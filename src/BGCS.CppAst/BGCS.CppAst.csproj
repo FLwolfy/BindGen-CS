@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClangSharp" Version="20.1.2.4" />
+    <PackageReference Include="Irony" Version="1.5.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'win-x64'">
+    <PackageReference Include="libclang.runtime.win-x64" Version="20.1.2" />
+    <PackageReference Include="libClangSharp.runtime.win-x64" Version="20.1.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'osx-arm64'">
+    <PackageReference Include="libclang.runtime.osx-arm64" Version="20.1.2" />
+    <PackageReference Include="libClangSharp.runtime.osx-arm64" Version="20.1.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'osx-x64'">
+    <PackageReference Include="libclang.runtime.osx-x64" Version="20.1.2" />
+    <PackageReference Include="libClangSharp.runtime.osx-x64" Version="20.1.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'linux-x64'">
+    <PackageReference Include="libclang.runtime.linux-x64" Version="20.1.2" />
+    <PackageReference Include="libClangSharp.runtime.linux-x64" Version="20.1.2" />
+  </ItemGroup>
+
+</Project>
