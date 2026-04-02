@@ -52,3 +52,41 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# xUnit / VSTest
+*.trx
+TestResults/
+*.coverage
+*.coveragexml
+
+# Coverage tools
+coverage/
+coverage-*/
+coverage.cobertura.xml
+lcov.info
+
+# User / IDE settings
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# JetBrains Rider / IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# macOS / OS files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Local environment files
+.env
+.env.*
+
+# Generated package lock for local tool restore caches (if any)
+packages/
