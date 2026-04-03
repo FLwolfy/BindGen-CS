@@ -32,6 +32,7 @@ public static class MemberVisitorRegistry
         Register<FirstRefVisitor>();
         Register<ObjCIvarDeclVisitor>();
         Register<TemplateTypeParameterVisitor>();
+        Register<UnexposedDeclVisitor>();
     }
 
     public static T GetVisitor<T>() where T : MemberVisitor => registry.GetVisitor<T>();

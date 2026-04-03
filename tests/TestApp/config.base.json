@@ -1,0 +1,7 @@
+{
+  "GenerateExtensions": false,
+  "UseCustomContext": false,
+  "MergeGeneratedFilesToSingleFile": true,
+  "SingleFileOutputName": "Bindings.cs",
+  "DeleteSplitFilesAfterMerging": true
+}

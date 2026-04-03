@@ -90,3 +90,6 @@ lcov.info
 
 # Generated package lock for local tool restore caches (if any)
 packages/
+
+# External library for referencing
+extern/

@@ -77,6 +77,49 @@ public static class Extensions
         return cursor.Linkage.ToLinkageKind();
     }
 
+    public static bool IsExternC(this in CXCursor cursor, in CXCursor parent)
+    {
+        if (parent.Kind == CXCursorKind.CXCursor_LinkageSpec && parent.IsExternCLinkageSpec())
+        {
+            return true;
+        }
+
+        if (cursor.LexicalParent.Kind == CXCursorKind.CXCursor_LinkageSpec && cursor.LexicalParent.IsExternCLinkageSpec())
+        {
+            return true;
+        }
+
+        if (cursor.SemanticParent.Kind == CXCursorKind.CXCursor_LinkageSpec && cursor.SemanticParent.IsExternCLinkageSpec())
+        {
+            return true;
+        }
+
+        // Fallback for single declaration style: extern "C" int func(...);
+        if (cursor.StorageClass == CX_StorageClass.CX_SC_Extern)
+        {
+            var text = cursor.AsText();
+            if (text.Contains("extern", StringComparison.Ordinal) && text.Contains("\"C\"", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static bool IsExternCLinkageSpec(this in CXCursor cursor)
+    {
+        if (cursor.Kind != CXCursorKind.CXCursor_LinkageSpec)
+        {
+            return false;
+        }
+
+        var text = cursor.AsText();
+        return text.Contains("extern", StringComparison.Ordinal)
+            && text.Contains("\"C\"", StringComparison.Ordinal)
+            && !text.Contains("\"C++\"", StringComparison.Ordinal);
+    }
+
     public static CppCallingConvention GetCallingConvention(this CXType type)
     {
         var callingConv = type.FunctionTypeCallingConv;

@@ -1,0 +1,13 @@
+{
+  "BaseConfig": {
+    "Url": "file://config.base.json"
+  },
+  "ImportType": "DllImport",
+  "ApiName": "Test",
+  "Namespace": "BGCS.TestApp.Generated",
+  "LibName": "testlib",
+  "GenerateExtensions": false,
+  "MergeGeneratedFilesToSingleFile": true,
+  "SingleFileOutputName": "Bindings.cs",
+  "DeleteSplitFilesAfterMerging": true
+}

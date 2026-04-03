@@ -50,6 +50,7 @@ public unsafe class FunctionDeclVisitor : MemberVisitor
             Visibility = cursor.GetVisibility(),
             StorageQualifier = cursor.GetStorageQualifier(),
             LinkageKind = cursor.GetLinkageKind(),
+            IsExternC = cursor.IsExternC(parent),
         };
 
         if (cursor.Kind == CXCursorKind.CXCursor_Constructor)

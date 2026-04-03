@@ -63,6 +63,11 @@ public sealed class CppFunction : CppDeclaration, ICppMemberWithVisibility, ICpp
     public CppLinkageKind LinkageKind { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this function is declared with <c>extern "C"</c> linkage specification.
+    /// </summary>
+    public bool IsExternC { get; set; }
+
+    /// <summary>
     /// Gets or sets the return type.
     /// </summary>
     public CppType ReturnType { get; set; }

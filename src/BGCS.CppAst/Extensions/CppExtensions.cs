@@ -72,6 +72,11 @@ public static class CppExtensions
     /// <returns><c>true</c> if the function is a dllexport or visibility("default")</returns>
     public static bool IsPublicExport(this CppFunction function)
     {
+        if (function.IsExternC)
+        {
+            return true;
+        }
+
         if (function.Attributes != null)
         {
             foreach (var attr in function.Attributes)
@@ -80,6 +85,14 @@ public static class CppExtensions
             }
         }
 
-        return function.LinkageKind == CppLinkageKind.External || function.LinkageKind == CppLinkageKind.UniqueExternal;
+        if (function.LinkageKind == CppLinkageKind.External || function.LinkageKind == CppLinkageKind.UniqueExternal)
+        {
+            return true;
+        }
+
+        // Fallback: some parsers may not classify `extern "C"` with External/UniqueExternal linkage.
+        // For top-level non-static functions, treat them as publicly bindable.
+        return !function.IsCxxClassMethod
+            && function.StorageQualifier != CppStorageQualifier.Static;
     }
 }
