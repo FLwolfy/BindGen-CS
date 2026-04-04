@@ -2,10 +2,19 @@
   "BaseConfig": {
     "Url": "file://config.base.json"
   },
+  "UseComGenerator": false,
   "ImportType": "DllImport",
   "ApiName": "Test",
   "Namespace": "BGCS.TestApp.Generated",
   "LibName": "testlib",
+  "EntryFiles": [
+    "headers/basic_c.h",
+    "headers/cpp_extern_c.h"
+  ],
+  "OutputFilterFiles": [
+    "headers/basic_c.h",
+    "headers/cpp_extern_c.h"
+  ],
   "GenerateExtensions": false,
   "MergeGeneratedFilesToSingleFile": true,
   "SingleFileOutputName": "Bindings.cs",

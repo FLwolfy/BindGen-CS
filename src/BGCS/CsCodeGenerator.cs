@@ -233,9 +233,12 @@
                 return false;
             }
 
-            allowedHeaders ??= [];
-            allowedHeaders.AddRange(headerFiles);
+            if (allowedHeaders is null)
+            {
+                allowedHeaders = [.. headerFiles];
+            }
 
+            bool explicitEmptyOutputFilter = allowedHeaders.Count == 0;
             FileSet files = new(allowedHeaders.Select(PathHelper.GetPath));
 
             foreach (var meta in copyFromPending)
@@ -273,6 +276,11 @@
             {
                 if (step.Enabled)
                 {
+                    if (explicitEmptyOutputFilter)
+                    {
+                        continue;
+                    }
+
                     LogInfo($"Generating {step.Name}...");
                     step.Generate(files, result, generationOutputPath, config, metadata);
                     step.CopyToMetadata(metadata);
