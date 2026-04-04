@@ -6,7 +6,7 @@ using System.Text.Json;
 using BGCS;
 using BGCS.Core.Logging;
 
-namespace BGCS.App.Tests;
+namespace BGCS.Demo;
 
 internal static class Program
 {

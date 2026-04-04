@@ -14,9 +14,5 @@
   "OutputFilterFiles": [
     "headers/basic_c.h",
     "headers/cpp_extern_c.h"
-  ],
-  "GenerateExtensions": false,
-  "MergeGeneratedFilesToSingleFile": true,
-  "SingleFileOutputName": "Bindings.cs",
-  "DeleteSplitFilesAfterMerging": true
+  ]
 }

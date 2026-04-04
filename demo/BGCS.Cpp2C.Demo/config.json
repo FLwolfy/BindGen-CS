@@ -1,0 +1,12 @@
+{
+  "BaseConfig": {
+    "Url": "file://config.base.json"
+  },
+  "EntryFiles": [
+    "include/demo.hpp"
+  ],
+  "OutputFilterFiles": [
+    "include/demo.hpp",
+    "include/demo_common.hpp"
+  ]
+}

@@ -38,6 +38,7 @@
         /// </summary>
         public List<string> AdditionalArguments { get; set; } = new();
 
+        [DefaultValue("")]
         public string NamePrefix { get; set; } = string.Empty;
     }
 }

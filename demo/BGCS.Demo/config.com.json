@@ -6,6 +6,5 @@
   "ApiName": "TestCom",
   "Namespace": "BGCS.TestApp.Generated.Com",
   "LibName": "testcomlib",
-  "GenerateExtensions": false,
   "DelegatesAsVoidPointer": false
 }

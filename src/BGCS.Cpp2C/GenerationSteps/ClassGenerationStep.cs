@@ -293,12 +293,13 @@ public class ClassGenerationStep : GenerationStep
         {
             string name = GetUniqueCFunctionName(c, f);
             string cSignature = GetCFunctionSignature(c, f);
+            string cReturnType = config.GetCType(f.ReturnType);
             definedFunctions.Add(name);
             mapping.Add((c, f), name);
 
             definedCFunctions.Add(new(name, f.Name, f.Comment?.ToString()));
 
-            writer.WriteLine($"{config.NamePrefix}API({f.ReturnType}) {name}({cSignature});");
+            writer.WriteLine($"{config.NamePrefix}API({cReturnType}) {name}({cSignature});");
         }
 
         private void WriteFunctionCpp(CppClass c, string typeName, CppFunction f, ICodeWriter writer)
@@ -306,8 +307,9 @@ public class ClassGenerationStep : GenerationStep
             var name = mapping[(c, f)];
             string cSignature = GetCFunctionSignature(c, f);
             string signature = GetCppFunctionSignatureTypeless(f);
+            string cReturnType = config.GetCType(f.ReturnType);
 
-            using (writer.PushBlock($"{config.NamePrefix}API_INTERNAL({f.ReturnType}) {name}({cSignature})"))
+            using (writer.PushBlock($"{config.NamePrefix}API_INTERNAL({cReturnType}) {name}({cSignature})"))
             {
                 writer.WriteLine($"auto* ptr = reinterpret_cast<{c.Name}*>(self);");
                 writer.WriteLine($"return ptr->{f.Name}({signature});");
