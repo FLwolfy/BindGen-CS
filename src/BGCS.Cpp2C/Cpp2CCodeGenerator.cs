@@ -2,6 +2,7 @@
 {
     using BGCS.Core;
     using BGCS.Core.Logging;
+    using BGCS.Cpp2C.GenerationSteps;
     using BGCS.Cpp2C.Metadata;
     using BGCS.CppAst.Diagnostics;
     using BGCS.CppAst.Model.Metadata;
@@ -101,6 +102,7 @@
 
         public virtual void Generate(List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
         {
+            EnsureGenerationPipeline();
             var options = PrepareSettings();
 
             var compilation = CppParser.ParseFiles(headerFiles, options);
@@ -110,6 +112,7 @@
 
         public virtual void Generate(CppCompilation compilation, List<string> headerFiles, string outputPath, List<string>? allowedHeaders)
         {
+            EnsureGenerationPipeline();
             if (Directory.Exists(outputPath))
             {
                 Directory.Delete(outputPath, true);
@@ -202,6 +205,45 @@
         public Cpp2CGeneratorMetadata GetMetadata()
         {
             return metadata;
+        }
+
+        private void EnsureGenerationPipeline()
+        {
+            if (generationSteps.Count != 0)
+            {
+                return;
+            }
+
+            EnsureDefaultGenerationSteps();
+        }
+
+        private void EnsureDefaultGenerationSteps()
+        {
+            bool hasEnumStep = false;
+            bool hasClassStep = false;
+
+            for (int i = 0; i < generationSteps.Count; i++)
+            {
+                var step = generationSteps[i];
+                if (step is EnumGenerationStep)
+                {
+                    hasEnumStep = true;
+                }
+                else if (step is ClassGenerationStep)
+                {
+                    hasClassStep = true;
+                }
+            }
+
+            if (!hasEnumStep)
+            {
+                generationSteps.Add(new EnumGenerationStep(this, config));
+            }
+
+            if (!hasClassStep)
+            {
+                generationSteps.Add(new ClassGenerationStep(this, config));
+            }
         }
     }
 }

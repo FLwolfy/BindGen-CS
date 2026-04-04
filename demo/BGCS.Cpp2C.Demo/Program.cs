@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using BGCS.Cpp2C;
-using BGCS.Cpp2C.GenerationSteps;
 
 namespace BGCS.Cpp2C.Demo;
 
@@ -22,8 +21,6 @@ internal static class Program
 
         Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load(configPath);
         Cpp2CCodeGenerator generator = new(config);
-        generator.AddGenerationStep(new EnumGenerationStep(generator, config));
-        generator.AddGenerationStep(new ClassGenerationStep(generator, config));
         generator.Generate(entryFiles, outputPath, options.OutputFilterFiles.Count == 0 ? null : options.OutputFilterFiles);
 
         foreach (var message in generator.Messages)
