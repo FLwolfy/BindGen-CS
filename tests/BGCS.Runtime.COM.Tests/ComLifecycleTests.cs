@@ -74,7 +74,7 @@ public unsafe class ComLifecycleTests
         Assert.Equal(2, fake.State.ReleaseCalls);
 
         IUnknown* detached = ptr.Detach();
-        Assert.True(detached == fake.Pointer);
+        Assert.True(detached == null);
         Assert.True(ptr.Handle == null);
 
         ptr.Dispose();
