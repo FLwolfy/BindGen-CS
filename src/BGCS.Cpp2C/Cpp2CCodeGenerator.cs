@@ -145,6 +145,14 @@
 
             FileSet files = new(allowedHeaders.Select(PathHelper.GetPath));
 
+            foreach (var meta in copyFromPending)
+            {
+                foreach (var step in generationSteps)
+                {
+                    step.CopyFromMetadata(meta);
+                }
+            }
+
             LogInfo($"Configuring Steps...");
             foreach (var step in generationSteps)
             {

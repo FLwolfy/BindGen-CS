@@ -4,7 +4,7 @@ using System.IO;
 using BGCS;
 using BGCS.Core.Logging;
 
-namespace TestApp;
+namespace BGCS.App.Tests;
 
 internal static class Program
 {

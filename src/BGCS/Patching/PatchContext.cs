@@ -53,9 +53,9 @@
                 var fullPath = Path.Combine(stage, relativePath);
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
                 File.Copy(context.GetFullPath(file), fullPath, true);
-                if (!files.Contains(fullPath))
+                if (!files.Contains(relativePath))
                 {
-                    files.Add(fullPath);
+                    files.Add(relativePath);
                 }
             }
         }

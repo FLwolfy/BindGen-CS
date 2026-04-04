@@ -94,7 +94,7 @@
 
         public bool Generate(CppParserOptions parserOptions, string headerFile, string outputPath, List<string>? allowedHeaders = null)
         {
-            return Generate([headerFile], outputPath, allowedHeaders);
+            return Generate(parserOptions, [headerFile], outputPath, allowedHeaders);
         }
 
         public bool Generate(CppParserOptions parserOptions, List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
@@ -110,6 +110,8 @@
 
         protected virtual void ConfigureCore()
         {
+            PreProcessSteps.Clear();
+            generationSteps.Clear();
             ConfigureGeneratorCore(PreProcessSteps, generationSteps, out funcGen);
             config.DefinedCppEnums = GetGenerationStep<EnumGenerationStep>().DefinedCppEnums;
             wrappedPointers = GetGenerationStep<TypeGenerationStep>().WrappedPointers;

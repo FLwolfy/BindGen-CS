@@ -6,6 +6,8 @@ using System.Runtime.Versioning;
 
 public class ComObject : IDisposable
 {
+    private bool disposed;
+
     private ComObject()
     {
     }
@@ -64,16 +66,25 @@ public class ComObject : IDisposable
             }
         }
 
-        ~ComObject()
+    ~ComObject()
+    {
+        Dispose(disposing: false);
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (disposed)
         {
-            ReleaseInternal();
-            Dispose();
+            return;
         }
 
-        public void Dispose()
-        {
-            ReleaseInternal();
-            Dispose();
-            GC.SuppressFinalize(this);
-        }
+        ReleaseInternal();
+        disposed = true;
+    }
 }

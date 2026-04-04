@@ -208,7 +208,7 @@
 
                 for (int j = 0; j < parameters.Count; j++)
                 {
-                    var bit = (ix & 1 << j - 64) != 0;
+                    var bit = (ix & (1L << j)) != 0;
                     CppParameter cppParameter = parameters[j];
                     CppPrimitiveKind kind = cppParameter.Type.GetPrimitiveKind();
 

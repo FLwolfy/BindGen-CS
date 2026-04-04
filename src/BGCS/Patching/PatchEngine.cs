@@ -53,6 +53,7 @@
 
                 patch.Apply(context, settings, files, result);
                 context.WriteFile("settings.json", JsonConvert.SerializeObject(settings, options));
+                last = context;
             }
 
             last?.CopyToOutput(outputDir);
@@ -74,6 +75,7 @@
                     context.CopyFromInput(outputDir, files);
                 }
                 patch.Apply(context, metadata, files);
+                last = context;
             }
 
             last?.CopyToOutput(outputDir);
