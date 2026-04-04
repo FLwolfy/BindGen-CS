@@ -104,8 +104,15 @@
         {
             if (result.Function != null)
             {
-                result.BaseType = config.MakeDelegatePointer(result.Function);
-                --result.PointerLevel;
+                if (config.DelegatesAsVoidPointer)
+                {
+                    result.BaseType = "void";
+                }
+                else
+                {
+                    result.BaseType = config.MakeDelegatePointer(result.Function);
+                    --result.PointerLevel;
+                }
             }
             return result.BaseType + new string('*', result.PointerLevel);
         }

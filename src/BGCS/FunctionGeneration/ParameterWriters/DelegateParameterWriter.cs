@@ -15,7 +15,7 @@
         {
             rootParameter.CppType.IsDelegate(out var cppFunction);
             var config = context.Config;
-            var ptrType = config.MakeDelegatePointer(cppFunction!);
+            var ptrType = config.GetDelegatePointerType(cppFunction!);
             context.AppendParam($"({ptrType})Utils.GetFunctionPointerForDelegate({cppParameter.Name})");
         }
     }

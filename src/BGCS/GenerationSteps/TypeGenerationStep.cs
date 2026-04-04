@@ -662,7 +662,7 @@
                     {
                         int depth = 0;
                         cppField.Type.IsPointer(ref depth);
-                        string delegateType = $"({config.MakeDelegatePointer(cppFunction, false)}{new string('*', depth)})";
+                        string delegateType = $"({config.GetDelegatePointerType(cppFunction, false)}{new string('*', depth)})";
                         if (cppParameter.Type.Name.StartsWith("delegate*<"))
                         {
                             writer.WriteLine($"{fieldName} = {delegateType}{cppParameter.Name};");

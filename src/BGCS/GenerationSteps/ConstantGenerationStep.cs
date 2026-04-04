@@ -94,7 +94,7 @@
 
             for (int i = 0; i < compilation.Macros.Count; i++)
             {
-                if (!files.Contains(compilation.Macros[i].SourceFile))
+                if (string.IsNullOrEmpty(compilation.Macros[i].SourceFile) || !files.Contains(compilation.Macros[i].SourceFile))
                     continue;
 
                 var constant = ParseConstant(compilation.Macros[i]);

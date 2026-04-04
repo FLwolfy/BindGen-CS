@@ -184,7 +184,16 @@ public class ClassGenerationStep : GenerationStep
             headerWriter.WriteLine($"{config.NamePrefix}API({typeName}*) {typeName}Create();");
             headerWriter.WriteLine($"{config.NamePrefix}API(void) {typeName}Destroy({typeName}* self);");
 
-            cppWriter.WriteLine($"{config.NamePrefix}API_INTERNAL({typeName}*) {typeName}Create()");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL({typeName}*) {typeName}Create()"))
+            {
+                cppWriter.WriteLine($"return reinterpret_cast<{typeName}*>(new {cppClass.Name}());");
+            }
+
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(void) {typeName}Destroy({typeName}* self)"))
+            {
+                cppWriter.WriteLine($"auto* ptr = reinterpret_cast<{cppClass.Name}*>(self);");
+                cppWriter.WriteLine("delete ptr;");
+            }
 
             for (int j = 0; j < cppClass.Functions.Count; j++)
             {

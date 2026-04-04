@@ -217,7 +217,7 @@
                             string returnType = config.GetCsReturnType(cppFunction.ReturnType);
                             if (cppFunction.ReturnType.IsDelegate(out var outDelegate))
                             {
-                                returnType = config.MakeDelegatePointer(outDelegate);
+                                returnType = config.GetDelegatePointerType(outDelegate);
                             }
                             if (returnType == "bool")
                             {

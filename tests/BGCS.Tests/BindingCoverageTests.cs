@@ -141,8 +141,7 @@ public class BindingCoverageTests
 
             if (caseName == "C callback typedef")
             {
-                bool hasTypedFunctionPointer = result.AllGeneratedCode.Contains("delegate*<int, void>", StringComparison.Ordinal)
-                    || result.AllGeneratedCode.Contains("delegate*<void>", StringComparison.Ordinal);
+                bool hasTypedFunctionPointer = result.AllGeneratedCode.Contains("delegate*<int, void>", StringComparison.Ordinal);
                 Assert.True(
                     hasTypedFunctionPointer,
                     $"Case '{caseName}' expected function pointer signature not found.\nHeader:\n{header}\nTempDir: {result.TempDirectory}\nGenerated:\n{result.AllGeneratedCode}");

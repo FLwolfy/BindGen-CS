@@ -43,6 +43,24 @@ public unsafe class ComLifecycleTests
     }
 
     [Fact]
+    public void ComObject_QueryInterface_WhenUnsupported_ShouldReturnFailureAndNullObject()
+    {
+        using FakeComServer fake = new(initialRefCount: 1);
+
+        ComObject obj = ComObject.FromPtr(fake.Pointer)!;
+        Guid iid = UnsupportedCom.Guid;
+        int hr = obj.QueryInterface(ref iid, out ComObject? queried);
+
+        Assert.Equal(unchecked((int)0x80004002), hr);
+        Assert.Null(queried);
+        Assert.Equal(1, fake.State.QueryCalls);
+        Assert.Equal(0, fake.State.AddRefCalls);
+
+        obj.Dispose();
+        Assert.Equal(1, fake.State.ReleaseCalls);
+    }
+
+    [Fact]
     public void ComPtr_ReleaseDisposeDetach_ShouldUseIUnknownVtable()
     {
         using FakeComServer fake = new(initialRefCount: 3);
@@ -61,6 +79,54 @@ public unsafe class ComLifecycleTests
 
         ptr.Dispose();
         Assert.Equal(2, fake.State.ReleaseCalls);
+    }
+
+    [Fact]
+    public void ComPtr_Dispose_ShouldBeIdempotentAndClearHandle()
+    {
+        using FakeComServer fake = new(initialRefCount: 2);
+
+        ComPtr<IUnknown> ptr = new(fake.Pointer);
+        ptr.Dispose();
+        ptr.Dispose();
+
+        Assert.True(ptr.Handle == null);
+        Assert.Equal(1, fake.State.ReleaseCalls);
+    }
+
+    [Fact]
+    public void ComPtr_QueryInterface_Generic_ShouldRoundTripThroughVtable()
+    {
+        using FakeComServer fake = new(initialRefCount: 1);
+
+        ComPtr<IUnknown> ptr = new(fake.Pointer);
+        HResult hr = ptr.QueryInterface<IUnknown>(out ComPtr<IUnknown> queried);
+
+        Assert.True(hr.IsSuccess);
+        Assert.True(queried.Handle == fake.Pointer);
+        Assert.Equal(1, fake.State.QueryCalls);
+        Assert.Equal(1, fake.State.AddRefCalls);
+
+        queried.Dispose();
+        ptr.Dispose();
+        Assert.Equal(2, fake.State.ReleaseCalls);
+    }
+
+    [Fact]
+    public void ComPtr_QueryInterface_GenericUnsupported_ShouldReturnFailureAndNullHandle()
+    {
+        using FakeComServer fake = new(initialRefCount: 1);
+
+        ComPtr<IUnknown> ptr = new(fake.Pointer);
+        HResult hr = ptr.QueryInterface<UnsupportedCom>(out ComPtr<UnsupportedCom> queried);
+
+        Assert.True(hr.IsFailure);
+        Assert.True(queried.Handle == null);
+        Assert.Equal(1, fake.State.QueryCalls);
+        Assert.Equal(0, fake.State.AddRefCalls);
+
+        ptr.Dispose();
+        Assert.Equal(1, fake.State.ReleaseCalls);
     }
 
     private sealed class FakeComServer : IDisposable
@@ -83,7 +149,7 @@ public unsafe class ComLifecycleTests
 
             lock (Gate)
             {
-                States[(nint)instance] = new ComState(initialRefCount);
+                States[(nint)instance] = new ComState(initialRefCount, [IUnknown.Guid]);
             }
         }
 
@@ -107,6 +173,14 @@ public unsafe class ComLifecycleTests
             {
                 ComState state = States[(nint)self];
                 state.QueryCalls++;
+
+                Guid iid = *riid;
+                if (!state.SupportedInterfaces.Contains(iid))
+                {
+                    *ppvObject = null;
+                    return unchecked((int)0x80004002); // E_NOINTERFACE
+                }
+
                 state.AddRefCalls++;
                 state.RefCount++;
             }
@@ -156,17 +230,33 @@ public unsafe class ComLifecycleTests
 
     private sealed class ComState
     {
-        public ComState(uint initialRefCount)
+        public ComState(uint initialRefCount, HashSet<Guid> supportedInterfaces)
         {
             RefCount = initialRefCount;
+            SupportedInterfaces = supportedInterfaces;
         }
 
         public uint RefCount { get; set; }
+
+        public HashSet<Guid> SupportedInterfaces { get; }
 
         public int QueryCalls { get; set; }
 
         public int AddRefCalls { get; set; }
 
         public int ReleaseCalls { get; set; }
+    }
+
+    [Guid("11111111-2222-3333-4444-555555555555")]
+    private struct UnsupportedCom : IComObject, IComObject<UnsupportedCom>
+    {
+        public static readonly Guid Guid = new("11111111-2222-3333-4444-555555555555");
+
+        public unsafe void** LpVtbl;
+
+        public unsafe void*** AsVtblPtr()
+        {
+            return (void***)Unsafe.AsPointer(ref Unsafe.AsRef(in this));
+        }
     }
 }

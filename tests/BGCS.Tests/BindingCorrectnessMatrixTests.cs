@@ -215,8 +215,7 @@ public class BindingCorrectnessMatrixTests
 
             if (caseName == "C callback typedef")
             {
-                bool hasTypedFunctionPointer = run.GeneratedCode.Contains("delegate*<int, void>", StringComparison.Ordinal)
-                    || run.GeneratedCode.Contains("delegate*<void>", StringComparison.Ordinal);
+                bool hasTypedFunctionPointer = run.GeneratedCode.Contains("delegate*<int, void>", StringComparison.Ordinal);
                 Assert.True(
                     hasTypedFunctionPointer,
                     $"Case '{caseName}' expected function pointer signature not found.\nGenerated:\n{run.GeneratedCode}");

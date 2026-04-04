@@ -192,7 +192,7 @@
 
             if (type.IsDelegate(out var outDelegate))
             {
-                return MakeDelegatePointer(outDelegate);
+                return GetDelegatePointerType(outDelegate);
             }
 
             var name = GetCsTypeNameInternal(type);
@@ -234,6 +234,16 @@
                     return $"delegate*<{GetNamelessParameterSignature(functionType.Parameters, false, true)}, {GetCsTypeNameInternal(functionType.ReturnType)}>";
                 }
             }
+        }
+
+        public string GetDelegatePointerType(CppFunctionType functionType, bool withConvention = false)
+        {
+            if (DelegatesAsVoidPointer)
+            {
+                return "void*";
+            }
+
+            return MakeDelegatePointer(functionType, withConvention);
         }
 
         private string GetCsTypeNameInternal(CppType type)
@@ -293,7 +303,7 @@
 
                 if ((delegateType || ptrType != cppParameter.Type) && ptrType is CppTypedef typedef && typedef.ElementType.IsDelegate(out var cppFunction) && !paramCsTypeName.Contains('*'))
                 {
-                    paramCsTypeName = MakeDelegatePointer(cppFunction);
+                    paramCsTypeName = GetDelegatePointerType(cppFunction);
 
                     while (depth-- > 0)
                     {
@@ -396,14 +406,7 @@
 
                 if (delegateType && ptrType is CppTypedef typedef && typedef.ElementType.IsDelegate(out var cppFunction))
                 {
-                    if (cppFunction.Parameters.Count == 0)
-                    {
-                        paramCsTypeName = $"delegate*<{GetCsTypeName(cppFunction.ReturnType)}>";
-                    }
-                    else
-                    {
-                        paramCsTypeName = $"delegate*<{GetNamelessParameterSignature(cppFunction.Parameters, false, delegateType)}, {GetCsTypeName(cppFunction.ReturnType)}>";
-                    }
+                    paramCsTypeName = GetDelegatePointerType(cppFunction);
 
                     while (depth-- > 0)
                     {
@@ -472,14 +475,7 @@
 
                 if (delegateType && ptrType is CppTypedef typedef && typedef.ElementType.IsDelegate(out var cppFunction))
                 {
-                    if (cppFunction.Parameters.Count == 0)
-                    {
-                        paramCsTypeName = $"delegate*<{GetCsTypeName(cppFunction.ReturnType)}>";
-                    }
-                    else
-                    {
-                        paramCsTypeName = $"delegate*<{GetNamelessParameterSignature(cppFunction.Parameters, false, delegateType)}, {GetCsTypeName(cppFunction.ReturnType)}>";
-                    }
+                    paramCsTypeName = GetDelegatePointerType(cppFunction);
 
                     while (depth-- > 0)
                     {

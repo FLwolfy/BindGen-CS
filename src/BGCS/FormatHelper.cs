@@ -240,7 +240,7 @@
                 return "~0u - 3";
             }
 
-            if (value.StartsWith("L\"") && value.StartsWith("R\"") && value.StartsWith("LR\"") && value.EndsWith("\"") && value.Count(c => c == '"') > 2)
+            if ((value.StartsWith("L\"") || value.StartsWith("R\"") || value.StartsWith("LR\"")) && value.EndsWith("\"") && value.Count(c => c == '"') > 2)
             {
                 string[] parts = value.Split('"', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 StringBuilder sb = new();

@@ -39,7 +39,7 @@
 
         public bool Contains(string path)
         {
-            if (string.IsNullOrEmpty(path)) return true;
+            if (string.IsNullOrEmpty(path)) return false;
             path = PathHelper.GetPath(path);
             return set.Contains(path);
         }

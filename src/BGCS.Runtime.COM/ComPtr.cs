@@ -84,7 +84,13 @@ public unsafe struct ComPtr<T> : IComObject, IComObject<T>, IDisposable where T 
 
         public void Dispose()
         {
+            if (Handle == null)
+            {
+                return;
+            }
+
             Release();
+            Handle = null;
         }
 
         public unsafe T* Detach()
