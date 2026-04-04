@@ -42,7 +42,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core", "core", "{E8178168-B
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "runtime", "runtime", "{BD9A8C92-F640-4B9A-9D15-9D79B9806165}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "parser", "parser", "{A630FD52-C3C6-446F-ACF2-F70E34950399}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "generator", "generator", "{A630FD52-C3C6-446F-ACF2-F70E34950399}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

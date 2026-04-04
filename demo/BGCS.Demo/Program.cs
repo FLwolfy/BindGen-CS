@@ -97,14 +97,8 @@ internal static class Program
             : [];
         string scanText = string.Join(Environment.NewLine, outputFiles.Select(File.ReadAllText));
 
-        string runtimeNamespace = GetRuntimeNamespace(config);
+        string runtimeNamespace = GetRuntimeNamespace();
         string runtimeUsing = $"using {runtimeNamespace};";
-
-        if (scanText.Contains("using BGCS.Runtime;", StringComparison.Ordinal))
-        {
-            Console.WriteLine("Runtime check failed: generated output must not contain `using BGCS.Runtime;`.");
-            return false;
-        }
 
         if (config.IncludeRuntimeSourceInSingleFile)
         {
@@ -141,15 +135,7 @@ internal static class Program
         return true;
     }
 
-    private static string GetRuntimeNamespace(CsCodeGeneratorConfig config)
-    {
-        if (string.IsNullOrWhiteSpace(config.Namespace))
-        {
-            return "Generated.Runtime";
-        }
-
-        return $"{config.Namespace}.Runtime";
-    }
+    private static string GetRuntimeNamespace() => "BGCS.Runtime";
     private sealed class AppRunOptions
     {
         public List<string>? EntryFiles { get; set; }

@@ -291,7 +291,7 @@ Cpp2C 預設行為（重要）：
 - runtime 輸出規則：
   - 若需要 runtime 且 `IncludeRuntimeSourceInSingleFile = true`：runtime 會內嵌到單檔 bindings
   - 若需要 runtime 且 `IncludeRuntimeSourceInSingleFile = false`：runtime 會輸出為獨立 `Runtime.cs`
-  - 生成 bindings 不會使用 `using BGCS.Runtime;`，runtime 命名空間為 `config.Namespace + ".Runtime"`
+  - 生成 bindings 會固定使用 `using BGCS.Runtime;`，runtime 命名空間固定為 `BGCS.Runtime`
 
 ### 5.2 Cpp2C 輸出
 

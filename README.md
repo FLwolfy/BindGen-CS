@@ -64,7 +64,7 @@ Single-file/runtime behavior summary:
 - When runtime is required:
   - `IncludeRuntimeSourceInSingleFile = true`: runtime source is embedded into the merged binding file.
   - `IncludeRuntimeSourceInSingleFile = false`: runtime source is emitted as standalone `Runtime.cs`.
-- Generated bindings do not emit `using BGCS.Runtime;`; runtime namespace is `config.Namespace + ".Runtime"`.
+- Generated bindings always use `using BGCS.Runtime;` and runtime namespace remains `BGCS.Runtime`.
 
 ### Full Documents
 

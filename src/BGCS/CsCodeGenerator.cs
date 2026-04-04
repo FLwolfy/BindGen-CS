@@ -532,14 +532,9 @@ namespace BGCS
             LogInfo($"Generated runtime file: {runtimePath}");
         }
 
-        private string GetRuntimeNamespace()
+        private static string GetRuntimeNamespace()
         {
-            if (string.IsNullOrWhiteSpace(config.Namespace))
-            {
-                return "Generated.Runtime";
-            }
-
-            return $"{config.Namespace}.Runtime";
+            return "BGCS.Runtime";
         }
 
         private string RewriteRuntimeNamespace(string text)

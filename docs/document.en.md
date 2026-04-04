@@ -264,7 +264,7 @@ Source:
 - Runtime output policy:
   - If runtime is required and `IncludeRuntimeSourceInSingleFile = true`: runtime source is embedded into merged bindings
   - If runtime is required and `IncludeRuntimeSourceInSingleFile = false`: runtime is emitted as standalone `Runtime.cs`
-  - Generated bindings do not use `using BGCS.Runtime;`; runtime namespace is `config.Namespace + ".Runtime"`
+  - Generated bindings always use `using BGCS.Runtime;`; runtime namespace is fixed to `BGCS.Runtime`
 
 ### 5.2 Cpp2C output
 

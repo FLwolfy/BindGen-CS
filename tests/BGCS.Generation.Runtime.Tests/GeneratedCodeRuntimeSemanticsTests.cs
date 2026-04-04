@@ -111,7 +111,10 @@ public class GeneratedCodeRuntimeSemanticsTests
         Type bridgeType = asm.GetType("BGCS.Tests.Generated.GeneratedContextBridge")!;
         Assert.NotNull(bridgeType);
 
-        object? bridge = Activator.CreateInstance(bridgeType, inner);
+        Func<string, nint> getProcAddress = inner.GetProcAddress;
+        Func<string, bool> isExtensionSupported = inner.IsExtensionSupported;
+        Action dispose = inner.Dispose;
+        object? bridge = Activator.CreateInstance(bridgeType, getProcAddress, isExtensionSupported, dispose);
         Assert.NotNull(bridge);
         return bridge!;
     }
@@ -121,33 +124,41 @@ public class GeneratedCodeRuntimeSemanticsTests
         return $$"""
             namespace BGCS.Tests.Generated;
 
-            public sealed class GeneratedContextBridge : global::{{GeneratedNamespace}}.Runtime.INativeContext
+            public sealed class GeneratedContextBridge : global::BGCS.Runtime.INativeContext
             {
-                private readonly global::BGCS.Runtime.INativeContext inner;
+                private readonly global::System.Func<string, nint> getProcAddress;
+                private readonly global::System.Func<string, bool> isExtensionSupported;
+                private readonly global::System.Action dispose;
 
-                public GeneratedContextBridge(global::BGCS.Runtime.INativeContext inner)
+                public GeneratedContextBridge(
+                    global::System.Func<string, nint> getProcAddress,
+                    global::System.Func<string, bool> isExtensionSupported,
+                    global::System.Action dispose)
                 {
-                    this.inner = inner;
+                    this.getProcAddress = getProcAddress;
+                    this.isExtensionSupported = isExtensionSupported;
+                    this.dispose = dispose;
                 }
 
                 public nint GetProcAddress(string procName)
                 {
-                    return inner.GetProcAddress(procName);
+                    return getProcAddress(procName);
                 }
 
                 public bool TryGetProcAddress(string procName, out nint procAddress)
                 {
-                    return inner.TryGetProcAddress(procName, out procAddress);
+                    procAddress = getProcAddress(procName);
+                    return procAddress != 0;
                 }
 
                 public bool IsExtensionSupported(string extensionName)
                 {
-                    return inner.IsExtensionSupported(extensionName);
+                    return isExtensionSupported(extensionName);
                 }
 
                 public void Dispose()
                 {
-                    inner.Dispose();
+                    dispose();
                 }
             }
             """;
