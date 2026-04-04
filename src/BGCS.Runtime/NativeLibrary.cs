@@ -1,4 +1,6 @@
-﻿namespace BGCS.Runtime;
+﻿using System;
+
+namespace BGCS.Runtime;
 
 using System.Runtime.InteropServices;
 

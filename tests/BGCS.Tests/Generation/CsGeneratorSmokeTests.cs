@@ -100,7 +100,9 @@ public class CsGeneratorSmokeTests
                 Namespace = "Test.Generated",
                 LibName = "test",
                 GenerateExtensions = false,
+                ImportType = ImportType.DllImport,
                 MergeGeneratedFilesToSingleFile = true,
+                IncludeRuntimeSourceInSingleFile = true,
                 SingleFileOutputName = "AllBindings.cs"
             };
 

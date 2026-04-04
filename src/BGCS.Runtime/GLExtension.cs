@@ -1,4 +1,6 @@
-﻿namespace BGCS.Runtime
+﻿using System;
+
+namespace BGCS.Runtime
 {
     public abstract class GLExtension : IDisposable
     {

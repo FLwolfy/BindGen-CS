@@ -16,6 +16,8 @@ namespace BGCS.Tests;
 
 public class GeneratedCodeRuntimeSemanticsTests
 {
+    private const string GeneratedNamespace = "Runtime.Generated";
+
     [Fact]
     public void Generate_FunctionTableBindings_ShouldExecuteAgainstCustomContext()
     {
@@ -35,7 +37,8 @@ public class GeneratedCodeRuntimeSemanticsTests
             Assert.NotNull(apiType);
 
             FakeNativeContext context = new();
-            InvokeStatic(apiType, "InitApi", [context]);
+            object generatedContext = CreateGeneratedContextAdapter(asm, context);
+            InvokeStatic(apiType, "InitApi", [generatedContext]);
 
             int sum = (int)InvokeStatic(apiType, "BgcsAddNative", [7, 35])!;
             Assert.Equal(42, sum);
@@ -71,6 +74,12 @@ public class GeneratedCodeRuntimeSemanticsTests
 
         SyntaxTree[] trees = sourceFiles
             .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), path: path))
+            .Concat(
+            [
+                CSharpSyntaxTree.ParseText(
+                    BuildContextBridgeSource(),
+                    path: "__GeneratedContextBridge__.cs")
+            ])
             .ToArray();
 
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -95,6 +104,53 @@ public class GeneratedCodeRuntimeSemanticsTests
         pe.Position = 0;
         AssemblyLoadContext alc = new("BGCS.Generated.RuntimeSemantics", isCollectible: true);
         return alc.LoadFromStream(pe);
+    }
+
+    private static object CreateGeneratedContextAdapter(Assembly asm, INativeContext inner)
+    {
+        Type bridgeType = asm.GetType("BGCS.Tests.Generated.GeneratedContextBridge")!;
+        Assert.NotNull(bridgeType);
+
+        object? bridge = Activator.CreateInstance(bridgeType, inner);
+        Assert.NotNull(bridge);
+        return bridge!;
+    }
+
+    private static string BuildContextBridgeSource()
+    {
+        return $$"""
+            namespace BGCS.Tests.Generated;
+
+            public sealed class GeneratedContextBridge : global::{{GeneratedNamespace}}.Runtime.INativeContext
+            {
+                private readonly global::BGCS.Runtime.INativeContext inner;
+
+                public GeneratedContextBridge(global::BGCS.Runtime.INativeContext inner)
+                {
+                    this.inner = inner;
+                }
+
+                public nint GetProcAddress(string procName)
+                {
+                    return inner.GetProcAddress(procName);
+                }
+
+                public bool TryGetProcAddress(string procName, out nint procAddress)
+                {
+                    return inner.TryGetProcAddress(procName, out procAddress);
+                }
+
+                public bool IsExtensionSupported(string extensionName)
+                {
+                    return inner.IsExtensionSupported(extensionName);
+                }
+
+                public void Dispose()
+                {
+                    inner.Dispose();
+                }
+            }
+            """;
     }
 
     private static IEnumerable<MetadataReference> GetMetadataReferences()
@@ -137,7 +193,7 @@ public class GeneratedCodeRuntimeSemanticsTests
         CsCodeGeneratorConfig cfg = new()
         {
             ApiName = "RuntimeApi",
-            Namespace = "Runtime.Generated",
+            Namespace = GeneratedNamespace,
             LibName = "runtimetest",
             GenerateExtensions = false,
             ImportType = ImportType.FunctionTable,

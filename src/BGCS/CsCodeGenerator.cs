@@ -1,4 +1,4 @@
-﻿namespace BGCS
+namespace BGCS
 {
     using BGCS.Core;
     using BGCS.Core.CSharp;
@@ -20,24 +20,6 @@
     public partial class CsCodeGenerator : BaseGenerator
     {
         private const string RuntimeUsingDefault = "using BGCS.Runtime;";
-        private static readonly string[] runtimeUsageTokens =
-        [
-            "FunctionTable",
-            "LibraryLoader",
-            "NativeLibraryContext",
-            "INativeContext",
-            "Pointer<",
-            "ConstPointer<",
-            "Bitfield.",
-            "[NativeName",
-            "NativeName(",
-            "NativeNameType.",
-            "Bool8",
-            "Bool32",
-            "NativeCallback<",
-            "IGLContext",
-            "GLExtension",
-        ];
 
         protected FunctionGenerator funcGen = null!;
         protected PatchEngine patchEngine = new();
@@ -310,31 +292,19 @@
             LogInfo("Applying Post-Patches...");
             patchEngine.ApplyPostPatches(metadata, generationOutputPath, Directory.GetFiles(generationOutputPath, "*.*", SearchOption.AllDirectories).ToList());
 
-            bool runtimeRequired = DetectRuntimeRequirement(generationOutputPath, out string? runtimeReason);
-            if (runtimeRequired)
-            {
-                LogInfo($"Runtime requirement detected: {runtimeReason}");
-            }
-            else
-            {
-                LogInfo("Runtime requirement detected: none");
-            }
-            RewriteRuntimeUsings(generationOutputPath, runtimeRequired);
+            RewriteRuntimeUsings(generationOutputPath);
 
             if (config.MergeGeneratedFilesToSingleFile)
             {
-                MergeGeneratedFilesToSingleFile(generationOutputPath, outputPath, runtimeRequired);
-                if (runtimeRequired && !config.IncludeRuntimeSourceInSingleFile)
+                MergeGeneratedFilesToSingleFile(generationOutputPath, outputPath);
+                if (!config.IncludeRuntimeSourceInSingleFile)
                 {
                     WriteStandaloneRuntimeFile(outputPath);
                 }
             }
             else
             {
-                if (runtimeRequired)
-                {
-                    WriteStandaloneRuntimeFile(outputPath);
-                }
+                WriteStandaloneRuntimeFile(outputPath);
             }
 
             if (singleFileOutputOnly && Directory.Exists(generationOutputPath))
@@ -345,7 +315,7 @@
             return true;
         }
 
-        protected virtual void MergeGeneratedFilesToSingleFile(string generationOutputPath, string outputPath, bool runtimeRequired)
+        protected virtual void MergeGeneratedFilesToSingleFile(string generationOutputPath, string outputPath)
         {
             string mergedFileName = string.IsNullOrWhiteSpace(config.SingleFileOutputName) ? "Bindings.cs" : config.SingleFileOutputName;
             string mergedPath = Path.Combine(outputPath, mergedFileName);
@@ -391,9 +361,10 @@
                 }
             }
 
-            if (runtimeRequired && config.IncludeRuntimeSourceInSingleFile)
+            bool runtimeEmbeddedInBindings = false;
+            if (config.IncludeRuntimeSourceInSingleFile)
             {
-                TryAppendRuntimeSources(orderedUsings, usingSet, bodies);
+                runtimeEmbeddedInBindings = TryAppendRuntimeSources(orderedUsings, usingSet, bodies);
             }
 
             StringBuilder builder = new();
@@ -424,6 +395,10 @@
 
             File.WriteAllText(mergedPath, builder.ToString());
             LogInfo($"Merged generated files into: {mergedPath}");
+            if (runtimeEmbeddedInBindings)
+            {
+                LogInfo($"Merged runtime sources into: {mergedPath}");
+            }
 
             for (int i = 0; i < files.Count; i++)
             {
@@ -433,7 +408,7 @@
             DeleteEmptyDirectories(generationOutputPath);
         }
 
-        private void TryAppendRuntimeSources(List<string> orderedUsings, HashSet<string> usingSet, List<string> bodies)
+        private bool TryAppendRuntimeSources(List<string> orderedUsings, HashSet<string> usingSet, List<string> bodies)
         {
             IReadOnlyList<(string Name, string Content)> runtimeSources = GetEmbeddedRuntimeSources();
             if (runtimeSources.Count == 0)
@@ -444,7 +419,7 @@
             if (runtimeSources.Count == 0)
             {
                 LogWarn("Single-file runtime embedding is enabled, but BGCS.Runtime sources were not found. Output still requires BGCS.Runtime.");
-                return;
+                return false;
             }
 
             List<string> runtimeBodies = [];
@@ -471,34 +446,14 @@
             if (runtimeBodies.Count > 0)
             {
                 string combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", runtimeBodies);
-                bodies.Add(WrapWithIncludeGuard(combinedBody));
-            }
-        }
-
-        private bool DetectRuntimeRequirement(string generationOutputPath, out string? reason)
-        {
-            reason = null;
-            string[] files = Directory.GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories);
-            for (int i = 0; i < files.Length; i++)
-            {
-                string path = files[i];
-                string text = File.ReadAllText(path);
-                text = text.Replace(RuntimeUsingDefault, string.Empty, StringComparison.Ordinal);
-
-                for (int j = 0; j < runtimeUsageTokens.Length; j++)
-                {
-                    if (text.Contains(runtimeUsageTokens[j], StringComparison.Ordinal))
-                    {
-                        reason = $"{Path.GetFileName(path)} contains `{runtimeUsageTokens[j]}`";
-                        return true;
-                    }
-                }
+                bodies.Add(combinedBody);
+                return true;
             }
 
             return false;
         }
 
-        private void RewriteRuntimeUsings(string generationOutputPath, bool runtimeRequired)
+        private void RewriteRuntimeUsings(string generationOutputPath)
         {
             string[] files = Directory.GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories);
             string runtimeUsingTarget = $"using {GetRuntimeNamespace()};";
@@ -512,14 +467,7 @@
                     continue;
                 }
 
-                if (runtimeRequired)
-                {
-                    text = text.Replace(RuntimeUsingDefault, runtimeUsingTarget, StringComparison.Ordinal);
-                }
-                else
-                {
-                    text = text.Replace(RuntimeUsingDefault, string.Empty, StringComparison.Ordinal);
-                }
+                text = text.Replace(RuntimeUsingDefault, runtimeUsingTarget, StringComparison.Ordinal);
 
                 File.WriteAllText(path, text);
             }
@@ -579,26 +527,9 @@
             }
 
             string combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", bodies);
-            builder.AppendLine(WrapWithIncludeGuard(combinedBody));
+            builder.AppendLine(combinedBody);
             File.WriteAllText(runtimePath, builder.ToString());
-        }
-
-        private string WrapWithIncludeGuard(string body)
-        {
-            string symbol = BuildRuntimeIncludeGuardSymbol();
-            return $"#if !{symbol}{Environment.NewLine}#define {symbol}{Environment.NewLine}{body}{Environment.NewLine}#endif";
-        }
-
-        private string BuildRuntimeIncludeGuardSymbol()
-        {
-            string source = GetRuntimeNamespace();
-            StringBuilder symbol = new("BGCS_RUNTIME_INCLUDED_");
-            for (int i = 0; i < source.Length; i++)
-            {
-                char c = source[i];
-                symbol.Append(char.IsLetterOrDigit(c) ? char.ToUpperInvariant(c) : '_');
-            }
-            return symbol.ToString();
+            LogInfo($"Generated runtime file: {runtimePath}");
         }
 
         private string GetRuntimeNamespace()
@@ -701,8 +632,33 @@
 
         private static string NormalizeRuntimeTextForMerge(string text)
         {
-            string normalized = text.Replace("\r\n", "\n");
+            string normalized = text.Replace("\r\n", "\n").TrimStart('\uFEFF');
             string[] lines = normalized.Split('\n');
+            if (TryFindFileScopedNamespace(lines, out int namespaceLineIndex, out string? namespaceName))
+            {
+                string prefix = string.Join(Environment.NewLine, lines[..namespaceLineIndex]).TrimEnd();
+                string body = string.Join(Environment.NewLine, lines[(namespaceLineIndex + 1)..]);
+                string indentedBody = IndentLines(body, "    ");
+
+                StringBuilder builder = new();
+                if (!string.IsNullOrWhiteSpace(prefix))
+                {
+                    builder.AppendLine(prefix);
+                }
+                builder.AppendLine($"namespace {namespaceName}");
+                builder.AppendLine("{");
+                builder.AppendLine(indentedBody);
+                builder.Append('}');
+                return builder.ToString();
+            }
+
+            return text;
+        }
+
+        private static bool TryFindFileScopedNamespace(string[] lines, out int namespaceLineIndex, out string? namespaceName)
+        {
+            namespaceLineIndex = -1;
+            namespaceName = null;
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -712,17 +668,25 @@
                     continue;
                 }
 
-                if (TryParseFileScopedNamespace(trimmed, out string? namespaceName))
+                if (TryParseFileScopedNamespace(trimmed, out namespaceName))
                 {
-                    string body = string.Join(Environment.NewLine, lines[(i + 1)..]);
-                    string indentedBody = IndentLines(body, "    ");
-                    return $"namespace {namespaceName}{Environment.NewLine}{{{Environment.NewLine}{indentedBody}{Environment.NewLine}}}";
+                    namespaceLineIndex = i;
+                    return true;
                 }
 
-                break;
+                if (trimmed.StartsWith("using ", StringComparison.Ordinal) ||
+                    trimmed.StartsWith("//", StringComparison.Ordinal) ||
+                    trimmed.StartsWith("/*", StringComparison.Ordinal) ||
+                    trimmed.StartsWith("*", StringComparison.Ordinal) ||
+                    trimmed.StartsWith("#", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return false;
             }
 
-            return text;
+            return false;
         }
 
         private static bool TryParseFileScopedNamespace(string line, out string? namespaceName)
