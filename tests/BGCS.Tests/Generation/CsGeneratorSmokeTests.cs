@@ -101,8 +101,7 @@ public class CsGeneratorSmokeTests
                 LibName = "test",
                 GenerateExtensions = false,
                 MergeGeneratedFilesToSingleFile = true,
-                SingleFileOutputName = "AllBindings.cs",
-                DeleteSplitFilesAfterMerging = true
+                SingleFileOutputName = "AllBindings.cs"
             };
 
             CsCodeGenerator gen = new(cfg);

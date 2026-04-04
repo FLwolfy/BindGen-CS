@@ -22,7 +22,7 @@ internal static class Program
         Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load(configPath);
         Cpp2CCodeGenerator generator = new(config);
         
-        generator.Generate(entryFiles, outputPath, options.OutputFilterFiles.Count == 0 ? null : options.OutputFilterFiles);
+        generator.Generate(entryFiles, outputPath, options.AllowedHeaders.Count == 0 ? null : options.AllowedHeaders);
         
         foreach (var message in generator.Messages)
         {
@@ -51,9 +51,11 @@ internal static class Program
             options.EntryFiles = entryFiles;
         }
 
-        if (TryReadStringArray(root, "OutputFilterFiles", out var outputFilterFiles))
+        if (TryReadStringArray(root, "allowedHeaders", out var allowedHeaders)
+            || TryReadStringArray(root, "AllowedHeaders", out allowedHeaders)
+            || TryReadStringArray(root, "OutputFilterFiles", out allowedHeaders))
         {
-            options.OutputFilterFiles = outputFilterFiles;
+            options.AllowedHeaders = allowedHeaders;
         }
 
         return options;
@@ -82,6 +84,6 @@ internal static class Program
     {
         public List<string> EntryFiles { get; set; } = [];
 
-        public List<string> OutputFilterFiles { get; set; } = [];
+        public List<string> AllowedHeaders { get; set; } = [];
     }
 }

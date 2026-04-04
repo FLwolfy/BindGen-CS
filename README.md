@@ -11,6 +11,8 @@ This project is a **modified version of a forked [HexaGen](https://github.com/He
 - C++ to C bridge generation (`BGCS.Cpp2C`)
 - Config-driven generation with JSON config composition (`BaseConfig`)
 - Function-table and direct import modes for generated bindings
+- Optional single-file output with embedded runtime source (no external runtime project reference needed)
+- Single-file merge auto-removes split generated files
 - Configurable naming, filtering, and mapping pipelines
 - Runtime support libraries for generated interop code
 
@@ -53,6 +55,14 @@ Config composition (`BaseConfig`) is supported via:
   }
 }
 ```
+
+Single-file/runtime behavior summary:
+
+- When `MergeGeneratedFilesToSingleFile = true`, BGCS merges output into `SingleFileOutputName` and automatically removes split generated files.
+- When runtime is required:
+  - `IncludeRuntimeSourceInSingleFile = true`: runtime source is embedded into the merged binding file.
+  - `IncludeRuntimeSourceInSingleFile = false`: runtime source is emitted as standalone `Runtime.cs`.
+- Generated bindings do not emit `using BGCS.Runtime;`; runtime namespace is `config.Namespace + ".Runtime"`.
 
 ### Full Documents
 

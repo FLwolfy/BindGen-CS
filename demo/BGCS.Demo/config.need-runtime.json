@@ -1,0 +1,20 @@
+{
+  "BaseConfig": {
+    "Url": "file://config.base.json"
+  },
+  "ImportType": "FunctionTable",
+  "UseCustomContext": false,
+  "GenerateMetadata": false,
+  "IncludeRuntimeSourceInSingleFile": false,
+  "ApiName": "Test",
+  "Namespace": "BGCS.TestApp.Generated",
+  "LibName": "testlib",
+  "EntryFiles": [
+    "headers/basic_c.h",
+    "headers/cpp_extern_c.h"
+  ],
+  "allowedHeaders": [
+    "headers/basic_c.h",
+    "headers/cpp_extern_c.h"
+  ]
+}

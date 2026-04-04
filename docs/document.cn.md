@@ -2,7 +2,7 @@
 
 本文件提供：
 
-- 所有主要使用方式（BGCS / COM / Cpp2C / Demo App）
+- 所有主要使用方式（BGCS / Cpp2C）
 - 配置繼承（`BaseConfig`）行為
 - 完整配置欄位解釋（表格）
 
@@ -17,7 +17,7 @@
   "LibName": "mylib",
   "ImportType": "DllImport",
   "EntryFiles": ["headers/api.h"],
-  "OutputFilterFiles": ["headers/api.h"]
+  "allowedHeaders": ["headers/api.h"]
 }
 ```
 
@@ -29,10 +29,11 @@
 | `Namespace` | 生成命名空間 | `My.Generated` |
 | `LibName` | native library 名稱 | `mylib` |
 | `ImportType` | 匯入模式 | `DllImport` / `FunctionTable` |
+| `MergeGeneratedFilesToSingleFile` | 單檔輸出 | `true` / `false` |
+| `IncludeRuntimeSourceInSingleFile` | 單檔時內嵌 runtime 原始碼 | `true` / `false` |
+| `SingleFileOutputName` | 單檔名稱 | `Bindings.cs` |
 | `GenerateExtensions` | 是否生成 extension | `false`（保守）/`true` |
 | `DelegatesAsVoidPointer` | callback 策略 | `false`（typed）/`true` |
-| `MergeGeneratedFilesToSingleFile` | 單檔輸出 | `true` / `false` |
-| `SingleFileOutputName` | 單檔名稱 | `Bindings.cs` |
 
 ### 0.3 Cpp2C 常用最小配置
 
@@ -40,7 +41,7 @@
 {
   "NamePrefix": "BGCS_",
   "EntryFiles": ["include/demo.hpp"],
-  "OutputFilterFiles": ["include/demo.hpp"]
+  "allowedHeaders": ["include/demo.hpp"]
 }
 ```
 
@@ -84,11 +85,10 @@ using BGCS;
 
 var config = CsCodeGeneratorConfig.Load("config.json");
 var generator = new CsCodeGenerator(config);
-bool ok = generator.Generate(
-    new List<string> { "headers/entry.h" },
-    "Output",
-    allowedHeaders: new List<string> { "headers/entry.h", "headers/public_only.h" });
+bool ok = generator.Generate(new List<string> { "headers/entry.h" }, "Output");
 ```
+
+嚴格白名單輸出請使用 config 內的 `allowedHeaders`。
 
 ## 1.4 Cpp2C（C++ -> C bridge）
 
@@ -110,13 +110,6 @@ Cpp2C 預設行為（重要）：
 - 推薦：
   - 一般情境直接使用最短 API（如上）。
   - 只有在客製 pipeline 時才手動加/覆寫 steps。
-
-## 1.6 Demo App 方式
-
-- `demo/BGCS.Demo`:
-  - 讀 `config.json`，跑 BGCS / COM 生成流程
-- `demo/BGCS.Cpp2C.Demo`:
-  - 讀 `config.json`，跑 Cpp2C 生成流程
 
 ## 2. BaseConfig（配置繼承）
 
@@ -152,6 +145,9 @@ Cpp2C 預設行為（重要）：
 | `ApiName` | `string` | `""` | 生成 API 主類名稱。 |
 | `LibName` | `string` | `""` | Native library 名稱。 |
 | `ImportType` | `ImportType` | `FunctionTable` | 匯入方式（`DllImport` / `LibraryImport` / `FunctionTable`）。 |
+| `MergeGeneratedFilesToSingleFile` | `bool` | `false` | 是否合併成單檔。 |
+| `IncludeRuntimeSourceInSingleFile` | `bool` | `false` | 若需要 runtime，是否將 runtime 原始碼內嵌到單檔輸出。 |
+| `SingleFileOutputName` | `string` | `Bindings.cs` | 單檔模式輸出檔名。 |
 | `GenerateMetadata` | `bool` | `false` | 是否生成 `NativeName` 等 metadata 屬性。 |
 | `GenerateConstants` | `bool` | `true` | 常量生成開關。 |
 | `GenerateEnums` | `bool` | `true` | enum 生成開關。 |
@@ -161,9 +157,6 @@ Cpp2C 預設行為（重要）：
 | `GenerateTypes` | `bool` | `true` | type/struct/class 生成開關。 |
 | `GenerateDelegates` | `bool` | `true` | delegate 生成開關。 |
 | `OneFilePerType` | `bool` | `true` | 是否依型別拆檔。 |
-| `MergeGeneratedFilesToSingleFile` | `bool` | `false` | 是否合併成單檔。 |
-| `SingleFileOutputName` | `string` | `Bindings.cs` | 單檔模式輸出檔名。 |
-| `DeleteSplitFilesAfterMerging` | `bool` | `true` | 合併後是否刪除分檔。 |
 | `Usings` | `List<string>` | 由 defaults 初始化 | 附加 using 清單。 |
 
 ## 3.2 日誌、解析器與編譯參數
@@ -288,38 +281,28 @@ Cpp2C 預設行為（重要）：
 | `AdditionalArguments` | `List<string>` | `[]` | parser 額外引數。 |
 | `NamePrefix` | `string` | `""` | 生成 C API 前綴（例如 `BGCS_`）。 |
 
-## 5. App 層配置（Demo Program）
+## 5. 輸出形態說明
 
-`demo/BGCS.Demo` 與 `demo/BGCS.Cpp2C.Demo` 額外支援：
-
-| 欄位 | 說明 |
-|---|---|
-| `EntryFiles` | parser 入口檔清單。 |
-| `OutputFilterFiles` | strict 輸出白名單。 |
-
-`OutputFilterFiles` 行為：
-
-- `null`（未提供）: 預設使用 `EntryFiles`
-- `[]`（明確空陣列）: 不輸出任何 binding
-- 非空陣列: 只輸出該清單來源宣告
-
-## 6. 輸出形態說明
-
-## 6.1 BGCS 輸出
+### 5.1 BGCS 輸出
 
 - 預設分檔（Constants/Types/Functions/...）
 - 可選單檔合併（`MergeGeneratedFilesToSingleFile`）
+- 當 `MergeGeneratedFilesToSingleFile = true` 時，合併後會自動刪除分檔
+- runtime 輸出規則：
+  - 若需要 runtime 且 `IncludeRuntimeSourceInSingleFile = true`：runtime 會內嵌到單檔 bindings
+  - 若需要 runtime 且 `IncludeRuntimeSourceInSingleFile = false`：runtime 會輸出為獨立 `Runtime.cs`
+  - 生成 bindings 不會使用 `using BGCS.Runtime;`，runtime 命名空間為 `config.Namespace + ".Runtime"`
 
-## 6.2 Cpp2C 輸出
+### 5.2 Cpp2C 輸出
 
 - 固定多檔結構：
   - `Output/include/*`
   - `Output/src/*`
 - 不提供單一檔案輸出模式
 
-## 7. 常見配置策略
+## 6. 常見配置策略
 
-## 7.1 最小可用 BGCS
+### 6.1 最小可用 BGCS
 
 ```json
 {
@@ -330,7 +313,7 @@ Cpp2C 預設行為（重要）：
 }
 ```
 
-## 7.2 Base + 子配置分層
+### 6.2 Base + 子配置分層
 
 `config.base.json` 放共用：
 
@@ -344,9 +327,9 @@ Cpp2C 預設行為（重要）：
 - `ApiName`
 - `Namespace`
 - `EntryFiles`
-- `OutputFilterFiles`
+- `allowedHeaders`
 
-## 7.3 C++ 複雜 API 推薦流程
+### 6.3 C++ 複雜 API 推薦流程
 
 1. 先用 `BGCS.Cpp2C` 產 C bridge
 2. 再對 bridge headers 跑 `BGCS` 生 C# binding

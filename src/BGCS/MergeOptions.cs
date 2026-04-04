@@ -45,6 +45,7 @@
         AllowedTypedefs = 1L << 36,
         AllowedDelegates = 1L << 37,
         AllowedConstants = 1L << 38,
+        IncludeRuntimeSourceInSingleFile = 1L << 39,
         ConstantMappings = 1L << 40,
         EnumMappings = 1L << 41,
         FunctionMappings = 1L << 42,

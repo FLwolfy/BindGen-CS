@@ -2,7 +2,7 @@
 
 This folder contains two standalone demo apps extracted from the repository tests:
 
-- `BGCS.Demo`: C/C++/COM -> C# bindings demo via `BGCS`
+- `BGCS.Demo`: C/C++ -> C# bindings demo via `BGCS`
 - `BGCS.Cpp2C.Demo`: C++ -> C bridge generation demo via `BGCS.Cpp2C`
 
 ## Prerequisites
@@ -39,7 +39,7 @@ dotnet run -- --all Output
 Config notes:
 
 - `EntryFiles`: parser entry files
-- `OutputFilterFiles`: strict output whitelist
+- `allowedHeaders`: strict output whitelist
   - omitted/null: defaults to `EntryFiles`
   - empty array: output nothing
   - non-empty: output only listed files

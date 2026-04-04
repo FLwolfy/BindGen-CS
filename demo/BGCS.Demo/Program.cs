@@ -12,55 +12,19 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        if (args.Length > 0 && args[0].Equals("--all", StringComparison.OrdinalIgnoreCase))
-        {
-            return RunAllScenarios(args);
-        }
-
-        string configPath = args.Length > 0 ? args[0] : "config.json";
-        string outputPath = args.Length > 2 ? args[2] : "Output";
-        string? headerPathOverride = args.Length > 1 ? args[1] : null;
-
-        AppRunOptions options = LoadAppRunOptions(configPath);
-        List<string> entryFiles = ResolveEntryFiles(options.EntryFiles, headerPathOverride);
-        return RunSingle(configPath, entryFiles, outputPath, options.OutputFilterFiles);
-    }
-
-    private static int RunAllScenarios(string[] args)
-    {
-        string outputRoot = args.Length > 1 ? args[1] : "Output";
-        List<(string Name, string Config, List<string> Headers)> scenarios =
-        [
-            ("basic-c", "config.json", [Path.Combine("headers", "basic_c.h")]),
-            ("cpp-extern-c", "config.json", [Path.Combine("headers", "cpp_extern_c.h")])
-        ];
-
-        int failures = 0;
-
-        foreach (var scenario in scenarios)
-        {
-            string scenarioOutput = Path.Combine(outputRoot, scenario.Name);
-            Console.WriteLine($"== Running scenario: {scenario.Name} ==");
-            int code = RunSingle(scenario.Config, scenario.Headers, scenarioOutput, outputFilterFiles: null);
-            if (code != 0)
-            {
-                failures++;
-            }
-        }
-
-        Console.WriteLine(failures == 0
-            ? "All scenarios succeeded."
-            : $"Some scenarios failed. Count: {failures}");
-
-        return failures == 0 ? 0 : 1;
-    }
-
-    private static int RunSingle(string configPath, List<string> entryFiles, string outputPath, List<string>? outputFilterFiles)
-    {
+        string configPath = args.Length > 0 ? args[0] : "config.no-runtime.json";
+        // string configPath = args.Length > 0 ? args[0] : "config.need-runtime.json";
+        // string configPath = args.Length > 0 ? args[0] : "config.embed-runtime.json";
+        
+        string outputPath = args.Length > 1 ? args[1] : "Output";
         CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(configPath);
+        AppRunOptions options = LoadAppRunOptions(configPath);
 
         CsCodeGenerator generator = new(config);
-        bool success = generator.Generate(entryFiles, outputPath, outputFilterFiles);
+        List<string> entryFiles = options.EntryFiles is { Count: > 0 }
+            ? options.EntryFiles
+            : [Path.Combine("headers", "basic_c.h")];
+        bool success = generator.Generate(entryFiles, outputPath, options.AllowedHeaders);
         IReadOnlyList<LogMessage> messages = generator.Messages;
 
         foreach (var message in messages)
@@ -72,22 +36,13 @@ internal static class Program
             ? $"Generation succeeded. Output: {outputPath}"
             : $"Generation failed. Config: {configPath}, EntryFiles: {string.Join(", ", entryFiles)}");
 
-        return success ? 0 : 1;
-    }
-
-    private static List<string> ResolveEntryFiles(List<string>? configEntryFiles, string? headerPathOverride)
-    {
-        if (!string.IsNullOrWhiteSpace(headerPathOverride))
+        if (!success)
         {
-            return [headerPathOverride];
+            return 1;
         }
 
-        if (configEntryFiles is { Count: > 0 })
-        {
-            return configEntryFiles;
-        }
-
-        return [Path.Combine("headers", "basic_c.h")];
+        bool runtimeCheckPassed = ValidateRuntimeEmbedding(config, outputPath);
+        return runtimeCheckPassed ? 0 : 2;
     }
 
     private static AppRunOptions LoadAppRunOptions(string configPath)
@@ -107,9 +62,11 @@ internal static class Program
             options.EntryFiles = entryFiles;
         }
 
-        if (TryReadStringArray(root, "OutputFilterFiles", out var outputFilterFiles) || TryReadStringArray(root, "AllowedHeaders", out outputFilterFiles))
+        if (TryReadStringArray(root, "allowedHeaders", out var allowedHeaders)
+            || TryReadStringArray(root, "AllowedHeaders", out allowedHeaders)
+            || TryReadStringArray(root, "OutputFilterFiles", out allowedHeaders))
         {
-            options.OutputFilterFiles = outputFilterFiles;
+            options.AllowedHeaders = allowedHeaders;
         }
 
         return options;
@@ -134,11 +91,108 @@ internal static class Program
         return true;
     }
 
+    private static bool ValidateRuntimeEmbedding(CsCodeGeneratorConfig config, string outputPath)
+    {
+        string mergedPath = Path.Combine(outputPath, string.IsNullOrWhiteSpace(config.SingleFileOutputName) ? "Bindings.cs" : config.SingleFileOutputName);
+        string scanText;
+
+        if (File.Exists(mergedPath))
+        {
+            scanText = File.ReadAllText(mergedPath);
+        }
+        else
+        {
+            string[] files = Directory.Exists(outputPath)
+                ? Directory.GetFiles(outputPath, "*.cs", SearchOption.AllDirectories)
+                : [];
+            scanText = string.Join(Environment.NewLine, files.Select(File.ReadAllText));
+        }
+
+        string runtimeNamespace = GetRuntimeNamespace(config);
+        string runtimeUsing = $"using {runtimeNamespace};";
+        string guardSymbol = BuildRuntimeIncludeGuardSymbol(runtimeNamespace);
+
+        if (scanText.Contains("using BGCS.Runtime;", StringComparison.Ordinal))
+        {
+            Console.WriteLine("Runtime check failed: generated output must not contain `using BGCS.Runtime;`.");
+            return false;
+        }
+
+        bool needsRuntime = scanText.Contains(runtimeUsing, StringComparison.Ordinal)
+            || scanText.Contains("FunctionTable", StringComparison.Ordinal)
+            || scanText.Contains("[NativeName", StringComparison.Ordinal)
+            || scanText.Contains("Bitfield.", StringComparison.Ordinal)
+            || scanText.Contains("Pointer<", StringComparison.Ordinal)
+            || scanText.Contains("ConstPointer<", StringComparison.Ordinal);
+
+        if (!needsRuntime)
+        {
+            Console.WriteLine("Runtime check passed: this binding does not require runtime.");
+            return true;
+        }
+
+        if (config.IncludeRuntimeSourceInSingleFile)
+        {
+            bool hasEmbeddedRuntimeCode = File.Exists(mergedPath)
+                && File.ReadAllText(mergedPath).Contains($"namespace {runtimeNamespace}", StringComparison.Ordinal)
+                && File.ReadAllText(mergedPath).Contains($"#if !{guardSymbol}", StringComparison.Ordinal);
+            if (!hasEmbeddedRuntimeCode)
+            {
+                Console.WriteLine("Runtime check failed: when IncludeRuntimeSourceInSingleFile=true, Bindings.cs must include runtime namespace and include guard.");
+                return false;
+            }
+
+            Console.WriteLine("Runtime check passed: runtime is embedded in Bindings.cs with namespace `config.Namespace + .Runtime`.");
+            return true;
+        }
+
+        string runtimeFile = Path.Combine(outputPath, "Runtime.cs");
+        if (!File.Exists(runtimeFile))
+        {
+            Console.WriteLine("Runtime check failed: when IncludeRuntimeSourceInSingleFile=false and runtime is required, a standalone Runtime.cs must be generated.");
+            return false;
+        }
+
+        string runtimeText = File.ReadAllText(runtimeFile);
+        bool runtimeFileValid =
+            runtimeText.Contains($"namespace {runtimeNamespace}", StringComparison.Ordinal)
+            && runtimeText.Contains($"#if !{guardSymbol}", StringComparison.Ordinal);
+        if (!runtimeFileValid)
+        {
+            Console.WriteLine("Runtime check failed: Runtime.cs does not use the expected namespace/include guard.");
+            return false;
+        }
+
+        Console.WriteLine("Runtime check passed: runtime is generated as standalone Runtime.cs with namespace `config.Namespace + .Runtime`.");
+        return true;
+    }
+
+    private static string GetRuntimeNamespace(CsCodeGeneratorConfig config)
+    {
+        if (string.IsNullOrWhiteSpace(config.Namespace))
+        {
+            return "Generated.Runtime";
+        }
+
+        return $"{config.Namespace}.Runtime";
+    }
+
+    private static string BuildRuntimeIncludeGuardSymbol(string runtimeNamespace)
+    {
+        List<char> chars = new(runtimeNamespace.Length + 24);
+        chars.AddRange("BGCS_RUNTIME_INCLUDED_");
+        for (int i = 0; i < runtimeNamespace.Length; i++)
+        {
+            char c = runtimeNamespace[i];
+            chars.Add(char.IsLetterOrDigit(c) ? char.ToUpperInvariant(c) : '_');
+        }
+        return new string([.. chars]);
+    }
+
     private sealed class AppRunOptions
     {
         public List<string>? EntryFiles { get; set; }
 
-        public List<string>? OutputFilterFiles { get; set; }
-
+        public List<string>? AllowedHeaders { get; set; }
     }
 }

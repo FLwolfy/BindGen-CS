@@ -19,6 +19,26 @@
 
     public partial class CsCodeGenerator : BaseGenerator
     {
+        private const string RuntimeUsingDefault = "using BGCS.Runtime;";
+        private static readonly string[] runtimeUsageTokens =
+        [
+            "FunctionTable",
+            "LibraryLoader",
+            "NativeLibraryContext",
+            "INativeContext",
+            "Pointer<",
+            "ConstPointer<",
+            "Bitfield.",
+            "[NativeName",
+            "NativeName(",
+            "NativeNameType.",
+            "Bool8",
+            "Bool32",
+            "NativeCallback<",
+            "IGLContext",
+            "GLExtension",
+        ];
+
         protected FunctionGenerator funcGen = null!;
         protected PatchEngine patchEngine = new();
         private CsCodeGeneratorMetadata metadata = new();
@@ -202,7 +222,7 @@
             if (Directory.Exists(outputPath)) Directory.Delete(outputPath, true);
             Directory.CreateDirectory(outputPath);
 
-            bool singleFileOutputOnly = config.MergeGeneratedFilesToSingleFile && config.DeleteSplitFilesAfterMerging;
+            bool singleFileOutputOnly = config.MergeGeneratedFilesToSingleFile;
             string generationOutputPath = outputPath;
             if (singleFileOutputOnly)
             {
@@ -290,9 +310,31 @@
             LogInfo("Applying Post-Patches...");
             patchEngine.ApplyPostPatches(metadata, generationOutputPath, Directory.GetFiles(generationOutputPath, "*.*", SearchOption.AllDirectories).ToList());
 
+            bool runtimeRequired = DetectRuntimeRequirement(generationOutputPath, out string? runtimeReason);
+            if (runtimeRequired)
+            {
+                LogInfo($"Runtime requirement detected: {runtimeReason}");
+            }
+            else
+            {
+                LogInfo("Runtime requirement detected: none");
+            }
+            RewriteRuntimeUsings(generationOutputPath, runtimeRequired);
+
             if (config.MergeGeneratedFilesToSingleFile)
             {
-                MergeGeneratedFilesToSingleFile(generationOutputPath, outputPath);
+                MergeGeneratedFilesToSingleFile(generationOutputPath, outputPath, runtimeRequired);
+                if (runtimeRequired && !config.IncludeRuntimeSourceInSingleFile)
+                {
+                    WriteStandaloneRuntimeFile(outputPath);
+                }
+            }
+            else
+            {
+                if (runtimeRequired)
+                {
+                    WriteStandaloneRuntimeFile(outputPath);
+                }
             }
 
             if (singleFileOutputOnly && Directory.Exists(generationOutputPath))
@@ -303,7 +345,7 @@
             return true;
         }
 
-        protected virtual void MergeGeneratedFilesToSingleFile(string generationOutputPath, string outputPath)
+        protected virtual void MergeGeneratedFilesToSingleFile(string generationOutputPath, string outputPath, bool runtimeRequired)
         {
             string mergedFileName = string.IsNullOrWhiteSpace(config.SingleFileOutputName) ? "Bindings.cs" : config.SingleFileOutputName;
             string mergedPath = Path.Combine(outputPath, mergedFileName);
@@ -349,6 +391,11 @@
                 }
             }
 
+            if (runtimeRequired && config.IncludeRuntimeSourceInSingleFile)
+            {
+                TryAppendRuntimeSources(orderedUsings, usingSet, bodies);
+            }
+
             StringBuilder builder = new();
             if (!string.IsNullOrWhiteSpace(headerBanner))
             {
@@ -378,15 +425,344 @@
             File.WriteAllText(mergedPath, builder.ToString());
             LogInfo($"Merged generated files into: {mergedPath}");
 
-            if (config.DeleteSplitFilesAfterMerging)
+            for (int i = 0; i < files.Count; i++)
             {
-                for (int i = 0; i < files.Count; i++)
+                File.Delete(files[i]);
+            }
+
+            DeleteEmptyDirectories(generationOutputPath);
+        }
+
+        private void TryAppendRuntimeSources(List<string> orderedUsings, HashSet<string> usingSet, List<string> bodies)
+        {
+            IReadOnlyList<(string Name, string Content)> runtimeSources = GetEmbeddedRuntimeSources();
+            if (runtimeSources.Count == 0)
+            {
+                runtimeSources = GetRuntimeSourcesFromFileSystem();
+            }
+
+            if (runtimeSources.Count == 0)
+            {
+                LogWarn("Single-file runtime embedding is enabled, but BGCS.Runtime sources were not found. Output still requires BGCS.Runtime.");
+                return;
+            }
+
+            List<string> runtimeBodies = [];
+            for (int i = 0; i < runtimeSources.Count; i++)
+            {
+                string normalizedRuntimeText = NormalizeRuntimeTextForMerge(RewriteRuntimeNamespace(runtimeSources[i].Content));
+                ParsedMergedFile parsedRuntime = ParseMergedFile(normalizedRuntimeText);
+
+                for (int j = 0; j < parsedRuntime.Usings.Count; j++)
                 {
-                    File.Delete(files[i]);
+                    string usingLine = parsedRuntime.Usings[j];
+                    if (usingSet.Add(usingLine))
+                    {
+                        orderedUsings.Add(usingLine);
+                    }
                 }
 
-                DeleteEmptyDirectories(generationOutputPath);
+                if (!string.IsNullOrWhiteSpace(parsedRuntime.Body))
+                {
+                    runtimeBodies.Add(parsedRuntime.Body.Trim());
+                }
             }
+
+            if (runtimeBodies.Count > 0)
+            {
+                string combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", runtimeBodies);
+                bodies.Add(WrapWithIncludeGuard(combinedBody));
+            }
+        }
+
+        private bool DetectRuntimeRequirement(string generationOutputPath, out string? reason)
+        {
+            reason = null;
+            string[] files = Directory.GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories);
+            for (int i = 0; i < files.Length; i++)
+            {
+                string path = files[i];
+                string text = File.ReadAllText(path);
+                text = text.Replace(RuntimeUsingDefault, string.Empty, StringComparison.Ordinal);
+
+                for (int j = 0; j < runtimeUsageTokens.Length; j++)
+                {
+                    if (text.Contains(runtimeUsageTokens[j], StringComparison.Ordinal))
+                    {
+                        reason = $"{Path.GetFileName(path)} contains `{runtimeUsageTokens[j]}`";
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void RewriteRuntimeUsings(string generationOutputPath, bool runtimeRequired)
+        {
+            string[] files = Directory.GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories);
+            string runtimeUsingTarget = $"using {GetRuntimeNamespace()};";
+
+            for (int i = 0; i < files.Length; i++)
+            {
+                string path = files[i];
+                string text = File.ReadAllText(path);
+                if (!text.Contains(RuntimeUsingDefault, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (runtimeRequired)
+                {
+                    text = text.Replace(RuntimeUsingDefault, runtimeUsingTarget, StringComparison.Ordinal);
+                }
+                else
+                {
+                    text = text.Replace(RuntimeUsingDefault, string.Empty, StringComparison.Ordinal);
+                }
+
+                File.WriteAllText(path, text);
+            }
+        }
+
+        private void WriteStandaloneRuntimeFile(string outputPath)
+        {
+            IReadOnlyList<(string Name, string Content)> runtimeSources = GetEmbeddedRuntimeSources();
+            if (runtimeSources.Count == 0)
+            {
+                runtimeSources = GetRuntimeSourcesFromFileSystem();
+            }
+
+            if (runtimeSources.Count == 0)
+            {
+                LogWarn("Runtime is required but no runtime sources were found.");
+                return;
+            }
+
+            List<string> orderedUsings = [];
+            HashSet<string> usingSet = new(StringComparer.Ordinal);
+            List<string> bodies = [];
+            for (int i = 0; i < runtimeSources.Count; i++)
+            {
+                string normalizedRuntimeText = NormalizeRuntimeTextForMerge(RewriteRuntimeNamespace(runtimeSources[i].Content));
+                ParsedMergedFile parsedRuntime = ParseMergedFile(normalizedRuntimeText);
+
+                for (int j = 0; j < parsedRuntime.Usings.Count; j++)
+                {
+                    string usingLine = parsedRuntime.Usings[j];
+                    if (usingSet.Add(usingLine))
+                    {
+                        orderedUsings.Add(usingLine);
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(parsedRuntime.Body))
+                {
+                    bodies.Add(parsedRuntime.Body.Trim());
+                }
+            }
+
+            if (bodies.Count == 0)
+            {
+                return;
+            }
+
+            string runtimePath = Path.Combine(outputPath, "Runtime.cs");
+            StringBuilder builder = new();
+            for (int i = 0; i < orderedUsings.Count; i++)
+            {
+                builder.AppendLine(orderedUsings[i]);
+            }
+            if (orderedUsings.Count > 0)
+            {
+                builder.AppendLine();
+            }
+
+            string combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", bodies);
+            builder.AppendLine(WrapWithIncludeGuard(combinedBody));
+            File.WriteAllText(runtimePath, builder.ToString());
+        }
+
+        private string WrapWithIncludeGuard(string body)
+        {
+            string symbol = BuildRuntimeIncludeGuardSymbol();
+            return $"#if !{symbol}{Environment.NewLine}#define {symbol}{Environment.NewLine}{body}{Environment.NewLine}#endif";
+        }
+
+        private string BuildRuntimeIncludeGuardSymbol()
+        {
+            string source = GetRuntimeNamespace();
+            StringBuilder symbol = new("BGCS_RUNTIME_INCLUDED_");
+            for (int i = 0; i < source.Length; i++)
+            {
+                char c = source[i];
+                symbol.Append(char.IsLetterOrDigit(c) ? char.ToUpperInvariant(c) : '_');
+            }
+            return symbol.ToString();
+        }
+
+        private string GetRuntimeNamespace()
+        {
+            if (string.IsNullOrWhiteSpace(config.Namespace))
+            {
+                return "Generated.Runtime";
+            }
+
+            return $"{config.Namespace}.Runtime";
+        }
+
+        private string RewriteRuntimeNamespace(string text)
+        {
+            string runtimeNamespace = GetRuntimeNamespace();
+            text = text.Replace("namespace BGCS.Runtime;", $"namespace {runtimeNamespace};", StringComparison.Ordinal);
+            text = text.Replace("namespace BGCS.Runtime\r\n", $"namespace {runtimeNamespace}\r\n", StringComparison.Ordinal);
+            text = text.Replace("namespace BGCS.Runtime\n", $"namespace {runtimeNamespace}\n", StringComparison.Ordinal);
+            return text;
+        }
+
+        private static IReadOnlyList<(string Name, string Content)> GetEmbeddedRuntimeSources()
+        {
+            const string prefix = "BGCS.RuntimeSources.";
+            var assembly = typeof(CsCodeGenerator).Assembly;
+            string[] resources = assembly
+                .GetManifestResourceNames()
+                .Where(x => x.StartsWith(prefix, StringComparison.Ordinal) && x.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (resources.Length == 0)
+            {
+                return [];
+            }
+
+            List<(string Name, string Content)> sources = new(resources.Length);
+            for (int i = 0; i < resources.Length; i++)
+            {
+                string resource = resources[i];
+                using Stream? stream = assembly.GetManifestResourceStream(resource);
+                if (stream == null)
+                {
+                    continue;
+                }
+
+                using StreamReader reader = new(stream);
+                sources.Add((resource, reader.ReadToEnd()));
+            }
+
+            return sources;
+        }
+
+        private IReadOnlyList<(string Name, string Content)> GetRuntimeSourcesFromFileSystem()
+        {
+            string? runtimeDirectory = ResolveRuntimeSourceDirectory();
+            if (runtimeDirectory == null)
+            {
+                return [];
+            }
+
+            string[] runtimeFiles = Directory
+                .GetFiles(runtimeDirectory, "*.cs", SearchOption.TopDirectoryOnly)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            List<(string Name, string Content)> sources = new(runtimeFiles.Length);
+            for (int i = 0; i < runtimeFiles.Length; i++)
+            {
+                string path = runtimeFiles[i];
+                sources.Add((Path.GetFileName(path), File.ReadAllText(path)));
+            }
+
+            return sources;
+        }
+
+        private static string? ResolveRuntimeSourceDirectory()
+        {
+            HashSet<string> roots = [];
+            roots.Add(Directory.GetCurrentDirectory());
+            roots.Add(AppContext.BaseDirectory);
+
+            foreach (string root in roots)
+            {
+                string? dir = root;
+                while (!string.IsNullOrWhiteSpace(dir))
+                {
+                    string candidate = Path.Combine(dir, "src", "BGCS.Runtime");
+                    if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "NativeNameAttribute.cs")))
+                    {
+                        return candidate;
+                    }
+
+                    dir = Path.GetDirectoryName(dir);
+                }
+            }
+
+            return null;
+        }
+
+        private static string NormalizeRuntimeTextForMerge(string text)
+        {
+            string normalized = text.Replace("\r\n", "\n");
+            string[] lines = normalized.Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string trimmed = lines[i].Trim();
+                if (trimmed.Length == 0)
+                {
+                    continue;
+                }
+
+                if (TryParseFileScopedNamespace(trimmed, out string? namespaceName))
+                {
+                    string body = string.Join(Environment.NewLine, lines[(i + 1)..]);
+                    string indentedBody = IndentLines(body, "    ");
+                    return $"namespace {namespaceName}{Environment.NewLine}{{{Environment.NewLine}{indentedBody}{Environment.NewLine}}}";
+                }
+
+                break;
+            }
+
+            return text;
+        }
+
+        private static bool TryParseFileScopedNamespace(string line, out string? namespaceName)
+        {
+            namespaceName = null;
+            const string prefix = "namespace ";
+            if (!line.StartsWith(prefix, StringComparison.Ordinal) || !line.EndsWith(';'))
+            {
+                return false;
+            }
+
+            string candidate = line[prefix.Length..^1].Trim();
+            if (candidate.Length == 0)
+            {
+                return false;
+            }
+
+            namespaceName = candidate;
+            return true;
+        }
+
+        private static string IndentLines(string text, string indent)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            string[] lines = text.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Length == 0)
+                {
+                    continue;
+                }
+
+                lines[i] = indent + lines[i];
+            }
+
+            return string.Join(Environment.NewLine, lines);
         }
 
         private static ParsedMergedFile ParseMergedFile(string text)
@@ -577,8 +953,11 @@
             }
 
             overload = new(cppFunction.Name, csName, function.Comment, "", kind, new(returnCsName, returnKind));
-            overload.Attributes.Add($"[NativeName(NativeNameType.Func, \"{cppFunction.Name}\")]");
-            overload.Attributes.Add($"[return: NativeName(NativeNameType.Type, \"{cppFunction.ReturnType.GetDisplayName()}\")]");
+            if (config.GenerateMetadata)
+            {
+                overload.Attributes.Add($"[NativeName(NativeNameType.Func, \"{cppFunction.Name}\")]");
+                overload.Attributes.Add($"[return: NativeName(NativeNameType.Type, \"{cppFunction.ReturnType.GetDisplayName()}\")]");
+            }
             for (int j = 0; j < cppFunction.Parameters.Count; j++)
             {
                 var cppParameter = cppFunction.Parameters[j];
@@ -590,8 +969,11 @@
                 CsType csType = new(paramCsTypeName, primKind);
 
                 CsParameterInfo csParameter = new(paramCsName, cppParameter.Type, csType, direction);
-                csParameter.Attributes.Add($"[NativeName(NativeNameType.Param, \"{cppParameter.Name}\")]");
-                csParameter.Attributes.Add($"[NativeName(NativeNameType.Type, \"{cppParameter.Type.GetDisplayName()}\")]");
+                if (config.GenerateMetadata)
+                {
+                    csParameter.Attributes.Add($"[NativeName(NativeNameType.Param, \"{cppParameter.Name}\")]");
+                    csParameter.Attributes.Add($"[NativeName(NativeNameType.Type, \"{cppParameter.Type.GetDisplayName()}\")]");
+                }
                 overload.Parameters.Add(csParameter);
                 if (config.TryGetDefaultValue(cppFunction.Name, cppParameter, false, out var defaultValue))
                 {
@@ -623,8 +1005,11 @@
                 CsType csType = new(paramCsTypeName, primKind);
 
                 CsParameterInfo csParameter = new(paramCsName, cppParameter.Type, csType, direction);
-                csParameter.Attributes.Add($"[NativeName(NativeNameType.Param, \"{cppParameter.Name}\")]");
-                csParameter.Attributes.Add($"[NativeName(NativeNameType.Type, \"{cppParameter.Type.GetDisplayName()}\")]");
+                if (config.GenerateMetadata)
+                {
+                    csParameter.Attributes.Add($"[NativeName(NativeNameType.Param, \"{cppParameter.Name}\")]");
+                    csParameter.Attributes.Add($"[NativeName(NativeNameType.Type, \"{cppParameter.Type.GetDisplayName()}\")]");
+                }
                 parameters.Add(csParameter);
             }
 

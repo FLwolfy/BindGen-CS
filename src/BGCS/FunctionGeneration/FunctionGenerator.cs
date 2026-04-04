@@ -377,6 +377,11 @@
 
         public virtual void GenerateAttributes(CppParameter cppParameter, Direction direction, CsParameterInfo parameter, List<string> attributes)
         {
+            if (!settings.GenerateMetadata)
+            {
+                return;
+            }
+
             string paramAttr = $"[NativeName(NativeNameType.Param, \"{cppParameter.Name}\")]";
             string typeAttr = $"[NativeName(NativeNameType.Type, \"{cppParameter.Type.GetDisplayName()}\")]";
             attributes.Add(paramAttr);

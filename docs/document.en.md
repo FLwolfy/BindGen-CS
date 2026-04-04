@@ -2,7 +2,7 @@
 
 This document provides:
 
-- All major usage methods (`BGCS` / COM / `BGCS.Cpp2C` / Demo apps)
+- All major usage methods (`BGCS` / `BGCS.Cpp2C`)
 - `BaseConfig` composition behavior
 - Detailed configuration explanations in table form
 
@@ -17,7 +17,7 @@ This document provides:
   "LibName": "mylib",
   "ImportType": "DllImport",
   "EntryFiles": ["headers/api.h"],
-  "OutputFilterFiles": ["headers/api.h"]
+  "allowedHeaders": ["headers/api.h"]
 }
 ```
 
@@ -29,10 +29,11 @@ This document provides:
 | `Namespace` | Generated namespace | `My.Generated` |
 | `LibName` | Native library name | `mylib` |
 | `ImportType` | Import mode | `DllImport` / `FunctionTable` |
+| `MergeGeneratedFilesToSingleFile` | Single-file output mode | `true` / `false` |
+| `IncludeRuntimeSourceInSingleFile` | Embed runtime source in single-file mode | `true` / `false` |
+| `SingleFileOutputName` | Merged file name | `Bindings.cs` |
 | `GenerateExtensions` | Generate extension helpers | `false` (strict) / `true` |
 | `DelegatesAsVoidPointer` | Callback pointer strategy | `false` (typed) / `true` |
-| `MergeGeneratedFilesToSingleFile` | Single-file output mode | `true` / `false` |
-| `SingleFileOutputName` | Merged file name | `Bindings.cs` |
 
 ### 0.3 Cpp2C minimal common config
 
@@ -40,7 +41,7 @@ This document provides:
 {
   "NamePrefix": "BGCS_",
   "EntryFiles": ["include/demo.hpp"],
-  "OutputFilterFiles": ["include/demo.hpp"]
+  "allowedHeaders": ["include/demo.hpp"]
 }
 ```
 
@@ -84,11 +85,10 @@ using BGCS;
 
 var config = CsCodeGeneratorConfig.Load("config.json");
 var generator = new CsCodeGenerator(config);
-bool ok = generator.Generate(
-    new List<string> { "headers/entry.h" },
-    "Output",
-    allowedHeaders: new List<string> { "headers/entry.h", "headers/public_only.h" });
+bool ok = generator.Generate(new List<string> { "headers/entry.h" }, "Output");
 ```
+
+Use `allowedHeaders` in config for strict whitelist control.
 
 ### 1.4 Cpp2C (C++ -> C bridge)
 
@@ -110,13 +110,6 @@ Cpp2C default behavior (important):
 - Recommendation:
   - Use the minimal API above for normal scenarios.
   - Manually add/override steps only for custom pipelines.
-
-### 1.6 Demo app style
-
-- `demo/BGCS.Demo`
-- `demo/BGCS.Cpp2C.Demo`
-
-Both support config-based execution with `EntryFiles` and `OutputFilterFiles`.
 
 ## 2. BaseConfig Composition
 
@@ -152,6 +145,9 @@ Sources:
 | `ApiName` | `string` | `""` | Main generated API type name |
 | `LibName` | `string` | `""` | Native library name |
 | `ImportType` | `ImportType` | `FunctionTable` | Import mode (`DllImport` / `LibraryImport` / `FunctionTable`) |
+| `MergeGeneratedFilesToSingleFile` | `bool` | `false` | Merge all generated `.cs` into one |
+| `IncludeRuntimeSourceInSingleFile` | `bool` | `false` | If runtime is required, embed runtime source into merged single file |
+| `SingleFileOutputName` | `string` | `Bindings.cs` | Single-file output name |
 | `GenerateMetadata` | `bool` | `false` | Emit metadata attributes |
 | `GenerateConstants` | `bool` | `true` | Constant generation switch |
 | `GenerateEnums` | `bool` | `true` | Enum generation switch |
@@ -161,9 +157,6 @@ Sources:
 | `GenerateTypes` | `bool` | `true` | Type generation switch |
 | `GenerateDelegates` | `bool` | `true` | Delegate generation switch |
 | `OneFilePerType` | `bool` | `true` | Per-type split output |
-| `MergeGeneratedFilesToSingleFile` | `bool` | `false` | Merge all generated `.cs` into one |
-| `SingleFileOutputName` | `string` | `Bindings.cs` | Single-file output name |
-| `DeleteSplitFilesAfterMerging` | `bool` | `true` | Remove split files after merge |
 | `Usings` | `List<string>` | defaults | Additional using directives |
 
 ### 3.2 Logging, parser, and compiler arguments
@@ -261,29 +254,19 @@ Source:
 | `AdditionalArguments` | `List<string>` | `[]` | Extra parser arguments |
 | `NamePrefix` | `string` | `""` | Prefix for generated C API names |
 
-## 5. Demo App-level Config Keys
+## 5. Output Forms
 
-`demo/BGCS.Demo` and `demo/BGCS.Cpp2C.Demo` additionally use:
-
-| Field | Description |
-|---|---|
-| `EntryFiles` | Parser entry files |
-| `OutputFilterFiles` | Strict output whitelist |
-
-`OutputFilterFiles` behavior:
-
-- `null` (not provided): defaults to `EntryFiles`
-- `[]` (explicit empty array): output nothing
-- non-empty array: output only declarations from listed files
-
-## 6. Output Forms
-
-### 6.1 BGCS output
+### 5.1 BGCS output
 
 - Split files by generation steps/types
 - Optional single-file merge (`MergeGeneratedFilesToSingleFile`)
+- When `MergeGeneratedFilesToSingleFile = true`, split generated files are automatically removed after merge
+- Runtime output policy:
+  - If runtime is required and `IncludeRuntimeSourceInSingleFile = true`: runtime source is embedded into merged bindings
+  - If runtime is required and `IncludeRuntimeSourceInSingleFile = false`: runtime is emitted as standalone `Runtime.cs`
+  - Generated bindings do not use `using BGCS.Runtime;`; runtime namespace is `config.Namespace + ".Runtime"`
 
-### 6.2 Cpp2C output
+### 5.2 Cpp2C output
 
 - Always multi-file bridge layout:
   - `Output/include/*`
@@ -291,12 +274,12 @@ Source:
 
 No single-file output mode.
 
-## 7. Recommended Configuration Strategy
+## 6. Recommended Configuration Strategy
 
 1. Put shared policies into `config.base.json`:
    - import mode, naming policies, common parser arguments
 2. Keep child configs minimal:
-   - `ApiName`, `Namespace`, `EntryFiles`, `OutputFilterFiles`
+   - `ApiName`, `Namespace`, `EntryFiles`, `allowedHeaders`
 3. For complex C++ APIs:
    - generate C bridge via `BGCS.Cpp2C` first
    - then generate C# bindings from bridge headers via `BGCS`

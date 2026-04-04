@@ -311,7 +311,7 @@
                     }
                 }
 
-                if (attributes)
+                if (attributes && GenerateMetadata)
                 {
                     argumentBuilder.Append($"[NativeName(NativeNameType.Param, \"{cppParameter.Name}\")] ");
                     argumentBuilder.Append($"[NativeName(NativeNameType.Type, \"{cppParameter.Type.GetDisplayName()}\")] ");

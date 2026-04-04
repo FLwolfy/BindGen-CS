@@ -153,7 +153,6 @@ public class GeneratedCodeCompilationMatrixTests
                 Configure = cfg =>
                 {
                     cfg.MergeGeneratedFilesToSingleFile = true;
-                    cfg.DeleteSplitFilesAfterMerging = true;
                     cfg.SingleFileOutputName = "Bindings.cs";
                 }
             }

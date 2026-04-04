@@ -242,10 +242,10 @@
         public string SingleFileOutputName { get; set; } = "Bindings.cs";
 
         /// <summary>
-        /// Delete original split files after writing merged file when <see cref="MergeGeneratedFilesToSingleFile"/> is enabled. (Default: <see langword="true"/>)
+        /// Embed BGCS runtime source files into the merged single-file output, so the generated bindings do not require a separate BGCS.Runtime reference. (Default: <see langword="false"/>)
         /// </summary>
-        [DefaultValue(true)]
-        public bool DeleteSplitFilesAfterMerging { get; set; } = true;
+        [DefaultValue(false)]
+        public bool IncludeRuntimeSourceInSingleFile { get; set; } = false;
 
         /// <summary>
         /// This option controls the bool type eg. 8Bit Bool and 32Bit Bool. (Default: <see cref="BoolType.Bool8"/>)

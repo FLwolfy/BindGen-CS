@@ -86,6 +86,11 @@
                 OneFilePerType = baseConfig.OneFilePerType;
             }
 
+            if (mergeOptions.HasFlag(MergeOptions.IncludeRuntimeSourceInSingleFile))
+            {
+                IncludeRuntimeSourceInSingleFile = baseConfig.IncludeRuntimeSourceInSingleFile;
+            }
+
             if (mergeOptions.HasFlag(MergeOptions.BoolType))
             {
                 BoolType = baseConfig.BoolType;

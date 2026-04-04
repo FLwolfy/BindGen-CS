@@ -5,7 +5,7 @@
   "EntryFiles": [
     "include/demo.hpp"
   ],
-  "OutputFilterFiles": [
+  "allowedHeaders": [
     "include/demo.hpp",
     "include/demo_common.hpp"
   ]

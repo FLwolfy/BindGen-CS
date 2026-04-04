@@ -2,15 +2,16 @@
   "BaseConfig": {
     "Url": "file://config.base.json"
   },
-  "ImportType": "DllImport",
+  "ImportType": "FunctionTable",
   "ApiName": "Test",
   "Namespace": "BGCS.TestApp.Generated",
   "LibName": "testlib",
+  "IncludeRuntimeSourceInSingleFile": true,
   "EntryFiles": [
     "headers/basic_c.h",
     "headers/cpp_extern_c.h"
   ],
-  "OutputFilterFiles": [
+  "allowedHeaders": [
     "headers/basic_c.h",
     "headers/cpp_extern_c.h"
   ]
