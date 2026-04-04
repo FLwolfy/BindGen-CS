@@ -47,7 +47,6 @@
             CustomEnums = [];
             VaryingTypes = [];
 
-            IIDMappings = [];
             ConstantMappings = [];
             EnumMappings = [];
             FunctionMappings = [];
@@ -198,7 +197,7 @@
         public bool GenerateEnums { get; set; } = true;
 
         /// <summary>
-        /// Enables generation for extensions, this option is very useful if you have an handle type or COM objects. (Default: <see langword="true"/>)
+        /// Enables generation for extensions, this option is very useful if you have a handle type. (Default: <see langword="true"/>)
         /// </summary>
         [DefaultValue(true)]
         public bool GenerateExtensions { get; set; } = true;
@@ -216,7 +215,7 @@
         public bool GenerateHandles { get; set; } = true;
 
         /// <summary>
-        /// Enables generation for types. This includes COM objects and normal C-Structs. (Default: <see langword="true"/>)
+        /// Enables generation for types. This includes normal C structs. (Default: <see langword="true"/>)
         /// </summary>
         [DefaultValue(true)]
         public bool GenerateTypes { get; set; } = true;

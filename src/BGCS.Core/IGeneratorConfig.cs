@@ -41,7 +41,6 @@
         HashSet<string> IgnoredParts { get; set; }
         HashSet<string> IgnoredTypedefs { get; set; }
         HashSet<string> IgnoredTypes { get; set; }
-        Dictionary<string, string> IIDMappings { get; set; }
         HashSet<string> Keywords { get; set; }
         Dictionary<string, string> KnownConstantNames { get; set; }
         Dictionary<string, List<string>> KnownConstructors { get; set; }

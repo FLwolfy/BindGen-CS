@@ -65,17 +65,7 @@ var generator = new CsCodeGenerator(config);
 bool ok = generator.Generate("headers/api.h", "Output");
 ```
 
-### 1.2 BGCS COM path
-
-```csharp
-using BGCS;
-
-var config = CsCodeGeneratorConfig.Load("config.com.json");
-var generator = new CsComCodeGenerator(config);
-bool ok = generator.Generate("headers/com_like.h", "Output");
-```
-
-### 1.3 BGCS with multiple entry files
+### 1.2 BGCS with multiple entry files
 
 ```csharp
 using BGCS;
@@ -87,7 +77,7 @@ bool ok = generator.Generate(
     "Output");
 ```
 
-### 1.4 BGCS strict output file filter
+### 1.3 BGCS strict output file filter
 
 ```csharp
 using BGCS;
@@ -100,7 +90,7 @@ bool ok = generator.Generate(
     allowedHeaders: new List<string> { "headers/entry.h", "headers/public_only.h" });
 ```
 
-### 1.5 Cpp2C (C++ -> C bridge)
+### 1.4 Cpp2C (C++ -> C bridge)
 
 ```csharp
 using BGCS.Cpp2C;
@@ -243,7 +233,7 @@ Sources:
 | Group | Main fields |
 |---|---|
 | Known naming/semantic tables | `KnownConstantNames`, `KnownEnumValueNames`, `KnownEnumPrefixes`, `KnownExtensionPrefixes`, `KnownExtensionNames`, `KnownDefaultValueNames`, `KnownConstructors`, `KnownMemberFunctions`, `VaryingTypes`, `CustomEnums` |
-| Mapping tables | `IIDMappings`, `ConstantMappings`, `EnumMappings`, `FunctionMappings`, `HandleMappings`, `ClassMappings`, `DelegateMappings`, `ArrayMappings`, `NameMappings`, `TypeMappings`, `TypedefToEnumMappings`, `FunctionAliasMappings` |
+| Mapping tables | `ConstantMappings`, `EnumMappings`, `FunctionMappings`, `HandleMappings`, `ClassMappings`, `DelegateMappings`, `ArrayMappings`, `NameMappings`, `TypeMappings`, `TypedefToEnumMappings`, `FunctionAliasMappings` |
 
 ### 3.8 Programmatic-only delegates
 
@@ -279,7 +269,6 @@ Source:
 |---|---|
 | `EntryFiles` | Parser entry files |
 | `OutputFilterFiles` | Strict output whitelist |
-| `UseComGenerator` | (`BGCS.Demo` only) switch to `CsComCodeGenerator` |
 
 `OutputFilterFiles` behavior:
 

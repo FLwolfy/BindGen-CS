@@ -17,7 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="../../src/BGCS/BGCS.csproj" />
     <ProjectReference Include="../../src/BGCS.Runtime/BGCS.Runtime.csproj" />
-    <ProjectReference Include="../../src/BGCS.Runtime.COM/BGCS.Runtime.COM.csproj" />
   </ItemGroup>
 
 </Project>

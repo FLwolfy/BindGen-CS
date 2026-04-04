@@ -26,7 +26,7 @@ public class GeneratedCodeCompilationTests
             int test_fn(int value);
             """;
 
-        var run = RunGenerator(header, useComGenerator: false);
+        var run = RunGenerator(header);
         try
         {
             AssertGeneratorSucceeded(run.Ok, run.Messages);
@@ -43,54 +43,6 @@ public class GeneratedCodeCompilationTests
 
             Assert.NotNull(method);
             Assert.Equal(typeof(int), method!.ReturnType);
-        }
-        finally
-        {
-            Cleanup(run.TempDirectory);
-        }
-    }
-
-    [Fact]
-    public void Generate_ComBindings_OutputShouldCompileAndContainExpectedSymbols()
-    {
-        string header = """
-            #define DEFINE_GUID(name, l, w1, w2, b1,b2,b3,b4,b5,b6,b7,b8)
-            DEFINE_GUID(IID_IMyInterface, 0x12345678, 0x1234, 0x5678, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78);
-
-            typedef struct IMyInterfaceVtbl
-            {
-                void* QueryInterface;
-                void* AddRef;
-                void* Release;
-            } IMyInterfaceVtbl;
-
-            typedef struct IMyInterface
-            {
-                IMyInterfaceVtbl* lpVtbl;
-            } IMyInterface;
-
-            void test_use_com(IMyInterface* value);
-            """;
-
-        var run = RunGenerator(header, useComGenerator: true);
-        try
-        {
-            AssertGeneratorSucceeded(run.Ok, run.Messages);
-
-            Assembly asm = CompileGeneratedSources(run.OutputPath, "BGCS.Generated.COM");
-            Type? comType = asm.GetType("Compile.Generated.IMyInterface");
-            Assert.NotNull(comType);
-            Assert.Contains(
-                comType!.GetFields(BindingFlags.Public | BindingFlags.Instance),
-                x => x.FieldType.IsPointer || x.FieldType == typeof(nint));
-
-            MethodInfo? method = asm
-                .GetTypes()
-                .SelectMany(x => x.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance))
-                .FirstOrDefault(x => x.Name == "TestUseComNative");
-
-            Assert.NotNull(method);
-            Assert.Equal(typeof(void), method!.ReturnType);
         }
         finally
         {
@@ -157,7 +109,7 @@ public class GeneratedCodeCompilationTests
         Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
     }
 
-    private static (bool Ok, string TempDirectory, string OutputPath, IReadOnlyList<LogMessage> Messages) RunGenerator(string headerText, bool useComGenerator)
+    private static (bool Ok, string TempDirectory, string OutputPath, IReadOnlyList<LogMessage> Messages) RunGenerator(string headerText)
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-compile-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -176,7 +128,7 @@ public class GeneratedCodeCompilationTests
             DelegatesAsVoidPointer = false
         };
 
-        BaseGenerator generator = useComGenerator ? new CsComCodeGenerator(cfg) : new CsCodeGenerator(cfg);
+        BaseGenerator generator = new CsCodeGenerator(cfg);
 
         CppParserOptions parserOptions = new()
         {
@@ -189,9 +141,7 @@ public class GeneratedCodeCompilationTests
         };
         parserOptions.AdditionalArguments.Add("-undef");
 
-        bool ok = useComGenerator
-            ? ((CsComCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath)
-            : ((CsCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath);
+        bool ok = ((CsCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath);
 
         return (ok, temp, outputPath, generator.Messages);
     }

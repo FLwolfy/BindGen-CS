@@ -23,19 +23,16 @@ internal static class Program
 
         AppRunOptions options = LoadAppRunOptions(configPath);
         List<string> entryFiles = ResolveEntryFiles(options.EntryFiles, headerPathOverride);
-        bool useComGenerator = options.UseComGenerator ?? false;
-
-        return RunSingle(configPath, entryFiles, outputPath, useComGenerator, options.OutputFilterFiles);
+        return RunSingle(configPath, entryFiles, outputPath, options.OutputFilterFiles);
     }
 
     private static int RunAllScenarios(string[] args)
     {
         string outputRoot = args.Length > 1 ? args[1] : "Output";
-        List<(string Name, string Config, List<string> Headers, bool UseCom)> scenarios =
+        List<(string Name, string Config, List<string> Headers)> scenarios =
         [
-            ("basic-c", "config.json", [Path.Combine("headers", "basic_c.h")], false),
-            ("cpp-extern-c", "config.json", [Path.Combine("headers", "cpp_extern_c.h")], false),
-            ("com-like", "config.com.json", [Path.Combine("headers", "com_like.h")], true)
+            ("basic-c", "config.json", [Path.Combine("headers", "basic_c.h")]),
+            ("cpp-extern-c", "config.json", [Path.Combine("headers", "cpp_extern_c.h")])
         ];
 
         int failures = 0;
@@ -44,7 +41,7 @@ internal static class Program
         {
             string scenarioOutput = Path.Combine(outputRoot, scenario.Name);
             Console.WriteLine($"== Running scenario: {scenario.Name} ==");
-            int code = RunSingle(scenario.Config, scenario.Headers, scenarioOutput, scenario.UseCom, outputFilterFiles: null);
+            int code = RunSingle(scenario.Config, scenario.Headers, scenarioOutput, outputFilterFiles: null);
             if (code != 0)
             {
                 failures++;
@@ -58,25 +55,13 @@ internal static class Program
         return failures == 0 ? 0 : 1;
     }
 
-    private static int RunSingle(string configPath, List<string> entryFiles, string outputPath, bool useComGenerator, List<string>? outputFilterFiles)
+    private static int RunSingle(string configPath, List<string> entryFiles, string outputPath, List<string>? outputFilterFiles)
     {
         CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(configPath);
 
-        bool success;
-        IReadOnlyList<LogMessage> messages;
-
-        if (useComGenerator)
-        {
-            CsComCodeGenerator generator = new(config);
-            success = generator.Generate(entryFiles, outputPath, outputFilterFiles);
-            messages = generator.Messages;
-        }
-        else
-        {
-            CsCodeGenerator generator = new(config);
-            success = generator.Generate(entryFiles, outputPath, outputFilterFiles);
-            messages = generator.Messages;
-        }
+        CsCodeGenerator generator = new(config);
+        bool success = generator.Generate(entryFiles, outputPath, outputFilterFiles);
+        IReadOnlyList<LogMessage> messages = generator.Messages;
 
         foreach (var message in messages)
         {
@@ -127,12 +112,6 @@ internal static class Program
             options.OutputFilterFiles = outputFilterFiles;
         }
 
-        if (root.TryGetProperty("UseComGenerator", out JsonElement useComElement) &&
-            (useComElement.ValueKind == JsonValueKind.True || useComElement.ValueKind == JsonValueKind.False))
-        {
-            options.UseComGenerator = useComElement.GetBoolean();
-        }
-
         return options;
     }
 
@@ -161,6 +140,5 @@ internal static class Program
 
         public List<string>? OutputFilterFiles { get; set; }
 
-        public bool? UseComGenerator { get; set; }
     }
 }

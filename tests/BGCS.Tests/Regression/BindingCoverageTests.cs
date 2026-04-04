@@ -85,48 +85,11 @@ public class BindingCoverageTests
         ];
     }
 
-    public static IEnumerable<object[]> ComBindingCases()
-    {
-        yield return
-        [
-            "COM-like interface struct",
-            """
-            typedef struct IMyInterfaceVtbl
-            {
-                void* QueryInterface;
-                void* AddRef;
-                void* Release;
-            } IMyInterfaceVtbl;
-
-            typedef struct IMyInterface
-            {
-                IMyInterfaceVtbl* lpVtbl;
-            } IMyInterface;
-
-            void Test_UseCom(IMyInterface* value);
-            """,
-            new[] { "IMyInterface", "EntryPoint = \"Test_UseCom\"", "TestUseCom" }
-        ];
-
-        yield return
-        [
-            "COM-like header with DEFINE_GUID",
-            """
-            #define DEFINE_GUID(name, l, w1, w2, b1,b2,b3,b4,b5,b6,b7,b8)
-            DEFINE_GUID(IID_IMyInterface, 0x12345678, 0x1234, 0x5678, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78);
-
-            typedef struct IMyInterface IMyInterface;
-            void Test_UseComGuid(IMyInterface* value);
-            """,
-            new[] { "IMyInterface", "EntryPoint = \"Test_UseComGuid\"", "TestUseComGuid" }
-        ];
-    }
-
     [Theory]
     [MemberData(nameof(CAndCppBindingCases))]
     public void Generate_CAndCppBindings_ShouldProduceExpectedFragments(string caseName, string header, string[] expectedFragments)
     {
-        var result = RunGenerator(header, useComGenerator: false);
+        var result = RunGenerator(header);
         bool passed = false;
         try
         {
@@ -158,41 +121,13 @@ public class BindingCoverageTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ComBindingCases))]
-    public void Generate_ComBindings_ShouldProduceExpectedFragments(string caseName, string header, string[] expectedFragments)
-    {
-        var result = RunGenerator(header, useComGenerator: true);
-        bool passed = false;
-        try
-        {
-            AssertGeneratorSucceeded(result.Ok, result.Messages);
-
-            foreach (string fragment in expectedFragments)
-            {
-                Assert.True(
-                    result.AllGeneratedCode.Contains(fragment, StringComparison.Ordinal),
-                    $"Case '{caseName}' expected fragment not found: {fragment}\nHeader:\n{header}\nTempDir: {result.TempDirectory}\nGenerated:\n{result.AllGeneratedCode}");
-            }
-
-            passed = true;
-        }
-        finally
-        {
-            if (passed)
-            {
-                Cleanup(result.TempDirectory);
-            }
-        }
-    }
-
     private static void AssertGeneratorSucceeded(bool ok, IReadOnlyList<LogMessage> messages)
     {
         Assert.True(ok);
         Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
     }
 
-    private static (bool Ok, string TempDirectory, string AllGeneratedCode, IReadOnlyList<LogMessage> Messages) RunGenerator(string headerText, bool useComGenerator)
+    private static (bool Ok, string TempDirectory, string AllGeneratedCode, IReadOnlyList<LogMessage> Messages) RunGenerator(string headerText)
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-binding-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -211,7 +146,7 @@ public class BindingCoverageTests
             DelegatesAsVoidPointer = false
         };
 
-        BaseGenerator generator = useComGenerator ? new CsComCodeGenerator(cfg) : new CsCodeGenerator(cfg);
+        BaseGenerator generator = new CsCodeGenerator(cfg);
         CppParserOptions parserOptions = new()
         {
             ParseMacros = true,
@@ -223,9 +158,7 @@ public class BindingCoverageTests
         };
         parserOptions.AdditionalArguments.Add("-undef");
 
-        bool ok = useComGenerator
-            ? ((CsComCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath)
-            : ((CsCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath);
+        bool ok = ((CsCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath);
 
         string allGeneratedCode = string.Empty;
         if (Directory.Exists(outputPath))

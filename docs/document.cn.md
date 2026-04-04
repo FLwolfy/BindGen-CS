@@ -65,17 +65,7 @@ var generator = new CsCodeGenerator(config);
 bool ok = generator.Generate("headers/api.h", "Output");
 ```
 
-## 1.2 BGCS COM 路徑
-
-```csharp
-using BGCS;
-
-var config = CsCodeGeneratorConfig.Load("config.com.json");
-var generator = new CsComCodeGenerator(config);
-bool ok = generator.Generate("headers/com_like.h", "Output");
-```
-
-## 1.3 BGCS 多入口檔案
+## 1.2 BGCS 多入口檔案
 
 ```csharp
 using BGCS;
@@ -87,7 +77,7 @@ bool ok = generator.Generate(
     "Output");
 ```
 
-## 1.4 BGCS 顯式輸出白名單（strict 輸出控制）
+## 1.3 BGCS 顯式輸出白名單（strict 輸出控制）
 
 ```csharp
 using BGCS;
@@ -100,7 +90,7 @@ bool ok = generator.Generate(
     allowedHeaders: new List<string> { "headers/entry.h", "headers/public_only.h" });
 ```
 
-## 1.5 Cpp2C（C++ -> C bridge）
+## 1.4 Cpp2C（C++ -> C bridge）
 
 ```csharp
 using BGCS.Cpp2C;
@@ -258,7 +248,6 @@ Cpp2C 預設行為（重要）：
 
 | 欄位 | 型別 | 說明 |
 |---|---|---|
-| `IIDMappings` | `Dictionary<string,string>` | COM IID 名稱映射。 |
 | `ConstantMappings` | `List<ConstantMapping>` | 常量映射。 |
 | `EnumMappings` | `List<EnumMapping>` | enum 映射。 |
 | `FunctionMappings` | `List<FunctionMapping>` | function 映射。 |
@@ -307,7 +296,6 @@ Cpp2C 預設行為（重要）：
 |---|---|
 | `EntryFiles` | parser 入口檔清單。 |
 | `OutputFilterFiles` | strict 輸出白名單。 |
-| `UseComGenerator` | 只在 `BGCS.Demo` 使用，切換 `CsComCodeGenerator`。 |
 
 `OutputFilterFiles` 行為：
 

@@ -8,7 +8,6 @@ This project is a **modified version of a forked HexaGen codebase**, adapted and
 ## Features
 
 - C# binding generation for C-style native APIs
-- COM-oriented C# binding generation
 - C++ to C bridge generation (`BGCS.Cpp2C`)
 - Config-driven generation with JSON config composition (`BaseConfig`)
 - Function-table and direct import modes for generated bindings
@@ -33,16 +32,6 @@ using BGCS;
 var config = CsCodeGeneratorConfig.Load("config.json");
 var generator = new CsCodeGenerator(config);
 bool ok = generator.Generate("headers/api.h", "Output");
-```
-
-BGCS COM path:
-
-```csharp
-using BGCS;
-
-var config = CsCodeGeneratorConfig.Load("config.com.json");
-var generator = new CsComCodeGenerator(config);
-bool ok = generator.Generate("headers/com_like.h", "Output");
 ```
 
 Cpp2C (C++ header -> C bridge):
@@ -75,7 +64,6 @@ Config composition (`BaseConfig`) is supported via:
 - `src/BGCS` - Main C# binding generator
 - `src/BGCS.Cpp2C` - C++ to C bridge generator
 - `src/BGCS.Runtime` - Runtime support for generated bindings
-- `src/BGCS.Runtime.COM` - COM runtime helpers
 - `src/BGCS.CppAst` - C/C++ AST parsing layer
 - `tests/*` - Unit/integration/regression test projects
 - `demo/*` - Local demo apps for manual generation validation

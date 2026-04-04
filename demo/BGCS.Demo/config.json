@@ -2,7 +2,6 @@
   "BaseConfig": {
     "Url": "file://config.base.json"
   },
-  "UseComGenerator": false,
   "ImportType": "DllImport",
   "ApiName": "Test",
   "Namespace": "BGCS.TestApp.Generated",

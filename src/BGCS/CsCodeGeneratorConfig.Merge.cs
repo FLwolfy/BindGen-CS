@@ -99,7 +99,6 @@
             MergeDictionaries(KnownDefaultValueNames, baseConfig.KnownDefaultValueNames, mergeOptions, MergeOptions.KnownDefaultValueNames);
             MergeDictionaries(KnownConstructors, baseConfig.KnownConstructors, mergeOptions, MergeOptions.KnownConstructors);
             MergeDictionaries(KnownMemberFunctions, baseConfig.KnownMemberFunctions, mergeOptions, MergeOptions.KnownMemberFunctions);
-            MergeDictionaries(IIDMappings, baseConfig.IIDMappings, mergeOptions, MergeOptions.IIDMappings);
             MergeDictionaries(NameMappings, baseConfig.NameMappings, mergeOptions, MergeOptions.NameMappings);
             MergeDictionaries(TypeMappings, baseConfig.TypeMappings, mergeOptions, MergeOptions.TypeMappings);
 

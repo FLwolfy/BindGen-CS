@@ -19,8 +19,6 @@
         String = 1 << 6,
         Array = 1 << 7,
         Bool = 1 << 8,
-        IID = 1 << 9,
-        COMPtr = 1 << 10,
     }
 
     public class CsParameterInfo : ICloneable<CsParameterInfo>
@@ -104,8 +102,6 @@
                 result |= Type.IsString ? ParameterFlags.String : ParameterFlags.None;
                 result |= Type.IsArray ? ParameterFlags.Array : ParameterFlags.None;
                 result |= Type.IsBool ? ParameterFlags.Bool : ParameterFlags.None;
-                result |= Type.Name.Contains("Guid*") ? ParameterFlags.IID : ParameterFlags.None;
-                result |= Type.Name.Contains("ComPtr<") ? ParameterFlags.COMPtr : ParameterFlags.None;
                 return result;
             }
         }

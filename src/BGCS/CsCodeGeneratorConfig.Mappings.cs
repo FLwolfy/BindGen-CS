@@ -8,12 +8,6 @@
     public partial class CsCodeGeneratorConfig
     {
         /// <summary>
-        /// Allows to define or overwrite COM object Guids. where the Key is the com object name and the value the guid. (Default: Empty)
-        /// </summary>
-        [DefaultValue(null)]
-        public Dictionary<string, string> IIDMappings { get; set; } = null!;
-
-        /// <summary>
         /// Allows to inject data and modify constants. (Default: Empty)
         /// </summary>
         [DefaultValue(null)]

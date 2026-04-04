@@ -17,9 +17,6 @@
     <None Update="config.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="config.com.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="headers/**/*.h">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

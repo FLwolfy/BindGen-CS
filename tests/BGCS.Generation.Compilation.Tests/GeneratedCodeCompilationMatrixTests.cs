@@ -122,37 +122,6 @@ public class GeneratedCodeCompilationMatrixTests
             },
             new()
             {
-                Name = "Com_Vtbl_And_Guid",
-                Header = """
-                    #define DEFINE_GUID(name, l, w1, w2, b1,b2,b3,b4,b5,b6,b7,b8)
-                    DEFINE_GUID(IID_IMyInterface, 0x12345678, 0x1234, 0x5678, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78);
-
-                    typedef struct IMyInterfaceVtbl
-                    {
-                        void* QueryInterface;
-                        void* AddRef;
-                        void* Release;
-                    } IMyInterfaceVtbl;
-
-                    typedef struct IMyInterface
-                    {
-                        IMyInterfaceVtbl* lpVtbl;
-                    } IMyInterface;
-
-                    void bgcs_use_com(IMyInterface* value);
-                    """,
-                UseComGenerator = true,
-                ImportType = ImportType.DllImport,
-                ExpectedTypeNames = ["IMyInterface", "IMyInterfaceVtbl"],
-                ExpectedMethodNames = ["BgcsUseComNative"],
-                VerifyAssembly = (_, run) =>
-                {
-                    Assert.NotNull(run.ComGenerator);
-                    Assert.True(run.ComGenerator!.HasGUID("IMyInterface"));
-                }
-            },
-            new()
-            {
                 Name = "FunctionTable_Mode",
                 Header = """
                     int bgcs_ping(void);
@@ -249,8 +218,6 @@ public class GeneratedCodeCompilationMatrixTests
         paths.Add(typeof(CsCodeGenerator).Assembly.Location);
         paths.Add(typeof(CsCodeGeneratorConfig).Assembly.Location);
         paths.Add(typeof(BGCS.Runtime.FunctionTable).Assembly.Location);
-        paths.Add(typeof(BGCS.Runtime.COM.IUnknown).Assembly.Location);
-
         return paths.Select(static path => MetadataReference.CreateFromFile(path));
     }
 
@@ -291,18 +258,9 @@ public class GeneratedCodeCompilationMatrixTests
         };
         parserOptions.AdditionalArguments.Add("-undef");
 
-        if (scenario.UseComGenerator)
-        {
-            CsComCodeGenerator gen = new(cfg);
-            bool ok = gen.Generate(parserOptions, headerPath, outputPath);
-            return new(ok, temp, outputPath, gen.Messages, gen);
-        }
-        else
-        {
-            CsCodeGenerator gen = new(cfg);
-            bool ok = gen.Generate(parserOptions, headerPath, outputPath);
-            return new(ok, temp, outputPath, gen.Messages, null);
-        }
+        CsCodeGenerator gen = new(cfg);
+        bool ok = gen.Generate(parserOptions, headerPath, outputPath);
+        return new(ok, temp, outputPath, gen.Messages);
     }
 
     private static void Cleanup(string directory)
@@ -341,8 +299,6 @@ public class GeneratedCodeCompilationMatrixTests
 
         public string Namespace { get; set; } = "Compile.Generated";
 
-        public bool UseComGenerator { get; set; }
-
         public ImportType ImportType { get; set; } = ImportType.DllImport;
 
         public bool ExpectSingleFileOutput { get; set; }
@@ -360,6 +316,5 @@ public class GeneratedCodeCompilationMatrixTests
         bool Ok,
         string TempDirectory,
         string OutputPath,
-        IReadOnlyList<LogMessage> Messages,
-        CsComCodeGenerator? ComGenerator);
+        IReadOnlyList<LogMessage> Messages);
 }

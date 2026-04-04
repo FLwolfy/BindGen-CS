@@ -221,16 +221,6 @@
             return Identifier = $"{StructName}({BuildConstructorSignature(false, false, false)})";
         }
 
-        public string BuildSignatureIdentifierForCOM()
-        {
-            return Identifier = $"{ReturnType.Name} {Name}{(IsGeneric ? $"<{BuildGenericSignature()}>" : string.Empty)}({BuildSignature(false, false)})";
-        }
-
-        public string BuildExtensionSignatureIdentifierForCOM(string comObject)
-        {
-            return Identifier = $"{ReturnType.Name} {Name}{(IsGeneric ? $"<{BuildGenericSignature()}>" : string.Empty)}({BuildExtensionSignatureForCOM(comObject, false, false)})";
-        }
-
         #endregion IDs
 
         public string BuildFullConstructorSignature(bool generateMetadata)
@@ -246,16 +236,6 @@
         public string BuildFullExtensionSignature(string type, string name)
         {
             return $"{ReturnType.Name} {Name}{(IsGeneric ? $"<{BuildGenericSignature()}>" : string.Empty)}({BuildExtensionSignature(type, name)}) {BuildGenericConstraint()}";
-        }
-
-        public string BuildFullSignatureForCOM(bool generateMetadata)
-        {
-            return $"{ReturnType.Name} {Name}{(IsGeneric ? $"<{BuildGenericSignature()}>" : string.Empty)}({BuildSignature(generateMetadata)}) {BuildGenericConstraint()}";
-        }
-
-        public string BuildFullExtensionSignatureForCOM(string comObject, bool generateMetadata)
-        {
-            return $"{ReturnType.Name} {Name}{(IsGeneric ? $"<{BuildGenericSignature()}>" : string.Empty)}({BuildExtensionSignatureForCOM(comObject, generateMetadata)}) {BuildGenericConstraint()}";
         }
 
         public string BuildSignature(bool useAttributes = true, bool useNames = true)
@@ -305,24 +285,6 @@
         {
             StringBuilder sb = new();
             sb.Append(useNames ? $"this {type} {name ?? string.Empty}" : $"this {type}");
-            for (int i = 0; i < Parameters.Count; i++)
-            {
-                var param = Parameters[i];
-                var writeAttr = useAttributes && param.Attributes.Count > 0;
-
-                if (param.DefaultValue != null)
-                    continue;
-
-                sb.Append($", {(writeAttr ? string.Join(" ", param.Attributes) + " " : string.Empty)}{param.Type}{(useNames ? " " + param.Name : string.Empty)}");
-            }
-
-            return sb.ToString();
-        }
-
-        public string BuildExtensionSignatureForCOM(string comObject, bool useAttributes = true, bool useNames = true)
-        {
-            StringBuilder sb = new();
-            sb.Append(useNames ? $"this ComPtr<{comObject}> comObj" : $"this ComPtr<{comObject}>");
             for (int i = 0; i < Parameters.Count; i++)
             {
                 var param = Parameters[i];
