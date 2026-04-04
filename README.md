@@ -1,6 +1,6 @@
 # BindGen-CS
 
-BindGen-CS is a code generation toolkit for native interop, focused on generating C# bindings from C/C++ headers and generating C bridges from C++ APIs.
+BindGen-CS is a code generation toolkit for native interop, focused on generating C# bindings from C/C++ headers and generating C bridges from C++ APIs. With proper configurations, this code-generation tool allows you to output a **SINGLE-FILE** bindings.
 
 This project is a **modified version of a forked [HexaGen](https://github.com/HexaEngine/HexaGen) codebase**, adapted and extended for the BindGen-CS workflow and architecture.
 
