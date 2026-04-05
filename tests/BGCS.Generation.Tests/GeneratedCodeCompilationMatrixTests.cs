@@ -153,7 +153,7 @@ public class GeneratedCodeCompilationMatrixTests
                 Configure = cfg =>
                 {
                     cfg.MergeGeneratedFilesToSingleFile = true;
-                    cfg.IncludeRuntimeSourceInSingleFile = true;
+                    cfg.GenerateRuntimeSource = false;
                     cfg.SingleFileOutputName = "Bindings.cs";
                 }
             }

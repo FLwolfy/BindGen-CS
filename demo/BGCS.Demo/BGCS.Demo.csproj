@@ -14,10 +14,10 @@
     <None Update="config.base.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="config.runtime-merged.json">
+    <None Update="config.runtime-generated.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="config.runtime-split.json">
+    <None Update="config.runtime-notgenerated.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="headers/**/*.h">

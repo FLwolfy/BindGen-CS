@@ -102,7 +102,6 @@ public class CsGeneratorSmokeTests
                 GenerateExtensions = false,
                 ImportType = ImportType.DllImport,
                 MergeGeneratedFilesToSingleFile = true,
-                IncludeRuntimeSourceInSingleFile = true,
                 SingleFileOutputName = "AllBindings.cs"
             };
 
@@ -122,6 +121,7 @@ public class CsGeneratorSmokeTests
             string[] csFiles = Directory.GetFiles(output, "*.cs", SearchOption.AllDirectories);
             Assert.Single(csFiles);
             Assert.Equal(mergedPath, csFiles[0]);
+            Assert.False(File.Exists(Path.Combine(output, "Runtime.cs")));
             Assert.Empty(Directory.GetDirectories(output, "*", SearchOption.AllDirectories));
         }
         finally

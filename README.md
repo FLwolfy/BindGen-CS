@@ -13,7 +13,7 @@ Contributions are welcome ⭐. Feel free to open issues or submit pull requests 
 - C++ to C bridge generation (`BGCS.Cpp2C`)
 - Config-driven generation with JSON config composition (`BaseConfig`)
 - Function-table and direct import modes for generated bindings
-- Optional single-file output with embedded runtime source (no external runtime project reference needed)
+- Optional standalone runtime source generation (`Runtime.cs`)
 - Single-file merge auto-removes split generated files
 - Configurable naming, filtering, and mapping pipelines
 - Runtime support libraries for generated interop code
@@ -61,15 +61,17 @@ Config composition (`BaseConfig`) is supported via:
 Single-file/runtime behavior summary:
 
 - When `MergeGeneratedFilesToSingleFile = true`, BGCS merges output into `SingleFileOutputName` and automatically removes split generated files.
-- When runtime is required:
-  - `IncludeRuntimeSourceInSingleFile = true`: runtime source is embedded into the merged binding file.
-  - `IncludeRuntimeSourceInSingleFile = false`: runtime source is emitted as standalone `Runtime.cs`.
+- Runtime source generation is explicit:
+  - `GenerateRuntimeSource = true`: generate standalone `Runtime.cs` in output root.
+  - `GenerateRuntimeSource = false`: do not generate runtime source.
 - Generated bindings always use `using BGCS.Runtime;` and runtime namespace remains `BGCS.Runtime`.
+- If your project already references external `BGCS.Runtime`, define compile symbol `BGCS_RUNTIME_EXTERNAL` to exclude generated runtime source and avoid duplicate type declarations.
 
 ### Full Documents
 
-- [document.en.md](docs/document.en.md) (English)
-- [document.cn.md](docs/document.cn.md) (中文)
+- [configuration.md](docs/configuration.md)
+- [api.md](docs/api.md)
+- [testing.md](docs/testing.md)
 
 ## Project Layout
 

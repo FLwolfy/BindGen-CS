@@ -242,10 +242,10 @@
         public string SingleFileOutputName { get; set; } = "Bindings.cs";
 
         /// <summary>
-        /// Embed BGCS runtime source files into the merged single-file output, so the generated bindings do not require a separate BGCS.Runtime reference. (Default: <see langword="false"/>)
+        /// Generate standalone runtime source file (`Runtime.cs`) into output root. (Default: <see langword="false"/>)
         /// </summary>
         [DefaultValue(false)]
-        public bool IncludeRuntimeSourceInSingleFile { get; set; } = false;
+        public bool GenerateRuntimeSource { get; set; } = false;
 
         /// <summary>
         /// This option controls the bool type eg. 8Bit Bool and 32Bit Bool. (Default: <see cref="BoolType.Bool8"/>)

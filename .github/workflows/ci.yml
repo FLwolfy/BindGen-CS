@@ -28,6 +28,12 @@ jobs:
       - name: Test
         run: dotnet test BindGen-CS.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./artifacts/test-results
 
+      - name: Full test matrix workflow
+        run: ./scripts/run-full-test-matrix.sh
+        env:
+          SKIP_RESTORE_BUILD: "1"
+          CONFIGURATION: "Release"
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

@@ -12,7 +12,7 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        string configPath = args.Length > 0 ? args[0] : "config.runtime-merged.json";
+        string configPath = args.Length > 0 ? args[0] : "config.runtime-generated.json";
         
         string outputPath = args.Length > 1 ? args[1] : "Output";
         CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(configPath);
@@ -39,7 +39,7 @@ internal static class Program
             return 1;
         }
 
-        bool runtimeCheckPassed = ValidateRuntimeEmbedding(config, outputPath);
+        bool runtimeCheckPassed = ValidateRuntimeOutput(config, outputPath);
         return runtimeCheckPassed ? 0 : 2;
     }
 
@@ -89,49 +89,37 @@ internal static class Program
         return true;
     }
 
-    private static bool ValidateRuntimeEmbedding(CsCodeGeneratorConfig config, string outputPath)
+    private static bool ValidateRuntimeOutput(CsCodeGeneratorConfig config, string outputPath)
     {
-        string mergedPath = Path.Combine(outputPath, string.IsNullOrWhiteSpace(config.SingleFileOutputName) ? "Bindings.cs" : config.SingleFileOutputName);
-        string[] outputFiles = Directory.Exists(outputPath)
-            ? Directory.GetFiles(outputPath, "*.cs", SearchOption.AllDirectories)
-            : [];
-        string scanText = string.Join(Environment.NewLine, outputFiles.Select(File.ReadAllText));
-
         string runtimeNamespace = GetRuntimeNamespace();
-        string runtimeUsing = $"using {runtimeNamespace};";
-
-        if (config.IncludeRuntimeSourceInSingleFile)
+        string runtimeFile = Path.Combine(outputPath, "Runtime.cs");
+        if (config.GenerateRuntimeSource)
         {
-            bool hasEmbeddedRuntimeCode = File.Exists(mergedPath)
-                && File.ReadAllText(mergedPath).Contains($"namespace {runtimeNamespace}", StringComparison.Ordinal)
-                && File.ReadAllText(mergedPath).Contains(runtimeUsing, StringComparison.Ordinal);
-            if (!hasEmbeddedRuntimeCode)
+            if (!File.Exists(runtimeFile))
             {
-                Console.WriteLine("Runtime check failed: when IncludeRuntimeSourceInSingleFile=true, Bindings.cs must include runtime namespace and using.");
+                Console.WriteLine("Runtime check failed: GenerateRuntimeSource=true requires Runtime.cs.");
                 return false;
             }
 
-            Console.WriteLine("Runtime check passed: runtime is embedded in Bindings.cs.");
+            string runtimeText = File.ReadAllText(runtimeFile);
+            bool runtimeFileValid = runtimeText.Contains($"namespace {runtimeNamespace}", StringComparison.Ordinal);
+            if (!runtimeFileValid)
+            {
+                Console.WriteLine("Runtime check failed: Runtime.cs does not use the expected runtime namespace.");
+                return false;
+            }
+
+            Console.WriteLine("Runtime check passed: runtime is generated as standalone Runtime.cs.");
             return true;
         }
 
-        string runtimeFile = Path.Combine(outputPath, "Runtime.cs");
-        if (!File.Exists(runtimeFile))
+        if (File.Exists(runtimeFile))
         {
-            Console.WriteLine("Runtime check failed: when IncludeRuntimeSourceInSingleFile=false, Runtime.cs must be generated.");
+            Console.WriteLine("Runtime check failed: GenerateRuntimeSource=false must not emit Runtime.cs.");
             return false;
         }
 
-        string runtimeText = File.ReadAllText(runtimeFile);
-        bool runtimeFileValid =
-            runtimeText.Contains($"namespace {runtimeNamespace}", StringComparison.Ordinal);
-        if (!runtimeFileValid)
-        {
-            Console.WriteLine("Runtime check failed: Runtime.cs does not use the expected runtime namespace.");
-            return false;
-        }
-
-        Console.WriteLine("Runtime check passed: runtime is generated as standalone Runtime.cs.");
+        Console.WriteLine("Runtime check passed: runtime source generation is disabled.");
         return true;
     }
 

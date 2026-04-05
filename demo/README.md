@@ -26,20 +26,20 @@ Run with explicit config/output:
 
 ```bash
 cd ~/demo/BGCS.Demo
-dotnet run -- config.runtime-split.json Output
+dotnet run -- config.runtime-notgenerated.json Output
 ```
 
-Run runtime merged into `Bindings.cs`:
+Run with runtime source generation enabled:
 
 ```bash
 cd ~/demo/BGCS.Demo
-dotnet run -- config.runtime-merged.json Output
+dotnet run -- config.runtime-generated.json Output
 ```
 
 Config notes:
 
-- `config.runtime-split.json`: generate `Bindings.cs` + standalone `Runtime.cs`
-- `config.runtime-merged.json`: embed runtime source into `Bindings.cs`
+- `config.runtime-generated.json`: generate `Bindings.cs` + standalone `Runtime.cs` (`GenerateRuntimeSource=true`)
+- `config.runtime-notgenerated.json`: generate only `Bindings.cs` (`GenerateRuntimeSource=false`)
 - `EntryFiles`: parser entry files
 - `allowedHeaders`: strict output whitelist
   - omitted/null: defaults to `EntryFiles`

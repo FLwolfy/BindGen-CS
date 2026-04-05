@@ -20,6 +20,7 @@ namespace BGCS
     public partial class CsCodeGenerator : BaseGenerator
     {
         private const string RuntimeUsingDefault = "using BGCS.Runtime;";
+        private const string RuntimeSourceExcludeSymbol = "BGCS_RUNTIME_EXTERNAL";
 
         protected FunctionGenerator funcGen = null!;
         protected PatchEngine patchEngine = new();
@@ -297,12 +298,9 @@ namespace BGCS
             if (config.MergeGeneratedFilesToSingleFile)
             {
                 MergeGeneratedFilesToSingleFile(generationOutputPath, outputPath);
-                if (!config.IncludeRuntimeSourceInSingleFile)
-                {
-                    WriteStandaloneRuntimeFile(outputPath);
-                }
             }
-            else
+
+            if (config.GenerateRuntimeSource)
             {
                 WriteStandaloneRuntimeFile(outputPath);
             }
@@ -361,12 +359,6 @@ namespace BGCS
                 }
             }
 
-            bool runtimeEmbeddedInBindings = false;
-            if (config.IncludeRuntimeSourceInSingleFile)
-            {
-                runtimeEmbeddedInBindings = TryAppendRuntimeSources(orderedUsings, usingSet, bodies);
-            }
-
             StringBuilder builder = new();
             if (!string.IsNullOrWhiteSpace(headerBanner))
             {
@@ -395,10 +387,6 @@ namespace BGCS
 
             File.WriteAllText(mergedPath, builder.ToString());
             LogInfo($"Merged generated files into: {mergedPath}");
-            if (runtimeEmbeddedInBindings)
-            {
-                LogInfo($"Merged runtime sources into: {mergedPath}");
-            }
 
             for (int i = 0; i < files.Count; i++)
             {
@@ -406,51 +394,6 @@ namespace BGCS
             }
 
             DeleteEmptyDirectories(generationOutputPath);
-        }
-
-        private bool TryAppendRuntimeSources(List<string> orderedUsings, HashSet<string> usingSet, List<string> bodies)
-        {
-            IReadOnlyList<(string Name, string Content)> runtimeSources = GetEmbeddedRuntimeSources();
-            if (runtimeSources.Count == 0)
-            {
-                runtimeSources = GetRuntimeSourcesFromFileSystem();
-            }
-
-            if (runtimeSources.Count == 0)
-            {
-                LogWarn("Single-file runtime embedding is enabled, but BGCS.Runtime sources were not found. Output still requires BGCS.Runtime.");
-                return false;
-            }
-
-            List<string> runtimeBodies = [];
-            for (int i = 0; i < runtimeSources.Count; i++)
-            {
-                string normalizedRuntimeText = NormalizeRuntimeTextForMerge(RewriteRuntimeNamespace(runtimeSources[i].Content));
-                ParsedMergedFile parsedRuntime = ParseMergedFile(normalizedRuntimeText);
-
-                for (int j = 0; j < parsedRuntime.Usings.Count; j++)
-                {
-                    string usingLine = parsedRuntime.Usings[j];
-                    if (usingSet.Add(usingLine))
-                    {
-                        orderedUsings.Add(usingLine);
-                    }
-                }
-
-                if (!string.IsNullOrWhiteSpace(parsedRuntime.Body))
-                {
-                    runtimeBodies.Add(parsedRuntime.Body.Trim());
-                }
-            }
-
-            if (runtimeBodies.Count > 0)
-            {
-                string combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", runtimeBodies);
-                bodies.Add(combinedBody);
-                return true;
-            }
-
-            return false;
         }
 
         private void RewriteRuntimeUsings(string generationOutputPath)
@@ -527,9 +470,15 @@ namespace BGCS
             }
 
             string combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", bodies);
+            combinedBody = WrapRuntimeBodyWithGuard(combinedBody);
             builder.AppendLine(combinedBody);
             File.WriteAllText(runtimePath, builder.ToString());
             LogInfo($"Generated runtime file: {runtimePath}");
+        }
+
+        private static string WrapRuntimeBodyWithGuard(string body)
+        {
+            return $"#if !{RuntimeSourceExcludeSymbol}{Environment.NewLine}{body}{Environment.NewLine}#endif";
         }
 
         private static string GetRuntimeNamespace()

@@ -30,7 +30,7 @@ This document provides:
 | `LibName` | Native library name | `mylib` |
 | `ImportType` | Import mode | `DllImport` / `FunctionTable` |
 | `MergeGeneratedFilesToSingleFile` | Single-file output mode | `true` / `false` |
-| `IncludeRuntimeSourceInSingleFile` | Embed runtime source in single-file mode | `true` / `false` |
+| `GenerateRuntimeSource` | Generate standalone `Runtime.cs` | `true` / `false` |
 | `SingleFileOutputName` | Merged file name | `Bindings.cs` |
 | `GenerateExtensions` | Generate extension helpers | `false` (strict) / `true` |
 | `DelegatesAsVoidPointer` | Callback pointer strategy | `false` (typed) / `true` |
@@ -146,7 +146,7 @@ Sources:
 | `LibName` | `string` | `""` | Native library name |
 | `ImportType` | `ImportType` | `FunctionTable` | Import mode (`DllImport` / `LibraryImport` / `FunctionTable`) |
 | `MergeGeneratedFilesToSingleFile` | `bool` | `false` | Merge all generated `.cs` into one |
-| `IncludeRuntimeSourceInSingleFile` | `bool` | `false` | If runtime is required, embed runtime source into merged single file |
+| `GenerateRuntimeSource` | `bool` | `false` | Generate standalone `Runtime.cs` in output root |
 | `SingleFileOutputName` | `string` | `Bindings.cs` | Single-file output name |
 | `GenerateMetadata` | `bool` | `false` | Emit metadata attributes |
 | `GenerateConstants` | `bool` | `true` | Constant generation switch |
@@ -262,8 +262,8 @@ Source:
 - Optional single-file merge (`MergeGeneratedFilesToSingleFile`)
 - When `MergeGeneratedFilesToSingleFile = true`, split generated files are automatically removed after merge
 - Runtime output policy:
-  - If runtime is required and `IncludeRuntimeSourceInSingleFile = true`: runtime source is embedded into merged bindings
-  - If runtime is required and `IncludeRuntimeSourceInSingleFile = false`: runtime is emitted as standalone `Runtime.cs`
+  - If `GenerateRuntimeSource = true`: runtime is emitted as standalone `Runtime.cs`
+  - If `GenerateRuntimeSource = false`: runtime source is not generated
   - Generated bindings always use `using BGCS.Runtime;`; runtime namespace is fixed to `BGCS.Runtime`
 
 ### 5.2 Cpp2C output
