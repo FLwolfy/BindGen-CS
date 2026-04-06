@@ -395,6 +395,7 @@ namespace BGCS
             List<string> orderedUsings = [];
             HashSet<string> usingSet = new(StringComparer.Ordinal);
             List<string> bodies = [];
+            bool canWrapSingleNamespace = true;
 
             for (int i = 0; i < files.Count; i++)
             {
@@ -417,7 +418,16 @@ namespace BGCS
 
                 if (!string.IsNullOrWhiteSpace(parsed.Body))
                 {
-                    bodies.Add(parsed.Body.Trim());
+                    string sourceBody = parsed.Body.Replace("\r\n", "\n");
+                    if (TryUnwrapNamespaceBody(sourceBody, config.Namespace, out string? unwrappedBody))
+                    {
+                        bodies.Add(DedentLines(NormalizeMergedBody(unwrappedBody)));
+                    }
+                    else
+                    {
+                        canWrapSingleNamespace = false;
+                        bodies.Add(NormalizeMergedBody(sourceBody));
+                    }
                 }
             }
 
@@ -438,16 +448,39 @@ namespace BGCS
                 builder.AppendLine();
             }
 
-            for (int i = 0; i < bodies.Count; i++)
+            if (canWrapSingleNamespace && bodies.Count > 0)
             {
-                builder.AppendLine(bodies[i]);
-                if (i + 1 < bodies.Count)
+                builder.AppendLine($"namespace {config.Namespace}");
+                builder.AppendLine("{");
+                List<string> nonEmptyBodies = bodies
+                    .Select(x => x.Trim('\r', '\n'))
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToList();
+                for (int i = 0; i < nonEmptyBodies.Count; i++)
                 {
-                    builder.AppendLine();
+                    builder.AppendLine(IndentLines(nonEmptyBodies[i], "    "));
+                    if (i + 1 < nonEmptyBodies.Count)
+                    {
+                        builder.AppendLine();
+                    }
+                }
+                builder.AppendLine("}");
+            }
+            else
+            {
+                for (int i = 0; i < bodies.Count; i++)
+                {
+                    builder.AppendLine(bodies[i]);
+                    if (i + 1 < bodies.Count)
+                    {
+                        builder.AppendLine();
+                    }
                 }
             }
 
-            File.WriteAllText(mergedPath, builder.ToString());
+            string mergedText = builder.ToString().TrimEnd() + Environment.NewLine;
+            mergedText = NormalizeLeadingTabsPerLine(mergedText, 4);
+            File.WriteAllText(mergedPath, mergedText);
             LogInfo($"Merged generated files into: {mergedPath}");
 
             for (int i = 0; i < files.Count; i++)
@@ -495,6 +528,8 @@ namespace BGCS
             List<string> orderedUsings = [];
             HashSet<string> usingSet = new(StringComparer.Ordinal);
             List<string> bodies = [];
+            string runtimeNamespace = GetRuntimeNamespace();
+            bool canWrapSingleNamespace = true;
             for (int i = 0; i < runtimeSources.Count; i++)
             {
                 string normalizedRuntimeText = NormalizeRuntimeTextForMerge(RewriteRuntimeNamespace(runtimeSources[i].Content));
@@ -511,7 +546,30 @@ namespace BGCS
 
                 if (!string.IsNullOrWhiteSpace(parsedRuntime.Body))
                 {
-                    bodies.Add(parsedRuntime.Body.Trim());
+                    string sourceBody = parsedRuntime.Body.Replace("\r\n", "\n");
+                    if (TryUnwrapNamespaceBody(sourceBody, runtimeNamespace, out string? unwrappedBody))
+                    {
+                        ParsedMergedFile parsedInner = ParseMergedFile(unwrappedBody);
+                        for (int j = 0; j < parsedInner.Usings.Count; j++)
+                        {
+                            string usingLine = parsedInner.Usings[j];
+                            if (usingSet.Add(usingLine))
+                            {
+                                orderedUsings.Add(usingLine);
+                            }
+                        }
+
+                        string innerBody = DedentLines(NormalizeMergedBody(parsedInner.Body));
+                        if (!string.IsNullOrWhiteSpace(innerBody))
+                        {
+                            bodies.Add(innerBody);
+                        }
+                    }
+                    else
+                    {
+                        canWrapSingleNamespace = false;
+                        bodies.Add(NormalizeMergedBody(sourceBody));
+                    }
                 }
             }
 
@@ -531,10 +589,35 @@ namespace BGCS
                 builder.AppendLine();
             }
 
-            string combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", bodies);
+            string combinedBody;
+            if (canWrapSingleNamespace)
+            {
+                StringBuilder nsBuilder = new();
+                nsBuilder.AppendLine($"namespace {runtimeNamespace}");
+                nsBuilder.AppendLine("{");
+
+                for (int i = 0; i < bodies.Count; i++)
+                {
+                    nsBuilder.AppendLine(IndentLines(bodies[i], "    "));
+                    if (i + 1 < bodies.Count)
+                    {
+                        nsBuilder.AppendLine();
+                    }
+                }
+
+                nsBuilder.AppendLine("}");
+                combinedBody = nsBuilder.ToString().TrimEnd();
+            }
+            else
+            {
+                combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", bodies).TrimEnd();
+            }
+
             combinedBody = WrapRuntimeBodyWithGuard(combinedBody);
             builder.AppendLine(combinedBody);
-            File.WriteAllText(runtimePath, builder.ToString());
+            string runtimeText = builder.ToString().TrimEnd() + Environment.NewLine;
+            runtimeText = NormalizeLeadingTabsPerLine(runtimeText, 4);
+            File.WriteAllText(runtimePath, runtimeText);
             LogInfo($"Generated runtime file: {runtimePath}");
         }
 
@@ -737,6 +820,264 @@ namespace BGCS
             return string.Join(Environment.NewLine, lines);
         }
 
+        private static string NormalizeMergedBody(string text)
+        {
+            string normalized = text.Replace("\r\n", "\n").Trim('\r', '\n');
+            if (normalized.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            string[] lines = normalized.Split('\n');
+            List<string> compact = new(lines.Length);
+            bool previousBlank = false;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i].TrimEnd();
+                bool blank = string.IsNullOrWhiteSpace(line);
+                if (blank)
+                {
+                    if (previousBlank)
+                    {
+                        continue;
+                    }
+
+                    previousBlank = true;
+                    compact.Add(string.Empty);
+                    continue;
+                }
+
+                previousBlank = false;
+                compact.Add(line);
+            }
+
+            while (compact.Count > 0 && compact[0].Length == 0)
+            {
+                compact.RemoveAt(0);
+            }
+
+            while (compact.Count > 0 && compact[^1].Length == 0)
+            {
+                compact.RemoveAt(compact.Count - 1);
+            }
+
+            return string.Join(Environment.NewLine, compact);
+        }
+
+        private static string DedentLines(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            string normalized = text.Replace("\r\n", "\n");
+            string[] lines = normalized.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i] = ExpandLeadingTabs(lines[i], 4);
+            }
+
+            int? minIndent = null;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i];
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                int indent = 0;
+                while (indent < line.Length && char.IsWhiteSpace(line[indent]))
+                {
+                    indent++;
+                }
+
+                minIndent = minIndent is null ? indent : Math.Min(minIndent.Value, indent);
+            }
+
+            if (minIndent is null || minIndent.Value == 0)
+            {
+                return string.Join(Environment.NewLine, lines);
+            }
+
+            int remove = minIndent.Value;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i];
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                lines[i] = line.Length >= remove ? line[remove..] : string.Empty;
+            }
+
+            return string.Join(Environment.NewLine, AlignOpeningBracesWithPreviousLine(lines));
+        }
+
+        private static string ExpandLeadingTabs(string line, int tabSize)
+        {
+            if (string.IsNullOrEmpty(line))
+            {
+                return line;
+            }
+
+            int i = 0;
+            while (i < line.Length && (line[i] == '\t' || line[i] == ' '))
+            {
+                i++;
+            }
+
+            if (i == 0)
+            {
+                return line;
+            }
+
+            string prefix = line[..i];
+            if (!prefix.Contains('\t'))
+            {
+                return line;
+            }
+
+            string expanded = prefix.Replace("\t", new string(' ', tabSize), StringComparison.Ordinal);
+            return expanded + line[i..];
+        }
+
+        private static string NormalizeLeadingTabsPerLine(string text, int tabSize)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            string normalized = text.Replace("\r\n", "\n");
+            string[] lines = normalized.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i] = ExpandLeadingTabs(lines[i], tabSize);
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string[] AlignOpeningBracesWithPreviousLine(string[] lines)
+        {
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Trim() != "{")
+                {
+                    continue;
+                }
+
+                int prev = i - 1;
+                while (prev >= 0 && string.IsNullOrWhiteSpace(lines[prev]))
+                {
+                    prev--;
+                }
+
+                if (prev < 0)
+                {
+                    continue;
+                }
+
+                string prevLine = lines[prev];
+                string braceLine = lines[i];
+                int prevIndent = GetLeadingWhitespaceCount(prevLine);
+                int braceIndent = GetLeadingWhitespaceCount(braceLine);
+                if (braceIndent > prevIndent)
+                {
+                    lines[i] = new string(' ', prevIndent) + "{";
+                }
+            }
+
+            return lines;
+        }
+
+        private static int GetLeadingWhitespaceCount(string line)
+        {
+            int count = 0;
+            while (count < line.Length && char.IsWhiteSpace(line[count]))
+            {
+                count++;
+            }
+
+            return count;
+        }
+
+        private static bool TryUnwrapNamespaceBody(string body, string namespaceName, out string unwrappedBody)
+        {
+            unwrappedBody = string.Empty;
+            string trimmed = body.Trim();
+            if (trimmed.Length == 0)
+            {
+                return false;
+            }
+
+            string fileScopedPrefix = $"namespace {namespaceName};";
+            if (trimmed.StartsWith(fileScopedPrefix, StringComparison.Ordinal))
+            {
+                unwrappedBody = TrimBoundaryNewLines(trimmed[fileScopedPrefix.Length..]);
+                return true;
+            }
+
+            string blockScopedPrefix = $"namespace {namespaceName}";
+            if (!trimmed.StartsWith(blockScopedPrefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            int namespaceDeclarationEnd = blockScopedPrefix.Length;
+            while (namespaceDeclarationEnd < trimmed.Length && char.IsWhiteSpace(trimmed[namespaceDeclarationEnd]))
+            {
+                namespaceDeclarationEnd++;
+            }
+
+            if (namespaceDeclarationEnd >= trimmed.Length || trimmed[namespaceDeclarationEnd] != '{')
+            {
+                return false;
+            }
+
+            int bodyStart = namespaceDeclarationEnd + 1;
+            int depth = 1;
+            int index = bodyStart;
+            for (; index < trimmed.Length; index++)
+            {
+                char c = trimmed[index];
+                if (c == '{')
+                {
+                    depth++;
+                }
+                else if (c == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (depth != 0)
+            {
+                return false;
+            }
+
+            string suffix = trimmed[(index + 1)..].Trim();
+            if (suffix.Length != 0)
+            {
+                return false;
+            }
+
+            unwrappedBody = TrimBoundaryNewLines(trimmed[bodyStart..index]);
+            return true;
+        }
+
+        private static string TrimBoundaryNewLines(string text)
+        {
+            return text.Trim('\r', '\n');
+        }
+
         private static ParsedMergedFile ParseMergedFile(string text)
         {
             string normalized = text.Replace("\r\n", "\n");
@@ -800,7 +1141,7 @@ namespace BGCS
                 break;
             }
 
-            string body = string.Join(Environment.NewLine, lines.Skip(index)).Trim();
+            string body = TrimBoundaryNewLines(string.Join(Environment.NewLine, lines.Skip(index)));
             return new ParsedMergedFile(banner, usings, body);
         }
 

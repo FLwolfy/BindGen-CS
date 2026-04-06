@@ -3,6 +3,7 @@ name: Publish BGCS NuGet
 on:
   push:
     tags:
+      - "v*"
       - "bgcs-v*"
       - "cpp2c-v*"
       - "runtime-v*"
@@ -22,7 +23,62 @@ on:
         type: string
 
 jobs:
-  publish:
+  publish-all-on-unified-tag:
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package_id: BGCS
+            project_path: src/BGCS/BGCS.csproj
+          - package_id: BGCS.Cpp2C
+            project_path: src/BGCS.Cpp2C/BGCS.Cpp2C.csproj
+          - package_id: BGCS.Runtime
+            project_path: src/BGCS.Runtime/BGCS.Runtime.csproj
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Resolve version from unified tag
+        id: publish
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          if [[ -z "${VERSION}" ]]; then
+            echo "Version is empty."
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "Publishing ${VERSION} for ${{ matrix.package_id }} from ${{ matrix.project_path }}"
+
+      - name: Restore
+        run: dotnet restore ${{ matrix.project_path }}
+
+      - name: Build
+        run: dotnet build ${{ matrix.project_path }} --configuration Release --no-restore
+
+      - name: Pack
+        run: dotnet pack ${{ matrix.project_path }} --configuration Release --no-build --output artifacts/nuget -p:ContinuousIntegrationBuild=true -p:Version=${{ steps.publish.outputs.version }}
+
+      - name: Push package to NuGet
+        run: dotnet nuget push "artifacts/nuget/${{ matrix.package_id }}.${{ steps.publish.outputs.version }}.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
+      - name: Push symbols to NuGet
+        run: dotnet nuget push "artifacts/nuget/${{ matrix.package_id }}.${{ steps.publish.outputs.version }}.snupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
+  publish-single:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref_name, 'bgcs-v') || startsWith(github.ref_name, 'cpp2c-v') || startsWith(github.ref_name, 'runtime-v')
     runs-on: ubuntu-latest
     permissions:
       contents: read

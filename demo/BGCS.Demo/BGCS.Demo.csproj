@@ -20,6 +20,9 @@
     <None Update="config.runtime-notgenerated.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="config.all-set.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="headers/**/*.h">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

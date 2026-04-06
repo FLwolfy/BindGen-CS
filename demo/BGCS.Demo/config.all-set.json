@@ -18,7 +18,22 @@
   "GeneratePlaceholderComments": false,
   "FunctionTableEntries": [
     {
-      "EntryPoint": "bgcs_demo_ping"
+      "EntryPoint": "Bgcs_UpdatePoint"
+    },
+    {
+      "EntryPoint": "Bgcs_SetMode"
+    },
+    {
+      "EntryPoint": "Bgcs_SetCallback"
+    },
+    {
+      "EntryPoint": "Bgcs_Add"
+    },
+    {
+      "EntryPoint": "Bgcs_GetStats"
+    },
+    {
+      "EntryPoint": "Bgcs_SetHandle"
     }
   ],
   "UseCustomContext": true,
@@ -66,47 +81,58 @@
     "params"
   ],
   "IgnoredFunctions": [
-    "bgcs_ignore_me"
+    "bgcs_ignore_me",
+    "Bgcs_Internal_DebugOnly"
   ],
   "IgnoredExtensions": [
     "BgcsLegacyExt"
   ],
   "IgnoredTypes": [
-    "BgcsIgnoredType"
+    "BgcsRect"
   ],
   "IgnoredEnums": [
-    "BgcsIgnoredEnum"
+    "BgcsColor"
   ],
   "IgnoredTypedefs": [
     "BgcsIgnoredTypedef"
   ],
   "IgnoredDelegates": [
-    "BgcsIgnoredDelegate"
+    "BgcsLogCallback"
   ],
   "IgnoredConstants": [
     "BGCS_IGNORED_CONST"
   ],
   "AllowedFunctions": [
-    "bgcs_demo_ping",
-    "bgcs_demo_sum"
+    "Bgcs_UpdatePoint",
+    "Bgcs_SetMode",
+    "Bgcs_SetCallback",
+    "Bgcs_Add",
+    "Bgcs_GetStats",
+    "Bgcs_SetHandle"
   ],
   "AllowedExtensions": [
     "BgcsSampleExt"
   ],
   "AllowedTypes": [
-    "BgcsTypeA"
+    "BgcsPoint",
+    "BgcsRect",
+    "BgcsStats"
   ],
   "AllowedEnums": [
-    "BgcsMode"
+    "BgcsMode",
+    "BgcsColor"
   ],
   "AllowedTypedefs": [
     "BgcsHandle"
   ],
   "AllowedDelegates": [
-    "BgcsCallback"
+    "BgcsCallback",
+    "BgcsLogCallback"
   ],
   "AllowedConstants": [
-    "BGCS_MAX_VALUE"
+    "BGCS_MAX_VALUE",
+    "BGCS_DEFAULT_TIMEOUT",
+    "BGCS_OLD_CONST"
   ],
   "Usings": [
     "System.Numerics",
@@ -139,7 +165,6 @@
       "Attributes": [
         "[Flags]"
       ],
-      "Comment": "Custom enum from config",
       "BaseType": "int",
       "Items": [
         {
@@ -148,8 +173,7 @@
           "CppValue": "1",
           "Name": "CustomA",
           "Value": "1",
-          "Attributes": [],
-          "Comment": "item a"
+          "Attributes": []
         }
       ]
     }
@@ -170,7 +194,7 @@
   ],
   "EnumMappings": [
     {
-      "ExportedName": "BGCS_MODE",
+      "ExportedName": "BgcsMode",
       "FriendlyName": "BgcsMode",
       "Comment": "enum remap",
       "ItemMappings": [
@@ -185,8 +209,8 @@
   ],
   "FunctionMappings": [
     {
-      "ExportedName": "bgcs_demo_sum",
-      "FriendlyName": "DemoSum",
+      "ExportedName": "Bgcs_Add",
+      "FriendlyName": "AddNumbers",
       "Comment": "sum function remap",
       "Defaults": {
         "b": "1"
@@ -213,14 +237,14 @@
   ],
   "ClassMappings": [
     {
-      "ExportedName": "BgcsStruct",
-      "FriendlyName": "BgcsStruct",
+      "ExportedName": "BgcsStats",
+      "FriendlyName": "BgcsStats",
       "Comment": "class remap",
       "FieldMappings": [
         {
-          "ExportedName": "x",
-          "DisplayName": "X",
-          "Comment": "field x"
+          "ExportedName": "Frame",
+          "DisplayName": "Frame",
+          "Comment": "frame counter"
         }
       ]
     }
@@ -251,11 +275,11 @@
     "BgcsModeAlias": "BgcsMode"
   },
   "FunctionAliasMappings": {
-    "bgcs_demo_sum": [
+    "Bgcs_Add": [
       {
-        "ExportedName": "bgcs_demo_sum",
-        "ExportedAliasName": "bgcs_demo_sum_ext",
-        "FriendlyName": "DemoSumExt",
+        "ExportedName": "Bgcs_Add",
+        "ExportedAliasName": "Bgcs_AddEx",
+        "FriendlyName": "AddNumbersEx",
         "Comment": "alias mapping sample"
       }
     ]
