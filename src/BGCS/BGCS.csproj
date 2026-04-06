@@ -6,6 +6,17 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>$(DefinedConstants);CPPAST_15_OR_GREATER</DefineConstants>
+
+    <PackageId>BGCS</PackageId>
+    <Authors>FLwolfy</Authors>
+    <Description>BindGen-CS core package for generating C# interop bindings from C headers.</Description>
+    <PackageTags>interop;bindings;generator;native</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/FLwolfy/BindGen-CS</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>

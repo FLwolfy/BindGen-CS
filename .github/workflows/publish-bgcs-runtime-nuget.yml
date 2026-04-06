@@ -1,11 +1,21 @@
-name: Publish BGCS.Runtime NuGet
+name: Publish BGCS NuGet
 
 on:
   push:
     tags:
+      - "bgcs-v*"
+      - "cpp2c-v*"
       - "runtime-v*"
   workflow_dispatch:
     inputs:
+      package:
+        description: "Package to publish"
+        required: true
+        type: choice
+        options:
+          - BGCS
+          - BGCS.Cpp2C
+          - BGCS.Runtime
       version:
         description: "Package version (e.g. 1.2.3 or 1.2.3-preview.1)"
         required: true
@@ -26,15 +36,39 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
-      - name: Resolve version
-        id: version
+      - name: Resolve package and version
+        id: publish
         shell: bash
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            PACKAGE_ID="${{ github.event.inputs.package }}"
             VERSION="${{ github.event.inputs.version }}"
           else
             TAG="${GITHUB_REF_NAME}"
-            VERSION="${TAG#runtime-v}"
+            if [[ "${TAG}" == runtime-v* ]]; then
+              PACKAGE_ID="BGCS.Runtime"
+              VERSION="${TAG#runtime-v}"
+            elif [[ "${TAG}" == bgcs-v* ]]; then
+              PACKAGE_ID="BGCS"
+              VERSION="${TAG#bgcs-v}"
+            elif [[ "${TAG}" == cpp2c-v* ]]; then
+              PACKAGE_ID="BGCS.Cpp2C"
+              VERSION="${TAG#cpp2c-v}"
+            else
+              echo "Unsupported tag format: ${TAG}"
+              exit 1
+            fi
+          fi
+
+          if [[ "${PACKAGE_ID}" == "BGCS" ]]; then
+            PROJECT_PATH="src/BGCS/BGCS.csproj"
+          elif [[ "${PACKAGE_ID}" == "BGCS.Cpp2C" ]]; then
+            PROJECT_PATH="src/BGCS.Cpp2C/BGCS.Cpp2C.csproj"
+          elif [[ "${PACKAGE_ID}" == "BGCS.Runtime" ]]; then
+            PROJECT_PATH="src/BGCS.Runtime/BGCS.Runtime.csproj"
+          else
+            echo "Unsupported package: ${PACKAGE_ID}"
+            exit 1
           fi
 
           if [[ -z "${VERSION}" ]]; then
@@ -42,20 +76,22 @@ jobs:
             exit 1
           fi
 
+          echo "package_id=${PACKAGE_ID}" >> "${GITHUB_OUTPUT}"
+          echo "project_path=${PROJECT_PATH}" >> "${GITHUB_OUTPUT}"
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
-          echo "Publishing BGCS.Runtime version ${VERSION}"
+          echo "Publishing ${PACKAGE_ID} version ${VERSION} from ${PROJECT_PATH}"
 
       - name: Restore
-        run: dotnet restore src/BGCS.Runtime/BGCS.Runtime.csproj
+        run: dotnet restore ${{ steps.publish.outputs.project_path }}
 
       - name: Build
-        run: dotnet build src/BGCS.Runtime/BGCS.Runtime.csproj --configuration Release --no-restore
+        run: dotnet build ${{ steps.publish.outputs.project_path }} --configuration Release --no-restore
 
       - name: Pack
-        run: dotnet pack src/BGCS.Runtime/BGCS.Runtime.csproj --configuration Release --no-build --output artifacts/nuget -p:ContinuousIntegrationBuild=true -p:Version=${{ steps.version.outputs.version }}
+        run: dotnet pack ${{ steps.publish.outputs.project_path }} --configuration Release --no-build --output artifacts/nuget -p:ContinuousIntegrationBuild=true -p:Version=${{ steps.publish.outputs.version }}
 
       - name: Push package to NuGet
-        run: dotnet nuget push "artifacts/nuget/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+        run: dotnet nuget push "artifacts/nuget/${{ steps.publish.outputs.package_id }}.${{ steps.publish.outputs.version }}.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
       - name: Push symbols to NuGet
-        run: dotnet nuget push "artifacts/nuget/*.snupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+        run: dotnet nuget push "artifacts/nuget/${{ steps.publish.outputs.package_id }}.${{ steps.publish.outputs.version }}.snupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate

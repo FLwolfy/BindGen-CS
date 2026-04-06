@@ -1,3 +1,4 @@
+using System;
 using BGCS.Runtime;
 using Xunit;
 
@@ -49,5 +50,15 @@ public class Bool8AndBitfieldTests
         Bitfield.Set(ref raw, 0b01u, offset: 1, bitWidth: 2);
 
         Assert.Equal(0b1111_0010u, raw);
+    }
+
+    [Fact]
+    public void Bitfield_ToULong_WithUnsupportedSizeType_ShouldThrow()
+    {
+        decimal value = 1m;
+
+        Exception ex = Assert.Throws<Exception>(() => Bitfield.ToULong(value));
+
+        Assert.Contains("not supported in bitfields", ex.Message);
     }
 }
