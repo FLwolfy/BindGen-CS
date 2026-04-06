@@ -6,8 +6,14 @@ using BGCS.CppAst.Collections;
 using BGCS.CppAst.Model;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>InclusionDirectiveVisitor</c>.
+/// </summary>
 public unsafe class InclusionDirectiveVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_InclusionDirective
     ];

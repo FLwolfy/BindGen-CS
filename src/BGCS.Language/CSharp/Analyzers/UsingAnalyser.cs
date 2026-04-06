@@ -4,8 +4,14 @@
     using BGCS.Language;
     using BGCS.Language.CSharp.Nodes;
 
+    /// <summary>
+    /// Defines the public class <c>UsingAnalyser</c>.
+    /// </summary>
     public class UsingAnalyser : ISyntaxAnalyzer
     {
+        /// <summary>
+        /// Executes public operation <c>Analyze</c>.
+        /// </summary>
         public AnalyserResult Analyze(ParserContext context)
         {
             if (!context.SeekInBounds(2))

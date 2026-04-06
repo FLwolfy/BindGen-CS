@@ -12,6 +12,9 @@ namespace BGCS.CppAst.Model.Templates;
 /// </summary>
 public class CppTemplateArgument : CppType
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppTemplateArgument"/>.
+    /// </summary>
     public CppTemplateArgument(CXCursor cursor, CppType sourceParam, CppType typeArg, bool isSpecializedArgument) : base(cursor, CppTypeKind.TemplateArgumentType)
     {
         SourceParam = sourceParam ?? throw new ArgumentNullException(nameof(sourceParam));
@@ -20,6 +23,9 @@ public class CppTemplateArgument : CppType
         IsSpecializedArgument = isSpecializedArgument;
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppTemplateArgument</c>.
+    /// </summary>
     public CppTemplateArgument(CXCursor cursor, CppType sourceParam, long intArg) : base(cursor, CppTypeKind.TemplateArgumentType)
     {
         SourceParam = sourceParam ?? throw new ArgumentNullException(nameof(sourceParam));
@@ -28,6 +34,9 @@ public class CppTemplateArgument : CppType
         IsSpecializedArgument = true;
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppTemplateArgument</c>.
+    /// </summary>
     public CppTemplateArgument(CXCursor cursor, CppType sourceParam, string? unknownStr) : base(cursor, CppTypeKind.TemplateArgumentType)
     {
         SourceParam = sourceParam ?? throw new ArgumentNullException(nameof(sourceParam));
@@ -36,6 +45,9 @@ public class CppTemplateArgument : CppType
         IsSpecializedArgument = true;
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppTemplateArgument</c>.
+    /// </summary>
     public CppTemplateArgument(CX_TemplateArgument templateArgument, CppType sourceParam, CppType typeArg, bool isSpecializedArgument) : base(CXCursor.Null, CppTypeKind.TemplateArgumentType)
     {
         TemplateArgument = templateArgument;
@@ -45,6 +57,9 @@ public class CppTemplateArgument : CppType
         IsSpecializedArgument = isSpecializedArgument;
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppTemplateArgument</c>.
+    /// </summary>
     public CppTemplateArgument(CX_TemplateArgument templateArgument, CppType sourceParam, long intArg) : base(CXCursor.Null, CppTypeKind.TemplateArgumentType)
     {
         TemplateArgument = templateArgument;
@@ -54,6 +69,9 @@ public class CppTemplateArgument : CppType
         IsSpecializedArgument = true;
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppTemplateArgument</c>.
+    /// </summary>
     public CppTemplateArgument(CX_TemplateArgument templateArgument, CppType sourceParam, string? unknownStr) : base(CXCursor.Null, CppTypeKind.TemplateArgumentType)
     {
         TemplateArgument = templateArgument;
@@ -63,16 +81,34 @@ public class CppTemplateArgument : CppType
         IsSpecializedArgument = true;
     }
 
+    /// <summary>
+    /// Gets or sets <c>TemplateArgument</c>.
+    /// </summary>
     public CX_TemplateArgument TemplateArgument { get; set; }
 
+    /// <summary>
+    /// Gets <c>ArgKind</c>.
+    /// </summary>
     public CppTemplateArgumentKind ArgKind { get; }
 
+    /// <summary>
+    /// Gets <c>ArgAsType</c>.
+    /// </summary>
     public CppType? ArgAsType { get; }
 
+    /// <summary>
+    /// Gets <c>ArgAsInteger</c>.
+    /// </summary>
     public long ArgAsInteger { get; }
 
+    /// <summary>
+    /// Gets <c>ArgAsUnknown</c>.
+    /// </summary>
     public string? ArgAsUnknown { get; }
 
+    /// <summary>
+    /// Exposes public member <c>ArgString</c>.
+    /// </summary>
     public string ArgString
     {
         get
@@ -92,6 +128,9 @@ public class CppTemplateArgument : CppType
     /// </summary>
     public CppType SourceParam { get; }
 
+    /// <summary>
+    /// Gets <c>IsSpecializedArgument</c>.
+    /// </summary>
     public bool IsSpecializedArgument { get; }
 
     /// <inheritdoc />

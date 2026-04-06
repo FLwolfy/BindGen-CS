@@ -7,6 +7,9 @@
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
 
+    /// <summary>
+    /// Defines the public interface <c>IGeneratorConfig</c>.
+    /// </summary>
     public interface IGeneratorConfig
     {
         HashSet<string> AllowedConstants { get; set; }

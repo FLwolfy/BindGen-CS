@@ -3,6 +3,9 @@
     using BGCS.Core;
     using System.Text;
 
+    /// <summary>
+    /// Defines values for <c>NamingConvention</c>.
+    /// </summary>
     public enum NamingConvention
     {
         Unknown,
@@ -14,8 +17,14 @@
         LowerFlatCase,
     }
 
+    /// <summary>
+    /// Defines the public class <c>NamingHelper</c>.
+    /// </summary>
     public static class NamingHelper
     {
+        /// <summary>
+        /// Executes public operation <c>AnalyzeNamingConvention</c>.
+        /// </summary>
         public static NamingConvention AnalyzeNamingConvention(string input)
         {
             if (string.IsNullOrEmpty(input))
@@ -76,6 +85,9 @@
             return NamingConvention.Unknown;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetParts</c>.
+        /// </summary>
         public static string[] GetParts(string input, NamingConvention convention)
         {
             string[] parts = new string[] { input };
@@ -101,6 +113,9 @@
             return parts;
         }
 
+        /// <summary>
+        /// Executes public operation <c>ConvertTo</c>.
+        /// </summary>
         public static string ConvertTo(string input, NamingConvention targetConvention)
         {
             // unknown as target is basically keep original convention.
@@ -204,6 +219,9 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Executes public operation <c>Capitalize</c>.
+        /// </summary>
         public static unsafe string Capitalize(this string input)
         {
             string copy = input.ToString();

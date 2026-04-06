@@ -1,0 +1,35 @@
+{
+  "BaseConfig": {
+    "Url": "file://config.base.json",
+    "IgnoredProperties": [
+      "AdditionalArguments"
+    ]
+  },
+  "NamePrefix": "BGCS_DEMO_",
+  "LogLevel": "Information",
+  "CppLogLevel": "Warning",
+  "IncludeFolders": [
+    "include",
+    "include/compat"
+  ],
+  "SystemIncludeFolders": [
+    "/usr/include",
+    "/usr/local/include"
+  ],
+  "Defines": [
+    "BGCS_CPP2C_DEMO=1",
+    "BGCS_CPP2C_EXTRA=1"
+  ],
+  "AdditionalArguments": [
+    "-std=c++20",
+    "-fms-extensions"
+  ],
+  "EntryFiles": [
+    "include/demo.hpp",
+    "include/demo_common.hpp"
+  ],
+  "allowedHeaders": [
+    "include/demo.hpp",
+    "include/demo_common.hpp"
+  ]
+}

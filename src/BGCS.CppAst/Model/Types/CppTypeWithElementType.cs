@@ -16,6 +16,9 @@ public abstract class CppTypeWithElementType : CppType
         ElementType = elementType ?? throw new ArgumentNullException(nameof(elementType));
     }
 
+    /// <summary>
+    /// Gets <c>ElementType</c>.
+    /// </summary>
     public CppType ElementType { get; }
 
     /// <inheritdoc />

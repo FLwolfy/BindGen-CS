@@ -3,6 +3,9 @@ using BGCS.CppAst.Model.Declarations;
 
 namespace BGCS.Patching
 ;
+    /// <summary>
+    /// Defines values for <c>NamingPatchOptions</c>.
+    /// </summary>
     public enum NamingPatchOptions
     {
         None,
@@ -11,6 +14,9 @@ namespace BGCS.Patching
         CaseInsensitive = 1 << 2
     }
 
+    /// <summary>
+    /// Defines values for <c>NamingPatchMode</c>.
+    /// </summary>
     public enum NamingPatchMode
     {
         None = 0,
@@ -21,12 +27,18 @@ namespace BGCS.Patching
         All = Functions | Structs | Handles | Enums,
     }
 
+    /// <summary>
+    /// Defines the public class <c>NamingPatch</c>.
+    /// </summary>
     public class NamingPatch : PrePatch
     {
         private readonly string[] prefixes;
         private readonly NamingPatchOptions options;
         private readonly NamingPatchMode mode;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="NamingPatch"/>.
+        /// </summary>
         public NamingPatch(string[] prefixes, NamingPatchOptions options, NamingPatchMode mode = NamingPatchMode.Functions)
         {
             this.prefixes = prefixes;

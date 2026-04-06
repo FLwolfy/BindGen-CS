@@ -4,21 +4,36 @@
     using Newtonsoft.Json;
     using System.Collections.Frozen;
 
+    /// <summary>
+    /// Defines the public class <c>CsFunctionTableMetadata</c>.
+    /// </summary>
     public class CsFunctionTableMetadata : GeneratorMetadataEntry, ICloneable<CsFunctionTableMetadata>
     {
         [JsonConstructor]
+        /// <summary>
+        /// Initializes a new instance of <see cref="CsFunctionTableMetadata"/>.
+        /// </summary>
         public CsFunctionTableMetadata(List<CsFunctionTableEntry> entries)
         {
             Entries = entries;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CsFunctionTableMetadata</c>.
+        /// </summary>
         public CsFunctionTableMetadata()
         {
             Entries = [];
         }
 
+        /// <summary>
+        /// Gets or sets <c>Entries</c>.
+        /// </summary>
         public List<CsFunctionTableEntry> Entries { get; set; }
 
+        /// <summary>
+        /// Merges configuration or metadata via <c>Merge</c>.
+        /// </summary>
         public void Merge(CsFunctionTableMetadata from)
         {
             FrozenDictionary<int, CsFunctionTableEntry> indicesLookupTable = Entries.ToFrozenDictionary(x => x.Index);
@@ -54,11 +69,17 @@
             return new(Entries.Select(x => x.Clone()).ToList());
         }
 
+        /// <summary>
+        /// Executes public operation <c>Clone</c>.
+        /// </summary>
         public override GeneratorMetadataEntry Clone()
         {
             return new CsFunctionTableMetadata(Entries.Select(x => x.Clone()).ToList());
         }
 
+        /// <summary>
+        /// Merges configuration or metadata via <c>Merge</c>.
+        /// </summary>
         public override void Merge(GeneratorMetadataEntry from, in MergeOptions options)
         {
             if (options.MergeFunctionTable && from is CsFunctionTableMetadata metadata)

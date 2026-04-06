@@ -4,18 +4,36 @@
     using System;
     using System.Collections.Generic;
 
+    /// <summary>
+    /// Declares the callback signature <c>LogEventHandler</c>.
+    /// </summary>
     public delegate void LogEventHandler(LogSeverity severity, string message);
 
+    /// <summary>
+    /// Defines the public class <c>LoggerBase</c>.
+    /// </summary>
     public class LoggerBase
     {
         private readonly List<LogMessage> messages = new();
 
+        /// <summary>
+        /// Exposes public member <c>messages</c>.
+        /// </summary>
         public IReadOnlyList<LogMessage> Messages => messages;
 
+        /// <summary>
+        /// Raises notifications for this component.
+        /// </summary>
         public event LogEventHandler? LogEvent;
 
+        /// <summary>
+        /// Gets or sets <c>LogLevel</c>.
+        /// </summary>
         public LogSeverity LogLevel { get; set; } = LogSeverity.Information;
 
+        /// <summary>
+        /// Executes public operation <c>DisplayMessages</c>.
+        /// </summary>
         public void DisplayMessages()
         {
             int warns = 0;
@@ -73,6 +91,9 @@
             messages.Clear();
         }
 
+        /// <summary>
+        /// Executes public operation <c>Log</c>.
+        /// </summary>
         public void Log(LogSeverity severtiy, string message)
         {
             if (severtiy < LogLevel) return;
@@ -80,36 +101,57 @@
             LogEvent?.Invoke(severtiy, message);
         }
 
+        /// <summary>
+        /// Executes public operation <c>LogCritical</c>.
+        /// </summary>
         public void LogCritical(string message)
         {
             Log(LogSeverity.Critical, message);
         }
 
+        /// <summary>
+        /// Executes public operation <c>LogDebug</c>.
+        /// </summary>
         public void LogDebug(string message)
         {
             Log(LogSeverity.Debug, message);
         }
 
+        /// <summary>
+        /// Executes public operation <c>LogError</c>.
+        /// </summary>
         public void LogError(string message)
         {
             Log(LogSeverity.Error, message);
         }
 
+        /// <summary>
+        /// Executes public operation <c>LogInfo</c>.
+        /// </summary>
         public void LogInfo(string message)
         {
             Log(LogSeverity.Information, message);
         }
 
+        /// <summary>
+        /// Executes public operation <c>LogTrace</c>.
+        /// </summary>
         public void LogTrace(string message)
         {
             Log(LogSeverity.Trace, message);
         }
 
+        /// <summary>
+        /// Executes public operation <c>LogWarn</c>.
+        /// </summary>
         public void LogWarn(string message)
         {
             Log(LogSeverity.Warning, message);
         }
 
+        /// <summary>
+        /// Executes public operation <c>LogToConsole</c>.
+        /// </summary>
         public void LogToConsole()
         {
             LogEvent += GeneratorLogEvent;

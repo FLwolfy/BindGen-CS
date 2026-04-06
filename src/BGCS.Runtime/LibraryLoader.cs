@@ -15,6 +15,9 @@ using System.Runtime.InteropServices;
 using Android.Content.PM;
 #endif
 
+/// <summary>
+/// Flags describing supported target platforms for native library loading.
+/// </summary>
 public enum TargetPlatform
 {
     Unknown = 0,
@@ -33,14 +36,40 @@ public enum TargetPlatform
     Any = FreeBSD | Linux | OSX | Windows | Android | IOS | Tizen | ChromeOS | WebAssembly | Solaris | WatchOS | TVO
 }
 
+/// <summary>
+/// Callback that resolves a concrete file path for a library name.
+/// </summary>
+/// <param name="libraryName">Requested library name.</param>
+/// <param name="pathToLibrary">Resolved file path when handled.</param>
+/// <returns><see langword="true"/> when handled; otherwise <see langword="false"/>.</returns>
 public delegate bool ResolvePathHandler(string libraryName, out string? pathToLibrary);
 
+/// <summary>
+/// Callback that can rewrite a library name before loading.
+/// </summary>
+/// <param name="libraryName">Library name to inspect or replace.</param>
+/// <returns><see langword="true"/> to stop interceptor chain; otherwise <see langword="false"/>.</returns>
 public delegate bool LibraryNameInterceptor(ref string libraryName);
 
+/// <summary>
+/// Callback that can provide a library handle directly, bypassing default loading.
+/// </summary>
+/// <param name="libraryName">Library name being loaded.</param>
+/// <param name="pointer">Native library handle when handled.</param>
+/// <returns><see langword="true"/> when handled; otherwise <see langword="false"/>.</returns>
 public delegate bool LibraryLoadInterceptor(string libraryName, out nint pointer);
 
+/// <summary>
+/// Callback that can provide a custom <see cref="INativeContext"/> implementation.
+/// </summary>
+/// <param name="libraryName">Library name being loaded.</param>
+/// <param name="context">Resolved native context when handled.</param>
+/// <returns><see langword="true"/> when handled; otherwise <see langword="false"/>.</returns>
 public delegate bool NativeContextInterceptor(string libraryName, out INativeContext? context);
 
+/// <summary>
+/// Platform-aware native library loading pipeline with interception hooks.
+/// </summary>
 public static class LibraryLoader
 {
         private static readonly EventHandlerList<ResolvePathHandler> resolvePathHandlers = [];
@@ -48,40 +77,64 @@ public static class LibraryLoader
         private static readonly EventHandlerList<LibraryLoadInterceptor> libraryLoadInterceptors = [];
         private static readonly EventHandlerList<NativeContextInterceptor> nativeContextInterceptors = [];
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for FreeBSD.</summary>
         public static OSPlatform FreeBSD { get; } = OSPlatform.Create("FREEBSD");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for Linux.</summary>
         public static OSPlatform Linux { get; } = OSPlatform.Create("LINUX");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for macOS.</summary>
         public static OSPlatform OSX { get; } = OSPlatform.Create("OSX");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for Windows.</summary>
         public static OSPlatform Windows { get; } = OSPlatform.Create("WINDOWS");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for Android.</summary>
         public static OSPlatform Android { get; } = OSPlatform.Create("ANDROID");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for iOS.</summary>
         public static OSPlatform IOS { get; } = OSPlatform.Create("IOS");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for Tizen.</summary>
         public static OSPlatform Tizen { get; } = OSPlatform.Create("TIZEN");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for ChromeOS.</summary>
         public static OSPlatform ChromeOS { get; } = OSPlatform.Create("CHROMEOS");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for WebAssembly.</summary>
         public static OSPlatform WebAssembly { get; } = OSPlatform.Create("WEBASSEMBLY");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for Solaris.</summary>
         public static OSPlatform Solaris { get; } = OSPlatform.Create("SOLARIS");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for watchOS.</summary>
         public static OSPlatform WatchOS { get; } = OSPlatform.Create("WATCHOS");
 
+        /// <summary>Custom <see cref="OSPlatform"/> marker for tvOS.</summary>
         public static OSPlatform TVOS { get; } = OSPlatform.Create("TVOS");
 
+        /// <summary>
+        /// Additional probing folders for native libraries.
+        /// Relative paths are resolved from <see cref="AppContext.BaseDirectory"/>.
+        /// </summary>
         public static List<string> CustomLoadFolders { get; } = [];
 
+        /// <summary>Occurs when the loader needs to resolve a concrete library file path.</summary>
         public static event ResolvePathHandler ResolvePath { add => resolvePathHandlers.Add(value); remove => resolvePathHandlers.Remove(value); }
 
+        /// <summary>Occurs before loading to allow rewriting the library name.</summary>
         public static event LibraryNameInterceptor InterceptLibraryName { add => libraryNameInterceptors.Add(value); remove => libraryNameInterceptors.Remove(value); }
 
+        /// <summary>Occurs before default loading to allow providing a native handle directly.</summary>
         public static event LibraryLoadInterceptor InterceptLibraryLoad { add => libraryLoadInterceptors.Add(value); remove => libraryLoadInterceptors.Remove(value); }
 
+        /// <summary>Occurs before default loading to allow providing a custom native context.</summary>
         public static event NativeContextInterceptor InterceptNativeContext { add => nativeContextInterceptors.Add(value); remove => nativeContextInterceptors.Remove(value); }
 
+        /// <summary>
+        /// Gets the default library file extension for the current platform.
+        /// </summary>
+        /// <returns>Platform-specific extension such as <c>.dll</c>, <c>.so</c> or <c>.dylib</c>.</returns>
         public static string GetExtension()
         {
             // Default extension based on platform
@@ -138,15 +191,30 @@ public static class LibraryLoader
             return ".so";
         }
 
+        /// <summary>
+        /// Callback used to provide the logical native library name.
+        /// </summary>
         public delegate string LibraryNameCallback();
 
+        /// <summary>
+        /// Callback used to provide a custom native library extension.
+        /// </summary>
         public delegate string LibraryExtensionCallback();
 
+        /// <summary>
+        /// Registers an interceptor that binds a library name to the current process main module.
+        /// </summary>
+        /// <param name="targetLibraryName">Logical library name to intercept.</param>
         public static void LoadFromMainModule(string targetLibraryName)
         {
             LoadFrom(targetLibraryName, Process.GetCurrentProcess().MainModule!.BaseAddress);
         }
 
+        /// <summary>
+        /// Registers an interceptor that binds a library name to an existing module handle.
+        /// </summary>
+        /// <param name="targetLibraryName">Logical library name to intercept.</param>
+        /// <param name="address">Native module handle to return for that name.</param>
         public static void LoadFrom(string targetLibraryName, nint address)
         {
             bool Callback(string libraryName, out nint pointer)
@@ -164,6 +232,12 @@ public static class LibraryLoader
             libraryLoadInterceptors.Add(Callback);
         }
 
+        /// <summary>
+        /// Loads a native library and returns a ready-to-use <see cref="INativeContext"/>.
+        /// </summary>
+        /// <param name="libraryNameCallback">Callback providing logical library name.</param>
+        /// <param name="libraryExtensionCallback">Optional callback overriding extension resolution.</param>
+        /// <returns>Native context used by generated bindings.</returns>
         public static INativeContext LoadLibraryEx(LibraryNameCallback libraryNameCallback, LibraryExtensionCallback? libraryExtensionCallback)
         {
             var libraryName = libraryNameCallback();
@@ -179,6 +253,13 @@ public static class LibraryLoader
             return new NativeLibraryContext(LoadLibrary(libraryNameCallback, libraryExtensionCallback));
         }
 
+        /// <summary>
+        /// Loads a native library and returns its native module handle.
+        /// </summary>
+        /// <param name="libraryNameCallback">Callback providing logical library name.</param>
+        /// <param name="libraryExtensionCallback">Optional callback overriding extension resolution.</param>
+        /// <returns>Native module handle.</returns>
+        /// <exception cref="DllNotFoundException">Thrown when no candidate library can be loaded.</exception>
         public static nint LoadLibrary(LibraryNameCallback libraryNameCallback, LibraryExtensionCallback? libraryExtensionCallback)
         {
             var libraryName = libraryNameCallback();
@@ -272,6 +353,11 @@ public static class LibraryLoader
             return libraryName;
         }
 
+        /// <summary>
+        /// Determines whether a path is absolute/fully qualified for the current platform.
+        /// </summary>
+        /// <param name="path">Path to test.</param>
+        /// <returns><see langword="true"/> when absolute; otherwise <see langword="false"/>.</returns>
         public static bool IsPathFullyQualified(string path)
         {
             if (path.Length == 0)

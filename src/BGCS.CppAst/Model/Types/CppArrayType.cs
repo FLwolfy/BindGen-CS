@@ -28,12 +28,18 @@ public sealed class CppArrayType : CppTypeWithElementType
     /// </summary>
     public int Size { get; }
 
+    /// <summary>
+    /// Exposes public member <c>SizeOf</c>.
+    /// </summary>
     public override int SizeOf
     {
         get => Size * ElementType.SizeOf;
         set => throw new InvalidOperationException("Cannot set the SizeOf an array type. The SizeOf is calculated by the SizeOf its ElementType and the number of elements in the fixed array");
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetCanonicalType</c>.
+    /// </summary>
     public override CppType GetCanonicalType()
     {
         var elementTypeCanonical = ElementType.GetCanonicalType();
@@ -41,6 +47,9 @@ public sealed class CppArrayType : CppTypeWithElementType
         return new CppArrayType(Cursor.CanonicalCursor, elementTypeCanonical, Size);
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"{ElementType.GetDisplayName()}[{Size}]";

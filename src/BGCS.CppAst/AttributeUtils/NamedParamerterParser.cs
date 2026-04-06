@@ -4,12 +4,21 @@ using Irony.Parsing;
 using System.Text;
 
 namespace BGCS.CppAst.AttributeUtils;
+/// <summary>
+/// Defines the public class <c>NamedParameterParser</c>.
+/// </summary>
 public class NamedParameterParser
 {
     #region Embeded Types
 
+    /// <summary>
+    /// Defines the public class <c>TerminalNames</c>.
+    /// </summary>
     public static class TerminalNames
     {
+        /// <summary>
+        /// Exposes public member <c>"identifier",</c>.
+        /// </summary>
         public const string Identifier = "identifier",
         Number = "number",
         String = "string",
@@ -32,6 +41,9 @@ public class NamedParameterParser
 
     #endregion Embeded Types
 
+    /// <summary>
+    /// Executes public operation <c>ParseNamedParameters</c>.
+    /// </summary>
     public static bool ParseNamedParameters(string content, Dictionary<string, object> outNamedParameterDic, out string? errorMessage)
     {
         errorMessage = null;

@@ -6,8 +6,14 @@
     using System.Linq;
     using System.Reflection;
 
+    /// <summary>
+    /// Defines the public class <c>CollectionNormalizer</c>.
+    /// </summary>
     public static class CollectionNormalizer
     {
+        /// <summary>
+        /// Executes public operation <c>Normalize</c>.
+        /// </summary>
         public static void Normalize<T>(T obj)
         {
             if (obj == null) return;

@@ -5,6 +5,9 @@
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
 
+    /// <summary>
+    /// Defines the public class <c>CsCodeGeneratorConfig</c>.
+    /// </summary>
     public partial class CsCodeGeneratorConfig
     {
         /// <summary>
@@ -71,10 +74,16 @@
         public Dictionary<string, string?> TypedefToEnumMappings { get; set; } = null!;
 
         [DefaultValue(null)]
+        /// <summary>
+        /// Gets or sets <c>FunctionAliasMappings</c>.
+        /// </summary>
         public Dictionary<string, List<FunctionAliasMapping>> FunctionAliasMappings { get; set; } = null!;
 
         #region FunctionAlias
 
+        /// <summary>
+        /// Attempts to resolve data via <c>TryGetFunctionAliasMapping</c> without throwing.
+        /// </summary>
         public bool TryGetFunctionAliasMapping(string name, string aliasName, [NotNullWhen(true)] out FunctionAliasMapping? mapping)
         {
             if (!FunctionAliasMappings.TryGetValue(name, out var aliases))
@@ -96,6 +105,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetFunctionAliasMapping</c>.
+        /// </summary>
         public FunctionAliasMapping? GetFunctionAliasMapping(string name, string aliasName)
         {
             if (!FunctionAliasMappings.TryGetValue(name, out var aliases))
@@ -114,6 +126,9 @@
             return null;
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddFunctionAliasMapping</c>.
+        /// </summary>
         public List<FunctionAliasMapping> AddFunctionAliasMapping(FunctionAliasMapping alias)
         {
             if (!FunctionAliasMappings.TryGetValue(alias.ExportedName, out var aliases))

@@ -7,6 +7,9 @@
     // Summary:
     //     Supports cloning, which creates a new instance of a class with the same value
     //     as an existing instance.
+    /// <summary>
+    /// Defines the public interface <c>ICloneable</c>.
+    /// </summary>
     public interface ICloneable<T>
     {
         //
@@ -18,8 +21,14 @@
         T Clone();
     }
 
+    /// <summary>
+    /// Defines the public class <c>Extensions</c>.
+    /// </summary>
     public static class Extensions
     {
+        /// <summary>
+        /// Executes public operation <c>Reverse</c>.
+        /// </summary>
         public static void Reverse(this StringBuilder sb)
         {
             char t;
@@ -36,16 +45,25 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>Dictionary</c>.
+        /// </summary>
         public static Dictionary<TKey, TValue> Clone<TKey, TValue>(this Dictionary<TKey, TValue> dictionary) where TKey : notnull
         {
             return new(dictionary);
         }
 
+        /// <summary>
+        /// Executes public operation <c>List</c>.
+        /// </summary>
         public static List<T> Clone<T>(this List<T> list)
         {
             return new(list);
         }
 
+        /// <summary>
+        /// Executes public operation <c>List</c>.
+        /// </summary>
         public static List<T> CloneValues<T>(this IList<T> list) where T : ICloneable<T>
         {
             return new(list.Select(x => x.Clone()));

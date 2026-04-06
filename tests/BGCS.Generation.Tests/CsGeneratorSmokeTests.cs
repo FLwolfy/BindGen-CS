@@ -101,8 +101,7 @@ public class CsGeneratorSmokeTests
                 LibName = "test",
                 GenerateExtensions = false,
                 ImportType = ImportType.DllImport,
-                MergeGeneratedFilesToSingleFile = true,
-                SingleFileOutputName = "AllBindings.cs"
+                MergeGeneratedFilesToSingleFile = true
             };
 
             CsCodeGenerator gen = new(cfg);
@@ -111,7 +110,7 @@ public class CsGeneratorSmokeTests
             Assert.True(ok);
             Assert.DoesNotContain(gen.Messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
 
-            string mergedPath = Path.Combine(output, "AllBindings.cs");
+            string mergedPath = Path.Combine(output, "Bindings.cs");
             Assert.True(File.Exists(mergedPath));
 
             string merged = File.ReadAllText(mergedPath);

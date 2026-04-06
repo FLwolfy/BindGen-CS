@@ -8,31 +8,55 @@
     using System.Runtime.InteropServices;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>CharCaseInsensitiveEqualityComparer</c>.
+    /// </summary>
     public class CharCaseInsensitiveEqualityComparer : IEqualityComparer<char>
     {
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public static readonly CharCaseInsensitiveEqualityComparer Default = new();
 
+        /// <summary>
+        /// Executes public operation <c>Equals</c>.
+        /// </summary>
         public bool Equals(char x, char y)
         {
             return char.ToLower(x) == char.ToLower(y);
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetHashCode</c>.
+        /// </summary>
         public int GetHashCode([DisallowNull] char obj)
         {
             return char.ToLower(obj).GetHashCode();
         }
     }
 
+    /// <summary>
+    /// Defines the public class <c>WordList</c>.
+    /// </summary>
     public class WordList
     {
         private readonly TrieStringSet words = new(CharCaseInsensitiveEqualityComparer.Default);
 
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public static readonly WordList EN_EN = new("en_EN");
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="WordList"/>.
+        /// </summary>
         public WordList()
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>WordList</c>.
+        /// </summary>
         public WordList(string countryCode)
         {
             var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BGCS.Core.Resources." + countryCode + ".txt");
@@ -46,6 +70,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>CreateFromTxt</c>.
+        /// </summary>
         public static unsafe void CreateFromTxt(string source, string destination)
         {
             var lines = File.ReadAllLines(source);
@@ -93,6 +120,9 @@
             fs.Close();
         }
 
+        /// <summary>
+        /// Executes public operation <c>Read</c>.
+        /// </summary>
         public unsafe void Read(string path)
         {
             var fs = File.OpenRead(path);
@@ -129,6 +159,9 @@
             fs.Close();
         }
 
+        /// <summary>
+        /// Executes public operation <c>ReadTxt</c>.
+        /// </summary>
         public unsafe void ReadTxt(string path)
         {
             var lines = File.ReadAllLines(path);
@@ -142,6 +175,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>ReadTxt</c>.
+        /// </summary>
         public unsafe void ReadTxt(Stream stream)
         {
             TextReader reader = new StreamReader(stream);
@@ -155,6 +191,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>Write</c>.
+        /// </summary>
         public unsafe void Write(string path)
         {
             /*
@@ -189,6 +228,9 @@
             fs.Close();*/
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteTxt</c>.
+        /// </summary>
         public unsafe void WriteTxt(string path)
         {
             /*
@@ -217,6 +259,9 @@
             fs.Close();*/
         }
 
+        /// <summary>
+        /// Executes public operation <c>ReadFrom</c>.
+        /// </summary>
         public static WordList ReadFrom(string path)
         {
             WordList list = new();
@@ -224,6 +269,9 @@
             return list;
         }
 
+        /// <summary>
+        /// Executes public operation <c>ReadFromTxt</c>.
+        /// </summary>
         public static WordList ReadFromTxt(string path)
         {
             WordList list = new();
@@ -232,11 +280,17 @@
             return list;
         }
 
+        /// <summary>
+        /// Executes public operation <c>FindMostMatching</c>.
+        /// </summary>
         public ReadOnlySpan<char> FindMostMatching(ReadOnlySpan<char> text)
         {
             return words.FindLargestMatch(text);
         }
 
+        /// <summary>
+        /// Executes public operation <c>SplitWords</c>.
+        /// </summary>
         public string[] SplitWords(string text)
         {
             List<string> words = new();
@@ -259,6 +313,9 @@
         }
     }
 
+    /// <summary>
+    /// Defines the public class <c>WordListCollection</c>.
+    /// </summary>
     public class WordListCollection
     {
     }

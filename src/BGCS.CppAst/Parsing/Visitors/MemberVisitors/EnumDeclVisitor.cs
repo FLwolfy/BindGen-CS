@@ -5,8 +5,14 @@ using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>EnumDeclMemberVisitor</c>.
+/// </summary>
 public unsafe class EnumDeclMemberVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_EnumDecl
     ];

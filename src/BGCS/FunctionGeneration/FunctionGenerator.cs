@@ -11,6 +11,9 @@
     using System.Collections.Generic;
     using System.Linq;
 
+    /// <summary>
+    /// Defines the public class <c>FunctionGenerator</c>.
+    /// </summary>
     public class FunctionGenerator
     {
         private readonly CsCodeGeneratorConfig settings;
@@ -22,6 +25,9 @@
             this.settings = settings;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CreateDefault</c>.
+        /// </summary>
         public static FunctionGenerator CreateDefault(CsCodeGeneratorConfig config)
         {
             FunctionGenerator generator = new(config);
@@ -35,10 +41,19 @@
             return generator;
         }
 
+        /// <summary>
+        /// Exposes public member <c>rules</c>.
+        /// </summary>
         public IReadOnlyList<FunctionGenRule> Rules => rules;
 
+        /// <summary>
+        /// Exposes public member <c>steps</c>.
+        /// </summary>
         public IReadOnlyList<FunctionGenStep> Steps => steps;
 
+        /// <summary>
+        /// Executes public operation <c>OverwriteStep</c>.
+        /// </summary>
         public void OverwriteStep<T>(FunctionGenStep step) where T : FunctionGenStep
         {
             for (int i = 0; i < steps.Count; i++)
@@ -51,6 +66,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>OverwriteRule</c>.
+        /// </summary>
         public void OverwriteRule<T>(FunctionGenRule rule) where T : FunctionGenRule
         {
             for (int i = 0; i < rules.Count; i++)
@@ -63,26 +81,41 @@
             }
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddRule</c>.
+        /// </summary>
         public void AddRule(FunctionGenRule rule)
         {
             rules.Add(rule);
         }
 
+        /// <summary>
+        /// Removes data or behavior through <c>RemoveRule</c>.
+        /// </summary>
         public void RemoveRule(FunctionGenRule rule)
         {
             rules.Remove(rule);
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddStep</c>.
+        /// </summary>
         public void AddStep(FunctionGenStep step)
         {
             steps.Add(step);
         }
 
+        /// <summary>
+        /// Removes data or behavior through <c>RemoveStep</c>.
+        /// </summary>
         public void RemoveStep(FunctionGenStep step)
         {
             steps.Remove(step);
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>GenerateConstructorVariations</c>.
+        /// </summary>
         public virtual void GenerateConstructorVariations(CppClass cppClass, List<CsSubClass> subClasses, string csName, CsFunctionOverload function)
         {
             settings.TryGetFunctionMapping(function.ExportedName, out var mapping);
@@ -160,6 +193,9 @@
             function.TryAddVariation(spanVariation);
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>GenerateVariations</c>.
+        /// </summary>
         public virtual void GenerateVariations(IList<CppParameter> parameters, CsFunctionOverload function)
         {
             settings.TryGetFunctionMapping(function.ExportedName, out var mapping);
@@ -375,6 +411,9 @@
             }
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>GenerateAttributes</c>.
+        /// </summary>
         public virtual void GenerateAttributes(CppParameter cppParameter, Direction direction, CsParameterInfo parameter, List<string> attributes)
         {
             if (!settings.GenerateMetadata)
@@ -388,6 +427,9 @@
             attributes.Add(typeAttr);
         }
 
+        /// <summary>
+        /// Executes public operation <c>ApplySteps</c>.
+        /// </summary>
         public virtual void ApplySteps(CsFunctionOverload function, CsFunctionVariation variation)
         {
             foreach (var step in steps)
@@ -398,6 +440,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>ApplyStep</c>.
+        /// </summary>
         public virtual void ApplyStep<T>(CsFunctionOverload function, CsFunctionVariation variation) where T : FunctionGenStep
         {
             foreach (var step in steps)

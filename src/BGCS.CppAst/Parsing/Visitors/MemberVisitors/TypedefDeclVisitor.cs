@@ -9,8 +9,14 @@ using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Utilities;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>TypedefDeclVisitor</c>.
+/// </summary>
 public unsafe class TypedefDeclVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_TypedefDecl
     ];

@@ -46,6 +46,9 @@ public sealed class CppParameter : CppDeclaration, ICppMember
     /// </summary>
     public CppExpression? InitExpression { get; set; }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         if (string.IsNullOrEmpty(Name))

@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Language
 {
+    /// <summary>
+    /// Defines the public class <c>Preprocessor</c>.
+    /// </summary>
     public class Preprocessor
     {
         protected readonly List<string> operators = new();
@@ -8,6 +11,9 @@
         protected readonly Dictionary<string, KeywordType> keywordMap = new();
         protected readonly List<string> numberNotations = new();
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="Preprocessor"/>.
+        /// </summary>
         public Preprocessor()
         {
             operators.Add("+");
@@ -42,6 +48,9 @@
             punctuations.Add(',');
         }
 
+        /// <summary>
+        /// Executes public operation <c>Process</c>.
+        /// </summary>
         public string Process(string text, string filename)
         {
             List<Token> tokens = new();
@@ -97,6 +106,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsNewLineOrEof</c>.
+        /// </summary>
         public static bool IsNewLineOrEof(ReadOnlySpan<char> input, int index, out int length)
         {
             length = 0;

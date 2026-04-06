@@ -8,6 +8,9 @@ using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Utilities;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>CppModelBuilder</c>.
+/// </summary>
 public unsafe partial class CppModelBuilder
 {
     private static List<CppAttribute> ParseSystemAndAnnotateAttributeInCursor(CXCursor cursor)
@@ -93,6 +96,9 @@ public unsafe partial class CppModelBuilder
         return attributes;
     }
 
+    /// <summary>
+    /// Executes public operation <c>ParseAttributes</c>.
+    /// </summary>
     public void ParseAttributes(CXCursor cursor, ICppAttributeContainer attrContainer, bool needOnlineSeek = false)
     {
         //Try to handle annotate in cursor first
@@ -127,6 +133,9 @@ public unsafe partial class CppModelBuilder
         attrContainer.TokenAttributes.AddRange(attributes);
     }
 
+    /// <summary>
+    /// Executes public operation <c>ParseTypedefAttribute</c>.
+    /// </summary>
     public void ParseTypedefAttribute(CXCursor cursor, CppType type, CppType underlyingTypeDefType)
     {
         if (type is CppTypedef typedef)

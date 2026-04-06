@@ -8,32 +8,56 @@
     using System.Collections.Generic;
     using System.IO;
 
+    /// <summary>
+    /// Defines the public class <c>HandleGenerationStep</c>.
+    /// </summary>
     public class HandleGenerationStep : GenerationStep
     {
         protected readonly HashSet<string> LibDefinedTypedefs = new();
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly HashSet<string> DefinedTypedefs = new();
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="HandleGenerationStep"/>.
+        /// </summary>
         public HandleGenerationStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Handles";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
             Enabled = config.GenerateHandles;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(CsCodeGeneratorMetadata metadata)
         {
             metadata.DefinedTypedefs.AddRange(DefinedTypedefs);
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(CsCodeGeneratorMetadata metadata)
         {
             LibDefinedTypedefs.AddRange(metadata.DefinedTypedefs);
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
             LibDefinedTypedefs.Clear();
@@ -74,6 +98,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;

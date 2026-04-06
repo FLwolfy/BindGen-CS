@@ -1,6 +1,9 @@
 ﻿using BGCS.Metadata;
 
 namespace BGCS.Patching;
+    /// <summary>
+    /// Defines the public class <c>ConstantsToEnumPatch</c>.
+    /// </summary>
     public class ConstantsToEnumPatch : PrePatch
     {
         private readonly string macroPrefix;
@@ -9,6 +12,9 @@ namespace BGCS.Patching;
         private readonly HashSet<string> ignored;
         private readonly HashSet<string> extra;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ConstantsToEnumPatch"/>.
+        /// </summary>
         public ConstantsToEnumPatch(string macroPrefix, string csEnumName, string baseType, HashSet<string>? ignored = null, HashSet<string>? extra = null)
         {
             this.macroPrefix = macroPrefix;

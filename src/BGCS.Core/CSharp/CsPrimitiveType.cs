@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Core.CSharp
 {
+    /// <summary>
+    /// Defines values for <c>CsPrimitiveType</c>.
+    /// </summary>
     public enum CsPrimitiveType
     {
         Unknown,

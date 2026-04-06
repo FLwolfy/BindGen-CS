@@ -8,10 +8,20 @@
     using System.Collections.Generic;
     using System.ComponentModel;
 
+    /// <summary>
+    /// Complete configuration model for the BGCS C# binding generator.
+    /// </summary>
+    /// <remarks>
+    /// This type controls parsing, filtering, naming, marshalling, file layout and emitted runtime integration.
+    /// Most properties map directly to JSON configuration fields and are intended to be serialized/deserialized.
+    /// </remarks>
     public partial class CsCodeGeneratorConfig : IGeneratorConfig
     {
         private readonly CppTypeConverter converter;
 
+        /// <summary>
+        /// Initializes a configuration instance with default collections and mapping tables.
+        /// </summary>
         public CsCodeGeneratorConfig()
         {
             converter = new(this);
@@ -60,12 +70,25 @@
             FunctionAliasMappings = [];
         }
 
+        /// <summary>
+        /// Gets the type conversion service used to map C/C++ types to C# representations.
+        /// </summary>
         [JsonIgnore]
         public CppTypeConverter TypeConverter => converter;
 
+        /// <summary>
+        /// Optional callback that injects custom code into generated file headers.
+        /// </summary>
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
         [DefaultValue(null)]
         public HeaderInjectionDelegate? HeaderInjector { get; set; }
 
+        /// <summary>
+        /// Optional base configuration source merged into this instance before generation.
+        /// </summary>
+        /// <remarks>
+        /// This is typically used to reference shared settings from a central config URL/file.
+        /// </remarks>
         [DefaultValue(null)]
         public BaseConfig? BaseConfig { get; set; }
 
@@ -226,6 +249,9 @@
         [DefaultValue(true)]
         public bool GenerateDelegates { get; set; } = true;
 
+        /// <summary>
+        /// Generates each type into its own file when enabled. When disabled, type output may be consolidated.
+        /// </summary>
         [DefaultValue(true)]
         public bool OneFilePerType { get; set; } = true;
 
@@ -236,10 +262,11 @@
         public bool MergeGeneratedFilesToSingleFile { get; set; }
 
         /// <summary>
-        /// File name used when <see cref="MergeGeneratedFilesToSingleFile"/> is enabled. (Default: "Bindings.cs")
+        /// Runtime namespace used by generated bindings and optional standalone runtime source.
+        /// If empty or whitespace, defaults to <c>BGCS.Runtime</c>.
         /// </summary>
-        [DefaultValue("Bindings.cs")]
-        public string SingleFileOutputName { get; set; } = "Bindings.cs";
+        [DefaultValue("")]
+        public string RuntimeNamespace { get; set; } = string.Empty;
 
         /// <summary>
         /// Generate standalone runtime source file (`Runtime.cs`) into output root. (Default: <see langword="false"/>)
@@ -471,6 +498,12 @@
         [DefaultValue(NamingConvention.PascalCase)]
         public NamingConvention MemberNamingConvention { get; set; } = NamingConvention.PascalCase;
 
+        /// <summary>
+        /// Collapses typedef chains automatically before type mapping and emission.
+        /// </summary>
+        /// <remarks>
+        /// Enabling this usually reduces alias noise in output but can hide intermediate typedef names.
+        /// </remarks>
         [DefaultValue(true)]
         public bool AutoSquashTypedef { get; set; } = true;
 
@@ -498,6 +531,9 @@
         [DefaultValue(null)]
         public List<string> AdditionalArguments { get; set; } = null!;
 
+        /// <summary>
+        /// Additional enum definitions injected into generated output regardless of parsed source headers.
+        /// </summary>
         [DefaultValue(null)]
         public List<CsEnumMetadata> CustomEnums { get; set; } = null!;
 

@@ -3,6 +3,9 @@
     using System;
     using System.Collections.Generic;
 
+    /// <summary>
+    /// Defines the public interface <c>ICodeWriter</c>.
+    /// </summary>
     public interface ICodeWriter
     {
         int IndentLevel { get; }

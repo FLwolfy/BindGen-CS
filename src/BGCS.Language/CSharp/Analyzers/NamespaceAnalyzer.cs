@@ -1,8 +1,14 @@
 ﻿using BGCS.Language.CSharp.Nodes;
 
 namespace BGCS.Language.CSharp.Analyzers;
+    /// <summary>
+    /// Defines the public class <c>NamespaceAnalyzer</c>.
+    /// </summary>
     public class NamespaceAnalyzer : ISyntaxAnalyzer
     {
+        /// <summary>
+        /// Executes public operation <c>Analyze</c>.
+        /// </summary>
         public AnalyserResult Analyze(ParserContext context)
         {
             if (!context.SeekInBounds(2))

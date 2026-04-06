@@ -2,11 +2,17 @@
 {
     using System.Text.RegularExpressions;
 
+    /// <summary>
+    /// Defines the public class <c>RegexPatch</c>.
+    /// </summary>
     public abstract class RegexPatch
     {
         protected Regex Regex;
         private readonly string? targetFile;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="RegexPatch"/>.
+        /// </summary>
         public RegexPatch(string pattern, RegexOptions options, string? targetFile = null)
         {
             if ((options & RegexOptions.Compiled) == 0)
@@ -18,18 +24,27 @@
             this.targetFile = targetFile;
         }
 
+        /// <summary>
+        /// Executes public operation <c>RegexPatch</c>.
+        /// </summary>
         public RegexPatch(string pattern, string? targetFile = null)
         {
             Regex = new Regex(pattern, RegexOptions.Compiled);
             this.targetFile = targetFile;
         }
 
+        /// <summary>
+        /// Executes public operation <c>RegexPatch</c>.
+        /// </summary>
         public RegexPatch(Regex regex, string? targetFile = null)
         {
             Regex = regex;
             this.targetFile = targetFile;
         }
 
+        /// <summary>
+        /// Executes public operation <c>PrePatch</c>.
+        /// </summary>
         public virtual void PrePatch(CsCodeGeneratorConfig settings, ParseResult result, string file, ref string text)
         {
             if (targetFile != null && file != targetFile)
@@ -49,6 +64,9 @@
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>PostPatch</c>.
+        /// </summary>
         public virtual void PostPatch(string file, ref string text)
         {
             if (targetFile != null && file != targetFile)

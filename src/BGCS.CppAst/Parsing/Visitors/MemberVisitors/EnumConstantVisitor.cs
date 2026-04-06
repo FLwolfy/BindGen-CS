@@ -6,8 +6,14 @@ using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Utilities;
 
 namespace BGCS.CppAst.Parsing.Visitors.MemberVisitors;
+/// <summary>
+/// Defines the public class <c>EnumConstantVisitor</c>.
+/// </summary>
 public class EnumConstantVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [CXCursorKind.CXCursor_EnumConstantDecl];
 
     protected override unsafe CppElement? VisitCore(CXCursor cursor, CXCursor parent)

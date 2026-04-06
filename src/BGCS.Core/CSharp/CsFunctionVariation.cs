@@ -6,9 +6,15 @@
     using System.Text;
     using Newtonsoft.Json;
 
+    /// <summary>
+    /// Defines the public class <c>CsFunctionVariation</c>.
+    /// </summary>
     public class CsFunctionVariation : ICsFunction, ICloneable<CsFunctionVariation>, IHasIdentifier
     {
         [JsonConstructor]
+        /// <summary>
+        /// Initializes a new instance of <see cref="CsFunctionVariation"/>.
+        /// </summary>
         public CsFunctionVariation(string identifier, string exportedName, string name, string structName, CsFunctionKind kind, CsType returnType, List<CsParameterInfo> parameters, List<CsGenericParameterInfo> genericParameters, List<string> modifiers, List<string> attributes)
         {
             Identifier = identifier;
@@ -24,6 +30,9 @@
             Attributes = attributes;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CsFunctionVariation</c>.
+        /// </summary>
         public CsFunctionVariation(string identifier, string exportedName, string name, string structName, CsFunctionKind kind, CsType returnType)
         {
             Identifier = identifier;
@@ -38,26 +47,59 @@
             Attributes = new();
         }
 
+        /// <summary>
+        /// Gets or sets <c>Identifier</c>.
+        /// </summary>
         public string Identifier { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>ExportedName</c>.
+        /// </summary>
         public string ExportedName { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>Name</c>.
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>StructName</c>.
+        /// </summary>
         public string StructName { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>Kind</c>.
+        /// </summary>
         public CsFunctionKind Kind { get; set; }
 
+        /// <summary>
+        /// Exposes public member <c>0</c>.
+        /// </summary>
         public bool IsGeneric => GenericParameters.Count > 0;
 
+        /// <summary>
+        /// Gets or sets <c>ReturnType</c>.
+        /// </summary>
         public CsType ReturnType { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>Parameters</c>.
+        /// </summary>
         public List<CsParameterInfo> Parameters { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>GenericParameters</c>.
+        /// </summary>
         public List<CsGenericParameterInfo> GenericParameters { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>Modifiers</c>.
+        /// </summary>
         public List<string> Modifiers { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>Attributes</c>.
+        /// </summary>
         public List<string> Attributes { get; set; }
 
         #region IDs
@@ -118,18 +160,27 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildFunctionHeaderId</c>.
+        /// </summary>
         public string BuildFunctionHeaderId(WriteFunctionFlags flags)
         {
             string signature = BuildFunctionSignature(this, false, false, true, flags);
             return Identifier = $"{Name}({signature})";
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildFunctionHeaderId</c>.
+        /// </summary>
         public string BuildFunctionHeaderId(string alias, WriteFunctionFlags flags)
         {
             string signature = BuildFunctionSignature(this, false, false, true, flags);
             return Identifier = $"{alias}({signature})";
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildFunctionHeader</c>.
+        /// </summary>
         public string BuildFunctionHeader(CsType csReturnType, WriteFunctionFlags flags, bool generateMetadata)
         {
             string signature = BuildFunctionSignature(this, generateMetadata, true, false, flags);
@@ -143,6 +194,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildFunctionHeader</c>.
+        /// </summary>
         public string BuildFunctionHeader(string alias, CsType csReturnType, WriteFunctionFlags flags, bool generateMetadata)
         {
             string signature = BuildFunctionSignature(this, generateMetadata, true, false, flags);
@@ -156,6 +210,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildFunctionOverload</c>.
+        /// </summary>
         public string BuildFunctionOverload(WriteFunctionFlags flags)
         {
             string signature = BuildFunctionOverload(this, flags);
@@ -216,6 +273,9 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildConstructorSignatureIdentifier</c>.
+        /// </summary>
         public string BuildConstructorSignatureIdentifier()
         {
             return Identifier = $"{StructName}({BuildConstructorSignature(false, false, false)})";
@@ -223,21 +283,33 @@
 
         #endregion IDs
 
+        /// <summary>
+        /// Executes public operation <c>BuildFullConstructorSignature</c>.
+        /// </summary>
         public string BuildFullConstructorSignature(bool generateMetadata)
         {
             return $"{StructName}({BuildConstructorSignature(generateMetadata)})";
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildFullSignature</c>.
+        /// </summary>
         public string BuildFullSignature()
         {
             return $"{ReturnType.Name} {Name}{(IsGeneric ? $"<{BuildGenericSignature()}>" : string.Empty)}({BuildSignature()}) {BuildGenericConstraint()}";
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildFullExtensionSignature</c>.
+        /// </summary>
         public string BuildFullExtensionSignature(string type, string name)
         {
             return $"{ReturnType.Name} {Name}{(IsGeneric ? $"<{BuildGenericSignature()}>" : string.Empty)}({BuildExtensionSignature(type, name)}) {BuildGenericConstraint()}";
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildSignature</c>.
+        /// </summary>
         public string BuildSignature(bool useAttributes = true, bool useNames = true)
         {
             StringBuilder sb = new();
@@ -260,6 +332,9 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildConstructorSignature</c>.
+        /// </summary>
         public string BuildConstructorSignature(bool useAttributes = true, bool useNames = true, bool useDefaults = true)
         {
             StringBuilder sb = new();
@@ -281,6 +356,9 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildExtensionSignature</c>.
+        /// </summary>
         public string BuildExtensionSignature(string type, string? name, bool useAttributes = true, bool useNames = true)
         {
             StringBuilder sb = new();
@@ -299,21 +377,33 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildGenericSignature</c>.
+        /// </summary>
         public string BuildGenericSignature()
         {
             return string.Join(", ", GenericParameters.Select(p => p.Name));
         }
 
+        /// <summary>
+        /// Executes public operation <c>BuildGenericConstraint</c>.
+        /// </summary>
         public string BuildGenericConstraint()
         {
             return string.Join(" ", GenericParameters.Select(p => p.Constrain));
         }
 
+        /// <summary>
+        /// Executes public operation <c>ToString</c>.
+        /// </summary>
         public override string ToString()
         {
             return BuildSignature();
         }
 
+        /// <summary>
+        /// Executes public operation <c>HasParameter</c>.
+        /// </summary>
         public bool HasParameter(CsParameterInfo cppParameter)
         {
             for (int i = 0; i < Parameters.Count; i++)
@@ -324,6 +414,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetParameter</c>.
+        /// </summary>
         public CsParameterInfo? GetParameter(string name)
         {
             for (int i = 0; i < Parameters.Count; i++)
@@ -335,22 +428,34 @@
             return null;
         }
 
+        /// <summary>
+        /// Attempts to resolve data via <c>TryGetParameter</c> without throwing.
+        /// </summary>
         public bool TryGetParameter(string name, [NotNullWhen(true)] out CsParameterInfo? parameter)
         {
             parameter = GetParameter(name);
             return parameter != null;
         }
 
+        /// <summary>
+        /// Executes public operation <c>ShallowClone</c>.
+        /// </summary>
         public CsFunctionVariation ShallowClone()
         {
             return new CsFunctionVariation(Identifier, ExportedName, Name, StructName, Kind, ReturnType.Clone());
         }
 
+        /// <summary>
+        /// Executes public operation <c>Clone</c>.
+        /// </summary>
         public CsFunctionVariation Clone()
         {
             return new CsFunctionVariation(Identifier, ExportedName, Name, StructName, Kind, ReturnType.Clone(), Parameters.CloneValues(), GenericParameters.CloneValues(), Modifiers.Clone(), Attributes.Clone());
         }
 
+        /// <summary>
+        /// Executes public operation <c>ValueVariation</c>.
+        /// </summary>
         public static implicit operator ValueVariation(CsFunctionVariation variation)
         {
             return new ValueVariation(variation.Name, variation.Parameters);

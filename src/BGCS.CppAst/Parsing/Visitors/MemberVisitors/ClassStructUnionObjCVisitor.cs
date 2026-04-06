@@ -6,8 +6,14 @@ using BGCS.CppAst.Model.Declarations;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+/// <summary>
+/// Defines the public class <c>ClassStructUnionObjCVisitor</c>.
+/// </summary>
 public unsafe class ClassStructUnionObjCVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_ClassTemplate,
             CXCursorKind.CXCursor_ClassDecl,

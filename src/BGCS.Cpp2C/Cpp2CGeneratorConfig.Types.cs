@@ -6,8 +6,15 @@
     using System;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>Cpp2CGeneratorConfig</c> used by the generation pipeline.
+    /// </summary>
     public partial class Cpp2CGeneratorConfig
     {
+        /// <summary>
+        /// Performs the operation implemented by <c>GetCType</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetCType</c>.</returns>
         public string GetCType(CppType type)
         {
             // TODO: Improve type mapping
@@ -118,6 +125,10 @@
             };
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetCTypeName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetCTypeName</c>.</returns>
         public string GetCTypeName(CppClass c)
         {
             return $"{NamePrefix}{c.Name}";

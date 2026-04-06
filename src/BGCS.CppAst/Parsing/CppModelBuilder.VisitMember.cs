@@ -4,8 +4,14 @@ using ClangSharp.Interop;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Interfaces;
 
+/// <summary>
+/// Defines the public class <c>CppModelBuilder</c>.
+/// </summary>
 public unsafe partial class CppModelBuilder
 {
+    /// <summary>
+    /// Executes public operation <c>VisitMember</c>.
+    /// </summary>
     public CXChildVisitResult VisitMember(CXCursor cursor, CXCursor parent, void* data = null)
     {
         CppElement? element = null;

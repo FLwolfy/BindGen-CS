@@ -1,21 +1,33 @@
 ﻿namespace BGCS.Language
 {
+    /// <summary>
+    /// Defines the public class <c>ParserBase</c>.
+    /// </summary>
     public class ParserBase
     {
         protected readonly List<ISyntaxAnalyzer> analyzers = new();
         protected readonly Lexer lexer = new();
         protected readonly ParserOptions options;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ParserBase"/>.
+        /// </summary>
         public ParserBase(ParserOptions options)
         {
             this.options = options;
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddAnalyser</c>.
+        /// </summary>
         public virtual void AddAnalyser(ISyntaxAnalyzer analyzer)
         {
             analyzers.Add(analyzer);
         }
 
+        /// <summary>
+        /// Executes public operation <c>Parse</c>.
+        /// </summary>
         public virtual ParserResult Parse(string input, string filename)
         {
             var lexerResult = lexer.Tokenize(input, filename);

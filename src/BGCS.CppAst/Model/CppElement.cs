@@ -27,6 +27,9 @@ public abstract class CppElement : ICppElement
         Cursor = cursor;
     }
 
+    /// <summary>
+    /// Gets or sets <c>Cursor</c>.
+    /// </summary>
     public CXCursor Cursor { get; set; }
 
     /// <summary>
@@ -39,10 +42,19 @@ public abstract class CppElement : ICppElement
     /// </summary>
     public ICppContainer? Parent { get; internal set; }
 
+    /// <summary>
+    /// Executes public operation <c>Equals</c>.
+    /// </summary>
     public override sealed bool Equals(object? obj) => ReferenceEquals(this, obj);
 
+    /// <summary>
+    /// Returns computed data from <c>GetHashCode</c>.
+    /// </summary>
     public override sealed int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
+    /// <summary>
+    /// Exposes public member <c>FullParentName</c>.
+    /// </summary>
     public string FullParentName
     {
         get
@@ -94,6 +106,9 @@ public abstract class CppElement : ICppElement
     /// </summary>
     public string SourceFile => Span.Start.File;
 
+    /// <summary>
+    /// Executes public operation <c>AssignSourceSpan</c>.
+    /// </summary>
     public void AssignSourceSpan(in CXCursor cursor)
     {
         var start = cursor.Extent.Start;
@@ -105,6 +120,9 @@ public abstract class CppElement : ICppElement
     }
 
     [Obsolete("Remove me later, when all meta attributes are handled after the new api")]
+    /// <summary>
+    /// Executes public operation <c>ConvertToMetaAttributes</c>.
+    /// </summary>
     public void ConvertToMetaAttributes()
     {
         if (this is not ICppAttributeContainer container) return;

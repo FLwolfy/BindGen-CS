@@ -52,8 +52,14 @@ public interface ICppDeclarationContainer : ICppContainer, ICppAttributeContaine
     //CppContainerList<CppAttribute> Attributes { get; }
 }
 
+/// <summary>
+/// Defines the public class <c>ICppDeclarationContainerExtensions</c>.
+/// </summary>
 public static class ICppDeclarationContainerExtensions
 {
+    /// <summary>
+    /// Executes public operation <c>FindByName</c>.
+    /// </summary>
     public static CppElement? FindByName<T>(this T container, ReadOnlySpan<char> name) where T : ICppDeclarationContainer
     {
         var c = container.Classes.FindElementByName(name);

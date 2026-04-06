@@ -7,16 +7,28 @@
     using BGCS.Metadata;
     using System.Collections.Frozen;
 
+    /// <summary>
+    /// Defines the public class <c>ConstantPreProcessStep</c>.
+    /// </summary>
     public class ConstantPreProcessStep : PreProcessStep
     {
+        /// <summary>
+        /// Initializes a new instance of <see cref="ConstantPreProcessStep"/>.
+        /// </summary>
         public ConstantPreProcessStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>PreProcess</c>.
+        /// </summary>
         public override void PreProcess(FileSet files, CppCompilation compilation, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata, ParseResult result)
         {
             FrozenSet<string> functionNames = compilation.Functions.Select(f => f.Name).ToFrozenSet();

@@ -5,18 +5,39 @@
     using System.Collections.Generic;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>FunctionWriterContext</c>.
+    /// </summary>
     public class FunctionWriterContext
     {
+        /// <summary>
+        /// Gets <c>Writer</c>.
+        /// </summary>
         public ICodeWriter Writer { get; }
 
+        /// <summary>
+        /// Gets <c>Config</c>.
+        /// </summary>
         public CsCodeGeneratorConfig Config { get; }
 
+        /// <summary>
+        /// Gets <c>StringBuilder</c>.
+        /// </summary>
         public StringBuilder StringBuilder { get; }
 
+        /// <summary>
+        /// Gets <c>Overload</c>.
+        /// </summary>
         public CsFunctionOverload Overload { get; }
 
+        /// <summary>
+        /// Gets <c>Variation</c>.
+        /// </summary>
         public CsFunctionVariation Variation { get; }
 
+        /// <summary>
+        /// Gets <c>Flags</c>.
+        /// </summary>
         public WriteFunctionFlags Flags { get; }
 
         private Stack<(string paramName, CsParameterInfo param, string varName, string? convertBackCondition)> strings = new();
@@ -24,6 +45,9 @@
         private int stringCounter = 0;
         private int blockCounter = 0;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="FunctionWriterContext"/>.
+        /// </summary>
         public FunctionWriterContext(ICodeWriter writer, CsCodeGeneratorConfig config, StringBuilder stringBuilder, CsFunctionOverload overload, CsFunctionVariation variation, WriteFunctionFlags flags)
         {
             Writer = writer;
@@ -34,17 +58,26 @@
             Flags = flags;
         }
 
+        /// <summary>
+        /// Executes public operation <c>AppendParam</c>.
+        /// </summary>
         public void AppendParam(string param)
         {
             StringBuilder.Append(param);
         }
 
+        /// <summary>
+        /// Executes public operation <c>BeginBlock</c>.
+        /// </summary>
         public int BeginBlock(string text)
         {
             Writer.BeginBlock(text);
             return IncrementBlockCounter();
         }
 
+        /// <summary>
+        /// Executes public operation <c>EndBlock</c>.
+        /// </summary>
         public int EndBlock()
         {
             Writer.EndBlock();
@@ -56,6 +89,9 @@
             return blockCounter++;
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringArrayConvertToUnmanaged</c>.
+        /// </summary>
         public void WriteStringArrayConvertToUnmanaged(CsParameterInfo parameter)
         {
             MarshalHelper.WriteStringArrayConvertToUnmanaged(Writer, parameter.Type, parameter.Name, $"pStrArray{stringArrays.Count}");
@@ -63,11 +99,17 @@
             PushStringArray(parameter.Name, parameter, $"pStrArray{stringArrays.Count}");
         }
 
+        /// <summary>
+        /// Executes public operation <c>PushStringArray</c>.
+        /// </summary>
         public void PushStringArray(string paramName, CsParameterInfo parameter, string varName)
         {
             stringArrays.Push((paramName, parameter, varName));
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringConvertToUnmanaged</c>.
+        /// </summary>
         public void WriteStringConvertToUnmanaged(CsParameterInfo parameter, bool isRef, string? convertBackCondition = null)
         {
             // Lightweight branch for readonly strings.
@@ -89,40 +131,67 @@
             AppendParam($"pStr{stringCounter}");
         }
 
+        /// <summary>
+        /// Executes public operation <c>PushString</c>.
+        /// </summary>
         public void PushString(string paramName, CsParameterInfo parameter, string varName, string? convertBackCondition)
         {
             strings.Push((paramName, parameter, varName, convertBackCondition));
         }
 
+        /// <summary>
+        /// Executes public operation <c>IncrementStringCounter</c>.
+        /// </summary>
         public int IncrementStringCounter()
         {
             return stringCounter++;
         }
 
+        /// <summary>
+        /// Executes public operation <c>TryPopString</c>.
+        /// </summary>
         public bool TryPopString(out (string paramName, CsParameterInfo param, string varName, string? convertBackCondition) stackItem)
         {
             return strings.TryPop(out stackItem);
         }
 
+        /// <summary>
+        /// Executes public operation <c>TryPopStringArray</c>.
+        /// </summary>
         public bool TryPopStringArray(out (string paramName, CsParameterInfo param, string varName) stackItem)
         {
             return stringArrays.TryPop(out stackItem);
         }
 
+        /// <summary>
+        /// Exposes public member <c>stringCounter</c>.
+        /// </summary>
         public int StringCounter => stringCounter;
 
+        /// <summary>
+        /// Exposes public member <c>blockCounter</c>.
+        /// </summary>
         public int BlockCounter => blockCounter;
 
+        /// <summary>
+        /// Executes public operation <c>DecrementBlockCounter</c>.
+        /// </summary>
         public int DecrementBlockCounter()
         {
             return blockCounter--;
         }
 
+        /// <summary>
+        /// Executes public operation <c>DecrementStringCounter</c>.
+        /// </summary>
         public int DecrementStringCounter()
         {
             return stringCounter--;
         }
 
+        /// <summary>
+        /// Executes public operation <c>ConvertStrings</c>.
+        /// </summary>
         public void ConvertStrings()
         {
             while (strings.TryPop(out var stackItem))
@@ -131,6 +200,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>FreeStringArrays</c>.
+        /// </summary>
         public void FreeStringArrays()
         {
             while (stringArrays.TryPop(out var stackItem))
@@ -139,6 +211,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>FreeStrings</c>.
+        /// </summary>
         public void FreeStrings()
         {
             while (stringCounter > 0)
@@ -148,6 +223,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>EndBlocks</c>.
+        /// </summary>
         public void EndBlocks()
         {
             while (blockCounter > 0)
@@ -157,6 +235,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>UniqueName</c>.
+        /// </summary>
         public string UniqueName(string name)
         {
             var nname = name;

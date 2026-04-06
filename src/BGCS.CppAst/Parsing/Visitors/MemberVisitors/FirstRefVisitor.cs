@@ -4,8 +4,14 @@ using ClangSharp.Interop;
 using BGCS.CppAst.Model;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>FirstRefVisitor</c>.
+/// </summary>
 public class FirstRefVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [CXCursorKind.CXCursor_FirstRef];
 
     protected override unsafe CppElement? VisitCore(CXCursor cursor, CXCursor parent)

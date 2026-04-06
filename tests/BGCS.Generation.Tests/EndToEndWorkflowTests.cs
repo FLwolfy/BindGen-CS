@@ -7,7 +7,7 @@ namespace BGCS.Tests;
 public class EndToEndWorkflowTests
 {
     [Fact]
-    public void BatchGenerator_WithConfigFileAndCliOutputOverride_ShouldGenerateBindingsAndRuntime()
+    public void BatchGenerator_WithConfigFileAndCliOutputOverride_ShouldGenerateBindingsAndRuntimeWithConfiguredNamespace()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-e2e-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -26,8 +26,8 @@ public class EndToEndWorkflowTests
             LibName = "demo",
             GenerateExtensions = false,
             MergeGeneratedFilesToSingleFile = true,
-            SingleFileOutputName = "Bindings.cs",
             GenerateRuntimeSource = true,
+            RuntimeNamespace = "Custom.Runtime",
             ImportType = ImportType.DllImport
         };
 
@@ -52,7 +52,8 @@ public class EndToEndWorkflowTests
             string runtime = File.ReadAllText(runtimePath);
 
             Assert.Contains("DemoAddNative", bindings);
-            Assert.Contains("namespace BGCS.Runtime", runtime);
+            Assert.Contains("using Custom.Runtime;", bindings);
+            Assert.Contains("namespace Custom.Runtime", runtime);
             Assert.Contains("#if !BGCS_RUNTIME_EXTERNAL", runtime);
         }
         finally

@@ -6,8 +6,14 @@ using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Utilities;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>ObjCPropertyDeclVisitor</c>.
+/// </summary>
 public unsafe class ObjCPropertyDeclVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_ObjCPropertyDecl
     ];

@@ -27,6 +27,9 @@ public abstract class CppType : CppElement
     /// </summary>
     public CppTypeKind TypeKind { get; }
 
+    /// <summary>
+    /// Gets or sets <c>SizeOf</c>.
+    /// </summary>
     public abstract int SizeOf { get; set; }
 
     /// <summary>

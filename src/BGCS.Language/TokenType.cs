@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Language
 {
+    /// <summary>
+    /// Defines values for <c>TokenType</c>.
+    /// </summary>
     public enum TokenType : byte
     {
         Unknown = 0,

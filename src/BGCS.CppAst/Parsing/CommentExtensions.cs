@@ -6,13 +6,22 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+/// <summary>
+/// Defines the public class <c>CommentExtensions</c>.
+/// </summary>
 public static class CommentExtensions
 {
+    /// <summary>
+    /// Returns computed data from <c>GetComment</c>.
+    /// </summary>
     public static CppComment? GetComment(this in CXCursor cursor)
     {
         return cursor.ParsedComment.ToComment();
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToComment</c>.
+    /// </summary>
     public static CppComment? ToComment(this in CXComment cxComment)
     {
         var cppKind = GetCommentKind(cxComment.Kind);

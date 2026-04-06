@@ -12,29 +12,56 @@
     using System.Collections.Generic;
     using System.IO;
 
+    /// <summary>
+    /// Defines the public class <c>EnumGenerationStep</c>.
+    /// </summary>
     public class EnumGenerationStep : GenerationStep
     {
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly HashSet<CsEnumMetadata> LibDefinedEnums = new(IdentifierComparer<CsEnumMetadata>.Default);
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly HashSet<CsEnumMetadata> DefinedEnums = new(IdentifierComparer<CsEnumMetadata>.Default);
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly Dictionary<string, CsEnumMetadata> DefinedCppEnums = new();
         private int unknownEnumCounter = 0;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="EnumGenerationStep"/>.
+        /// </summary>
         public EnumGenerationStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Enums";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
             Enabled = config.GenerateEnums;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(CsCodeGeneratorMetadata metadata)
         {
             metadata.DefinedEnums.AddRange(DefinedEnums);
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(CsCodeGeneratorMetadata metadata)
         {
             LibDefinedEnums.AddRange(metadata.DefinedEnums);
@@ -44,6 +71,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
             LibDefinedEnums.Clear();
@@ -103,6 +133,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;

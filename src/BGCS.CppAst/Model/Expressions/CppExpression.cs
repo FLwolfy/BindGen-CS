@@ -61,6 +61,9 @@ public abstract class CppExpression : CppElement
 /// </summary>
 public class CppRawExpression : CppExpression
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppRawExpression"/>.
+    /// </summary>
     public CppRawExpression(CXCursor cursor, CppExpressionKind kind) : base(cursor, kind)
     {
         Tokens = [];
@@ -90,6 +93,9 @@ public class CppRawExpression : CppExpression
         return Text;
     }
 
+    /// <summary>
+    /// Executes public operation <c>AppendTokens</c>.
+    /// </summary>
     public void AppendTokens(CXCursor cursor)
     {
         Tokenizer tokenizer = new(cursor);
@@ -106,10 +112,16 @@ public class CppRawExpression : CppExpression
 /// </summary>
 public class CppInitListExpression : CppExpression
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppInitListExpression"/>.
+    /// </summary>
     public CppInitListExpression(CXCursor cursor) : base(cursor, CppExpressionKind.InitList)
     {
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         var builder = new StringBuilder();
@@ -125,6 +137,9 @@ public class CppInitListExpression : CppExpression
 /// </summary>
 public class CppBinaryExpression : CppExpression
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppBinaryExpression"/>.
+    /// </summary>
     public CppBinaryExpression(CXCursor cursor, CppExpressionKind kind) : base(cursor, kind)
     {
     }
@@ -160,6 +175,9 @@ public class CppBinaryExpression : CppExpression
 /// </summary>
 public class CppUnaryExpression : CppExpression
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppUnaryExpression"/>.
+    /// </summary>
     public CppUnaryExpression(CXCursor cursor, CppExpressionKind kind) : base(cursor, kind)
     {
     }
@@ -187,6 +205,9 @@ public class CppUnaryExpression : CppExpression
 /// </summary>
 public class CppParenExpression : CppExpression
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppParenExpression"/>.
+    /// </summary>
     public CppParenExpression(CXCursor cursor) : base(cursor, CppExpressionKind.Paren)
     {
     }
@@ -207,6 +228,9 @@ public class CppParenExpression : CppExpression
 /// </summary>
 public class CppLiteralExpression : CppExpression
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppLiteralExpression"/>.
+    /// </summary>
     public CppLiteralExpression(CXCursor cursor, CppExpressionKind kind, string value) : base(cursor, kind)
     {
         Value = value;

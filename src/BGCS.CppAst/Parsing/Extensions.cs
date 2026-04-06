@@ -12,8 +12,14 @@ using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Utilities;
 using System.Text;
 
+/// <summary>
+/// Defines the public class <c>Extensions</c>.
+/// </summary>
 public static class Extensions
 {
+    /// <summary>
+    /// Executes public operation <c>ToVisibility</c>.
+    /// </summary>
     public static CppVisibility ToVisibility(this CX_CXXAccessSpecifier accessSpecifier)
     {
         return accessSpecifier switch
@@ -25,11 +31,17 @@ public static class Extensions
         };
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetVisibility</c>.
+    /// </summary>
     public static CppVisibility GetVisibility(this in CXCursor cursor)
     {
         return cursor.CXXAccessSpecifier.ToVisibility();
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetStorageQualifier</c>.
+    /// </summary>
     public static CppStorageQualifier GetStorageQualifier(this in CXCursor cursor)
     {
         return cursor.StorageClass switch
@@ -40,11 +52,17 @@ public static class Extensions
         };
     }
 
+    /// <summary>
+    /// Executes public operation <c>IsAnonymousTypeUsed</c>.
+    /// </summary>
     public static bool IsAnonymousTypeUsed(this CppType type, CppType anonymousType)
     {
         return IsAnonymousTypeUsed(type, anonymousType, []);
     }
 
+    /// <summary>
+    /// Executes public operation <c>IsAnonymousTypeUsed</c>.
+    /// </summary>
     public static bool IsAnonymousTypeUsed(this CppType type, CppType anonymousType, HashSet<CppType> visited)
     {
         if (!visited.Add(type)) return false;
@@ -59,6 +77,9 @@ public static class Extensions
         return false;
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToLinkageKind</c>.
+    /// </summary>
     public static CppLinkageKind ToLinkageKind(this CXLinkageKind link)
     {
         return link switch
@@ -72,11 +93,17 @@ public static class Extensions
         };
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetLinkageKind</c>.
+    /// </summary>
     public static CppLinkageKind GetLinkageKind(this CXCursor cursor)
     {
         return cursor.Linkage.ToLinkageKind();
     }
 
+    /// <summary>
+    /// Executes public operation <c>IsExternC</c>.
+    /// </summary>
     public static bool IsExternC(this in CXCursor cursor, in CXCursor parent)
     {
         if (parent.Kind == CXCursorKind.CXCursor_LinkageSpec && parent.IsExternCLinkageSpec())
@@ -107,6 +134,9 @@ public static class Extensions
         return false;
     }
 
+    /// <summary>
+    /// Executes public operation <c>IsExternCLinkageSpec</c>.
+    /// </summary>
     public static bool IsExternCLinkageSpec(this in CXCursor cursor)
     {
         if (cursor.Kind != CXCursorKind.CXCursor_LinkageSpec)
@@ -120,6 +150,9 @@ public static class Extensions
             && !text.Contains("\"C++\"", StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetCallingConvention</c>.
+    /// </summary>
     public static CppCallingConvention GetCallingConvention(this CXType type)
     {
         var callingConv = type.FunctionTypeCallingConv;
@@ -148,6 +181,9 @@ public static class Extensions
         };
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToSourceLocation</c>.
+    /// </summary>
     public static CppSourceLocation ToSourceLocation(this in CXSourceLocation start)
     {
         start.GetFileLocation(out var file, out var line, out var column, out var offset);
@@ -159,11 +195,17 @@ public static class Extensions
         return new CppSourceLocation(fileNameStr, (int)offset, (int)line, (int)column);
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetSourceLocation</c>.
+    /// </summary>
     public static CppSourceLocation GetSourceLocation(this in CXCursor cursor)
     {
         return cursor.Location.ToSourceLocation();
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToSourceRange</c>.
+    /// </summary>
     public static CppSourceSpan ToSourceRange(this in CXSourceRange range)
     {
         var start = range.Start.ToSourceLocation();
@@ -171,16 +213,25 @@ public static class Extensions
         return new CppSourceSpan(start, end);
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetSourceRange</c>.
+    /// </summary>
     public static CppSourceSpan GetSourceRange(this in CXCursor cursor)
     {
         return cursor.Extent.ToSourceRange();
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetSourceLocation</c>.
+    /// </summary>
     public static CppSourceLocation GetSourceLocation(this in CXDiagnostic diagnostic)
     {
         return diagnostic.Location.ToSourceLocation();
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetCursorAsTextBetweenOffset</c>.
+    /// </summary>
     public static string GetCursorAsTextBetweenOffset(this in CXCursor cursor, int startOffset, int endOffset)
     {
         Tokenizer tokenizer = new(cursor);
@@ -202,13 +253,22 @@ public static class Extensions
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Executes public operation <c>IsExpression</c>.
+    /// </summary>
     public static bool IsExpression(this in CXCursor cursor)
     {
         return cursor.Kind >= CXCursorKind.CXCursor_FirstExpr && cursor.Kind <= CXCursorKind.CXCursor_LastExpr;
     }
 
+    /// <summary>
+    /// Executes public operation <c>AsText</c>.
+    /// </summary>
     public static string AsText(this in CXCursor cursor) => new Tokenizer(cursor).TokensToString();
 
+    /// <summary>
+    /// Executes public operation <c>IsCursorDefinition</c>.
+    /// </summary>
     public static bool IsCursorDefinition(this in CXCursor cursor, CppElement element)
     {
         return cursor.IsDefinition || element is CppInclusionDirective || element is CppClass cppClass && (cppClass.ClassKind == CppClassKind.ObjCInterface ||

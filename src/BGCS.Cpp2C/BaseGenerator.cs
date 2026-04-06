@@ -2,18 +2,30 @@
 {
     using BGCS.Core.Logging;
 
+    /// <summary>
+    /// Defines the public class <c>BaseGenerator</c> used by the generation pipeline.
+    /// </summary>
     public class BaseGenerator
     {
         protected readonly Cpp2CGeneratorConfig config;
         private readonly List<LogMessage> messages = new();
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="BaseGenerator"/>.
+        /// </summary>
         public BaseGenerator(Cpp2CGeneratorConfig settings)
         {
             this.config = settings;
         }
 
+        /// <summary>
+        /// Exposes public member <c>messages</c>.
+        /// </summary>
         public IReadOnlyList<LogMessage> Messages => messages;
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Log</c>.
+        /// </summary>
         public void Log(LogSeverity severtiy, string message)
         {
             if (severtiy < config.LogLevel) return;
@@ -22,36 +34,57 @@
             WriteMessage(msg);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LogTrace</c>.
+        /// </summary>
         public void LogTrace(string message)
         {
             Log(LogSeverity.Trace, message);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LogDebug</c>.
+        /// </summary>
         public void LogDebug(string message)
         {
             Log(LogSeverity.Debug, message);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LogInfo</c>.
+        /// </summary>
         public void LogInfo(string message)
         {
             Log(LogSeverity.Information, message);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LogWarn</c>.
+        /// </summary>
         public void LogWarn(string message)
         {
             Log(LogSeverity.Warning, message);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LogError</c>.
+        /// </summary>
         public void LogError(string message)
         {
             Log(LogSeverity.Error, message);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LogCritical</c>.
+        /// </summary>
         public void LogCritical(string message)
         {
             Log(LogSeverity.Critical, message);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>DisplayMessages</c>.
+        /// </summary>
         public void DisplayMessages()
         {
             int warns = 0;

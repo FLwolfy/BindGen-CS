@@ -6,8 +6,14 @@ using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Utilities;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>NamespaceDeclVisitor</c>.
+/// </summary>
 public class NamespaceDeclVisitor : DeclContainerVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [CXCursorKind.CXCursor_Namespace];
 
     protected override unsafe CppContainerContext VisitCore(CXCursor cursor, CXCursor parent)

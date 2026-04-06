@@ -23,12 +23,18 @@ public sealed class CppTemplateParameterType : CppType
         Name = name ?? throw new ArgumentNullException(nameof(name));
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppTemplateParameterType</c>.
+    /// </summary>
     public CppTemplateParameterType(CX_TemplateArgument templateArgument, string name) : base(CXCursor.Null, CppTypeKind.TemplateParameterType)
     {
         TemplateArgument = templateArgument;
         Name = name ?? throw new ArgumentNullException(nameof(name));
     }
 
+    /// <summary>
+    /// Gets or sets <c>TemplateArgument</c>.
+    /// </summary>
     public CX_TemplateArgument TemplateArgument { get; set; }
 
     /// <summary>

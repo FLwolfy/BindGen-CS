@@ -2,6 +2,9 @@ namespace BGCS.Language.CSharp.Analyzers;
 
 using BGCS.Language.CSharp.Nodes;
 
+/// <summary>
+/// Defines the public class <c>ClassMemberAnalyzer</c>.
+/// </summary>
 public class ClassMemberAnalyzer : ISyntaxAnalyzer
 {
     private static readonly KeywordType[] ModifierKeywords =
@@ -16,6 +19,9 @@ public class ClassMemberAnalyzer : ISyntaxAnalyzer
         KeywordType.Unsafe
     ];
 
+    /// <summary>
+    /// Executes public operation <c>Analyze</c>.
+    /// </summary>
     public AnalyserResult Analyze(ParserContext context)
     {
         if (context.Current is not ClassNode)

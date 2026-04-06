@@ -4,26 +4,41 @@
     using Newtonsoft.Json;
     using System.Collections.Generic;
 
+    /// <summary>
+    /// Defines the public class <c>PatchEngine</c>.
+    /// </summary>
     public class PatchEngine
     {
         private readonly List<IPrePatch> preGenerationPatches = new();
         private readonly List<IPostPatch> postGenerationPatches = new();
         private readonly string baseStagePath;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="PatchEngine"/>.
+        /// </summary>
         public PatchEngine(string baseStagePath)
         {
             this.baseStagePath = baseStagePath;
         }
 
+        /// <summary>
+        /// Executes public operation <c>PatchEngine</c>.
+        /// </summary>
         public PatchEngine() : this($"patches/{Guid.NewGuid()}")
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>RegisterPrePatch</c>.
+        /// </summary>
         public void RegisterPrePatch(IPrePatch patch)
         {
             preGenerationPatches.Add(patch);
         }
 
+        /// <summary>
+        /// Executes public operation <c>RegisterPostPatch</c>.
+        /// </summary>
         public void RegisterPostPatch(IPostPatch patch)
         {
             postGenerationPatches.Add(patch);
@@ -35,6 +50,9 @@
 
         private readonly JsonSerializerSettings options = new() { Formatting = Formatting.Indented };
 
+        /// <summary>
+        /// Executes public operation <c>ApplyPrePatches</c>.
+        /// </summary>
         public void ApplyPrePatches(CsCodeGeneratorConfig settings, string outputDir, List<string> files, ParseResult result)
         {
             PatchContext? last = null;
@@ -59,6 +77,9 @@
             last?.CopyToOutput(outputDir);
         }
 
+        /// <summary>
+        /// Executes public operation <c>ApplyPostPatches</c>.
+        /// </summary>
         public void ApplyPostPatches(CsCodeGeneratorMetadata metadata, string outputDir, List<string> files)
         {
             PatchContext? last = null;

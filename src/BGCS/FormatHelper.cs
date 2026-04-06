@@ -8,8 +8,14 @@
     using System.Diagnostics.CodeAnalysis;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>FormatHelper</c>.
+    /// </summary>
     public static class FormatHelper
     {
+        /// <summary>
+        /// Executes public operation <c>IsCaps</c>.
+        /// </summary>
         public static bool IsCaps(this string str)
         {
             for (int i = 0; i < str.Length; i++)
@@ -23,6 +29,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsPointer</c>.
+        /// </summary>
         public static bool IsPointer(this CppType type)
         {
             if (type is CppPointerType)
@@ -38,6 +47,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsPointer</c>.
+        /// </summary>
         public static bool IsPointer(this CppType type, ref int depth)
         {
             bool isPointer = false;
@@ -60,6 +72,9 @@
             return isPointer;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsPointer</c>.
+        /// </summary>
         public static bool IsPointer(this CppType type, ref int depth, out CppType pointerType)
         {
             bool isPointer = false;
@@ -82,6 +97,9 @@
             return isPointer;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsPointerOf</c>.
+        /// </summary>
         public static bool IsPointerOf(this CppType type, CppType pointer)
         {
             if (pointer is CppPointerType pointerType)
@@ -91,6 +109,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsPointerOf</c>.
+        /// </summary>
         public static bool IsPointerOf(this CppType type, CppType pointer, ref int depth)
         {
             if (pointer is CppPointerType pointerType)
@@ -111,11 +132,17 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsType</c>.
+        /// </summary>
         public static bool IsType(this CppType a, CppType b)
         {
             return a.GetDisplayName() == b.GetDisplayName();
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsPrimitive</c>.
+        /// </summary>
         public static bool IsPrimitive(this CppType cppType, [NotNullWhen(true)] out CppPrimitiveType? primitive)
         {
             if (cppType is CppPrimitiveType cppPrimitive)
@@ -139,6 +166,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsUsedAsPointer</c>.
+        /// </summary>
         public static bool IsUsedAsPointer(this CppClass cppClass, CppCompilation compilation, out List<int> depths)
         {
             depths = new List<int>();
@@ -183,6 +213,9 @@
             return depths.Count > 0;
         }
 
+        /// <summary>
+        /// Executes public operation <c>NormalizeEnumValue</c>.
+        /// </summary>
         public static string NormalizeEnumValue(this string value)
         {
             if (value == "(~0U)")
@@ -213,6 +246,9 @@
             return value.Replace("ULL", "UL");
         }
 
+        /// <summary>
+        /// Executes public operation <c>NormalizeConstantValue</c>.
+        /// </summary>
         public static string NormalizeConstantValue(this string value)
         {
             if (value == "(~0U)")
@@ -279,6 +315,9 @@
             return value.Replace("ULL", "UL");
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsConstantExpression</c>.
+        /// </summary>
         public static bool IsConstantExpression(this string expression)
         {
             for (int i = 0; i < expression.Length; i++)
@@ -303,11 +342,17 @@
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsString</c>.
+        /// </summary>
         public static bool IsString(this string name)
         {
             return name.StartsWith("\"") && name.EndsWith("\"");
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsVoid</c>.
+        /// </summary>
         public static bool IsVoid(this CppType cppType)
         {
             if (cppType is CppPrimitiveType type)
@@ -317,6 +362,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsString</c>.
+        /// </summary>
         public static bool IsString(this CppType cppType, CsCodeGeneratorConfig config, out CppPrimitiveKind stringKind, bool isPointer = false)
         {
             if (cppType is CppPointerType pointer && !isPointer)
@@ -359,6 +407,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsTemplateParameter</c>.
+        /// </summary>
         public static bool IsTemplateParameter(this CppType type, CppFunction function)
         {
             if (type is CppPointerType pointer)
@@ -395,6 +446,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetTemplateParameterCsName</c>.
+        /// </summary>
         public static string GetTemplateParameterCsName(this CppType type, string genericName)
         {
             if (type is CppPointerType pointer)
@@ -425,6 +479,9 @@
             return string.Empty;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetPrimitiveKind</c>.
+        /// </summary>
         public static CppPrimitiveKind GetPrimitiveKind(this CppType cppType, bool isPointer = false)
         {
             if (cppType is CppArrayType arrayType)

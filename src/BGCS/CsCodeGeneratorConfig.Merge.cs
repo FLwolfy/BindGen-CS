@@ -2,8 +2,14 @@
 {
     using System.Collections.Generic;
 
+    /// <summary>
+    /// Defines the public class <c>CsCodeGeneratorConfig</c>.
+    /// </summary>
     public partial class CsCodeGeneratorConfig
     {
+        /// <summary>
+        /// Merges configuration or metadata via <c>Merge</c>.
+        /// </summary>
         public void Merge(CsCodeGeneratorConfig baseConfig, MergeOptions mergeOptions)
         {
             if (mergeOptions.HasFlag(MergeOptions.EnableExperimentalOptions))

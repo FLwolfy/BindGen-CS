@@ -4,8 +4,14 @@ using ClangSharp.Interop;
 using BGCS.CppAst.Model.Expressions;
 using BGCS.CppAst.Utilities;
 
+/// <summary>
+/// Defines the public class <c>CppModelBuilder</c>.
+/// </summary>
 public unsafe partial class CppModelBuilder
 {
+    /// <summary>
+    /// Executes public operation <c>VisitExpression</c>.
+    /// </summary>
     public static CppExpression? VisitExpression(CXCursor cursor)
     {
         CppExpression? expr = null;
@@ -82,6 +88,9 @@ public unsafe partial class CppModelBuilder
         return expr;
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToExpressionKind</c>.
+    /// </summary>
     public static CppExpressionKind ToExpressionKind(CXCursorKind kind) => kind switch
     {
         CXCursorKind.CXCursor_UnexposedExpr => CppExpressionKind.Unexposed,

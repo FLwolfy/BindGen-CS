@@ -6,12 +6,21 @@ using System;
 using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Utilities;
+/// <summary>
+/// Defines the public class <c>AttributeTokenizer</c>.
+/// </summary>
 public unsafe class AttributeTokenizer : Tokenizer
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="AttributeTokenizer"/>.
+    /// </summary>
     public AttributeTokenizer(CXCursor cursor) : base(cursor)
     {
     }
 
+    /// <summary>
+    /// Executes public operation <c>AttributeTokenizer</c>.
+    /// </summary>
     public AttributeTokenizer(CXTranslationUnit tu, CXSourceRange range) : base(tu, range)
     {
     }
@@ -284,6 +293,9 @@ public unsafe class AttributeTokenizer : Tokenizer
         return new Tuple<CXSourceRange, CXSourceRange>(clang.getRange(begin, end), clang.getNullRange());
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetRange</c>.
+    /// </summary>
     public override CXSourceRange GetRange(CXCursor cursor)
     {
         /*  This process is complicated when parsing attributes that use

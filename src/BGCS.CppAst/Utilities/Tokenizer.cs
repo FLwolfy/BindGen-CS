@@ -22,6 +22,9 @@ public class Tokenizer
     protected readonly CXTranslationUnit tu;
     private readonly CXCursor cursor;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="Tokenizer"/>.
+    /// </summary>
     public Tokenizer(CXCursor cursor)
     {
         tu = cursor.TranslationUnit;
@@ -29,19 +32,31 @@ public class Tokenizer
         this.cursor = cursor;
     }
 
+    /// <summary>
+    /// Executes public operation <c>Tokenizer</c>.
+    /// </summary>
     public Tokenizer(CXTranslationUnit tu, CXSourceRange range)
     {
         this.tu = tu;
         this.range = range;
     }
 
+    /// <summary>
+    /// Exposes public member <c>cursor</c>.
+    /// </summary>
     public CXCursor Cursor => cursor;
 
+    /// <summary>
+    /// Returns computed data from <c>GetRange</c>.
+    /// </summary>
     public virtual CXSourceRange GetRange(CXCursor cursor)
     {
         return cursor.Extent;
     }
 
+    /// <summary>
+    /// Exposes public member <c>Count</c>.
+    /// </summary>
     public int Count
     {
         get
@@ -53,6 +68,9 @@ public class Tokenizer
         }
     }
 
+    /// <summary>
+    /// Exposes public member <c>i]</c>.
+    /// </summary>
     public CppToken this[int i]
     {
         get
@@ -108,6 +126,9 @@ public class Tokenizer
         }
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetString</c>.
+    /// </summary>
     public string GetString(int i)
     {
         var tokens = tu.Tokenize(range);
@@ -116,6 +137,9 @@ public class Tokenizer
         return TokenSpelling;
     }
 
+    /// <summary>
+    /// Executes public operation <c>TokensToString</c>.
+    /// </summary>
     public string TokensToString()
     {
         int length = Count;
@@ -134,6 +158,9 @@ public class Tokenizer
         return CppToken.TokensToString(tokens);
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetStringForLength</c>.
+    /// </summary>
     public string GetStringForLength(int length)
     {
         StringBuilder result = new(length);
@@ -147,16 +174,25 @@ public class Tokenizer
     }
 }
 
+/// <summary>
+/// Defines the public class <c>TokenizerDebuggerType</c>.
+/// </summary>
 public class TokenizerDebuggerType
 {
     private readonly Tokenizer tokenizer;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="TokenizerDebuggerType"/>.
+    /// </summary>
     public TokenizerDebuggerType(Tokenizer tokenizer)
     {
         this.tokenizer = tokenizer;
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+    /// <summary>
+    /// Exposes public member <c>Items</c>.
+    /// </summary>
     public object[] Items
     {
         get

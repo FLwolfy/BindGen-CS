@@ -12,8 +12,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+/// <summary>
+/// Defines the public class <c>ClassStructDeclVisitor</c>.
+/// </summary>
 public class ClassStructDeclVisitor : DeclContainerVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } =
     [
         CXCursorKind.CXCursor_ClassTemplate,
@@ -172,6 +178,9 @@ public class ClassStructDeclVisitor : DeclContainerVisitor
         return new(cppClass, visibility);
     }
 
+    /// <summary>
+    /// Adds data or behavior through <c>AddTemplateParameters</c>.
+    /// </summary>
     public unsafe void AddTemplateParameters(CXCursor cursor, CppClass cppClass)
     {
         var ctx = (cppClass, Context);

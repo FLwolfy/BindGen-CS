@@ -3,11 +3,20 @@ using BGCS.CppAst.Model.Types;
 using BGCS.Metadata;
 
 namespace BGCS;
+    /// <summary>
+    /// Declares the callback signature <c>CustomEnumItemMapperDelegate</c>.
+    /// </summary>
     public delegate void CustomEnumItemMapperDelegate(CppEnum cppEnum, CppEnumItem cppEnumItem, CsEnumMetadata csEnum, CsEnumItemMetadata csEnumItem);
 
+    /// <summary>
+    /// Defines the public class <c>CsCodeGeneratorConfig</c>.
+    /// </summary>
     public partial class CsCodeGeneratorConfig
     {
         [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        /// <summary>
+        /// Gets or sets <c>CustomEnumItemMapper</c>.
+        /// </summary>
         public CustomEnumItemMapperDelegate? CustomEnumItemMapper { get; set; }
 
         [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]

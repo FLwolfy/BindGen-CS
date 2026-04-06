@@ -7,33 +7,57 @@
     using System.Collections.Frozen;
     using System.Collections.Generic;
 
+    /// <summary>
+    /// Defines the public class <c>ConstantGenerationStep</c>.
+    /// </summary>
     public class ConstantGenerationStep : GenerationStep
     {
         protected readonly HashSet<CsConstantMetadata> LibDefinedConstants = new(IdentifierComparer<CsConstantMetadata>.Default);
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly HashSet<CsConstantMetadata> DefinedConstants = new(IdentifierComparer<CsConstantMetadata>.Default);
         protected readonly Dictionary<string, CsConstantMetadata> DefinedCppConstants = [];
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ConstantGenerationStep"/>.
+        /// </summary>
         public ConstantGenerationStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Constants";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
             Enabled = config.GenerateConstants;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(CsCodeGeneratorMetadata metadata)
         {
             metadata.DefinedConstants.AddRange(DefinedConstants);
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(CsCodeGeneratorMetadata metadata)
         {
             LibDefinedConstants.AddRange(metadata.DefinedConstants);
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
             LibDefinedConstants.Clear();
@@ -77,6 +101,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;

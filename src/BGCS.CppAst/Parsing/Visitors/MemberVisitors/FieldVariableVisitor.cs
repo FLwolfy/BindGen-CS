@@ -7,8 +7,14 @@ using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Utilities;
 
 namespace BGCS.CppAst.Parsing.Visitors.MemberVisitors;
+/// <summary>
+/// Defines the public class <c>FieldVariableVisitor</c>.
+/// </summary>
 public unsafe class FieldVariableVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [CXCursorKind.CXCursor_FieldDecl, CXCursorKind.CXCursor_VarDecl];
 
     protected override CppElement? VisitCore(CXCursor cursor, CXCursor parent)

@@ -77,8 +77,14 @@ public class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclarationCo
     public List<CppAttribute> Attributes { get; }
 
     [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
+    /// <summary>
+    /// Gets <c>TokenAttributes</c>.
+    /// </summary>
     public List<CppAttribute> TokenAttributes { get; }
 
+    /// <summary>
+    /// Gets or sets <c>MetaAttributes</c>.
+    /// </summary>
     public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
 
     /// <summary>
@@ -86,6 +92,9 @@ public class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclarationCo
     /// </summary>
     public CppContainerList<CppInclusionDirective> InclusionDirectives { get; }
 
+    /// <summary>
+    /// Exposes public member <c>"::"</c>.
+    /// </summary>
     public static readonly string NamespaceSeparator = "::";
 
     /// <inheritdoc />
@@ -268,9 +277,18 @@ public class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclarationCo
 
     private struct CacheByName : IEnumerable<CppElement>
     {
+        /// <summary>
+        /// Exposes public member <c>Element</c>.
+        /// </summary>
         public CppElement Element;
+        /// <summary>
+        /// Exposes public member <c>List</c>.
+        /// </summary>
         public List<CppElement> List;
 
+        /// <summary>
+        /// Returns computed data from <c>GetEnumerator</c>.
+        /// </summary>
         public readonly IEnumerator<CppElement> GetEnumerator()
         {
             if (Element != null) yield return Element;

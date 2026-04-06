@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Language
 {
+    /// <summary>
+    /// Defines values for <c>KeywordType</c>.
+    /// </summary>
     public enum KeywordType : ushort
     {
         Unknown = 0,

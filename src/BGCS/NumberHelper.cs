@@ -2,8 +2,14 @@
 {
     using BGCS.Metadata;
 
+    /// <summary>
+    /// Defines the public class <c>NumberHelper</c>.
+    /// </summary>
     public static class NumberHelper
     {
+        /// <summary>
+        /// Executes public operation <c>IsNumeric</c>.
+        /// </summary>
         public static bool IsNumeric(this string name)
         {
             if (string.IsNullOrEmpty(name))
@@ -16,6 +22,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsNumeric</c>.
+        /// </summary>
         public static bool IsNumeric(this string name, out NumberType numberType, NumberParseOptions options = NumberParseOptions.All)
         {
             numberType = NumberType.None;
@@ -203,6 +212,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsNumeric</c>.
+        /// </summary>
         public static bool IsNumeric(this string name, NumberParseOptions options = NumberParseOptions.All)
         {
             if (string.IsNullOrEmpty(name))
@@ -302,6 +314,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>NumberStringCompareLess</c>.
+        /// </summary>
         public static bool NumberStringCompareLess(ReadOnlySpan<char> value, string max)
         {
             // Greater
@@ -334,6 +349,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>NumberStringCompareLessEquals</c>.
+        /// </summary>
         public static bool NumberStringCompareLessEquals(ReadOnlySpan<char> value, string max)
         {
             // Greater
@@ -366,6 +384,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetNumberType</c>.
+        /// </summary>
         public static string GetNumberType(this NumberType number)
         {
             return number switch
@@ -382,6 +403,9 @@
             };
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetCSharpType</c>.
+        /// </summary>
         public static string GetCSharpType(this CsConstantType number)
         {
             return number switch
@@ -399,6 +423,9 @@
             };
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetConstantType</c>.
+        /// </summary>
         public static CsConstantType GetConstantType(this NumberType type)
         {
             return type switch

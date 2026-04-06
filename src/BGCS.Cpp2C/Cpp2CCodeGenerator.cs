@@ -10,29 +10,48 @@
     using Newtonsoft.Json;
     using System.Diagnostics.CodeAnalysis;
 
+    /// <summary>
+    /// Defines the public class <c>Cpp2CCodeGenerator</c> used by the generation pipeline.
+    /// </summary>
     public partial class Cpp2CCodeGenerator : BaseGenerator
     {
         private readonly Cpp2CGeneratorMetadata metadata = new();
         private readonly List<GenerationStep> generationSteps = [];
         private readonly List<Cpp2CGeneratorMetadata> copyFromPending = [];
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="Cpp2CCodeGenerator"/>.
+        /// </summary>
         public Cpp2CCodeGenerator(Cpp2CGeneratorConfig settings) : base(settings)
         {
         }
 
+        /// <summary>
+        /// Exposes public member <c>generationSteps</c>.
+        /// </summary>
         public IReadOnlyList<GenerationStep> GenerationSteps => generationSteps;
 
+        /// <summary>
+        /// Performs the operation implemented by <c>AddGenerationStep</c>.
+        /// </summary>
         public void AddGenerationStep(GenerationStep step)
         {
             generationSteps.Add(step);
         }
 
+        /// <summary>
+        /// Creates and registers a generation step of type <typeparamref name="T"/>.
+        /// </summary>
         public void AddGenerationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : GenerationStep
         {
             var step = (T)Activator.CreateInstance(typeof(T), this, config)!;
             generationSteps.Add(step);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetGenerationStep</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetGenerationStep</c>.</returns>
         public T GetGenerationStep<T>() where T : GenerationStep
         {
             foreach (var step in generationSteps)
@@ -46,6 +65,9 @@
             throw new InvalidOperationException($"Generation step of type {typeof(T).Name} not found.");
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>OverwriteGenerationStep</c>.
+        /// </summary>
         public void OverwriteGenerationStep<TTarget>(GenerationStep newStep) where TTarget : GenerationStep
         {
             for (int i = 0; i < generationSteps.Count; i++)
@@ -95,11 +117,17 @@
             return options;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Generate</c>.
+        /// </summary>
         public virtual void Generate(string headerFile, string outputPath, List<string>? allowedHeaders = null)
         {
             Generate([headerFile], outputPath, allowedHeaders);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Generate</c>.
+        /// </summary>
         public virtual void Generate(List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
         {
             EnsureGenerationPipeline();
@@ -110,6 +138,9 @@
             Generate(compilation, headerFiles, outputPath, allowedHeaders);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Generate</c>.
+        /// </summary>
         public virtual void Generate(CppCompilation compilation, List<string> headerFiles, string outputPath, List<string>? allowedHeaders)
         {
             EnsureGenerationPipeline();
@@ -175,6 +206,9 @@
         }
 
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Reset</c>.
+        /// </summary>
         public virtual void Reset()
         {
             foreach (var step in GenerationSteps)
@@ -183,11 +217,17 @@
             }
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>CopyFrom</c>.
+        /// </summary>
         public void CopyFrom(Cpp2CGeneratorMetadata metadata)
         {
             copyFromPending.Add(metadata);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>SaveMetadata</c>.
+        /// </summary>
         public void SaveMetadata(string path)
         {
             JsonSerializerSettings options = new() { Formatting = Formatting.Indented };
@@ -195,6 +235,9 @@
             File.WriteAllText(path, json);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LoadMetadata</c>.
+        /// </summary>
         public void LoadMetadata(string path)
         {
             var json = File.ReadAllText(path);
@@ -202,6 +245,10 @@
             CopyFrom(metadata);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetMetadata</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetMetadata</c>.</returns>
         public Cpp2CGeneratorMetadata GetMetadata()
         {
             return metadata;

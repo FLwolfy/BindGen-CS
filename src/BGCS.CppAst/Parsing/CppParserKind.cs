@@ -5,6 +5,9 @@ using System;
 
 namespace BGCS.CppAst.Parsing;
 
+/// <summary>
+/// Defines values for <c>CppParserKind</c>.
+/// </summary>
 public enum CppParserKind
 {
     /// <summary>

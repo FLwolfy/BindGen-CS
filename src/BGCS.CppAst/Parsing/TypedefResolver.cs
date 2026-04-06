@@ -6,6 +6,9 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 [Flags]
+/// <summary>
+/// Defines values for <c>ResolverScope</c>.
+/// </summary>
 public enum ResolverScope
 {
     None = 0,
@@ -14,10 +17,16 @@ public enum ResolverScope
     All = System | User,
 }
 
+/// <summary>
+/// Defines the public class <c>TypedefResolver</c>.
+/// </summary>
 public class TypedefResolver
 {
     private readonly Dictionary<CursorKey, CppType> typedefs = [];
 
+    /// <summary>
+    /// Executes public operation <c>RegisterTypedef</c>.
+    /// </summary>
     public void RegisterTypedef(CursorKey key, CppType type)
     {
         if (typedefs.TryGetValue(key, out var cppPreviousCppType))
@@ -30,6 +39,9 @@ public class TypedefResolver
         }
     }
 
+    /// <summary>
+    /// Executes public operation <c>TryResolve</c>.
+    /// </summary>
     public bool TryResolve(CursorKey key, [NotNullWhen(true)] out CppType? type, ResolverScope scope = ResolverScope.All)
     {
         if ((scope & ResolverScope.User) != 0)

@@ -70,14 +70,26 @@ public class CppNamespace : CppDeclaration, ICppMember, ICppGlobalDeclarationCon
     public List<CppAttribute> Attributes { get; }
 
     [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
+    /// <summary>
+    /// Gets <c>TokenAttributes</c>.
+    /// </summary>
     public List<CppAttribute> TokenAttributes { get; }
 
+    /// <summary>
+    /// Gets or sets <c>MetaAttributes</c>.
+    /// </summary>
     public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"namespace {Name} {{...}}";
     }
 
+    /// <summary>
+    /// Executes public operation <c>Children</c>.
+    /// </summary>
     public IEnumerable<ICppDeclaration> Children => CppContainerHelper.Children(this);
 }

@@ -3,6 +3,9 @@
     using System;
 
     [Flags]
+    /// <summary>
+    /// Defines values for <c>NumberParseOptions</c>.
+    /// </summary>
     public enum NumberParseOptions
     {
         None = 0,

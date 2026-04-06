@@ -50,6 +50,9 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// </summary>
     public CppClassKind ClassKind { get; set; }
 
+    /// <summary>
+    /// Gets or sets <c>TemplateKind</c>.
+    /// </summary>
     public CppTemplateKind TemplateKind { get; set; }
 
     /// <inheritdoc />
@@ -65,6 +68,9 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// </summary>
     public string ObjCCategoryName { get; set; }
 
+    /// <summary>
+    /// Exposes public member <c>FullName</c>.
+    /// </summary>
     public override string FullName
     {
         get
@@ -125,8 +131,14 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     public List<CppAttribute> Attributes { get; }
 
     [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
+    /// <summary>
+    /// Gets <c>TokenAttributes</c>.
+    /// </summary>
     public List<CppAttribute> TokenAttributes { get; }
 
+    /// <summary>
+    /// Gets or sets <c>MetaAttributes</c>.
+    /// </summary>
     public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
 
     /// <summary>
@@ -134,6 +146,9 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// </summary>
     public bool IsDefinition { get; set; }
 
+    /// <summary>
+    /// Gets or sets <c>Definition</c>.
+    /// </summary>
     public CppClass? Definition { get; set; }
 
     /// <summary>
@@ -187,6 +202,9 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// <inheritdoc />
     public CppContainerList<CppType> TemplateParameters { get; }
 
+    /// <summary>
+    /// Gets <c>TemplateSpecializedArguments</c>.
+    /// </summary>
     public List<CppTemplateArgument> TemplateSpecializedArguments { get; } = [];
 
     /// <summary>
@@ -194,14 +212,29 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// </summary>
     public CppClass SpecializedTemplate { get; set; }
 
+    /// <summary>
+    /// Exposes public member <c>CppClass</c>.
+    /// </summary>
     public bool IsEmbeded => Parent is CppClass;
 
+    /// <summary>
+    /// Gets or sets <c>IsAbstract</c>.
+    /// </summary>
     public bool IsAbstract { get; set; }
 
+    /// <summary>
+    /// Gets or sets <c>IsCompleteDefinition</c>.
+    /// </summary>
     public bool IsCompleteDefinition { get; set; }
 
+    /// <summary>
+    /// Gets or sets <c>IsDefined</c>.
+    /// </summary>
     public bool IsDefined { get; internal set; }
 
+    /// <summary>
+    /// Gets or sets <c>IsPODType</c>.
+    /// </summary>
     public bool IsPODType { get; set; }
 
     /// <inheritdoc />
@@ -310,6 +343,9 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Exposes public member <c>Children</c>.
+    /// </summary>
     public override IEnumerable<ICppDeclaration> Children
     {
         get

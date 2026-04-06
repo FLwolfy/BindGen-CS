@@ -24,6 +24,9 @@ public sealed class CppTemplateParameterNonType : CppType
         NoneTemplateType = templateNonType ?? throw new ArgumentNullException(nameof(templateNonType));
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppTemplateParameterNonType</c>.
+    /// </summary>
     public CppTemplateParameterNonType(CX_TemplateArgument templateArgument, string name, CppType templateNonType) : base(CXCursor.Null, CppTypeKind.TemplateParameterNonType)
     {
         TemplateArgument = templateArgument;
@@ -31,6 +34,9 @@ public sealed class CppTemplateParameterNonType : CppType
         NoneTemplateType = templateNonType ?? throw new ArgumentNullException(nameof(templateNonType));
     }
 
+    /// <summary>
+    /// Gets or sets <c>TemplateArgument</c>.
+    /// </summary>
     public CX_TemplateArgument TemplateArgument { get; set; }
 
     /// <summary>
@@ -38,6 +44,9 @@ public sealed class CppTemplateParameterNonType : CppType
     /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets <c>NoneTemplateType</c>.
+    /// </summary>
     public CppType NoneTemplateType { get; }
 
     private bool Equals(CppTemplateParameterNonType other)

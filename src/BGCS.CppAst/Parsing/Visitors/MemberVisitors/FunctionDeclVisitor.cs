@@ -9,8 +9,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+/// <summary>
+/// Defines the public class <c>FunctionDeclVisitor</c>.
+/// </summary>
 public unsafe class FunctionDeclVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_FunctionTemplate,
             CXCursorKind.CXCursor_FunctionDecl,

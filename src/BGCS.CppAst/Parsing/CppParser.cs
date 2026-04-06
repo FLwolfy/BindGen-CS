@@ -18,6 +18,9 @@ namespace BGCS.CppAst.Parsing;
 /// </summary>
 public static class CppParser
 {
+    /// <summary>
+    /// Exposes public member <c>"cppast.input"</c>.
+    /// </summary>
     public const string CppAstRootFileName = "cppast.input";
 
     /// <summary>
@@ -311,10 +314,19 @@ public static class CppParser
 
     private struct CppFileOrString
     {
+        /// <summary>
+        /// Exposes public member <c>Filename</c>.
+        /// </summary>
         public string Filename;
 
+        /// <summary>
+        /// Exposes public member <c>Content</c>.
+        /// </summary>
         public string Content;
 
+        /// <summary>
+        /// Executes public operation <c>ToString</c>.
+        /// </summary>
         public override string ToString()
         {
             return $"{nameof(Filename)}: {Filename}, {nameof(Content)}: {Content}";

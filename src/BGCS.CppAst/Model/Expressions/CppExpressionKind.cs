@@ -4,6 +4,9 @@ using System;
 // Licensed under the MIT License.
 
 namespace BGCS.CppAst.Model.Expressions;
+/// <summary>
+/// Defines values for <c>CppExpressionKind</c>.
+/// </summary>
 public enum CppExpressionKind
 {
     Unknown,

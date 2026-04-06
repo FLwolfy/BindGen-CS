@@ -5,9 +5,15 @@
     using Newtonsoft.Json;
     using System.Globalization;
 
+    /// <summary>
+    /// Defines the public class <c>CsType</c>.
+    /// </summary>
     public class CsType : ICloneable<CsType>
     {
         [JsonConstructor]
+        /// <summary>
+        /// Initializes a new instance of <see cref="CsType"/>.
+        /// </summary>
         public CsType(string name, string cleanName, bool isPointer, bool isOut, bool isRef, bool isSpan, bool isString, bool isPrimitive, bool isVoid, bool isBool, bool isArray, bool isEnum, CsStringType stringType, CsPrimitiveType primitiveType)
         {
             Name = name;
@@ -26,6 +32,9 @@
             PrimitiveType = primitiveType;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CsType</c>.
+        /// </summary>
         public CsType(string name, bool isPointer, bool isRef, bool isString, bool isPrimitive, bool isVoid, bool isArray, CsPrimitiveType primitiveType)
         {
             Name = name;
@@ -39,6 +48,9 @@
             CleanName = Classify();
         }
 
+        /// <summary>
+        /// Executes public operation <c>CsType</c>.
+        /// </summary>
         public CsType(string name, CsPrimitiveType primitiveType)
         {
             Name = name;
@@ -46,6 +58,9 @@
             CleanName = Classify();
         }
 
+        /// <summary>
+        /// Executes public operation <c>CsType</c>.
+        /// </summary>
         public CsType(string name, CppPrimitiveKind primitiveType)
         {
             Name = name;
@@ -53,6 +68,9 @@
             CleanName = Classify();
         }
 
+        /// <summary>
+        /// Executes public operation <c>CsType</c>.
+        /// </summary>
         public CsType(string name, bool isEnum, CppPrimitiveKind primitiveType)
         {
             Name = name;
@@ -61,38 +79,89 @@
             CleanName = Classify();
         }
 
+        /// <summary>
+        /// Gets or sets <c>Name</c>.
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>CleanName</c>.
+        /// </summary>
         public string CleanName { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsPointer</c>.
+        /// </summary>
         public bool IsPointer { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsOut</c>.
+        /// </summary>
         public bool IsOut { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsRef</c>.
+        /// </summary>
         public bool IsRef { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsIn</c>.
+        /// </summary>
         public bool IsIn { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsSpan</c>.
+        /// </summary>
         public bool IsSpan { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsString</c>.
+        /// </summary>
         public bool IsString { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsPrimitive</c>.
+        /// </summary>
         public bool IsPrimitive { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsVoid</c>.
+        /// </summary>
         public bool IsVoid { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsBool</c>.
+        /// </summary>
         public bool IsBool { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsArray</c>.
+        /// </summary>
         public bool IsArray { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IsEnum</c>.
+        /// </summary>
         public bool IsEnum { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>StringType</c>.
+        /// </summary>
         public CsStringType StringType { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>PrimitiveType</c>.
+        /// </summary>
         public CsPrimitiveType PrimitiveType { get; set; }
 
+        /// <summary>
+        /// Exposes public member <c>IsIn</c>.
+        /// </summary>
         public bool IsRefOrIn => IsRef || IsIn;
 
+        /// <summary>
+        /// Executes public operation <c>IsKnownPrimitive</c>.
+        /// </summary>
         public static bool IsKnownPrimitive(string name)
         {
             if (name.StartsWith("void"))
@@ -130,6 +199,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>Classify</c>.
+        /// </summary>
         public string Classify()
         {
             IsRef = Name.StartsWith("ref ");
@@ -192,6 +264,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>Map</c>.
+        /// </summary>
         public static CsPrimitiveType Map(CppPrimitiveKind kind)
         {
             return kind switch
@@ -217,16 +292,25 @@
             };
         }
 
+        /// <summary>
+        /// Executes public operation <c>ToString</c>.
+        /// </summary>
         public override string ToString()
         {
             return Name;
         }
 
+        /// <summary>
+        /// Executes public operation <c>Clone</c>.
+        /// </summary>
         public CsType Clone()
         {
             return new CsType(Name, CleanName, IsPointer, IsOut, IsRef, IsSpan, IsString, IsPrimitive, IsVoid, IsBool, IsArray, IsEnum, StringType, PrimitiveType);
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetNormalizedName</c>.
+        /// </summary>
         public ReadOnlySpan<char> GetNormalizedName()
         {
             var nameNormalized = Name.AsSpan();
@@ -237,6 +321,9 @@
             return nameNormalized.Trim();
         }
 
+        /// <summary>
+        /// Executes public operation <c>Conflicts</c>.
+        /// </summary>
         public bool Conflicts(CsType other)
         {
             if (IsRefOrIn && other.IsRefOrIn)
@@ -248,6 +335,9 @@
 
         private static readonly CompareInfo CompareInfo = CultureInfo.InvariantCulture.CompareInfo;
 
+        /// <summary>
+        /// Returns computed data from <c>GetConflictHashCode</c>.
+        /// </summary>
         public int GetConflictHashCode()
         {
             HashCode code = new();

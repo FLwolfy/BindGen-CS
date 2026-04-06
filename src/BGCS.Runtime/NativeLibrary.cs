@@ -4,6 +4,13 @@ namespace BGCS.Runtime;
 
 using System.Runtime.InteropServices;
 
+/// <summary>
+/// Cross-platform dynamic library loader for resolving native modules and exports.
+/// </summary>
+/// <remarks>
+/// This helper uses platform-specific APIs (<c>LoadLibrary/GetProcAddress</c> or <c>dlopen/dlsym</c>) and returns
+/// raw native handles/addresses consumed by runtime contexts and generated bindings.
+/// </remarks>
 public unsafe class NativeLibrary
 {
         // Windows
@@ -38,6 +45,11 @@ public unsafe class NativeLibrary
 
         private const int RTLD_NOW = 2;
 
+        /// <summary>
+        /// Loads a dynamic library and returns its native handle.
+        /// </summary>
+        /// <param name="libraryPath">Path or platform-specific library name.</param>
+        /// <returns>Native module handle, or <c>0</c> when loading fails.</returns>
         public static nint Load(string libraryPath)
         {
             byte* pLibraryPath = Utils.StringToUTF8Ptr(libraryPath);
@@ -62,6 +74,11 @@ public unsafe class NativeLibrary
             return libraryHandle;
         }
 
+        /// <summary>
+        /// Unloads a previously loaded library handle.
+        /// </summary>
+        /// <param name="libraryHandle">Native module handle returned by <see cref="Load"/>.</param>
+        /// <returns><see langword="true"/> when the unload operation succeeds; otherwise <see langword="false"/>.</returns>
         public static bool Free(nint libraryHandle)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -104,6 +121,15 @@ public unsafe class NativeLibrary
             return functionAddress;
         }
 
+        /// <summary>
+        /// Resolves an exported symbol and throws when not found.
+        /// </summary>
+        /// <param name="libraryHandle">Native module handle.</param>
+        /// <param name="functionName">Export name to resolve.</param>
+        /// <returns>Address of the resolved symbol.</returns>
+        /// <exception cref="EntryPointNotFoundException">
+        /// Thrown when <paramref name="functionName"/> does not exist in <paramref name="libraryHandle"/>.
+        /// </exception>
         public static nint GetExport(nint libraryHandle, string functionName)
         {
             byte* pFunctionName = Utils.StringToUTF8Ptr(functionName);
@@ -120,6 +146,13 @@ public unsafe class NativeLibrary
             return functionAddress;
         }
 
+        /// <summary>
+        /// Attempts to resolve an exported symbol without throwing.
+        /// </summary>
+        /// <param name="libraryHandle">Native module handle.</param>
+        /// <param name="functionName">Export name to resolve.</param>
+        /// <param name="functionAddress">Resolved function address, or <c>0</c> when not found.</param>
+        /// <returns><see langword="true"/> when the export exists; otherwise <see langword="false"/>.</returns>
         public static bool TryGetExport(nint libraryHandle, string functionName, out nint functionAddress)
         {
             byte* pFunctionName = Utils.StringToUTF8Ptr(functionName);

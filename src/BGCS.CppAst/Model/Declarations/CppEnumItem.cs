@@ -45,8 +45,14 @@ public sealed class CppEnumItem : CppDeclaration, ICppMember, ICppAttributeConta
     public List<CppAttribute> Attributes { get; } = [];
 
     [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
+    /// <summary>
+    /// Gets <c>TokenAttributes</c>.
+    /// </summary>
     public List<CppAttribute> TokenAttributes { get; } = [];
 
+    /// <summary>
+    /// Gets or sets <c>MetaAttributes</c>.
+    /// </summary>
     public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
 
     /// <inheritdoc />

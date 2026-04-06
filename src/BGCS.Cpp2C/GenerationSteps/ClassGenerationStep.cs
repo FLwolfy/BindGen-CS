@@ -8,6 +8,9 @@ using System.Text;
 
 namespace BGCS.Cpp2C.GenerationSteps;
 
+/// <summary>
+/// Defines the public class <c>ClassGenerationStep</c>.
+/// </summary>
 public class ClassGenerationStep : GenerationStep
     {
         private readonly HashSet<string> definedFunctions = [];
@@ -67,28 +70,49 @@ public class ClassGenerationStep : GenerationStep
 #include ""Classes.h""
 ";
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ClassGenerationStep"/>.
+        /// </summary>
         public ClassGenerationStep(Cpp2CCodeGenerator generator, Cpp2CGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Class Generation Step";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(Cpp2CGeneratorConfig config)
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(Cpp2CGeneratorMetadata metadata)
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(Cpp2CGeneratorMetadata metadata)
         {
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, Cpp2CGeneratorConfig config, Cpp2CGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;

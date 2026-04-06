@@ -12,24 +12,48 @@
     using System.IO;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>FunctionGenerationStep</c>.
+    /// </summary>
     public class FunctionGenerationStep : GenerationStep
     {
         protected readonly HashSet<string> LibDefinedFunctions = [];
+        /// <summary>
+        /// Exposes public member <c>[]</c>.
+        /// </summary>
         public readonly HashSet<string> CppDefinedFunctions = [];
+        /// <summary>
+        /// Exposes public member <c>[]</c>.
+        /// </summary>
         public readonly HashSet<string> DefinedNativeFunctions = [];
+        /// <summary>
+        /// Exposes public member <c>[]</c>.
+        /// </summary>
         public readonly List<CsFunction> DefinedFunctions = [];
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly HashSet<CsFunctionVariation> DefinedVariationsFunctions = new(IdentifierComparer<CsFunctionVariation>.Default);
         protected readonly HashSet<string> OutReturnFunctions = [];
 
         private FunctionGenerator funcGen = null!;
         private FunctionTableBuilder FunctionTableBuilder = null!;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="FunctionGenerationStep"/>.
+        /// </summary>
         public FunctionGenerationStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Functions";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
             Enabled = config.GenerateFunctions;
@@ -37,6 +61,9 @@
             FunctionTableBuilder = generator.FunctionTableBuilder;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(CsCodeGeneratorMetadata metadata)
         {
             metadata.CppDefinedFunctions.AddRange(CppDefinedFunctions);
@@ -44,11 +71,17 @@
             metadata.FunctionTable = new(FunctionTableBuilder.Entries);
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(CsCodeGeneratorMetadata metadata)
         {
             LibDefinedFunctions.AddRange(metadata.CppDefinedFunctions);
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
             LibDefinedFunctions.Clear();
@@ -128,6 +161,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;
@@ -320,6 +356,9 @@
             funcGen.GenerateVariations(cppFunction.Parameters, overload);
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteFunctions</c>.
+        /// </summary>
         public virtual void WriteFunctions(GenContext context, HashSet<CsFunctionVariation> definedFunctions, CsFunction csFunction, CsFunctionOverload overload, WriteFunctionFlags flags, params string[] modifiers)
         {
             foreach (CsFunctionVariation variation in overload.Variations)
@@ -347,6 +386,9 @@
             }
         }
 
+        /// <summary>
+        /// Gets <c>ParameterWriters</c>.
+        /// </summary>
         public virtual List<IParameterWriter> ParameterWriters { get; } =
         [
             new HandleParameterWriter(),
@@ -361,17 +403,26 @@
             new FallthroughParameterWriter(),
         ];
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddParamterWriter</c>.
+        /// </summary>
         public void AddParamterWriter(IParameterWriter writer)
         {
             ParameterWriters.Add(writer);
             ParameterWriters.Sort(new ParameterPriorityComparer());
         }
 
+        /// <summary>
+        /// Removes data or behavior through <c>RemoveParamterWriter</c>.
+        /// </summary>
         public void RemoveParamterWriter(IParameterWriter writer)
         {
             ParameterWriters.Remove(writer);
         }
 
+        /// <summary>
+        /// Executes public operation <c>OverwriteParameterWriter</c>.
+        /// </summary>
         public void OverwriteParameterWriter<T>(IParameterWriter newWriter) where T : IParameterWriter
         {
             for (int i = 0; i < ParameterWriters.Count; i++)
@@ -543,6 +594,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>ClassifyParameters</c>.
+        /// </summary>
         public static void ClassifyParameters(CsFunctionOverload overload, CsFunctionVariation variation, CsType csReturnType, out bool firstParamReturn, out int offset, out bool hasManaged)
         {
             firstParamReturn = false;

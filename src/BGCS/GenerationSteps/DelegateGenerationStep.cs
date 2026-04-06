@@ -9,33 +9,57 @@
     using BGCS.Metadata;
     using System.IO;
 
+    /// <summary>
+    /// Defines the public class <c>DelegateGenerationStep</c>.
+    /// </summary>
     public class DelegateGenerationStep : GenerationStep
     {
         protected readonly HashSet<CsDelegate> LibDefinedDelegates = new(IdentifierComparer<CsDelegate>.Default);
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly HashSet<CsDelegate> DefinedDelegates = new(IdentifierComparer<CsDelegate>.Default);
         private readonly HashSet<string> csDelegateNames = [];
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="DelegateGenerationStep"/>.
+        /// </summary>
         public DelegateGenerationStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Delegates";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
             Enabled = config.GenerateDelegates;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(CsCodeGeneratorMetadata metadata)
         {
             metadata.DefinedDelegates.AddRange(DefinedDelegates);
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(CsCodeGeneratorMetadata metadata)
         {
             LibDefinedDelegates.AddRange(metadata.DefinedDelegates);
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
             LibDefinedDelegates.Clear();
@@ -85,6 +109,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;

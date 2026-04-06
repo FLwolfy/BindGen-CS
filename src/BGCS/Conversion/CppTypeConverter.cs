@@ -5,6 +5,9 @@
     using BGCS.CppAst.Model.Types;
     using System.Text;
 
+    /// <summary>
+    /// Defines values for <c>CsTypeStyle</c>.
+    /// </summary>
     public enum CsTypeStyle
     {
         Raw,
@@ -12,6 +15,9 @@
         Wrapped,
     }
 
+    /// <summary>
+    /// Defines the public class <c>CppTypeConverter</c>.
+    /// </summary>
     public class CppTypeConverter
     {
         private readonly CsCodeGeneratorConfig config;
@@ -20,11 +26,17 @@
         private Dictionary<string, CppEnum> typeDefToEnum = [];
         private Dictionary<CppType, string> anonymousMapping = [];
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="CppTypeConverter"/>.
+        /// </summary>
         public CppTypeConverter(CsCodeGeneratorConfig config)
         {
             this.config = config;
         }
 
+        /// <summary>
+        /// Executes public operation <c>Initialize</c>.
+        /// </summary>
         public void Initialize(ParseResult result)
         {
             typedefCache.Clear();
@@ -47,6 +59,9 @@
             }
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddAnonymousMapping</c>.
+        /// </summary>
         public void AddAnonymousMapping(CppType anon, string name)
         {
             anonymousMapping[anon] = name;
@@ -67,13 +82,31 @@
 
         private struct AnalysisResult
         {
+            /// <summary>
+            /// Exposes public member <c>BaseType</c>.
+            /// </summary>
             public string BaseType;
+            /// <summary>
+            /// Exposes public member <c>PointerLevel</c>.
+            /// </summary>
             public int PointerLevel;
+            /// <summary>
+            /// Exposes public member <c>IsConst</c>.
+            /// </summary>
             public bool IsConst;
+            /// <summary>
+            /// Exposes public member <c>Function</c>.
+            /// </summary>
             public CppFunctionType? Function;
 
+            /// <summary>
+            /// Exposes public member <c>null</c>.
+            /// </summary>
             public readonly bool IsFunctionPointer => PointerLevel == 1 && Function != null;
 
+            /// <summary>
+            /// Merges configuration or metadata via <c>Merge</c>.
+            /// </summary>
             public void Merge(in AnalysisResult result)
             {
                 BaseType = result.BaseType;
@@ -83,6 +116,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>Convert</c>.
+        /// </summary>
         public string Convert(CppType type, CsTypeStyle style)
         {
             var result = AnalyzeType(type);

@@ -38,6 +38,9 @@ public class CppToken : CppElement
     /// <inheritdoc />
     public override string ToString() => Text;
 
+    /// <summary>
+    /// Executes public operation <c>TokensToString</c>.
+    /// </summary>
     public static string TokensToString(IEnumerable<CppToken> tokens)
     {
         var builder = new StringBuilder();

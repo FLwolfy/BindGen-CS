@@ -21,27 +21,57 @@ public partial class CppModelBuilder : CompilationLoggerBase
 {
     private readonly CppModelContext context;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppModelBuilder"/>.
+    /// </summary>
     public CppModelBuilder(CXTranslationUnit translationUnit)
     {
         context = new CppModelContext(this, translationUnit);
     }
 
+    /// <summary>
+    /// Gets or sets <c>AutoSquashTypedef</c>.
+    /// </summary>
     public bool AutoSquashTypedef { get; set; }
 
+    /// <summary>
+    /// Gets or sets <c>ParseSystemIncludes</c>.
+    /// </summary>
     public bool ParseSystemIncludes { get; set; }
 
+    /// <summary>
+    /// Gets or sets <c>ParseTokenAttributeEnabled</c>.
+    /// </summary>
     public bool ParseTokenAttributeEnabled { get; set; }
 
+    /// <summary>
+    /// Gets or sets <c>ParseCommentAttributeEnabled</c>.
+    /// </summary>
     public bool ParseCommentAttributeEnabled { get; set; }
 
+    /// <summary>
+    /// Exposes public member <c>context.RootCompilation</c>.
+    /// </summary>
     public override CppCompilation RootCompilation => context.RootCompilation;
 
+    /// <summary>
+    /// Exposes public member <c>context.Containers</c>.
+    /// </summary>
     public Dictionary<CursorKey, CppContainerContext> Containers => context.Containers;
 
+    /// <summary>
+    /// Exposes public member <c>context.CurrentRootContainer</c>.
+    /// </summary>
     public CppContainerContext CurrentRootContainer => context.CurrentRootContainer;
 
+    /// <summary>
+    /// Exposes public member <c>context.TypedefResolver</c>.
+    /// </summary>
     public TypedefResolver TypedefResolver => context.TypedefResolver;
 
+    /// <summary>
+    /// Executes public operation <c>TryToCreateTemplateParameters</c>.
+    /// </summary>
     public CppType? TryToCreateTemplateParameters(CXCursor cursor)
     {
         switch (cursor.Kind)
@@ -75,12 +105,18 @@ public partial class CppModelBuilder : CompilationLoggerBase
         return null;
     }
 
+    /// <summary>
+    /// Executes public operation <c>VisitTranslationUnit</c>.
+    /// </summary>
     public unsafe CXChildVisitResult VisitTranslationUnit(CXCursor cursor, CXCursor parent, void* data)
     {
         var result = VisitMember(cursor, parent, data);
         return result;
     }
 
+    /// <summary>
+    /// Executes public operation <c>VisitInitValue</c>.
+    /// </summary>
     public unsafe void VisitInitValue(CXCursor cursor, out CppExpression? expression, out CppValue? value)
     {
         expression = null;

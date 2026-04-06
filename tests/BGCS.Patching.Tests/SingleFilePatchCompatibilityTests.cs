@@ -110,8 +110,7 @@ public class SingleFilePatchCompatibilityTests
             GenerateExtensions = false,
             DelegatesAsVoidPointer = false,
             MergeGeneratedFilesToSingleFile = true,
-            GenerateRuntimeSource = generateRuntimeSource,
-            SingleFileOutputName = "Bindings.cs"
+            GenerateRuntimeSource = generateRuntimeSource
         };
     }
 

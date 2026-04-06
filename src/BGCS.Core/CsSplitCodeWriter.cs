@@ -3,6 +3,9 @@
     using BGCS.Core;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>CsSplitCodeWriter</c>.
+    /// </summary>
     public sealed class CsSplitCodeWriter : ICodeWriter, IDisposable
     {
         private bool _shouldIndent = true;
@@ -20,16 +23,34 @@
         private string? name;
         private string? extension;
 
+        /// <summary>
+        /// Gets <c>FileName</c>.
+        /// </summary>
         public string FileName { get; }
 
+        /// <summary>
+        /// Gets <c>Namespaces</c>.
+        /// </summary>
         public string[] Namespaces { get; }
 
+        /// <summary>
+        /// Exposes public member <c>indentLevel</c>.
+        /// </summary>
         public int IndentLevel => indentLevel;
 
+        /// <summary>
+        /// Gets or sets <c>SplitThreshold</c>.
+        /// </summary>
         public int SplitThreshold { get; set; } = 5000;
 
+        /// <summary>
+        /// Exposes public member <c>splitCount</c>.
+        /// </summary>
         public int SplitCount => splitCount;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="CsSplitCodeWriter"/>.
+        /// </summary>
         public CsSplitCodeWriter(string fileName, string @namespace, IList<string> usings, HeaderInjectionDelegate? headerInjector, int baseIndentLevel = 2)
         {
             fileName = FileNameHelper.SanitizeFileName(fileName);
@@ -85,12 +106,18 @@
             sb.AppendLine();
         }
 
+        /// <summary>
+        /// Executes public operation <c>Dispose</c>.
+        /// </summary>
         public void Dispose()
         {
             EndBlock();
             _writer.Dispose();
         }
 
+        /// <summary>
+        /// Writes output for <c>Write</c>.
+        /// </summary>
         public void Write(char chr)
         {
             WriteIndented(chr);
@@ -100,12 +127,18 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>Write</c>.
+        /// </summary>
         public void Write(string @string)
         {
             WriteIndented(@string);
             linesWritten += @string.Count(c => c == '\n');
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteLine</c>.
+        /// </summary>
         public void WriteLine()
         {
             capture &= indentLevel < baseIndentLevel;
@@ -118,6 +151,9 @@
             _shouldIndent = true;
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteLine</c>.
+        /// </summary>
         public void WriteLine(string @string)
         {
             capture &= indentLevel < baseIndentLevel;
@@ -133,6 +169,9 @@
 
         private static readonly char[] newLineCharacters = ['\n', '\r'];
 
+        /// <summary>
+        /// Writes output for <c>WriteLines</c>.
+        /// </summary>
         public void WriteLines(string? text)
         {
             if (text == null)
@@ -175,6 +214,9 @@
             _shouldIndent = true;
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteLines</c>.
+        /// </summary>
         public void WriteLines(IEnumerable<string> lines)
         {
             foreach (var line in lines)
@@ -183,6 +225,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>BeginBlock</c>.
+        /// </summary>
         public void BeginBlock(string content)
         {
             WriteLine(content);
@@ -190,6 +235,9 @@
             Indent(1);
         }
 
+        /// <summary>
+        /// Executes public operation <c>EndBlock</c>.
+        /// </summary>
         public void EndBlock(string marker = "}")
         {
             Unindent(1);
@@ -197,6 +245,9 @@
             TrySplit();
         }
 
+        /// <summary>
+        /// Executes public operation <c>TrySplit</c>.
+        /// </summary>
         public void TrySplit()
         {
             if (linesWritten >= SplitThreshold && indentLevel == baseIndentLevel)
@@ -217,8 +268,14 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>PushBlock</c>.
+        /// </summary>
         public IDisposable PushBlock(string marker = "{") => new CodeBlock(this, marker);
 
+        /// <summary>
+        /// Executes public operation <c>Indent</c>.
+        /// </summary>
         public void Indent(int count = 1)
         {
             indentLevel += count;
@@ -233,6 +290,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>Unindent</c>.
+        /// </summary>
         public void Unindent(int count = 1)
         {
             if (count > indentLevel)
@@ -313,12 +373,18 @@
         {
             private readonly ICodeWriter _writer;
 
+            /// <summary>
+            /// Initializes a new instance of <see cref="CodeBlock"/>.
+            /// </summary>
             public CodeBlock(ICodeWriter writer, string content)
             {
                 _writer = writer;
                 _writer.BeginBlock(content);
             }
 
+            /// <summary>
+            /// Executes public operation <c>Dispose</c>.
+            /// </summary>
             public void Dispose()
             {
                 _writer.EndBlock();

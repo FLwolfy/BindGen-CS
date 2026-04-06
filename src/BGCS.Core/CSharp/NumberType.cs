@@ -1,5 +1,8 @@
 ﻿namespace BGCS
 {
+    /// <summary>
+    /// Defines values for <c>NumberType</c>.
+    /// </summary>
     public enum NumberType : byte
     {
         None = 0,

@@ -17,6 +17,9 @@ namespace BGCS
     using System.Diagnostics.CodeAnalysis;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>CsCodeGenerator</c> used by the generation pipeline.
+    /// </summary>
     public partial class CsCodeGenerator : BaseGenerator
     {
         private const string RuntimeUsingDefault = "using BGCS.Runtime;";
@@ -25,30 +28,61 @@ namespace BGCS
         protected FunctionGenerator funcGen = null!;
         protected PatchEngine patchEngine = new();
         private CsCodeGeneratorMetadata metadata = new();
+        /// <summary>
+        /// Performs the operation implemented by <c>new</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>new</c>.</returns>
         public readonly FunctionTableBuilder FunctionTableBuilder = new();
         private readonly List<GenerationStep> generationSteps = new();
         private Dictionary<string, string> wrappedPointers = null!;
         private List<CsCodeGeneratorMetadata> copyFromPending = [];
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Create</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>Create</c>.</returns>
         public static CsCodeGenerator Create(string configPath)
         {
             return new(CsCodeGeneratorConfig.Load(configPath));
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>CsCodeGenerator</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>CsCodeGenerator</c>.</returns>
         public CsCodeGenerator(CsCodeGeneratorConfig config) : base(config)
         {
         }
 
+        /// <summary>
+        /// Exposes public member <c>}</c>.
+        /// </summary>
         public FunctionGenerator FunctionGenerator { get => funcGen; protected set => funcGen = value; }
 
+        /// <summary>
+        /// Exposes public member <c>patchEngine</c>.
+        /// </summary>
         public PatchEngine PatchEngine => patchEngine;
 
+        /// <summary>
+        /// Exposes public member <c>generationSteps</c>.
+        /// </summary>
         public IReadOnlyList<GenerationStep> GenerationSteps => generationSteps;
 
+        /// <summary>
+        /// Gets or sets the <c>PreProcessSteps</c> setting used by this component.
+        /// </summary>
         public List<PreProcessStep> PreProcessSteps { get; } = new();
 
+        /// <summary>
+        /// Gets or sets the <c>CLIOptions</c> setting used by this component.
+        /// </summary>
         public CLIGeneratorOptions? CLIOptions { get; set; }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetGenerationStep</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetGenerationStep</c>.</returns>
         public T GetGenerationStep<T>() where T : GenerationStep
         {
             foreach (var step in GenerationSteps)
@@ -62,17 +96,26 @@ namespace BGCS
             throw new InvalidOperationException($"Step of type '{typeof(T)}' was not found.");
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>AddGenerationStep</c>.
+        /// </summary>
         public void AddGenerationStep(GenerationStep step)
         {
             generationSteps.Add(step);
         }
 
+        /// <summary>
+        /// Creates and registers a generation step of type <typeparamref name="T"/>.
+        /// </summary>
         public void AddGenerationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : GenerationStep
         {
             var step = (GenerationStep)Activator.CreateInstance(typeof(T), this, config)!;
             generationSteps.Add(step);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>OverwriteGenerationStep</c>.
+        /// </summary>
         public void OverwriteGenerationStep<TTarget>(GenerationStep newStep) where TTarget : GenerationStep
         {
             for (int i = 0; i < GenerationSteps.Count; i++)
@@ -85,21 +128,37 @@ namespace BGCS
             }
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Generate</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>Generate</c>.</returns>
         public bool Generate(string headerFile, string outputPath, List<string>? allowedHeaders = null)
         {
             return Generate([headerFile], outputPath, allowedHeaders);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Generate</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>Generate</c>.</returns>
         public bool Generate(List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
         {
             return Generate(PrepareSettings(), headerFiles, outputPath, allowedHeaders);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Generate</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>Generate</c>.</returns>
         public bool Generate(CppParserOptions parserOptions, string headerFile, string outputPath, List<string>? allowedHeaders = null)
         {
             return Generate(parserOptions, [headerFile], outputPath, allowedHeaders);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Generate</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>Generate</c>.</returns>
         public bool Generate(CppParserOptions parserOptions, List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
         {
             ConfigureCore();
@@ -192,6 +251,10 @@ namespace BGCS
             return CppParser.ParseFiles(headerFiles, parserOptions);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GenerateCore</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GenerateCore</c>.</returns>
         public virtual bool GenerateCore(CppCompilation compilation, List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
         {
             if (CLIOptions != null && CLIOptions.OutputDirectory != null)
@@ -315,8 +378,7 @@ namespace BGCS
 
         protected virtual void MergeGeneratedFilesToSingleFile(string generationOutputPath, string outputPath)
         {
-            string mergedFileName = string.IsNullOrWhiteSpace(config.SingleFileOutputName) ? "Bindings.cs" : config.SingleFileOutputName;
-            string mergedPath = Path.Combine(outputPath, mergedFileName);
+            string mergedPath = Path.Combine(outputPath, "Bindings.cs");
 
             List<string> files = Directory
                 .GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories)
@@ -481,9 +543,11 @@ namespace BGCS
             return $"#if !{RuntimeSourceExcludeSymbol}{Environment.NewLine}{body}{Environment.NewLine}#endif";
         }
 
-        private static string GetRuntimeNamespace()
+        private string GetRuntimeNamespace()
         {
-            return "BGCS.Runtime";
+            return string.IsNullOrWhiteSpace(config.RuntimeNamespace)
+                ? "BGCS.Runtime"
+                : config.RuntimeNamespace;
         }
 
         private string RewriteRuntimeNamespace(string text)
@@ -770,6 +834,9 @@ namespace BGCS
         {
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>Reset</c>.
+        /// </summary>
         public virtual void Reset()
         {
             foreach (var step in GenerationSteps)
@@ -778,11 +845,17 @@ namespace BGCS
             }
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>CopyFrom</c>.
+        /// </summary>
         public void CopyFrom(CsCodeGeneratorMetadata metadata)
         {
             copyFromPending.Add(metadata);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>SaveMetadata</c>.
+        /// </summary>
         public void SaveMetadata(string path)
         {
             JsonSerializerSettings options = new() { Formatting = Formatting.Indented };
@@ -790,6 +863,9 @@ namespace BGCS
             File.WriteAllText(path, json);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>LoadMetadata</c>.
+        /// </summary>
         public void LoadMetadata(string path)
         {
             var json = File.ReadAllText(path);
@@ -797,11 +873,19 @@ namespace BGCS
             CopyFrom(metadata);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetMetadata</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetMetadata</c>.</returns>
         public CsCodeGeneratorMetadata GetMetadata()
         {
             return metadata;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>FindFunction</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>FindFunction</c>.</returns>
         public static CppFunction FindFunction(CppCompilation compilation, string name)
         {
             for (int i = 0; i < compilation.Functions.Count; i++)
@@ -814,6 +898,9 @@ namespace BGCS
             throw new Exception($"Function '{name}' not found!");
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>PrepareArgs</c>.
+        /// </summary>
         public void PrepareArgs(CsFunctionVariation variation, CsType csReturnType)
         {
             if (wrappedPointers.TryGetValue(csReturnType.Name, out string? value))
@@ -832,6 +919,10 @@ namespace BGCS
             }
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>CreateCsFunction</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>CreateCsFunction</c>.</returns>
         public virtual CsFunction CreateCsFunction(CppFunction cppFunction, CsFunctionKind kind, string csName, List<CsFunction> functions, out CsFunctionOverload overload)
         {
             config.TryGetFunctionMapping(cppFunction.Name, out var mapping);
@@ -893,6 +984,10 @@ namespace BGCS
             return function;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>CreateCsDelegate</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>CreateCsDelegate</c>.</returns>
         public virtual CsDelegate CreateCsDelegate<T>(T member, string csName, CppFunctionType functionType) where T : class, ICppDeclaration, ICppMember
         {
             config.WriteCsSummary(member.Comment, out string? comment);
@@ -981,18 +1076,29 @@ namespace BGCS
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>BuildFunctionHeaderId</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>BuildFunctionHeaderId</c>.</returns>
         public virtual string BuildFunctionHeaderId(CsFunctionVariation variation, WriteFunctionFlags flags)
         {
             string signature = BuildFunctionSignature(variation, false, false, flags);
             return $"{variation.Name}({signature})";
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>BuildFunctionHeader</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>BuildFunctionHeader</c>.</returns>
         public virtual string BuildFunctionHeader(CsFunctionVariation variation, CsType csReturnType, WriteFunctionFlags flags, bool generateMetadata)
         {
             string signature = BuildFunctionSignature(variation, generateMetadata, true, flags);
             return $"{csReturnType.Name} {variation.Name}({signature})";
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>ClassifyParameters</c>.
+        /// </summary>
         public static void ClassifyParameters(CsFunctionOverload overload, CsFunctionVariation variation, CsType csReturnType, out bool firstParamReturn, out int offset, out bool hasManaged)
         {
             firstParamReturn = false;

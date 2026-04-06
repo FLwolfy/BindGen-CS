@@ -21,6 +21,9 @@ public class CppContainerList<TElement> : ICollection<TElement>, IEnumerable<TEl
 {
     private readonly List<TElement> _elements;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppContainerList"/>.
+    /// </summary>
     public CppContainerList(ICppContainer container)
     {
         Container = container ?? throw new ArgumentNullException(nameof(container));
@@ -54,6 +57,9 @@ public class CppContainerList<TElement> : ICollection<TElement>, IEnumerable<TEl
         _elements.Add(item);
     }
 
+    /// <summary>
+    /// Adds data or behavior through <c>AddRange</c>.
+    /// </summary>
     public void AddRange(IEnumerable<TElement> collection)
     {
         if (collection != null)
@@ -138,6 +144,9 @@ public class CppContainerList<TElement> : ICollection<TElement>, IEnumerable<TEl
         set => _elements[index] = value;
     }
 
+    /// <summary>
+    /// Executes public operation <c>Find</c>.
+    /// </summary>
     public TElement? Find<TUserdata>(TUserdata userdata, Func<TElement, TUserdata, bool> selector) where TUserdata : allows ref struct
     {
         foreach (var element in _elements)
@@ -151,8 +160,14 @@ public class CppContainerList<TElement> : ICollection<TElement>, IEnumerable<TEl
     }
 }
 
+/// <summary>
+/// Defines the public class <c>CppContainerListExtensions</c>.
+/// </summary>
 public static class CppContainerListExtensions
 {
+    /// <summary>
+    /// Executes public operation <c>FindElementByName</c>.
+    /// </summary>
     public static TElement? FindElementByName<TElement>(this CppContainerList<TElement> list, ReadOnlySpan<char> name) where TElement : CppElement, ICppMember
     {
         return list.Find(name, static (x, name) => name.SequenceEqual(x.Name));

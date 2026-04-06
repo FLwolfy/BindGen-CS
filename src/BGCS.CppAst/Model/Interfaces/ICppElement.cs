@@ -11,5 +11,8 @@ using ClangSharp.Interop;
 /// </summary>
 public interface ICppElement
 {
+    /// <summary>
+    /// Gets <c>Cursor</c>.
+    /// </summary>
     public CXCursor Cursor { get; }
 }

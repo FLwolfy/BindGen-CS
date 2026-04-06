@@ -3,16 +3,28 @@
     using BGCS;
     using BGCS.Core.CSharp;
 
+    /// <summary>
+    /// Defines the public class <c>UseThisParameterWriter</c>.
+    /// </summary>
     public class UseThisParameterWriter : IParameterWriter
     {
+        /// <summary>
+        /// Exposes public member <c>IParameterWriter.PriorityMultiplier</c>.
+        /// </summary>
         public virtual int Priority => 7 * IParameterWriter.PriorityMultiplier;
 
+        /// <summary>
+        /// Executes public operation <c>CanWrite</c>.
+        /// </summary>
         public virtual bool CanWrite(FunctionWriterContext context, CsParameterInfo rootParameter, CsParameterInfo cppParameter, ParameterFlags paramFlags, int index, int offset)
         {
             var writeFunctionFlags = context.Flags;
             return writeFunctionFlags.HasFlag(WriteFunctionFlags.UseThis) && index == 0;
         }
 
+        /// <summary>
+        /// Writes output for <c>Write</c>.
+        /// </summary>
         public virtual void Write(FunctionWriterContext context, CsParameterInfo rootParameter, CsParameterInfo cppParameter, ParameterFlags paramFlags, int index, int offset)
         {
             var overload = context.Overload;

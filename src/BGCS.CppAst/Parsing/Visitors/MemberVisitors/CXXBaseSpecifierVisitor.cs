@@ -6,8 +6,14 @@ using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Types;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>CXXBaseSpecifierVisitor</c>.
+/// </summary>
 public unsafe class CXXBaseSpecifierVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_CXXBaseSpecifier
     ];

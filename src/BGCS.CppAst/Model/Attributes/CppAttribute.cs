@@ -12,12 +12,18 @@ namespace BGCS.CppAst.Model.Attributes;
 /// </summary>
 public class CppAttribute : CppElement
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppAttribute"/>.
+    /// </summary>
     public CppAttribute(CXCursor cursor, string name, AttributeKind kind) : base(cursor)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         Kind = kind;
     }
 
+    /// <summary>
+    /// Executes public operation <c>CppAttribute</c>.
+    /// </summary>
     public CppAttribute(CXComment comment, string name, AttributeKind kind) : base(CXCursor.Null)
     {
         Comment = comment;
@@ -25,6 +31,9 @@ public class CppAttribute : CppElement
         Kind = kind;
     }
 
+    /// <summary>
+    /// Gets or sets <c>Comment</c>.
+    /// </summary>
     public CXComment Comment { get; set; }
 
     /// <summary>
@@ -47,6 +56,9 @@ public class CppAttribute : CppElement
     /// </summary>
     public bool IsVariadic { get; set; }
 
+    /// <summary>
+    /// Gets <c>Kind</c>.
+    /// </summary>
     public AttributeKind Kind { get; }
 
     /// <inheritdoc />

@@ -16,6 +16,9 @@ namespace BGCS.CppAst.Model.Metadata;
 /// </summary>
 public class CppCommentFull : CppComment
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentFull"/>.
+    /// </summary>
     public CppCommentFull(CXComment comment) : base(comment, CppCommentKind.Full)
     {
     }
@@ -42,6 +45,9 @@ public abstract class CppComment
         Kind = kind;
     }
 
+    /// <summary>
+    /// Gets or sets <c>Comment</c>.
+    /// </summary>
     public CXComment Comment { get; set; }
 
     /// <summary>
@@ -75,6 +81,9 @@ public abstract class CppComment
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Executes public operation <c>ChildrenToString</c>.
+    /// </summary>
     public string ChildrenToString()
     {
         var builder = new StringBuilder();
@@ -82,6 +91,9 @@ public abstract class CppComment
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Executes public operation <c>TryToParseAttributes</c>.
+    /// </summary>
     public void TryToParseAttributes(ICppAttributeContainer attrContainer)
     {
         if (this is CppCommentText ctxt && ctxt.Text != null)
@@ -118,8 +130,14 @@ public abstract class CppCommentCommand : CppComment
         Arguments = [];
     }
 
+    /// <summary>
+    /// Gets or sets <c>CommandName</c>.
+    /// </summary>
     public string CommandName { get; set; }
 
+    /// <summary>
+    /// Gets <c>Arguments</c>.
+    /// </summary>
     public List<string> Arguments { get; }
 
     protected internal override void ToString(StringBuilder builder)
@@ -140,6 +158,9 @@ public abstract class CppCommentCommand : CppComment
 /// </summary>
 public class CppCommentParagraph : CppComment
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentParagraph"/>.
+    /// </summary>
     public CppCommentParagraph(CXComment comment) : base(comment, CppCommentKind.Paragraph)
     {
     }
@@ -174,6 +195,9 @@ public class CppCommentParagraph : CppComment
 /// </summary>
 public class CppCommentBlockCommand : CppCommentCommand
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentBlockCommand"/>.
+    /// </summary>
     public CppCommentBlockCommand(CXComment comment) : base(comment, CppCommentKind.BlockCommand)
     {
     }
@@ -190,10 +214,16 @@ public class CppCommentBlockCommand : CppCommentCommand
 /// </summary>
 public class CppCommentInlineCommand : CppCommentCommand
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentInlineCommand"/>.
+    /// </summary>
     public CppCommentInlineCommand(CXComment comment) : base(comment, CppCommentKind.InlineCommand)
     {
     }
 
+    /// <summary>
+    /// Gets or sets <c>RenderKind</c>.
+    /// </summary>
     public CppCommentInlineCommandRenderKind RenderKind { get; set; }
 
     protected internal override void ToString(StringBuilder builder)
@@ -219,6 +249,9 @@ public enum CppCommentInlineCommandRenderKind
 /// </summary>
 public class CppCommentParamCommand : CppCommentCommand
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentParamCommand"/>.
+    /// </summary>
     public CppCommentParamCommand(CXComment comment) : base(comment, CppCommentKind.ParamCommand)
     {
     }
@@ -262,6 +295,9 @@ public class CppCommentParamCommand : CppCommentCommand
 /// </summary>
 public class CppCommentTemplateParamCommand : CppCommentCommand
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentTemplateParamCommand"/>.
+    /// </summary>
     public CppCommentTemplateParamCommand(CXComment comment) : base(comment, CppCommentKind.TemplateParamCommand)
     {
     }
@@ -330,6 +366,9 @@ public enum CppCommentKind
 /// </summary>
 public class CppCommentVerbatimBlockCommand : CppCommentCommand
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentVerbatimBlockCommand"/>.
+    /// </summary>
     public CppCommentVerbatimBlockCommand(CXComment comment) : base(comment, CppCommentKind.VerbatimBlockCommand)
     {
     }
@@ -347,6 +386,9 @@ public class CppCommentVerbatimBlockCommand : CppCommentCommand
 /// </summary>
 public class CppCommentVerbatimBlockLine : CppCommentTextBase
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentVerbatimBlockLine"/>.
+    /// </summary>
     public CppCommentVerbatimBlockLine(CXComment comment) : base(comment, CppCommentKind.VerbatimBlockLine)
     {
     }
@@ -367,6 +409,9 @@ public abstract class CppCommentTextBase : CppComment
     {
     }
 
+    /// <summary>
+    /// Gets or sets <c>Text</c>.
+    /// </summary>
     public string? Text { get; set; }
 
     protected internal override void ToString(StringBuilder builder)
@@ -380,6 +425,9 @@ public abstract class CppCommentTextBase : CppComment
 /// </summary>
 public class CppCommentText : CppCommentTextBase
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentText"/>.
+    /// </summary>
     public CppCommentText(CXComment comment) : base(comment, CppCommentKind.Text)
     {
     }
@@ -390,6 +438,9 @@ public class CppCommentText : CppCommentTextBase
 /// </summary>
 public class CppCommentVerbatimLine : CppCommentTextBase
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentVerbatimLine"/>.
+    /// </summary>
     public CppCommentVerbatimLine(CXComment comment) : base(comment, CppCommentKind.VerbatimLine)
     {
     }
@@ -410,6 +461,9 @@ public abstract class CppCommentHtmlTag : CppComment
     {
     }
 
+    /// <summary>
+    /// Gets or sets <c>TagName</c>.
+    /// </summary>
     public string TagName { get; set; }
 
     protected internal abstract override void ToString(StringBuilder builder);
@@ -420,6 +474,9 @@ public abstract class CppCommentHtmlTag : CppComment
 /// </summary>
 public class CppCommentHtmlStartTag : CppCommentHtmlTag
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentHtmlStartTag"/>.
+    /// </summary>
     public CppCommentHtmlStartTag(CXComment comment) : base(comment, CppCommentKind.HtmlStartTag)
     {
         Attributes = [];
@@ -462,6 +519,9 @@ public class CppCommentHtmlStartTag : CppCommentHtmlTag
 /// </summary>
 public class CppCommentHtmlEndTag : CppCommentHtmlTag
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppCommentHtmlEndTag"/>.
+    /// </summary>
     public CppCommentHtmlEndTag(CXComment comment) : base(comment, CppCommentKind.HtmlEndTag)
     {
     }

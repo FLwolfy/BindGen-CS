@@ -3,6 +3,9 @@
     using System;
 
     [Flags]
+    /// <summary>
+    /// Defines values for <c>MergeOptions</c>.
+    /// </summary>
     public enum MergeOptions : ulong
     {
         None = 0,

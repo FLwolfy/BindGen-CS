@@ -26,6 +26,9 @@ public class CppCompilation : CppGlobalDeclarationContainer, IDisposable
         System = new(translationUnit.Cursor);
     }
 
+    /// <summary>
+    /// Exposes public member <c>translationUnit</c>.
+    /// </summary>
     public CXTranslationUnit TranslationUnit => translationUnit;
 
     /// <summary>
@@ -48,6 +51,9 @@ public class CppCompilation : CppGlobalDeclarationContainer, IDisposable
     /// </summary>
     public CppGlobalDeclarationContainer System { get; }
 
+    /// <summary>
+    /// Executes public operation <c>Dispose</c>.
+    /// </summary>
     public void Dispose()
     {
         if (translationUnit.Handle != IntPtr.Zero)

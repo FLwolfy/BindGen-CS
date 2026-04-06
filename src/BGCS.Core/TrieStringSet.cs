@@ -5,37 +5,67 @@
     using System.Diagnostics.CodeAnalysis;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>TrieStringSet</c>.
+    /// </summary>
     public class TrieStringSet : ICollection<string>
     {
         private readonly IEqualityComparer<char> _comparer;
         private readonly TrieSetNode root;
         private int count;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="TrieStringSet"/>.
+        /// </summary>
         public TrieStringSet()
         {
             _comparer = EqualityComparer<char>.Default;
             root = new('\0', _comparer);
         }
 
+        /// <summary>
+        /// Executes public operation <c>TrieStringSet</c>.
+        /// </summary>
         public TrieStringSet(IEqualityComparer<char> comparer)
         {
             _comparer = comparer;
             root = new('\0', _comparer);
         }
 
+        /// <summary>
+        /// Defines the public class <c>TrieSetNode</c>.
+        /// </summary>
         public class TrieSetNode
         {
+            /// <summary>
+            /// Exposes public member <c>Key</c>.
+            /// </summary>
             public readonly char Key;
+            /// <summary>
+            /// Exposes public member <c>Parent</c>.
+            /// </summary>
             public TrieSetNode? Parent;
+            /// <summary>
+            /// Exposes public member <c>Children</c>.
+            /// </summary>
             public Dictionary<char, TrieSetNode> Children;
+            /// <summary>
+            /// Exposes public member <c>IsTerminal</c>.
+            /// </summary>
             public bool IsTerminal;
 
+            /// <summary>
+            /// Initializes a new instance of <see cref="TrieSetNode"/>.
+            /// </summary>
             public TrieSetNode(char key, IEqualityComparer<char> comparer)
             {
                 Key = key;
                 Children = new(comparer);
             }
 
+            /// <summary>
+            /// Executes public operation <c>TrieSetNode</c>.
+            /// </summary>
             public TrieSetNode(char key, TrieSetNode parent, IEqualityComparer<char> comparer)
             {
                 Key = key;
@@ -44,10 +74,16 @@
             }
         }
 
+        /// <summary>
+        /// Exposes public member <c>count</c>.
+        /// </summary>
         public int Count => count;
 
         bool ICollection<string>.IsReadOnly => false;
 
+        /// <summary>
+        /// Returns computed data from <c>GetEnumerator</c>.
+        /// </summary>
         public IEnumerator<string> GetEnumerator()
         {
             return GetAllNodes(root).Select(GetFullKey).GetEnumerator();
@@ -58,6 +94,9 @@
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>Add</c>.
+        /// </summary>
         public void Add(string key)
         {
             TrieSetNode node = root;
@@ -75,6 +114,9 @@
             count++;
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddRange</c>.
+        /// </summary>
         public void AddRange(IEnumerable<string> keys)
         {
             foreach (string key in keys)
@@ -83,6 +125,9 @@
             }
         }
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddItem</c>.
+        /// </summary>
         public TrieSetNode AddItem(TrieSetNode node, char key)
         {
             if (!node.Children.TryGetValue(key, out var child))
@@ -95,12 +140,18 @@
             return child;
         }
 
+        /// <summary>
+        /// Executes public operation <c>Clear</c>.
+        /// </summary>
         public void Clear()
         {
             root.Children.Clear();
             count = 0;
         }
 
+        /// <summary>
+        /// Executes public operation <c>Contains</c>.
+        /// </summary>
         public bool Contains(string key)
         {
             var node = GetNode(key);
@@ -108,8 +159,14 @@
             return node != null && node.IsTerminal;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyTo</c>.
+        /// </summary>
         public void CopyTo(string[] array, int arrayIndex) => Array.Copy(GetAllNodes(root).Select(GetFullKey).ToArray(), 0, array, arrayIndex, Count);
 
+        /// <summary>
+        /// Removes data or behavior through <c>Remove</c>.
+        /// </summary>
         public bool Remove(string key)
         {
             TrieSetNode? node = GetNode(key);
@@ -129,6 +186,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetNode</c>.
+        /// </summary>
         public TrieSetNode? GetNode(string key)
         {
             var node = root;
@@ -145,6 +205,9 @@
             return node;
         }
 
+        /// <summary>
+        /// Attempts to resolve data via <c>TryGetNode</c> without throwing.
+        /// </summary>
         public bool TryGetNode(string key, [NotNullWhen(true)] out TrieSetNode? node)
         {
             node = GetNode(key);
@@ -152,12 +215,18 @@
             return node != null && node.IsTerminal;
         }
 
+        /// <summary>
+        /// Removes data or behavior through <c>RemoveNode</c>.
+        /// </summary>
         public void RemoveNode(TrieSetNode node)
         {
             Remove(node);
             count--;
         }
 
+        /// <summary>
+        /// Removes data or behavior through <c>Remove</c>.
+        /// </summary>
         public void Remove(TrieSetNode node)
         {
             while (true)
@@ -179,6 +248,9 @@
             }
         }
 
+        /// <summary>
+        /// Removes data or behavior through <c>Remove</c>.
+        /// </summary>
         public void Remove(TrieSetNode node, char key)
         {
             foreach (var trieNode in node.Children)
@@ -191,6 +263,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>FindLargestMatch</c>.
+        /// </summary>
         public ReadOnlySpan<char> FindLargestMatch(ReadOnlySpan<char> match)
         {
             if (match.Length == 0)
@@ -219,6 +294,9 @@
             return match[..(lastMatch + 1)];
         }
 
+        /// <summary>
+        /// Executes public operation <c>FindSmallestMatch</c>.
+        /// </summary>
         public ReadOnlySpan<char> FindSmallestMatch(ReadOnlySpan<char> match)
         {
             if (match.Length == 0)

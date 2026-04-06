@@ -16,39 +16,69 @@
     using System.Runtime.InteropServices;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>TypeGenerationStep</c>.
+    /// </summary>
     public class TypeGenerationStep : GenerationStep
     {
         protected readonly HashSet<string> LibDefinedTypes = new();
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly HashSet<string> DefinedTypes = new();
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly Dictionary<string, string> WrappedPointers = new();
+        /// <summary>
+        /// Executes public operation <c>new</c>.
+        /// </summary>
         public readonly Dictionary<string, HashSet<CsFunctionVariation>> MemberFunctions = new();
 
         protected FunctionGenerator funcGen = null!;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="TypeGenerationStep"/>.
+        /// </summary>
         public TypeGenerationStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Types";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
             Enabled = config.GenerateTypes;
             funcGen = generator.FunctionGenerator;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(CsCodeGeneratorMetadata metadata)
         {
             metadata.DefinedTypes.AddRange(DefinedTypes);
             metadata.WrappedPointers.AddRange(WrappedPointers);
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(CsCodeGeneratorMetadata metadata)
         {
             LibDefinedTypes.AddRange(metadata.DefinedTypes);
             WrappedPointers.AddRange(metadata.WrappedPointers);
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
             LibDefinedTypes.Clear();
@@ -99,6 +129,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;
@@ -163,34 +196,88 @@
             }
         }
 
+        /// <summary>
+        /// Defines the public class <c>CsStruct</c>.
+        /// </summary>
         public class CsStruct
         {
+            /// <summary>
+            /// Exposes public member <c>Name</c>.
+            /// </summary>
             public string Name;
+            /// <summary>
+            /// Exposes public member <c>CppType</c>.
+            /// </summary>
             public CppClass CppType;
+            /// <summary>
+            /// Exposes public member <c>LayoutKind.Sequential</c>.
+            /// </summary>
             public LayoutKind LayoutKind = LayoutKind.Sequential;
+            /// <summary>
+            /// Exposes public member <c>[]</c>.
+            /// </summary>
             public List<CsStruct> SubTypes = [];
+            /// <summary>
+            /// Exposes public member <c>[]</c>.
+            /// </summary>
             public List<CsField> Fields = [];
+            /// <summary>
+            /// Exposes public member <c>[]</c>.
+            /// </summary>
             public List<CsPropertyMetadata> Properties = [];
+            /// <summary>
+            /// Exposes public member <c>[]</c>.
+            /// </summary>
             public List<string> Attributes = [];
+            /// <summary>
+            /// Exposes public member <c>Comment</c>.
+            /// </summary>
             public string? Comment;
 
+            /// <summary>
+            /// Initializes a new instance of <see cref="CsStruct"/>.
+            /// </summary>
             public CsStruct(string name, CppClass cppType)
             {
                 Name = name;
                 CppType = cppType;
             }
 
+            /// <summary>
+            /// Exposes public member <c>CppType.IsAnonymous</c>.
+            /// </summary>
             public bool IsAnonymous => CppType.IsAnonymous;
         }
 
+        /// <summary>
+        /// Defines the public class <c>CsField</c>.
+        /// </summary>
         public class CsField
         {
+            /// <summary>
+            /// Exposes public member <c>Name</c>.
+            /// </summary>
             public string Name;
+            /// <summary>
+            /// Exposes public member <c>Type</c>.
+            /// </summary>
             public CsType Type;
+            /// <summary>
+            /// Exposes public member <c>CppField</c>.
+            /// </summary>
             public CppField CppField;
+            /// <summary>
+            /// Exposes public member <c>[]</c>.
+            /// </summary>
             public List<string> Attributes = [];
+            /// <summary>
+            /// Exposes public member <c>Comment</c>.
+            /// </summary>
             public string? Comment;
 
+            /// <summary>
+            /// Initializes a new instance of <see cref="CsField"/>.
+            /// </summary>
             public CsField(string name, CsType type, CppField cppField)
             {
                 Name = name;
@@ -198,16 +285,34 @@
                 CppField = cppField;
             }
 
+            /// <summary>
+            /// Exposes public member <c>CppField.IsAnonymous</c>.
+            /// </summary>
             public bool IsAnonymous => CppField.IsAnonymous;
 
+            /// <summary>
+            /// Exposes public member <c>CppField.Offset</c>.
+            /// </summary>
             public long Offset => CppField.Offset;
 
+            /// <summary>
+            /// Exposes public member <c>CppField.BitOffset</c>.
+            /// </summary>
             public long BitOffset => CppField.BitOffset;
 
+            /// <summary>
+            /// Exposes public member <c>CppField.IsBitField</c>.
+            /// </summary>
             public bool IsBitField => CppField.IsBitField;
 
+            /// <summary>
+            /// Exposes public member <c>CppField.BitFieldWidth</c>.
+            /// </summary>
             public int BitFieldWidth => CppField.BitFieldWidth;
 
+            /// <summary>
+            /// Exposes public member <c>CppField.Type.SizeOf</c>.
+            /// </summary>
             public int SizeOf => CppField.Type.SizeOf;
         }
 

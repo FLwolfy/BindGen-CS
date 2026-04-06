@@ -5,8 +5,14 @@
     using BGCS.CppAst.Model.Types;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>MarshalHelper</c>.
+    /// </summary>
     public static class MarshalHelper
     {
+        /// <summary>
+        /// Writes output for <c>WriteStringConvertToManaged</c>.
+        /// </summary>
         public static void WriteStringConvertToManaged(StringBuilder sb, CppType type)
         {
             CppPrimitiveKind primitiveKind = type.GetPrimitiveKind();
@@ -24,6 +30,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringConvertToManaged</c>.
+        /// </summary>
         public static void WriteStringConvertToManaged(StringBuilder sb, CsType type)
         {
             if (type.StringType == CsStringType.StringUTF8)
@@ -40,6 +49,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringConvertToManaged</c>.
+        /// </summary>
         public static void WriteStringConvertToManaged(ICodeWriter writer, CppType type, string variable, string pointer)
         {
             CppPrimitiveKind primitiveKind = type.GetPrimitiveKind();
@@ -57,6 +69,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringConvertToManaged</c>.
+        /// </summary>
         public static void WriteStringConvertToManaged(ICodeWriter writer, CsType type, string variable, string pointer, string? convertCondition = null)
         {
             if (convertCondition != null)
@@ -81,6 +96,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringConvertToUnmanaged</c>.
+        /// </summary>
         public static void WriteStringConvertToUnmanaged(ICodeWriter writer, CppType type, string name, int i)
         {
             CppPrimitiveKind primitiveKind = type.GetPrimitiveKind();
@@ -130,6 +148,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringConvertToUnmanaged</c>.
+        /// </summary>
         public static void WriteStringConvertToUnmanaged(ICodeWriter writer, CsType type, string name, int i)
         {
             if (type.StringType == CsStringType.StringUTF8)
@@ -178,6 +199,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteFreeString</c>.
+        /// </summary>
         public static void WriteFreeString(ICodeWriter writer, int i)
         {
             using (writer.PushBlock($"if (pStrSize{i} >= Utils.MaxStackallocSize)"))
@@ -186,6 +210,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringArrayConvertToUnmanaged</c>.
+        /// </summary>
         public static void WriteStringArrayConvertToUnmanaged(ICodeWriter writer, CppType type, string name, int i)
         {
             CppPrimitiveKind primitiveKind = type.GetPrimitiveKind();
@@ -237,6 +264,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringArrayConvertToUnmanaged</c>.
+        /// </summary>
         public static void WriteStringArrayConvertToUnmanaged(ICodeWriter writer, CppType type, string name, string varName)
         {
             CppPrimitiveKind primitiveKind = type.GetPrimitiveKind();
@@ -288,6 +318,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringArrayConvertToUnmanaged</c>.
+        /// </summary>
         public static void WriteStringArrayConvertToUnmanaged(ICodeWriter writer, CsType type, string name, int i)
         {
             if (type.StringType == CsStringType.StringUTF8)
@@ -338,6 +371,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteStringArrayConvertToUnmanaged</c>.
+        /// </summary>
         public static void WriteStringArrayConvertToUnmanaged(ICodeWriter writer, CsType type, string name, string varName)
         {
             CsPrimitiveType primitiveKind = type.PrimitiveType;
@@ -389,6 +425,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteFreeUnmanagedStringArray</c>.
+        /// </summary>
         public static void WriteFreeUnmanagedStringArray(ICodeWriter writer, string name, int i)
         {
             using (writer.PushBlock($"for (int i = 0; i < {name}.Length; i++)"))
@@ -401,6 +440,9 @@
             }
         }
 
+        /// <summary>
+        /// Writes output for <c>WriteFreeUnmanagedStringArray</c>.
+        /// </summary>
         public static void WriteFreeUnmanagedStringArray(ICodeWriter writer, string name, string varName)
         {
             using (writer.PushBlock($"for (int i = 0; i < {name}.Length; i++)"))

@@ -1,10 +1,22 @@
 ﻿namespace BGCS.Core.Logging
 {
+    /// <summary>
+    /// Defines the public struct <c>LogMessage</c>.
+    /// </summary>
     public struct LogMessage
     {
+        /// <summary>
+        /// Exposes public member <c>Severtiy</c>.
+        /// </summary>
         public LogSeverity Severtiy;
+        /// <summary>
+        /// Exposes public member <c>Message</c>.
+        /// </summary>
         public string Message;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="LogMessage"/>.
+        /// </summary>
         public LogMessage(LogSeverity severtiy, string message)
         {
             Severtiy = severtiy;
@@ -25,6 +37,9 @@
             };
         }
 
+        /// <summary>
+        /// Executes public operation <c>ToString</c>.
+        /// </summary>
         public override readonly string ToString()
         {
             return $"{GetServertiyString(Severtiy)}\t{Message}";

@@ -2,8 +2,14 @@
 {
     using System;
 
+    /// <summary>
+    /// Defines the public class <c>MurmurHash3</c>.
+    /// </summary>
     public static class MurmurHash3
     {
+        /// <summary>
+        /// Executes public operation <c>Hash32</c>.
+        /// </summary>
         public static uint Hash32(ReadOnlySpan<byte> data, uint seed = 0)
         {
             const uint c1 = 0xcc9e2d51;

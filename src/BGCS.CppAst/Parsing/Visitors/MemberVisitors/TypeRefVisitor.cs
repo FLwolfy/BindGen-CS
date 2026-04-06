@@ -5,8 +5,14 @@ using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Types;
 using System.Collections.Generic;
 
+/// <summary>
+/// Defines the public class <c>TypeRefVisitor</c>.
+/// </summary>
 public unsafe class TypeRefVisitor : MemberVisitor
 {
+    /// <summary>
+    /// Gets <c>Kinds</c>.
+    /// </summary>
     public override IEnumerable<CXCursorKind> Kinds { get; } = [
         CXCursorKind.CXCursor_TypeRef
     ];

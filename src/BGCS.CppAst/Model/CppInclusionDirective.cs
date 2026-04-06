@@ -12,6 +12,9 @@ using ClangSharp.Interop;
 /// </summary>
 public class CppInclusionDirective : CppElement
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppInclusionDirective"/>.
+    /// </summary>
     public CppInclusionDirective(CXCursor cursor, string fileName) : base(cursor)
     {
         FileName = fileName;

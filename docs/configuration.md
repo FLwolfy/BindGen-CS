@@ -31,7 +31,7 @@ This document provides:
 | `ImportType` | Import mode | `DllImport` / `FunctionTable` |
 | `MergeGeneratedFilesToSingleFile` | Single-file output mode | `true` / `false` |
 | `GenerateRuntimeSource` | Generate standalone `Runtime.cs` | `true` / `false` |
-| `SingleFileOutputName` | Merged file name | `Bindings.cs` |
+| `RuntimeNamespace` | Runtime namespace override | `My.Runtime` / empty (default) |
 | `GenerateExtensions` | Generate extension helpers | `false` (strict) / `true` |
 | `DelegatesAsVoidPointer` | Callback pointer strategy | `false` (typed) / `true` |
 
@@ -147,7 +147,7 @@ Sources:
 | `ImportType` | `ImportType` | `FunctionTable` | Import mode (`DllImport` / `LibraryImport` / `FunctionTable`) |
 | `MergeGeneratedFilesToSingleFile` | `bool` | `false` | Merge all generated `.cs` into one |
 | `GenerateRuntimeSource` | `bool` | `false` | Generate standalone `Runtime.cs` in output root |
-| `SingleFileOutputName` | `string` | `Bindings.cs` | Single-file output name |
+| `RuntimeNamespace` | `string` | `""` | Runtime namespace override (empty => `BGCS.Runtime`) |
 | `GenerateMetadata` | `bool` | `false` | Emit metadata attributes |
 | `GenerateConstants` | `bool` | `true` | Constant generation switch |
 | `GenerateEnums` | `bool` | `true` | Enum generation switch |
@@ -261,10 +261,12 @@ Source:
 - Split files by generation steps/types
 - Optional single-file merge (`MergeGeneratedFilesToSingleFile`)
 - When `MergeGeneratedFilesToSingleFile = true`, split generated files are automatically removed after merge
+- Merged output filename is fixed: `Bindings.cs`
 - Runtime output policy:
   - If `GenerateRuntimeSource = true`: runtime is emitted as standalone `Runtime.cs`
   - If `GenerateRuntimeSource = false`: runtime source is not generated
-  - Generated bindings always use `using BGCS.Runtime;`; runtime namespace is fixed to `BGCS.Runtime`
+  - Generated bindings use `using {RuntimeNamespace};`
+  - `RuntimeNamespace` empty/whitespace => `BGCS.Runtime`
 
 ### 5.2 Cpp2C output
 

@@ -58,6 +58,9 @@ public class CppMacro : CppElement, ICppMember
         Value = CppToken.TokensToString(Tokens);
     }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         var builder = new StringBuilder();

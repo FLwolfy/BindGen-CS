@@ -1,0 +1,263 @@
+{
+  "BaseConfig": {
+    "Url": "file://config.base.json",
+    "IgnoredProperties": [
+      "IncludeFolders"
+    ]
+  },
+  "Namespace": "BGCS.TestApp.AllSet",
+  "ApiName": "TestAllSet",
+  "LibName": "testlib_allset",
+  "LogLevel": "Information",
+  "CppLogLevel": "Warning",
+  "EnableExperimentalOptions": true,
+  "GenerateSizeOfStructs": true,
+  "GenerateConstructorsForStructs": false,
+  "DelegatesAsVoidPointer": false,
+  "WrapPointersAsHandle": true,
+  "GeneratePlaceholderComments": false,
+  "FunctionTableEntries": [
+    {
+      "EntryPoint": "bgcs_demo_ping"
+    }
+  ],
+  "UseCustomContext": true,
+  "GetLibraryNameFunctionName": "ResolveNativeLibraryName",
+  "GetLibraryExtensionFunctionName": "ResolveNativeLibraryExtension",
+  "GenerateMetadata": true,
+  "OneFilePerType": false,
+  "MergeGeneratedFilesToSingleFile": true,
+  "RuntimeNamespace": "BGCS.TestApp.Runtime",
+  "GenerateRuntimeSource": true,
+  "BoolType": "Bool32",
+  "KnownConstantNames": {
+    "BGCS_MAX_VALUE": "MaxValue"
+  },
+  "KnownEnumValueNames": {
+    "BGCS_MODE_FAST": "Fast"
+  },
+  "KnownEnumPrefixes": {
+    "BgcsMode": "BGCS_MODE"
+  },
+  "KnownExtensionPrefixes": {
+    "BgcsExt": "BGCS_EXT"
+  },
+  "KnownExtensionNames": {
+    "BGCS_EXT_SAMPLE": "Sample"
+  },
+  "KnownDefaultValueNames": {
+    "BGCS_DEFAULT_TIMEOUT": "1000"
+  },
+  "KnownConstructors": {
+    "BgcsHandle": [
+      "bgcs_create_handle"
+    ]
+  },
+  "KnownMemberFunctions": {
+    "BgcsHandle": [
+      "bgcs_handle_release"
+    ]
+  },
+  "IgnoredParts": [
+    "BGCS"
+  ],
+  "Keywords": [
+    "event",
+    "params"
+  ],
+  "IgnoredFunctions": [
+    "bgcs_ignore_me"
+  ],
+  "IgnoredExtensions": [
+    "BgcsLegacyExt"
+  ],
+  "IgnoredTypes": [
+    "BgcsIgnoredType"
+  ],
+  "IgnoredEnums": [
+    "BgcsIgnoredEnum"
+  ],
+  "IgnoredTypedefs": [
+    "BgcsIgnoredTypedef"
+  ],
+  "IgnoredDelegates": [
+    "BgcsIgnoredDelegate"
+  ],
+  "IgnoredConstants": [
+    "BGCS_IGNORED_CONST"
+  ],
+  "AllowedFunctions": [
+    "bgcs_demo_ping",
+    "bgcs_demo_sum"
+  ],
+  "AllowedExtensions": [
+    "BgcsSampleExt"
+  ],
+  "AllowedTypes": [
+    "BgcsTypeA"
+  ],
+  "AllowedEnums": [
+    "BgcsMode"
+  ],
+  "AllowedTypedefs": [
+    "BgcsHandle"
+  ],
+  "AllowedDelegates": [
+    "BgcsCallback"
+  ],
+  "AllowedConstants": [
+    "BGCS_MAX_VALUE"
+  ],
+  "Usings": [
+    "System.Numerics",
+    "System.Diagnostics"
+  ],
+  "ConstantNamingConvention": "ScreamingSnakeCase",
+  "FunctionNamingConvention": "CamelCase",
+  "AutoSquashTypedef": false,
+  "IncludeFolders": [
+    "headers",
+    "headers/extra"
+  ],
+  "SystemIncludeFolders": [
+    "/usr/include",
+    "/usr/local/include"
+  ],
+  "Defines": [
+    "BGCS_DEMO=1",
+    "BGCS_ENABLE_EXPERIMENTAL=1"
+  ],
+  "AdditionalArguments": [
+    "-std=c11",
+    "-fms-extensions"
+  ],
+  "CustomEnums": [
+    {
+      "Identifier": "BgcsCustomMode",
+      "CppName": "BgcsCustomMode",
+      "Name": "BgcsCustomMode",
+      "Attributes": [
+        "[Flags]"
+      ],
+      "Comment": "Custom enum from config",
+      "BaseType": "int",
+      "Items": [
+        {
+          "Identifier": "BGCS_CUSTOM_A",
+          "CppName": "BGCS_CUSTOM_A",
+          "CppValue": "1",
+          "Name": "CustomA",
+          "Value": "1",
+          "Attributes": [],
+          "Comment": "item a"
+        }
+      ]
+    }
+  ],
+  "VaryingTypes": [
+    "ReadOnlySpan<byte>",
+    "Span<byte>"
+  ],
+  "GenerateAdditionalOverloads": true,
+  "ConstantMappings": [
+    {
+      "ExportedName": "BGCS_OLD_CONST",
+      "FriendlyName": "BgcsNewConst",
+      "Comment": "constant remap",
+      "Type": "int",
+      "Value": "7"
+    }
+  ],
+  "EnumMappings": [
+    {
+      "ExportedName": "BGCS_MODE",
+      "FriendlyName": "BgcsMode",
+      "Comment": "enum remap",
+      "ItemMappings": [
+        {
+          "ExportedName": "BGCS_MODE_FAST",
+          "FriendlyName": "Fast",
+          "Comment": "fast mode",
+          "Value": "1"
+        }
+      ]
+    }
+  ],
+  "FunctionMappings": [
+    {
+      "ExportedName": "bgcs_demo_sum",
+      "FriendlyName": "DemoSum",
+      "Comment": "sum function remap",
+      "Defaults": {
+        "b": "1"
+      },
+      "CustomVariations": [],
+      "Parameters": [
+        {
+          "ExportedName": "a",
+          "FriendlyName": "left"
+        },
+        {
+          "ExportedName": "b",
+          "FriendlyName": "right"
+        }
+      ]
+    }
+  ],
+  "HandleMappings": [
+    {
+      "ExportedName": "BgcsHandle",
+      "FriendlyName": "BgcsHandle",
+      "Comment": "handle remap"
+    }
+  ],
+  "ClassMappings": [
+    {
+      "ExportedName": "BgcsStruct",
+      "FriendlyName": "BgcsStruct",
+      "Comment": "class remap",
+      "FieldMappings": [
+        {
+          "ExportedName": "x",
+          "DisplayName": "X",
+          "Comment": "field x"
+        }
+      ]
+    }
+  ],
+  "DelegateMappings": [
+    {
+      "Name": "BgcsCallback",
+      "ReturnType": "void",
+      "Signature": "int value"
+    }
+  ],
+  "ArrayMappings": [
+    {
+      "Primitive": "Float",
+      "Size": 4,
+      "Name": "Vector4"
+    }
+  ],
+  "NameMappings": {
+    "BGCS": "Bgcs",
+    "Demo": "Sample"
+  },
+  "TypeMappings": {
+    "size_t": "nuint",
+    "BgcsBool": "int"
+  },
+  "TypedefToEnumMappings": {
+    "BgcsModeAlias": "BgcsMode"
+  },
+  "FunctionAliasMappings": {
+    "bgcs_demo_sum": [
+      {
+        "ExportedName": "bgcs_demo_sum",
+        "ExportedAliasName": "bgcs_demo_sum_ext",
+        "FriendlyName": "DemoSumExt",
+        "Comment": "alias mapping sample"
+      }
+    ]
+  }
+}

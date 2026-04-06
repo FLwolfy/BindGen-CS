@@ -23,8 +23,8 @@ Key detail: post-patches run before file merge and before `Runtime.cs` generatio
 
 Main behavior switchboard:
 
-- output: `MergeGeneratedFilesToSingleFile`, `SingleFileOutputName`
-- runtime: `GenerateRuntimeSource`
+- output: `MergeGeneratedFilesToSingleFile` (merged output fixed to `Bindings.cs`)
+- runtime: `GenerateRuntimeSource`, `RuntimeNamespace`
 - import mode: `ImportType` (`DllImport` / `LibraryImport` / `FunctionTable`)
 - generation toggles: `GenerateConstants/Enums/Functions/Types/Handles/Delegates/Extensions`
 - filtering: `Allowed*`, `Ignored*`
@@ -117,8 +117,8 @@ These are the main points for custom generator pipelines.
 
 ## 7. Runtime Strategy
 
-- Generated bindings use `using BGCS.Runtime;`
-- Runtime namespace is fixed to `BGCS.Runtime`
+- Generated bindings use `using {RuntimeNamespace};`
+- `RuntimeNamespace` empty/whitespace defaults to `BGCS.Runtime`
 - `GenerateRuntimeSource=true` emits standalone `Runtime.cs`
 - `GenerateRuntimeSource=false` emits no runtime source
 - Generated runtime source is wrapped with `#if !BGCS_RUNTIME_EXTERNAL` guard
@@ -162,7 +162,7 @@ var cfg = new CsCodeGeneratorConfig
     LibName = "mylib",
     ImportType = ImportType.FunctionTable,
     MergeGeneratedFilesToSingleFile = true,
-    SingleFileOutputName = "Bindings.cs",
+    RuntimeNamespace = "My.Runtime", // optional, default BGCS.Runtime
     GenerateRuntimeSource = true // false => no Runtime.cs emitted
 };
 

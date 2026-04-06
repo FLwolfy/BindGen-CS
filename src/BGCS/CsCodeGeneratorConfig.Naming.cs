@@ -3,10 +3,16 @@ using System.Text;
 
 namespace BGCS
 ;
+    /// <summary>
+    /// Defines the public class <c>CsCodeGeneratorConfig</c>.
+    /// </summary>
     public partial class CsCodeGeneratorConfig
     {
         private readonly ConcurrentDictionary<string, string> nameCache = new();
 
+        /// <summary>
+        /// Returns computed data from <c>GetCsCleanName</c>.
+        /// </summary>
         public string GetCsCleanName(string name)
         {
             if (TypeMappings.TryGetValue(name, out string? mappedName))
@@ -74,6 +80,9 @@ namespace BGCS
             return newName;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetCsCleanNameWithConvention</c>.
+        /// </summary>
         public string GetCsCleanNameWithConvention(string name, NamingConvention convention, bool removeTailingT = true)
         {
             if (TypeMappings.TryGetValue(name, out string? mappedName))

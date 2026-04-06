@@ -14,10 +14,17 @@
     using System.Text;
     using System.Xml.Linq;
 
+    /// <summary>
+    /// Defines the public class <c>CsCodeGeneratorConfig</c> used by the generation pipeline.
+    /// </summary>
     public partial class CsCodeGeneratorConfig
     {
         #region Mapping Helpers
 
+        /// <summary>
+        /// Performs the operation implemented by <c>TryGetEnumMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>TryGetEnumMapping</c>.</returns>
         public bool TryGetEnumMapping(string enumName, [NotNullWhen(true)] out EnumMapping? mapping)
         {
             for (int i = 0; i < EnumMappings.Count; i++)
@@ -34,6 +41,10 @@
             return false;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetEnumMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetEnumMapping</c>.</returns>
         public EnumMapping? GetEnumMapping(string enumName)
         {
             for (int i = 0; i < EnumMappings.Count; i++)
@@ -48,6 +59,10 @@
             return null;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>TryGetFunctionMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>TryGetFunctionMapping</c>.</returns>
         public bool TryGetFunctionMapping(string functionName, [NotNullWhen(true)] out FunctionMapping? mapping)
         {
             for (int i = 0; i < FunctionMappings.Count; i++)
@@ -64,6 +79,10 @@
             return false;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetFunctionMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetFunctionMapping</c>.</returns>
         public FunctionMapping? GetFunctionMapping(string functionName)
         {
             for (int i = 0; i < FunctionMappings.Count; i++)
@@ -78,6 +97,10 @@
             return null;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>TryGetTypeMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>TryGetTypeMapping</c>.</returns>
         public bool TryGetTypeMapping(string typeName, [NotNullWhen(true)] out TypeMapping? mapping)
         {
             for (int i = 0; i < ClassMappings.Count; i++)
@@ -94,6 +117,10 @@
             return false;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetTypeMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetTypeMapping</c>.</returns>
         public TypeMapping? GetTypeMapping(string typeName)
         {
             for (int i = 0; i < ClassMappings.Count; i++)
@@ -108,6 +135,10 @@
             return null;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>TryGetHandleMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>TryGetHandleMapping</c>.</returns>
         public bool TryGetHandleMapping(string typeName, [NotNullWhen(true)] out HandleMapping? mapping)
         {
             for (int i = 0; i < HandleMappings.Count; i++)
@@ -124,6 +155,10 @@
             return false;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetHandleMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetHandleMapping</c>.</returns>
         public HandleMapping? GetHandleMapping(string typeName)
         {
             for (int i = 0; i < HandleMappings.Count; i++)
@@ -138,6 +173,10 @@
             return null;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>TryGetDelegateMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>TryGetDelegateMapping</c>.</returns>
         public bool TryGetDelegateMapping(string delegateName, [NotNullWhen(true)] out DelegateMapping? mapping)
         {
             for (int i = 0; i < DelegateMappings.Count; i++)
@@ -154,6 +193,10 @@
             return false;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetDelegateMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetDelegateMapping</c>.</returns>
         public DelegateMapping? GetDelegateMapping(string delegateName)
         {
             for (int i = 0; i < DelegateMappings.Count; i++)
@@ -168,6 +211,10 @@
             return null;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>TryGetArrayMapping</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>TryGetArrayMapping</c>.</returns>
         public bool TryGetArrayMapping(CppArrayType arrayType, [NotNullWhen(true)] out string? mapping)
         {
             for (int i = 0; i < ArrayMappings.Count; i++)
@@ -185,6 +232,10 @@
 
         #endregion Mapping Helpers
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetCsReturnType</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetCsReturnType</c>.</returns>
         public string GetCsReturnType(CppType? type)
         {
             if (type == null)
@@ -200,6 +251,10 @@
             return name;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetCsTypeName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetCsTypeName</c>.</returns>
         public string GetCsTypeName(CppType? type)
         {
             if (type == null)
@@ -210,6 +265,10 @@
             return name;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>MakeDelegatePointer</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>MakeDelegatePointer</c>.</returns>
         public string MakeDelegatePointer(CppFunctionType functionType, bool withConvention = false)
         {
             if (withConvention)
@@ -236,6 +295,10 @@
             }
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetDelegatePointerType</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetDelegatePointerType</c>.</returns>
         public string GetDelegatePointerType(CppFunctionType functionType, bool withConvention = false)
         {
             if (DelegatesAsVoidPointer)
@@ -254,7 +317,6 @@
         /// <summary>
         /// This method will return <see langword="ref"/> <see cref="T"/> instead of <see cref="T"/>*
         /// </summary>
-        /// <param name="type"></param>
         ///
         /// <returns></returns>
         public string GetCsWrapperTypeName(CppType? type)
@@ -270,7 +332,6 @@
         /// <summary>
         /// This method will return <see cref="Pointer&lt;T&gt;"/> instead of <see cref="T"/>*
         /// </summary>
-        /// <param name="type"></param>
         ///
         /// <returns></returns>
         public string GetCsWrappedPointerTypeName(CppType? type)
@@ -283,6 +344,10 @@
             return name;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetParameterSignature</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetParameterSignature</c>.</returns>
         public string GetParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool attributes = true, bool names = true, bool delegateType = false, bool compatibility = false)
         {
             StringBuilder argumentBuilder = new();
@@ -351,6 +416,10 @@
             return argumentBuilder.ToString();
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetParameterSignatureNames</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetParameterSignatureNames</c>.</returns>
         public string GetParameterSignatureNames(IList<CppParameter> parameters)
         {
             StringBuilder argumentBuilder = new();
@@ -382,6 +451,10 @@
             return argumentBuilder.ToString();
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetNamelessParameterSignature</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetNamelessParameterSignature</c>.</returns>
         public string GetNamelessParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool delegateType = false, bool compatibility = false)
         {
             var argumentBuilder = new StringBuilder();
@@ -442,6 +515,10 @@
             return argumentBuilder.ToString();
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>WriteFunctionMarshalling</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>WriteFunctionMarshalling</c>.</returns>
         public string WriteFunctionMarshalling(IList<CppParameter> parameters, bool compatibility = false)
         {
             var argumentBuilder = new StringBuilder();
@@ -502,6 +579,10 @@
 
         private readonly ConcurrentDictionary<string, string> parameterNameCache = new();
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetParameterName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetParameterName</c>.</returns>
         public string GetParameterName(int paramIdx, string name)
         {
             if (name == "out")
@@ -557,11 +638,19 @@
             return NormalizeParameterName(name);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetDelegateName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetDelegateName</c>.</returns>
         public string GetDelegateName(string name)
         {
             return GetCsCleanNameWithConvention(name, DelegateNamingConvention, false);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>NormalizeParameterName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>NormalizeParameterName</c>.</returns>
         public string NormalizeParameterName(string name)
         {
             if (parameterNameCache.TryGetValue(name, out var newName))
@@ -588,6 +677,10 @@
             return newName;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>NormalizeValue</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>NormalizeValue</c>.</returns>
         public string? NormalizeValue(string value, bool sanitize)
         {
             if (KnownDefaultValueNames.TryGetValue(value, out var names))
@@ -630,6 +723,10 @@
             return value;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetCsFunctionName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetCsFunctionName</c>.</returns>
         public string GetCsFunctionName(string function)
         {
             if (TryGetFunctionMapping(function, out var mapping))
@@ -661,6 +758,10 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>TryGetDefaultValue</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>TryGetDefaultValue</c>.</returns>
         public bool TryGetDefaultValue(string functionName, CppParameter parameter, bool sanitize, out string? defaultValue)
         {
             if (TryGetFunctionMapping(functionName, out var mapping))
@@ -694,6 +795,10 @@
             return false;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetConstantName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetConstantName</c>.</returns>
         public string GetConstantName(string value)
         {
             if (KnownConstantNames.TryGetValue(value, out string? knownName))
@@ -704,6 +809,10 @@
             return GetCsCleanNameWithConvention(value, ConstantNamingConvention, false);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetEnumNamePrefix</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetEnumNamePrefix</c>.</returns>
         public EnumPrefix GetEnumNamePrefix(string typeName)
         {
             if (KnownEnumPrefixes.TryGetValue(typeName, out string? knownValue))
@@ -750,6 +859,10 @@
             return new(partList.ToArray());
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetEnumNamePrefixEx</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetEnumNamePrefixEx</c>.</returns>
         public EnumPrefix GetEnumNamePrefixEx(string typeName)
         {
             if (KnownEnumPrefixes.TryGetValue(typeName, out string? knownValue))
@@ -801,6 +914,10 @@
             return new([.. partList]);
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetEnumNameEx</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetEnumNameEx</c>.</returns>
         public string GetEnumNameEx(string value, EnumPrefix enumPrefix)
         {
             return GetEnumName(value, enumPrefix);
@@ -877,6 +994,10 @@
             */
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetEnumName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetEnumName</c>.</returns>
         public string GetEnumName(string value, EnumPrefix enumPrefix)
         {
             if (value.StartsWith("0x"))
@@ -930,6 +1051,10 @@
             return char.IsNumber(prettyName[0]) ? parts[^1].ToCamelCase() + prettyName : prettyName;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetExtensionNamePrefix</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetExtensionNamePrefix</c>.</returns>
         public string GetExtensionNamePrefix(string typeName)
         {
             if (KnownExtensionPrefixes.TryGetValue(typeName, out string? knownValue))
@@ -942,6 +1067,10 @@
             return string.Join("_", parts.Select(s => s.ToUpper()));
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetExtensionName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetExtensionName</c>.</returns>
         public string GetExtensionName(string value, string extensionPrefix)
         {
             if (KnownExtensionNames.TryGetValue(value, out string? knownName))
@@ -981,6 +1110,10 @@
             return (char.IsNumber(prettyName[0])) ? prefixParts[^1].ToCamelCase() + prettyName : prettyName;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetFieldName</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetFieldName</c>.</returns>
         public string GetFieldName(string name)
         {
             var parts = name.Split('_', StringSplitOptions.RemoveEmptyEntries);
@@ -1002,6 +1135,10 @@
             return char.IsDigit(name[0]) ? '_' + name : name;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetBoolType</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetBoolType</c>.</returns>
         public unsafe string GetBoolType()
         {
             return BoolType switch
@@ -1012,6 +1149,10 @@
             };
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>GetBoolType</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>GetBoolType</c>.</returns>
         public unsafe string GetBoolType(bool ptr)
         {
             if (ptr && BoolType == BoolType.Bool8)
@@ -1024,6 +1165,10 @@
             };
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>WriteCsSummary</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>WriteCsSummary</c>.</returns>
         public bool WriteCsSummary(string? comment, ICodeWriter writer)
         {
             if (comment == null)
@@ -1049,6 +1194,10 @@
             return true;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>WriteCsSummary</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>WriteCsSummary</c>.</returns>
         public bool WriteCsSummary(string? comment, out string? com)
         {
             com = null;
@@ -1078,12 +1227,20 @@
             return true;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>WriteCsSummary</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>WriteCsSummary</c>.</returns>
         public string? WriteCsSummary(string? comment)
         {
             WriteCsSummary(comment, out var result);
             return result;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>WriteCsSummary</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>WriteCsSummary</c>.</returns>
         public bool WriteCsSummary(CppComment? comment, ICodeWriter writer)
         {
             bool result = false;
@@ -1152,6 +1309,9 @@
             return result;
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>WriteCsSummary</c>.
+        /// </summary>
         public void WriteCsSummary(CppComment? cppComment, out string? comment)
         {
             comment = null;
@@ -1231,6 +1391,10 @@
             }
         }
 
+        /// <summary>
+        /// Performs the operation implemented by <c>WriteCsSummary</c>.
+        /// </summary>
+        /// <returns>Result produced by <c>WriteCsSummary</c>.</returns>
         public string? WriteCsSummary(CppComment? cppComment)
         {
             WriteCsSummary(cppComment, out var result);

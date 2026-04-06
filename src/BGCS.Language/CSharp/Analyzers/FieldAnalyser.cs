@@ -4,8 +4,14 @@
     using BGCS.Language;
     using BGCS.Language.CSharp.Nodes;
 
+    /// <summary>
+    /// Defines the public class <c>FieldAnalyser</c>.
+    /// </summary>
     public class FieldAnalyser : IMemberSyntaxAnalyzer
     {
+        /// <summary>
+        /// Executes public operation <c>Analyze</c>.
+        /// </summary>
         public AnalyserResult Analyze(ParserContext context, IReadOnlyList<KeywordType> modifiers)
         {
             if (context.IsEnd || (!context.CurrentToken.IsIdentifier && !context.CurrentToken.IsKeyword))

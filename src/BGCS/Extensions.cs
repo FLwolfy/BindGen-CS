@@ -10,8 +10,14 @@
     using System.Runtime.InteropServices;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>Extensions</c>.
+    /// </summary>
     public static class Extensions
     {
+        /// <summary>
+        /// Executes public operation <c>FormatLocationAttribute</c>.
+        /// </summary>
         public static string FormatLocationAttribute(this CppElement element)
         {
             // TODO: refactor escape string etc.
@@ -21,6 +27,9 @@
             return $"[SourceLocation(\"{file}\", \"{start}\", \"{end}\")]";
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetCallingConvention</c>.
+        /// </summary>
         public static CallingConvention GetCallingConvention(this CppCallingConvention convention)
         {
             return convention switch
@@ -34,6 +43,9 @@
             };
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetCallingConventionDelegate</c>.
+        /// </summary>
         public static string GetCallingConventionDelegate(this CppCallingConvention convention)
         {
             return convention switch
@@ -46,6 +58,9 @@
             };
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetCallingConventionLibrary</c>.
+        /// </summary>
         public static string GetCallingConventionLibrary(this CppCallingConvention convention)
         {
             return convention switch
@@ -58,6 +73,9 @@
             };
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetDirection</c>.
+        /// </summary>
         public static Direction GetDirection(this CppType type, bool isPointer = false)
         {
             if (type is CppPrimitiveType)
@@ -103,6 +121,9 @@
             return isPointer ? Direction.InOut : Direction.In;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CanBeUsedAsOutput</c>.
+        /// </summary>
         public static bool CanBeUsedAsOutput(this CppType type, out CppTypeDeclaration? elementTypeDeclaration)
         {
             if (type is CppPointerType pointerType)
@@ -131,6 +152,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Returns computed data from <c>GetCanonicalRoot</c>.
+        /// </summary>
         public static CppType GetCanonicalRoot(this CppType cppType, bool followTypedefs)
         {
             while (true)
@@ -150,6 +174,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>TryCast</c>.
+        /// </summary>
         public static bool TryCast<TFrom, TTo>(this TFrom from, [NotNullWhen(true), MaybeNullWhen(false)] out TTo? to)
         {
             if (from is TTo casted)
@@ -161,6 +188,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsCOMObject</c>.
+        /// </summary>
         public static bool IsCOMObject(this CppClass cppClass)
         {
             if (cppClass.Fields.Count == 0 && cppClass.Functions.Count > 0 && cppClass.IsAbstract)
@@ -168,6 +198,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsClass</c>.
+        /// </summary>
         public static bool IsClass(this CppType cppType, [NotNullWhen(true)] out CppClass? cppClass)
         {
             while (true)
@@ -197,6 +230,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsDelegate</c>.
+        /// </summary>
         public static bool IsDelegate(this CppPointerType cppPointer, [NotNullWhen(true)] out CppFunctionType? cppFunction)
         {
             if (cppPointer.ElementType is CppFunctionType functionType)
@@ -208,13 +244,22 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsDelegate</c>.
+        /// </summary>
         public static bool IsDelegate(this CppType cppType, [NotNullWhen(true)] out CppFunctionType? cppFunction)
         {
             return cppType.GetCanonicalRoot(true).TryCast(out cppFunction);
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsDelegate</c>.
+        /// </summary>
         public static bool IsDelegate(this CppType cppType) => cppType.IsDelegate(out _);
 
+        /// <summary>
+        /// Executes public operation <c>IsDelegate</c>.
+        /// </summary>
         public static bool IsDelegate(this CppPointerType cppPointer)
         {
             if (cppPointer.ElementType is CppFunctionType)
@@ -225,6 +270,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsEnum</c>.
+        /// </summary>
         public static bool IsEnum(this CppType cppType, [NotNullWhen(true)] out CppEnum? cppEnum)
         {
             while (true)
@@ -254,11 +302,17 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsEnum</c>.
+        /// </summary>
         public static bool IsEnum(this CppType cppType)
         {
             return cppType.IsEnum(out _);
         }
 
+        /// <summary>
+        /// Executes public operation <c>IsOpaqueHandle</c>.
+        /// </summary>
         public static bool IsOpaqueHandle(this CppTypedef typedef)
         {
             if (typedef.ElementType is CppPointerType pointerType && pointerType.ElementType is CppClass classType)
@@ -268,6 +322,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Executes public operation <c>ToCamelCase</c>.
+        /// </summary>
         public static unsafe string ToCamelCase(this string str)
         {
             bool wasNumber = false;
@@ -294,6 +351,9 @@
         private enum SplitByCaseModes
         { None, WhiteSpace, Digit, UpperCase, LowerCase }
 
+        /// <summary>
+        /// Executes public operation <c>SplitByCase</c>.
+        /// </summary>
         public static string[] SplitByCase(this string s)
         {
             var ʀ = new List<string>();
@@ -343,6 +403,9 @@
             return ʀ.ToArray();
         }
 
+        /// <summary>
+        /// Executes public operation <c>FindMacro</c>.
+        /// </summary>
         public static CppMacro? FindMacro(this CppCompilation compilation, string name)
         {
             for (int i = 0; i < compilation.Macros.Count; i++)
@@ -354,6 +417,9 @@
             return null;
         }
 
+        /// <summary>
+        /// Executes public operation <c>TryFindMacro</c>.
+        /// </summary>
         public static bool TryFindMacro(this CppCompilation compilation, string name, [NotNullWhen(true)] out CppMacro? macro)
         {
             macro = FindMacro(compilation, name);

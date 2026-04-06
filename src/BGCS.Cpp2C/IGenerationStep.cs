@@ -3,6 +3,9 @@
     using BGCS.Core;
     using BGCS.Cpp2C.Metadata;
 
+    /// <summary>
+    /// Defines the public interface <c>IGenerationStep</c>.
+    /// </summary>
     public interface IGenerationStep
     {
         bool Enabled { get; set; }

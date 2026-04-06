@@ -457,6 +457,9 @@ namespace BGCS.Core.Collections
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>StartingWith</c>.
+        /// </summary>
         public IEnumerable<KeyValuePair<string, T>> StartingWith(string key)
         {
             if (_root == null)
@@ -928,6 +931,9 @@ namespace BGCS.Core.Collections
                 }
             }
 
+            /// <summary>
+            /// Executes public operation <c>Dispose</c>.
+            /// </summary>
             public void Dispose()
             {
                 // Do nothing
@@ -1040,6 +1046,9 @@ namespace BGCS.Core.Collections
                 get { return LowChild != null || EqChild != null || HighChild != null; }
             }
 
+            /// <summary>
+            /// Executes public operation <c>ToString</c>.
+            /// </summary>
             public override string ToString()
             {
                 if (IsKey)

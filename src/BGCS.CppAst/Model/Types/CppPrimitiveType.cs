@@ -288,6 +288,9 @@ public sealed class CppPrimitiveType : CppType
         return this;
     }
 
+    /// <summary>
+    /// Executes public operation <c>FrozenDictionary</c>.
+    /// </summary>
     public static readonly FrozenDictionary<CXTypeKind, CppPrimitiveType> KindToPrimitive = new Dictionary<CXTypeKind, CppPrimitiveType>()
     {
         { CXTypeKind.CXType_Void, Void },

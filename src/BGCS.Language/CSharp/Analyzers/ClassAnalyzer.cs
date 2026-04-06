@@ -3,10 +3,16 @@
     using BGCS.Language.CSharp.Nodes;
     using System.Collections.Generic;
 
+    /// <summary>
+    /// Defines the public class <c>ClassAnalyzer</c>.
+    /// </summary>
     public class ClassAnalyzer : ISyntaxAnalyzer
     {
         private readonly List<KeywordType> modifiers = new();
 
+        /// <summary>
+        /// Executes public operation <c>Analyze</c>.
+        /// </summary>
         public AnalyserResult Analyze(ParserContext context)
         {
             if (!context.SeekInBounds(2))

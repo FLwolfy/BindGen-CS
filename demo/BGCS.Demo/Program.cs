@@ -91,7 +91,7 @@ internal static class Program
 
     private static bool ValidateRuntimeOutput(CsCodeGeneratorConfig config, string outputPath)
     {
-        string runtimeNamespace = GetRuntimeNamespace();
+        string runtimeNamespace = GetRuntimeNamespace(config);
         string runtimeFile = Path.Combine(outputPath, "Runtime.cs");
         if (config.GenerateRuntimeSource)
         {
@@ -123,7 +123,8 @@ internal static class Program
         return true;
     }
 
-    private static string GetRuntimeNamespace() => "BGCS.Runtime";
+    private static string GetRuntimeNamespace(CsCodeGeneratorConfig config)
+        => string.IsNullOrWhiteSpace(config.RuntimeNamespace) ? "BGCS.Runtime" : config.RuntimeNamespace;
     private sealed class AppRunOptions
     {
         public List<string>? EntryFiles { get; set; }

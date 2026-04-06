@@ -1,7 +1,13 @@
 ﻿namespace BGCS
 {
+    /// <summary>
+    /// Defines the public class <c>CsCodeGeneratorConfig</c>.
+    /// </summary>
     public partial class CsCodeGeneratorConfig
     {
+        /// <summary>
+        /// Gets <c>Default</c>.
+        /// </summary>
         public static CsCodeGeneratorConfig Default { get; } = new CsCodeGeneratorConfig()
         {
             TypeMappings = new()

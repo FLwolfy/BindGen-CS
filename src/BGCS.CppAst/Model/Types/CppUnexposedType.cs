@@ -46,5 +46,8 @@ public sealed class CppUnexposedType : CppType, ICppTemplateOwner, ICppContainer
     /// <inheritdoc />
     public override string ToString() => Name;
 
+    /// <summary>
+    /// Exposes public member <c>[]</c>.
+    /// </summary>
     public IEnumerable<ICppDeclaration> Children => [];
 }

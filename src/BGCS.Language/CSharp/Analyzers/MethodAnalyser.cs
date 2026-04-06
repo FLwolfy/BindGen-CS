@@ -4,10 +4,16 @@
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
 
+    /// <summary>
+    /// Defines the public class <c>MethodAnalyser</c>.
+    /// </summary>
     public class MethodAnalyser : IMemberSyntaxAnalyzer
     {
         private readonly List<Token> parameters = new();
 
+        /// <summary>
+        /// Executes public operation <c>Analyze</c>.
+        /// </summary>
         public AnalyserResult Analyze(ParserContext context, IReadOnlyList<KeywordType> modifiers)
         {
             if (!context.SeekInBounds(2))

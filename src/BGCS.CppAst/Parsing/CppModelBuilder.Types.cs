@@ -10,8 +10,14 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
+/// <summary>
+/// Defines the public class <c>CppModelBuilder</c>.
+/// </summary>
 public unsafe partial class CppModelBuilder
 {
+    /// <summary>
+    /// Returns computed data from <c>GetCppType</c>.
+    /// </summary>
     public CppType GetCppType(CXCursor cursor, CXType type, CXCursor parent)
     {
         var cppType = GetCppTypeInternal(cursor, type, parent);
@@ -147,10 +153,22 @@ public unsafe partial class CppModelBuilder
 
     private struct VisitedFunctionTypeContext
     {
+        /// <summary>
+        /// Exposes public member <c>Builder</c>.
+        /// </summary>
         public CppModelBuilder Builder;
+        /// <summary>
+        /// Exposes public member <c>CppFunction</c>.
+        /// </summary>
         public CppFunctionTypeBase CppFunction;
+        /// <summary>
+        /// Exposes public member <c>IsParsingParameter</c>.
+        /// </summary>
         public bool IsParsingParameter;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="VisitedFunctionTypeContext"/>.
+        /// </summary>
         public VisitedFunctionTypeContext(CppModelBuilder builder, CppFunctionTypeBase cppFunction)
         {
             Builder = builder;
@@ -236,6 +254,9 @@ public unsafe partial class CppModelBuilder
         return templateCppTypes;
     }
 
+    /// <summary>
+    /// Executes public operation <c>VisitClassDecl</c>.
+    /// </summary>
     public unsafe CppClass VisitClassDecl(CXCursor cursor)
     {
         var cppStruct = this.context.GetOrCreateDeclContainer<CppClass>(cursor, out var context);

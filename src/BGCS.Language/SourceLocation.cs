@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Language
 {
+    /// <summary>
+    /// Defines the public struct <c>SourceLocation</c>.
+    /// </summary>
     public readonly struct SourceLocation
     {
         /// <summary>
@@ -22,6 +25,9 @@
         /// </summary>
         public readonly int Column;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="SourceLocation"/>.
+        /// </summary>
         public SourceLocation(string file, int offset, int line, int column)
         {
             File = file;
@@ -30,6 +36,9 @@
             Column = column;
         }
 
+        /// <summary>
+        /// Executes public operation <c>ToString</c>.
+        /// </summary>
         public override string ToString()
         {
             return $"{File} at line: {Line}, character: {Column}";

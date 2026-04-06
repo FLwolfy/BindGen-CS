@@ -2,6 +2,9 @@
 {
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>FileNameHelper</c>.
+    /// </summary>
     public class FileNameHelper
     {
         private static readonly Dictionary<char, string> replacements = new()
@@ -23,6 +26,9 @@
 
         private static readonly char[] invalidChars = Path.GetInvalidFileNameChars();
 
+        /// <summary>
+        /// Executes public operation <c>SanitizeFileName</c>.
+        /// </summary>
         public static string SanitizeFileName(string fileName)
         {
             var sb = new StringBuilder(fileName.Length);

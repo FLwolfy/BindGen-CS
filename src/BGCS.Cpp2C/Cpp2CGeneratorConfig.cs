@@ -3,8 +3,14 @@
     using BGCS.Core.Logging;
     using System.ComponentModel;
 
+    /// <summary>
+    /// Configuration model for the C++ to C adapter generator.
+    /// </summary>
     public partial class Cpp2CGeneratorConfig
     {
+        /// <summary>
+        /// Optional base configuration source merged into this instance before generation.
+        /// </summary>
         [DefaultValue(null)]
         public BaseConfig? BaseConfig { get; set; }
 
@@ -38,6 +44,12 @@
         /// </summary>
         public List<string> AdditionalArguments { get; set; } = new();
 
+        /// <summary>
+        /// Prefix prepended to generated C-facing symbol names.
+        /// </summary>
+        /// <remarks>
+        /// Use this to avoid naming collisions when exposing multiple wrapped libraries in a single binary.
+        /// </remarks>
         [DefaultValue("")]
         public string NamePrefix { get; set; } = string.Empty;
     }

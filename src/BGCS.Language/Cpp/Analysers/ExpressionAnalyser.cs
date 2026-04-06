@@ -1,98 +1,176 @@
 namespace BGCS.Language.Cpp.Analysers;
 
+/// <summary>
+/// Defines the public class <c>ExpressionNode</c>.
+/// </summary>
 public class ExpressionNode : SyntaxNode
 {
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return "expr";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>FunctionCallNode</c>.
+/// </summary>
 public class FunctionCallNode : SyntaxNode
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="FunctionCallNode"/>.
+    /// </summary>
     public FunctionCallNode(string name)
     {
         Name = name;
     }
 
+    /// <summary>
+    /// Gets <c>Name</c>.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"call: {Name}";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>CastNode</c>.
+/// </summary>
 public class CastNode : SyntaxNode
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CastNode"/>.
+    /// </summary>
     public CastNode(string name)
     {
         Name = name;
     }
 
+    /// <summary>
+    /// Gets <c>Name</c>.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"cast: {Name}";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>OperatorNode</c>.
+/// </summary>
 public class OperatorNode : SyntaxNode
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="OperatorNode"/>.
+    /// </summary>
     public OperatorNode(string name)
     {
         Name = name;
     }
 
+    /// <summary>
+    /// Gets <c>Name</c>.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"op: {Name}";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>GroupNode</c>.
+/// </summary>
 public class GroupNode : SyntaxNode
 {
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return "group";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>TypeNode</c>.
+/// </summary>
 public class TypeNode : SyntaxNode
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="TypeNode"/>.
+    /// </summary>
     public TypeNode(string name)
     {
         Name = name;
     }
 
+    /// <summary>
+    /// Gets <c>Name</c>.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"type: {Name}";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>VariableNode</c>.
+/// </summary>
 public class VariableNode : SyntaxNode
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="VariableNode"/>.
+    /// </summary>
     public VariableNode(string name)
     {
         Name = name;
     }
 
+    /// <summary>
+    /// Gets <c>Name</c>.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"var: {Name}";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>ValueNode</c>.
+/// </summary>
 public class ValueNode : SyntaxNode
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="ValueNode"/>.
+    /// </summary>
     public ValueNode(string value, LiteralType type, NumberType numberType)
     {
         Value = value;
@@ -100,20 +178,38 @@ public class ValueNode : SyntaxNode
         NumberType = numberType;
     }
 
+    /// <summary>
+    /// Gets <c>Value</c>.
+    /// </summary>
     public string Value { get; }
 
+    /// <summary>
+    /// Gets <c>Type</c>.
+    /// </summary>
     public LiteralType Type { get; }
 
+    /// <summary>
+    /// Gets <c>NumberType</c>.
+    /// </summary>
     public NumberType NumberType { get; }
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         return $"value: {Value}";
     }
 }
 
+/// <summary>
+/// Defines the public class <c>ExpressionAnalyser</c>.
+/// </summary>
 public class ExpressionAnalyser : ISyntaxAnalyzer
 {
+    /// <summary>
+    /// Executes public operation <c>Analyze</c>.
+    /// </summary>
     public AnalyserResult Analyze(ParserContext context)
     {
         if (context.IsEnd || !IsExpressionStart(context.CurrentToken))

@@ -48,8 +48,14 @@ public sealed class CppFunction : CppDeclaration, ICppMemberWithVisibility, ICpp
     public List<CppAttribute> Attributes { get; }
 
     [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
+    /// <summary>
+    /// Gets <c>TokenAttributes</c>.
+    /// </summary>
     public List<CppAttribute> TokenAttributes { get; }
 
+    /// <summary>
+    /// Gets <c>MetaAttributes</c>.
+    /// </summary>
     public MetaAttributeMap MetaAttributes { get; } = new MetaAttributeMap();
 
     /// <summary>
@@ -90,6 +96,9 @@ public sealed class CppFunction : CppDeclaration, ICppMemberWithVisibility, ICpp
     /// </summary>
     public CppContainerList<CppParameter> Parameters { get; }
 
+    /// <summary>
+    /// Exposes public member <c>DefaultParamCount</c>.
+    /// </summary>
     public int DefaultParamCount
     {
         get
@@ -111,16 +120,34 @@ public sealed class CppFunction : CppDeclaration, ICppMemberWithVisibility, ICpp
     /// </summary>
     public CppFunctionFlags Flags { get; set; }
 
+    /// <summary>
+    /// Executes public operation <c>Member</c>.
+    /// </summary>
     public bool IsCxxClassMethod => ((int)Flags & (int)CppFunctionFlags.Method) != 0;
 
+    /// <summary>
+    /// Executes public operation <c>Member</c>.
+    /// </summary>
     public bool IsPureVirtual => ((int)Flags & (int)CppFunctionFlags.Pure) != 0;
 
+    /// <summary>
+    /// Executes public operation <c>Member</c>.
+    /// </summary>
     public bool IsVirtual => ((int)Flags & (int)CppFunctionFlags.Virtual) != 0;
 
+    /// <summary>
+    /// Exposes public member <c>CppStorageQualifier.Static</c>.
+    /// </summary>
     public bool IsStatic => StorageQualifier == CppStorageQualifier.Static;
 
+    /// <summary>
+    /// Executes public operation <c>Member</c>.
+    /// </summary>
     public bool IsConst => ((int)Flags & (int)CppFunctionFlags.Const) != 0;
 
+    /// <summary>
+    /// Executes public operation <c>Member</c>.
+    /// </summary>
     public bool IsFunctionTemplate => ((int)Flags & (int)CppFunctionFlags.FunctionTemplate) != 0;
 
     /// <inheritdoc />

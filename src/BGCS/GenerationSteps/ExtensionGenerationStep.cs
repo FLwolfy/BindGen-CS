@@ -11,40 +11,64 @@
     using System.Collections.Generic;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>ExtensionGenerationStep</c>.
+    /// </summary>
     public class ExtensionGenerationStep : GenerationStep
     {
         protected readonly HashSet<string> LibDefinedExtensionTypes = new();
         protected readonly HashSet<string> DefinedExtensionTypes = new();
         protected HashSet<CsFunctionVariation> DefinedVariationsFunctions;
 
+        /// <summary>
+        /// Exposes public member <c>[]</c>.
+        /// </summary>
         public readonly List<CsFunction> DefinedExtensions = [];
 
         protected FunctionGenerator funcGen = null!;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ExtensionGenerationStep"/>.
+        /// </summary>
         public ExtensionGenerationStep(CsCodeGenerator generator, CsCodeGeneratorConfig config) : base(generator, config)
         {
             DefinedVariationsFunctions = null!;
         }
 
+        /// <summary>
+        /// Gets <c>Name</c>.
+        /// </summary>
         public override string Name { get; } = "Extensions";
 
+        /// <summary>
+        /// Executes public operation <c>Configure</c>.
+        /// </summary>
         public override void Configure(CsCodeGeneratorConfig config)
         {
             Enabled = config.GenerateExtensions;
             funcGen = generator.FunctionGenerator;
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyToMetadata</c>.
+        /// </summary>
         public override void CopyToMetadata(CsCodeGeneratorMetadata metadata)
         {
             metadata.DefinedExtensions.AddRange(DefinedExtensions);
             metadata.DefinedExtensionTypes.AddRange(DefinedExtensionTypes);
         }
 
+        /// <summary>
+        /// Executes public operation <c>CopyFromMetadata</c>.
+        /// </summary>
         public override void CopyFromMetadata(CsCodeGeneratorMetadata metadata)
         {
             LibDefinedExtensionTypes.AddRange(metadata.DefinedExtensionTypes);
         }
 
+        /// <summary>
+        /// Executes public operation <c>Reset</c>.
+        /// </summary>
         public override void Reset()
         {
             LibDefinedExtensionTypes.Clear();
@@ -160,6 +184,9 @@
             return false;
         }
 
+        /// <summary>
+        /// Runs generation logic through <c>Generate</c>.
+        /// </summary>
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;
@@ -226,6 +253,9 @@
             }
         }
 
+        /// <summary>
+        /// Gets <c>ParameterWriters</c>.
+        /// </summary>
         public virtual List<IParameterWriter> ParameterWriters { get; } =
         [
             new HandleParameterWriter(),
@@ -239,17 +269,26 @@
             new FallthroughParameterWriter(),
         ];
 
+        /// <summary>
+        /// Adds data or behavior through <c>AddParamterWriter</c>.
+        /// </summary>
         public void AddParamterWriter(IParameterWriter writer)
         {
             ParameterWriters.Add(writer);
             ParameterWriters.Sort(new ParameterPriorityComparer());
         }
 
+        /// <summary>
+        /// Removes data or behavior through <c>RemoveParamterWriter</c>.
+        /// </summary>
         public void RemoveParamterWriter(IParameterWriter writer)
         {
             ParameterWriters.Remove(writer);
         }
 
+        /// <summary>
+        /// Executes public operation <c>OverwriteParameterWriter</c>.
+        /// </summary>
         public void OverwriteParameterWriter<T>(IParameterWriter newWriter) where T : IParameterWriter
         {
             for (int i = 0; i < ParameterWriters.Count; i++)

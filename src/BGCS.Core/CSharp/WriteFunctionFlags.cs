@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Core.CSharp
 {
+    /// <summary>
+    /// Defines values for <c>WriteFunctionFlags</c>.
+    /// </summary>
     public enum WriteFunctionFlags
     {
         None = 0,

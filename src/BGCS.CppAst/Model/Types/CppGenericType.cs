@@ -15,20 +15,38 @@ namespace BGCS.CppAst.Model.Types;
 /// </summary>
 public class CppGenericType : CppType
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppGenericType"/>.
+    /// </summary>
     public CppGenericType(CXCursor cursor, CppType baseType) : base(cursor, CppTypeKind.GenericType)
     {
         BaseType = baseType;
         GenericArguments = [];
     }
 
+    /// <summary>
+    /// Gets or sets <c>BaseType</c>.
+    /// </summary>
     public CppType BaseType { get; set; }
 
+    /// <summary>
+    /// Gets <c>GenericArguments</c>.
+    /// </summary>
     public List<CppType> GenericArguments { get; }
 
+    /// <summary>
+    /// Gets or sets <c>SizeOf</c>.
+    /// </summary>
     public override int SizeOf { get; set; }
 
+    /// <summary>
+    /// Returns computed data from <c>GetCanonicalType</c>.
+    /// </summary>
     public override CppType GetCanonicalType() => this;
 
+    /// <summary>
+    /// Executes public operation <c>ToString</c>.
+    /// </summary>
     public override string ToString()
     {
         var builder = new StringBuilder();

@@ -36,10 +36,19 @@ cd ~/demo/BGCS.Demo
 dotnet run -- config.runtime-generated.json Output
 ```
 
+Run with all configuration fields explicitly set (showcase profile):
+
+```bash
+cd ~/demo/BGCS.Demo
+dotnet run -- config.all-set.json Output
+```
+
 Config notes:
 
 - `config.runtime-generated.json`: generate `Bindings.cs` + standalone `Runtime.cs` (`GenerateRuntimeSource=true`)
 - `config.runtime-notgenerated.json`: generate only `Bindings.cs` (`GenerateRuntimeSource=false`)
+- `config.all-set.json`: comprehensive showcase config with explicit values for nearly all BGCS options
+- `RuntimeNamespace` (optional): override runtime namespace; empty/missing => `BGCS.Runtime`
 - `EntryFiles`: parser entry files
 - `allowedHeaders`: strict output whitelist
   - omitted/null: defaults to `EntryFiles`
@@ -64,7 +73,15 @@ cd ~/demo/BGCS.Cpp2C.Demo
 dotnet run -- config.json Output
 ```
 
+Run with all configuration fields explicitly set (showcase profile):
+
+```bash
+cd ~/demo/BGCS.Cpp2C.Demo
+dotnet run -- config.all-set.json Output
+```
+
 This demo generates a C bridge layout:
 
 - `Output/include/*` for public C headers
 - `Output/src/*` for C++ implementation shims
+- `config.all-set.json` demonstrates explicit non-empty/non-default values for Cpp2C options

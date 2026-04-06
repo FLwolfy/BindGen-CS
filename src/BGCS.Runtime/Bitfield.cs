@@ -19,6 +19,12 @@ using System.Runtime.CompilerServices;
 public static unsafe class Bitfield
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    /// <summary>
+    /// Reinterprets an unmanaged value as an unsigned 64-bit representation.
+    /// </summary>
+    /// <typeparam name="T">Supported unmanaged integral type (1, 2, 4 or 8 bytes).</typeparam>
+    /// <param name="value">Value to reinterpret.</param>
+    /// <returns>Bitwise representation as <see cref="ulong"/>.</returns>
     public static ulong ToULong<T>(T value) where T : unmanaged
     {
         return sizeof(T) switch
@@ -32,6 +38,14 @@ public static unsafe class Bitfield
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    /// <summary>
+    /// Reads a bitfield segment from <paramref name="raw"/>.
+    /// </summary>
+    /// <typeparam name="T">Underlying storage type.</typeparam>
+    /// <param name="raw">Raw value containing the bitfield.</param>
+    /// <param name="offset">Bit offset of the field.</param>
+    /// <param name="bitWidth">Bit width of the field.</param>
+    /// <returns>The extracted field value cast to <typeparamref name="T"/>.</returns>
     public static T Get<T>(T raw, int offset, int bitWidth) where T : unmanaged
     {
         ulong rawl = ToULong(raw);
@@ -41,6 +55,14 @@ public static unsafe class Bitfield
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    /// <summary>
+    /// Writes a bitfield segment into <paramref name="raw"/>.
+    /// </summary>
+    /// <typeparam name="T">Underlying storage type.</typeparam>
+    /// <param name="raw">Raw value to modify.</param>
+    /// <param name="value">Field value to write.</param>
+    /// <param name="offset">Bit offset of the field.</param>
+    /// <param name="bitWidth">Bit width of the field.</param>
     public static void Set<T>(ref T raw, T value, int offset, int bitWidth) where T : unmanaged
     {
         ulong rawl = ToULong(raw);

@@ -2,6 +2,9 @@
 {
     using Microsoft.CodeAnalysis.CSharp;
 
+    /// <summary>
+    /// Defines the public class <c>TextHelper</c>.
+    /// </summary>
     public static class TextHelper
     {
         /// <summary>

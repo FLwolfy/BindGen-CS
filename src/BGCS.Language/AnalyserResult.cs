@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Language
 {
+    /// <summary>
+    /// Defines values for <c>AnalyserResult</c>.
+    /// </summary>
     public enum AnalyserResult
     {
         /// <summary>

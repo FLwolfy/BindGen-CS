@@ -32,13 +32,25 @@ public sealed class CppTypedef : CppTypeDeclaration, ICppMemberWithVisibility, I
         MetaAttributes = new MetaAttributeMap();
     }
 
+    /// <summary>
+    /// Gets <c>Attributes</c>.
+    /// </summary>
     public List<CppAttribute> Attributes { get; }
 
     [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
+    /// <summary>
+    /// Gets <c>TokenAttributes</c>.
+    /// </summary>
     public List<CppAttribute> TokenAttributes { get; }
 
+    /// <summary>
+    /// Gets or sets <c>MetaAttributes</c>.
+    /// </summary>
     public MetaAttributeMap MetaAttributes { get; private set; }
 
+    /// <summary>
+    /// Gets <c>ElementType</c>.
+    /// </summary>
     public CppType ElementType { get; }
 
     /// <summary>
@@ -51,6 +63,9 @@ public sealed class CppTypedef : CppTypeDeclaration, ICppMemberWithVisibility, I
     /// </summary>
     public string Name { get; set; }
 
+    /// <summary>
+    /// Exposes public member <c>FullName</c>.
+    /// </summary>
     public override string FullName
     {
         get

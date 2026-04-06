@@ -6,13 +6,25 @@
     using Newtonsoft.Json.Linq;
     using System;
 
+    /// <summary>
+    /// Defines the public class <c>BaseConfig</c>.
+    /// </summary>
     public class BaseConfig
     {
+        /// <summary>
+        /// Gets or sets <c>Url</c>.
+        /// </summary>
         public string? Url { get; set; }
 
+        /// <summary>
+        /// Gets or sets <c>IgnoredProperties</c>.
+        /// </summary>
         public HashSet<string> IgnoredProperties { get; set; } = [];
     }
 
+    /// <summary>
+    /// Defines the public class <c>ConfigComposer</c>.
+    /// </summary>
     public class ConfigComposer : LoggerBase, IConfigComposer
     {
         private const string FileProtocol = "file://";
@@ -26,6 +38,9 @@
             PropertyNameComparison = StringComparison.Ordinal
         };
 
+        /// <summary>
+        /// Executes public operation <c>Compose</c>.
+        /// </summary>
         public void Compose(ref Cpp2CGeneratorConfig config)
         {
             var stack = new Stack<Cpp2CGeneratorConfig>();

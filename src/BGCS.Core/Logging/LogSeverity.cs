@@ -1,5 +1,8 @@
 ﻿namespace BGCS.Core.Logging
 {
+    /// <summary>
+    /// Defines values for <c>LogSeverity</c>.
+    /// </summary>
     public enum LogSeverity
     {
         Trace = 0,

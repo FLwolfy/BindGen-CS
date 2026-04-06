@@ -3,8 +3,14 @@
     using System.Runtime.InteropServices;
     using System.Text;
 
+    /// <summary>
+    /// Defines the public class <c>PathHelper</c>.
+    /// </summary>
     public static unsafe class PathHelper
     {
+        /// <summary>
+        /// Returns computed data from <c>GetPath</c>.
+        /// </summary>
         public static string GetPath(string path)
         {
             if (path == null) return null;
@@ -32,6 +38,9 @@
 
         static readonly char[] separators = [Path.PathSeparator, Path.AltDirectorySeparatorChar];
 
+        /// <summary>
+        /// Executes public operation <c>FindBase</c>.
+        /// </summary>
         public static string? FindBase()
         {
             ReadOnlySpan<char> dirD = Environment.CurrentDirectory;

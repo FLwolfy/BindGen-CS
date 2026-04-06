@@ -3,12 +3,27 @@ using System.Runtime.CompilerServices;
 using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Parsing;
+/// <summary>
+/// Defines the public struct <c>CursorKey</c>.
+/// </summary>
 public struct CursorKey : IEquatable<CursorKey>
 {
+    /// <summary>
+    /// Exposes public member <c>scope</c>.
+    /// </summary>
     public ResolverScope scope;
+    /// <summary>
+    /// Exposes public member <c>cursor</c>.
+    /// </summary>
     public CXCursor cursor;
+    /// <summary>
+    /// Exposes public member <c>name</c>.
+    /// </summary>
     public CString name;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="CursorKey"/>.
+    /// </summary>
     public unsafe CursorKey(CppContainerContext context, CXCursor cursor)
     {
         scope = context.Type switch
@@ -45,26 +60,41 @@ public struct CursorKey : IEquatable<CursorKey>
         }
     }
 
+    /// <summary>
+    /// Executes public operation <c>Equals</c>.
+    /// </summary>
     public override readonly bool Equals(object? obj)
     {
         return obj is CursorKey key && Equals(key);
     }
 
+    /// <summary>
+    /// Executes public operation <c>Equals</c>.
+    /// </summary>
     public readonly bool Equals(CursorKey other)
     {
         return other.scope == scope && other.name == name && other.cursor.IsAnonymous == cursor.IsAnonymous && !(cursor.IsAnonymous && cursor.Hash != other.cursor.Hash);
     }
 
+    /// <summary>
+    /// Returns computed data from <c>GetHashCode</c>.
+    /// </summary>
     public override readonly int GetHashCode()
     {
         return HashCode.Combine(scope, name.GetHashCode(), cursor.IsAnonymous, cursor.IsAnonymous ? cursor.Hash : 0);
     }
 
+    /// <summary>
+    /// Executes public operation <c>Member</c>.
+    /// </summary>
     public static bool operator ==(CursorKey left, CursorKey right)
     {
         return left.Equals(right);
     }
 
+    /// <summary>
+    /// Executes public operation <c>Member</c>.
+    /// </summary>
     public static bool operator !=(CursorKey left, CursorKey right)
     {
         return !(left == right);

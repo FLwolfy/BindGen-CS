@@ -4,8 +4,14 @@ using static BGCS.CppAst.AttributeUtils.NamedParameterParser;
 
 namespace BGCS.CppAst.AttributeUtils;
 [Language("NamedParameter.CppAst", "0.1", "Grammer for named parameter")]
+/// <summary>
+/// Defines the public class <c>NamedParameterGrammar</c>.
+/// </summary>
 public class NamedParameterGrammar : Grammar
 {
+    /// <summary>
+    /// Executes public operation <c>new</c>.
+    /// </summary>
     public static readonly NamedParameterGrammar Instance = new();
 
     private NamedParameterGrammar() :
@@ -85,12 +91,18 @@ public class NamedParameterGrammar : Grammar
     }
 
     //Must create new overrides here in order to support the "Operator" token color
+    /// <summary>
+    /// Executes public operation <c>RegisterOperators</c>.
+    /// </summary>
     public new void RegisterOperators(int precedence, params string[] opSymbols)
     {
         RegisterOperators(precedence, Associativity.Left, opSymbols);
     }
 
     //Must create new overrides here in order to support the "Operator" token color
+    /// <summary>
+    /// Executes public operation <c>RegisterOperators</c>.
+    /// </summary>
     public new void RegisterOperators(int precedence, Associativity associativity, params string[] opSymbols)
     {
         foreach (string op in opSymbols)
@@ -106,6 +118,9 @@ public class NamedParameterGrammar : Grammar
         return MakeStarRule(new NonTerminal(term.Name + "*"), term);
     }
 
+    /// <summary>
+    /// Executes public operation <c>Keyword</c>.
+    /// </summary>
     public KeyTerm Keyword(string keyword)
     {
         var term = ToTerm(keyword);
@@ -118,6 +133,9 @@ public class NamedParameterGrammar : Grammar
         return term;
     }
 
+    /// <summary>
+    /// Executes public operation <c>Operator</c>.
+    /// </summary>
     public KeyTerm Operator(string op)
     {
         string opCased = CaseSensitive ? op : op.ToLower();

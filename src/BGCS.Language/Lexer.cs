@@ -4,6 +4,9 @@
     using System.Linq;
     using System.Runtime.CompilerServices;
 
+    /// <summary>
+    /// Defines the public class <c>Lexer</c>.
+    /// </summary>
     public class Lexer
     {
         protected readonly List<string> operators = new();
@@ -12,6 +15,9 @@
         protected readonly Dictionary<string, KeywordType> keywordMap = new();
         protected readonly List<string> numberNotations = new();
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="Lexer"/>.
+        /// </summary>
         public Lexer()
         {
             operators.Add("+");
@@ -78,6 +84,9 @@
             return true;
         }
 
+        /// <summary>
+        /// Executes public operation <c>Tokenize</c>.
+        /// </summary>
         public virtual LexerResult Tokenize(string input, string filename)
         {
             DiagnosticBag diagnostics = new();
@@ -297,6 +306,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>Trim</c>.
+        /// </summary>
         public static void Trim(ReadOnlySpan<char> input, ref int start, ref int length)
         {
             bool wasChar = false;
@@ -328,6 +340,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsWhiteSpaceOrNewLine</c>.
+        /// </summary>
         public static bool IsWhiteSpaceOrNewLine(ReadOnlySpan<char> input, int index, out int length, out bool isNewLine)
         {
             length = 0;
@@ -365,6 +380,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsNewLine</c>.
+        /// </summary>
         public static bool IsNewLine(ReadOnlySpan<char> input, int index)
         {
             if (input[index] == '\n')
@@ -381,6 +399,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsNewLineOrEof</c>.
+        /// </summary>
         public static bool IsNewLineOrEof(ReadOnlySpan<char> input, int index, out int length)
         {
             length = 0;
@@ -407,6 +428,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsPunctuation</c>.
+        /// </summary>
         public bool IsPunctuation(ReadOnlySpan<char> input, int index, out int length)
         {
             length = 0;
@@ -425,6 +449,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsKeyword</c>.
+        /// </summary>
         public bool IsKeyword(ReadOnlySpan<char> input, int index, out int length)
         {
             length = 0;
@@ -444,6 +471,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsKeyword</c>.
+        /// </summary>
         public bool IsKeyword(ReadOnlySpan<char> span, out KeywordType keywordType)
         {
             keywordType = KeywordType.Unknown;
@@ -462,6 +492,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsOperator</c>.
+        /// </summary>
         public bool IsOperator(ReadOnlySpan<char> input, int index, out int length)
         {
             length = 0;
@@ -497,6 +530,9 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Executes public operation <c>IsNumber</c>.
+        /// </summary>
         public static bool IsNumber(ReadOnlySpan<char> input, out NumberType type, NumberParseOptions options = NumberParseOptions.AllowAll)
         {
             type = NumberType.None;

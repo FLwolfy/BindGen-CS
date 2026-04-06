@@ -20,6 +20,9 @@ namespace BGCS.CppAst.Model.Declarations;
 /// </summary>
 public sealed class CppProperty : CppDeclaration, ICppMember, ICppAttributeContainer
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="CppProperty"/>.
+    /// </summary>
     public CppProperty(CXCursor cursor, CppType type, string name) : base(cursor)
     {
         Type = type ?? throw new ArgumentNullException(nameof(type));
@@ -33,8 +36,14 @@ public sealed class CppProperty : CppDeclaration, ICppMember, ICppAttributeConta
     public List<CppAttribute> Attributes { get; }
 
     [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
+    /// <summary>
+    /// Gets <c>TokenAttributes</c>.
+    /// </summary>
     public List<CppAttribute> TokenAttributes { get; } = [];
 
+    /// <summary>
+    /// Gets or sets <c>MetaAttributes</c>.
+    /// </summary>
     public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
 
     /// <summary>

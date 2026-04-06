@@ -2,8 +2,14 @@
 {
     using System;
 
+    /// <summary>
+    /// Defines the public class <c>ParserContext</c>.
+    /// </summary>
     public class ParserContext
     {
+        /// <summary>
+        /// Exposes public member <c>diagnostics</c>.
+        /// </summary>
         public readonly DiagnosticBag diagnostics;
 
         private readonly RootNode root;
@@ -19,6 +25,9 @@
 
         private SyntaxNode? last;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ParserContext"/>.
+        /// </summary>
         public ParserContext(RootNode root, ParserOptions options, IList<ISyntaxAnalyzer> analyzers, IList<Token> tokens, DiagnosticBag diagnostics)
         {
             this.diagnostics = diagnostics;
@@ -30,10 +39,19 @@
             last = root;
         }
 
+        /// <summary>
+        /// Exposes public member <c>diagnostics.HasErrors</c>.
+        /// </summary>
         public bool HasError => diagnostics.HasErrors;
 
+        /// <summary>
+        /// Exposes public member <c>diagnostics</c>.
+        /// </summary>
         public DiagnosticBag Diagnostics => diagnostics;
 
+        /// <summary>
+        /// Exposes public member <c>root</c>.
+        /// </summary>
         public SyntaxNode Root => root;
 
         /// <summary>
@@ -46,16 +64,34 @@
         /// </summary>
         public SyntaxNode? Last => last;
 
+        /// <summary>
+        /// Exposes public member <c>scopeStack</c>.
+        /// </summary>
         public Stack<SyntaxNode> ScopeStack => scopeStack;
 
+        /// <summary>
+        /// Exposes public member <c>tokens[currentTokenIndex]</c>.
+        /// </summary>
         public Token CurrentToken => tokens[currentTokenIndex];
 
+        /// <summary>
+        /// Exposes public member <c>currentTokenIndex</c>.
+        /// </summary>
         public int CurrentTokenIndex => currentTokenIndex;
 
+        /// <summary>
+        /// Exposes public member <c>tokens.Count</c>.
+        /// </summary>
         public int TokenCount => tokens.Count;
 
+        /// <summary>
+        /// Exposes public member <c>tokens.Count</c>.
+        /// </summary>
         public bool IsEnd => currentTokenIndex >= tokens.Count;
 
+        /// <summary>
+        /// Exposes public member <c>index]</c>.
+        /// </summary>
         public Token this[int index]
         {
             get => tokens[index];
@@ -151,6 +187,9 @@
             return tokens[currentTokenIndex + offset];
         }
 
+        /// <summary>
+        /// Executes public operation <c>CurrentCompare</c>.
+        /// </summary>
         public bool CurrentCompare(Func<Token, bool> compare)
         {
             return InBounds(currentTokenIndex) && compare(CurrentToken);

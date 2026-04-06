@@ -4,8 +4,14 @@
     using BGCS.CppAst.Model.Metadata;
     using BGCS.CppAst.Model.Types;
 
+    /// <summary>
+    /// Defines the public class <c>ReferenceResolver</c>.
+    /// </summary>
     public class ReferenceResolver
     {
+        /// <summary>
+        /// Executes public operation <c>Prefilter</c>.
+        /// </summary>
         public virtual void Prefilter(FileSet set, CppCompilation compilation, CsCodeGeneratorConfig config)
         {
             CppCompilation outputCompilation = new(compilation.TranslationUnit);
@@ -62,6 +68,9 @@
             }
         }
 
+        /// <summary>
+        /// Executes public operation <c>Resolve</c>.
+        /// </summary>
         public virtual void Resolve(CppType cppType, CppCompilation input, CppCompilation output)
         {
             if (cppType.IsEnum(out var cppEnum))
