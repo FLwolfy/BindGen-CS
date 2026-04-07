@@ -16,6 +16,7 @@ namespace BGCS
     using BGCS.PreProcessSteps;
     using System.Diagnostics.CodeAnalysis;
     using System.Text;
+    using System.Text.RegularExpressions;
 
     /// <summary>
     /// Defines the public class <c>CsCodeGenerator</c> used by the generation pipeline.
@@ -24,6 +25,9 @@ namespace BGCS
     {
         private const string RuntimeUsingDefault = "using BGCS.Runtime;";
         private const string RuntimeSourceExcludeSymbol = "BGCS_RUNTIME_EXTERNAL";
+        private static readonly Regex EmptyPartialTypeRegex = new(
+            @"^\s*public\s+(?:static\s+)?(?:readonly\s+)?(?:unsafe\s+)?partial\s+(?:class|struct)\s+\w+\s*\r?\n\s*\{\s*\r?\n\s*\}\s*(?:\r?\n)?",
+            RegexOptions.Multiline | RegexOptions.Compiled);
 
         protected FunctionGenerator funcGen = null!;
         protected PatchEngine patchEngine = new();
@@ -358,6 +362,8 @@ namespace BGCS
             patchEngine.ApplyPostPatches(metadata, generationOutputPath, Directory.GetFiles(generationOutputPath, "*.*", SearchOption.AllDirectories).ToList());
 
             RewriteRuntimeUsings(generationOutputPath);
+            RemoveEmptyPartialTypes(generationOutputPath);
+            DeleteEmptyDirectories(generationOutputPath);
 
             if (config.MergeGeneratedFilesToSingleFile)
             {
@@ -372,6 +378,67 @@ namespace BGCS
             if (singleFileOutputOnly && Directory.Exists(generationOutputPath))
             {
                 Directory.Delete(generationOutputPath, true);
+            }
+
+            return true;
+        }
+
+        private static void RemoveEmptyPartialTypes(string generationOutputPath)
+        {
+            string[] files = Directory.GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories);
+            for (int i = 0; i < files.Length; i++)
+            {
+                string path = files[i];
+                string text = File.ReadAllText(path);
+                string updated = EmptyPartialTypeRegex.Replace(text, string.Empty);
+                if (!ReferenceEquals(text, updated) && text != updated)
+                {
+                    File.WriteAllText(path, updated);
+                }
+
+                if (IsScaffoldingOnlyCSharpFile(updated))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+
+        private static bool IsScaffoldingOnlyCSharpFile(string text)
+        {
+            string normalized = text.Replace("\r\n", "\n");
+            string[] lines = normalized.Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i].Trim();
+                if (line.Length == 0)
+                {
+                    continue;
+                }
+
+                if (line.StartsWith("//", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (line == "{" || line == "}")
+                {
+                    continue;
+                }
+
+                if (line.StartsWith("namespace ", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (line.StartsWith("using ", StringComparison.Ordinal) &&
+                    line.EndsWith(';') &&
+                    !line.Contains('='))
+                {
+                    continue;
+                }
+
+                return false;
             }
 
             return true;
