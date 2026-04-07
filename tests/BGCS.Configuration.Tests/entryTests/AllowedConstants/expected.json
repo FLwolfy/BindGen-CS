@@ -1,0 +1,6 @@
+{
+  "Property": "AllowedConstants",
+  "Expected": [
+    "MY_CONST"
+  ]
+}

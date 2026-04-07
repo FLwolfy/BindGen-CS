@@ -1,0 +1,8 @@
+{
+  "Property": "KnownMemberFunctions",
+  "Expected": {
+    "MyType": [
+      "sample_add"
+    ]
+  }
+}

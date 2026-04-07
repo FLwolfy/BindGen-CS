@@ -1,0 +1,8 @@
+{
+  "Property": "KnownConstructors",
+  "Expected": {
+    "MyType": [
+      "sample_add"
+    ]
+  }
+}

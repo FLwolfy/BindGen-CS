@@ -1,0 +1,6 @@
+{
+  "Property": "SystemIncludeFolders",
+  "Expected": [
+    "sysinclude"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "HeaderFile": "header.h",
+  "Namespace": "EntryTests.Generated",
+  "ApiName": "EntryApi",
+  "LibName": "entry-lib",
+  "MergeGeneratedFilesToSingleFile": true,
+  "ImportType": "DllImport",
+  "GenerateExtensions": false,
+  "GenerateRuntimeSource": false,
+  "AllowedEnums": [
+    "MyEnum"
+  ]
+}

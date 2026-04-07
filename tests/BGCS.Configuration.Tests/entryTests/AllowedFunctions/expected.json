@@ -1,0 +1,6 @@
+{
+  "Property": "AllowedFunctions",
+  "Expected": [
+    "sample_add"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "HeaderFile": "header.h",
+  "Namespace": "Expected.Namespace.Entry",
+  "ApiName": "EntryApi",
+  "LibName": "entry-lib",
+  "MergeGeneratedFilesToSingleFile": true,
+  "ImportType": "DllImport",
+  "GenerateExtensions": false,
+  "GenerateRuntimeSource": false
+}

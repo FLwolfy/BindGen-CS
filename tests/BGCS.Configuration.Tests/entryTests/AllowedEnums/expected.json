@@ -1,0 +1,6 @@
+{
+  "Property": "AllowedEnums",
+  "Expected": [
+    "MyEnum"
+  ]
+}

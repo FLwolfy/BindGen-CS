@@ -1,0 +1,4 @@
+{
+  "Property": "ConstantNamingConvention",
+  "Expected": "PascalCase"
+}

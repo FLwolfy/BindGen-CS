@@ -1,0 +1,6 @@
+{
+  "Property": "AllowedTypes",
+  "Expected": [
+    "MyType"
+  ]
+}

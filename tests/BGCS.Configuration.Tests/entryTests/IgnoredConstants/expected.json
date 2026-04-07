@@ -1,0 +1,6 @@
+{
+  "Property": "IgnoredConstants",
+  "Expected": [
+    "MY_CONST"
+  ]
+}

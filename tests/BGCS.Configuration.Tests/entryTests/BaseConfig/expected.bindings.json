@@ -1,0 +1,6 @@
+{
+  "Contains": [
+    "namespace Expected.FromBase",
+    "partial class BaseApi"
+  ]
+}

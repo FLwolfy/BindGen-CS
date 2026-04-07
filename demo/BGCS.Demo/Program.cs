@@ -12,7 +12,7 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        string configPath = args.Length > 0 ? args[0] : "config.runtime-generated.json";
+        string configPath = args.Length > 0 ? args[0] : "config.all-set.json";
         
         string outputPath = args.Length > 1 ? args[1] : "Output";
         CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(configPath);

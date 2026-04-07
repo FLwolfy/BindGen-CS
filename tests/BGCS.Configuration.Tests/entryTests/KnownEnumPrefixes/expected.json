@@ -1,0 +1,6 @@
+{
+  "Property": "KnownEnumPrefixes",
+  "Expected": {
+    "EnumA": "ENUM_A"
+  }
+}

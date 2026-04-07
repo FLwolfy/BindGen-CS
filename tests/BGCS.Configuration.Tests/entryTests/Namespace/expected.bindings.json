@@ -1,0 +1,6 @@
+{
+  "Contains": [
+    "namespace Expected.Namespace.Entry",
+    "partial class EntryApi"
+  ]
+}

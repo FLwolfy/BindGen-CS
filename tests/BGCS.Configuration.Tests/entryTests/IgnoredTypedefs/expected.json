@@ -1,0 +1,6 @@
+{
+  "Property": "IgnoredTypedefs",
+  "Expected": [
+    "MyTypedef"
+  ]
+}

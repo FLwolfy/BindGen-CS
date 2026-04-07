@@ -1,0 +1,6 @@
+{
+  "Property": "Defines",
+  "Expected": [
+    "MY_DEF=1"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "Contains": [
+    "namespace EntryTests.Generated",
+    "partial class EntryApi"
+  ],
+  "NotContains": [
+    "SampleAddNative",
+    "SampleAdd("
+  ]
+}

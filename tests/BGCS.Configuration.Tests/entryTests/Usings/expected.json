@@ -1,0 +1,6 @@
+{
+  "Property": "Usings",
+  "Expected": [
+    "System.Text"
+  ]
+}
