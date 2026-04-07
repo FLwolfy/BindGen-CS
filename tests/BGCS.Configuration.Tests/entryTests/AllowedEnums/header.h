@@ -1,1 +1,2 @@
-int sample_add(int a, int b);
+typedef enum KeepEnum { KeepEnum_A = 1 } KeepEnum;
+typedef enum DropEnum { DropEnum_B = 2 } DropEnum;

@@ -1,1 +1,1 @@
-int sample_add(int a, int b);
+int api_name_fn(int value);

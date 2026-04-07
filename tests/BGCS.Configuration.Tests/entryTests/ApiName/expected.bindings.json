@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class ExpectedApiName"
+    "partial class ExpectedApiName",
+    "ApiNameFnNative"
+  ],
+  "NotContains": [
+    "partial class EntryApi"
   ]
 }

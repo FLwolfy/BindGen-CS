@@ -1,1 +1,2 @@
-int sample_add(int a, int b);
+#define KEEP_CONST 100
+#define DROP_CONST 200

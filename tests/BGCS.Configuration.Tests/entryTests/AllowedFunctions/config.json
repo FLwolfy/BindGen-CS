@@ -8,6 +8,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "AllowedFunctions": [
-    "sample_add"
+    "keep_fn"
   ]
 }

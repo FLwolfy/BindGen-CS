@@ -1,6 +1,8 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "partial struct KeepHandle"
+  ],
+  "NotContains": [
+    "partial struct DropHandle"
   ]
 }

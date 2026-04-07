@@ -1,6 +1,6 @@
 {
   "Property": "AdditionalArguments",
   "Expected": [
-    "-std=c11"
+    "-DFROM_ADDITIONAL_ARGUMENTS=1"
   ]
 }

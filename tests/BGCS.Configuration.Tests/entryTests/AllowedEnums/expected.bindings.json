@@ -1,6 +1,8 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "enum KeepEnum"
+  ],
+  "NotContains": [
+    "enum DropEnum"
   ]
 }

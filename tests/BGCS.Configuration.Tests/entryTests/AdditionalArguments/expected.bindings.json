@@ -1,6 +1,7 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
+    "EntryPoint = \"args_ok\"",
+    "ArgsOkNative",
     "partial class EntryApi"
   ]
 }

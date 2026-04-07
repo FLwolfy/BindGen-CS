@@ -1,1 +1,2 @@
-int sample_add(int a, int b);
+typedef struct KeepOpaque_T* KeepHandle;
+typedef struct DropOpaque_T* DropHandle;

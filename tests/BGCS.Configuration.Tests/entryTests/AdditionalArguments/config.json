@@ -8,6 +8,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "AdditionalArguments": [
-    "-std=c11"
+    "-DFROM_ADDITIONAL_ARGUMENTS=1"
   ]
 }

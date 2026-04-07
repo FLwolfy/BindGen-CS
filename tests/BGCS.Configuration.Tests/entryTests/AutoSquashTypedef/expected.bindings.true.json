@@ -1,0 +1,10 @@
+{
+  "Contains": [
+    "EntryPoint = \"alias_add\"",
+    "AliasAddNative(int value)"
+  ],
+  "NotContains": [
+    "using AliasInt = int;",
+    "AliasAddNative(AliasInt value)"
+  ]
+}

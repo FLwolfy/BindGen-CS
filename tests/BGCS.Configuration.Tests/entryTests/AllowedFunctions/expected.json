@@ -1,6 +1,6 @@
 {
   "Property": "AllowedFunctions",
   "Expected": [
-    "sample_add"
+    "keep_fn"
   ]
 }

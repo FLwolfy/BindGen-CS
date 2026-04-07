@@ -287,6 +287,10 @@
             {
                 return new() { BaseType = name };
             }
+            if (!config.AutoSquashTypedef)
+            {
+                return new() { BaseType = GetMapping(typedef) };
+            }
             lock (syncObj)
             {
                 if (!typedefCache.TryGetValue(typedef, out var result))

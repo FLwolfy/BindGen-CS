@@ -189,6 +189,7 @@ namespace BGCS
             generationSteps.Add(new EnumGenerationStep(this, config));
             generationSteps.Add(new ConstantGenerationStep(this, config));
             generationSteps.Add(new HandleGenerationStep(this, config));
+            generationSteps.Add(new TypedefAliasGenerationStep(this, config));
             generationSteps.Add(new TypeGenerationStep(this, config));
             generationSteps.Add(new FunctionGenerationStep(this, config));
             generationSteps.Add(new ExtensionGenerationStep(this, config));
@@ -212,7 +213,7 @@ namespace BGCS
                 //ParseTokenAttributes = true,
                 ParserKind = CppParserKind.Cpp,
 
-                AutoSquashTypedef = false,
+                AutoSquashTypedef = config.AutoSquashTypedef,
             };
 
             var additionalArguments = config.AdditionalArguments ?? [];

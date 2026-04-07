@@ -8,6 +8,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "AllowedTypes": [
-    "MyType"
+    "KeepType"
   ]
 }

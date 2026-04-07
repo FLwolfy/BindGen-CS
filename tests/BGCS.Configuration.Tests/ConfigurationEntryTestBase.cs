@@ -129,6 +129,11 @@ public abstract class ConfigurationEntryTestBase
         Assert.False(output.HasErrors, output.Diagnostics);
     }
 
+    protected static void AssertGenerationFailed(GeneratedOutput output)
+    {
+        Assert.True(!output.Success || output.HasErrors, output.Diagnostics);
+    }
+
     protected static void PrintBindings(GeneratedOutput output)
     {
         Console.WriteLine("==== Bindings.cs ====");
@@ -138,6 +143,7 @@ public abstract class ConfigurationEntryTestBase
     protected static void AssertExpected(
         GeneratedOutput output,
         string expectedFileName = "expected.json",
+        string expectedBindingsFileName = "expected.bindings.json",
         [CallerFilePath] string callerFilePath = "")
     {
         string? entryFolder = Path.GetDirectoryName(callerFilePath);
@@ -168,7 +174,7 @@ public abstract class ConfigurationEntryTestBase
             JToken.DeepEquals(expectedValue, actualToken),
             $"Expected property '{propertyName}' to be '{expectedValue}', but was '{actualToken}'.");
 
-        AssertBindingsExpected(output, callerFilePath: callerFilePath);
+        AssertBindingsExpected(output, expectedBindingsFileName, callerFilePath);
     }
 
     protected static void AssertExpectedForEntryFolder(
