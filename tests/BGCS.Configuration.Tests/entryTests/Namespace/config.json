@@ -1,5 +1,4 @@
 {
-  "HeaderFile": "header.h",
   "Namespace": "Expected.Namespace.Entry",
   "ApiName": "EntryApi",
   "LibName": "entry-lib",

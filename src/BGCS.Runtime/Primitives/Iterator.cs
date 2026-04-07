@@ -4,11 +4,11 @@ namespace BGCS.Runtime
 {
     using System.Runtime.InteropServices;
 
-    [StructLayout(LayoutKind.Sequential)]
     /// <summary>
     /// Lightweight pointer-based iterator for unmanaged buffers.
     /// </summary>
     /// <typeparam name="T">Element type in the underlying buffer.</typeparam>
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct Iterator<T> where T : unmanaged
     {
         /// <summary>

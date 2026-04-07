@@ -1,5 +1,4 @@
 {
-  "HeaderFile": "header.h",
   "BaseConfig": {
     "Url": "file://base.json"
   }

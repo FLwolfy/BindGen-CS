@@ -1,6 +1,8 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public enum sampleMode"
+  ],
+  "NotContains": [
+    "public enum SampleMode"
   ]
 }

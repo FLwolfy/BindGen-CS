@@ -1,0 +1,22 @@
+{
+  "Contains": [
+    "public unsafe delegate void LogCb(int level);",
+    "public unsafe delegate int SumCb(int left, int right);",
+    "public unsafe delegate void TickCb();",
+    "private static NativeCallback<LogCb> __autoWrappedCallback_",
+    "private static NativeCallback<SumCb> __autoWrappedCallback_",
+    "private static NativeCallback<TickCb> __autoWrappedCallback_",
+    "private static LogCb? __AutoWrapCallback_",
+    "private static SumCb? __AutoWrapCallback_",
+    "private static TickCb? __AutoWrapCallback_",
+    "new NativeCallback<LogCb>(callback)",
+    "new NativeCallback<SumCb>(callback)",
+    "new NativeCallback<TickCb>(callback)",
+    "SetSumCallbackNative",
+    "SetTickCallbackNative",
+    "Utils.GetFunctionPointerForDelegate(__AutoWrapCallback_"
+  ],
+  "NotContains": [
+    "Utils.GetFunctionPointerForDelegate(cb)"
+  ]
+}

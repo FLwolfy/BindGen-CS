@@ -1,6 +1,13 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "ApplyCbNative",
+    "SetNotifyNative",
+    "DispatchMixNative",
+    "delegate*<int, int> cb",
+    "delegate*<void> cb",
+    "delegate*<"
+  ],
+  "NotContains": [
+    "void* cb"
   ]
 }

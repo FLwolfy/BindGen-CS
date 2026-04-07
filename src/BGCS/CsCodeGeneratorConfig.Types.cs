@@ -1,4 +1,4 @@
-﻿namespace BGCS
+namespace BGCS
 {
     using BGCS.Conversion;
     using BGCS.Core;
@@ -1143,8 +1143,8 @@
         {
             return BoolType switch
             {
-                BoolType.Bool8 => "byte",
-                BoolType.Bool32 => "int",
+                BoolType.Bool8 => "Bool8",
+                BoolType.Bool32 => "Bool32",
                 _ => throw new NotSupportedException(),
             };
         }
@@ -1155,12 +1155,10 @@
         /// <returns>Result produced by <c>GetBoolType</c>.</returns>
         public unsafe string GetBoolType(bool ptr)
         {
-            if (ptr && BoolType == BoolType.Bool8)
-                return "bool";
             return BoolType switch
             {
-                BoolType.Bool8 => "byte",
-                BoolType.Bool32 => "int",
+                BoolType.Bool8 => "Bool8",
+                BoolType.Bool32 => "Bool32",
                 _ => throw new NotSupportedException(),
             };
         }

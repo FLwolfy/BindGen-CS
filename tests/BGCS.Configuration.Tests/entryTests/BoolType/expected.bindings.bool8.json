@@ -1,0 +1,17 @@
+{
+  "Contains": [
+    "internal static extern Bool8 BoolEvalNative(Bool8 value);",
+    "public static bool BoolEval(bool value)",
+    "internal static extern Bool8 BoolAndNative(Bool8 left, Bool8 right);",
+    "public static bool BoolAnd(bool left, bool right)",
+    "ret != 0",
+    "left ? (Bool8)1 : (Bool8)0",
+    "right ? (Bool8)1 : (Bool8)0"
+  ],
+  "NotContains": [
+    "internal static extern byte BoolEvalNative",
+    "internal static extern byte BoolAndNative",
+    "public static int BoolEval(",
+    "public static int BoolAnd("
+  ]
+}

@@ -1,4 +1,4 @@
-﻿namespace BGCS
+namespace BGCS
 {
     using BGCS.Conversion;
     using BGCS.Core.Logging;
@@ -147,6 +147,13 @@
         public bool DelegatesAsVoidPointer { get; set; } = true;
 
         /// <summary>
+        /// Automatically wraps callback delegates with <c>NativeCallback&lt;T&gt;</c> holders before passing function pointers to native APIs.
+        /// Useful for registration-style callbacks where native code stores the pointer beyond the call site. (Default: <see langword="false"/>)
+        /// </summary>
+        [DefaultValue(false)]
+        public bool AutoWrapCallbacks { get; set; } = false;
+
+        /// <summary>
         /// This option makes the resulting wrapper more "safe" so you don't need unsafe blocks everywhere. (Default: <see langword="false"/>)
         /// </summary>
         [DefaultValue(false)]
@@ -275,7 +282,9 @@
         public bool GenerateRuntimeSource { get; set; } = false;
 
         /// <summary>
-        /// This option controls the bool type eg. 8Bit Bool and 32Bit Bool. (Default: <see cref="BoolType.Bool8"/>)
+        /// Controls native bool representation in generated signatures.
+        /// <see cref="BoolType.Bool8"/> uses <c>BGCS.Runtime.Bool8</c>.
+        /// <see cref="BoolType.Bool32"/> uses <c>BGCS.Runtime.Bool32</c>.
         /// </summary>
         [DefaultValue(BoolType.Bool8)]
         public BoolType BoolType { get; set; } = BoolType.Bool8;

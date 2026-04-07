@@ -1,4 +1,24 @@
 {
   "Property": "CustomEnums",
-  "Expected": []
+  "Expected": [
+    {
+      "Identifier": "custom_mode",
+      "CppName": "custom_mode",
+      "Name": "CustomMode",
+      "Attributes": [],
+      "Comment": null,
+      "BaseType": "int",
+      "Items": [
+        {
+          "Identifier": "CUSTOM_MODE_ONE",
+          "CppName": "CUSTOM_MODE_ONE",
+          "CppValue": "1",
+          "Name": "One",
+          "Value": "1",
+          "Attributes": [],
+          "Comment": null
+        }
+      ]
+    }
+  ]
 }

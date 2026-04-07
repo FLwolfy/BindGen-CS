@@ -1,1 +1,1 @@
-int sample_add(int a, int b);
+typedef void (*sample_callback)(int value);

@@ -1,5 +1,4 @@
 {
-  "HeaderFile": "header.h",
   "Namespace": "EntryTests.Generated",
   "ApiName": "EntryApi",
   "LibName": "entry-lib",
@@ -7,5 +6,23 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
-  "CustomEnums": []
+  "CustomEnums": [
+    {
+      "CppName": "custom_mode",
+      "Name": "CustomMode",
+      "Attributes": [],
+      "Comment": null,
+      "BaseType": "int",
+      "Items": [
+        {
+          "CppName": "CUSTOM_MODE_ONE",
+          "CppValue": "1",
+          "Name": "One",
+          "Value": "1",
+          "Attributes": [],
+          "Comment": null
+        }
+      ]
+    }
+  ]
 }

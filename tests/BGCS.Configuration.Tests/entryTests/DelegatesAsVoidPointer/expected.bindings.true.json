@@ -1,0 +1,12 @@
+{
+  "Contains": [
+    "ApplyCbNative",
+    "SetNotifyNative",
+    "DispatchMixNative",
+    "void* cb"
+  ],
+  "NotContains": [
+    "delegate*<int, int> cb",
+    "delegate*<void> cb"
+  ]
+}

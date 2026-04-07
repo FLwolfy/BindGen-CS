@@ -7,7 +7,7 @@ public class AutoSquashTypedefEntryTests : ConfigurationEntryTestBase
     [Fact]
     public void AutoSquashTypedef_False_ShouldKeepTypedefInBindings()
     {
-        using var output = Generate("config.false.json");
+        using var output = Generate("config.false.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
         AssertExpected(output, "expected.false.json", "expected.bindings.false.json");
@@ -16,7 +16,7 @@ public class AutoSquashTypedefEntryTests : ConfigurationEntryTestBase
     [Fact]
     public void AutoSquashTypedef_True_ShouldSquashTypedefInBindings()
     {
-        using var output = Generate("config.true.json");
+        using var output = Generate("config.true.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
         AssertExpected(output, "expected.true.json", "expected.bindings.true.json");

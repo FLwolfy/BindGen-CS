@@ -144,19 +144,24 @@ public class CsCodeGeneratorConfigTypeApiTests
     [Fact]
     public void GetBoolType_ShouldRespectConfiguredBoolMode()
     {
-        CsCodeGeneratorConfig cfg = new() { BoolType = BoolType.Bool8 };
-        Assert.Equal("byte", cfg.GetBoolType());
-        Assert.Equal("bool", cfg.GetBoolType(ptr: true));
+        CsCodeGeneratorConfig cfg = new();
+        Assert.Equal(BoolType.Bool8, cfg.BoolType);
+        Assert.Equal("Bool8", cfg.GetBoolType());
+        Assert.Equal("Bool8", cfg.GetBoolType(ptr: true));
+
+        cfg.BoolType = BoolType.Bool8;
+        Assert.Equal("Bool8", cfg.GetBoolType());
+        Assert.Equal("Bool8", cfg.GetBoolType(ptr: true));
 
         cfg.BoolType = BoolType.Bool32;
-        Assert.Equal("int", cfg.GetBoolType());
-        Assert.Equal("int", cfg.GetBoolType(ptr: true));
+        Assert.Equal("Bool32", cfg.GetBoolType());
+        Assert.Equal("Bool32", cfg.GetBoolType(ptr: true));
     }
 
     [Fact]
     public void DelegatePointerType_ShouldRespectDelegatesAsVoidPointerFlag()
     {
-        CsCodeGeneratorConfig cfg = new();
+        CsCodeGeneratorConfig cfg = new() { BoolType = BoolType.Bool8 };
         CppFunctionType callbackType = new(default, CppPrimitiveType.Void);
         callbackType.Parameters.Add(new CppParameter(default, CppPrimitiveType.Int, "value"));
 
@@ -183,9 +188,9 @@ public class CsCodeGeneratorConfigTypeApiTests
         string namelessCompat = cfg.GetNamelessParameterSignature(parameters, canUseOut: false, compatibility: true);
         string marshallingCompat = cfg.WriteFunctionMarshalling(parameters, compatibility: true);
 
-        Assert.Contains("byte enabled", signature);
+        Assert.Contains("Bool8 enabled", signature);
         Assert.Contains("int* values", signature);
-        Assert.Equal("byte, nint", namelessCompat);
+        Assert.Equal("Bool8, nint", namelessCompat);
         Assert.Equal("enabled, (nint)values", marshallingCompat);
     }
 

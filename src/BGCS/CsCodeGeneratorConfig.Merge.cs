@@ -192,6 +192,7 @@
                 MemberNamingConvention = baseConfig.MemberNamingConvention;
             }
 
+            AutoWrapCallbacks = baseConfig.AutoWrapCallbacks;
             AutoSquashTypedef = baseConfig.AutoSquashTypedef;
         }
 

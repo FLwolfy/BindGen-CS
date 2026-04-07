@@ -1,6 +1,12 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public const int MyFlag = 1;",
+    "public const int AnotherValue = 2;"
+  ],
+  "NotContains": [
+    "public const int myFlag = 1;",
+    "public const int MY_FLAG = 1;",
+    "public const int anotherValue = 2;",
+    "public const int ANOTHER_VALUE = 2;"
   ]
 }

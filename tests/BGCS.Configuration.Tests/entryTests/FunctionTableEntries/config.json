@@ -1,10 +1,9 @@
 {
-  "HeaderFile": "header.h",
   "Namespace": "EntryTests.Generated",
   "ApiName": "EntryApi",
   "LibName": "entry-lib",
   "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
+  "ImportType": "FunctionTable",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "FunctionTableEntries": [

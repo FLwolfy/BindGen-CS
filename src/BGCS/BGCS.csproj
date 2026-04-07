@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\BGCS.Runtime\*.cs">
+    <EmbeddedResource Include="..\BGCS.Runtime\**\*.cs">
       <LogicalName>BGCS.RuntimeSources.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>

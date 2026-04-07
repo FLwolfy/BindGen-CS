@@ -1,6 +1,13 @@
 {
   "Contains": [
     "namespace Expected.FromBase",
-    "partial class BaseApi"
+    "partial class BaseApi",
+    "internal const string LibName = \"base-lib\";",
+    "EntryPoint = \"sample_add\"",
+    "SampleAddNative"
+  ],
+  "NotContains": [
+    "partial class EntryApi",
+    "internal const string LibName = \"entry-lib\";"
   ]
 }

@@ -1,6 +1,7 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "EntryPoint = \"sample_add\"",
+    "SampleAddNative",
+    "public static int SampleAdd(int a, int b)"
   ]
 }

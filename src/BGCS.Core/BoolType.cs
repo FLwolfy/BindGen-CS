@@ -1,4 +1,4 @@
-﻿namespace BGCS
+namespace BGCS
 {
     /// <summary>
     /// Defines values for <c>BoolType</c>.

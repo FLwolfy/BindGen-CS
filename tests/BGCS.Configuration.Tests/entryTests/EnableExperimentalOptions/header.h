@@ -1,1 +1,2 @@
-int sample_add(int a, int b);
+typedef int (*math_cb)(int value);
+int apply_cb(math_cb cb, int value);

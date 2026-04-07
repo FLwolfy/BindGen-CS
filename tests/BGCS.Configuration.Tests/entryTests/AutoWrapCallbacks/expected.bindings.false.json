@@ -1,0 +1,17 @@
+{
+  "Contains": [
+    "public unsafe delegate void LogCb(int level);",
+    "public unsafe delegate int SumCb(int left, int right);",
+    "public unsafe delegate void TickCb();",
+    "SetLogCallbackNative",
+    "SetSumCallbackNative",
+    "SetTickCallbackNative",
+    "Utils.GetFunctionPointerForDelegate(cb)"
+  ],
+  "NotContains": [
+    "NativeCallback<LogCb>",
+    "NativeCallback<SumCb>",
+    "NativeCallback<TickCb>",
+    "__AutoWrapCallback_SetLogCallback_cb_0"
+  ]
+}

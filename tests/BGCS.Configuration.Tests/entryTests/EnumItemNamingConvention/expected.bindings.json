@@ -1,6 +1,11 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "enum ColorMode",
+    "one = 1",
+    "two = 2"
+  ],
+  "NotContains": [
+    "One = 1",
+    "Two = 2"
   ]
 }

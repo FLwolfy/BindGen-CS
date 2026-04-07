@@ -1,5 +1,4 @@
 {
-  "HeaderFile": "header.h",
   "Namespace": "EntryTests.Generated",
   "ApiName": "EntryApi",
   "LibName": "entry-lib",
@@ -7,5 +6,6 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "DelegatesAsVoidPointer": false,
   "EnableExperimentalOptions": true
 }

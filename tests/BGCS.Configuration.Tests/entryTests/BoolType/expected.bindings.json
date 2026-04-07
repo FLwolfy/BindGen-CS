@@ -1,6 +1,17 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static extern Bool32 BoolEvalNative(Bool32 value);",
+    "public static bool BoolEval(bool value)",
+    "internal static extern Bool32 BoolAndNative(Bool32 left, Bool32 right);",
+    "public static bool BoolAnd(bool left, bool right)",
+    "ret != 0",
+    "left ? (Bool32)1 : (Bool32)0",
+    "right ? (Bool32)1 : (Bool32)0"
+  ],
+  "NotContains": [
+    "internal static extern int BoolEvalNative",
+    "internal static extern int BoolAndNative",
+    "public static int BoolEval(",
+    "public static int BoolAnd("
   ]
 }

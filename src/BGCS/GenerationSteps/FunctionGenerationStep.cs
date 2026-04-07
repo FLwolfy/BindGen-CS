@@ -35,6 +35,7 @@
         /// </summary>
         public readonly HashSet<CsFunctionVariation> DefinedVariationsFunctions = new(IdentifierComparer<CsFunctionVariation>.Default);
         protected readonly HashSet<string> OutReturnFunctions = [];
+        private readonly HashSet<string> autoWrappedCallbackSlots = [];
 
         private FunctionGenerator funcGen = null!;
         private FunctionTableBuilder FunctionTableBuilder = null!;
@@ -90,6 +91,7 @@
             DefinedVariationsFunctions.Clear();
             OutReturnFunctions.Clear();
             DefinedFunctions.Clear();
+            autoWrappedCallbackSlots.Clear();
         }
 
         protected virtual List<string> SetupFunctionUsings()
@@ -452,6 +454,8 @@
             }
 
             ClassifyParameters(overload, variation, csReturnType, out bool firstParamReturn, out int offset, out bool hasManaged);
+            List<AutoWrappedCallbackSpec> autoWrapSpecs = GetAutoWrappedCallbackSpecs(overload, variation, offset);
+            EmitAutoWrappedCallbackMembers(context.Writer, autoWrapSpecs);
 
             LogInfo("defined function " + header);
 
@@ -512,12 +516,29 @@
                         cppParameter = param;
                     }
 
-                    foreach (var parameterWriter in ParameterWriters)
+                    AutoWrappedCallbackSpec? autoWrapSpec = null;
+                    for (int j = 0; j < autoWrapSpecs.Count; j++)
                     {
-                        if (parameterWriter.CanWrite(writerContext, overload.Parameters[i + offset], cppParameter, paramFlags, i, offset))
+                        if (autoWrapSpecs[j].ParameterIndex == i + offset)
                         {
-                            parameterWriter.Write(writerContext, overload.Parameters[i + offset], cppParameter, paramFlags, i, offset);
+                            autoWrapSpec = autoWrapSpecs[j];
                             break;
+                        }
+                    }
+
+                    if (autoWrapSpec is not null)
+                    {
+                        sb.Append($"({autoWrapSpec.Value.PointerType})Utils.GetFunctionPointerForDelegate({autoWrapSpec.Value.HelperName}({cppParameter.Name}))");
+                    }
+                    else
+                    {
+                        foreach (var parameterWriter in ParameterWriters)
+                        {
+                            if (parameterWriter.CanWrite(writerContext, overload.Parameters[i + offset], cppParameter, paramFlags, i, offset))
+                            {
+                                parameterWriter.Write(writerContext, overload.Parameters[i + offset], cppParameter, paramFlags, i, offset);
+                                break;
+                            }
                         }
                     }
 
@@ -565,6 +586,132 @@
             writer.WriteLine();
 
             return true;
+        }
+
+        private readonly record struct AutoWrappedCallbackSpec(
+            int ParameterIndex,
+            string DelegateType,
+            string PointerType,
+            string FieldName,
+            string HelperName);
+
+        private List<AutoWrappedCallbackSpec> GetAutoWrappedCallbackSpecs(CsFunctionOverload overload, CsFunctionVariation variation, int offset)
+        {
+            if (!config.AutoWrapCallbacks)
+            {
+                return [];
+            }
+
+            List<AutoWrappedCallbackSpec> specs = [];
+            for (int i = 0; i < overload.Parameters.Count - offset; i++)
+            {
+                int parameterIndex = i + offset;
+                CsParameterInfo rootParameter = overload.Parameters[parameterIndex];
+                if (!rootParameter.CppType.IsDelegate(out CppFunctionType? cppFunction))
+                {
+                    continue;
+                }
+
+                CsParameterInfo currentParameter = rootParameter;
+                if (variation.TryGetParameter(rootParameter.Name, out CsParameterInfo? variationParameter))
+                {
+                    currentParameter = variationParameter;
+                }
+
+                if (currentParameter.Type.IsPointer || currentParameter.Type.IsRef || currentParameter.Type.IsIn)
+                {
+                    continue;
+                }
+
+                if (currentParameter.Type.Name.Contains("delegate*"))
+                {
+                    continue;
+                }
+
+                string slotId = BuildAutoWrappedCallbackSlotId(overload.Name, rootParameter.CleanName, parameterIndex);
+                specs.Add(new AutoWrappedCallbackSpec(
+                    parameterIndex,
+                    currentParameter.Type.Name,
+                    config.GetDelegatePointerType(cppFunction!),
+                    $"__autoWrappedCallback_{slotId}",
+                    $"__AutoWrapCallback_{slotId}"));
+            }
+
+            return specs;
+        }
+
+        private void EmitAutoWrappedCallbackMembers(ICodeWriter writer, List<AutoWrappedCallbackSpec> specs)
+        {
+            for (int i = 0; i < specs.Count; i++)
+            {
+                AutoWrappedCallbackSpec spec = specs[i];
+                if (!autoWrappedCallbackSlots.Add(spec.FieldName))
+                {
+                    continue;
+                }
+
+                writer.WriteLine($"private static NativeCallback<{spec.DelegateType}> {spec.FieldName};");
+                writer.WriteLine();
+                using (writer.PushBlock($"private static {spec.DelegateType}? {spec.HelperName}({spec.DelegateType}? callback)"))
+                {
+                    using (writer.PushBlock($"if ({spec.FieldName}.IsAllocated)"))
+                    {
+                        writer.WriteLine($"{spec.FieldName}.Dispose();");
+                    }
+
+                    writer.WriteLine();
+
+                    using (writer.PushBlock("if (callback == null)"))
+                    {
+                        writer.WriteLine($"{spec.FieldName} = default;");
+                        writer.WriteLine("return null;");
+                    }
+
+                    writer.WriteLine();
+                    writer.WriteLine($"{spec.FieldName} = new NativeCallback<{spec.DelegateType}>(callback);");
+                    writer.WriteLine($"return {spec.FieldName}.Callback;");
+                }
+
+                writer.WriteLine();
+            }
+        }
+
+        private static string BuildAutoWrappedCallbackSlotId(string functionName, string parameterName, int parameterIndex)
+        {
+            StringBuilder sb = new(functionName.Length + parameterName.Length + 8);
+            AppendIdentifierPart(sb, functionName);
+            sb.Append('_');
+            AppendIdentifierPart(sb, parameterName);
+            sb.Append('_');
+            sb.Append(parameterIndex);
+            return sb.ToString();
+        }
+
+        private static void AppendIdentifierPart(StringBuilder sb, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                sb.Append('_');
+                return;
+            }
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (char.IsLetterOrDigit(c) || c == '_')
+                {
+                    sb.Append(c);
+                }
+                else
+                {
+                    sb.Append('_');
+                }
+            }
+
+            if (char.IsDigit(sb[0]))
+            {
+                sb.Insert(0, '_');
+            }
         }
 
         protected virtual bool WriteAlias(GenContext context, HashSet<CsFunctionVariation> definedFunctions, CsFunction function, CsFunctionOverload overload, CsFunctionVariation variation, WriteFunctionFlags flags, FunctionAlias alias, params string[] modifiers)

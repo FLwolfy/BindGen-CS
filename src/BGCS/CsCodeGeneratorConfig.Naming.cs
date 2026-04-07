@@ -20,7 +20,8 @@ namespace BGCS
                 return mappedName;
             }
 
-            if (nameCache.TryGetValue(name, out string? cacheEntry))
+            string cacheKey = $"clean:{name}";
+            if (nameCache.TryGetValue(cacheKey, out string? cacheEntry))
             {
                 return cacheEntry;
             }
@@ -75,7 +76,7 @@ namespace BGCS
                 newName = newName.Replace(item.Key, item.Value, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            nameCache.TryAdd(name, newName);
+            nameCache.TryAdd(cacheKey, newName);
 
             return newName;
         }
@@ -90,7 +91,8 @@ namespace BGCS
                 return mappedName;
             }
 
-            if (nameCache.TryGetValue(name, out string? cacheEntry))
+            string cacheKey = $"conv:{convention}:{removeTailingT}:{name}";
+            if (nameCache.TryGetValue(cacheKey, out string? cacheEntry))
             {
                 return cacheEntry;
             }
@@ -114,7 +116,7 @@ namespace BGCS
                 newName = newName.Replace(item.Key, item.Value, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            nameCache.TryAdd(name, newName);
+            nameCache.TryAdd(cacheKey, newName);
 
             return newName;
         }

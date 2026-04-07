@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static extern int sampleAddNative(int a, int b);",
+    "public static int sampleAdd(int a, int b)"
+  ],
+  "NotContains": [
+    "public static int SampleAdd(int a, int b)"
   ]
 }
