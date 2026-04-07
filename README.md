@@ -48,14 +48,28 @@ var generator = new Cpp2CCodeGenerator(config);
 generator.Generate("include/demo.hpp", "Output");
 ```
 
-Config composition (`BaseConfig`) is supported via:
+A basic start up with configuration file:
 
 ```json
 {
   "BaseConfig": {
     "Url": "file://config.base.json"
   }
+  "ApiName": "MyApi",
+  "Namespace": "My.Generated",
+  "LibName": "mylib",
+  "ImportType": "DllImport",
+  "EntryFiles": ["headers/api.h"],
+  "allowedHeaders": ["headers/api.h"]
 }
+```
+
+```C#
+using BGCS;
+
+var cfg = new CsCodeGeneratorConfig("config.json");
+var gen = new CsCodeGenerator(cfg);
+bool ok = gen.Generate("headers/api.h", "Output");
 ```
 
 Single-file/runtime behavior summary:
