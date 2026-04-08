@@ -489,7 +489,7 @@ namespace BGCS
 
                 if (paramCsTypeName == "bool")
                 {
-                    paramCsTypeName = "byte";
+                    paramCsTypeName = GetBoolType();
                 }
 
                 if (canUseOut && cppParameter.Type.CanBeUsedAsOutput(out CppTypeDeclaration? cppTypeDeclaration))
