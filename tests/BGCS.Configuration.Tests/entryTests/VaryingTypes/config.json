@@ -6,7 +6,8 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "GenerateAdditionalOverloads": true,
   "VaryingTypes": [
-    "string"
+    "nint"
   ]
 }

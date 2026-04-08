@@ -1,6 +1,10 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static extern int SetModeNative(int mode);",
+    "public static int SetMode()",
+    "SetModeNative((int)(7));"
+  ],
+  "NotContains": [
+    "SetModeNative((int)(42));"
   ]
 }

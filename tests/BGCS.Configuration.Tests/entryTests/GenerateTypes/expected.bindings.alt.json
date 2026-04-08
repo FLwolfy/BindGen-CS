@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "public partial struct SamplePointType",
+    "public int X;",
+    "public int Y;"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "Contains": [
+    "public partial struct MergeType",
+    "public enum MergeMode : int",
+    "internal static extern int SampleAddNative(int a, int b);",
+    "internal static extern void MergeSetModeNative(MergeType* data, MergeMode mode);"
+  ]
+}

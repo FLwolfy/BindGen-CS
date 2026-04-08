@@ -1,6 +1,7 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "using EntryTests.Runtime;",
+    "internal static extern Bool8 BoolEvalNative(Bool8 value);",
+    "public static bool BoolEval(bool value)"
   ]
 }

@@ -1,1 +1,1 @@
-int sample_add(int a, int b);
+void set_name(const char* name);

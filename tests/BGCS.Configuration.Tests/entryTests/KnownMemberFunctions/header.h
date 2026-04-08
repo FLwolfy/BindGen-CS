@@ -1,1 +1,6 @@
-int sample_add(int a, int b);
+struct my_type
+{
+    int value;
+};
+
+int my_type_inc(struct my_type* self, int delta);

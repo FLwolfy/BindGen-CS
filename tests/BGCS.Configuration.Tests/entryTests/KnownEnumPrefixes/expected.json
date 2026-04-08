@@ -1,6 +1,6 @@
 {
   "Property": "KnownEnumPrefixes",
   "Expected": {
-    "EnumA": "ENUM_A"
+    "strange_enum": "MY_PREFIX"
   }
 }

@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "public unsafe delegate void MyDelegate(int value);",
+    "public unsafe delegate void KeepDelegate(int value);",
+    "internal static extern void SetKeepDelegateNative("
+  ]
+}

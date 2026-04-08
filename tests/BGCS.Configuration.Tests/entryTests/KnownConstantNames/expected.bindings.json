@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public const int SpecialConst = 7;",
+    "public const int KEEP_CONST = 3;"
+  ],
+  "NotContains": [
+    "public const int SAMPLE_CONST = 7;"
   ]
 }

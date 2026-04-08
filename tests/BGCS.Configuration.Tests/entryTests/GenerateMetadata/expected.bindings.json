@@ -1,6 +1,8 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "[NativeName(NativeNameType.Func, \"sample_add\")]",
+    "[return: NativeName(NativeNameType.Type, \"int\")]",
+    "[NativeName(NativeNameType.Param, \"a\")]",
+    "[DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = \"sample_add\")]"
   ]
 }

@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public const int KEEP_CONST = 13;",
+    "internal static extern int ReadConstNative();"
+  ],
+  "NotContains": [
+    "public const int MY_CONST = 9;"
   ]
 }

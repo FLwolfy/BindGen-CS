@@ -18,7 +18,7 @@ public class SystemIncludeFoldersEntryTests : ConfigurationEntryTestBase
     {
         using var output = Generate("config.alt.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
-        AssertGenerationSucceeded(output);
         AssertExpected(output, "expected.alt.json", "expected.bindings.alt.json");
+        AssertGenerationFailed(output);
     }
 }

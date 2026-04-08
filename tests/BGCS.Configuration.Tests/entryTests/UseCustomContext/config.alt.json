@@ -3,7 +3,7 @@
   "ApiName": "EntryApi",
   "LibName": "entry-lib",
   "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
+  "ImportType": "FunctionTable",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "UseCustomContext": false

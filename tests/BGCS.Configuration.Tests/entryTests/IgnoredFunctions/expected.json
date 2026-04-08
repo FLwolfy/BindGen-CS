@@ -1,6 +1,6 @@
 {
   "Property": "IgnoredFunctions",
   "Expected": [
-    "sample_add"
+    "drop_fn"
   ]
 }

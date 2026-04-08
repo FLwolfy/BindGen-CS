@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "public static unsafe partial class Extensions",
+    "public static void KeepExt(this WidgetHandle handle, int value)",
+    "public static void DropExt(this WidgetHandle handle, int value)",
+    "internal static extern void KeepExtNative(WidgetHandle handle, int value);",
+    "internal static extern void DropExtNative(WidgetHandle handle, int value);"
+  ]
+}

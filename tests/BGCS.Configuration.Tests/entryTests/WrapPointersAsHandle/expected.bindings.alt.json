@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "internal static extern int SampleTakePtrNative(SampleType* value);",
+    "public static int SampleTakePtr(SampleType* value)"
+  ],
+  "NotContains": [
+    "public unsafe struct SampleTypePtr : IEquatable<SampleTypePtr>"
+  ]
+}

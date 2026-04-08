@@ -1,1 +1,1 @@
-int sample_add(int a, int b);
+int sample_add(int input_value, int max_count);

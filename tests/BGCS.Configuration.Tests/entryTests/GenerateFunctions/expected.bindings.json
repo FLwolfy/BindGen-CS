@@ -1,9 +1,7 @@
 {
-  "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
-  ],
+  "Contains": [],
   "NotContains": [
+    "DllImport(LibName",
     "SampleAddNative",
     "SampleAdd("
   ]

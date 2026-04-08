@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "public static unsafe partial class Extensions",
+    "public static void SetValue(this WidgetHandle handle, int value)"
+  ],
+  "NotContains": [
+    "public static void ApplyValue(this WidgetHandle handle, int value)"
+  ]
+}

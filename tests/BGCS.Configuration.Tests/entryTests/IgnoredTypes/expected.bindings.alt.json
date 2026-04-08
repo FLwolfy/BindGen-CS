@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "public partial struct MyType",
+    "public partial struct KeepType",
+    "UseTypesNative("
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "internal static extern int SampleAddNative(int inputValue, int maxCount);",
+    "public static int SampleAdd(int inputValue, int maxCount)"
+  ],
+  "NotContains": [
+    "SampleAddNative(int InputValue, int MaxCount)"
+  ]
+}

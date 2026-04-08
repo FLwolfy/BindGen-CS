@@ -1,6 +1,7 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static extern void SetNameNative(byte* name);",
+    "public static void SetName(ReadOnlySpan<byte> name)",
+    "public static void SetName(string name)"
   ]
 }

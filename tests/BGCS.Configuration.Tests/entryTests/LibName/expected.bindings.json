@@ -1,6 +1,6 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal const string LibName = \"entry-lib-x\";",
+    "[DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = \"sample_add\")]"
   ]
 }

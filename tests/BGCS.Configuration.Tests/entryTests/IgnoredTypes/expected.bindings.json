@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public partial struct KeepType",
+    "UseTypesNative("
+  ],
+  "NotContains": [
+    "public partial struct MyType"
   ]
 }

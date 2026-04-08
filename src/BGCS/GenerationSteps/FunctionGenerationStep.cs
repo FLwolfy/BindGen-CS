@@ -341,6 +341,19 @@
                     }
                     else
                     {
+                        if (string.Equals(config.GetLibraryNameFunctionName, "GetLibraryName", StringComparison.Ordinal))
+                        {
+                            string escapedLibName = config.LibName
+                                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                                .Replace("\"", "\\\"", StringComparison.Ordinal);
+                            using (writerfuncTable.PushBlock("private static string GetLibraryName()"))
+                            {
+                                writerfuncTable.WriteLine($"return \"{escapedLibName}\";");
+                            }
+
+                            writerfuncTable.WriteLine();
+                        }
+
                         using (writerfuncTable.PushBlock("public static void InitApi()"))
                         {
                             writerfuncTable.WriteLine($"funcTable = new FunctionTable(LibraryLoader.LoadLibrary({config.GetLibraryNameFunctionName}, {config.GetLibraryExtensionFunctionName ?? "null"}), {count});");

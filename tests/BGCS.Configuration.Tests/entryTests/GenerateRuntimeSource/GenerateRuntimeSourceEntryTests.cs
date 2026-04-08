@@ -1,4 +1,5 @@
 using Xunit;
+using System.IO;
 
 namespace BGCS.Configuration.Tests;
 
@@ -11,6 +12,7 @@ public class GenerateRuntimeSourceEntryTests : ConfigurationEntryTestBase
         PrintBindings(output);
         AssertGenerationSucceeded(output);
         AssertExpected(output);
+        Assert.True(File.Exists(Path.Combine(output.OutputDirectory, "Runtime.cs")));
     }
 
     [Fact]
@@ -20,5 +22,6 @@ public class GenerateRuntimeSourceEntryTests : ConfigurationEntryTestBase
         PrintBindings(output);
         AssertGenerationSucceeded(output);
         AssertExpected(output, "expected.alt.json", "expected.bindings.alt.json");
+        Assert.False(File.Exists(Path.Combine(output.OutputDirectory, "Runtime.cs")));
     }
 }

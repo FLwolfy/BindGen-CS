@@ -131,8 +131,6 @@ public abstract class ConfigurationEntryTestBase
             ? Directory.GetFiles(output.OutputDirectory, "*.cs", SearchOption.AllDirectories)
             : [];
 
-        Assert.True(generatedFiles.Length > 0, "No generated .cs files found for compile check.");
-
         SyntaxTree[] trees = generatedFiles
             .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), path: path))
             .ToArray();

@@ -1,6 +1,8 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "SampleAddNative"
+  ],
+  "NotContains": [
+    "readonly partial struct GenHandle"
   ]
 }

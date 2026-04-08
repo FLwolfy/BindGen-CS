@@ -1,6 +1,7 @@
 {
   "Contains": [
-    "SetValueNative"
+    "internal static extern void ExtHandleSetValueNative(ExtHandle handle, int value);",
+    "public static void ExtHandleSetValue(ExtHandle handle, int value)"
   ],
   "NotContains": [
     "partial class Extensions"

@@ -5,6 +5,6 @@
   "MergeGeneratedFilesToSingleFile": true,
   "ImportType": "DllImport",
   "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
+  "GenerateRuntimeSource": true,
   "RuntimeNamespace": "EntryTests.Runtime.Alt"
 }

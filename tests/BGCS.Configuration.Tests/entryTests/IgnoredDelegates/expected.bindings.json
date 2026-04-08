@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public unsafe delegate void KeepDelegate(int value);",
+    "internal static extern void SetKeepDelegateNative("
+  ],
+  "NotContains": [
+    "public unsafe delegate void MyDelegate(int value);"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "Contains": [
-    "public const int SampleFlag = 7;"
+    "public const int SAMPLE_FLAG = 7;"
   ],
   "NotContains": []
 }

@@ -1,6 +1,6 @@
 {
   "Property": "IgnoredEnums",
   "Expected": [
-    "MyEnum"
+    "my_enum"
   ]
 }

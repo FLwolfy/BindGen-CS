@@ -7,6 +7,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "IgnoredFunctions": [
-    "sample_add"
+    "drop_fn"
   ]
 }

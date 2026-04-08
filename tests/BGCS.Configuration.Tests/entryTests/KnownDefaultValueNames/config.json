@@ -6,7 +6,19 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "FunctionMappings": [
+    {
+      "ExportedName": "set_mode",
+      "FriendlyName": null,
+      "Comment": null,
+      "Defaults": {
+        "mode": "42"
+      },
+      "CustomVariations": [],
+      "Parameters": null
+    }
+  ],
   "KnownDefaultValueNames": {
-    "VALUE_X": "default"
+    "42": "7"
   }
 }

@@ -1,0 +1,6 @@
+{
+  "Contains": [
+    "SampleAddNative",
+    "readonly partial struct GenHandle"
+  ]
+}

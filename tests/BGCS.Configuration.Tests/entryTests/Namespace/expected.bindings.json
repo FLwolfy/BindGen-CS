@@ -1,6 +1,7 @@
 {
   "Contains": [
     "namespace Expected.Namespace.Entry",
-    "partial class EntryApi"
+    "internal static extern int SampleAddNative(int a, int b);",
+    "public static int SampleAdd(int a, int b)"
   ]
 }

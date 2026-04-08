@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "public const int MY_CONST = 9;",
+    "public const int KEEP_CONST = 13;",
+    "internal static extern int ReadConstNative();"
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static extern int UseSysNative(int value);",
+    "public static int UseSys(int value)"
   ]
 }

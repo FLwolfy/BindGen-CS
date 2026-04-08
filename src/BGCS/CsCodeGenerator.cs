@@ -26,7 +26,7 @@ namespace BGCS
         private const string RuntimeUsingDefault = "using BGCS.Runtime;";
         private const string RuntimeSourceExcludeSymbol = "BGCS_RUNTIME_EXTERNAL";
         private static readonly Regex EmptyPartialTypeRegex = new(
-            @"^\s*public\s+(?:static\s+)?(?:readonly\s+)?(?:unsafe\s+)?partial\s+(?:class|struct)\s+\w+\s*\r?\n\s*\{\s*\r?\n\s*\}\s*(?:\r?\n)?",
+            @"^\s*(?:(?:\s*///.*\r?\n)+)?(?:\s*\[[^\]\r\n]+\]\r?\n)*\s*public\s+(?:static\s+)?(?:readonly\s+)?(?:unsafe\s+)?partial\s+(?:class|struct)\s+\w+\s*\r?\n\s*\{\s*\r?\n\s*\}\s*(?:\r?\n)?",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         protected FunctionGenerator funcGen = null!;

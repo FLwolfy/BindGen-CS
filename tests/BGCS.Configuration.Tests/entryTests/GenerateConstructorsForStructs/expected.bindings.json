@@ -1,6 +1,10 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public partial struct SampleVec2",
+    "public int X;",
+    "public int Y;"
+  ],
+  "NotContains": [
+    "public unsafe SampleVec2("
   ]
 }

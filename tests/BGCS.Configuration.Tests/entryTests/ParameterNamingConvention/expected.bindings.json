@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static extern int SampleAddNative(int InputValue, int MaxCount);",
+    "public static int SampleAdd(int InputValue, int MaxCount)"
+  ],
+  "NotContains": [
+    "SampleAddNative(int inputValue, int maxCount)"
   ]
 }

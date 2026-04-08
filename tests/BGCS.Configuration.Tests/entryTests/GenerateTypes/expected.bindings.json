@@ -1,6 +1,10 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "SampleAddNative"
+  ],
+  "NotContains": [
+    "public partial struct SamplePointType",
+    "public int X;",
+    "public int Y;"
   ]
 }

@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public enum KeepEnum : int",
+    "internal static extern int UseEnumNative(KeepEnum mode);"
+  ],
+  "NotContains": [
+    "public enum MyEnum : int"
   ]
 }

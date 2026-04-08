@@ -1,6 +1,12 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static FunctionTable funcTable;",
+    "public static void InitApi(INativeContext context)",
+    "funcTable = new FunctionTable(context, 1);",
+    "funcTable.Load(0, \"sample_add\");"
+  ],
+  "NotContains": [
+    "private static string GetLibraryName()",
+    "public static void InitApi()"
   ]
 }

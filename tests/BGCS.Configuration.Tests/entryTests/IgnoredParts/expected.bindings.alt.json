@@ -1,0 +1,6 @@
+{
+  "Contains": [
+    "internal static extern int EntrySampleAddNative(int a, int b);",
+    "public static int EntrySampleAdd(int a, int b)"
+  ]
+}

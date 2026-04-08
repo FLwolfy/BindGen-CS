@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "public const int HEADER_FLAG = 11;",
+    "public enum HeaderMode : int",
+    "internal static extern int HeaderEvalNative(HeaderMode mode);"
+  ]
+}

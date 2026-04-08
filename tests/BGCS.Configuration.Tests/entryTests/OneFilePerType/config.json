@@ -2,7 +2,7 @@
   "Namespace": "EntryTests.Generated",
   "ApiName": "EntryApi",
   "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
+  "MergeGeneratedFilesToSingleFile": false,
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,

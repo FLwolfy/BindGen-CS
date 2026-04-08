@@ -1,9 +1,9 @@
 {
   "Contains": [
     "partial class Extensions",
-    "setValue("
+    "public static void setValue(this"
   ],
   "NotContains": [
-    "SetValue("
+    "public static void SetValue(this"
   ]
 }

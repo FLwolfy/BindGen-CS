@@ -6,5 +6,6 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "AutoSquashTypedef": false,
   "IgnoredTypedefs": []
 }

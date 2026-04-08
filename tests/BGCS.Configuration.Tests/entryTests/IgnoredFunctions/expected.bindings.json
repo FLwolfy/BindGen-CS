@@ -1,6 +1,10 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static extern int KeepFnNative(int a, int b);",
+    "public static int KeepFn(int a, int b)"
+  ],
+  "NotContains": [
+    "DropFnNative",
+    "public static int DropFn(int a, int b)"
   ]
 }

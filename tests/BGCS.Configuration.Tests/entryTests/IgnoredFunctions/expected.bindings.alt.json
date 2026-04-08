@@ -1,0 +1,8 @@
+{
+  "Contains": [
+    "internal static extern int KeepFnNative(int a, int b);",
+    "internal static extern int DropFnNative(int a, int b);",
+    "public static int KeepFn(int a, int b)",
+    "public static int DropFn(int a, int b)"
+  ]
+}

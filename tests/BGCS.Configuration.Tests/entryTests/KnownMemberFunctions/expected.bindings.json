@@ -1,6 +1,7 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public partial struct MyType",
+    "internal static extern int MyTypeIncNative(MyType* self, int delta);",
+    "public unsafe int MyTypeInc(int delta)"
   ]
 }

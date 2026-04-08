@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "[DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = \"sample_add\")]",
+    "internal static extern int SampleAddNative(int a, int b);"
+  ],
+  "NotContains": [
+    "internal static FunctionTable funcTable;"
+  ]
+}

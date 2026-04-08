@@ -1,6 +1,11 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "internal static FunctionTable funcTable;",
+    "public static void InitApi()",
+    "funcTable.Load(0, \"sample_add\");",
+    "delegate* unmanaged[Cdecl]<int, int, int>)funcTable[0]"
+  ],
+  "NotContains": [
+    "[DllImport("
   ]
 }

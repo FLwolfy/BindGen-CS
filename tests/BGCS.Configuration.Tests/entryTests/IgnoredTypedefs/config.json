@@ -6,7 +6,8 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "AutoSquashTypedef": false,
   "IgnoredTypedefs": [
-    "MyTypedef"
+    "my_typedef"
   ]
 }

@@ -1,4 +1,5 @@
 using Xunit;
+using System.IO;
 
 namespace BGCS.Configuration.Tests;
 
@@ -11,6 +12,8 @@ public class MergeGeneratedFilesToSingleFileEntryTests : ConfigurationEntryTestB
         PrintBindings(output);
         AssertGenerationSucceeded(output);
         AssertExpected(output);
+        Assert.False(File.Exists(Path.Combine(output.OutputDirectory, "Bindings.cs")));
+        Assert.NotEmpty(Directory.GetFiles(output.OutputDirectory, "*.cs", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -20,5 +23,6 @@ public class MergeGeneratedFilesToSingleFileEntryTests : ConfigurationEntryTestB
         PrintBindings(output);
         AssertGenerationSucceeded(output);
         AssertExpected(output, "expected.alt.json", "expected.bindings.alt.json");
+        Assert.True(File.Exists(Path.Combine(output.OutputDirectory, "Bindings.cs")));
     }
 }

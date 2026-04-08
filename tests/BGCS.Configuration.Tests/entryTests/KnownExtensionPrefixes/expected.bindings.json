@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public static unsafe partial class Extensions",
+    "public static void SetValue(this WidgetHandle handle, int value)"
+  ],
+  "NotContains": [
+    "public static void LibSetValue(this WidgetHandle handle, int value)"
   ]
 }

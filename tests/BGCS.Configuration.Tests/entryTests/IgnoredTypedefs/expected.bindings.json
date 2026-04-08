@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "using KeepTypedef = int;",
+    "internal static extern KeepTypedef AddKeepNative(KeepTypedef value);"
+  ],
+  "NotContains": [
+    "using MyTypedef = int;"
   ]
 }

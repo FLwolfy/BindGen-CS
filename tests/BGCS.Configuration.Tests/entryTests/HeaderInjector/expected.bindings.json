@@ -1,6 +1,9 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public const int HEADER_FLAG = 11;",
+    "public enum HeaderMode : int",
+    "Off = unchecked(0)",
+    "On = unchecked(1)",
+    "internal static extern int HeaderEvalNative(HeaderMode mode);"
   ]
 }

@@ -1,5 +1,6 @@
 {
   "Contains": [
+    "[DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = \"sample_add\")]",
     "SampleAddNative",
     "public static int SampleAdd(int a, int b)"
   ],

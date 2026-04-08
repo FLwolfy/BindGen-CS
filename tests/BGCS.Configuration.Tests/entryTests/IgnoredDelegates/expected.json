@@ -1,6 +1,6 @@
 {
   "Property": "IgnoredDelegates",
   "Expected": [
-    "MyDelegate"
+    "my_delegate"
   ]
 }

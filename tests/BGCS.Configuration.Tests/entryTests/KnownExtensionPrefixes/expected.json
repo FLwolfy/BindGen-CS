@@ -1,6 +1,6 @@
 {
   "Property": "KnownExtensionPrefixes",
   "Expected": {
-    "EntryExt": "ENTRY_EXT"
+    "widget_handle_t": "LIB"
   }
 }

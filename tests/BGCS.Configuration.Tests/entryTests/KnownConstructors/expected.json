@@ -1,8 +1,8 @@
 {
   "Property": "KnownConstructors",
   "Expected": {
-    "MyType": [
-      "sample_add"
+    "my_type": [
+      "my_type_create"
     ]
   }
 }

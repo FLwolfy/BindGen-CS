@@ -1,0 +1,8 @@
+{
+  "Contains": [
+    "internal static extern int SampleAddNative(int a, int b);"
+  ],
+  "NotContains": [
+    "using System.Text;"
+  ]
+}

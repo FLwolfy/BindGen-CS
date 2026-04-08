@@ -1,7 +1,9 @@
 {
   "Contains": [
     "partial class Extensions",
-    "SetValue("
+    "public static void SetValue(this ExtHandle handle, int value)"
   ],
-  "NotContains": []
+  "NotContains": [
+    "public static void setValue(this ExtHandle handle, int value)"
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "Property": "KnownDefaultValueNames",
   "Expected": {
-    "VALUE_X": "default"
+    "42": "7"
   }
 }

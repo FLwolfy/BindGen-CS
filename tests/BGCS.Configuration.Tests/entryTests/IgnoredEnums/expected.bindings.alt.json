@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "public enum MyEnum : int",
+    "public enum KeepEnum : int",
+    "internal static extern int UseEnumNative(KeepEnum mode);"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "Contains": [
+    "internal const string LibName = \"entry-lib-xAlt\";",
+    "[DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = \"sample_add\")]"
+  ]
+}

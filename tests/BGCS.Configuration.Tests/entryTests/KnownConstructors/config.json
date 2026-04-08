@@ -7,8 +7,8 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "KnownConstructors": {
-    "MyType": [
-      "sample_add"
+    "my_type": [
+      "my_type_create"
     ]
   }
 }

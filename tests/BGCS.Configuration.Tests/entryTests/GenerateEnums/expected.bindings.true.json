@@ -1,8 +1,8 @@
 {
   "Contains": [
     "public enum SampleMode",
-    "Off = 0",
-    "On = 1"
+    "Off = unchecked(0)",
+    "On = unchecked(1)"
   ],
   "NotContains": []
 }

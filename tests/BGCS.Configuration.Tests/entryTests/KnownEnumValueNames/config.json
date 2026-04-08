@@ -7,6 +7,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "KnownEnumValueNames": {
-    "ENUM_A_X": "X"
+    "MY_PREFIX_ON": "Enabled"
   }
 }

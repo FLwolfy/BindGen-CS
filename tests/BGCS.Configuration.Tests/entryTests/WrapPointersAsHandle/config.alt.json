@@ -4,6 +4,7 @@
   "LibName": "entry-lib",
   "MergeGeneratedFilesToSingleFile": true,
   "ImportType": "DllImport",
+  "EnableExperimentalOptions": true,
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "WrapPointersAsHandle": false

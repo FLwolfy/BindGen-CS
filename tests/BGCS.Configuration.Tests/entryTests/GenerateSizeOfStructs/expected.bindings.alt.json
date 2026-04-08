@@ -1,0 +1,8 @@
+{
+  "Contains": [
+    "public partial struct SampleSizeType"
+  ],
+  "NotContains": [
+    "public static readonly int SizeInBytes = "
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "Contains": [
+    "internal static FunctionTable funcTable;",
+    "private static string GetLibraryName()",
+    "public static void InitApi()",
+    "funcTable = new FunctionTable(LibraryLoader.LoadLibrary(GetLibraryName, null), 1);",
+    "funcTable.Load(0, \"sample_add\");"
+  ],
+  "NotContains": [
+    "public static void InitApi(INativeContext context)"
+  ]
+}

@@ -1,1 +1,1 @@
-int sample_add(int a, int b);
+int use_keyword(int custom_keyword);

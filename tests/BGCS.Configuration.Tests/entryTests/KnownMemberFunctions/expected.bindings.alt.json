@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "public partial struct MyType",
+    "internal static extern int MyTypeIncNative(MyType* self, int delta);"
+  ],
+  "NotContains": [
+    "public unsafe int MyTypeInc(int delta)"
+  ]
+}

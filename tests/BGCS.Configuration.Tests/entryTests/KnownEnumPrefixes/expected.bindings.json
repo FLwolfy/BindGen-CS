@@ -1,6 +1,11 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public enum StrangeEnum : int",
+    "Off = unchecked(0)",
+    "On = unchecked(1)"
+  ],
+  "NotContains": [
+    "MyPrefixOff",
+    "MyPrefixOn"
   ]
 }

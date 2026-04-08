@@ -1,1 +1,1 @@
-int sample_add(int a, int b);
+int set_mode(int mode);

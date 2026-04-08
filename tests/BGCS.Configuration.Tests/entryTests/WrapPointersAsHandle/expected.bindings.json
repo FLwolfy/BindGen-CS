@@ -1,6 +1,11 @@
 {
   "Contains": [
-    "namespace EntryTests.Generated",
-    "partial class EntryApi"
+    "public unsafe struct SampleTypePtr : IEquatable<SampleTypePtr>",
+    "internal static extern int SampleTakePtrNative(SampleType* value);",
+    "public static int SampleTakePtr(SampleTypePtr value)",
+    "public static int SampleTakePtr(ref SampleType value)"
+  ],
+  "NotContains": [
+    "public static int SampleTakePtr(SampleType* value)"
   ]
 }

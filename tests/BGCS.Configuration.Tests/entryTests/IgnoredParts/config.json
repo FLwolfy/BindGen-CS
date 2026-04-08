@@ -7,6 +7,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "IgnoredParts": [
-    "Sample"
+    "Entry"
   ]
 }

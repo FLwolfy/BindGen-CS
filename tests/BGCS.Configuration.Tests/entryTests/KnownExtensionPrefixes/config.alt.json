@@ -4,7 +4,7 @@
   "LibName": "entry-lib",
   "MergeGeneratedFilesToSingleFile": true,
   "ImportType": "DllImport",
-  "GenerateExtensions": false,
+  "GenerateExtensions": true,
   "GenerateRuntimeSource": false,
   "KnownExtensionPrefixes": {}
 }

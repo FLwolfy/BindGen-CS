@@ -7,6 +7,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "KnownConstantNames": {
-    "SAMPLE_ADD": "SampleAddConst"
+    "SAMPLE_CONST": "SpecialConst"
   }
 }

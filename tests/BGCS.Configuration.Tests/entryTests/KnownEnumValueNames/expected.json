@@ -1,6 +1,6 @@
 {
   "Property": "KnownEnumValueNames",
   "Expected": {
-    "ENUM_A_X": "X"
+    "MY_PREFIX_ON": "Enabled"
   }
 }

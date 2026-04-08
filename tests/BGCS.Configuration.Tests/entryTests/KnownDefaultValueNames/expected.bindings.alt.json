@@ -1,0 +1,10 @@
+{
+  "Contains": [
+    "internal static extern int SetModeNative(int mode);",
+    "public static int SetMode()",
+    "SetModeNative((int)(42));"
+  ],
+  "NotContains": [
+    "SetModeNative((int)(7));"
+  ]
+}

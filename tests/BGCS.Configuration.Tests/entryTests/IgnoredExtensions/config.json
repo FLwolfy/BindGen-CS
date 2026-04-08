@@ -4,9 +4,9 @@
   "LibName": "entry-lib",
   "MergeGeneratedFilesToSingleFile": true,
   "ImportType": "DllImport",
-  "GenerateExtensions": false,
+  "GenerateExtensions": true,
   "GenerateRuntimeSource": false,
   "IgnoredExtensions": [
-    "sample_add"
+    "drop_ext"
   ]
 }

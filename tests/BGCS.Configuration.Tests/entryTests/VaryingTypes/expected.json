@@ -1,6 +1,9 @@
 {
   "Property": "VaryingTypes",
   "Expected": [
-    "string"
+    "ReadOnlySpan<byte>",
+    "string",
+    "ref string",
+    "nint"
   ]
 }
