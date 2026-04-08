@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using BGCS.Core.Logging;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Converters;
@@ -55,7 +57,7 @@ public abstract class ConfigurationEntryTestBase
             string bindings = File.Exists(bindingsPath) ? File.ReadAllText(bindingsPath) : string.Empty;
 
             bool hasErrors = generator.Messages.Any(x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
-            return new GeneratedOutput(temp, success, hasErrors, diagnostics, bindings, config);
+            return new GeneratedOutput(temp, outputPath, success, hasErrors, diagnostics, bindings, config);
         }
         finally
         {
@@ -107,6 +109,7 @@ public abstract class ConfigurationEntryTestBase
     {
         Assert.True(output.Success, output.Diagnostics);
         Assert.False(output.HasErrors, output.Diagnostics);
+        AssertBindingsCompiles(output);
     }
 
     protected static void AssertGenerationFailed(GeneratedOutput output)
@@ -116,8 +119,55 @@ public abstract class ConfigurationEntryTestBase
 
     protected static void PrintBindings(GeneratedOutput output)
     {
+        Console.WriteLine("==== Diagnostics ====");
+        Console.WriteLine(output.Diagnostics);
         Console.WriteLine("==== Bindings.cs ====");
         Console.WriteLine(output.Bindings);
+    }
+
+    protected static void AssertBindingsCompiles(GeneratedOutput output)
+    {
+        string[] generatedFiles = Directory.Exists(output.OutputDirectory)
+            ? Directory.GetFiles(output.OutputDirectory, "*.cs", SearchOption.AllDirectories)
+            : [];
+
+        Assert.True(generatedFiles.Length > 0, "No generated .cs files found for compile check.");
+
+        SyntaxTree[] trees = generatedFiles
+            .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), path: path))
+            .ToArray();
+        IEnumerable<MetadataReference> loadedReferences = AppDomain.CurrentDomain
+            .GetAssemblies()
+            .Where(assembly =>
+                !assembly.IsDynamic &&
+                !string.IsNullOrWhiteSpace(assembly.Location) &&
+                File.Exists(assembly.Location))
+            .Select(assembly => MetadataReference.CreateFromFile(assembly.Location));
+
+        IEnumerable<MetadataReference> localDllReferences = Directory
+            .GetFiles(AppContext.BaseDirectory, "*.dll", SearchOption.TopDirectoryOnly)
+            .Select(path => MetadataReference.CreateFromFile(path));
+
+        MetadataReference[] references = loadedReferences
+            .Concat(localDllReferences)
+            .DistinctBy(reference => reference.Display)
+            .ToArray();
+
+        CSharpCompilation compilation = CSharpCompilation.Create(
+            assemblyName: "BGCS.Configuration.Tests.GeneratedBindingsCheck",
+            syntaxTrees: trees,
+            references: references,
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));
+
+        Diagnostic[] errors = compilation.GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        if (errors.Length == 0)
+            return;
+
+        string compileErrors = string.Join(Environment.NewLine, errors.Select(e => e.ToString()));
+        Assert.True(false, $"Generated bindings failed to compile:{Environment.NewLine}{compileErrors}");
     }
 
     protected static void AssertExpected(
@@ -241,6 +291,7 @@ public abstract class ConfigurationEntryTestBase
 
     protected readonly record struct GeneratedOutput(
         string TempDirectory,
+        string OutputDirectory,
         bool Success,
         bool HasErrors,
         string Diagnostics,

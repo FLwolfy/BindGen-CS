@@ -6,5 +6,6 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "DelegatesAsVoidPointer": false,
   "GenerateDelegates": false
 }

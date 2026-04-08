@@ -173,6 +173,9 @@
                 }
             }
 
+            // Keep typedef-to-managed-handle mapping consistent for all later type resolution paths.
+            config.TypeMappings[typedef.Name] = metadata.Name;
+
             return metadata;
         }
 

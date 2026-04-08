@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "public unsafe delegate void SampleCb(int value);",
+    "SetCallbackNative"
+  ],
+  "NotContains": []
+}

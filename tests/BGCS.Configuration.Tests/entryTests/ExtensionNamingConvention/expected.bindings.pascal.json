@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "partial class Extensions",
+    "SetValue("
+  ],
+  "NotContains": [
+    "setValue("
+  ]
+}

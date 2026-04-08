@@ -2,5 +2,8 @@
   "Contains": [
     "namespace EntryTests.Generated",
     "partial class EntryApi"
+  ],
+  "NotContains": [
+    "public const int SampleFlag = 7;"
   ]
 }

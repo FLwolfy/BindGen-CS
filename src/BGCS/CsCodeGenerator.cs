@@ -489,12 +489,22 @@ namespace BGCS
                     string sourceBody = parsed.Body.Replace("\r\n", "\n");
                     if (TryUnwrapNamespaceBody(sourceBody, config.Namespace, out string? unwrappedBody))
                     {
-                        bodies.Add(DedentLines(NormalizeMergedBody(unwrappedBody)));
+                        string normalizedBody = DedentLines(NormalizeMergedBody(unwrappedBody));
+                        string bodyWithoutUsings = ExtractLeadingUsingLines(normalizedBody, orderedUsings, usingSet);
+                        if (!string.IsNullOrWhiteSpace(bodyWithoutUsings))
+                        {
+                            bodies.Add(bodyWithoutUsings);
+                        }
                     }
                     else
                     {
                         canWrapSingleNamespace = false;
-                        bodies.Add(NormalizeMergedBody(sourceBody));
+                        string normalizedBody = NormalizeMergedBody(sourceBody);
+                        string bodyWithoutUsings = ExtractLeadingUsingLines(normalizedBody, orderedUsings, usingSet);
+                        if (!string.IsNullOrWhiteSpace(bodyWithoutUsings))
+                        {
+                            bodies.Add(bodyWithoutUsings);
+                        }
                     }
                 }
             }
@@ -1144,6 +1154,37 @@ namespace BGCS
         private static string TrimBoundaryNewLines(string text)
         {
             return text.Trim('\r', '\n');
+        }
+
+        private static string ExtractLeadingUsingLines(string body, List<string> orderedUsings, HashSet<string> usingSet)
+        {
+            string normalized = body.Replace("\r\n", "\n");
+            string[] lines = normalized.Split('\n');
+
+            int index = 0;
+            while (index < lines.Length)
+            {
+                string line = lines[index].Trim();
+                if (line.Length == 0)
+                {
+                    index++;
+                    continue;
+                }
+
+                if (line.StartsWith("using ", StringComparison.Ordinal) && line.EndsWith(';'))
+                {
+                    if (usingSet.Add(line))
+                    {
+                        orderedUsings.Add(line);
+                    }
+                    index++;
+                    continue;
+                }
+
+                break;
+            }
+
+            return TrimBoundaryNewLines(string.Join(Environment.NewLine, lines.Skip(index)));
         }
 
         private static ParsedMergedFile ParseMergedFile(string text)

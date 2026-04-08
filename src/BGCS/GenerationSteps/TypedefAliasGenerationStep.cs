@@ -75,7 +75,7 @@ namespace BGCS.GenerationSteps
                 }
 
                 string aliasName = config.GetCsCleanName(typedef.Name);
-                string targetType = config.GetCsTypeName(typedef.ElementType);
+                string targetType = GetAliasTargetTypeName(typedef);
 
                 if (string.IsNullOrWhiteSpace(targetType) || aliasName == targetType)
                 {
@@ -121,6 +121,17 @@ namespace BGCS.GenerationSteps
 
             definedTypedefs.Add(aliasName);
             return false;
+        }
+
+        private string GetAliasTargetTypeName(CppTypedef typedef)
+        {
+            CppType current = typedef.ElementType;
+            while (current is CppTypedef innerTypedef)
+            {
+                current = innerTypedef.ElementType;
+            }
+
+            return config.GetCsTypeName(current);
         }
     }
 }

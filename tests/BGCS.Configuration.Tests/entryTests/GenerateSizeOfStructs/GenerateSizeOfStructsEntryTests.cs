@@ -12,4 +12,13 @@ public class GenerateSizeOfStructsEntryTests : ConfigurationEntryTestBase
         AssertGenerationSucceeded(output);
         AssertExpected(output);
     }
+
+    [Fact]
+    public void GenerateSizeOfStructs_AlternateConfig_ShouldMatchExpected()
+    {
+        using var output = Generate("config.alt.json", ["header.h"], ["header.h"]);
+        PrintBindings(output);
+        AssertGenerationSucceeded(output);
+        AssertExpected(output, "expected.alt.json", "expected.bindings.alt.json");
+    }
 }

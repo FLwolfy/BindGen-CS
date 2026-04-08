@@ -1,5 +1,6 @@
 ﻿using BGCS.Core.CSharp;
 using BGCS.CppAst.Model.Declarations;
+using BGCS;
 
 namespace BGCS.Patching
 ;
@@ -130,6 +131,7 @@ namespace BGCS.Patching
         protected override void PatchTypedef(CsCodeGeneratorConfig config, CppTypedef cppTypedef)
         {
             if ((mode & NamingPatchMode.Handles) == 0) return;
+            if (!cppTypedef.IsOpaqueHandle()) return;
 
             var name = config.GetCsTypeName(cppTypedef);
             name = Process(name);

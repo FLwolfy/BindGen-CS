@@ -192,8 +192,6 @@
                 MemberNamingConvention = baseConfig.MemberNamingConvention;
             }
 
-            AutoWrapCallbacks = baseConfig.AutoWrapCallbacks;
-            AutoSquashTypedef = baseConfig.AutoSquashTypedef;
         }
 
         private static void MergeDictionaries<TKey, TValue>(Dictionary<TKey, TValue> target, Dictionary<TKey, TValue> source, MergeOptions mergeOptions, MergeOptions targetOption) where TKey : notnull

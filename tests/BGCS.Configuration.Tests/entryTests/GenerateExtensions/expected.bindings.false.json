@@ -1,0 +1,8 @@
+{
+  "Contains": [
+    "SetValueNative"
+  ],
+  "NotContains": [
+    "partial class Extensions"
+  ]
+}

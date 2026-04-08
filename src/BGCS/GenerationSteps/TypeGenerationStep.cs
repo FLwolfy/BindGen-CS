@@ -101,6 +101,8 @@
         {
             csName = null;
             mapping = null;
+            if (string.IsNullOrWhiteSpace(cppClass.Name) || cppClass.Name.StartsWith("(anonymous", StringComparison.OrdinalIgnoreCase))
+                return true;
             if (config.AllowedTypes.Count != 0 && !config.AllowedTypes.Contains(cppClass.Name))
                 return true;
             if (config.IgnoredTypes.Contains(cppClass.Name))
@@ -121,7 +123,7 @@
             mapping = config.GetTypeMapping(cppClass.Name);
             csName = mapping?.FriendlyName ?? csName;
 
-            if (cppClass.ClassKind == CppClassKind.Class || cppClass.Name.EndsWith("_T") || csName == "void")
+            if (cppClass.ClassKind == CppClassKind.Class || cppClass.Name.EndsWith("_T") || csName == "void" || string.IsNullOrWhiteSpace(csName))
             {
                 return true;
             }

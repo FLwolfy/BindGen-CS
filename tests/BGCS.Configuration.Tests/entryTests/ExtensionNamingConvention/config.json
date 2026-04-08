@@ -4,8 +4,9 @@
   "LibName": "entry-lib",
   "MergeGeneratedFilesToSingleFile": true,
   "ImportType": "DllImport",
+  "WrapPointersAsHandle": true,
   "GenerateExtensions": true,
-  "GenerateFunctions": false,
+  "GenerateFunctions": true,
   "GenerateRuntimeSource": false,
   "ExtensionNamingConvention": "CamelCase"
 }

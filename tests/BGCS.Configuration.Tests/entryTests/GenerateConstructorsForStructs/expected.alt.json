@@ -1,0 +1,4 @@
+{
+  "Property": "GenerateConstructorsForStructs",
+  "Expected": true
+}

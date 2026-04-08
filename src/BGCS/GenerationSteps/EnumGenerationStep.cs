@@ -252,7 +252,7 @@
         {
             string cppName = cppEnum.Name;
             string cppPrefixName = cppMember.Name;
-            string csName = config.GetCsCleanName(cppName);
+            string csName = config.GetCsCleanNameWithConvention(cppName, config.EnumNamingConvention, false);
 
             if (csName.StartsWith("(unnamed enum at ") && csName.EndsWith(')'))
             {
@@ -262,7 +262,7 @@
 
             if (string.IsNullOrEmpty(cppName))
             {
-                csName = config.GetCsCleanName($"UnnamedEnum{unknownEnumCounter++}");
+                csName = config.GetCsCleanNameWithConvention($"UnnamedEnum{unknownEnumCounter++}", config.EnumNamingConvention, false);
                 LogWarn($"Unnamed enum, {cppEnum.FormatLocationAttribute()}");
                 cppName = csName;
                 if (string.IsNullOrEmpty(cppPrefixName))

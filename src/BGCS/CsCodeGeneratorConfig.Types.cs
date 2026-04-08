@@ -644,7 +644,13 @@ namespace BGCS
         /// <returns>Result produced by <c>GetDelegateName</c>.</returns>
         public string GetDelegateName(string name)
         {
-            return GetCsCleanNameWithConvention(name, DelegateNamingConvention, false);
+            string newName = NamingHelper.ConvertTo(name, DelegateNamingConvention);
+            foreach (var item in NameMappings)
+            {
+                newName = newName.Replace(item.Key, item.Value, StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            return newName;
         }
 
         /// <summary>
@@ -755,7 +761,7 @@ namespace BGCS
                 sb.Append(part);
             }
 
-            return sb.ToString();
+            return NamingHelper.ConvertTo(sb.ToString(), FunctionNamingConvention);
         }
 
         /// <summary>
@@ -1047,8 +1053,8 @@ namespace BGCS
             }
 
             string prettyName = sb.ToString();
-
-            return char.IsNumber(prettyName[0]) ? parts[^1].ToCamelCase() + prettyName : prettyName;
+            string finalName = char.IsNumber(prettyName[0]) ? parts[^1].ToCamelCase() + prettyName : prettyName;
+            return NamingHelper.ConvertTo(finalName, EnumItemNamingConvention);
         }
 
         /// <summary>
@@ -1107,7 +1113,8 @@ namespace BGCS
                 sb.Append(value);
 
             string prettyName = sb.ToString();
-            return (char.IsNumber(prettyName[0])) ? prefixParts[^1].ToCamelCase() + prettyName : prettyName;
+            string finalName = (char.IsNumber(prettyName[0])) ? prefixParts[^1].ToCamelCase() + prettyName : prettyName;
+            return NamingHelper.ConvertTo(finalName, ExtensionNamingConvention);
         }
 
         /// <summary>

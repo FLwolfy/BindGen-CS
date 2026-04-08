@@ -1,0 +1,9 @@
+{
+  "Contains": [
+    "ApplyCbNative",
+    "delegate*<int, int> cb"
+  ],
+  "NotContains": [
+    "void* cb"
+  ]
+}

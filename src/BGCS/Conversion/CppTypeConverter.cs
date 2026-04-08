@@ -279,6 +279,11 @@
 
         private AnalysisResult ResolveTypedef(CppTypedef typedef)
         {
+            if (!config.GenerateDelegates && typedef.ElementType.IsDelegate(out var delegateType))
+            {
+                return new() { BaseType = config.GetDelegatePointerType(delegateType!) };
+            }
+
             if (typeDefToEnum.TryGetValue(typedef.Name, out var cppEnum))
             {
                 return new() { BaseType = GetMapping(cppEnum) };

@@ -1,0 +1,9 @@
+{
+  "Property": "FunctionTableEntries",
+  "Expected": [
+    {
+      "Index": 7,
+      "EntryPoint": "sample_add"
+    }
+  ]
+}

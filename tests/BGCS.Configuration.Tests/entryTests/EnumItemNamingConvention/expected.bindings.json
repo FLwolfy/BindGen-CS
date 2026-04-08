@@ -1,11 +1,11 @@
 {
   "Contains": [
     "enum ColorMode",
-    "one = 1",
-    "two = 2"
+    "one = unchecked(1)",
+    "two = unchecked(2)"
   ],
   "NotContains": [
-    "One = 1",
-    "Two = 2"
+    "One = unchecked(1)",
+    "Two = unchecked(2)"
   ]
 }

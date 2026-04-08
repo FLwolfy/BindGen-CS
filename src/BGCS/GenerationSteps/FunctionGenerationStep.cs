@@ -4,10 +4,12 @@
     using BGCS.Core.Collections;
     using BGCS.Core.CSharp;
     using BGCS.CppAst.Model.Declarations;
+    using BGCS.CppAst.Model.Metadata;
     using BGCS.CppAst.Model.Types;
     using BGCS.FunctionGeneration;
     using BGCS.FunctionGeneration.ParameterWriters;
     using BGCS.Metadata;
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
@@ -169,6 +171,7 @@
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;
+            SeedAutoSquashedTypedefMappings(compilation);
             string folder = Path.Combine(outputPath, "Functions");
             if (Directory.Exists(folder))
             {
@@ -207,8 +210,8 @@
                     CppPrimitiveKind returnKind = cppFunction.ReturnType.GetPrimitiveKind();
 
                     bool boolReturn = returnCsName == "bool";
-                    var argumentsString = config.GetParameterSignature(cppFunction.Parameters, false, config.GenerateMetadata);
-                    var headerId = $"{csName}({config.GetParameterSignature(cppFunction.Parameters, false, false, false)})";
+                    var argumentsString = config.GetParameterSignature(cppFunction.Parameters, false, config.GenerateMetadata, true, true);
+                    var headerId = $"{csName}({config.GetParameterSignature(cppFunction.Parameters, false, false, false, true)})";
                     var header = $"{returnCsName} {csName}Native({argumentsString})";
 
                     if (FilterNativeFunction(context, cppFunction, headerId))
@@ -351,6 +354,80 @@
                     }
                 }
             }
+        }
+
+        private void SeedAutoSquashedTypedefMappings(CppCompilation compilation)
+        {
+            if (!config.AutoSquashTypedef)
+            {
+                return;
+            }
+
+            Dictionary<string, CppTypedef> typedefMap = new(StringComparer.Ordinal);
+            for (int i = 0; i < compilation.Typedefs.Count; i++)
+            {
+                CppTypedef typedef = compilation.Typedefs[i];
+                if (!typedefMap.ContainsKey(typedef.Name))
+                {
+                    typedefMap.Add(typedef.Name, typedef);
+                }
+            }
+
+            HashSet<string> visiting = new(StringComparer.Ordinal);
+            for (int i = 0; i < compilation.Typedefs.Count; i++)
+            {
+                CppTypedef typedef = compilation.Typedefs[i];
+                if (TryResolveTypedefTerminalType(typedef.ElementType, typedefMap, visiting, out string? mapped) &&
+                    !string.IsNullOrWhiteSpace(mapped))
+                {
+                    config.TypeMappings[typedef.Name] = mapped;
+                }
+            }
+        }
+
+        private bool TryResolveTypedefTerminalType(
+            CppType type,
+            Dictionary<string, CppTypedef> typedefMap,
+            HashSet<string> visiting,
+            out string? mapped)
+        {
+            if (type is CppTypedef typedef)
+            {
+                if (!visiting.Add(typedef.Name))
+                {
+                    mapped = null;
+                    return false;
+                }
+
+                try
+                {
+                    if (typedefMap.TryGetValue(typedef.Name, out CppTypedef? realTypedef))
+                    {
+                        return TryResolveTypedefTerminalType(realTypedef.ElementType, typedefMap, visiting, out mapped);
+                    }
+
+                    return TryResolveTypedefTerminalType(typedef.ElementType, typedefMap, visiting, out mapped);
+                }
+                finally
+                {
+                    visiting.Remove(typedef.Name);
+                }
+            }
+
+            if (type is CppPrimitiveType primitiveType)
+            {
+                mapped = config.GetCsTypeName(primitiveType);
+                return true;
+            }
+
+            if (type is CppEnum cppEnum)
+            {
+                mapped = config.GetCsCleanName(cppEnum.Name);
+                return true;
+            }
+
+            mapped = null;
+            return false;
         }
 
         protected virtual void GenerateVariations(CppFunction cppFunction, CsFunctionOverload overload)

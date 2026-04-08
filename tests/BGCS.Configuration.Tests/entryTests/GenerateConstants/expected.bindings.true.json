@@ -1,0 +1,6 @@
+{
+  "Contains": [
+    "public const int SampleFlag = 7;"
+  ],
+  "NotContains": []
+}

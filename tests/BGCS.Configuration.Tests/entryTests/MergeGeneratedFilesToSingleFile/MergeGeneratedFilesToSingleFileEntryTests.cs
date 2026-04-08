@@ -12,4 +12,13 @@ public class MergeGeneratedFilesToSingleFileEntryTests : ConfigurationEntryTestB
         AssertGenerationSucceeded(output);
         AssertExpected(output);
     }
+
+    [Fact]
+    public void MergeGeneratedFilesToSingleFile_AlternateConfig_ShouldMatchExpected()
+    {
+        using var output = Generate("config.alt.json", ["header.h"], ["header.h"]);
+        PrintBindings(output);
+        AssertGenerationSucceeded(output);
+        AssertExpected(output, "expected.alt.json", "expected.bindings.alt.json");
+    }
 }

@@ -1,9 +1,9 @@
 {
   "Contains": [
     "partial class Extensions",
-    "KeepExt("
+    "public static void KeepExt(this"
   ],
   "NotContains": [
-    "DropExt("
+    "public static void DropExt(this"
   ]
 }

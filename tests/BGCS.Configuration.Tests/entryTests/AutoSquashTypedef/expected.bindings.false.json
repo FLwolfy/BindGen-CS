@@ -1,7 +1,7 @@
 {
   "Contains": [
     "using BaseInt = int;",
-    "using AliasInt = BaseInt;",
+    "using AliasInt = int;",
     "EntryPoint = \"alias_add\"",
     "AliasAddNative(AliasInt value)"
   ],

@@ -6,7 +6,7 @@
   "ImportType": "DllImport",
   "GenerateExtensions": true,
   "GenerateRuntimeSource": false,
-  "GenerateFunctions": false,
+  "GenerateFunctions": true,
   "AllowedExtensions": [
     "keep_ext"
   ]
