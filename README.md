@@ -83,9 +83,9 @@ Single-file/runtime behavior summary:
 
 ### Full Documents
 
-- [configuration.md](docs/configuration.md)
-- [api.md](docs/api.md)
-- [testing.md](docs/testing.md)
+- [Basic API Usage](docs/api.md)
+- [Config Settings for BGCS](docs/config.md)
+- [Config Settings for Cpp2C](docs/cpp2c.config.md)
 
 ## Project Layout
 

@@ -15,6 +15,13 @@ run_tests() {
   dotnet test "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-build
 }
 
+discover_test_projects() {
+  find "${ROOT_DIR}/tests" -type f -name "*.csproj" \
+    ! -path "*/bin/*" \
+    ! -path "*/obj/*" \
+    | sort
+}
+
 if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
   log "dotnet restore BindGen-CS.sln"
   dotnet restore "${ROOT_DIR}/BindGen-CS.sln"
@@ -23,28 +30,25 @@ if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
   dotnet build "${ROOT_DIR}/BindGen-CS.sln" --configuration "${CONFIGURATION}" --no-restore
 fi
 
-log "Layer 1: Core component tests"
-run_tests "tests/BGCS.Core.Tests/BGCS.Core.Tests.csproj"
-run_tests "tests/BGCS.CppAst.Tests/BGCS.CppAst.Tests.csproj"
-run_tests "tests/BGCS.Language.Tests/BGCS.Language.Tests.csproj"
-run_tests "tests/BGCS.Runtime.Tests/BGCS.Runtime.Tests.csproj"
+log "Layer 1: Auto-discovered test projects under tests/"
+mapfile -t TEST_PROJECTS < <(discover_test_projects)
 
-log "Layer 2: BGCS generator logic (metadata, patch, function generation, regression)"
-run_tests "tests/BGCS.Tests/BGCS.Tests.csproj"
-run_tests "tests/BGCS.Patching.Tests/BGCS.Patching.Tests.csproj"
+if [[ "${#TEST_PROJECTS[@]}" -eq 0 ]]; then
+  log "No test projects found under tests/"
+  exit 1
+fi
 
-log "Layer 3: Generated code compile/runtime validation"
-run_tests "tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj"
-
-log "Layer 4: Cpp2C bridge generation validation"
-run_tests "tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj"
+for project_path in "${TEST_PROJECTS[@]}"; do
+  project_relative="${project_path#${ROOT_DIR}/}"
+  run_tests "${project_relative}"
+done
 
 DEMO_DIR="${ROOT_DIR}/demo/BGCS.Demo"
 DEMO_BIN_DIR="${DEMO_DIR}/bin/${CONFIGURATION}/generated"
 RUNTIME_GENERATED_OUT="${DEMO_BIN_DIR}/OutputRuntimeGenerated"
 RUNTIME_NOTGENERATED_OUT="${DEMO_BIN_DIR}/OutputRuntimeNotGenerated"
 
-log "Layer 5: End-to-end demo generation checks"
+log "Layer 2: End-to-end demo generation checks"
 pushd "${DEMO_DIR}" > /dev/null
 
 rm -rf "${DEMO_BIN_DIR}"

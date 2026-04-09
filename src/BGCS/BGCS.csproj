@@ -12,6 +12,8 @@
     <Description>BindGen-CS core package for generating C# interop bindings from C headers.</Description>
     <PackageTags>interop;bindings;generator;native</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/FLwolfy/BindGen-CS</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/FLwolfy/BindGen-CS</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -34,5 +36,9 @@
                       Exclude="..\BGCS.Runtime\bin\**\*;..\BGCS.Runtime\obj\**\*">
       <LogicalName>BGCS.RuntimeSources.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
