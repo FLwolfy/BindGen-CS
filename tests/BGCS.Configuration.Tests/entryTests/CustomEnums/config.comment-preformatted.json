@@ -1,0 +1,28 @@
+{
+  "Namespace": "EntryTests.Generated",
+  "ApiName": "EntryApi",
+  "LibName": "entry-lib",
+  "MergeGeneratedFilesToSingleFile": true,
+  "ImportType": "DllImport",
+  "GenerateExtensions": false,
+  "GenerateRuntimeSource": false,
+  "CustomEnums": [
+    {
+      "CppName": "custom_mode",
+      "Name": "CustomMode",
+      "Attributes": [],
+      "Comment": "/// <summary>\n/// Preformatted enum comment\n/// </summary>",
+      "BaseType": "int",
+      "Items": [
+        {
+          "CppName": "CUSTOM_MODE_ONE",
+          "CppValue": "1",
+          "Name": "One",
+          "Value": "1",
+          "Attributes": [],
+          "Comment": "// Preformatted item comment"
+        }
+      ]
+    }
+  ]
+}

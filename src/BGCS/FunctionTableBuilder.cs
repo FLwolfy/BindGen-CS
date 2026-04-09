@@ -1,6 +1,7 @@
 ﻿namespace BGCS
 {
     using BGCS.Metadata;
+    using System.Linq;
     using System.Text;
 
     /// <summary>
@@ -39,12 +40,32 @@
         /// </summary>
         public void Append(List<CsFunctionTableEntry> functionTableEntries)
         {
+            HashSet<int> usedIndices = [.. entries.Select(x => x.Index)];
+
             foreach (var entry in functionTableEntries)
             {
-                entryPointToIndex.Add(entry.EntryPoint, entry.Index);
+                if (entryPointToIndex.ContainsKey(entry.EntryPoint))
+                {
+                    continue;
+                }
+
+                int resolvedIndex = entry.Index;
+                if (resolvedIndex < 0 || usedIndices.Contains(resolvedIndex))
+                {
+                    resolvedIndex = index;
+                    while (usedIndices.Contains(resolvedIndex))
+                    {
+                        resolvedIndex++;
+                    }
+                }
+
+                entry.Index = resolvedIndex;
+
+                entryPointToIndex.Add(entry.EntryPoint, resolvedIndex);
                 entries.Add(entry);
-                sb.AppendLine($"funcTable.Load({entry.Index}, \"{entry.EntryPoint}\");");
-                index = Math.Max(index, entry.Index + 1);
+                usedIndices.Add(resolvedIndex);
+                sb.AppendLine($"funcTable.Load({resolvedIndex}, \"{entry.EntryPoint}\");");
+                index = Math.Max(index, resolvedIndex + 1);
             }
         }
 

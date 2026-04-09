@@ -1,0 +1,8 @@
+{
+  "Contains": [
+    "/// Plain enum comment",
+    "/// Plain item comment",
+    "public enum CustomMode"
+  ],
+  "NotContains": []
+}

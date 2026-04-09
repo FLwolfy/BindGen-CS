@@ -46,20 +46,36 @@
         /// <returns>Result produced by <c>Load</c>.</returns>
         public static CsCodeGeneratorConfig Load(string file, IConfigComposer? composer = null)
         {
+            string fullFilePath = Path.GetFullPath(file);
+            string? configDirectory = Path.GetDirectoryName(fullFilePath);
+            string previousCwd = Environment.CurrentDirectory;
+
             CsCodeGeneratorConfig result;
-            if (File.Exists(file))
+            if (File.Exists(fullFilePath))
             {
-                result = JsonConvert.DeserializeObject<CsCodeGeneratorConfig>(File.ReadAllText(file)) ?? new();
+                result = JsonConvert.DeserializeObject<CsCodeGeneratorConfig>(File.ReadAllText(fullFilePath)) ?? new();
             }
             else
             {
                 result = new();
             }
 
-            result.Save(file);
+            try
+            {
+                if (!string.IsNullOrEmpty(configDirectory))
+                {
+                    Environment.CurrentDirectory = configDirectory;
+                }
 
-            composer ??= new ConfigComposer();
-            composer.Compose(ref result);
+                result.Save(fullFilePath);
+
+                composer ??= new ConfigComposer();
+                composer.Compose(ref result);
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previousCwd;
+            }
 
             return result;
         }

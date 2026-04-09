@@ -11,6 +11,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
 
     /// <summary>
     /// Defines the public class <c>EnumGenerationStep</c>.
@@ -186,7 +187,7 @@
 
                 for (int i = 0; i < config.CustomEnums.Count; i++)
                 {
-                    var csEnum = config.CustomEnums[i];
+                    var csEnum = NormalizeCustomEnumComments(config.CustomEnums[i]);
                     WriteEnumFile(result, folder, filePath, csEnum);
                 }
             }
@@ -195,7 +196,7 @@
                 using var writer = new CsSplitCodeWriter(filePath, config.Namespace, SetupEnumUsings(), config.HeaderInjector, 1);
                 GenContext context = new(result, filePath, writer);
 
-                List<CsEnumMetadata> enums = [.. config.CustomEnums];
+                List<CsEnumMetadata> enums = [.. config.CustomEnums.Select(NormalizeCustomEnumComments)];
 
                 for (int i = 0; i < compilation.Enums.Count; i++)
                 {
@@ -423,6 +424,73 @@
             writer.WriteLines(csEnumItem.Comment);
             writer.WriteLines(csEnumItem.Attributes);
             writer.WriteLine($"{csEnumItem.Name} = {csEnumItem.Value},");
+        }
+
+        private CsEnumMetadata NormalizeCustomEnumComments(CsEnumMetadata source)
+        {
+            CsEnumMetadata normalized = source.Clone();
+            normalized.Comment = NormalizeCommentText(source.Comment);
+
+            for (int i = 0; i < normalized.Items.Count; i++)
+            {
+                normalized.Items[i].Comment = NormalizeCommentText(normalized.Items[i].Comment);
+            }
+
+            return normalized;
+        }
+
+        private string? NormalizeCommentText(string? comment)
+        {
+            if (comment == null)
+            {
+                return null;
+            }
+
+            if (IsAlreadyFormattedAsComment(comment))
+            {
+                return comment;
+            }
+
+            return config.WriteCsSummary(comment);
+        }
+
+        private static bool IsAlreadyFormattedAsComment(string comment)
+        {
+            string trimmed = comment.Trim();
+            if (trimmed.Length == 0)
+            {
+                return false;
+            }
+
+            if (trimmed.StartsWith("///", StringComparison.Ordinal) ||
+                trimmed.StartsWith("//", StringComparison.Ordinal) ||
+                trimmed.StartsWith("/*", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            string[] lines = trimmed.Split('\n');
+            bool hasNonEmptyLine = false;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i].Trim();
+                if (line.Length == 0)
+                {
+                    continue;
+                }
+
+                hasNonEmptyLine = true;
+                if (!line.StartsWith("///", StringComparison.Ordinal) &&
+                    !line.StartsWith("//", StringComparison.Ordinal) &&
+                    !line.StartsWith("/*", StringComparison.Ordinal) &&
+                    !line.StartsWith("*/", StringComparison.Ordinal) &&
+                    !line.StartsWith("*", StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return hasNonEmptyLine;
         }
     }
 }

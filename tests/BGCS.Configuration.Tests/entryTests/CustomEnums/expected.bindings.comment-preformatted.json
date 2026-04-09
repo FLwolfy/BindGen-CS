@@ -1,0 +1,10 @@
+{
+  "Contains": [
+    "/// Preformatted enum comment",
+    "// Preformatted item comment",
+    "public enum CustomMode"
+  ],
+  "NotContains": [
+    "/// Preformatted item comment"
+  ]
+}
