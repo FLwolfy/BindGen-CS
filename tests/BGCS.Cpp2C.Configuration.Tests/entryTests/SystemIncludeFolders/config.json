@@ -1,0 +1,6 @@
+{
+  "NamePrefix": "Sys_",
+  "SystemIncludeFolders": [
+    "sysincludes"
+  ]
+}

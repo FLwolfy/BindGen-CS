@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "typedef struct Args_Counter Args_Counter;",
+    "Args_Counter_Add",
+    "#define Args_API(type)"
+  ]
+}

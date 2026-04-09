@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "typedef struct Api_Counter Api_Counter;",
+    "Api_Counter_Add",
+    "#define Api_API(type)"
+  ]
+}

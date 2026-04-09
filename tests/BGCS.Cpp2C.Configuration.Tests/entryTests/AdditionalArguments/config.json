@@ -1,0 +1,6 @@
+{
+  "NamePrefix": "Args_",
+  "AdditionalArguments": [
+    "-DFROM_ADDITIONAL_ARGUMENTS=1"
+  ]
+}

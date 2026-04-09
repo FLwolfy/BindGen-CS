@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "typedef struct Sys_Counter Sys_Counter;",
+    "Sys_Counter_Add",
+    "#define Sys_API(type)"
+  ]
+}

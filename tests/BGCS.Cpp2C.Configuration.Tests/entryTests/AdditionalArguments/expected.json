@@ -1,0 +1,6 @@
+{
+  "Property": "AdditionalArguments",
+  "Expected": [
+    "-DFROM_ADDITIONAL_ARGUMENTS=1"
+  ]
+}

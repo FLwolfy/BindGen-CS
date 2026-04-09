@@ -1,0 +1,7 @@
+{
+  "Contains": [
+    "typedef struct Wrapped_Counter Wrapped_Counter;",
+    "Wrapped_Counter_Add",
+    "#define Wrapped_API(type)"
+  ]
+}

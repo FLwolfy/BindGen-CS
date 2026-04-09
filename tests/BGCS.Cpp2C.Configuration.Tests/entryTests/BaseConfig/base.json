@@ -1,0 +1,9 @@
+{
+  "NamePrefix": "Base_",
+  "IncludeFolders": [
+    "includes"
+  ],
+  "AdditionalArguments": [
+    "-DFROM_BASE=1"
+  ]
+}
