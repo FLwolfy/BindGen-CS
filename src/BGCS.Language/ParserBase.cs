@@ -38,7 +38,8 @@
                 return new ParserResult(null, diagnostics);
 
             RootNode root = new();
-            ParserContext context = new(root, options, analyzers, lexerResult.Tokens, diagnostics);
+            List<Token> tokens = lexerResult.Tokens ?? throw new InvalidOperationException("Lexer returned no tokens without an error diagnostic.");
+            ParserContext context = new(root, options, analyzers, tokens, diagnostics);
 
             while (!context.IsEnd)
             {

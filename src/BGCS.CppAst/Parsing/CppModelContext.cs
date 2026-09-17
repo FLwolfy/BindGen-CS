@@ -23,6 +23,7 @@ public unsafe partial class CppModelContext
     private CppContainerContext rootContainerContext = null!;
     private readonly TypedefResolver typedefResolver = new();
     private readonly Dictionary<CursorKey, CppTemplateParameterType> objCTemplateParameterTypes;
+    private readonly Dictionary<(ResolverScope Scope, uint Hash, CXCursorKind Kind), List<CursorKey>> cursorKeys;
 
     /// <summary>
     /// Initializes a new instance of <see cref="CppModelContext"/>.
@@ -33,6 +34,7 @@ public unsafe partial class CppModelContext
         containers = [];
         RootCompilation = new(translationUnit);
         objCTemplateParameterTypes = [];
+        cursorKeys = [];
         userRootContainerContext = new(RootCompilation, CppContainerContextType.User, CppVisibility.Default);
         systemRootContainerContext = new(RootCompilation.System, CppContainerContextType.System, CppVisibility.Default);
     }
@@ -142,7 +144,33 @@ public unsafe partial class CppModelContext
     /// </summary>
     public CursorKey GetCursorKey(CXCursor cursor)
     {
-        return new(rootContainerContext, cursor);
+        while (cursor.Kind == CXCursorKind.CXCursor_LinkageSpec)
+        {
+            cursor = cursor.SemanticParent;
+        }
+        ResolverScope scope = rootContainerContext.Type == CppContainerContextType.User
+            ? ResolverScope.User
+            : ResolverScope.System;
+        var cacheKey = (scope, cursor.Hash, cursor.Kind);
+        if (cursorKeys.TryGetValue(cacheKey, out List<CursorKey>? bucket))
+        {
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                if (clang.equalCursors(bucket[i].cursor, cursor) != 0)
+                {
+                    return bucket[i];
+                }
+            }
+        }
+        else
+        {
+            bucket = [];
+            cursorKeys.Add(cacheKey, bucket);
+        }
+
+        CursorKey key = new(rootContainerContext, cursor);
+        bucket.Add(key);
+        return key;
     }
 
     /// <summary>

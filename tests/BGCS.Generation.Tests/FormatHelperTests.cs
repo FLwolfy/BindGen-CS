@@ -135,13 +135,15 @@ public class FormatHelperTests
     }
 
     [Fact]
-    public void GetPrimitiveKind_ShouldReportPointerUnderlyingPrimitive()
+    public void GetPrimitiveKind_ShouldReportDirectAndPointerUnderlyingPrimitive()
     {
         CppType array = new CppArrayType(default, new CppPointerType(default, CppPrimitiveType.WChar), 3);
 
-        CppPrimitiveKind kind = array.GetPrimitiveKind();
+        CppPrimitiveKind directKind = CppPrimitiveType.Int.GetPrimitiveKind();
+        CppPrimitiveKind nestedKind = array.GetPrimitiveKind();
 
-        Assert.Equal(CppPrimitiveKind.WChar, kind);
+        Assert.Equal(CppPrimitiveKind.Int, directKind);
+        Assert.Equal(CppPrimitiveKind.WChar, nestedKind);
     }
 
     [Fact]
@@ -161,7 +163,7 @@ public class FormatHelperTests
         {
             CppParserOptions options = new() { ParseMacros = false, ParseSystemIncludes = false, ParserKind = CppParserKind.C };
             CppCompilation compilation = CppParser.ParseFile(header, options);
-            CppClass objClass = Assert.Single(compilation.Classes.Where(c => c.Name == "Obj"));
+            CppClass objClass = Assert.Single(compilation.Classes, c => c.Name == "Obj");
 
             bool usedAsPointer = objClass.IsUsedAsPointer(compilation, out var depths);
 

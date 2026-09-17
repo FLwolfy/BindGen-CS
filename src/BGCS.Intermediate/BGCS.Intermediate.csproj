@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PackageId>BGCS.Intermediate</PackageId>
+    <Authors>FLwolfy</Authors>
+    <Description>Dependency-free binding intermediate representation shared by BindGen-CS emitters.</Description>
+    <PackageTags>interop;bindings;generator;ir</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/FLwolfy/BindGen-CS</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/FLwolfy/BindGen-CS</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\BGCS\Intermediate\*.cs" Link="Intermediate\%(Filename)%(Extension)" />
+    <Compile Include="..\BGCS\Emission\IBindingEmitter.cs" Link="Emission\IBindingEmitter.cs" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

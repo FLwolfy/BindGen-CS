@@ -39,7 +39,7 @@ public sealed class CppEnumItem : CppDeclaration, ICppMember, ICppAttributeConta
     /// <summary>
     /// Gets the value of this enum item as an expression.
     /// </summary>
-    public CppExpression ValueExpression { get; set; }
+    public CppExpression? ValueExpression { get; set; }
 
     /// <inheritdoc />
     public List<CppAttribute> Attributes { get; } = [];

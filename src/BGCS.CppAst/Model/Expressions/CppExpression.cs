@@ -18,6 +18,7 @@ public abstract class CppExpression : CppElement
     protected CppExpression(CXCursor cursor, CppExpressionKind kind) : base(cursor)
     {
         Kind = kind;
+        Arguments = [];
     }
 
     /// <summary>
@@ -67,6 +68,7 @@ public class CppRawExpression : CppExpression
     public CppRawExpression(CXCursor cursor, CppExpressionKind kind) : base(cursor, kind)
     {
         Tokens = [];
+        Text = string.Empty;
     }
 
     /// <summary>
@@ -147,7 +149,7 @@ public class CppBinaryExpression : CppExpression
     /// <summary>
     /// The binary operator as a string.
     /// </summary>
-    public string Operator { get; set; }
+    public string Operator { get; set; } = string.Empty;
 
     /// <inheritdoc />
     public override string ToString()
@@ -185,7 +187,7 @@ public class CppUnaryExpression : CppExpression
     /// <summary>
     /// The unary operator as a string.
     /// </summary>
-    public string Operator { get; set; }
+    public string Operator { get; set; } = string.Empty;
 
     /// <inheritdoc />
     public override string ToString()

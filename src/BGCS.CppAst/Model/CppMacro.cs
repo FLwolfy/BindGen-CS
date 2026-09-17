@@ -25,6 +25,8 @@ public class CppMacro : CppElement, ICppMember
     {
         Name = name;
         Tokens = [];
+        Parameters = [];
+        Value = string.Empty;
     }
 
     /// <summary>

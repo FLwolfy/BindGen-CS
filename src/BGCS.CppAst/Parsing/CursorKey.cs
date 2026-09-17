@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Parsing;
+
 /// <summary>
 /// Defines the public struct <c>CursorKey</c>.
 /// </summary>
@@ -63,17 +64,15 @@ public struct CursorKey : IEquatable<CursorKey>
     /// <summary>
     /// Executes public operation <c>Equals</c>.
     /// </summary>
-    public override readonly bool Equals(object? obj)
-    {
-        return obj is CursorKey key && Equals(key);
-    }
+    public override readonly bool Equals(object? obj) => obj is CursorKey key && Equals(key);
 
     /// <summary>
     /// Executes public operation <c>Equals</c>.
     /// </summary>
     public readonly bool Equals(CursorKey other)
     {
-        return other.scope == scope && other.name == name && other.cursor.IsAnonymous == cursor.IsAnonymous && !(cursor.IsAnonymous && cursor.Hash != other.cursor.Hash);
+        return other.scope == scope && other.name == name && other.cursor.IsAnonymous == cursor.IsAnonymous &&
+            !(cursor.IsAnonymous && cursor.Hash != other.cursor.Hash);
     }
 
     /// <summary>
@@ -87,45 +86,39 @@ public struct CursorKey : IEquatable<CursorKey>
     /// <summary>
     /// Executes public operation <c>Member</c>.
     /// </summary>
-    public static bool operator ==(CursorKey left, CursorKey right)
-    {
-        return left.Equals(right);
-    }
+    public static bool operator ==(CursorKey left, CursorKey right) => left.Equals(right);
 
     /// <summary>
     /// Executes public operation <c>Member</c>.
     /// </summary>
-    public static bool operator !=(CursorKey left, CursorKey right)
-    {
-        return !(left == right);
-    }
-    
+    public static bool operator !=(CursorKey left, CursorKey right) => !left.Equals(right);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static unsafe int MbStrLen(byte* ptr)
     {
-        if ((IntPtr) ptr == IntPtr.Zero)
+        if ((IntPtr)ptr == IntPtr.Zero)
             return 0;
         int num1 = 0;
-        while (*ptr != (byte) 0)
+        while (*ptr != 0)
         {
             byte num2 = *ptr;
-            if (((int) num2 & 128 /*0x80*/) == 0)
+            if ((num2 & 128) == 0)
                 ++ptr;
-            else if (((int) num2 & 224 /*0xE0*/) == 192 /*0xC0*/)
+            else if ((num2 & 224) == 192)
             {
-                if (((int) ptr[1] & 192 /*0xC0*/) != 128 /*0x80*/)
+                if ((ptr[1] & 192) != 128)
                     return -1;
                 ptr += 2;
             }
-            else if (((int) num2 & 240 /*0xF0*/) == 224 /*0xE0*/)
+            else if ((num2 & 240) == 224)
             {
-                if (((int) ptr[1] & 192 /*0xC0*/) != 128 /*0x80*/ || ((int) ptr[2] & 192 /*0xC0*/) != 128 /*0x80*/)
+                if ((ptr[1] & 192) != 128 || (ptr[2] & 192) != 128)
                     return -1;
                 ptr += 3;
             }
             else
             {
-                if (((int) num2 & 248) != 240 /*0xF0*/ || ((int) ptr[1] & 192 /*0xC0*/) != 128 /*0x80*/ || ((int) ptr[2] & 192 /*0xC0*/) != 128 /*0x80*/ || ((int) ptr[3] & 192 /*0xC0*/) != 128 /*0x80*/)
+                if ((num2 & 248) != 240 || (ptr[1] & 192) != 128 || (ptr[2] & 192) != 128 || (ptr[3] & 192) != 128)
                     return -1;
                 ptr += 4;
             }

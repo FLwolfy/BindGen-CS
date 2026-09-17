@@ -4,18 +4,21 @@ This document focuses on BGCS runtime APIs and extension points: generator pipel
 
 ## 1. Pipeline Order
 
-`CsCodeGenerator.Generate*` runs in this order:
+`CsCodeGenerator` is the compatibility facade. `BindingGenerationPipeline` owns the application sequence:
 
-1. `ConfigureCore` (initialize preprocess steps, generation steps, function generator)
-2. `ParseFiles` (header parsing)
-3. `PreProcessSteps`
-4. `GenerationSteps`
-5. `PatchEngine.ApplyPostPatches`
-6. `RewriteRuntimeUsings`
-7. Optional `MergeGeneratedFilesToSingleFile`
-8. Optional `WriteStandaloneRuntimeFile` when `GenerateRuntimeSource=true`
+1. validate the composed configuration;
+2. parse headers and report Clang diagnostics;
+3. resolve the allowed-header closure;
+4. run preprocess steps and pre-patches;
+5. build shared `BindingModule` analysis data;
+6. run configured generation/emission steps in a staging directory;
+7. apply post-patches;
+8. rewrite Runtime imports and remove empty generated declarations;
+9. compose optional SingleFile output through Roslyn;
+10. emit optional standalone Runtime source;
+11. atomically commit output and publish `BindingGenerationResult`.
 
-Key detail: post-patches run before file merge and before `Runtime.cs` generation.
+Post-patches run before SingleFile composition and Runtime emission. A failed stage does not replace last-good output.
 
 ## 2. Core Types
 
@@ -23,7 +26,7 @@ Key detail: post-patches run before file merge and before `Runtime.cs` generatio
 
 Main behavior switchboard:
 
-- output: `MergeGeneratedFilesToSingleFile` (merged output fixed to `Bindings.cs`)
+- output: `OutputPath`, `MergeGeneratedFilesToSingleFile`, `SingleFileOutputName` (defaults to `Bindings.cs`)
 - runtime: `GenerateRuntimeSource`, `RuntimeNamespace`
 - import mode: `ImportType` (`DllImport` / `LibraryImport` / `FunctionTable`)
 - generation toggles: `GenerateConstants/Enums/Functions/Types/Handles/Delegates/Extensions`
@@ -39,6 +42,9 @@ Serialization/merge:
 
 Main execution API:
 
+- `GenerateConfigured(...)` for one-command config-driven generation with config-relative paths
+- `AnalyzeConfigured()` for parse/IR validation without output replacement
+- `LastResult` for `BindingModule`, diagnostics, success state, and emitted files
 - `Generate(...)` overloads for single/multi header and custom parser options
 - step composition: `GetGenerationStep<T>()`, `AddGenerationStep(...)`, `OverwriteGenerationStep(...)`
 - hooks: `PatchEngine`, `FunctionGenerator`
@@ -49,9 +55,22 @@ Main execution API:
 - `GeneratorBuilder`: fluent setup, global/local patch registration, post-config callbacks
 - `BatchGenerator`: batch orchestration with explicit `Generate(...)` and `Finish()`
 
-## 3. Metadata APIs (`BGCS.Metadata`)
+## 3. Shared IR and C++ Bridge Results
 
-## 3.1 `CsCodeGeneratorMetadata`
+`BGCS.Intermediate` is a zero-BGCS-dependency contract assembly containing:
+
+- `BindingModule`: one analyzed native module and target ABI;
+- `BindingType` / `BindingField` / `BindingEnumMember`;
+- `BindingFunction` / `BindingParameter`;
+- `MarshallingPlan`: strategy, ownership, encoding, length/capacity relationships, and cleanup;
+- `BindingDiagnostic` and `BindingGenerationResult`;
+- `IBindingEmitter` and `EmissionContext`.
+
+`BGCS.Facade.BindingGenerator.Generate(...)` returns a `BindingGenerationResult`. `Cpp2CCodeGenerator.LastResult` exposes the same result contract after C++ bridge generation. `BGCS.Emission.CSharpEmitter` and `BGCS.Cpp2C.Emission.CBridgeEmitter` both implement `IBindingEmitter`; the application pipelines also route compatibility generation passes through these emitter boundaries.
+
+## 4. Metadata APIs (`BGCS.Metadata`)
+
+## 4.1 `CsCodeGeneratorMetadata`
 
 Holds generator state and cross-step outputs:
 
@@ -67,14 +86,14 @@ Main methods:
 - `Clone(shallow = false)`
 - `Save(path)`, `Load(path)`
 
-## 3.2 Metadata Entry Types
+## 4.2 Metadata Entry Types
 
 - `GeneratorMetadataEntry`: base type (`Clone`, `Merge`)
 - `MetadataListEntry<T>`: list-style entry
 - `MetadataDictionaryEntry<TKey, TValue>`: dictionary-style entry
 - `CsFunctionTableMetadata`: validates index/entrypoint consistency during merge
 
-## 4. Patching APIs (`BGCS.Patching`)
+## 5. Patching APIs (`BGCS.Patching`)
 
 Interfaces:
 
@@ -88,9 +107,9 @@ Interfaces:
 
 Guideline: resolve target files from `files` list and use relative paths; avoid hardcoded output paths.
 
-## 5. Function Generation APIs (`BGCS.FunctionGeneration`)
+## 6. Function Generation APIs (`BGCS.FunctionGeneration`)
 
-## 5.1 `FunctionGenerator`
+## 6.1 `FunctionGenerator`
 
 Default composition:
 
@@ -102,20 +121,23 @@ Customization:
 - `AddRule`, `RemoveRule`, `OverwriteRule<T>`
 - `AddStep`, `RemoveStep`, `OverwriteStep<T>`
 
-## 5.2 Rules, Steps, and Parameter Writers
+## 6.2 Rules, Steps, and Parameter Writers
 
 - `FunctionGenRule`: transforms each `CppParameter` into C# parameter forms
 - `FunctionGenStep`: post-processes generated variations
 - `IParameterWriter`: final marshalling code writer with priority-based ordering
 
-## 6. Step Extension APIs
+## 7. Step Extension APIs
 
 - `PreProcessStep`: `Configure`, `PreProcess`
 - `GenerationStep`: `Configure`, `Generate`, `CopyToMetadata`, `CopyFromMetadata`, `Reset`
 
 These are the main points for custom generator pipelines.
 
-## 7. Runtime Strategy
+## 8. Runtime Strategy
+
+`NativeCallback<T>` owns one shared, copy-safe callback lease. `NativeCallbackRegistry<TKey,TDelegate>` manages keyed registrations; replaced/unregistered leases remain retired until native unregister synchronization completes and `ReleaseRetired()` is called, preventing concurrent callback use-after-free. `NativeCallbackExceptionBoundary` converts managed exceptions to fallback results and stores the exception per thread. `NativeAotCallback` exposes static `UnmanagedCallersOnly` thunks without delegates or GCHandles. Delegate-based callbacks must use concrete delegate declarations with an explicit unmanaged calling convention.
+
 
 - Generated bindings use `using {RuntimeNamespace};`
 - `RuntimeNamespace` empty/whitespace defaults to `BGCS.Runtime`
@@ -123,16 +145,16 @@ These are the main points for custom generator pipelines.
 - `GenerateRuntimeSource=false` emits no runtime source
 - Generated runtime source is wrapped with `#if !BGCS_RUNTIME_EXTERNAL` guard
 
-## 8. Test Mapping
+## 9. Test Mapping
 
 - patch behavior: `tests/BGCS.Patching.Tests/*`
 - generation pipeline + compile/runtime semantics: `tests/BGCS.Generation.Tests/*`
 - core unit/parser interop: `tests/BGCS.Tests/*`
 - full matrix entrypoint: `docs/testing.md`
 
-## 9. End-to-End Examples
+## 10. End-to-End Examples
 
-## 9.1 Minimal BGCS Generation
+## 10.1 Minimal BGCS Generation
 
 ```csharp
 using BGCS;
@@ -150,7 +172,7 @@ var gen = new CsCodeGenerator(cfg);
 bool ok = gen.Generate("headers/api.h", "Output");
 ```
 
-## 9.2 Single-File Bindings + Optional `Runtime.cs`
+## 10.2 Single-File Bindings + Optional `Runtime.cs`
 
 ```csharp
 using BGCS;
@@ -162,6 +184,7 @@ var cfg = new CsCodeGeneratorConfig
     LibName = "mylib",
     ImportType = ImportType.FunctionTable,
     MergeGeneratedFilesToSingleFile = true,
+    SingleFileOutputName = "MyApi.Bindings.cs",
     RuntimeNamespace = "My.Runtime", // optional, default BGCS.Runtime
     GenerateRuntimeSource = true // false => no Runtime.cs emitted
 };
@@ -170,7 +193,7 @@ var gen = new CsCodeGenerator(cfg);
 gen.Generate("headers/api.h", "Output");
 ```
 
-## 9.3 Register Pre/Post Patches
+## 10.3 Register Pre/Post Patches
 
 ```csharp
 using BGCS;
@@ -202,7 +225,7 @@ sealed class MyPostPatch : IPostPatch
 }
 ```
 
-## 9.4 Metadata Reuse Across Runs
+## 10.4 Metadata Reuse Across Runs
 
 ```csharp
 using BGCS;
@@ -219,7 +242,7 @@ genB.CopyFrom(meta); // carry previous definitions to avoid duplicates
 genB.Generate("headers/b.h", "OutputB");
 ```
 
-## 9.5 Custom Function Generation Strategy
+## 10.5 Custom Function Generation Strategy
 
 ```csharp
 using BGCS;

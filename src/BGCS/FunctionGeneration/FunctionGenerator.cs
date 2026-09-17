@@ -138,6 +138,15 @@
                 var paramCsTypeName = settings.GetCsTypeName(cppField.Type);
                 var paramCsName = settings.GetParameterName(i, cppField.Name);
                 var direction = cppField.Type.GetDirection();
+                CppType? arrayElementType = null;
+                if (cppField.Type is CppArrayType constructorArray)
+                {
+                    arrayElementType = constructorArray;
+                    while (arrayElementType is CppArrayType nestedArray)
+                        arrayElementType = nestedArray.ElementType;
+                    if (arrayElementType.IsPointerAlias())
+                        paramCsTypeName = "nint*";
+                }
 
                 {
                     if (cppField.Type is CppArrayType arrayType && arrayType.ElementType is CppPointerType pointerType && pointerType.ElementType is CppFunctionType && settings.DelegatesAsVoidPointer)
@@ -172,7 +181,9 @@
                 {
                     if (cppField.Type is CppArrayType arrayType)
                     {
-                        var arrayElementTypeName = settings.GetCsWrappedPointerTypeName(arrayType.ElementType);
+                        string arrayElementTypeName = arrayElementType?.IsPointerAlias() == true
+                            ? "nint"
+                            : settings.GetCsWrappedPointerTypeName(arrayType.ElementType);
                         spanParameterList[i] = new(paramCsName, cppField.Type, new($"Span<{arrayElementTypeName}>", kind), direction, "default", fieldCsName);
                     }
                     else

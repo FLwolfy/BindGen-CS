@@ -123,40 +123,25 @@
         /// <summary>
         /// Executes public operation <c>Read</c>.
         /// </summary>
-        public unsafe void Read(string path)
+        public void Read(string path)
         {
-            var fs = File.OpenRead(path);
-
-            byte* buffer = (byte*)Marshal.AllocHGlobal(4096);
-            int bufferSize = 4096;
-            var span = new Span<byte>(buffer, bufferSize);
-
-            fs.Read(span[..4]);
-            var count = BinaryPrimitives.ReadInt32LittleEndian(span);
-
-            DeflateStream stream = new(fs, CompressionMode.Decompress);
+            using FileStream fs = File.OpenRead(path);
+            Span<byte> header = stackalloc byte[4];
+            fs.ReadExactly(header);
+            int count = BinaryPrimitives.ReadInt32LittleEndian(header);
+            using DeflateStream stream = new(fs, CompressionMode.Decompress);
             for (int i = 0; i < count; i++)
             {
-                stream.Read(span[..4]);
-                var size = BinaryPrimitives.ReadInt32LittleEndian(span);
-                if (size + 4 > bufferSize)
-                {
-                    bufferSize = (size + 4) * 2;
-                    buffer = (byte*)Marshal.ReAllocHGlobal((nint)buffer, bufferSize);
-                    span = new Span<byte>(buffer, bufferSize);
-                }
-                stream.Read(span[..size]);
-                var word = Encoding.Unicode.GetString(span[..size]);
+                stream.ReadExactly(header);
+                int size = BinaryPrimitives.ReadInt32LittleEndian(header);
+                if (size < 0)
+                    throw new InvalidDataException($"Invalid word byte length: {size}.");
+                byte[] buffer = GC.AllocateUninitializedArray<byte>(size);
+                stream.ReadExactly(buffer);
+                string word = Encoding.Unicode.GetString(buffer);
                 if (!words.Contains(word))
-                {
                     words.Add(word);
-                }
             }
-
-            Marshal.FreeHGlobal((nint)buffer);
-
-            stream.Close();
-            fs.Close();
         }
 
         /// <summary>

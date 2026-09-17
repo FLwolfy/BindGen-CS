@@ -1,5 +1,6 @@
 ﻿namespace BGCS
 {
+    using BGCS.Configuration;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
 
@@ -40,6 +41,9 @@
         /// <returns>Result produced by <c>Create</c>.</returns>
         public static readonly JsonSerializer MergeSerializer = JsonSerializer.Create(MergeSerializerSettings);
 
+        [JsonIgnore]
+        internal string? ConfigDirectory { get; private set; }
+
         /// <summary>
         /// Performs the operation implemented by <c>Load</c>.
         /// </summary>
@@ -48,10 +52,10 @@
         {
             string fullFilePath = Path.GetFullPath(file);
             string? configDirectory = Path.GetDirectoryName(fullFilePath);
-            string previousCwd = Environment.CurrentDirectory;
 
+            bool fileExists = File.Exists(fullFilePath);
             CsCodeGeneratorConfig result;
-            if (File.Exists(fullFilePath))
+            if (fileExists)
             {
                 result = JsonConvert.DeserializeObject<CsCodeGeneratorConfig>(File.ReadAllText(fullFilePath)) ?? new();
             }
@@ -60,23 +64,33 @@
                 result = new();
             }
 
-            try
+            if (!fileExists)
             {
-                if (!string.IsNullOrEmpty(configDirectory))
-                {
-                    Environment.CurrentDirectory = configDirectory;
-                }
-
                 result.Save(fullFilePath);
-
-                composer ??= new ConfigComposer();
-                composer.Compose(ref result);
             }
-            finally
+
+            composer ??= new ConfigComposer();
+            if (composer is IConfigComposerContext contextualComposer)
             {
-                Environment.CurrentDirectory = previousCwd;
+                contextualComposer.Compose(ref result, configDirectory ?? Environment.CurrentDirectory);
             }
-
+            else
+            {
+                string previousCwd = Environment.CurrentDirectory;
+                try
+                {
+                    if (!string.IsNullOrEmpty(configDirectory))
+                    {
+                        Environment.CurrentDirectory = configDirectory;
+                    }
+                    composer.Compose(ref result);
+                }
+                finally
+                {
+                    Environment.CurrentDirectory = previousCwd;
+                }
+            }
+            result.ConfigDirectory = configDirectory;
             return result;
         }
 

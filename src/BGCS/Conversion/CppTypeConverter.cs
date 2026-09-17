@@ -2,7 +2,9 @@
 {
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Interfaces;
+    using BGCS.CppAst.Model.Templates;
     using BGCS.CppAst.Model.Types;
+    using BGCS.Platform;
     using System.Text;
 
     /// <summary>
@@ -178,7 +180,7 @@
             }
 
             sb.Append(result.BaseType);
-            while (result.PointerLevel-- != 0)
+            for (int i = 0; i < result.PointerLevel; i++)
             {
                 sb.Append('*');
             }
@@ -268,9 +270,45 @@
                     result.Function = functionType;
                     break;
                 }
+                else if (currentType is CppTemplateArgument { ArgAsType: not null } templateArgument)
+                {
+                    currentType = templateArgument.ArgAsType;
+                }
+                else if (currentType is CppTemplateParameterNonType nonTypeParameter)
+                {
+                    currentType = nonTypeParameter.NoneTemplateType;
+                }
+                else if (currentType is CppTemplateParameterType templateParameter)
+                {
+                    if (!config.TypeMappings.TryGetValue(templateParameter.Name, out string? mapping))
+                    {
+                        throw new NotSupportedException($"Template parameter '{templateParameter.Name}' requires a concrete specialization or TypeMappings entry.");
+                    }
+                    result.BaseType = mapping;
+                    break;
+                }
+                else if (currentType is CppUnexposedType unexposedType)
+                {
+                    if (!config.TypeMappings.TryGetValue(unexposedType.Name, out string? mapping))
+                    {
+                        throw new UnexposedTypeException(unexposedType);
+                    }
+                    result.BaseType = mapping;
+                    break;
+                }
+                else if (currentType is CppGenericType genericType)
+                {
+                    string genericName = genericType.ToString();
+                    if (!config.TypeMappings.TryGetValue(genericName, out string? mapping))
+                    {
+                        throw new NotSupportedException($"Generic type '{genericName}' requires a TypeMappings entry or a generated C++ bridge specialization.");
+                    }
+                    result.BaseType = mapping;
+                    break;
+                }
                 else
                 {
-                    throw new NotImplementedException();
+                    throw new NotSupportedException($"C++ type '{currentType}' ({currentType.TypeKind}) is not supported by the C# type converter.");
                 }
             }
 
@@ -279,9 +317,16 @@
 
         private AnalysisResult ResolveTypedef(CppTypedef typedef)
         {
-            if (!config.GenerateDelegates && typedef.ElementType.IsDelegate(out var delegateType))
+            if (typedef.ElementType.IsDelegate(out var delegateType))
             {
-                return new() { BaseType = config.GetDelegatePointerType(delegateType!) };
+                if (config.DelegatesAsVoidPointer)
+                {
+                    return new() { BaseType = "void", PointerLevel = 1 };
+                }
+                if (!config.GenerateDelegates)
+                {
+                    return new() { BaseType = config.GetDelegatePointerType(delegateType!) };
+                }
             }
 
             if (typeDefToEnum.TryGetValue(typedef.Name, out var cppEnum))
@@ -326,28 +371,9 @@
             return config.GetCsCleanName(member.Name);
         }
 
-        private string ConvertPrimitiveType(CppPrimitiveType primitiveType)
+        private static string ConvertPrimitiveType(CppPrimitiveType primitiveType)
         {
-            return primitiveType.Kind switch
-            {
-                CppPrimitiveKind.Void => "void",
-                CppPrimitiveKind.Char => "byte",
-                CppPrimitiveKind.Bool => "bool",
-                CppPrimitiveKind.WChar => "char",
-                CppPrimitiveKind.Short => "short",
-                CppPrimitiveKind.Int => "int",
-                CppPrimitiveKind.Long => "int",
-                CppPrimitiveKind.UnsignedLong => "uint",
-                CppPrimitiveKind.LongLong => "long",
-                CppPrimitiveKind.UnsignedChar => "byte",
-                CppPrimitiveKind.UnsignedShort => "ushort",
-                CppPrimitiveKind.UnsignedInt => "uint",
-                CppPrimitiveKind.UnsignedLongLong => "ulong",
-                CppPrimitiveKind.Float => "float",
-                CppPrimitiveKind.Double => "double",
-                CppPrimitiveKind.LongDouble => "double",
-                _ => string.Empty,
-            };
+            return WindowsAbi.GetPrimitiveTypeName(primitiveType.Kind);
         }
     }
 }

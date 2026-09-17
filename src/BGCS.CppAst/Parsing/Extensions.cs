@@ -264,7 +264,7 @@ public static class Extensions
     /// <summary>
     /// Executes public operation <c>AsText</c>.
     /// </summary>
-    public static string AsText(this in CXCursor cursor) => new Tokenizer(cursor).TokensToString();
+    public static string AsText(this in CXCursor cursor) => new Tokenizer(cursor).TokensToString() ?? string.Empty;
 
     /// <summary>
     /// Executes public operation <c>IsCursorDefinition</c>.

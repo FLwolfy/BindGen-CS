@@ -11,7 +11,11 @@ This repository now includes a full test workflow modeled as a layered generatio
 
 ```bash
 ./scripts/run-full-test-matrix.sh
+./scripts/test-real-libraries.sh
+./scripts/test-real-cpp-libraries.sh
 ```
+
+The real-library matrix discovers a sibling InnoEngine checkout or uses `INNOENGINE_ROOT`. It regenerates and compiles miniaudio, SDL3, cimgui, and cimguizmo SingleFile bindings, enforces the Windows generation budgets, and checks deterministic generated-source fingerprints plus reflection-based public API snapshots in `tests/real-libraries/api-snapshots.sha256` and `tests/real-libraries/public-api-snapshots.sha256`. Set `REQUIRE_REAL_LIBRARIES=1` to fail instead of skipping when vendored headers are unavailable. The real C++ matrix additionally generates a bimg C bridge, validates it with clang++, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies bridge/source/public-API snapshots.
 
 The script runs all major BGCS capabilities in ordered layers:
 
@@ -19,8 +23,9 @@ The script runs all major BGCS capabilities in ordered layers:
 2. BGCS base/unit/parser logic (`BGCS.Tests`)
 3. Patch-specific behavior (`BGCS.Patching.Tests`)
 4. Generated output compile/runtime semantics (`BGCS.Generation.Tests`)
-5. `BGCS.Cpp2C` generation
+5. `BGCS.Cpp2C` generation, native C++ syntax validation, DLL linking, and runtime invocation
 6. End-to-end demo generation (`runtime-generated` + `runtime-notgenerated`)
+7. NuGet dependency-closure restore, consumer compilation, execution, and `bindgen-cs` tool installation
 
 Demo artifacts are emitted under:
 
@@ -53,6 +58,10 @@ Demo semantics:
 `tests/BGCS.Cpp2C.Tests` covers:
 
 - C++ to C bridge generation semantics and metadata flow
+- real MSVC STL adapters for string, span, optional, and unique_ptr
+- managed virtual callback proxy generation
+- multiple-inheritance cast adjustment
+- clang++ bridge DLL linking and Create/Invoke/Destroy/error-channel runtime calls
 
 ## CI usage
 

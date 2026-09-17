@@ -28,6 +28,8 @@ public sealed class CppProperty : CppDeclaration, ICppMember, ICppAttributeConta
         Type = type ?? throw new ArgumentNullException(nameof(type));
         Name = name;
         Attributes = [];
+        GetterName = string.Empty;
+        SetterName = string.Empty;
     }
 
     /// <summary>

@@ -30,7 +30,7 @@ public static class CppParser
     /// <param name="options">Options used for parsing this file (e.g include folders...)</param>
     /// <param name="cppFilename">Optional path to a file only used for reporting errors. Default is 'content'</param>
     /// <returns>The result of the compilation</returns>
-    public static CppCompilation Parse(string cppText, CppParserOptions options = null, string cppFilename = "content")
+    public static CppCompilation Parse(string cppText, CppParserOptions? options = null, string cppFilename = "content")
     {
         if (cppText == null) throw new ArgumentNullException(nameof(cppText));
         var cppFiles = new List<CppFileOrString> { new CppFileOrString() { Filename = cppFilename, Content = cppText, } };
@@ -43,7 +43,7 @@ public static class CppParser
     /// <param name="cppFilename">A path to a C/C++ file on the disk to parse</param>
     /// <param name="options">Options used for parsing this file (e.g include folders...)</param>
     /// <returns>The result of the compilation</returns>
-    public static CppCompilation ParseFile(string cppFilename, CppParserOptions options = null)
+    public static CppCompilation ParseFile(string cppFilename, CppParserOptions? options = null)
     {
         if (cppFilename == null) throw new ArgumentNullException(nameof(cppFilename));
         var files = new List<string>() { cppFilename };
@@ -56,7 +56,7 @@ public static class CppParser
     /// <param name="cppFilenameList">A list of path to C/C++ header files on the disk to parse</param>
     /// <param name="options">Options used for parsing this file (e.g include folders...)</param>
     /// <returns>The result of the compilation</returns>
-    public static CppCompilation ParseFiles(List<string> cppFilenameList, CppParserOptions options = null)
+    public static CppCompilation ParseFiles(List<string> cppFilenameList, CppParserOptions? options = null)
     {
         if (cppFilenameList == null) throw new ArgumentNullException(nameof(cppFilenameList));
 
@@ -75,7 +75,7 @@ public static class CppParser
     /// <param name="cppFiles">A list of path to C/C++ header files on the disk to parse</param>
     /// <param name="options">Options used for parsing this file (e.g include folders...)</param>
     /// <returns>The result of the compilation</returns>
-    private static unsafe CppCompilation ParseInternal(List<CppFileOrString> cppFiles, CppParserOptions options = null)
+    private static unsafe CppCompilation ParseInternal(List<CppFileOrString> cppFiles, CppParserOptions? options = null)
     {
         if (cppFiles == null) throw new ArgumentNullException(nameof(cppFiles));
 
@@ -145,7 +145,7 @@ public static class CppParser
         using (var createIndex = CXIndex.Create())
         {
             string rootFileName = CppAstRootFileName;
-            string rootFileContent = null;
+            string? rootFileContent = null;
 
             // Build the root input source file
             var tempBuilder = new StringBuilder();
@@ -190,7 +190,9 @@ public static class CppParser
             CppModelBuilder builder = new(translationUnit)
             {
                 AutoSquashTypedef = options.AutoSquashTypedef,
+                ParserKind = options.ParserKind,
                 ParseSystemIncludes = options.ParseSystemIncludes,
+                ParseCommentsEnabled = options.ParseComments,
                 ParseTokenAttributeEnabled = options.ParseTokenAttributes,
                 ParseCommentAttributeEnabled = options.ParseCommentAttribute,
             };
@@ -254,7 +256,7 @@ public static class CppParser
         {
             var reader = new StringReader(rootContent);
             var lines = new List<string>();
-            string line;
+            string? line;
             while ((line = reader.ReadLine()) != null)
             {
                 lines.Add(line);

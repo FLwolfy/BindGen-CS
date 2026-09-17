@@ -22,12 +22,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
   </ItemGroup>
 
   <ItemGroup>
+        <Compile Remove="Intermediate\**\*.cs" />
+        <Compile Remove="Emission\IBindingEmitter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
 		<ProjectReference Include="..\BGCS.Core\BGCS.Core.csproj" />
+        <ProjectReference Include="..\BGCS.Intermediate\BGCS.Intermediate.csproj" />
 		<ProjectReference Include="..\BGCS.Language\BGCS.Language.csproj" />
   </ItemGroup>
 

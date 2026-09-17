@@ -201,7 +201,7 @@ public class BindingCorrectnessMatrixTests
         var failures = messages.Where(x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical).Select(x => x.ToString()).ToArray();
         if (failures.Length > 0)
         {
-            Assert.True(false, $"Case '{caseName}' had generator errors:\n{string.Join("\n", failures)}");
+            Assert.Fail($"Case '{caseName}' had generator errors:\n{string.Join("\n", failures)}");
         }
     }
 

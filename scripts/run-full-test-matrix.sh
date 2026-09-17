@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIGURATION="${CONFIGURATION:-Release}"
 SKIP_RESTORE_BUILD="${SKIP_RESTORE_BUILD:-0}"
+GATE_DIR="${ROOT_DIR}/artifacts/acceptance/gates"
+rm -rf "${GATE_DIR}"
+mkdir -p "${GATE_DIR}"
 
 log() {
   printf '[full-test-matrix] %s\n' "$1"
@@ -29,6 +32,7 @@ if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
   log "dotnet build BindGen-CS.sln (${CONFIGURATION})"
   dotnet build "${ROOT_DIR}/BindGen-CS.sln" --configuration "${CONFIGURATION}" --no-restore
 fi
+touch "${GATE_DIR}/solution-build"
 
 log "Layer 1: Auto-discovered test projects under tests/"
 mapfile -t TEST_PROJECTS < <(discover_test_projects)
@@ -42,6 +46,16 @@ for project_path in "${TEST_PROJECTS[@]}"; do
   project_relative="${project_path#${ROOT_DIR}/}"
   run_tests "${project_relative}"
 done
+touch "${GATE_DIR}/managed-tests"
+
+dotnet test "${ROOT_DIR}/tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~WindowsNativeAbi"
+touch "${GATE_DIR}/native-c-abi"
+dotnet test "${ROOT_DIR}/tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~StrictSafety"
+touch "${GATE_DIR}/strict-safety"
+dotnet test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~LinkAndInvokeNativeDll"
+touch "${GATE_DIR}/native-cpp-bridge"
+dotnet test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~Adapter|FullyQualifiedName~VirtualCallback|FullyQualifiedName~TemplateInstantiation|FullyQualifiedName~NonBlittable"
+touch "${GATE_DIR}/modern-cpp"
 
 DEMO_DIR="${ROOT_DIR}/demo/BGCS.Demo"
 DEMO_BIN_DIR="${DEMO_DIR}/bin/${CONFIGURATION}/generated"
@@ -88,5 +102,19 @@ if ! grep -q "namespace BGCS.Runtime" "${RUNTIME_GENERATED_OUT}/Runtime.cs"; the
 fi
 
 popd > /dev/null
+touch "${GATE_DIR}/demo"
+
+log "Layer 3: Vendored real-library regeneration and compilation"
+bash "${ROOT_DIR}/scripts/test-real-libraries.sh"
+touch "${GATE_DIR}/real-libraries"
+bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"
+touch "${GATE_DIR}/real-cpp-libraries"
+
+log "Layer 4: NuGet package dependency and consumer smoke test"
+"${ROOT_DIR}/scripts/test-nuget-packages.sh"
+touch "${GATE_DIR}/nuget-tool"
+
+log "Layer 5: Machine-readable acceptance report"
+bash "${ROOT_DIR}/scripts/write-acceptance-report.sh"
 
 log "All layers passed."

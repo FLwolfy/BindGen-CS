@@ -1,8 +1,5 @@
 ﻿namespace BGCS.Core
 {
-    using System.Runtime.InteropServices;
-    using System.Text;
-
     /// <summary>
     /// Defines the public class <c>PathHelper</c>.
     /// </summary>
@@ -13,7 +10,7 @@
         /// </summary>
         public static string GetPath(string path)
         {
-            if (path == null) return null;
+            ArgumentNullException.ThrowIfNull(path);
             if (Path.IsPathRooted(path)) return path;
             if (Path.IsPathFullyQualified(path)) return path;
             string sanitizedPath = Path.GetFullPath(path);
@@ -36,29 +33,19 @@
             return sanitizedPath;
         }
 
-        static readonly char[] separators = [Path.PathSeparator, Path.AltDirectorySeparatorChar];
-
         /// <summary>
-        /// Executes public operation <c>FindBase</c>.
+        /// Finds the nearest parent directory containing a <c>.git</c> directory.
         /// </summary>
+        /// <returns>The repository root, or <see langword="null"/> when no parent is a Git work tree.</returns>
         public static string? FindBase()
         {
-            ReadOnlySpan<char> dirD = Environment.CurrentDirectory;
-            Span<char> dir = stackalloc char[dirD.Length];
-            dirD.CopyTo(dir);
-            while (dir.IsEmpty)
+            DirectoryInfo? directory = new(Path.GetFullPath(Environment.CurrentDirectory));
+            while (directory != null)
             {
-                dir = dir.TrimEnd(separators);
-                if (Directory.Exists($"{dir}{Path.PathSeparator}.git"))
-                {
-                    return dir.ToString();
-                }
-
-                var span = Path.GetDirectoryName(dir);
-                ref var ba = ref MemoryMarshal.GetReference(span);
-                dir = MemoryMarshal.CreateSpan(ref ba, span.Length);
+                if (Directory.Exists(Path.Combine(directory.FullName, ".git")))
+                    return directory.FullName;
+                directory = directory.Parent;
             }
-
             return null;
         }
     }

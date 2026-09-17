@@ -205,6 +205,12 @@
                         continue;
                     }
 
+                    if (cppFunction.Flags.HasFlag(CppFunctionFlags.Variadic))
+                    {
+                        WriteVariadicFunctions(writer, cppFunction);
+                        continue;
+                    }
+
                     string? csName = config.GetCsFunctionName(cppFunction.Name);
                     string returnCsName = config.GetCsReturnType(cppFunction.ReturnType);
                     CppPrimitiveKind returnKind = cppFunction.ReturnType.GetPrimitiveKind();
@@ -313,6 +319,16 @@
                     overload.Modifiers.Add("public");
                     overload.Modifiers.Add("static");
                     GenerateVariations(cppFunction, overload);
+                    if (config.UnsafeFriendlyFunctions.Contains(cppFunction.Name))
+                    {
+                        CsFunctionVariation[] safeVariations = overload.Variations.Where(variation =>
+                            !variation.ReturnType.IsString && !variation.ReturnType.IsSpan && !variation.ReturnType.IsArray &&
+                            !variation.Parameters.Any(parameter => parameter.Type.IsString || parameter.Type.IsSpan ||
+                                parameter.Type.IsArray || !parameter.Type.IsPointer && parameter.CppType.IsDelegate(out _))).ToArray();
+                        overload.Variations.Clear();
+                        foreach (CsFunctionVariation safeVariation in safeVariations)
+                            overload.Variations.Add(safeVariation);
+                    }
                     WriteFunctions(context, DefinedVariationsFunctions, function, overload, WriteFunctionFlags.None, "public static");
                 }
             }
@@ -366,6 +382,56 @@
                         writerfuncTable.WriteLine("funcTable.Free();");
                     }
                 }
+            }
+        }
+
+        private void WriteVariadicFunctions(ICodeWriter writer, CppFunction cppFunction)
+        {
+            if (!config.VariadicFunctionVariants.TryGetValue(cppFunction.Name, out List<VariadicFunctionVariant>? variants) || variants.Count == 0)
+            {
+                LogWarn($"Variadic function '{cppFunction.Name}' was skipped because no VariadicFunctionVariants are configured.");
+                return;
+            }
+            if (config.ImportType != ImportType.DllImport)
+                throw new NotSupportedException($"Typed variadic function '{cppFunction.Name}' currently requires ImportType.DllImport.");
+
+            string returnType = config.GetCsReturnType(cppFunction.ReturnType);
+            if (returnType == "bool")
+                returnType = config.GetBoolType();
+            string baseName = config.GetCsFunctionName(cppFunction.Name);
+            foreach (VariadicFunctionVariant variant in variants)
+            {
+                if (variant.ParameterTypes.Any(string.IsNullOrWhiteSpace))
+                    throw new InvalidOperationException($"Variadic function '{cppFunction.Name}' contains an empty promoted parameter type.");
+                string suffix = string.IsNullOrWhiteSpace(variant.Suffix) ? string.Empty : config.GetCsCleanName(variant.Suffix);
+                string methodName = baseName + suffix;
+                List<string> declarations = [];
+                List<string> arguments = [];
+                for (int i = 0; i < cppFunction.Parameters.Count; i++)
+                {
+                    CppParameter parameter = cppFunction.Parameters[i];
+                    string parameterName = config.GetParameterName(i, parameter.Name);
+                    declarations.Add($"{config.GetCsTypeName(parameter.Type)} {parameterName}");
+                    arguments.Add(parameterName);
+                }
+                for (int i = 0; i < variant.ParameterTypes.Count; i++)
+                {
+                    string parameterName = i < variant.ParameterNames.Count && !string.IsNullOrWhiteSpace(variant.ParameterNames[i])
+                        ? config.NormalizeParameterName(variant.ParameterNames[i])
+                        : $"arg{i}";
+                    declarations.Add($"{variant.ParameterTypes[i]} {parameterName}");
+                    arguments.Add(parameterName);
+                }
+                string signature = string.Join(", ", declarations);
+                string call = $"{methodName}Native({string.Join(", ", arguments)})";
+                writer.WriteLine($"[DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = \"{cppFunction.Name}\")]");
+                writer.WriteLine($"internal static extern {returnType} {methodName}Native({signature});");
+                config.WriteCsSummary(cppFunction.Comment, writer);
+                using (writer.PushBlock($"public static {returnType} {methodName}({signature})"))
+                {
+                    writer.WriteLine(returnType == "void" ? call + ";" : "return " + call + ";");
+                }
+                writer.WriteLine();
             }
         }
 

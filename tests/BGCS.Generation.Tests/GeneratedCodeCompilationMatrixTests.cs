@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using System.Threading.Tasks;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
 using Microsoft.CodeAnalysis;
@@ -15,6 +18,8 @@ namespace BGCS.Tests;
 
 public class GeneratedCodeCompilationMatrixTests
 {
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int NativeIntCallback(int value);
     [Fact]
     public void Generate_Matrix_OutputShouldCompileAndExposeExpectedSemantics()
     {
@@ -56,6 +61,139 @@ public class GeneratedCodeCompilationMatrixTests
                 Cleanup(run.TempDirectory);
             }
         }
+    }
+
+    [Fact]
+    public void Generate_WhenParsingFails_ShouldPreserveLastSuccessfulOutput()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-output-transaction-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string headerPath = Path.Combine(temp, "input.h");
+        string outputPath = Path.Combine(temp, "out");
+        File.WriteAllText(headerPath, "int bgcs_valid(void);");
+        CsCodeGeneratorConfig config = new()
+        {
+            ApiName = "TransactionApi",
+            Namespace = "Transaction.Generated",
+            LibName = "transaction",
+            ImportType = ImportType.DllImport,
+            GenerateExtensions = false,
+            MergeGeneratedFilesToSingleFile = true
+        };
+        CsCodeGenerator generator = new(config);
+
+        try
+        {
+            Assert.True(generator.Generate(headerPath, outputPath));
+            string bindingsPath = Path.Combine(outputPath, "Bindings.cs");
+            string lastGood = File.ReadAllText(bindingsPath);
+            File.WriteAllText(headerPath, "int bgcs_invalid(");
+
+            Assert.False(generator.Generate(headerPath, outputPath));
+            Assert.Equal(lastGood, File.ReadAllText(bindingsPath));
+        }
+        finally
+        {
+            Cleanup(temp);
+        }
+    }
+
+    [Fact]
+    public void Generate_WindowsNativeAbi_ShouldMatchCompiledDllAtRuntime()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+        string llvm = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "LLVM", "bin");
+        string clang = Path.Combine(llvm, "clang.exe");
+        string linker = Path.Combine(llvm, "lld-link.exe");
+        if (!File.Exists(clang) || !File.Exists(linker))
+            return;
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-native-abi-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        const string libraryName = "bgcs_native_abi_test";
+        string header = Path.Combine(temp, "abi.h");
+        string source = Path.Combine(temp, "abi.c");
+        string objectFile = Path.Combine(temp, "abi.obj");
+        string dll = Path.Combine(AppContext.BaseDirectory, libraryName + ".dll");
+        string output = Path.Combine(temp, "generated");
+        File.WriteAllText(header,
+            "#define API __declspec(dllimport)\ntypedef struct BgcsAbi { int x; double y; } BgcsAbi;\n#pragma pack(push,1)\ntypedef struct BgcsPacked { unsigned char tag; int value; } BgcsPacked;\n#pragma pack(pop)\ntypedef int (*BgcsIntCallback)(int value);\nAPI int bgcs_abi_size(void);\nAPI int bgcs_abi_y_offset(void);\nAPI int bgcs_packed_size(void);\nAPI int bgcs_packed_value_offset(void);\nAPI double bgcs_abi_sum(BgcsAbi value);\nAPI int bgcs_utf8_length(const char* text);\nAPI int bgcs_call_callback(BgcsIntCallback callback, int value);");
+        File.WriteAllText(source,
+            "#define API __declspec(dllexport)\nint _fltused=0;\ntypedef struct BgcsAbi { int x; double y; } BgcsAbi;\n#pragma pack(push,1)\ntypedef struct BgcsPacked { unsigned char tag; int value; } BgcsPacked;\n#pragma pack(pop)\ntypedef int (*BgcsIntCallback)(int value);\nAPI int bgcs_abi_size(void){return sizeof(BgcsAbi);}\nAPI int bgcs_abi_y_offset(void){return __builtin_offsetof(BgcsAbi,y);}\nAPI int bgcs_packed_size(void){return sizeof(BgcsPacked);}\nAPI int bgcs_packed_value_offset(void){return __builtin_offsetof(BgcsPacked,value);}\nAPI double bgcs_abi_sum(BgcsAbi value){return value.x+value.y;}\nAPI int bgcs_utf8_length(const char* text){int length=0;while(text[length])length++;return length;}\nAPI int bgcs_call_callback(BgcsIntCallback callback,int value){return callback(value);}");
+        try
+        {
+            RunProcess(clang, temp, ["--target=x86_64-pc-windows-msvc", "-c", source, "-o", objectFile]);
+            RunProcess(linker, temp, ["/dll", "/noentry", "/out:" + dll, objectFile]);
+            CsCodeGeneratorConfig config = new()
+            {
+                Namespace = "BGCS.NativeAbi.Generated",
+                ApiName = "NativeAbi",
+                LibName = libraryName,
+                ImportType = ImportType.DllImport,
+                GenerateExtensions = false,
+                MergeGeneratedFilesToSingleFile = true,
+                ParserKind = CppParserKind.C
+            };
+            Assert.True(new CsCodeGenerator(config).Generate(header, output));
+            Assembly assembly = CompileGeneratedSources(output, "BGCS.NativeAbi.Runtime");
+            Type abiType = assembly.GetType("BGCS.NativeAbi.Generated.BgcsAbi")!;
+            Type packedType = assembly.GetType("BGCS.NativeAbi.Generated.BgcsPacked")!;
+            Type apiType = assembly.GetType("BGCS.NativeAbi.Generated.NativeAbi")!;
+            string previousDirectory = Environment.CurrentDirectory;
+            try
+            {
+                Environment.CurrentDirectory = temp;
+                int nativeSize = (int)apiType.GetMethod("BgcsAbiSizeNative", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
+                int nativeOffset = (int)apiType.GetMethod("BgcsAbiYOffsetNative", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
+                Assert.Equal(nativeSize, Marshal.SizeOf(abiType));
+                Assert.Equal(nativeOffset, Marshal.OffsetOf(abiType, "Y").ToInt32());
+                int packedSize = (int)apiType.GetMethod("BgcsPackedSizeNative", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
+                int packedOffset = (int)apiType.GetMethod("BgcsPackedValueOffsetNative", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
+                Assert.Equal(packedSize, Marshal.SizeOf(packedType));
+                Assert.Equal(packedOffset, Marshal.OffsetOf(packedType, "Value").ToInt32());
+                object value = Activator.CreateInstance(abiType)!;
+                abiType.GetField("X")!.SetValue(value, 4);
+                abiType.GetField("Y")!.SetValue(value, 2.5);
+                double sum = (double)apiType.GetMethod("BgcsAbiSumNative", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [value])!;
+                Assert.Equal(6.5, sum);
+                MethodInfo utf8Length = Assert.Single(apiType.GetMethods(BindingFlags.Static | BindingFlags.Public), method =>
+                    method.Name == "BgcsUtf8Length" && method.GetParameters() is [{ ParameterType: var parameterType }] && parameterType == typeof(string));
+                Assert.Equal(6, (int)utf8Length.Invoke(null, ["你好"])!);
+                NativeIntCallback callback = input => input * 3;
+                nint callbackPointer = Marshal.GetFunctionPointerForDelegate(callback);
+                MethodInfo callCallback = Assert.Single(apiType.GetMethods(BindingFlags.Static | BindingFlags.Public), method =>
+                    method.Name == "BgcsCallCallback" && method.GetParameters() is [{ ParameterType: var first }, _] && first == typeof(nint));
+                Assert.Equal(21, (int)callCallback.Invoke(null, [callbackPointer, 7])!);
+                GC.KeepAlive(callback);
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previousDirectory;
+            }
+        }
+        finally
+        {
+            Cleanup(temp);
+        }
+    }
+
+    private static void RunProcess(string executable, string workingDirectory, IReadOnlyList<string> arguments)
+    {
+        ProcessStartInfo start = new(executable)
+        {
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        foreach (string argument in arguments)
+            start.ArgumentList.Add(argument);
+        using Process process = Process.Start(start)!;
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        Task.WaitAll(stdout, stderr);
+        Assert.True(process.ExitCode == 0, stdout.Result + stderr.Result);
     }
 
     private static List<CompileScenario> CreateScenarios()
@@ -155,6 +293,168 @@ public class GeneratedCodeCompilationMatrixTests
                     cfg.MergeGeneratedFilesToSingleFile = true;
                     cfg.GenerateRuntimeSource = false;
                 }
+            },
+            new()
+            {
+                Name = "C_Union_Fixed_Array",
+                Header = """
+                    typedef union BgcsPacket
+                    {
+                        int values[4];
+                        double scalar;
+                    } BgcsPacket;
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsPacket"],
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type packet = assembly.GetType("Compile.Generated.BgcsPacket")!;
+                    Assert.Equal(0, Marshal.OffsetOf(packet, "Values_0").ToInt32());
+                    Assert.Equal(4, Marshal.OffsetOf(packet, "Values_1").ToInt32());
+                    Assert.Equal(8, Marshal.OffsetOf(packet, "Values_2").ToInt32());
+                    Assert.Equal(12, Marshal.OffsetOf(packet, "Values_3").ToInt32());
+                    Assert.Equal(16, Marshal.SizeOf(packet));
+                    Assert.Equal(typeof(Span<int>), packet.GetProperty("Values")?.PropertyType);
+                }
+            },
+            new()
+            {
+                Name = "C_Multidimensional_Array",
+                Header = """
+                    typedef struct BgcsMatrix
+                    {
+                        int values[2][3];
+                    } BgcsMatrix;
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsMatrix"],
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type matrix = assembly.GetType("Compile.Generated.BgcsMatrix")!;
+                    Assert.Equal(24, Marshal.SizeOf(matrix));
+                    Assert.Equal(20, Marshal.OffsetOf(matrix, "Values_5").ToInt32());
+                    Assert.Equal(typeof(Span<int>), matrix.GetProperty("Values")?.PropertyType);
+                }
+            },
+            new()
+            {
+                Name = "C_Pointer_Typedef_Array",
+                Header = """
+                    typedef void* BgcsThread;
+                    typedef struct BgcsThreadPool
+                    {
+                        BgcsThread threads[4];
+                    } BgcsThreadPool;
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsThreadPool"],
+                Configure = cfg => cfg.AutoSquashTypedef = false,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type pool = assembly.GetType("Compile.Generated.BgcsThreadPool")!;
+                    Assert.Equal(IntPtr.Size * 4, Marshal.SizeOf(pool));
+                    Assert.Equal(typeof(Span<nint>), pool.GetProperty("Threads")?.PropertyType);
+                }
+            },
+            new()
+            {
+                Name = "C_Integer_Alias_Enum_Convention",
+                Header = """
+                    typedef enum BgcsFlags_
+                    {
+                        BgcsFlags_None = 0,
+                        BgcsFlags_Enabled = 1
+                    } BgcsFlags_;
+                    typedef int BgcsFlags;
+                    typedef enum BgcsPrivate_
+                    {
+                        BgcsPrivate_FromOther = BgcsFlags_Enabled
+                    } BgcsPrivate_;
+                    void bgcs_use_flags(BgcsFlags flags);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsFlags", "BgcsPrivate"],
+                ExpectedMethodNames = ["BgcsUseFlagsNative"],
+                Configure = cfg => cfg.AutoSquashTypedef = false
+            },
+            new()
+            {
+                Name = "C_Typed_Variadic",
+                Header = "int bgcs_log(const char* format, ...);",
+                ImportType = ImportType.DllImport,
+                ExpectedMethodNames = ["BgcsLogIntsNative", "BgcsLogInts"],
+                Configure = cfg => cfg.VariadicFunctionVariants["bgcs_log"] =
+                [
+                    new VariadicFunctionVariant
+                    {
+                        Suffix = "Ints",
+                        ParameterTypes = ["int", "int"],
+                        ParameterNames = ["first", "second"]
+                    }
+                ]
+            },
+            new()
+            {
+                Name = "C_Callback_Field_Constructor",
+                Header = """
+                    typedef void (*BgcsFieldCallback)(int value);
+                    typedef struct BgcsCallbackTable
+                    {
+                        BgcsFieldCallback callback;
+                    } BgcsCallbackTable;
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsCallbackTable"],
+                Configure = cfg => cfg.DelegatesAsVoidPointer = true
+            },
+            new()
+            {
+                Name = "C_Flexible_Array",
+                Header = """
+                    typedef struct BgcsSamples
+                    {
+                        int count;
+                        float values[];
+                    } BgcsSamples;
+                    void bgcs_consume_samples(BgcsSamples* samples);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsSamples", "BgcsSamplesPtr"],
+                ExpectedMethodNames = ["BgcsConsumeSamplesNative"],
+                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type samples = assembly.GetType("Compile.Generated.BgcsSamples")!;
+                    Type samplesPointer = assembly.GetType("Compile.Generated.BgcsSamplesPtr")!;
+                    Assert.Equal(4, Marshal.SizeOf(samples));
+                    Assert.Equal(4, samples.GetField("ValuesOffset")?.GetValue(null));
+                    MethodInfo? values = samplesPointer.GetMethod("Values", [typeof(int)]);
+                    Assert.Equal(typeof(Span<float>), values?.ReturnType);
+                }
+            },
+            new()
+            {
+                Name = "C_Union_Bitfields",
+                Header = """
+                    typedef union BgcsBits
+                    {
+                        unsigned int flags : 3;
+                        int signed_value : 3;
+                    } BgcsBits;
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsBits"],
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type bits = assembly.GetType("Compile.Generated.BgcsBits")!;
+                    Assert.Equal(4, Marshal.SizeOf(bits));
+                    Assert.Equal(0, Marshal.OffsetOf(bits, "RawBits0").ToInt32());
+                    Assert.Equal(0, Marshal.OffsetOf(bits, "RawBits1").ToInt32());
+                    object value = Activator.CreateInstance(bits)!;
+                    PropertyInfo signedValue = bits.GetProperty("SignedValue")!;
+                    signedValue.SetValue(value, -1);
+                    Assert.Equal(-1, signedValue.GetValue(value));
+                }
             }
         ];
     }
@@ -192,7 +492,7 @@ public class GeneratedCodeCompilationMatrixTests
                 emit.Diagnostics
                     .Where(x => x.Severity == DiagnosticSeverity.Error)
                     .Select(x => x.ToString()));
-            Assert.True(false, "Generated code compilation failed:\n" + diagnostics);
+            Assert.Fail("Generated code compilation failed:\n" + diagnostics);
         }
 
         pe.Position = 0;

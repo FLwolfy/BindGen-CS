@@ -61,4 +61,33 @@ public class Bool8AndBitfieldTests
 
         Assert.Contains("not supported in bitfields", ex.Message);
     }
+
+    [Fact]
+    public void Bitfield_FullWidthUInt64_ShouldRoundTrip()
+    {
+        ulong raw = 0;
+
+        Bitfield.Set(ref raw, ulong.MaxValue, 0, 64);
+
+        Assert.Equal(ulong.MaxValue, Bitfield.Get(raw, 0, 64));
+    }
+
+    [Fact]
+    public void Bitfield_GetSigned_ShouldSignExtend()
+    {
+        int raw = 0b111;
+
+        int value = Bitfield.GetSigned(raw, 0, 3);
+
+        Assert.Equal(-1, value);
+    }
+
+    [Theory]
+    [InlineData(-1, 1)]
+    [InlineData(0, 0)]
+    [InlineData(31, 2)]
+    public void Bitfield_InvalidRange_ShouldThrow(int offset, int width)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Bitfield.Get(0u, offset, width));
+    }
 }

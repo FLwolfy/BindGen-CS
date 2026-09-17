@@ -98,7 +98,7 @@ public class GeneratedCodeRuntimeSemanticsTests
                 emit.Diagnostics
                     .Where(x => x.Severity == DiagnosticSeverity.Error)
                     .Select(x => x.ToString()));
-            Assert.True(false, "Generated code compilation failed:\n" + diagnostics);
+            Assert.Fail("Generated code compilation failed:\n" + diagnostics);
         }
 
         pe.Position = 0;

@@ -10,14 +10,20 @@
         /// <summary>
         /// Initializes a new instance of <see cref="ParseResult"/>.
         /// </summary>
-        public ParseResult(CppCompilation compilation)
+        public ParseResult(CppCompilation compilation, IReadOnlyList<string>? entryFiles = null)
         {
             Compilation = compilation;
+            EntryFiles = entryFiles ?? [];
         }
 
         /// <summary>
         /// Gets or sets <c>Compilation</c>.
         /// </summary>
         public CppCompilation Compilation { get; set; }
+
+        /// <summary>
+        /// Gets the root headers supplied directly to the generator.
+        /// </summary>
+        public IReadOnlyList<string> EntryFiles { get; }
     }
 }

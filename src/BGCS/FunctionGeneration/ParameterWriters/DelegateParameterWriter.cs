@@ -28,7 +28,14 @@
             rootParameter.CppType.IsDelegate(out var cppFunction);
             var config = context.Config;
             var ptrType = config.GetDelegatePointerType(cppFunction!);
-            context.AppendParam($"({ptrType})Utils.GetFunctionPointerForDelegate({cppParameter.Name})");
+            if (cppParameter.Type.Name == "nint" || cppParameter.Type.Name.Contains('*'))
+            {
+                context.AppendParam($"({ptrType}){cppParameter.Name}");
+            }
+            else
+            {
+                context.AppendParam($"({ptrType})Utils.GetFunctionPointerForDelegate({cppParameter.Name})");
+            }
         }
     }
 }

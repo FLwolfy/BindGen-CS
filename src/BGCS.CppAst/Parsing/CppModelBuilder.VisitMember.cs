@@ -62,7 +62,7 @@ public unsafe partial class CppModelBuilder
             element.AssignSourceSpan(cursor);
         }
 
-        if (element is ICppDeclaration cppDeclaration)
+        if (element is ICppDeclaration cppDeclaration && ParseCommentsEnabled)
         {
             cppDeclaration.Comment = cursor.GetComment();
 

@@ -7,6 +7,7 @@
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Expressions;
     using BGCS.CppAst.Model.Interfaces;
+    using BGCS.CppAst.Model.Metadata;
     using BGCS.Metadata;
     using System;
     using System.Collections.Generic;
@@ -31,6 +32,7 @@
         /// </summary>
         public readonly Dictionary<string, CsEnumMetadata> DefinedCppEnums = new();
         private int unknownEnumCounter = 0;
+        private readonly Dictionary<string, string> enumValueReferences = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Initializes a new instance of <see cref="EnumGenerationStep"/>.
@@ -81,6 +83,7 @@
             DefinedEnums.Clear();
             DefinedCppEnums.Clear();
             unknownEnumCounter = 0;
+            enumValueReferences.Clear();
         }
 
         protected virtual List<string> SetupEnumUsings()
@@ -140,6 +143,7 @@
         public override void Generate(FileSet files, ParseResult result, string outputPath, CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata)
         {
             var compilation = result.Compilation;
+            BuildEnumValueReferences(compilation);
             string folder = Path.Combine(outputPath, "Enums");
             if (Directory.Exists(folder))
             {
@@ -242,6 +246,23 @@
             }
         }
 
+        private void BuildEnumValueReferences(CppCompilation compilation)
+        {
+            enumValueReferences.Clear();
+            foreach (CppEnum cppEnum in compilation.Enums)
+            {
+                string enumName = config.GetCsCleanName(cppEnum.Name).TrimEnd('_');
+                EnumMapping? mapping = config.GetEnumMapping(cppEnum.Name);
+                enumName = mapping?.FriendlyName ?? enumName;
+                EnumPrefix prefix = config.GetEnumNamePrefixEx(cppEnum.Name);
+                foreach (CppEnumItem item in cppEnum.Items)
+                {
+                    string itemName = mapping?.GetItemMapping(item.Name)?.FriendlyName ?? config.GetEnumNameEx(item.Name, prefix);
+                    enumValueReferences.TryAdd(item.Name, $"{enumName}.{itemName}");
+                }
+            }
+        }
+
         private void WriteEnumFile(ParseResult result, string folder, string filePath, CsEnumMetadata csEnum)
         {
             using var writer = new CsCodeWriter(Path.Combine(folder, $"{csEnum.Name}.cs"), config.Namespace, SetupEnumUsings(), config.HeaderInjector);
@@ -253,7 +274,9 @@
         {
             string cppName = cppEnum.Name;
             string cppPrefixName = cppMember.Name;
-            string csName = config.GetCsCleanNameWithConvention(cppName, config.EnumNamingConvention, false);
+            string csName = config.EnumNamingConvention == NamingConvention.PascalCase
+                ? config.GetCsCleanName(cppName)
+                : config.GetCsCleanNameWithConvention(cppName, config.EnumNamingConvention, false);
 
             if (csName.StartsWith("(unnamed enum at ") && csName.EndsWith(')'))
             {
@@ -351,7 +374,9 @@
             if (enumItem.ValueExpression is CppRawExpression rawExpression && !string.IsNullOrEmpty(rawExpression.Text))
             {
                 cppValue = rawExpression.Text;
-                string enumValueName = config.GetEnumNameEx(rawExpression.Text, enumNamePrefix);
+                string enumValueName = enumValueReferences.TryGetValue(rawExpression.Text, out string? qualifiedName)
+                    ? qualifiedName
+                    : config.GetEnumNameEx(rawExpression.Text, enumNamePrefix);
 
                 if (config.KnownEnumValueNames.TryGetValue(rawExpression.Text, out string? knownName))
                 {

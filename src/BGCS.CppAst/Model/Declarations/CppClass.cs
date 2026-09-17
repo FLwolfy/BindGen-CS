@@ -61,7 +61,7 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// <summary>
     /// Gets or sets the target of the Objective-C category. Null if this class is not an <see cref="CppClassKind.ObjCInterfaceCategory"/>.
     /// </summary>
-    public CppClass ObjCCategoryTargetClass { get; set; }
+    public CppClass? ObjCCategoryTargetClass { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the Objective-C category. Empty if this class is not an <see cref="CppClassKind.ObjCInterfaceCategory"/>
@@ -210,7 +210,7 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// <summary>
     /// Gets the specialized class template of this instance.
     /// </summary>
-    public CppClass SpecializedTemplate { get; set; }
+    public CppClass? SpecializedTemplate { get; set; }
 
     /// <summary>
     /// Exposes public member <c>CppClass</c>.

@@ -58,7 +58,7 @@ public abstract class CppComment
     /// <summary>
     /// Gets a list of children. Might be null.
     /// </summary>
-    public List<CppComment> Children { get; set; }
+    public List<CppComment>? Children { get; set; }
 
     protected internal abstract void ToString(StringBuilder builder);
 

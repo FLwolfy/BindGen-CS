@@ -53,7 +53,10 @@ public abstract class ConfigurationEntryTestBase
                 Environment.NewLine,
                 generator.Messages.Select(x => $"[{x.Severtiy}] {x.Message}"));
 
-            string bindingsPath = Path.Combine(outputPath, "Bindings.cs");
+            string bindingsFileName = config.MergeGeneratedFilesToSingleFile
+                ? config.SingleFileOutputName
+                : "Bindings.cs";
+            string bindingsPath = Path.Combine(outputPath, bindingsFileName);
             string bindings = File.Exists(bindingsPath) ? File.ReadAllText(bindingsPath) : string.Empty;
 
             bool hasErrors = generator.Messages.Any(x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
@@ -165,7 +168,7 @@ public abstract class ConfigurationEntryTestBase
             return;
 
         string compileErrors = string.Join(Environment.NewLine, errors.Select(e => e.ToString()));
-        Assert.True(false, $"Generated bindings failed to compile:{Environment.NewLine}{compileErrors}");
+        Assert.Fail($"Generated bindings failed to compile:{Environment.NewLine}{compileErrors}");
     }
 
     protected static void AssertExpected(

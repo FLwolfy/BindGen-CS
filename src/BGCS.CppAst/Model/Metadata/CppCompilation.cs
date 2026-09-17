@@ -22,7 +22,7 @@ public class CppCompilation : CppGlobalDeclarationContainer, IDisposable
     {
         this.translationUnit = translationUnit;
         Diagnostics = new();
-
+        InputText = string.Empty;
         System = new(translationUnit.Cursor);
     }
 

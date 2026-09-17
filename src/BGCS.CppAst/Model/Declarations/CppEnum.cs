@@ -30,6 +30,7 @@ public sealed class CppEnum : CppTypeDeclaration, ICppMemberWithVisibility, ICpp
         Items = new CppContainerList<CppEnumItem>(this);
         Attributes = [];
         TokenAttributes = [];
+        IntegerType = CppPrimitiveType.Int;
     }
 
     /// <inheritdoc />

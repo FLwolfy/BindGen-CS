@@ -6,6 +6,7 @@
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "ParseSystemIncludes": true,
   "SystemIncludeFolders": [
     "sysinclude"
   ]

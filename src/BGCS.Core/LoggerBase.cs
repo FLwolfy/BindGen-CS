@@ -15,6 +15,7 @@
     public class LoggerBase
     {
         private readonly List<LogMessage> messages = new();
+        private readonly HashSet<string> messageKeys = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Exposes public member <c>messages</c>.
@@ -89,6 +90,7 @@
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine();
             messages.Clear();
+            messageKeys.Clear();
         }
 
         /// <summary>
@@ -97,6 +99,7 @@
         public void Log(LogSeverity severtiy, string message)
         {
             if (severtiy < LogLevel) return;
+            if (!messageKeys.Add($"{(int)severtiy}:{message}")) return;
             messages.Add(new LogMessage(severtiy, message));
             LogEvent?.Invoke(severtiy, message);
         }

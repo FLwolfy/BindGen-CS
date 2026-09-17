@@ -138,12 +138,12 @@ public class CppParserOptions
     /// <summary>
     /// Gets or sets a C/C++ pre-header included before the files/text to parse
     /// </summary>
-    public string PreHeaderText { get; set; }
+    public string? PreHeaderText { get; set; }
 
     /// <summary>
     /// Gets or sets a C/C++ post-header included after the files/text to parse
     /// </summary>
-    public string PostHeaderText { get; set; }
+    public string? PostHeaderText { get; set; }
 
     /// <summary>
     /// Clone this instance.

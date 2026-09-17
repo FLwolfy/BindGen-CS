@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using BGCS.Core;
 using Xunit;
 
@@ -45,5 +46,16 @@ public class FileNameHelperTests
 
         Assert.Contains("/", actual);
         Assert.Contains("\\", actual);
+    }
+
+    [Fact]
+    public void SanitizeFileName_AbsolutePath_ShouldPreserveDirectoryAndSanitizeLeafName()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "bgcs-path-test");
+        string input = Path.Combine(directory, "a?b.cs");
+
+        string actual = FileNameHelper.SanitizeFileName(input);
+
+        Assert.Equal(Path.Combine(directory, "aQuestionMarkb.cs"), actual);
     }
 }

@@ -29,6 +29,16 @@
         public List<FunctionMapping> FunctionMappings { get; set; } = null!;
 
         /// <summary>
+        /// Maps native C variadic functions to explicit promoted fixed signatures keyed by native function name.
+        /// </summary>
+        public Dictionary<string, List<VariadicFunctionVariant>> VariadicFunctionVariants { get; set; } = null!;
+
+        /// <summary>
+        /// Overrides inferred ownership, encoding, buffer relationships, and cleanup semantics by native function name.
+        /// </summary>
+        public Dictionary<string, FunctionMarshallingMapping> MarshallingMappings { get; set; } = null!;
+
+        /// <summary>
         /// Allows to inject data and modify handles. (Default: Empty)
         /// </summary>
         [DefaultValue(null)]

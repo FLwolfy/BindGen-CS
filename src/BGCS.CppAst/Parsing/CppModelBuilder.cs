@@ -35,9 +35,19 @@ public partial class CppModelBuilder : CompilationLoggerBase
     public bool AutoSquashTypedef { get; set; }
 
     /// <summary>
+    /// Gets or sets the language mode used for parsing the translation unit.
+    /// </summary>
+    public CppParserKind ParserKind { get; set; } = CppParserKind.Cpp;
+
+    /// <summary>
     /// Gets or sets <c>ParseSystemIncludes</c>.
     /// </summary>
     public bool ParseSystemIncludes { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether declaration comments are parsed into the AST.
+    /// </summary>
+    public bool ParseCommentsEnabled { get; set; } = true;
 
     /// <summary>
     /// Gets or sets <c>ParseTokenAttributeEnabled</c>.

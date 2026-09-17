@@ -175,6 +175,11 @@
 
             // Keep typedef-to-managed-handle mapping consistent for all later type resolution paths.
             config.TypeMappings[typedef.Name] = metadata.Name;
+            CppType target = typedef.ElementType;
+            while (target is CppTypedef nested)
+                target = nested.ElementType;
+            if (target is CppClass cppClass && !string.IsNullOrWhiteSpace(cppClass.Name))
+                config.TypeMappings[cppClass.Name] = metadata.Name;
 
             return metadata;
         }

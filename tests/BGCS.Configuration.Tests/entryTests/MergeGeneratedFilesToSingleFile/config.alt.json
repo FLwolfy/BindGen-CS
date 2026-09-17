@@ -3,6 +3,7 @@
   "ApiName": "EntryApi",
   "LibName": "entry-lib",
   "MergeGeneratedFilesToSingleFile": true,
+  "SingleFileOutputName": "Inno.Native.Generated.cs",
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false

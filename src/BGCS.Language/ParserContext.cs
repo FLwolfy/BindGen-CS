@@ -19,7 +19,6 @@
         private readonly Stack<SyntaxNode> scopeStack = new();
 
         private int currentTokenIndex;
-        private int localTokenIndex;
 
         private SyntaxNode current;
 

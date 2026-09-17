@@ -5,99 +5,130 @@
 
     /// <summary>
     /// Represents a native callback that can be passed to interop functions requiring a callback to C# code.
-    /// Ensures that the callback remains valid beyond the current scope by holding a GCHandle.
+    /// Copies share one lifetime lease so the underlying GC handle is released at most once.
     /// </summary>
     /// <typeparam name="T">The delegate type of the callback.</typeparam>
-    public struct NativeCallback<T> : IDisposable, IEquatable<NativeCallback<T>> where T : Delegate
+    public readonly struct NativeCallback<T> : IDisposable, IEquatable<NativeCallback<T>> where T : Delegate
     {
-        /// <summary>
-        /// The managed delegate representing the callback.
-        /// </summary>
-        public T? Callback;
-
-        /// <summary>
-        /// The GCHandle that ensures the callback remains allocated in memory.
-        /// </summary>
-        public GCHandle Handle;
+        private readonly CallbackLease? lease;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NativeCallback{T}"/> struct.
         /// </summary>
-        /// <param name="callback">The delegate to be used as the callback.</param>
+        /// <param name="callback">The delegate to keep alive for native code.</param>
         public NativeCallback(T? callback)
         {
-            Callback = callback;
-            if (callback != null)
-            {
-                Handle = GCHandle.Alloc(callback);
-            }
+            lease = callback == null ? null : new(callback);
         }
+
+        /// <summary>
+        /// Gets the managed delegate represented by this callback lease.
+        /// </summary>
+        public T? Callback => lease?.Callback;
+
+        /// <summary>
+        /// Gets the shared GC handle, or the default handle after disposal.
+        /// </summary>
+        public GCHandle Handle => lease?.Handle ?? default;
 
         /// <summary>
         /// Gets a value indicating whether the callback is null.
         /// </summary>
-        public readonly bool IsNull => Callback == null;
+        public bool IsNull => Callback == null;
 
         /// <summary>
-        /// Gets a value indicating whether the GCHandle is allocated.
+        /// Gets a value indicating whether the shared GC handle is allocated.
         /// </summary>
-        public readonly bool IsAllocated => Handle.IsAllocated;
+        public bool IsAllocated => lease?.IsAllocated == true;
 
         /// <summary>
-        /// Gets a value indicating whether the instance has been disposed.
+        /// Gets a value indicating whether the callback lease is empty or disposed.
         /// </summary>
-        public readonly bool IsDisposed => Handle == default;
+        public bool IsDisposed => !IsAllocated;
 
         /// <summary>
-        /// Releases the GCHandle and clears the callback.
+        /// Releases the shared callback lease. Repeated calls and calls through copied values are safe.
         /// </summary>
-        public void Dispose()
-        {
-            if (Handle.IsAllocated)
-            {
-                Handle.Free();
-                Handle = default;
-                Callback = default!;
-            }
-        }
+        public void Dispose() => lease?.Dispose();
 
         /// <inheritdoc/>
-        public override readonly bool Equals(object? obj)
-        {
-            return obj is NativeCallback<T> callback && Equals(callback);
-        }
+        public override bool Equals(object? obj) => obj is NativeCallback<T> callback && Equals(callback);
 
         /// <inheritdoc/>
-        public readonly bool Equals(NativeCallback<T> other)
-        {
-            return ReferenceEquals(Callback, other.Callback);
-        }
+        public bool Equals(NativeCallback<T> other) => ReferenceEquals(Callback, other.Callback);
 
         /// <inheritdoc/>
-        public override readonly int GetHashCode()
-        {
-            return Callback?.GetHashCode() ?? 0;
-        }
+        public override int GetHashCode() => Callback?.GetHashCode() ?? 0;
 
         /// <summary>
-        /// Determines whether two <see cref="NativeCallback{T}"/> instances are equal.
+        /// Determines whether two <see cref="NativeCallback{T}"/> instances reference the same delegate.
         /// </summary>
-        public static bool operator ==(NativeCallback<T> left, NativeCallback<T> right)
-        {
-            return left.Equals(right);
-        }
+        public static bool operator ==(NativeCallback<T> left, NativeCallback<T> right) => left.Equals(right);
 
         /// <summary>
-        /// Determines whether two <see cref="NativeCallback{T}"/> instances are not equal.
+        /// Determines whether two <see cref="NativeCallback{T}"/> instances reference different delegates.
         /// </summary>
-        public static bool operator !=(NativeCallback<T> left, NativeCallback<T> right)
-        {
-            return !(left == right);
-        }
+        public static bool operator !=(NativeCallback<T> left, NativeCallback<T> right) => !left.Equals(right);
 
         /// <summary>
-        /// Implicitly converts a <see cref="NativeCallback{T}"/> instance to its underlying delegate type.
+        /// Returns the managed delegate held by a callback lease.
         /// </summary>
         public static implicit operator T?(NativeCallback<T> callback) => callback.Callback;
+
+        private sealed class CallbackLease : IDisposable
+        {
+            private readonly object sync = new();
+            private GCHandle handle;
+
+            internal CallbackLease(T callback)
+            {
+                Callback = callback;
+                handle = GCHandle.Alloc(callback);
+            }
+
+            ~CallbackLease()
+            {
+                Dispose();
+            }
+
+            internal T? Callback { get; private set; }
+
+            internal GCHandle Handle
+            {
+                get
+                {
+                    lock (sync)
+                    {
+                        return handle;
+                    }
+                }
+            }
+
+            internal bool IsAllocated
+            {
+                get
+                {
+                    lock (sync)
+                    {
+                        return handle.IsAllocated;
+                    }
+                }
+            }
+
+            public void Dispose()
+            {
+                lock (sync)
+                {
+                    if (!handle.IsAllocated)
+                    {
+                        return;
+                    }
+                    handle.Free();
+                    handle = default;
+                    Callback = null;
+                }
+                GC.SuppressFinalize(this);
+            }
+        }
     }
 }

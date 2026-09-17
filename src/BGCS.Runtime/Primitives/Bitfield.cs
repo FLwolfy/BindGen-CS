@@ -48,9 +48,30 @@ public static unsafe class Bitfield
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Get<T>(T raw, int offset, int bitWidth) where T : unmanaged
     {
-        ulong rawl = ToULong(raw);
-        ulong mask = (1UL << bitWidth) - 1UL;
-        ulong value = (rawl >> offset) & mask;
+        ValidateRange<T>(offset, bitWidth);
+        ulong value = (ToULong(raw) >> offset) & CreateMask(bitWidth);
+        return *(T*)&value;
+    }
+
+    /// <summary>
+    /// Reads and sign-extends a signed bitfield segment from <paramref name="raw"/>.
+    /// </summary>
+    /// <typeparam name="T">Underlying signed storage type.</typeparam>
+    /// <param name="raw">Raw value containing the bitfield.</param>
+    /// <param name="offset">Bit offset of the field.</param>
+    /// <param name="bitWidth">Bit width of the field.</param>
+    /// <returns>The sign-extended field value cast to <typeparamref name="T"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static T GetSigned<T>(T raw, int offset, int bitWidth) where T : unmanaged
+    {
+        ValidateRange<T>(offset, bitWidth);
+        ulong mask = CreateMask(bitWidth);
+        ulong value = (ToULong(raw) >> offset) & mask;
+        ulong signBit = 1UL << (bitWidth - 1);
+        if ((value & signBit) != 0)
+        {
+            value |= ~mask;
+        }
         return *(T*)&value;
     }
 
@@ -65,10 +86,24 @@ public static unsafe class Bitfield
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Set<T>(ref T raw, T value, int offset, int bitWidth) where T : unmanaged
     {
-        ulong rawl = ToULong(raw);
-        ulong val = ToULong(value);
-        ulong mask = ((1UL << bitWidth) - 1UL) << offset;
-        var newl = (rawl & ~mask) | ((val & ((1UL << bitWidth) - 1UL)) << offset);
-        raw = *(T*)&newl;
+        ValidateRange<T>(offset, bitWidth);
+        ulong rawValue = ToULong(raw);
+        ulong valueMask = CreateMask(bitWidth);
+        ulong mask = valueMask << offset;
+        ulong newValue = (rawValue & ~mask) | ((ToULong(value) & valueMask) << offset);
+        raw = *(T*)&newValue;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong CreateMask(int bitWidth) => bitWidth == 64 ? ulong.MaxValue : (1UL << bitWidth) - 1UL;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ValidateRange<T>(int offset, int bitWidth) where T : unmanaged
+    {
+        int storageBits = sizeof(T) * 8;
+        if (bitWidth <= 0 || offset < 0 || bitWidth > storageBits || offset > storageBits - bitWidth)
+        {
+            throw new ArgumentOutOfRangeException(nameof(bitWidth), $"Bit range [{offset}, {offset + bitWidth}) exceeds {storageBits}-bit storage.");
+        }
     }
 }

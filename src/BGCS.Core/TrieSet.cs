@@ -19,7 +19,7 @@
         public TrieSet()
         {
             _comparer = EqualityComparer<T>.Default;
-            root = new(default, _comparer);
+            root = new(default!, _comparer);
         }
 
         /// <summary>
@@ -28,7 +28,7 @@
         public TrieSet(IEqualityComparer<T> comparer)
         {
             _comparer = comparer;
-            root = new(default, _comparer);
+            root = new(default!, _comparer);
         }
 
         /// <summary>
@@ -353,7 +353,7 @@
 
         private static IEnumerable<T> GetFullKey(TrieNode node)
         {
-            return node.Value;
+            return node.Value!;
         }
 
         private static IEnumerable<TrieNode> GetAllNodes(TrieNode node)

@@ -1,0 +1,162 @@
+# 配置指南
+
+[Wiki](README.cn.md) | [English](configuration-guide.md) | [自动生成的属性参考](config.md)
+
+为了保持源码兼容，当前 JSON 仍是扁平模型；内部正在拆分为 input、target、API、marshalling、mapping 和 output options。
+
+生成供编辑器和 CI 使用的 schema：
+
+```bash
+bindgen-cs schema bindgen.schema.json
+```
+
+Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum 名称和默认值。
+
+## 最小配置
+
+```json
+{
+  "Namespace": "MyCompany.Native.Library",
+  "ApiName": "LibraryApi",
+  "LibName": "library",
+  "EntryFiles": ["include/library.h"],
+  "ParserKind": "C",
+  "TargetArchitecture": "X64",
+  "ImportType": "DllImport",
+  "OutputPath": "Generated",
+  "MergeGeneratedFilesToSingleFile": true
+}
+```
+
+## 输入和 Parser
+
+| 属性 | 用途 | 建议 |
+| --- | --- | --- |
+| `EntryFiles` | 根头文件 | 有稳定 umbrella header 时优先使用 |
+| `AllowedHeaders` | 显式输出白名单 | umbrella header 可留空并开启 transitive |
+| `IncludeTransitivelyReferencedHeaders` | 包含 entry/include roots 下的用户头 | SDL 风格 API 推荐开启 |
+| `IncludeFolders` | 用户 include roots | transitive 模式下允许输出其中声明 |
+| `SystemIncludeFolders` | 编译器/system include roots | 通常不输出 |
+| `Defines` | 预处理 define | 必须与 native library build 一致 |
+| `AdditionalArguments` | 原始 Clang 参数 | 只有没有强类型配置时才使用 |
+| `ParserKind` | `C`、`Cpp`、`ObjC` | 与真实 header language 一致 |
+| `ParseMacros` | 构建 macro AST | 不需要常量时，大型宏库可关闭 |
+| `ParseComments` | 构建文档 AST | 只有不需要文档时才为性能关闭 |
+| `ParseSystemIncludes` | 包含系统声明 | 除非主动绑定系统头，否则保持 false |
+| `AutoSquashTypedef` | 折叠 typedef chain | 需要保留公开 alias 时关闭 |
+
+## Target
+
+`TargetArchitecture` 当前包含 Windows `X86`、`X64`、`Arm64`。Windows x64 是强制执行验证平台。Defines 和 native binary 必须与目标架构一致。
+
+## Import Mode
+
+- `DllImport`：兼容广、诊断简单。
+- `LibraryImport`：source-generated import；签名必须满足 source generator 限制。
+- `FunctionTable`：显式 native context 和 symbol resolution，与当前 Inno.Native 风格一致。
+
+## Output 与 Runtime
+
+- `GenerateConfigured` 以 config 所在目录解析 `OutputPath`。
+- `SingleFileOutputName` 只能是 `.cs` 文件名，禁止路径。
+- `GenerateRuntimeSource=false` 需要引用 `BGCS.Runtime`。
+- `GenerateRuntimeSource=true` 生成带 guard 的 standalone Runtime。
+- 输出是事务性的；解析/生成失败不会删除上一次成功结果。
+
+## Mapping 与 Policy
+
+只为无法安全推断的事实配置 mapping：
+
+- native/managed 命名；
+- opaque/unexposed type；
+- string encoding 和 ownership；
+- 无法通过名称识别的 pointer/count 关系；
+- constructor 和 member-style function；
+- 显式 template instance 和 C++ adapter。
+
+Mapping 不能掩盖 ABI 不确定性。非平凡 C++ 类型跨边界时必须生成 C Bridge。
+
+## 严格安全诊断
+
+`StrictSafety` 默认是 `true`。`StrictSafetySeverity` 可选 `Warning`（诊断但保持兼容）、`SuppressFriendly`（保留 raw ABI，删除高风险 string/Span/array/delegate overload）或 `Error`（validate/generate/build 在 commit 前失败）。诊断使用 `BGCS-SAFETY-*` code，并给出最小 `MarshallingMappings` 路径。只有外部审计明确负责这些语义时才应设为 `false`。
+
+## Ownership 与 Buffer Marshalling
+
+当 pointer 语法无法表达 ownership 或 buffer 关系时，使用 `MarshallingMappings`：
+
+```json
+{
+  "MarshallingMappings": {
+    "library_create_name": {
+      "Return": {
+        "Strategy": "String",
+        "Ownership": "Owned",
+        "Encoding": "Utf8",
+        "CleanupFunction": "library_free_name",
+        "RequiresCleanup": true,
+        "NullTerminated": true
+      }
+    },
+    "library_get_items": {
+      "Parameters": {
+        "output": {
+          "Strategy": "Span",
+          "Ownership": "CallerAllocated",
+          "LengthParameter": "actual_count",
+          "CapacityParameter": "capacity",
+          "WrittenCountParameter": "actual_count"
+        }
+      }
+    }
+  }
+}
+```
+
+显式 mapping 会覆盖保守推断，`OverloadPlanner` 不会覆盖这些关系；全部共享 IR emitter 都能通过 `MarshallingPlan` 读取。
+
+## 强类型 C Variadic 函数
+
+没有配置的 `...` 函数会带诊断跳过，因为静默丢掉可变参数会产生 ABI 风险。Windows DllImport 可以配置完成默认参数提升后的固定 variant：
+
+```json
+{
+  "VariadicFunctionVariants": {
+    "native_log": [
+      {
+        "Suffix": "IntString",
+        "ParameterTypes": ["int", "byte*"],
+        "ParameterNames": ["value", "text"]
+      }
+    ]
+  }
+}
+```
+
+类型必须已经体现 C default argument promotion：使用 `double` 而不是 `float`，窄整数使用 `int`。每个 variant 继续调用原始 native EntryPoint。
+
+## BaseConfig
+
+```json
+{
+  "BaseConfig": {
+    "Url": "file://shared.windows-x64.json",
+    "IgnoredProperties": ["EntryFiles", "OutputPath"]
+  }
+}
+```
+
+相对 BaseConfig 从引用它的配置目录解析；循环引用会明确失败；读取已有配置不会重写原文件。
+
+## Preset
+
+Windows 真实库矩阵当前验证 `sdl3`、`miniaudio`、`cimgui` 和 `cimguizmo` preset。Preset 提供 parser、typedef、callback、SingleFile 和必需 define 默认值；项目配置仍负责路径、namespace、API 名和 native library 名。
+
+```json
+{
+  "Preset": "sdl3",
+  "EntryFiles": ["vendor/SDL/include/SDL3/SDL.h"],
+  "IncludeFolders": ["vendor/SDL/include"]
+}
+```
+
+Windows COM preset 仍属于待完成验收项。

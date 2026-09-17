@@ -32,6 +32,7 @@ public sealed class CppFunction : CppDeclaration, ICppMemberWithVisibility, ICpp
         TemplateParameters = new CppContainerList<CppType>(this);
         Attributes = [];
         TokenAttributes = [];
+        ReturnType = CppPrimitiveType.Void;
     }
 
     /// <inheritdoc />

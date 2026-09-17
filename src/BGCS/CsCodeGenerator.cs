@@ -1,18 +1,26 @@
 namespace BGCS
 {
+    using BGCS.Application;
     using BGCS.Core;
     using BGCS.Core.CSharp;
     using BGCS.Core.Logging;
+    using BGCS.Configuration;
     using BGCS.CppAst.Diagnostics;
+    using BGCS.CppAst.Model;
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Interfaces;
     using BGCS.CppAst.Model.Metadata;
     using BGCS.CppAst.Model.Types;
     using BGCS.CppAst.Parsing;
+    using BGCS.Emission;
     using BGCS.FunctionGeneration;
+    using BGCS.Generation;
     using BGCS.GenerationSteps;
+    using BGCS.Intermediate;
     using BGCS.Metadata;
+    using BGCS.Output;
     using BGCS.Patching;
+    using BGCS.Platform;
     using BGCS.PreProcessSteps;
     using System.Diagnostics.CodeAnalysis;
     using System.Text;
@@ -24,7 +32,6 @@ namespace BGCS
     public partial class CsCodeGenerator : BaseGenerator
     {
         private const string RuntimeUsingDefault = "using BGCS.Runtime;";
-        private const string RuntimeSourceExcludeSymbol = "BGCS_RUNTIME_EXTERNAL";
         private static readonly Regex EmptyPartialTypeRegex = new(
             @"^\s*(?:(?:\s*///.*\r?\n)+)?(?:\s*\[[^\]\r\n]+\]\r?\n)*\s*public\s+(?:static\s+)?(?:readonly\s+)?(?:unsafe\s+)?partial\s+(?:class|struct)\s+\w+\s*\r?\n\s*\{\s*\r?\n\s*\}\s*(?:\r?\n)?",
             RegexOptions.Multiline | RegexOptions.Compiled);
@@ -40,6 +47,7 @@ namespace BGCS
         private readonly List<GenerationStep> generationSteps = new();
         private Dictionary<string, string> wrappedPointers = null!;
         private List<CsCodeGeneratorMetadata> copyFromPending = [];
+        private readonly BindingGenerationPipeline pipeline;
 
         /// <summary>
         /// Performs the operation implemented by <c>Create</c>.
@@ -47,7 +55,7 @@ namespace BGCS
         /// <returns>Result produced by <c>Create</c>.</returns>
         public static CsCodeGenerator Create(string configPath)
         {
-            return new(CsCodeGeneratorConfig.Load(configPath));
+            return new(new ConfigLoader().Load(configPath));
         }
 
         /// <summary>
@@ -56,7 +64,14 @@ namespace BGCS
         /// <returns>Result produced by <c>CsCodeGenerator</c>.</returns>
         public CsCodeGenerator(CsCodeGeneratorConfig config) : base(config)
         {
+            PresetResolver.Default.Apply(config);
+            pipeline = new(config);
         }
+
+        /// <summary>
+        /// Gets the structured result of the most recent completed generation attempt.
+        /// </summary>
+        public BindingGenerationResult? LastResult { get; private set; }
 
         /// <summary>
         /// Exposes public member <c>}</c>.
@@ -151,6 +166,66 @@ namespace BGCS
         }
 
         /// <summary>
+        /// Generates all configured entry files using paths relative to the loaded configuration file.
+        /// </summary>
+        /// <param name="outputPath">Optional output path override. Relative paths use the configuration directory.</param>
+        /// <returns><see langword="true"/> when parsing and generation complete without fatal diagnostics; otherwise <see langword="false"/>.</returns>
+        public bool GenerateConfigured(string? outputPath = null)
+        {
+            ConfiguredGenerationRequest request = ConfiguredGenerationRequestResolver.Resolve(config, outputPath);
+            string previousDirectory = Environment.CurrentDirectory;
+            try
+            {
+                Environment.CurrentDirectory = request.BaseDirectory;
+                return Generate(request.HeaderFiles.ToList(), request.OutputPath, request.AllowedHeaders?.ToList());
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previousDirectory;
+            }
+        }
+
+        /// <summary>
+        /// Parses and analyzes configured headers without emitting or replacing generated output.
+        /// </summary>
+        /// <returns>A structured result containing the shared binding IR and parser diagnostics.</returns>
+        public BindingGenerationResult AnalyzeConfigured()
+        {
+            ConfiguredGenerationRequest request = ConfiguredGenerationRequestResolver.Resolve(config, null);
+            string previousDirectory = Environment.CurrentDirectory;
+            try
+            {
+                Environment.CurrentDirectory = request.BaseDirectory;
+                ConfigValidator.Validate(config);
+                LogInfo($"Analyzing: {config.ApiName}");
+                CppCompilation compilation = ParseFiles(PrepareSettings(), request.HeaderFiles.ToList());
+                LogCompilationDiagnostics(compilation);
+                List<string> allowedHeaders = request.AllowedHeaders?.ToList() ??
+                    (config.IncludeTransitivelyReferencedHeaders
+                        ? ResolveTransitiveUserHeaders(compilation, request.HeaderFiles, config.IncludeFolders)
+                        : request.HeaderFiles.ToList());
+                if (compilation.HasErrors)
+                {
+                    LastResult = pipeline.CreateResult(compilation, allowedHeaders, false, request.OutputPath, Messages);
+                    return LastResult;
+                }
+                BindingModule module = pipeline.Analyze(compilation, allowedHeaders);
+                bool safetySuccess = !module.StructuredDiagnostics.Any(diagnostic => diagnostic.Severity == BindingDiagnosticSeverity.Error);
+                LastResult = new(module, safetySuccess, [],
+                [
+                    .. Messages.Select(diagnostic => new BindingDiagnostic(
+                        (BindingDiagnosticSeverity)(int)diagnostic.Severtiy, diagnostic.Message)),
+                    .. module.StructuredDiagnostics
+                ]);
+                return LastResult;
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previousDirectory;
+            }
+        }
+
+        /// <summary>
         /// Performs the operation implemented by <c>Generate</c>.
         /// </summary>
         /// <returns>Result produced by <c>Generate</c>.</returns>
@@ -165,6 +240,12 @@ namespace BGCS
         /// <returns>Result produced by <c>Generate</c>.</returns>
         public bool Generate(CppParserOptions parserOptions, List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
         {
+            ArgumentNullException.ThrowIfNull(parserOptions);
+            ArgumentNullException.ThrowIfNull(headerFiles);
+            if (headerFiles.Count == 0)
+            {
+                throw new ArgumentException("At least one header file is required.", nameof(headerFiles));
+            }
             ConfigureCore();
             LogInfo($"Generating: {config.ApiName}");
 
@@ -209,16 +290,17 @@ namespace BGCS
         {
             var options = new CppParserOptions
             {
-                ParseMacros = true,
-                ParseComments = true,
-                ParseSystemIncludes = true,
+                ParseMacros = config.ParseMacros,
+                ParseComments = config.ParseComments,
+                ParseSystemIncludes = config.ParseSystemIncludes,
 
-                ParseCommentAttribute = true,
+                ParseCommentAttribute = config.ParseComments,
                 //ParseTokenAttributes = true,
-                ParserKind = CppParserKind.Cpp,
+                ParserKind = config.ParserKind,
 
                 AutoSquashTypedef = config.AutoSquashTypedef,
             };
+            options.ConfigureForWindowsMsvc(WindowsAbi.GetTargetCpu(config.TargetArchitecture));
 
             var additionalArguments = config.AdditionalArguments ?? [];
             var includeFolders = config.IncludeFolders ?? [];
@@ -262,125 +344,132 @@ namespace BGCS
         /// <returns>Result produced by <c>GenerateCore</c>.</returns>
         public virtual bool GenerateCore(CppCompilation compilation, List<string> headerFiles, string outputPath, List<string>? allowedHeaders = null)
         {
-            if (CLIOptions != null && CLIOptions.OutputDirectory != null)
-            {
-                outputPath = Path.Combine(CLIOptions.OutputDirectory, outputPath);
-            }
-            else
-            {
-            }
+            return pipeline.Generate(this, compilation, headerFiles, outputPath, allowedHeaders);
+        }
 
-            if (Directory.Exists(outputPath)) Directory.Delete(outputPath, true);
-            Directory.CreateDirectory(outputPath);
+        internal CsCodeGeneratorConfig PipelineConfig => config;
 
-            bool singleFileOutputOnly = config.MergeGeneratedFilesToSingleFile;
-            string generationOutputPath = outputPath;
-            if (singleFileOutputOnly)
-            {
-                generationOutputPath = Path.Combine(Path.GetTempPath(), "bgcs-staging-" + Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(generationOutputPath);
-            }
+        internal CsCodeGeneratorMetadata PipelineMetadata => metadata;
 
-            // Print diagnostic messages
+        internal IReadOnlyList<CsCodeGeneratorMetadata> PendingMetadata => copyFromPending;
+
+        internal void SetLastResult(BindingGenerationResult result) => LastResult = result;
+
+        internal void ReportCompilationDiagnostics(CppCompilation compilation) => LogCompilationDiagnostics(compilation);
+
+        internal List<string> ResolveAllowedHeaders(CppCompilation compilation, IReadOnlyList<string> headerFiles)
+        {
+            return config.IncludeTransitivelyReferencedHeaders
+                ? ResolveTransitiveUserHeaders(compilation, headerFiles, config.IncludeFolders)
+                : [.. headerFiles];
+        }
+
+        internal void InvokePrePatch(ParseResult result, List<string> headerFiles) => OnPrePatchCore(result, headerFiles);
+
+        internal void RewriteGeneratedRuntimeUsings(string outputPath) => RewriteRuntimeUsings(outputPath);
+
+        internal static void RemoveEmptyGeneratedTypes(string outputPath) => RemoveEmptyPartialTypes(outputPath);
+
+        internal static void RemoveEmptyGeneratedDirectories(string outputPath) => DeleteEmptyDirectories(outputPath);
+
+        internal void ComposeSingleFile(string generationOutputPath) => MergeGeneratedFilesToSingleFile(generationOutputPath, generationOutputPath);
+
+        internal void EmitStandaloneRuntime(string outputPath) => WriteStandaloneRuntimeFile(outputPath);
+
+        private void LogCompilationDiagnostics(CppCompilation compilation)
+        {
             for (int i = 0; i < compilation.Diagnostics.Messages.Count; i++)
             {
-                CppDiagnosticMessage? message = compilation.Diagnostics.Messages[i];
+                CppDiagnosticMessage message = compilation.Diagnostics.Messages[i];
                 if (message.Type == CppLogMessageType.Error && config.CppLogLevel <= LogSeverity.Error)
-                {
                     LogError(message.ToString());
-                }
                 if (message.Type == CppLogMessageType.Warning && config.CppLogLevel <= LogSeverity.Warning)
-                {
                     LogWarn(message.ToString());
-                }
                 if (message.Type == CppLogMessageType.Info && config.CppLogLevel <= LogSeverity.Information)
-                {
                     LogInfo(message.ToString());
+            }
+        }
+
+        private static List<string> ResolveTransitiveUserHeaders(CppCompilation compilation, IReadOnlyList<string> headerFiles, IReadOnlyList<string> includeFolders)
+        {
+            HashSet<string> roots = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string headerFile in headerFiles)
+            {
+                string? directory = Path.GetDirectoryName(Path.GetFullPath(headerFile));
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    roots.Add(directory);
+                }
+            }
+            foreach (string includeFolder in includeFolders)
+            {
+                if (!string.IsNullOrWhiteSpace(includeFolder))
+                {
+                    roots.Add(Path.GetFullPath(includeFolder));
                 }
             }
 
-            if (compilation.HasErrors)
+            HashSet<string> sources = new(StringComparer.OrdinalIgnoreCase);
+            HashSet<ICppContainer> visited = new(ReferenceEqualityComparer.Instance);
+            foreach (string headerFile in headerFiles)
             {
-                return false;
+                sources.Add(Path.GetFullPath(headerFile));
             }
-
-            if (allowedHeaders is null)
+            foreach (string root in roots)
             {
-                allowedHeaders = [.. headerFiles];
-            }
-
-            bool explicitEmptyOutputFilter = allowedHeaders.Count == 0;
-            FileSet files = new(allowedHeaders.Select(PathHelper.GetPath));
-
-            foreach (var meta in copyFromPending)
-            {
-                foreach (var step in generationSteps)
+                if (!Directory.Exists(root))
+                    continue;
+                foreach (string candidate in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
                 {
-                    step.CopyFromMetadata(meta);
+                    string extension = Path.GetExtension(candidate);
+                    if (extension is ".h" or ".hh" or ".hpp" or ".hxx" or ".inc")
+                        sources.Add(Path.GetFullPath(candidate));
                 }
             }
-
-            LogInfo($"Configuring Pre-Processing Steps...");
-            foreach (var step in PreProcessSteps)
+            foreach (CppMacro macro in compilation.Macros)
             {
-                step.Configure(config);
+                AddSource(macro.SourceFile);
             }
+            Collect(compilation);
+            return [.. sources];
 
-            LogInfo("Running Pre-Processing Steps...");
-
-            ParseResult result = new(compilation);
-            config.TypeConverter.Initialize(result);
-            foreach (var step in PreProcessSteps)
+            void Collect(ICppContainer container)
             {
-                step.PreProcess(files, compilation, config, metadata, result);
-            }
-
-            OnPrePatchCore(result, headerFiles);
-
-            LogInfo($"Configuring Steps...");
-            foreach (var step in GenerationSteps)
-            {
-                step.Configure(config);
-            }
-
-            foreach (var step in GenerationSteps)
-            {
-                if (step.Enabled)
+                if (!visited.Add(container))
                 {
-                    if (explicitEmptyOutputFilter)
+                    return;
+                }
+                foreach (ICppDeclaration declaration in container.Children)
+                {
+                    if (declaration is CppElement element)
                     {
-                        continue;
+                        AddSource(element.SourceFile);
                     }
-
-                    LogInfo($"Generating {step.Name}...");
-                    step.Generate(files, result, generationOutputPath, config, metadata);
-                    step.CopyToMetadata(metadata);
+                    if (declaration is ICppContainer nested)
+                    {
+                        Collect(nested);
+                    }
                 }
             }
 
-            LogInfo("Applying Post-Patches...");
-            patchEngine.ApplyPostPatches(metadata, generationOutputPath, Directory.GetFiles(generationOutputPath, "*.*", SearchOption.AllDirectories).ToList());
-
-            RewriteRuntimeUsings(generationOutputPath);
-            RemoveEmptyPartialTypes(generationOutputPath);
-            DeleteEmptyDirectories(generationOutputPath);
-
-            if (config.MergeGeneratedFilesToSingleFile)
+            void AddSource(string? sourceFile)
             {
-                MergeGeneratedFilesToSingleFile(generationOutputPath, outputPath);
+                if (string.IsNullOrWhiteSpace(sourceFile))
+                {
+                    return;
+                }
+                string fullPath = Path.GetFullPath(sourceFile);
+                foreach (string root in roots)
+                {
+                    if (fullPath.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+                        fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                        fullPath.StartsWith(root + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sources.Add(fullPath);
+                        return;
+                    }
+                }
             }
-
-            if (config.GenerateRuntimeSource)
-            {
-                WriteStandaloneRuntimeFile(outputPath);
-            }
-
-            if (singleFileOutputOnly && Directory.Exists(generationOutputPath))
-            {
-                Directory.Delete(generationOutputPath, true);
-            }
-
-            return true;
         }
 
         private static void RemoveEmptyPartialTypes(string generationOutputPath)
@@ -446,127 +535,18 @@ namespace BGCS
 
         protected virtual void MergeGeneratedFilesToSingleFile(string generationOutputPath, string outputPath)
         {
-            string mergedPath = Path.Combine(outputPath, "Bindings.cs");
-
-            List<string> files = Directory
-                .GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories)
-                .Where(x => !string.Equals(x, mergedPath, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            string mergedPath = Path.Combine(outputPath, SingleFileOutputNameResolver.Resolve(config));
+            List<string> files = Directory.GetFiles(generationOutputPath, "*.cs", SearchOption.AllDirectories)
+                .Where(path => !string.Equals(path, mergedPath, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-
             if (files.Count == 0)
-            {
                 return;
-            }
-
-            string? headerBanner = null;
-            List<string> orderedUsings = [];
-            HashSet<string> usingSet = new(StringComparer.Ordinal);
-            List<string> bodies = [];
-            bool canWrapSingleNamespace = true;
-
-            for (int i = 0; i < files.Count; i++)
-            {
-                string text = File.ReadAllText(files[i]);
-                ParsedMergedFile parsed = ParseMergedFile(text);
-
-                if (headerBanner == null && !string.IsNullOrWhiteSpace(parsed.HeaderBanner))
-                {
-                    headerBanner = parsed.HeaderBanner;
-                }
-
-                for (int j = 0; j < parsed.Usings.Count; j++)
-                {
-                    string usingLine = parsed.Usings[j];
-                    if (usingSet.Add(usingLine))
-                    {
-                        orderedUsings.Add(usingLine);
-                    }
-                }
-
-                if (!string.IsNullOrWhiteSpace(parsed.Body))
-                {
-                    string sourceBody = parsed.Body.Replace("\r\n", "\n");
-                    if (TryUnwrapNamespaceBody(sourceBody, config.Namespace, out string? unwrappedBody))
-                    {
-                        string normalizedBody = DedentLines(NormalizeMergedBody(unwrappedBody));
-                        string bodyWithoutUsings = ExtractLeadingUsingLines(normalizedBody, orderedUsings, usingSet);
-                        if (!string.IsNullOrWhiteSpace(bodyWithoutUsings))
-                        {
-                            bodies.Add(bodyWithoutUsings);
-                        }
-                    }
-                    else
-                    {
-                        canWrapSingleNamespace = false;
-                        string normalizedBody = NormalizeMergedBody(sourceBody);
-                        string bodyWithoutUsings = ExtractLeadingUsingLines(normalizedBody, orderedUsings, usingSet);
-                        if (!string.IsNullOrWhiteSpace(bodyWithoutUsings))
-                        {
-                            bodies.Add(bodyWithoutUsings);
-                        }
-                    }
-                }
-            }
-
-            StringBuilder builder = new();
-            if (!string.IsNullOrWhiteSpace(headerBanner))
-            {
-                builder.AppendLine(headerBanner.TrimEnd());
-                builder.AppendLine();
-            }
-
-            for (int i = 0; i < orderedUsings.Count; i++)
-            {
-                builder.AppendLine(orderedUsings[i]);
-            }
-
-            if (orderedUsings.Count > 0 && bodies.Count > 0)
-            {
-                builder.AppendLine();
-            }
-
-            if (canWrapSingleNamespace && bodies.Count > 0)
-            {
-                builder.AppendLine($"namespace {config.Namespace}");
-                builder.AppendLine("{");
-                List<string> nonEmptyBodies = bodies
-                    .Select(x => x.Trim('\r', '\n'))
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .ToList();
-                for (int i = 0; i < nonEmptyBodies.Count; i++)
-                {
-                    builder.AppendLine(IndentLines(nonEmptyBodies[i], "    "));
-                    if (i + 1 < nonEmptyBodies.Count)
-                    {
-                        builder.AppendLine();
-                    }
-                }
-                builder.AppendLine("}");
-            }
-            else
-            {
-                for (int i = 0; i < bodies.Count; i++)
-                {
-                    builder.AppendLine(bodies[i]);
-                    if (i + 1 < bodies.Count)
-                    {
-                        builder.AppendLine();
-                    }
-                }
-            }
-
-            string mergedText = builder.ToString().TrimEnd() + Environment.NewLine;
-            mergedText = NormalizeLeadingTabsPerLine(mergedText, 4);
-            File.WriteAllText(mergedPath, mergedText);
-            LogInfo($"Merged generated files into: {mergedPath}");
-
-            for (int i = 0; i < files.Count; i++)
-            {
-                File.Delete(files[i]);
-            }
-
+            new SingleFileComposer().Compose(files, mergedPath, config.Namespace);
+            foreach (string file in files)
+                File.Delete(file);
             DeleteEmptyDirectories(generationOutputPath);
+            LogInfo($"Merged generated files into: {mergedPath}");
         }
 
         private void RewriteRuntimeUsings(string generationOutputPath)
@@ -584,6 +564,7 @@ namespace BGCS
                 }
 
                 text = text.Replace(RuntimeUsingDefault, runtimeUsingTarget, StringComparison.Ordinal);
+                text = text.Replace("Utils.", $"global::{GetRuntimeNamespace()}.Utils.", StringComparison.Ordinal);
 
                 File.WriteAllText(path, text);
             }
@@ -591,117 +572,12 @@ namespace BGCS
 
         private void WriteStandaloneRuntimeFile(string outputPath)
         {
-            IReadOnlyList<(string Name, string Content)> runtimeSources = GetEmbeddedRuntimeSources();
-            if (runtimeSources.Count == 0)
-            {
-                runtimeSources = GetRuntimeSourcesFromFileSystem();
-            }
-
-            if (runtimeSources.Count == 0)
-            {
-                LogWarn("Runtime is required but no runtime sources were found.");
-                return;
-            }
-
-            List<string> orderedUsings = [];
-            HashSet<string> usingSet = new(StringComparer.Ordinal);
-            List<string> bodies = [];
+            BindingModule module = new(config.ApiName, config.Namespace, config.LibName,
+                $"windows-{config.TargetArchitecture.ToString().ToLowerInvariant()}-msvc");
             string runtimeNamespace = GetRuntimeNamespace();
-            bool canWrapSingleNamespace = true;
-            for (int i = 0; i < runtimeSources.Count; i++)
-            {
-                string normalizedRuntimeText = NormalizeRuntimeTextForMerge(RewriteRuntimeNamespace(runtimeSources[i].Content));
-                ParsedMergedFile parsedRuntime = ParseMergedFile(normalizedRuntimeText);
-
-                for (int j = 0; j < parsedRuntime.Usings.Count; j++)
-                {
-                    string usingLine = parsedRuntime.Usings[j];
-                    if (usingSet.Add(usingLine))
-                    {
-                        orderedUsings.Add(usingLine);
-                    }
-                }
-
-                if (!string.IsNullOrWhiteSpace(parsedRuntime.Body))
-                {
-                    string sourceBody = parsedRuntime.Body.Replace("\r\n", "\n");
-                    if (TryUnwrapNamespaceBody(sourceBody, runtimeNamespace, out string? unwrappedBody))
-                    {
-                        ParsedMergedFile parsedInner = ParseMergedFile(unwrappedBody);
-                        for (int j = 0; j < parsedInner.Usings.Count; j++)
-                        {
-                            string usingLine = parsedInner.Usings[j];
-                            if (usingSet.Add(usingLine))
-                            {
-                                orderedUsings.Add(usingLine);
-                            }
-                        }
-
-                        string innerBody = DedentLines(NormalizeMergedBody(parsedInner.Body));
-                        if (!string.IsNullOrWhiteSpace(innerBody))
-                        {
-                            bodies.Add(innerBody);
-                        }
-                    }
-                    else
-                    {
-                        canWrapSingleNamespace = false;
-                        bodies.Add(NormalizeMergedBody(sourceBody));
-                    }
-                }
-            }
-
-            if (bodies.Count == 0)
-            {
-                return;
-            }
-
-            string runtimePath = Path.Combine(outputPath, "Runtime.cs");
-            StringBuilder builder = new();
-            for (int i = 0; i < orderedUsings.Count; i++)
-            {
-                builder.AppendLine(orderedUsings[i]);
-            }
-            if (orderedUsings.Count > 0)
-            {
-                builder.AppendLine();
-            }
-
-            string combinedBody;
-            if (canWrapSingleNamespace)
-            {
-                StringBuilder nsBuilder = new();
-                nsBuilder.AppendLine($"namespace {runtimeNamespace}");
-                nsBuilder.AppendLine("{");
-
-                for (int i = 0; i < bodies.Count; i++)
-                {
-                    nsBuilder.AppendLine(IndentLines(bodies[i], "    "));
-                    if (i + 1 < bodies.Count)
-                    {
-                        nsBuilder.AppendLine();
-                    }
-                }
-
-                nsBuilder.AppendLine("}");
-                combinedBody = nsBuilder.ToString().TrimEnd();
-            }
-            else
-            {
-                combinedBody = string.Join($"{Environment.NewLine}{Environment.NewLine}", bodies).TrimEnd();
-            }
-
-            combinedBody = WrapRuntimeBodyWithGuard(combinedBody);
-            builder.AppendLine(combinedBody);
-            string runtimeText = builder.ToString().TrimEnd() + Environment.NewLine;
-            runtimeText = NormalizeLeadingTabsPerLine(runtimeText, 4);
-            File.WriteAllText(runtimePath, runtimeText);
+            string runtimePath = new RuntimeEmitter().Emit(module,
+                new(outputPath, true, "Runtime.cs", runtimeNamespace)).Single();
             LogInfo($"Generated runtime file: {runtimePath}");
-        }
-
-        private static string WrapRuntimeBodyWithGuard(string body)
-        {
-            return $"#if !{RuntimeSourceExcludeSymbol}{Environment.NewLine}{body}{Environment.NewLine}#endif";
         }
 
         private string GetRuntimeNamespace()
@@ -710,551 +586,6 @@ namespace BGCS
                 ? "BGCS.Runtime"
                 : config.RuntimeNamespace;
         }
-
-        private string RewriteRuntimeNamespace(string text)
-        {
-            string runtimeNamespace = GetRuntimeNamespace();
-            text = text.Replace("namespace BGCS.Runtime;", $"namespace {runtimeNamespace};", StringComparison.Ordinal);
-            text = text.Replace("namespace BGCS.Runtime\r\n", $"namespace {runtimeNamespace}\r\n", StringComparison.Ordinal);
-            text = text.Replace("namespace BGCS.Runtime\n", $"namespace {runtimeNamespace}\n", StringComparison.Ordinal);
-            return text;
-        }
-
-        private static IReadOnlyList<(string Name, string Content)> GetEmbeddedRuntimeSources()
-        {
-            const string prefix = "BGCS.RuntimeSources.";
-            var assembly = typeof(CsCodeGenerator).Assembly;
-            string[] resources = assembly
-                .GetManifestResourceNames()
-                .Where(x => x.StartsWith(prefix, StringComparison.Ordinal) && x.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (resources.Length == 0)
-            {
-                return [];
-            }
-
-            List<(string Name, string Content)> sources = new(resources.Length);
-            for (int i = 0; i < resources.Length; i++)
-            {
-                string resource = resources[i];
-                using Stream? stream = assembly.GetManifestResourceStream(resource);
-                if (stream == null)
-                {
-                    continue;
-                }
-
-                using StreamReader reader = new(stream);
-                sources.Add((resource, reader.ReadToEnd()));
-            }
-
-            return sources;
-        }
-
-        private IReadOnlyList<(string Name, string Content)> GetRuntimeSourcesFromFileSystem()
-        {
-            string? runtimeDirectory = ResolveRuntimeSourceDirectory();
-            if (runtimeDirectory == null)
-            {
-                return [];
-            }
-
-            string[] runtimeFiles = Directory
-                .GetFiles(runtimeDirectory, "*.cs", SearchOption.TopDirectoryOnly)
-                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            List<(string Name, string Content)> sources = new(runtimeFiles.Length);
-            for (int i = 0; i < runtimeFiles.Length; i++)
-            {
-                string path = runtimeFiles[i];
-                sources.Add((Path.GetFileName(path), File.ReadAllText(path)));
-            }
-
-            return sources;
-        }
-
-        private static string? ResolveRuntimeSourceDirectory()
-        {
-            HashSet<string> roots = [];
-            roots.Add(Directory.GetCurrentDirectory());
-            roots.Add(AppContext.BaseDirectory);
-
-            foreach (string root in roots)
-            {
-                string? dir = root;
-                while (!string.IsNullOrWhiteSpace(dir))
-                {
-                    string candidate = Path.Combine(dir, "src", "BGCS.Runtime");
-                    if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "NativeNameAttribute.cs")))
-                    {
-                        return candidate;
-                    }
-
-                    dir = Path.GetDirectoryName(dir);
-                }
-            }
-
-            return null;
-        }
-
-        private static string NormalizeRuntimeTextForMerge(string text)
-        {
-            string normalized = text.Replace("\r\n", "\n").TrimStart('\uFEFF');
-            string[] lines = normalized.Split('\n');
-            if (TryFindFileScopedNamespace(lines, out int namespaceLineIndex, out string? namespaceName))
-            {
-                string prefix = string.Join(Environment.NewLine, lines[..namespaceLineIndex]).TrimEnd();
-                string body = string.Join(Environment.NewLine, lines[(namespaceLineIndex + 1)..]);
-                string indentedBody = IndentLines(body, "    ");
-
-                StringBuilder builder = new();
-                if (!string.IsNullOrWhiteSpace(prefix))
-                {
-                    builder.AppendLine(prefix);
-                }
-                builder.AppendLine($"namespace {namespaceName}");
-                builder.AppendLine("{");
-                builder.AppendLine(indentedBody);
-                builder.Append('}');
-                return builder.ToString();
-            }
-
-            return text;
-        }
-
-        private static bool TryFindFileScopedNamespace(string[] lines, out int namespaceLineIndex, out string? namespaceName)
-        {
-            namespaceLineIndex = -1;
-            namespaceName = null;
-
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string trimmed = lines[i].Trim();
-                if (trimmed.Length == 0)
-                {
-                    continue;
-                }
-
-                if (TryParseFileScopedNamespace(trimmed, out namespaceName))
-                {
-                    namespaceLineIndex = i;
-                    return true;
-                }
-
-                if (trimmed.StartsWith("using ", StringComparison.Ordinal) ||
-                    trimmed.StartsWith("//", StringComparison.Ordinal) ||
-                    trimmed.StartsWith("/*", StringComparison.Ordinal) ||
-                    trimmed.StartsWith("*", StringComparison.Ordinal) ||
-                    trimmed.StartsWith("#", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                return false;
-            }
-
-            return false;
-        }
-
-        private static bool TryParseFileScopedNamespace(string line, out string? namespaceName)
-        {
-            namespaceName = null;
-            const string prefix = "namespace ";
-            if (!line.StartsWith(prefix, StringComparison.Ordinal) || !line.EndsWith(';'))
-            {
-                return false;
-            }
-
-            string candidate = line[prefix.Length..^1].Trim();
-            if (candidate.Length == 0)
-            {
-                return false;
-            }
-
-            namespaceName = candidate;
-            return true;
-        }
-
-        private static string IndentLines(string text, string indent)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return string.Empty;
-            }
-
-            string[] lines = text.Split('\n');
-            for (int i = 0; i < lines.Length; i++)
-            {
-                if (lines[i].Length == 0)
-                {
-                    continue;
-                }
-
-                lines[i] = indent + lines[i];
-            }
-
-            return string.Join(Environment.NewLine, lines);
-        }
-
-        private static string NormalizeMergedBody(string text)
-        {
-            string normalized = text.Replace("\r\n", "\n").Trim('\r', '\n');
-            if (normalized.Length == 0)
-            {
-                return string.Empty;
-            }
-
-            string[] lines = normalized.Split('\n');
-            List<string> compact = new(lines.Length);
-            bool previousBlank = false;
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string line = lines[i].TrimEnd();
-                bool blank = string.IsNullOrWhiteSpace(line);
-                if (blank)
-                {
-                    if (previousBlank)
-                    {
-                        continue;
-                    }
-
-                    previousBlank = true;
-                    compact.Add(string.Empty);
-                    continue;
-                }
-
-                previousBlank = false;
-                compact.Add(line);
-            }
-
-            while (compact.Count > 0 && compact[0].Length == 0)
-            {
-                compact.RemoveAt(0);
-            }
-
-            while (compact.Count > 0 && compact[^1].Length == 0)
-            {
-                compact.RemoveAt(compact.Count - 1);
-            }
-
-            return string.Join(Environment.NewLine, compact);
-        }
-
-        private static string DedentLines(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return string.Empty;
-            }
-
-            string normalized = text.Replace("\r\n", "\n");
-            string[] lines = normalized.Split('\n');
-            for (int i = 0; i < lines.Length; i++)
-            {
-                lines[i] = ExpandLeadingTabs(lines[i], 4);
-            }
-
-            int? minIndent = null;
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string line = lines[i];
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
-
-                int indent = 0;
-                while (indent < line.Length && char.IsWhiteSpace(line[indent]))
-                {
-                    indent++;
-                }
-
-                minIndent = minIndent is null ? indent : Math.Min(minIndent.Value, indent);
-            }
-
-            if (minIndent is null || minIndent.Value == 0)
-            {
-                return string.Join(Environment.NewLine, lines);
-            }
-
-            int remove = minIndent.Value;
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string line = lines[i];
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
-
-                lines[i] = line.Length >= remove ? line[remove..] : string.Empty;
-            }
-
-            return string.Join(Environment.NewLine, AlignOpeningBracesWithPreviousLine(lines));
-        }
-
-        private static string ExpandLeadingTabs(string line, int tabSize)
-        {
-            if (string.IsNullOrEmpty(line))
-            {
-                return line;
-            }
-
-            int i = 0;
-            while (i < line.Length && (line[i] == '\t' || line[i] == ' '))
-            {
-                i++;
-            }
-
-            if (i == 0)
-            {
-                return line;
-            }
-
-            string prefix = line[..i];
-            if (!prefix.Contains('\t'))
-            {
-                return line;
-            }
-
-            string expanded = prefix.Replace("\t", new string(' ', tabSize), StringComparison.Ordinal);
-            return expanded + line[i..];
-        }
-
-        private static string NormalizeLeadingTabsPerLine(string text, int tabSize)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return text;
-            }
-
-            string normalized = text.Replace("\r\n", "\n");
-            string[] lines = normalized.Split('\n');
-            for (int i = 0; i < lines.Length; i++)
-            {
-                lines[i] = ExpandLeadingTabs(lines[i], tabSize);
-            }
-
-            return string.Join(Environment.NewLine, lines);
-        }
-
-        private static string[] AlignOpeningBracesWithPreviousLine(string[] lines)
-        {
-            for (int i = 0; i < lines.Length; i++)
-            {
-                if (lines[i].Trim() != "{")
-                {
-                    continue;
-                }
-
-                int prev = i - 1;
-                while (prev >= 0 && string.IsNullOrWhiteSpace(lines[prev]))
-                {
-                    prev--;
-                }
-
-                if (prev < 0)
-                {
-                    continue;
-                }
-
-                string prevLine = lines[prev];
-                string braceLine = lines[i];
-                int prevIndent = GetLeadingWhitespaceCount(prevLine);
-                int braceIndent = GetLeadingWhitespaceCount(braceLine);
-                if (braceIndent > prevIndent)
-                {
-                    lines[i] = new string(' ', prevIndent) + "{";
-                }
-            }
-
-            return lines;
-        }
-
-        private static int GetLeadingWhitespaceCount(string line)
-        {
-            int count = 0;
-            while (count < line.Length && char.IsWhiteSpace(line[count]))
-            {
-                count++;
-            }
-
-            return count;
-        }
-
-        private static bool TryUnwrapNamespaceBody(string body, string namespaceName, out string unwrappedBody)
-        {
-            unwrappedBody = string.Empty;
-            string trimmed = body.Trim();
-            if (trimmed.Length == 0)
-            {
-                return false;
-            }
-
-            string fileScopedPrefix = $"namespace {namespaceName};";
-            if (trimmed.StartsWith(fileScopedPrefix, StringComparison.Ordinal))
-            {
-                unwrappedBody = TrimBoundaryNewLines(trimmed[fileScopedPrefix.Length..]);
-                return true;
-            }
-
-            string blockScopedPrefix = $"namespace {namespaceName}";
-            if (!trimmed.StartsWith(blockScopedPrefix, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            int namespaceDeclarationEnd = blockScopedPrefix.Length;
-            while (namespaceDeclarationEnd < trimmed.Length && char.IsWhiteSpace(trimmed[namespaceDeclarationEnd]))
-            {
-                namespaceDeclarationEnd++;
-            }
-
-            if (namespaceDeclarationEnd >= trimmed.Length || trimmed[namespaceDeclarationEnd] != '{')
-            {
-                return false;
-            }
-
-            int bodyStart = namespaceDeclarationEnd + 1;
-            int depth = 1;
-            int index = bodyStart;
-            for (; index < trimmed.Length; index++)
-            {
-                char c = trimmed[index];
-                if (c == '{')
-                {
-                    depth++;
-                }
-                else if (c == '}')
-                {
-                    depth--;
-                    if (depth == 0)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            if (depth != 0)
-            {
-                return false;
-            }
-
-            string suffix = trimmed[(index + 1)..].Trim();
-            if (suffix.Length != 0)
-            {
-                return false;
-            }
-
-            unwrappedBody = TrimBoundaryNewLines(trimmed[bodyStart..index]);
-            return true;
-        }
-
-        private static string TrimBoundaryNewLines(string text)
-        {
-            return text.Trim('\r', '\n');
-        }
-
-        private static string ExtractLeadingUsingLines(string body, List<string> orderedUsings, HashSet<string> usingSet)
-        {
-            string normalized = body.Replace("\r\n", "\n");
-            string[] lines = normalized.Split('\n');
-
-            int index = 0;
-            while (index < lines.Length)
-            {
-                string line = lines[index].Trim();
-                if (line.Length == 0)
-                {
-                    index++;
-                    continue;
-                }
-
-                if (line.StartsWith("using ", StringComparison.Ordinal) && line.EndsWith(';'))
-                {
-                    if (usingSet.Add(line))
-                    {
-                        orderedUsings.Add(line);
-                    }
-                    index++;
-                    continue;
-                }
-
-                break;
-            }
-
-            return TrimBoundaryNewLines(string.Join(Environment.NewLine, lines.Skip(index)));
-        }
-
-        private static ParsedMergedFile ParseMergedFile(string text)
-        {
-            string normalized = text.Replace("\r\n", "\n");
-            string[] lines = normalized.Split('\n');
-
-            int index = 0;
-            string? banner = null;
-
-            if (lines.Length > 0 && lines[0].TrimStart().StartsWith("// ------------------------------------------------------------------------------", StringComparison.Ordinal))
-            {
-                int autoStart = -1;
-                int autoEnd = -1;
-                int secondSeparator = -1;
-
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    string line = lines[i].Trim();
-                    if (autoStart == -1 && string.Equals(line, "// <auto-generated>", StringComparison.Ordinal))
-                    {
-                        autoStart = i;
-                    }
-                    if (autoEnd == -1 && string.Equals(line, "// </auto-generated>", StringComparison.Ordinal))
-                    {
-                        autoEnd = i;
-                    }
-                    if (i > 0 && string.Equals(line, "// ------------------------------------------------------------------------------", StringComparison.Ordinal))
-                    {
-                        secondSeparator = i;
-                        break;
-                    }
-                }
-
-                if (autoStart != -1 && autoEnd != -1 && secondSeparator != -1 && autoStart < autoEnd)
-                {
-                    banner = string.Join(Environment.NewLine, lines.Take(secondSeparator + 1)).TrimEnd();
-                    index = secondSeparator + 1;
-                    while (index < lines.Length && string.IsNullOrWhiteSpace(lines[index]))
-                    {
-                        index++;
-                    }
-                }
-            }
-
-            List<string> usings = [];
-            while (index < lines.Length)
-            {
-                string line = lines[index].Trim();
-                if (line.StartsWith("using ", StringComparison.Ordinal) && line.EndsWith(';'))
-                {
-                    usings.Add(line);
-                    index++;
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    index++;
-                    continue;
-                }
-
-                break;
-            }
-
-            string body = TrimBoundaryNewLines(string.Join(Environment.NewLine, lines.Skip(index)));
-            return new ParsedMergedFile(banner, usings, body);
-        }
-
-        private sealed record ParsedMergedFile(string? HeaderBanner, List<string> Usings, string Body);
 
         private static void DeleteEmptyDirectories(string rootPath)
         {

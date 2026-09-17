@@ -371,6 +371,20 @@
             return csField;
         }
 
+        private static int GetNaturalAlignment(CppType type)
+        {
+            return type switch
+            {
+                CppQualifiedType qualified => GetNaturalAlignment(qualified.ElementType),
+                CppArrayType array => GetNaturalAlignment(array.ElementType),
+                CppTypedef typedef => GetNaturalAlignment(typedef.ElementType),
+                CppClass cppClass => Math.Max(1, cppClass.AlignOf),
+                CppEnum cppEnum => GetNaturalAlignment(cppEnum.IntegerType),
+                CppPointerType or CppReferenceType or CppFunctionType => nint.Size,
+                _ => Math.Clamp(type.SizeOf, 1, 8)
+            };
+        }
+
         protected virtual void WriteClass(GenContext context, CppClass cppClass, TypeMapping? mapping, string csName)
         {
             var writer = context.Writer;
@@ -396,14 +410,17 @@
             }
 
             bool isUnion = cppClass.ClassKind == CppClassKind.Union;
+            int naturalAlignment = cppClass.Fields.Count == 0 ? 1 : cppClass.Fields.Max(field => GetNaturalAlignment(field.Type));
+            int pack = cppClass.AlignOf > 0 && cppClass.AlignOf < naturalAlignment ? cppClass.AlignOf : 0;
+            string packArgument = pack == 0 ? string.Empty : $", Pack = {pack}";
 
             if (isUnion)
             {
-                writer.WriteLine("[StructLayout(LayoutKind.Explicit)]");
+                writer.WriteLine($"[StructLayout(LayoutKind.Explicit{packArgument})]");
             }
             else
             {
-                writer.WriteLine("[StructLayout(LayoutKind.Sequential)]");
+                writer.WriteLine($"[StructLayout(LayoutKind.Sequential{packArgument})]");
             }
 
             using (writer.PushBlock($"public {modifier} struct {csName}"))
@@ -528,7 +545,9 @@
 
                 HashSet<string> definedConstructors = new();
 
-                if (config.GenerateConstructorsForStructs && cppClass.Fields.Count > 0)
+                if (config.GenerateConstructorsForStructs && cppClass.Fields.Count > 0 &&
+                    !cppClass.Fields.Any(static field => field.Type is CppArrayType array &&
+                        (IsFlexibleArray(array) || array.ElementType is CppArrayType)))
                 {
                     config.WriteCsSummary((string?)null, out string? comment);
                     CsFunction function = new(csName, comment);
@@ -542,6 +561,18 @@
                         var paramCsName = config.GetParameterName(j, cppField.Name);
                         var direction = cppField.Type.GetDirection();
                         var kind = cppField.Type.GetPrimitiveKind();
+                        if (cppField.Type is CppArrayType parameterArray)
+                        {
+                            CppType elementType = AnalyzeArray(parameterArray, out _, out _);
+                            paramCsTypeName = IsPointerAlias(elementType)
+                                ? "nint*"
+                                : config.GetCsTypeName(elementType) + "*";
+                            kind = elementType.GetPrimitiveKind();
+                            if (elementType is CppPointerType pointerType && pointerType.ElementType is CppFunctionType && config.DelegatesAsVoidPointer)
+                            {
+                                paramCsTypeName = "nint*";
+                            }
+                        }
 
                         var subClass = subClasses.FirstOrDefault(x => x.CppType == cppField.Type);
 
@@ -551,11 +582,6 @@
                             paramCsTypeName = subClass.Name;
                             paramCsName = subClass.FieldName.ToLower();
                             csFieldName = subClass.FieldName;
-                        }
-
-                        if (cppField.Type is CppArrayType arrayType && arrayType.ElementType is CppPointerType pointerType && pointerType.ElementType is CppFunctionType && config.DelegatesAsVoidPointer)
-                        {
-                            paramCsTypeName = "nint*";
                         }
 
                         if (subClass != null)
@@ -611,6 +637,10 @@
         {
             var writer = context.Writer;
             var fields = cppClass.Fields;
+            if (fields[fieldIndex].BitFieldWidth <= 0)
+            {
+                return;
+            }
             var baseOffset = fields[fieldIndex].BitOffset;
             var baseType = fields[fieldIndex].Type;
             int storageBitSize = baseType.SizeOf * 8;
@@ -618,6 +648,10 @@
 
             var bitfieldId = bitfieldCount++;
             var bitfieldCsName = $"RawBits{bitfieldId}";
+            if (cppClass.ClassKind == CppClassKind.Union)
+            {
+                writer.WriteLine($"[FieldOffset({fields[fieldIndex].Offset})]");
+            }
             writer.WriteLine($"public {csBaseType.Name} {bitfieldCsName};");
 
             int bitfieldOffset = 0;
@@ -635,13 +669,18 @@
                     break;
                 }
 
+                long relativeBitOffset = field.BitOffset - baseOffset;
                 var bitfieldOffsetNext = bitfieldOffset + field.BitFieldWidth;
-                if (bitfieldOffsetNext > storageBitSize)
+                if (field.BitFieldWidth <= 0 || bitfieldOffsetNext > storageBitSize ||
+                    relativeBitOffset < 0 || relativeBitOffset + field.BitFieldWidth > storageBitSize)
                 {
                     break;
                 }
                 var csFieldName = config.GetFieldName(field.Name);
-                CsPropertyMetadata property = new(baseType, csBaseType, csFieldName, $"get => Bitfield.Get({bitfieldCsName}, {field.BitOffset - baseOffset}, {field.BitFieldWidth});", $"set => Bitfield.Set(ref {bitfieldCsName}, value, {field.BitOffset - baseOffset}, {field.BitFieldWidth});");
+                string getter = IsSignedBitfield(baseType)
+                    ? $"get => Bitfield.GetSigned({bitfieldCsName}, {relativeBitOffset}, {field.BitFieldWidth});"
+                    : $"get => Bitfield.Get({bitfieldCsName}, {relativeBitOffset}, {field.BitFieldWidth});";
+                CsPropertyMetadata property = new(baseType, csBaseType, csFieldName, getter, $"set => Bitfield.Set(ref {bitfieldCsName}, value, {relativeBitOffset}, {field.BitFieldWidth});");
                 properties.Add(property);
                 bitfieldOffset = bitfieldOffsetNext;
             }
@@ -753,15 +792,15 @@
                         targetsProperty = true;
                     }
 
-                    // skip array field types.
-                    // TODO: Add support for array field types.
                     if (cppField.Type is CppArrayType arrayType)
                     {
+                        CppType elementType = AnalyzeArray(arrayType, out int elementCount, out _);
+                        string elementCast = IsPointerAlias(elementType) ? $"({config.GetCsTypeName(elementType)})" : string.Empty;
                         using (writer.PushBlock($"if ({cppParameter.Name} != default({cppParameter.Type.Name}))"))
                         {
-                            for (int j = 0; j < arrayType.Size; j++)
+                            for (int j = 0; j < elementCount; j++)
                             {
-                                writer.WriteLine($"{fieldName}_{j} = {cppParameter.Name}[{j}];");
+                                writer.WriteLine($"{fieldName}_{j} = {elementCast}{cppParameter.Name}[{j}];");
                             }
                         }
                     }
@@ -770,7 +809,7 @@
                         int depth = 0;
                         cppField.Type.IsPointer(ref depth);
                         string delegateType = $"({config.GetDelegatePointerType(cppFunction, false)}{new string('*', depth)})";
-                        if (cppParameter.Type.Name.StartsWith("delegate*<"))
+                        if (cppParameter.Type.Name.StartsWith("delegate*<") || cppParameter.Type.Name.Contains('*') || cppParameter.Type.Name == "nint")
                         {
                             writer.WriteLine($"{fieldName} = {delegateType}{cppParameter.Name};");
                         }
@@ -793,6 +832,49 @@
             writer.WriteLine();
         }
 
+        private static bool IsSignedBitfield(CppType type)
+        {
+            return type.GetPrimitiveKind() is CppPrimitiveKind.Short or CppPrimitiveKind.Int or
+                CppPrimitiveKind.Long or CppPrimitiveKind.LongLong or CppPrimitiveKind.Int128;
+        }
+
+        private static bool IsFlexibleArray(CppArrayType arrayType)
+        {
+            while (true)
+            {
+                if (arrayType.Size <= 0)
+                {
+                    return true;
+                }
+                if (arrayType.ElementType is not CppArrayType nested)
+                {
+                    return false;
+                }
+                arrayType = nested;
+            }
+        }
+
+        private static CppType AnalyzeArray(CppArrayType arrayType, out int elementCount, out bool isFlexible)
+        {
+            elementCount = 1;
+            isFlexible = false;
+            CppType elementType = arrayType;
+            while (elementType is CppArrayType current)
+            {
+                if (current.Size <= 0)
+                {
+                    elementCount = 0;
+                    isFlexible = true;
+                }
+                else if (!isFlexible)
+                {
+                    elementCount = checked(elementCount * current.Size);
+                }
+                elementType = current.ElementType;
+            }
+            return elementType;
+        }
+
         private void WriteField(ICodeWriter writer, CppField field, TypeFieldMapping? mapping, List<CsSubClass> subClasses, bool isUnion = false, bool isReadOnly = false)
         {
             string csFieldName = config.GetFieldName(field.Name);
@@ -809,32 +891,38 @@
                 writer.WriteLine($"[NativeName(NativeNameType.Type, \"{field.Type.GetDisplayName()}\")]");
             }
 
-            if (isUnion)
+            if (isUnion && field.Type is not CppArrayType)
             {
                 writer.WriteLine("[FieldOffset(0)]");
             }
 
             if (field.Type is CppArrayType arrayType)
             {
-                string csFieldType = config.GetCsTypeName(arrayType.ElementType);
+                CppType elementType = AnalyzeArray(arrayType, out int elementCount, out bool isFlexible);
+                if (isFlexible)
+                {
+                    writer.WriteLine($"public static readonly int {csFieldName}Offset = {field.Offset};");
+                    if (fieldCommentWritten)
+                        writer.WriteLine();
+                    return;
+                }
 
-                if (arrayType.ElementType is CppPointerType pointerType && pointerType.ElementType is CppFunctionType functionType && config.DelegatesAsVoidPointer)
+                string csFieldType = config.GetCsTypeName(elementType);
+                if (csFieldType == "bool")
+                {
+                    csFieldType = config.GetBoolType();
+                }
+                if (elementType is CppPointerType pointerType && pointerType.ElementType is CppFunctionType && config.DelegatesAsVoidPointer)
                 {
                     csFieldType = "nint";
                 }
 
-                string unsafePrefix = string.Empty;
-
-                if (csFieldType.Contains('*'))
+                string unsafePrefix = csFieldType.Contains('*') ? "unsafe " : string.Empty;
+                for (int i = 0; i < elementCount; i++)
                 {
-                    unsafePrefix = "unsafe ";
-                }
-
-                for (int i = 0; i < arrayType.Size; i++)
-                {
-                    if (isUnion && i != 0)
+                    if (isUnion)
                     {
-                        writer.WriteLine($"[FieldOffset({arrayType.SizeOf * i})]");
+                        writer.WriteLine($"[FieldOffset({elementType.SizeOf * i})]");
                     }
                     writer.WriteLine($"public {unsafePrefix}{csFieldType} {csFieldName}_{i};");
                 }
@@ -917,24 +1005,41 @@
 
             if (field.Type is CppArrayType arrayType)
             {
-                string csFieldType = config.GetCsTypeName(arrayType.ElementType);
-
-                if (arrayType.ElementType is CppTypedef typedef && typedef.IsPrimitive(out var primitive))
+                CppType elementType = AnalyzeArray(arrayType, out int elementCount, out bool isFlexible);
+                string csFieldType = config.GetCsTypeName(elementType);
+                if (elementType is CppTypedef typedef && !IsPointerAlias(typedef) && typedef.IsPrimitive(out var primitive))
                 {
                     csFieldType = config.GetCsTypeName(primitive);
                 }
-
-                if (csFieldType.EndsWith('*'))
+                if (csFieldType == "bool")
                 {
-                    return;
+                    csFieldType = config.GetBoolType();
                 }
 
-                writer.WriteLine($"public unsafe Span<{csFieldType}> {csFieldName}");
-                using (writer.PushBlock(""))
+                string spanType = csFieldType;
+                if (csFieldType.Contains("delegate*"))
                 {
-                    using (writer.PushBlock("get"))
+                    csFieldType = "nint";
+                    spanType = "nint";
+                }
+                else if (csFieldType.Contains('*'))
+                {
+                    spanType = $"Pointer<{csFieldType.Replace("*", "")}>";
+                }
+
+                if (isFlexible)
+                {
+                    writer.WriteLine($"public unsafe Span<{spanType}> {csFieldName}(int length) => new((void*)((byte*)Handle + {field.Offset}), length);");
+                }
+                else
+                {
+                    writer.WriteLine($"public unsafe Span<{spanType}> {csFieldName}");
+                    using (writer.PushBlock(""))
                     {
-                        writer.WriteLine($"return new Span<{csFieldType}>(&Handle->{csFieldName}_0, {arrayType.Size});");
+                        using (writer.PushBlock("get"))
+                        {
+                            writer.WriteLine($"return new Span<{spanType}>((void*)&Handle->{csFieldName}_0, {elementCount});");
+                        }
                     }
                 }
             }
@@ -1052,21 +1157,30 @@
 
             if (field.Type is CppArrayType arrayType)
             {
-                string csFieldType = config.GetCsTypeName(arrayType.ElementType);
-                string spanType = csFieldType;
-                bool canUseFixed = false;
-                if (arrayType.ElementType is CppPrimitiveType)
+                CppType elementType = AnalyzeArray(arrayType, out int elementCount, out bool isFlexible);
+                if (isFlexible)
                 {
-                    canUseFixed = true;
+                    return;
                 }
-                else if (arrayType.ElementType is CppTypedef typedef && typedef.IsPrimitive(out var primitive))
+
+                string csFieldType = config.GetCsTypeName(elementType);
+                string spanType = csFieldType;
+                bool canUseFixed = elementType is CppPrimitiveType;
+                if (elementType is CppTypedef typedef && !IsPointerAlias(typedef) && typedef.IsPrimitive(out var primitive))
                 {
                     csFieldType = config.GetCsTypeName(primitive);
                     canUseFixed = true;
                 }
+                if (csFieldType == "bool")
+                {
+                    csFieldType = config.GetBoolType();
+                    spanType = csFieldType;
+                }
 
                 if (canUseFixed)
                 {
+                    config.WriteCsSummary(field.Comment, writer);
+                    writer.WriteLine($"public Span<{csFieldType}> {csFieldName} => MemoryMarshal.CreateSpan(ref {csFieldName}_0, {elementCount});");
                 }
                 else
                 {
@@ -1076,6 +1190,10 @@
                         {
                             csFieldType = "nint";
                         }
+                        spanType = "nint";
+                    }
+                    else if (IsPointerAlias(elementType))
+                    {
                         spanType = "nint";
                     }
                     else if (csFieldType.Contains('*'))
@@ -1091,12 +1209,21 @@
                         {
                             using (writer.PushBlock($"fixed ({csFieldType}* p = &this.{csFieldName}_0)"))
                             {
-                                writer.WriteLine($"return new Span<{spanType}>(p, {arrayType.Size});");
+                                writer.WriteLine($"return new Span<{spanType}>(p, {elementCount});");
                             }
                         }
                     }
                 }
             }
+        }
+
+        private static bool IsPointerAlias(CppType type)
+        {
+            while (type is CppTypedef typedef)
+                type = typedef.ElementType;
+            while (type is CppQualifiedType qualified)
+                type = qualified.ElementType;
+            return type is CppPointerType;
         }
 
         private void WriteStructHandle(GenContext context, CppClass cppClass, TypeMapping? mapping, string csName, string handleType)

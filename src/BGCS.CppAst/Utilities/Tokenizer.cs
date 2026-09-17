@@ -18,7 +18,7 @@ namespace BGCS.CppAst.Utilities;
 public class Tokenizer
 {
     private readonly CXSourceRange range;
-    private CppToken[] cppTokens;
+    private CppToken[]? cppTokens;
     protected readonly CXTranslationUnit tu;
     private readonly CXCursor cursor;
 
@@ -61,10 +61,8 @@ public class Tokenizer
     {
         get
         {
-            var tokens = tu.Tokenize(range);
-            int length = tokens.Length;
-            tu.DisposeTokens(tokens);
-            return length;
+            EnsureTokens();
+            return cppTokens!.Length;
         }
     }
 
@@ -75,54 +73,8 @@ public class Tokenizer
     {
         get
         {
-            // Only create a tokenizer if necessary
-            cppTokens ??= new CppToken[Count];
-
-            ref var cppToken = ref cppTokens[i];
-            if (cppToken != null)
-            {
-                return cppToken;
-            }
-            var tokens = tu.Tokenize(range);
-            var token = tokens[i];
-
-            CppTokenKind cppTokenKind = 0;
-            switch (token.Kind)
-            {
-                case CXTokenKind.CXToken_Punctuation:
-                    cppTokenKind = CppTokenKind.Punctuation;
-                    break;
-
-                case CXTokenKind.CXToken_Keyword:
-                    cppTokenKind = CppTokenKind.Keyword;
-                    break;
-
-                case CXTokenKind.CXToken_Identifier:
-                    cppTokenKind = CppTokenKind.Identifier;
-                    break;
-
-                case CXTokenKind.CXToken_Literal:
-                    cppTokenKind = CppTokenKind.Literal;
-                    break;
-
-                case CXTokenKind.CXToken_Comment:
-                    cppTokenKind = CppTokenKind.Comment;
-                    break;
-
-                default:
-                    break;
-            }
-
-            var tokenStr = CXUtil.GetTokenSpelling(token, tu);
-            var tokenLocation = token.GetLocation(tu);
-
-            var tokenRange = token.GetExtent(tu);
-            cppToken = new CppToken(cursor, cppTokenKind, tokenStr)
-            {
-                Span = tokenRange.ToSourceRange()
-            };
-            tu.DisposeTokens(tokens);
-            return cppToken;
+            EnsureTokens();
+            return cppTokens![i];
         }
     }
 
@@ -131,10 +83,8 @@ public class Tokenizer
     /// </summary>
     public string GetString(int i)
     {
-        var tokens = tu.Tokenize(range);
-        var TokenSpelling = CXUtil.GetTokenSpelling(tokens[i], tu);
-        tu.DisposeTokens(tokens);
-        return TokenSpelling;
+        EnsureTokens();
+        return cppTokens![i].Text;
     }
 
     /// <summary>
@@ -142,20 +92,41 @@ public class Tokenizer
     /// </summary>
     public string TokensToString()
     {
-        int length = Count;
-        if (length <= 0)
+        EnsureTokens();
+        return cppTokens!.Length == 0 ? string.Empty : CppToken.TokensToString(cppTokens);
+    }
+
+    private void EnsureTokens()
+    {
+        if (cppTokens != null)
+            return;
+        var nativeTokens = tu.Tokenize(range);
+        try
         {
-            return null;
+            CppToken[] converted = new CppToken[nativeTokens.Length];
+            for (int i = 0; i < nativeTokens.Length; i++)
+            {
+                var token = nativeTokens[i];
+                CppTokenKind kind = token.Kind switch
+                {
+                    CXTokenKind.CXToken_Punctuation => CppTokenKind.Punctuation,
+                    CXTokenKind.CXToken_Keyword => CppTokenKind.Keyword,
+                    CXTokenKind.CXToken_Identifier => CppTokenKind.Identifier,
+                    CXTokenKind.CXToken_Literal => CppTokenKind.Literal,
+                    CXTokenKind.CXToken_Comment => CppTokenKind.Comment,
+                    _ => 0
+                };
+                converted[i] = new CppToken(cursor, kind, CXUtil.GetTokenSpelling(token, tu))
+                {
+                    Span = token.GetExtent(tu).ToSourceRange()
+                };
+            }
+            cppTokens = converted;
         }
-
-        List<CppToken> tokens = new(length);
-
-        for (int i = 0; i < length; i++)
+        finally
         {
-            tokens.Add(this[i]);
+            tu.DisposeTokens(nativeTokens);
         }
-
-        return CppToken.TokensToString(tokens);
     }
 
     /// <summary>

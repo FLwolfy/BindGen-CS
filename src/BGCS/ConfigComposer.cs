@@ -2,6 +2,7 @@
 {
     using BGCS.Core;
     using BGCS.Core.Collections;
+    using BGCS.Configuration;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using System;
@@ -25,7 +26,7 @@
     /// <summary>
     /// Defines the public class <c>ConfigComposer</c>.
     /// </summary>
-    public class ConfigComposer : LoggerBase, IConfigComposer
+    public class ConfigComposer : LoggerBase, IConfigComposer, IConfigComposerContext
     {
         private const string FileProtocol = "file://";
         private const string HttpProtocol = "http://";
@@ -43,14 +44,30 @@
         /// </summary>
         public void Compose(ref CsCodeGeneratorConfig config)
         {
+            Compose(ref config, Environment.CurrentDirectory);
+        }
+
+        void IConfigComposerContext.Compose(ref CsCodeGeneratorConfig config, string baseDirectory)
+        {
+            Compose(ref config, baseDirectory);
+        }
+
+        private void Compose(ref CsCodeGeneratorConfig config, string baseDirectory)
+        {
             var stack = new Stack<CsCodeGeneratorConfig>();
+            var visitedSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var current = config;
+            string currentDirectory = baseDirectory;
             while (true)
             {
                 stack.Push(current);
                 if (current.BaseConfig?.Url == null)
                     break;
-                current = LoadBaseConfig(current.BaseConfig);
+                current = LoadBaseConfig(current.BaseConfig, currentDirectory, out string source, out currentDirectory);
+                if (!visitedSources.Add(source))
+                {
+                    throw new InvalidOperationException($"Circular BaseConfig reference detected: {source}");
+                }
             }
 
             var merged = CsCodeGeneratorConfig.Default;
@@ -117,15 +134,18 @@
             }
         }
 
-        private CsCodeGeneratorConfig LoadBaseConfig(BaseConfig baseConfig)
+        private CsCodeGeneratorConfig LoadBaseConfig(BaseConfig baseConfig, string baseDirectory, out string source, out string nextBaseDirectory)
         {
             CsCodeGeneratorConfig? baseGeneratorConfig = null;
-
             ReadOnlySpan<char> url = baseConfig.Url;
+            source = url.ToString();
+            nextBaseDirectory = baseDirectory;
 
             if (url.StartsWith(FileProtocol))
             {
-                var path = url[FileProtocol.Length..].ToString();
+                string path = Path.GetFullPath(url[FileProtocol.Length..].ToString(), baseDirectory);
+                source = path;
+                nextBaseDirectory = Path.GetDirectoryName(path) ?? baseDirectory;
                 if (!File.Exists(path))
                 {
                     LogCritical($"File not found: {path}");
@@ -147,7 +167,7 @@
             if (baseGeneratorConfig == null)
             {
                 LogCritical($"Invalid URL: {url}");
-                throw new Exception($"Invalid URL: {url}");
+                throw new InvalidOperationException($"Invalid BaseConfig URL: {url}");
             }
 
             return baseGeneratorConfig;

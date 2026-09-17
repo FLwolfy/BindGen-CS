@@ -57,29 +57,43 @@ public class EnumGenerationStep : GenerationStep
     {
         var fileName = Path.Combine(outputPath, "include", "enums.h");
         using CodeWriter writer = new(fileName, "", null);
-        WriteEnums(config.NamePrefix, writer, result.Compilation.Enums);
+        WriteEnums(writer, result.Compilation.Enums);
 
+        List<CppClass> classes = [.. result.Compilation.Classes];
         foreach (var ns in result.Compilation.EnumerateNamespaces())
         {
             var name = ns.GetFullNamespace("::");
             writer.WriteLine($"// begin namespace {name}");
-            WriteEnums(ns.GetFullNamespace("_"), writer, ns.Enums);
+            WriteEnums(writer, ns.Enums);
+            classes.AddRange(ns.Classes);
             writer.WriteLine($"// end namespace {name}");
+        }
+        foreach (CppClass cppClass in EnumerateClasses(classes))
+            WriteEnums(writer, cppClass.Enums);
+    }
+
+    private static IEnumerable<CppClass> EnumerateClasses(IEnumerable<CppClass> classes)
+    {
+        foreach (CppClass cppClass in classes)
+        {
+            yield return cppClass;
+            foreach (CppClass nested in EnumerateClasses(cppClass.Classes))
+                yield return nested;
         }
     }
 
-    private void WriteEnums(string prefix, CodeWriter writer, IEnumerable<CppEnum> enums)
+    private void WriteEnums(CodeWriter writer, IEnumerable<CppEnum> enums)
     {
         foreach (var enumClass in enums)
         {
-            WriteEnum(prefix, writer, enumClass);
+            WriteEnum(writer, enumClass);
         }
     }
 
-    private void WriteEnum(string prefix, ICodeWriter writer, CppEnum enumClass)
+    private void WriteEnum(ICodeWriter writer, CppEnum enumClass)
     {
         Dictionary<string, string> map = [];
-        string enumName = $"{prefix}{enumClass.Name}";
+        string enumName = config.GetCTypeName(enumClass);
         foreach (var item in enumClass.Items)
         {
             map[item.Name] = $"{enumName}_{item.Name}";

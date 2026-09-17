@@ -644,6 +644,10 @@ namespace BGCS
         /// <returns>Result produced by <c>GetDelegateName</c>.</returns>
         public string GetDelegateName(string name)
         {
+            if (DelegateNamingConvention == NamingConvention.PascalCase)
+            {
+                return GetCsCleanName(name);
+            }
             string newName = NamingHelper.ConvertTo(name, DelegateNamingConvention);
             foreach (var item in NameMappings)
             {
@@ -667,6 +671,10 @@ namespace BGCS
             name = name.Trim('_');
 
             newName = NamingHelper.ConvertTo(name, ParameterNamingConvention);
+            if (string.IsNullOrEmpty(newName))
+            {
+                newName = "value";
+            }
 
             if (Keywords.Contains(newName))
             {
@@ -1248,70 +1256,13 @@ namespace BGCS
         /// <returns>Result produced by <c>WriteCsSummary</c>.</returns>
         public bool WriteCsSummary(CppComment? comment, ICodeWriter writer)
         {
-            bool result = false;
-            if (comment is CppCommentFull full && full.Children != null)
+            string? documentation = BuildCsDocumentation(comment);
+            if (documentation == null)
             {
-                writer.WriteLine("/// <summary>");
-                for (int i = 0; i < full.Children.Count; i++)
-                {
-                    WriteCsSummary(full.Children[i], writer);
-                }
-                writer.WriteLine("/// </summary>");
-                result = true;
+                return false;
             }
-            if (comment is CppCommentParagraph paragraph)
-            {
-                for (int i = 0; i < paragraph.Children.Count; i++)
-                {
-                    WriteCsSummary(paragraph.Children[i], writer);
-                }
-                result = true;
-            }
-
-            if (comment is CppCommentBlockCommand blockCommand)
-            {
-            }
-            if (comment is CppCommentVerbatimBlockCommand verbatimBlockCommand)
-            {
-            }
-
-            if (comment is CppCommentVerbatimBlockLine verbatimBlockLine)
-            {
-            }
-
-            if (comment is CppCommentVerbatimLine line)
-            {
-            }
-
-            if (comment is CppCommentParamCommand paramCommand)
-            {
-                // TODO: add param comment support
-            }
-
-            if (comment is CppCommentInlineCommand inlineCommand)
-            {
-                // TODO: add inline comment support
-            }
-
-            if (comment is CppCommentText text)
-            {
-                writer.WriteLine($"/// " + text.Text + "<br/>");
-                result = true;
-            }
-
-            if (comment == null || comment.Kind == CppCommentKind.Null)
-            {
-            }
-
-            if (!result && GeneratePlaceholderComments)
-            {
-                writer.WriteLine("/// <summary>");
-                writer.WriteLine("/// To be documented.");
-                writer.WriteLine("/// </summary>");
-                return true;
-            }
-
-            return result;
+            writer.WriteLines(documentation);
+            return true;
         }
 
         /// <summary>
@@ -1319,82 +1270,128 @@ namespace BGCS
         /// </summary>
         public void WriteCsSummary(CppComment? cppComment, out string? comment)
         {
-            comment = null;
-            StringBuilder sb = new();
-            if (cppComment is CppCommentFull full && full.Children != null)
+            comment = BuildCsDocumentation(cppComment);
+        }
+
+        private string? BuildCsDocumentation(CppComment? comment)
+        {
+            if (comment == null || comment.Kind == CppCommentKind.Null)
             {
-                sb.AppendLine("/// <summary>");
-                for (int i = 0; i < full.Children.Count; i++)
+                return GeneratePlaceholderComments
+                    ? "/// <summary>\n/// To be documented.\n/// </summary>\n"
+                    : null;
+            }
+
+            List<string> summaryParts = [];
+            List<(string Name, string Text)> parameters = [];
+            List<(string Name, string Text)> typeParameters = [];
+            List<string> returns = [];
+            CollectDocumentation(comment, summaryParts, parameters, typeParameters, returns);
+            string summary = NormalizeDocumentationText(string.Join(" ", summaryParts));
+            if (summary.Length == 0 && GeneratePlaceholderComments)
+            {
+                summary = "To be documented.";
+            }
+            if (summary.Length == 0 && parameters.Count == 0 && typeParameters.Count == 0 && returns.Count == 0)
+            {
+                return null;
+            }
+
+            StringBuilder builder = new();
+            if (summary.Length > 0)
+            {
+                builder.AppendLine("/// <summary>");
+                builder.Append("/// ").AppendLine(EscapeDocumentation(summary));
+                builder.AppendLine("/// </summary>");
+            }
+            foreach ((string name, string text) in parameters)
+            {
+                builder.Append("/// <param name=\"").Append(EscapeDocumentation(name)).Append("\">")
+                    .Append(EscapeDocumentation(NormalizeDocumentationText(text))).AppendLine("</param>");
+            }
+            foreach ((string name, string text) in typeParameters)
+            {
+                builder.Append("/// <typeparam name=\"").Append(EscapeDocumentation(name)).Append("\">")
+                    .Append(EscapeDocumentation(NormalizeDocumentationText(text))).AppendLine("</typeparam>");
+            }
+            if (returns.Count > 0)
+            {
+                builder.Append("/// <returns>").Append(EscapeDocumentation(NormalizeDocumentationText(string.Join(" ", returns))))
+                    .AppendLine("</returns>");
+            }
+            return builder.ToString();
+        }
+
+        private static void CollectDocumentation(CppComment comment, List<string> summaryParts,
+            List<(string Name, string Text)> parameters, List<(string Name, string Text)> typeParameters, List<string> returns)
+        {
+            if (comment is CppCommentParamCommand parameter)
+            {
+                parameters.Add((parameter.ParamName, CollectDocumentationText(parameter)));
+                return;
+            }
+            if (comment is CppCommentTemplateParamCommand typeParameter)
+            {
+                typeParameters.Add((typeParameter.ParamName, CollectDocumentationText(typeParameter)));
+                return;
+            }
+            if (comment is CppCommentBlockCommand command &&
+                command.CommandName is "return" or "returns" or "result")
+            {
+                returns.Add(CollectDocumentationText(command));
+                return;
+            }
+            if (comment is CppCommentText text)
+            {
+                if (!string.IsNullOrWhiteSpace(text.Text))
                 {
-                    WriteCsSummary(full.Children[i], out var subComment);
-                    sb.Append(subComment);
+                    summaryParts.Add(text.Text);
                 }
-                sb.AppendLine("/// </summary>");
-                comment = sb.ToString();
                 return;
             }
-            if (cppComment is CppCommentParagraph paragraph)
+            if (comment.Children == null)
             {
-                for (int i = 0; i < paragraph.Children.Count; i++)
-                {
-                    WriteCsSummary(paragraph.Children[i], out var subComment);
-                    sb.Append(subComment);
-                }
-                comment = sb.ToString();
                 return;
             }
-            if (cppComment is CppCommentText text)
+            foreach (CppComment child in comment.Children)
             {
-                sb.AppendLine($"/// " + text.Text + "<br/>");
-                comment = sb.ToString();
-                return;
-            }
-
-            if (cppComment is CppCommentBlockCommand blockCommand)
-            {
-                comment = null;
-            }
-            if (cppComment is CppCommentVerbatimBlockCommand verbatimBlockCommand)
-            {
-                comment = null;
-            }
-
-            if (cppComment is CppCommentVerbatimBlockLine verbatimBlockLine)
-            {
-                comment = null;
-            }
-
-            if (cppComment is CppCommentVerbatimLine line)
-            {
-                comment = null;
-            }
-
-            if (cppComment is CppCommentParamCommand paramCommand)
-            {
-                // TODO: add param comment support
-                comment = null;
-            }
-
-            if (cppComment is CppCommentInlineCommand inlineCommand)
-            {
-                // TODO: add inline comment support
-                comment = null;
-            }
-
-            if (cppComment == null || cppComment.Kind == CppCommentKind.Null)
-            {
-                comment = null;
-            }
-
-            if (comment == null && GeneratePlaceholderComments)
-            {
-                sb.AppendLine("/// <summary>");
-                sb.AppendLine("/// To be documented.");
-                sb.AppendLine("/// </summary>");
-                comment = sb.ToString();
-                return;
+                CollectDocumentation(child, summaryParts, parameters, typeParameters, returns);
             }
         }
+
+        private static string CollectDocumentationText(CppComment comment)
+        {
+            List<string> parts = [];
+            CollectText(comment, parts);
+            return string.Join(" ", parts);
+        }
+
+        private static void CollectText(CppComment comment, List<string> parts)
+        {
+            if (comment is CppCommentText text)
+            {
+                if (!string.IsNullOrWhiteSpace(text.Text))
+                {
+                    parts.Add(text.Text);
+                }
+                return;
+            }
+            if (comment.Children == null)
+            {
+                return;
+            }
+            foreach (CppComment child in comment.Children)
+            {
+                CollectText(child, parts);
+            }
+        }
+
+        private static string NormalizeDocumentationText(string value)
+        {
+            return string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        private static string EscapeDocumentation(string value) => new XText(value).ToString();
 
         /// <summary>
         /// Performs the operation implemented by <c>WriteCsSummary</c>.

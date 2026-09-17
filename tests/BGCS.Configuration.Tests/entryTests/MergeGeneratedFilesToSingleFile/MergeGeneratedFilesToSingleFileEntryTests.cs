@@ -23,6 +23,8 @@ public class MergeGeneratedFilesToSingleFileEntryTests : ConfigurationEntryTestB
         PrintBindings(output);
         AssertGenerationSucceeded(output);
         AssertExpected(output, "expected.alt.json", "expected.bindings.alt.json");
-        Assert.True(File.Exists(Path.Combine(output.OutputDirectory, "Bindings.cs")));
+        Assert.Equal("Inno.Native.Generated.cs", output.Config.SingleFileOutputName);
+        Assert.True(File.Exists(Path.Combine(output.OutputDirectory, "Inno.Native.Generated.cs")));
+        Assert.False(File.Exists(Path.Combine(output.OutputDirectory, "Bindings.cs")));
     }
 }

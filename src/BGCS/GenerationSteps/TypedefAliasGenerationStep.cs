@@ -3,6 +3,7 @@ using BGCS.Core.Collections;
 namespace BGCS.GenerationSteps
 {
     using BGCS.Core;
+    using BGCS.Core.CSharp;
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Types;
     using BGCS.Metadata;
@@ -61,6 +62,10 @@ namespace BGCS.GenerationSteps
 
             string filePath = Path.Combine(folder, "TypedefAliases.cs");
             using var writer = new CsCodeWriter(filePath, config.Namespace, [], config.HeaderInjector);
+            List<string> opaqueTypes = [];
+            HashSet<string> enumTypeNames = result.Compilation.Enums
+                .Select(cppEnum => config.GetCsCleanName(cppEnum.Name))
+                .ToHashSet(StringComparer.Ordinal);
 
             foreach (CppTypedef typedef in result.Compilation.Typedefs)
             {
@@ -77,12 +82,29 @@ namespace BGCS.GenerationSteps
                 string aliasName = config.GetCsCleanName(typedef.Name);
                 string targetType = GetAliasTargetTypeName(typedef);
 
-                if (string.IsNullOrWhiteSpace(targetType) || aliasName == targetType)
+                if (string.IsNullOrWhiteSpace(targetType) || CsType.IsKnownPrimitive(aliasName) || enumTypeNames.Contains(aliasName))
+                {
+                    continue;
+                }
+                if (targetType == "void" || IsIncompleteRecordAlias(typedef))
+                {
+                    opaqueTypes.Add(aliasName);
+                    continue;
+                }
+                if (aliasName == targetType)
                 {
                     continue;
                 }
 
+                if (targetType.Contains('*'))
+                    targetType = "nint";
                 writer.WriteLine($"using {aliasName} = {targetType};");
+            }
+
+            foreach (string opaqueType in opaqueTypes)
+            {
+                writer.WriteLine();
+                writer.WriteLine($"public partial struct {opaqueType} {{ }}");
             }
         }
 
@@ -121,6 +143,14 @@ namespace BGCS.GenerationSteps
 
             definedTypedefs.Add(aliasName);
             return false;
+        }
+
+        private static bool IsIncompleteRecordAlias(CppTypedef typedef)
+        {
+            CppType current = typedef.ElementType;
+            while (current is CppTypedef nested)
+                current = nested.ElementType;
+            return current is CppClass { IsDefinition: false };
         }
 
         private string GetAliasTargetTypeName(CppTypedef typedef)

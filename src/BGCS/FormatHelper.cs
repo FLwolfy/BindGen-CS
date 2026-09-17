@@ -167,6 +167,20 @@
         }
 
         /// <summary>
+        /// Determines whether a typedef or qualified type ultimately aliases a native pointer.
+        /// </summary>
+        /// <param name="cppType">Type to inspect.</param>
+        /// <returns><see langword="true"/> when the alias chain ends in a pointer type.</returns>
+        public static bool IsPointerAlias(this CppType cppType)
+        {
+            while (cppType is CppTypedef typedef)
+                cppType = typedef.ElementType;
+            while (cppType is CppQualifiedType qualified)
+                cppType = qualified.ElementType;
+            return cppType is CppPointerType;
+        }
+
+        /// <summary>
         /// Executes public operation <c>IsUsedAsPointer</c>.
         /// </summary>
         public static bool IsUsedAsPointer(this CppClass cppClass, CppCompilation compilation, out List<int> depths)
@@ -504,7 +518,7 @@
                 return GetPrimitiveKind(typedef.ElementType, isPointer);
             }
 
-            if (isPointer && cppType is CppPrimitiveType primitive)
+            if (cppType is CppPrimitiveType primitive)
             {
                 return primitive.Kind;
             }

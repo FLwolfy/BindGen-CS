@@ -31,16 +31,19 @@
         /// </summary>
         public static string SanitizeFileName(string fileName)
         {
-            var sb = new StringBuilder(fileName.Length);
+            int separatorIndex = Math.Max(fileName.LastIndexOf('/'), fileName.LastIndexOf('\\'));
+            string directory = separatorIndex < 0 ? string.Empty : fileName[..(separatorIndex + 1)];
+            string name = separatorIndex < 0 ? fileName : fileName[(separatorIndex + 1)..];
+            var sb = new StringBuilder(name.Length);
 
             // Replace characters based on the dictionary
-            foreach (char c in fileName)
+            foreach (char c in name)
             {
                 if (replacements.TryGetValue(c, out string? replacement))
                 {
                     sb.Append(replacement);
                 }
-                else if (!invalidChars.Contains(c) || c == '/' || c == '\\')
+                else if (!invalidChars.Contains(c))
                 {
                     sb.Append(c);
                 }
@@ -50,20 +53,21 @@
                 }
             }
 
-            fileName = sb.ToString();
+            name = sb.ToString();
 
             // Handle reserved names (Windows-specific)
             foreach (string reservedName in reservedNames)
             {
-                if (string.Equals(fileName, reservedName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name, reservedName, StringComparison.OrdinalIgnoreCase))
                 {
-                    fileName = $"_{fileName}";
+                    name = $"_{name}";
                     break;
                 }
             }
 
             // Limit the length to 255 characters
-            return fileName.Length > 255 ? fileName[..255] : fileName;
+            name = name.Length > 255 ? name[..255] : name;
+            return directory + name;
         }
     }
 }

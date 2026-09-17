@@ -1,38 +1,44 @@
 # BGCS NuGet Publishing
 
-## Workflow
+## Release model
 
-Automatic publishing is configured via GitHub Actions:
+All BindGen-CS packages use one version and are published as one validated release set:
 
-- Workflow file: `.github/workflows/publish-bgcs-runtime-nuget.yml`
-- Tag triggers:
-  - `bgcs-v*` -> `BGCS`
-  - `cpp2c-v*` -> `BGCS.Cpp2C`
-  - `runtime-v*` -> `BGCS.Runtime`
-- Manual trigger: `workflow_dispatch` with `package` and `version` inputs
+- `BGCS`
+- `BGCS.Cpp2C`
+- `BGCS.Runtime`
+- `BGCS.Intermediate`
+- `BindGen-CS` (the `bindgen-cs` .NET tool)
+- `BGCS.CppAst` (transitive implementation package)
+- `BGCS.Core` (transitive implementation package)
+- `BGCS.Language` (transitive implementation package)
 
-## Required Secret
+Consumers normally install only `BGCS`, `BGCS.Cpp2C`, or `BGCS.Runtime`. Command-line users install `BindGen-CS` as a .NET tool. NuGet restores implementation packages transitively.
 
-Set this repository secret in GitHub Actions:
+## Local package validation
 
-- `NUGET_API_KEY`
+```bash
+./scripts/test-nuget-packages.sh
+```
 
-## NuGet API Key Recommendation
+This command packs the complete dependency closure, restores the three public packages into a clean consumer project, compiles it, and runs it. The full test matrix invokes the same package validation.
 
-When creating the NuGet API key:
+## Automated publishing
 
-- Scope packages to `BGCS`, `BGCS.Cpp2C`, and `BGCS.Runtime` (recommended)
-- Use push permission for package publish
+The release workflow is `.github/workflows/publish-bgcs-runtime-nuget.yml`.
+
+It runs restore, build, all tests, package-closure validation, and only then pushes packages and symbol packages. Publishing is triggered by either:
+
+- a unified `v*` tag, such as `v1.2.3`; or
+- the manual workflow with a release version.
+
+## Required secret
+
+Set the GitHub Actions secret `NUGET_API_KEY`. Its NuGet package scope must allow all eight package IDs listed above.
 
 ## Release
 
 ```bash
-git tag bgcs-v1.0.0
-git push origin bgcs-v1.0.0
-
-git tag cpp2c-v1.0.0
-git push origin cpp2c-v1.0.0
-
-git tag runtime-v1.0.0
-git push origin runtime-v1.0.0
+git tag v1.2.3
+git push origin v1.2.3
 ```

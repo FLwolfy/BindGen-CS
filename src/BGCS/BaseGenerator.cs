@@ -20,6 +20,7 @@
         public BaseGenerator(CsCodeGeneratorConfig config)
         {
             this.config = config;
+            LogLevel = config.LogLevel;
         }
 
         /// <summary>

@@ -1,6 +1,5 @@
 ﻿namespace BGCS
 {
-    using CommandLine;
     using BGCS.Metadata;
     using BGCS.Patching;
     using Microsoft.Extensions.Options;
@@ -217,7 +216,7 @@
         /// <returns>Result produced by <c>WithArgs</c>.</returns>
         public GeneratorBuilder WithArgs(string[] args)
         {
-            options = Parser.Default.ParseArguments<CLIGeneratorOptions>(args).Value;
+            options = CLIGeneratorOptions.Parse(args);
             if (generator != null)
             {
                 generator.CLIOptions = options;

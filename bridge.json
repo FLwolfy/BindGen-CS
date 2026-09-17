@@ -1,0 +1,25 @@
+{
+  "EntryFiles": [],
+  "AllowedHeaders": [],
+  "LogLevel": 3,
+  "CppLogLevel": 4,
+  "IncludeFolders": [],
+  "SystemIncludeFolders": [],
+  "Defines": [],
+  "AdditionalArguments": [],
+  "TemplateInstantiations": [],
+  "Utf8StringTypes": [
+    "std::string",
+    "std::basic_string<char>"
+  ],
+  "UniquePtrTypes": [
+    "std::unique_ptr"
+  ],
+  "SpanTypes": [
+    "std::span"
+  ],
+  "OptionalTypes": [
+    "std::optional"
+  ],
+  "VirtualCallbackInterfaces": []
+}

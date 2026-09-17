@@ -7,7 +7,7 @@
     {
         protected readonly List<string> operators = new();
         protected readonly List<char> punctuations = new();
-        protected readonly List<string> keywords;
+        protected readonly List<string> keywords = new();
         protected readonly Dictionary<string, KeywordType> keywordMap = new();
         protected readonly List<string> numberNotations = new();
 

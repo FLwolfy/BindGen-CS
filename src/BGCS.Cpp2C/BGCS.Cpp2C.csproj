@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BGCS.Core\BGCS.Core.csproj" />
+    <ProjectReference Include="..\BGCS.Intermediate\BGCS.Intermediate.csproj" />
   </ItemGroup>
 
   <ItemGroup>

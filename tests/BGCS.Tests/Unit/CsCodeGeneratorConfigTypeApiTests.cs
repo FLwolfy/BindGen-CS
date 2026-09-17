@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using BGCS.Conversion;
 using BGCS.Core;
 using BGCS.Core.Mapping;
 using BGCS.CppAst.Model.Declarations;
@@ -44,6 +46,35 @@ public class CsCodeGeneratorConfigTypeApiTests
     }
 
     [Fact]
+    public void TypeConverter_ShouldMapExtendedWindowsPrimitiveTypes()
+    {
+        CsCodeGeneratorConfig config = new();
+
+        Assert.Equal("int", config.TypeConverter.Convert(CppPrimitiveType.Long, CsTypeStyle.Raw));
+        Assert.Equal("char", config.TypeConverter.Convert(CppPrimitiveType.WChar, CsTypeStyle.Raw));
+        Assert.Equal("Int128", config.TypeConverter.Convert(CppPrimitiveType.Int128, CsTypeStyle.Raw));
+        Assert.Equal("UInt128", config.TypeConverter.Convert(CppPrimitiveType.UInt128, CsTypeStyle.Raw));
+        Assert.Equal("Half", config.TypeConverter.Convert(CppPrimitiveType.Float16, CsTypeStyle.Raw));
+    }
+
+    [Fact]
+    public void TypeConverter_ShouldRequireExplicitMappingsForUnexposedAndGenericTypes()
+    {
+        CsCodeGeneratorConfig config = new();
+        CppUnexposedType opaque = new(default, "NativeOpaque");
+        CppGenericType generic = new(default, new CppUnexposedType(default, "Vector"));
+        generic.GenericArguments.Add(CppPrimitiveType.Int);
+
+        Assert.Throws<UnexposedTypeException>(() => config.TypeConverter.Convert(opaque, CsTypeStyle.Raw));
+        Assert.Throws<NotSupportedException>(() => config.TypeConverter.Convert(generic, CsTypeStyle.Raw));
+
+        config.TypeMappings["NativeOpaque"] = "nint";
+        config.TypeMappings["Vector<int>"] = "NativeIntVector";
+        Assert.Equal("nint", config.TypeConverter.Convert(opaque, CsTypeStyle.Raw));
+        Assert.Equal("NativeIntVector", config.TypeConverter.Convert(generic, CsTypeStyle.Raw));
+    }
+
+    [Fact]
     public void FunctionAliasMappings_ShouldAddAndResolveAlias()
     {
         CsCodeGeneratorConfig cfg = new();
@@ -84,6 +115,7 @@ public class CsCodeGeneratorConfigTypeApiTests
         string normalized = cfg.NormalizeParameterName("9_VALUE");
 
         Assert.Equal("_9Value", normalized);
+        Assert.Equal("value", cfg.NormalizeParameterName(string.Empty));
     }
 
     [Fact]

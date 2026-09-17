@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 using BGCS.Core.Logging;
 using BGCS.Cpp2C;
 using Newtonsoft.Json;
@@ -251,9 +252,11 @@ public abstract class Cpp2CConfigurationEntryTestBase
 
             using Process process = Process.Start(startInfo)
                                     ?? throw new InvalidOperationException($"Failed to start compiler: {compiler}");
-            string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
             process.WaitForExit();
+            string stdout = stdoutTask.GetAwaiter().GetResult();
+            string stderr = stderrTask.GetAwaiter().GetResult();
 
             Assert.True(
                 process.ExitCode == 0,
@@ -270,6 +273,13 @@ public abstract class Cpp2CConfigurationEntryTestBase
         string? fromEnv = Environment.GetEnvironmentVariable("BGCS_CPP2C_CXX");
         if (!string.IsNullOrWhiteSpace(fromEnv))
             return fromEnv;
+
+        if (OperatingSystem.IsWindows())
+        {
+            string installedClang = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "LLVM", "bin", "clang++.exe");
+            if (File.Exists(installedClang))
+                return installedClang;
+        }
 
         return "clang++";
     }
@@ -325,13 +335,6 @@ public abstract class Cpp2CConfigurationEntryTestBase
                 continue;
 
             sb.Append(argument);
-            sb.Append(' ');
-        }
-
-        foreach (string header in output.HeaderFiles)
-        {
-            sb.Append("-include ");
-            sb.Append(Quote(header));
             sb.Append(' ');
         }
 

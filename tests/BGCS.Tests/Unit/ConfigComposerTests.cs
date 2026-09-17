@@ -108,4 +108,29 @@ public class ConfigComposerTests
             }
         }
     }
+
+    [Fact]
+    public void Compose_WithCircularBaseConfigs_ShouldFailClearly()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-config-cycle-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string firstPath = Path.Combine(temp, "first.json");
+        string secondPath = Path.Combine(temp, "second.json");
+        File.WriteAllText(firstPath, "{\"BaseConfig\":{\"Url\":\"file://second.json\"}}");
+        File.WriteAllText(secondPath, "{\"BaseConfig\":{\"Url\":\"file://first.json\"}}");
+
+        try
+        {
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => CsCodeGeneratorConfig.Load(firstPath));
+
+            Assert.Contains("Circular BaseConfig", exception.Message);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+            {
+                Directory.Delete(temp, true);
+            }
+        }
+    }
 }

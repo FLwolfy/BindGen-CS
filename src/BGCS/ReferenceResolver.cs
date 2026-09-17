@@ -77,10 +77,6 @@
             {
                 output.Enums.Add(cppEnum);
             }
-            if (cppType.IsDelegate(out var cppFunction))
-            {
-                output.Enums.Add(cppEnum);
-            }
         }
     }
 }

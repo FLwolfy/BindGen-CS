@@ -33,7 +33,7 @@
                 LogSeverity.Warning => "[Wrn]",
                 LogSeverity.Error => "[Err]",
                 LogSeverity.Critical => "[Crt]",
-                _ => throw new NotImplementedException(),
+                _ => throw new ArgumentOutOfRangeException(nameof(severtiy), severtiy, null),
             };
         }
 

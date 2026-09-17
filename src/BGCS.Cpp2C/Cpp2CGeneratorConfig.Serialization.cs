@@ -39,28 +39,39 @@
         /// <returns>Result produced by <c>Create</c>.</returns>
         public static readonly JsonSerializer MergeSerializer = JsonSerializer.Create(MergeSerializerSettings);
 
+        [JsonIgnore]
+        internal string? ConfigDirectory { get; private set; }
+
         /// <summary>
-        /// Performs the operation implemented by <c>Load</c>.
+        /// Loads and composes a C++ bridge configuration without rewriting an existing source file.
         /// </summary>
-        /// <returns>Result produced by <c>Load</c>.</returns>
+        /// <param name="file">Configuration file path.</param>
+        /// <param name="composer">Optional custom base configuration composer.</param>
+        /// <returns>The composed configuration with its source directory recorded for relative path resolution.</returns>
         public static Cpp2CGeneratorConfig Load(string file, IConfigComposer? composer = null)
         {
-            Cpp2CGeneratorConfig result;
-            if (File.Exists(file))
-            {
-                result = JsonConvert.DeserializeObject<Cpp2CGeneratorConfig>(File.ReadAllText(file)) ?? new();
-            }
-            else
-            {
-                result = new();
-            }
-
-            result.Save(file);
+            string fullPath = Path.GetFullPath(file);
+            bool exists = File.Exists(fullPath);
+            Cpp2CGeneratorConfig result = exists
+                ? JsonConvert.DeserializeObject<Cpp2CGeneratorConfig>(File.ReadAllText(fullPath)) ?? new()
+                : new();
+            if (!exists)
+                result.Save(fullPath);
 
             composer ??= new ConfigComposer();
-            composer.Compose(ref result);
-
-            return result;
+            string previousDirectory = Environment.CurrentDirectory;
+            try
+            {
+                result.ConfigDirectory = Path.GetDirectoryName(fullPath) ?? previousDirectory;
+                Environment.CurrentDirectory = result.ConfigDirectory;
+                composer.Compose(ref result);
+                result.ConfigDirectory = Path.GetDirectoryName(fullPath) ?? previousDirectory;
+                return result;
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previousDirectory;
+            }
         }
 
         /// <summary>
