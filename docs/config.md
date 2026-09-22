@@ -1,6 +1,8 @@
-# Configuration
+# Tested Configuration Entries
 
-This is an entry-by-entry specification generated from `BGCS.Configuration.Tests`.
+This behavioral catalog is generated from dedicated entry tests in `BGCS.Configuration.Tests`. It is not the complete `CsCodeGeneratorConfig` property list.
+
+Use `bindgen-cs schema bindgen.schema.json` for every property in the installed version, and use [Configuration Guide](configuration-guide.md) for target, safety, marshalling, workspace, and precedence rules.
 
 ## AdditionalArguments
 
@@ -844,6 +846,44 @@ partial class Extensions
 public static void setValue(this
 // NotContains
 public static void SetValue(this
+```
+
+## FunctionContainerMappings
+
+### 1. Explanation
+**FunctionContainerMappings** controls the **FunctionContainerMappings** behavior and is validated by both property snapshots and generated-output checks.
+
+### 2. Type, Example, and Default Value
+- Type: `unknown`
+- Default value: `(runtime default)`
+- Example expected value: `(not specified in snapshot)`
+
+### 3. Example Config and Generated Output
+#### Example config
+```json
+{
+  "Namespace": "EntryTests.Generated",
+  "ApiName": "EntryApi",
+  "LibName": "entry-lib",
+  "MergeGeneratedFilesToSingleFile": true,
+  "ImportType": "DllImport",
+  "GenerateExtensions": false,
+  "GenerateRuntimeSource": false,
+  "FunctionMappings": [
+    {
+      "ExportedName": "internal_add",
+      "FriendlyName": "Add",
+      "ContainerName": "EntryInternals",
+      "Defaults": {},
+      "CustomVariations": []
+    }
+  ]
+}
+```
+
+#### Example generated output markers
+```csharp
+// No expected.bindings snapshot for this entry
 ```
 
 ## FunctionNamingConvention
@@ -2090,7 +2130,7 @@ MyPrefixOn
 // Contains
 public enum StrangeEnum : int
 MyPrefixOff = unchecked(0)
-MyPrefixOn = unchecked(1)
+Enabled = unchecked(1)
 // NotContains
 ```
 
@@ -2300,8 +2340,8 @@ public static int SampleSub(int a, int b)
 ```csharp
 // Contains
 public partial struct SampleType
-public int ValueOne;
-public int ValueTwo;
+public int valueOne;
+public int valueTwo;
 internal static extern int SampleUseNative(SampleType value);
 // NotContains
 ```
@@ -2489,6 +2529,7 @@ public static bool BoolEval(bool value)
   "ImportType": "DllImport",
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
+  "ParseSystemIncludes": true,
   "SystemIncludeFolders": [
     "sysinclude"
   ]
@@ -2501,6 +2542,47 @@ public static bool BoolEval(bool value)
 internal static extern int UseSysNative(int value);
 public static int UseSys(int value)
 // NotContains
+```
+
+## TypeFieldMappings
+
+### 1. Explanation
+**TypeFieldMappings** controls the **TypeFieldMappings** behavior and is validated by both property snapshots and generated-output checks.
+
+### 2. Type, Example, and Default Value
+- Type: `unknown`
+- Default value: `(runtime default)`
+- Example expected value: `(not specified in snapshot)`
+
+### 3. Example Config and Generated Output
+#### Example config
+```json
+{
+  "Namespace": "EntryTests.Generated",
+  "ApiName": "EntryApi",
+  "LibName": "entry-lib",
+  "MergeGeneratedFilesToSingleFile": true,
+  "ImportType": "DllImport",
+  "GenerateExtensions": false,
+  "GenerateRuntimeSource": false,
+  "MemberNamingConvention": "PascalCase",
+  "ClassMappings": [
+    {
+      "ExportedName": "sample_type",
+      "FriendlyName": "SampleType",
+      "FieldMappings": [
+        { "ExportedName": "id", "DisplayName": "ID" },
+        { "ExportedName": "url", "DisplayName": "URL" },
+        { "ExportedName": "cpu", "DisplayName": "CPU" }
+      ]
+    }
+  ]
+}
+```
+
+#### Example generated output markers
+```csharp
+// No expected.bindings snapshot for this entry
 ```
 
 ## TypeNamingConvention

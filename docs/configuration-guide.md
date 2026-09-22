@@ -1,8 +1,16 @@
 # Configuration Guide
 
-[Wiki](README.md) | [中文](configuration-guide.cn.md) | [Generated property reference](config.md)
+[Wiki](README.md) | [中文](configuration-guide.cn.md) | [Configuration entries with dedicated tests](config.md)
 
-The current JSON model remains flat for source compatibility. Internally it is being separated into input, target, API, marshalling, mapping, and output options.
+The public JSON model remains flat for source compatibility, while the internal pipeline separates input, target, analysis, marshalling, emission, and output responsibilities. Layer large configurations through BaseConfig and presets instead of copying one monolithic document.
+
+Use configuration sources in this order of authority:
+
+1. `bindgen-cs schema` from the installed version for the complete property set;
+2. this guide for workflow and safety rules;
+3. `docs/config.md` for behavioral examples backed by dedicated regression tests.
+
+`docs/config.md` is not a complete property inventory and does not replace the schema.
 
 Generate an editor/CI schema with:
 
@@ -10,7 +18,16 @@ Generate an editor/CI schema with:
 bindgen-cs schema bindgen.schema.json
 ```
 
-The schema is derived from the installed `CsCodeGeneratorConfig` version, including enum names and default values.
+The schema is derived from the installed `CsCodeGeneratorConfig` version, including enum names and discoverable defaults. It is useful for property discovery; detailed semantics for object-valued mappings remain in this guide and the tests.
+
+## Make four decisions first
+
+| Decision | Common choice | When to change it |
+| --- | --- | --- |
+| Language boundary | C header → C# | Use a C bridge for C++ classes/templates |
+| Target | `host-c` | Select an explicit target/triple/sysroot for a non-host ABI |
+| Import | `DllImport` | Use `LibraryImport` for source generation or `FunctionTable` for runtime loading |
+| Runtime | Reference `BGCS.Runtime` | Enable `GenerateRuntimeSource` for standalone source distribution |
 
 ## Minimal configuration
 
@@ -19,14 +36,15 @@ The schema is derived from the installed `CsCodeGeneratorConfig` version, includ
   "Namespace": "MyCompany.Native.Library",
   "ApiName": "LibraryApi",
   "LibName": "library",
+  "Preset": "host-c,c-library",
   "EntryFiles": ["include/library.h"],
-  "ParserKind": "C",
-  "TargetArchitecture": "X64",
+  "IncludeFolders": ["include"],
   "ImportType": "DllImport",
-  "OutputPath": "Generated",
-  "MergeGeneratedFilesToSingleFile": true
+  "OutputPath": "Generated"
 }
 ```
+
+This configuration follows the host ABI. Reproducible release configurations should use an explicit target preset or set platform/architecture/ABI directly; the configured target must match the final native binary.
 
 ## Input and parser settings
 
@@ -47,7 +65,9 @@ The schema is derived from the installed `CsCodeGeneratorConfig` version, includ
 
 ## Target settings
 
-`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, and FreeBSD with their valid x86/x64/Arm/Arm64 combinations. `TargetTriple`, `SysRoot`, and `CompilerPath` provide controlled overrides. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK.
+`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, and FreeBSD with their valid x86/x64/Arm/Arm64 combinations. `TargetTriple`, `TargetSysRoot`, and `CompilerPath` provide controlled overrides. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK.
+
+Model support is not the same as completed host acceptance. See the [target evidence matrix](capabilities.md#target-evidence) and the current generated acceptance report.
 
 ## Import modes
 
@@ -160,3 +180,15 @@ Presets are composable and generic: choose one target preset (`host-c`, `host-cp
 ```
 
 Explicit project settings override preset defaults, independent of preset order.
+
+## Workspaces
+
+A workspace stores multiple configuration paths for repository-level automation:
+
+```bash
+bindgen-cs workspace validate native/bindings/workspace.json
+bindgen-cs workspace generate native/bindings/workspace.json
+bindgen-cs workspace diff native/bindings/workspace.json
+```
+
+Put `workspace diff` in CI to validate all checked-in bindings without overwriting final output.

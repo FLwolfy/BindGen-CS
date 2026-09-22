@@ -1,87 +1,50 @@
 # BGCS Demo Workspace
 
-This folder contains two standalone demo apps extracted from the repository tests:
+The demo workspace contains two small, runnable examples. They reference the projects in this checkout through relative paths; the repository can live anywhere.
 
-- `BGCS.Demo`: C/C++ -> C# bindings demo via `BGCS`
-- `BGCS.Cpp2C.Demo`: C++ -> C bridge generation demo via `BGCS.Cpp2C`
+| Demo | Input | Output |
+| --- | --- | --- |
+| `BGCS.Demo` | C header | C# bindings, with package-based or standalone Runtime mode |
+| `BGCS.Cpp2C.Demo` | C++ headers | C ABI headers and C++ implementation shims |
+
+These examples demonstrate embedding the packages. New command-line users should start with the repository [getting-started guide](../docs/getting-started.md).
 
 ## Prerequisites
 
-- .NET SDK (`net9.0`)
-- Clang/LibClang available to the parser environment
-- This repo present at `~/Dev/BindGen-CS` (project references are wired to this path)
+- .NET SDK 9.0;
+- a working host C/C++ compiler environment for header discovery;
+- commands run from the selected demo directory so its relative config paths resolve correctly.
 
-## 1) BGCS.Demo
-
-Location: `~/demo/BGCS.Demo`
-
-Run with default config:
+## C to C# demo
 
 ```bash
-cd ~/demo/BGCS.Demo
-dotnet run
-```
-
-Run with explicit config/output:
-
-```bash
-cd ~/demo/BGCS.Demo
+cd demo/BGCS.Demo
 dotnet run -- config.runtime-notgenerated.json Output
 ```
 
-Run with runtime source generation enabled:
+Use standalone Runtime source instead:
 
 ```bash
-cd ~/demo/BGCS.Demo
 dotnet run -- config.runtime-generated.json Output
 ```
 
-Run with all configuration fields explicitly set (showcase profile):
+The program generates bindings from `headers/basic_c.h`, prints parser/generator diagnostics, and checks whether `Runtime.cs` matches the selected deployment mode.
+
+- `config.runtime-notgenerated.json` emits bindings that expect a `BGCS.Runtime` package reference.
+- `config.runtime-generated.json` emits bindings plus standalone `Runtime.cs`.
+- `config.all-set.json` is a property-coverage showcase, not the recommended minimal starting configuration.
+
+## C++ to C bridge demo
 
 ```bash
-cd ~/demo/BGCS.Demo
-dotnet run -- config.all-set.json Output
-```
-
-Config notes:
-
-- `config.runtime-generated.json`: generate `Bindings.cs` + standalone `Runtime.cs` (`GenerateRuntimeSource=true`)
-- `config.runtime-notgenerated.json`: generate only `Bindings.cs` (`GenerateRuntimeSource=false`)
-- `config.all-set.json`: comprehensive showcase config with explicit values for nearly all BGCS options
-- `RuntimeNamespace` (optional): override runtime namespace; empty/missing => `BGCS.Runtime`
-- `EntryFiles`: parser entry files
-- `allowedHeaders`: strict output whitelist
-  - omitted/null: defaults to `EntryFiles`
-  - empty array: output nothing
-  - non-empty: output only listed files
-
-## 2) BGCS.Cpp2C.Demo
-
-Location: `~/demo/BGCS.Cpp2C.Demo`
-
-Run with default config:
-
-```bash
-cd ~/demo/BGCS.Cpp2C.Demo
-dotnet run
-```
-
-Run with explicit config/output:
-
-```bash
-cd ~/demo/BGCS.Cpp2C.Demo
+cd demo/BGCS.Cpp2C.Demo
 dotnet run -- config.json Output
 ```
 
-Run with all configuration fields explicitly set (showcase profile):
+Generated C-facing headers are placed under `Output/include`; C++ implementation shims are placed under `Output/src`. The demo does not compile the bridge into a shared library—use the original native project's compiler flags, include directories, definitions, and linker inputs for that step.
 
-```bash
-cd ~/demo/BGCS.Cpp2C.Demo
-dotnet run -- config.all-set.json Output
-```
+`config.all-set.json` demonstrates non-default C++ bridge settings. It contains host-specific include paths and intentionally broad parser arguments, so adapt it before running on another machine; `config.json` is the portable demo entry point.
 
-This demo generates a C bridge layout:
+## Clean output
 
-- `Output/include/*` for public C headers
-- `Output/src/*` for C++ implementation shims
-- `config.all-set.json` demonstrates explicit non-empty/non-default values for Cpp2C options
+Both demo programs accept the output directory as their second argument. The output is reproducible and safe to exclude from source control.

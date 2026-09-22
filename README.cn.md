@@ -2,196 +2,176 @@
 
 [English](README.md) | [简体中文](README.cn.md)
 
-BindGen-CS 是一个跨平台 C/C++ → C# Binding 工具。它可以为 C ABI 库生成 C# 互操作 API，也可以为不能被 .NET 直接调用的 C++ API 生成 ABI 稳定的 C Bridge。
+BindGen-CS 是一个面向生产环境的跨平台 C/C++ → C# Binding 工具链：C ABI 可以直接生成 C# interop；C++ class、模板实例和选定 STL 类型可以先生成 ABI 稳定的 C Bridge，再自动生成对应 C# bindings。
 
-> **当前状态：** macOS arm64 完整验收矩阵已通过。Target model 覆盖 Windows、Linux、macOS、Android、iOS 和 FreeBSD ABI family；真实库确定性快照按实际验证过的宿主 target 分别维护。无法证明安全的 C++ 语义会被拒绝并给出可执行诊断，不会被猜测生成。每份[验收报告](docs/acceptance.cn.md)会准确记录实际验证的 target 和剩余边界。
+> **当前可信状态：** `macos-arm64-darwin` 完整验收矩阵已通过，十个分类均为 9.0/10.0。Windows、Linux、Android、iOS 和 FreeBSD 已进入 target/ABI model，但没有对应 target 的验收报告时，不把设计支持写成实机通过。BindGen-CS 对无法证明安全的语义给出诊断，不猜测 ownership、allocator 或 C++ ABI。
 
-## 项目目标
+## 选择正确的工作流
 
-> 对受支持的 C/C++ ABI 和标准库类型自动生成安全绑定；对缺少 ownership、allocator 或实例化信息的声明进行严格诊断，并只要求最小必要配置。
+| 你的输入 | 推荐入口 | 结果 |
+| --- | --- | --- |
+| C header / C ABI | `bindgen-cs init native.h` | C# imports、类型、常量和可选友好 overload |
+| C++ class / template / STL | `bindgen-cs init library.hpp` | `bridge.json`、C Bridge 源码及可选 C# bindings |
+| 多个 native library | `bindgen-cs workspace ...` | 一份 workspace 统一验证、生成和 diff |
+| 在构建工具中嵌入 | `BGCS` NuGet 包 | 稳定 facade、结构化结果和共享 Binding IR |
+| 只消费生成代码 | `BGCS.Runtime` NuGet 包 | 指针、callback、native context 和 ABI runtime 类型 |
 
-- 常见库只需要一份配置和一条生成命令。
-- 显式建模平台、架构、ABI、target triple、sysroot 和工具链。
-- C# 与 C Bridge emitter 共用同一个 Binding IR。
-- 默认生成接近 `Inno.Native.*` 的清晰 API，不修改生成文件。
-- 确定性的 SingleFileOutput。
-- 稳定发布 Runtime、Generator、C++ Bridge 和 .NET Tool NuGet 包。
-- 提供编译、ABI、运行时、包消费和真实库回归测试。
+更完整的支持范围、证据等级和明确边界见[能力矩阵](docs/capabilities.cn.md)。
 
-## 快速开始
+## 五分钟生成第一个 C Binding
+
+要求：.NET SDK 9.0，以及宿主平台上的 Clang/GNU compiler driver 或 Windows LLVM。
 
 ```bash
 dotnet tool install --global BindGen-CS
-bindgen-cs init
+
+# native.h 必须已经存在
+bindgen-cs init native.h
 bindgen-cs doctor
-bindgen-cs validate
-bindgen-cs generate
-bindgen-cs build
+bindgen-cs validate bindgen.json
+bindgen-cs generate bindgen.json
+bindgen-cs build bindgen.json
 ```
 
-`bindgen-cs init` 会创建适合初学者、跟随宿主平台的 `bindgen.json`：
+默认输出为 `Generated/Bindings.cs`。`build` 会在临时消费项目中以 nullable 和 warning-as-error 编译生成源码；它验证 managed bindings，不替代上游 native library 的构建。
+
+`init native.h` 会生成可立即运行的配置。准备提交配置前，应把其中的绝对 header/include 路径改成相对于配置文件的仓库路径：
 
 ```json
 {
-  "Namespace": "Native.Bindings",
+  "Preset": "host-c,c-library",
+  "Namespace": "MyCompany.Native",
   "ApiName": "NativeApi",
   "LibName": "native",
-  "Preset": "host-c",
-  "EntryFiles": ["native.h"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
+  "EntryFiles": ["include/native.h"],
+  "IncludeFolders": ["include"],
   "OutputPath": "Generated",
-  "ImportType": "DllImport",
-  "MergeGeneratedFilesToSingleFile": true,
-  "SingleFileOutputName": "Bindings.cs",
-  "GenerateRuntimeSource": false
+  "ImportType": "DllImport"
 }
 ```
 
-也可以通过兼容 facade 嵌入到 C# 程序：
+生成目录应当被视为可重建产物：定制 naming、type、function、marshalling 和 ownership 时修改配置，不直接修改生成文件。
+
+## C++ Bridge
+
+```bash
+bindgen-cs init include/library.hpp
+bindgen-cs bridge bridge.json
+```
+
+这会生成 C ABI wrapper；默认 `init` 配置还会从 bridge header 生成 C# bindings。你仍需使用原库的 compiler flags、include path 和 linker inputs，把生成的 `src/Classes.cpp` 编译进 native shared library。
+
+已验证的 C++ 范围包括 class 构造/析构、instance/static method、overload、namespace function、异常边界、multiple-inheritance pointer adjustment、显式模板实例、`std::string`、`std::vector`、`std::span`、blittable/non-blittable `std::optional`、`std::unique_ptr`、`std::shared_ptr` 和配置式 pure-virtual callback proxy。它不是任意 C++ 语义的自动翻译器；未知 specialization 会明确失败。
+
+## CLI
+
+| 命令 | 用途 |
+| --- | --- |
+| `init` | 从 C/C++ header 或配置路径创建起始配置 |
+| `doctor` | 检查 host target、compiler、system includes 和 macOS SDK |
+| `validate` | 解析并分析，不写正式输出 |
+| `inspect` | 输出分析后的 module 摘要或 JSON |
+| `generate` | 事务性生成 bindings |
+| `build` | 生成并编译验证 C# 输出 |
+| `diff` | 在临时目录重生成并检查 checked-in bindings 是否最新 |
+| `workspace` | 批量 `validate`、`generate` 或 `diff` 多个项目 |
+| `schema` | 从当前安装版本生成完整 JSON Schema |
+| `bridge` | 生成配置驱动的 C++ → C Bridge |
+
+完整示例见[快速开始](docs/getting-started.cn.md)，配置决策见[配置指南](docs/configuration-guide.cn.md)。
+
+## 核心能力
+
+- 显式建模 platform、architecture、ABI、target triple、sysroot 和 compiler discovery。
+- 支持 `DllImport`、`LibraryImport` 和显式 function table/native context。
+- 处理 struct、union、packing、bitfield、fixed array、typedef、opaque handle、callback 和 target-dependent primitive。
+- 使用 `MarshallingMappings` 表达 string encoding、ownership、cleanup、pointer/count、capacity/written-count 和 caller allocation。
+- Pipeline 会生成共享 Binding IR 并据此执行安全分析；Runtime/C Bridge 已使用明确 emitter 边界，主 C# 输出仍经过兼容 `GenerationStep` 路径并由 `CSharpEmitter` 封装。输出通过 staging transaction 原子替换。
+- 支持 BaseConfig、可组合 preset、SingleFile、workspace、确定性 diff 和 target-specific snapshot。
+- 发布 CLI、generator、C++ Bridge、Runtime 和零依赖 IR 包。
+
+## 安全契约
+
+BindGen-CS 将 native 声明分成三类：
+
+1. ABI 和 lifetime 足够明确：自动生成并编译验证。
+2. 声明缺少 ownership、allocator、length 或 callback lifetime：给出 `BGCS-SAFETY-*` 诊断和最小配置路径。
+3. C++ 类型无法安全 lowering：以 `BGCSCPP001` / `BGCSCPP-INSTANTIATION` 拒绝生成。
+
+这条边界是正确性设计，不是功能缺失的静默掩盖。诊断处理方式见[诊断指南](docs/diagnostics.cn.md)。
+
+## InnoEngine 实战证明
+
+同仓的 InnoEngine 集成不是演示用 toy header。完整 gate 会：
+
+- 从配置确定性重生成 cimgui、cimguizmo、miniaudio、SDL3 和 bgfx；
+- 拒绝 `Generated/` 之外的手写 native import；
+- 从锁定源码构建全部 native dependency；
+- 以 warning-as-error 构建完整 InnoEngine solution；
+- 运行所有 native binding 测试项目。
+
+真实库 gate 还覆盖 miniaudio、SDL3、cimgui、cimguizmo、bgfx C99 和 bimg C++ Bridge 的生成、编译与 target-specific API snapshot。
+
+## 架构与嵌入
+
+```text
+CLI / Embedded Facade
+        ↓
+Configuration → Parsing → Analysis → Binding IR
+                                      ↓
+                  C# / Runtime / C Bridge Emitters
+                                      ↓
+                         Transactional Output
+```
+
+兼容入口：
 
 ```csharp
 using BGCS;
 
 CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
-bool success = generator.GenerateConfigured();
-
-if (!success)
+if (!generator.GenerateConfigured())
 {
     foreach (var diagnostic in generator.Messages)
         Console.Error.WriteLine(diagnostic);
 }
 ```
 
-通过配置生成 C++ Bridge：
+需要结构化 IR 时使用 `BGCS.Facade.BindingGenerator`。当前 C# compatibility emission 与 IR-native 目标路径的区别、分层职责和迁移完成条件见[架构说明](docs/architecture.cn.md)。
 
-```bash
-bindgen-cs bridge bridge.json
-```
-
-新的应用还可以直接取得分析后的 Binding IR：
-
-```csharp
-using BGCS.Facade;
-using BGCS.Intermediate;
-
-BindingGenerationResult result = BindingGenerator.Generate("bindgen.json");
-BindingModule? module = result.Module;
-```
-
-## 最终架构
-
-```text
-BGCS
-├─ Facade
-│  ├─ CsCodeGenerator
-│  └─ BindingGenerator
-├─ Application
-│  └─ BindingGenerationPipeline
-├─ Configuration
-│  ├─ ConfigLoader
-│  ├─ ConfigComposer
-│  ├─ ConfigValidator
-│  └─ PresetResolver
-├─ Analysis
-│  ├─ DeclarationGraph
-│  ├─ TypeAnalyzer
-│  ├─ AbiLayoutAnalyzer
-│  ├─ OwnershipAnalyzer
-│  └─ OverloadPlanner
-├─ Intermediate
-│  ├─ BindingModule
-│  ├─ BindingType
-│  ├─ BindingFunction
-│  └─ MarshallingPlan
-├─ Emission
-│  ├─ CSharpEmitter
-│  ├─ CBridgeEmitter
-│  ├─ RuntimeEmitter
-│  └─ SingleFileComposer
-└─ Output
-   └─ OutputDirectoryTransaction
-```
-
-兼容 facade 已把编排委托给 Application pipeline，C#、Runtime、SingleFile 和 C Bridge 输出都经过明确 emitter 边界。详见[架构说明](docs/architecture.cn.md)。
-
-## 验收目标
-
-稳定主版本只有在报告 target 上每个分类都经过独立测量并达到 **9.0/10.0**、且全部 mandatory gate 通过时才算完成。
-
-| 方面 | 目标 | 强制证据 |
-| --- | ---: | --- |
-| 普通小型 C API | 9.0 | 生成 C# 可编译，运行时 ABI 测试通过，生成文件零手改 |
-| 中大型 C API | 9.0 | SDL3、miniaudio、cimgui、cimguizmo、bgfx 在预算内重新生成，InnoEngine 保持 diff-clean |
-| 复杂 C ABI 正确性 | 9.0 | 宿主原生 layout/invocation，加 target-specific primitive、pack、union、bitfield、callback 和调用约定测试 |
-| 普通 C++ class bridge | 9.0 | 构造析构、方法、重载、继承转换和异常边界测试 |
-| 复杂现代 C++ | 9.0 | 显式模板实例、选定 STL adapter、智能指针和 virtual callback 测试 |
-| 生成 API 美观程度 | 9.0 | Reflection public API 快照通过，生成目录之外不存在手写 native import |
-| 小白易用性 | 9.0 | init/doctor/validate/generate/build 流程和可执行诊断 |
-| 外层架构 | 9.0 | 强制单向项目依赖和稳定 facade 契约 |
-| 内部架构 | 9.0 | 共享 IR、分析器/emitter 独立测试、消除 God Class |
-| NuGet/测试/发布工程化 | 9.0 | 干净消费、symbols、tool 安装、原生/C# 测试和确定性包 |
-
-详细评分公式、性能预算和 pass/fail 规则以 [docs/acceptance.cn.md](docs/acceptance.cn.md) 为准。`scripts/run-full-test-matrix.sh` 只有在全部强制层通过后才写入 `artifacts/acceptance/report.json`。
-
-| 已测分类 | macOS arm64 分数 |
-| --- | ---: |
-| 普通小型 C API | 9.0 |
-| 中大型 C API | 9.0 |
-| 复杂 C ABI 正确性 | 9.0 |
-| 普通 C++ class bridge | 9.0 |
-| 复杂现代 C++ | 9.0 |
-| 生成 API 质量 | 9.0 |
-| 小白易用性 | 9.0 |
-| 外层架构 | 9.0 |
-| 内部架构 | 9.0 |
-| NuGet/测试/发布 | 9.0 |
-
-macOS arm64 真实库 gate 会在不修改生成源码的条件下重新生成 SingleFile，并以 0 C# warning/error 编译：
-
-| 库 | 预算 | 已验证行为 |
-| --- | ---: | --- |
-| miniaudio split | 60 秒 | 生成和编译 |
-| SDL3 umbrella header | 45 秒 | 生成和编译 |
-| cimgui | 30 秒 | 生成和编译 |
-| cimguizmo | 15 秒 | 生成和编译 |
-| bgfx C99 | 30 秒 | 生成和编译 |
-| bimg C++ | 15 秒 | C Bridge、clang++、C# 回绑、API snapshot |
-
-Synthetic C 与生成的 C++ Bridge 原生 runtime invocation gate 已通过。InnoEngine gate 还会验证五个绑定项目的确定性重生成、拒绝 Generated 目录外的手写 native import、从锁定源码构建每项必需的 native dependency、构建完整 solution，并执行全部 native binding 测试项目。
-
-## NuGet 包
-
-公开入口包：
-
-- `BGCS`：可嵌入的 C/C++ → C# facade。
-- `BGCS.Cpp2C`：C++ → C Bridge。
-- `BGCS.Runtime`：生成绑定使用的 Runtime。
-- `BindGen-CS`：提供 `bindgen-cs` 命令的 .NET Tool。
-- `BGCS.Intermediate`：零依赖共享 Binding IR 和 diagnostics contract。
-
-`BGCS.Core`、`BGCS.Language` 和 `BGCS.CppAst` 是传递实现包。所有发布包使用同一版本，并在发布前执行干净消费者测试。
-
-## 验证命令
+## 验收
 
 ```bash
 ./scripts/run-full-test-matrix.sh
-./scripts/test-nuget-packages.sh
 ```
 
-C++ Bridge 测试使用 `BGCS_CPP2C_CXX`/`CXX`，或自动发现宿主 Clang/GNU driver。macOS parser 还会通过 `SDKROOT` 或 `xcrun` 自动发现活动 SDK。
+报告只有在 managed tests、原生 ABI/runtime gate、真实 C/C++ 库、确定性 snapshot、InnoEngine workspace/native build/test 和 NuGet/tool smoke 全部通过后才生成：
 
-## Wiki
+- `artifacts/acceptance/report.json`
+- `artifacts/acceptance/report.md`
 
-- [中文 Wiki 入口](docs/README.cn.md)
+评分规则和 target 隔离原则见[验收规范](docs/acceptance.cn.md)。当前验收分数证明声明范围内的质量，不代表完整 C++ 语言覆盖。
+
+## 包
+
+- `BindGen-CS`：提供 `bindgen-cs` 命令的 .NET Tool。
+- `BGCS`：可嵌入的 C/C++ → C# facade。
+- `BGCS.Cpp2C`：C++ → C Bridge。
+- `BGCS.Runtime`：生成 bindings 使用的 runtime。
+- `BGCS.Intermediate`：零依赖 Binding IR 和 diagnostics contract。
+
+选择说明见[NuGet 包与公开 API](docs/packages.cn.md)。
+
+## 文档
+
+- [中文文档入口](docs/README.cn.md)
 - [快速开始](docs/getting-started.cn.md)
-- [架构说明](docs/architecture.cn.md)
+- [能力与边界](docs/capabilities.cn.md)
 - [配置指南](docs/configuration-guide.cn.md)
+- [诊断指南](docs/diagnostics.cn.md)
+- [架构说明](docs/architecture.cn.md)
 - [验收规范](docs/acceptance.cn.md)
-- [API 参考](docs/api.md)
-- [NuGet 包与导出 API](docs/packages.cn.md)
 - [测试说明](docs/testing.md)
-- [发布说明](docs/publish.md)
 
 ## License
 

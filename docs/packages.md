@@ -90,10 +90,14 @@ Generated bindings normally reference this package. `GenerateRuntimeSource=true`
 
 Applications should not install these individually unless they directly consume those extension APIs.
 
-## Current limitations
+## Current boundaries
 
-- Verified modern C++ adapters cover `std::string`, input `std::span<T>`, blittable `std::optional<T>`, and ownership-transferring `std::unique_ptr<T>`, plus configured pure-virtual callback proxies. `std::variant` and non-blittable optional alternatives still require explicit custom lowering; string, vector, span input/return, optional, unique_ptr, and shared_ptr defaults are verified.
+- Verified modern C++ adapters cover `std::string`, vector/span input and return views, blittable optional presence/value, the non-blittable optional owned-handle protocol, ownership-transferring `std::unique_ptr<T>`, retained `std::shared_ptr<T>`, and configured pure-virtual callback proxies. `std::variant` and arbitrary unknown specializations still require explicit custom lowering.
 - Ownership and allocator semantics cannot be inferred reliably from pointer syntax alone.
 - Typed C variadic variants currently require `DllImport` and explicit promoted argument types.
 - Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots. InnoEngine separately builds its native binaries and runs all six native binding test projects.
 - The complete solution, generated consumers, and package smoke projects compile with warnings treated as errors.
+
+Architecturally, `BindingModule`, analysis, and the IR-native emitter API are public. Primary configuration-driven C# output still routes through legacy `GenerationStep` implementations encapsulated by `CSharpEmitter.EmitLegacy`. Consumers can build new emitters against `BGCS.Intermediate`, but should not assume legacy-step removal is complete.
+
+See [Capabilities and boundaries](capabilities.md) for the complete evidence levels and remaining gaps.

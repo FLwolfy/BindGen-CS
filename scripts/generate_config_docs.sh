@@ -170,9 +170,11 @@ print_entry_block() {
 generate_bgcs_doc() {
   local output="$ROOT_DIR/docs/config.md"
   {
-    echo "# Configuration"
+    echo "# Tested Configuration Entries"
     echo
-    echo "This is an entry-by-entry specification generated from \`BGCS.Configuration.Tests\`."
+    echo "This behavioral catalog is generated from dedicated entry tests in \`BGCS.Configuration.Tests\`. It is not the complete \`CsCodeGeneratorConfig\` property list."
+    echo
+    echo "Use \`bindgen-cs schema bindgen.schema.json\` for every property in the installed version, and use [Configuration Guide](configuration-guide.md) for target, safety, marshalling, workspace, and precedence rules."
     echo
     while IFS= read -r folder; do
       print_entry_block "$(basename "$folder")" "$folder" "csharp" "BGCS"
@@ -183,9 +185,11 @@ generate_bgcs_doc() {
 generate_cpp2c_doc() {
   local output="$ROOT_DIR/docs/cpp2c.config.md"
   {
-    echo "# Configuration"
+    echo "# Tested C++ Bridge Configuration Entries"
     echo
-    echo "This is an entry-by-entry specification generated from \`BGCS.Cpp2C.Configuration.Tests\`."
+    echo "This behavioral catalog is generated from dedicated entry tests in \`BGCS.Cpp2C.Configuration.Tests\`. It does not enumerate every \`Cpp2CGeneratorConfig\` property."
+    echo
+    echo "Use [Getting Started](getting-started.md#c-bridge), [Capabilities](capabilities.md#c-bridge), and the public configuration type for the complete bridge workflow and current STL/template adapter scope."
     echo
     while IFS= read -r folder; do
       print_entry_block "$(basename "$folder")" "$folder" "cpp" "CPP2C"

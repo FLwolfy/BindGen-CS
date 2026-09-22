@@ -1,90 +1,123 @@
 # Architecture
 
-[Wiki](README.md) | [中文](architecture.cn.md)
+[简体中文](architecture.cn.md) | [Documentation index](README.md) | [Capability matrix](capabilities.md)
 
-## Dependency rule
+This document distinguishes the current implementation from the target architecture. They do not completely overlap: shared Binding IR, analysis, and emitter contracts exist, while primary C# generation still emits through compatibility `GenerationStep` implementations. Directory names are not a substitute for the actual data flow.
 
-Dependencies point inward and never from analysis or intermediate models back to a facade or emitter:
+## Current data flow
+
+```text
+CLI / CsCodeGenerator / BindingGenerator
+                 ↓
+      Config load + composition + validation
+                 ↓
+       C/C++ parse → CppCompilation
+                 ↓
+        BindingGenerationPipeline
+          ├─ preprocess / pre-patch
+          ├─ DeclarationGraph
+          ├─ BindingModuleAnalyzer → BindingModule
+          ├─ StrictSafetyAnalyzer
+          ├─ CSharpEmitter.EmitLegacy
+          │    └─ GenerationStep implementations
+          ├─ post-patch / SingleFile / optional Runtime
+          └─ GeneratedOutputTransaction.commit
+```
+
+Important facts:
+
+- `BindingModule` is a real analysis result used by structured results, safety diagnostics, and the new emitter API.
+- Primary C# output currently calls `CSharpEmitter.EmitLegacy(...)`; that encapsulates but does not eliminate the AST/metadata-based `GenerationStep` path.
+- `CSharpEmitter.Emit(BindingModule, EmissionContext)` is an IR-native path, but is not yet the default configured generation implementation.
+- C++ bridging has its own analyzer and `CBridgeEmitter.EmitAst` path and also returns a `BindingModule`; it shares contracts with C# without every emission path being IR-only.
+- CLI `build` creates a temporary .NET project after pipeline success for warning-as-error compilation. Compilation validation is not performed inside `BindingGenerationPipeline` itself.
+
+## Target data flow
+
+```text
+Configuration → Parsing → Analysis → immutable BindingModule
+                                         ↓
+                  C# / Runtime / C Bridge / custom emitters
+                                         ↓
+                            Transactional Output
+```
+
+In the target state, emitters do not traverse mutable Clang AST state or depend on legacy generator metadata. The current codebase has the contracts and part of the emitter implementation, but migration is not complete.
+
+## Dependency rules
+
+Dependencies should point inward:
 
 ```text
 BGCS.Tool
-  -> Facade
-  -> Application
-  -> Configuration + Analysis
-  -> Intermediate
-  -> BGCS.Core + BGCS.CppAst
+  → BGCS facade/application
+  → configuration + analysis + emission
+  → BGCS.Intermediate
+  → BGCS.Core + BGCS.CppAst + BGCS.Language
 
-Emission -> Intermediate
-Output is shared infrastructure
-BGCS.Runtime is independent of all generator assemblies
+BGCS.Runtime is independent of generator assemblies
+BGCS.Intermediate depends on no other BGCS assembly
 ```
 
-## Layers
+`Analysis` and `Intermediate` must not reference the CLI. IR contracts should not contain Roslyn syntax, generated source strings, filesystem paths, or mutable Clang cursors.
+
+## Layer responsibilities
 
 ### Facade
 
-`CsCodeGenerator` preserves existing source compatibility. `BindingGenerator` is the concise new entry point returning `BindingGenerationResult`. A facade validates arguments and delegates; it must not contain AST traversal, ABI logic, source composition, or native build logic.
-
-### Application
-
-`BindingGenerationPipeline` owns the use-case sequence:
-
-1. resolve and validate configuration;
-2. parse native inputs;
-3. build a declaration graph;
-4. analyze ABI, types, ownership, and overload relationships;
-5. produce one `BindingModule`;
-6. run selected emitters into a staging directory;
-7. compile/validate when requested;
-8. atomically commit output;
-9. return a structured result.
+`CsCodeGenerator` preserves the compatibility API; `BGCS.Facade.BindingGenerator` returns `BindingGenerationResult`. The facade owns arguments and use-case entry points and should not accumulate more AST traversal or output composition.
 
 ### Configuration
 
-- `ConfigLoader`: source IO and config-relative paths.
-- `ConfigComposer`: base configuration composition and cycle detection.
-- `ConfigValidator`: complete validation before output mutation.
-- `PresetResolver`: known-library and known-ABI defaults without copying large JSON files.
+- `ConfigLoader`: configuration input and relative-path context.
+- `ConfigComposer`: BaseConfig merging and cycle detection.
+- `ConfigValidator`: target, path, mapping, and output invariants before writes.
+- `PresetResolver`: generic target/API/output defaults without library-specific hardcoding.
 
-Configuration types describe intent. They must not write C# or traverse Clang AST nodes.
+### Parsing
+
+`BGCS.CppAst` uses Clang to build declaration/type/comment/token models. `CppTarget` and `CppToolchainDiscovery` supply target triples, system includes, and sysroots.
 
 ### Analysis
 
-- `DeclarationGraph`: declarations and ABI dependencies.
-- `TypeAnalyzer`: C/C++ type to IR type lowering.
-- `AbiLayoutAnalyzer`: size, alignment, fields, arrays, unions, packing, and bitfields.
-- `OwnershipAnalyzer`: borrowed/owned/transferred/caller-allocated semantics and string encoding.
-- `OverloadPlanner`: pointer/count, capacity/written-count, strings, spans, callbacks, and two-call patterns.
+- `DeclarationGraph`: declaration dependency ordering.
+- `TypeAnalyzer`: native types to `BindingTypeReference`.
+- `AbiLayoutAnalyzer`: size, alignment, fields, arrays, unions, and bitfield facts.
+- `OwnershipAnalyzer`: conservative marshalling/ownership defaults merged with explicit mappings.
+- `OverloadPlanner`: pointer/count, capacity, and written-count relationships.
+- `StrictSafetyAnalyzer`: unproven ownership, allocator, length, and callback lifetime.
 
-Analyzers do not create files.
+Analyzers do not create final output files.
 
 ### Intermediate
 
-`BindingModule`, `BindingType`, `BindingFunction`, and `MarshallingPlan` are the only input to final emitters. They contain resolved names and ABI facts but no Roslyn syntax, C++ source strings, filesystem paths, or mutable Clang state.
+`BGCS.Intermediate` is a dependency-free contract package containing `BindingModule`, types/functions/fields/parameters, `MarshallingPlan`, diagnostics, `IBindingEmitter`, and `EmissionContext`.
+
+It is both a usable analysis result and the target model for legacy-emission migration. The existence of IR must not be confused with every emitter already being fully IR-native.
 
 ### Emission
 
-- `CSharpEmitter`: raw imports and friendly APIs.
-- `CBridgeEmitter`: ABI-stable wrappers for C++ declarations.
-- `RuntimeEmitter`: optional standalone Runtime source.
-- `SingleFileComposer`: syntax-aware deterministic composition.
-
-Emitters do not infer ownership or layout. Missing analysis is an error, not an emitter heuristic.
+- `CSharpEmitter`: contains both IR-native `Emit` and the `EmitLegacy` adapter used by the current primary path.
+- `RuntimeEmitter`: emits standalone runtime contracts from a module.
+- `SingleFileComposer`: deterministic syntax-tree composition through Roslyn.
+- `CBridgeEmitter`: emits C++ to C wrappers and currently still consumes AST-specific generation data.
 
 ### Output
 
-`OutputDirectoryTransaction` stages all files on the destination volume. Existing output remains untouched until every required emitter and validator succeeds.
+`GeneratedOutputTransaction` / `OutputDirectoryTransaction` generate into staging directories. Final output is replaced only after generation and patching succeed, preserving last-good bindings on failure.
 
-## Migration policy
+## Migration completion criteria
 
-The repository currently contains legacy AST-to-source generation steps. During migration:
+Primary C# generation is fully IR-native only when all of the following are true:
 
-- facade signatures remain compatible;
-- every migrated path must first have an IR test and a generated compilation test;
-- legacy and IR emitters must not both define the same declaration;
-- no new feature may add logic to the `CsCodeGenerator` god class;
-- a layer is considered migrated only after the facade delegates to it and old code is removed.
+1. `BindingGenerationPipeline` calls `CSharpEmitter.Emit(BindingModule, ...)` as the default path.
+2. Legacy `GenerationStep` implementations no longer determine public output semantics.
+3. Metadata/patch capabilities become IR transforms or are explicitly constrained to source post-processing.
+4. Real-library source/public-API snapshots and native tests remain unchanged.
+5. Removing `EmitLegacy` does not change generated output.
+
+The equivalent C++ bridge criterion is that the C Bridge emitter consumes a complete IR and the AST is confined to analysis.
 
 ## Extension model
 
-Long-term extensions register analyzers, policies, presets, and emitters through typed interfaces. Extensions receive immutable request/IR data and a scoped diagnostic sink. They must not depend on CLI types or mutate global current directories.
+New extensions should receive immutable configuration/requests, Binding IR, and scoped diagnostics. They must not depend on the CLI, change the global current directory, or hardcode one native library's names/layout into core. Library-specific facts belong in consumer configuration, preset composition, or an explicit custom adapter.

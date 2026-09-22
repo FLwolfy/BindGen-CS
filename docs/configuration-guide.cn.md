@@ -1,8 +1,16 @@
 # 配置指南
 
-[Wiki](README.cn.md) | [English](configuration-guide.md) | [自动生成的属性参考](config.md)
+[Wiki](README.cn.md) | [English](configuration-guide.md) | [具备专门测试的配置条目](config.md)
 
-为了保持源码兼容，当前 JSON 仍是扁平模型；内部正在拆分为 input、target、API、marshalling、mapping 和 output options。
+为了保持源码兼容，JSON 公开模型仍是扁平结构；内部 pipeline 已把 input、target、analysis、marshalling、emission 和 output 职责分开。大型配置应通过 BaseConfig 和 preset 分层，不要复制整份配置。
+
+配置资料的权威顺序是：
+
+1. 当前安装版本运行 `bindgen-cs schema` 得到的完整属性集合；
+2. 本指南中的工作流与安全规则；
+3. `docs/config.md` 中具备独立 regression test 的行为示例。
+
+`docs/config.md` 不是完整属性枚举，不能替代 schema。
 
 生成供编辑器和 CI 使用的 schema：
 
@@ -10,7 +18,16 @@
 bindgen-cs schema bindgen.schema.json
 ```
 
-Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum 名称和默认值。
+Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum 名称和可发现的默认值。当前 schema 适合属性发现，但 object-valued mapping 的详细语义仍以本指南和测试为准。
+
+## 先做四个选择
+
+| 决策 | 常用选择 | 何时改变 |
+| --- | --- | --- |
+| 语言边界 | C header → C# | C++ class/template 改用 C Bridge |
+| target | `host-c` | 生成非宿主 ABI 时显式选择 target/triple/sysroot |
+| import | `DllImport` | source-generated import 用 `LibraryImport`；运行时加载用 `FunctionTable` |
+| runtime | 引用 `BGCS.Runtime` | 需要单文件分发时开启 `GenerateRuntimeSource` |
 
 ## 最小配置
 
@@ -19,14 +36,15 @@ Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum �
   "Namespace": "MyCompany.Native.Library",
   "ApiName": "LibraryApi",
   "LibName": "library",
+  "Preset": "host-c,c-library",
   "EntryFiles": ["include/library.h"],
-  "ParserKind": "C",
-  "TargetArchitecture": "X64",
+  "IncludeFolders": ["include"],
   "ImportType": "DllImport",
-  "OutputPath": "Generated",
-  "MergeGeneratedFilesToSingleFile": true
+  "OutputPath": "Generated"
 }
 ```
+
+这个配置跟随宿主 ABI。可重现的发布配置应使用明确 target preset，或显式填写 platform/architecture/ABI；配置 target 必须与最终 native binary 一致。
 
 ## 输入和 Parser
 
@@ -47,7 +65,9 @@ Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum �
 
 ## Target
 
-`TargetPlatform`、`TargetArchitecture` 和 `TargetAbi` 共同组成经过验证的 target。`Host` 会解析为当前运行平台/架构；显式 target 覆盖 Windows、Linux、macOS、Android、iOS、FreeBSD 及其有效的 x86/x64/Arm/Arm64 组合。`TargetTriple`、`SysRoot`、`CompilerPath` 提供受控覆盖。Defines 和 native binary 必须与解析后的 target 一致。宿主解析会发现编译器 system include，macOS 还会发现活动 SDK。
+`TargetPlatform`、`TargetArchitecture` 和 `TargetAbi` 共同组成经过验证的 target。`Host` 会解析为当前运行平台/架构；显式 target 覆盖 Windows、Linux、macOS、Android、iOS、FreeBSD 及其有效的 x86/x64/Arm/Arm64 组合。`TargetTriple`、`TargetSysRoot`、`CompilerPath` 提供受控覆盖。Defines 和 native binary 必须与解析后的 target 一致。宿主解析会发现编译器 system include，macOS 还会发现活动 SDK。
+
+“模型支持”不等于“已在该宿主完成验收”。查看[能力矩阵](capabilities.cn.md#target-证据)和当前生成的 acceptance report。
 
 ## Import Mode
 
@@ -160,3 +180,15 @@ Preset 可以组合且保持通用：选择一个 target preset（`host-c`、`ho
 ```
 
 显式项目配置始终覆盖 preset 默认值，并且与 preset 顺序无关。
+
+## Workspace
+
+Workspace 文件保存多个 config path，适合仓库级自动化：
+
+```bash
+bindgen-cs workspace validate native/bindings/workspace.json
+bindgen-cs workspace generate native/bindings/workspace.json
+bindgen-cs workspace diff native/bindings/workspace.json
+```
+
+把 `workspace diff` 放入 CI，可以在不覆盖正式输出的情况下验证全部 checked-in bindings。

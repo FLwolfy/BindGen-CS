@@ -1,24 +1,24 @@
 # BindGen-CS API Reference (BGCS)
 
-This document focuses on BGCS runtime APIs and extension points: generator pipeline, metadata, patching, and function generation.
+This document focuses on BGCS generator APIs and extension points: the compatibility pipeline, shared IR, metadata, patching, and function generation. For runtime-only APIs, see the `BGCS.Runtime` package README.
 
 ## 1. Pipeline Order
 
-`CsCodeGenerator` is the compatibility facade. `BindingGenerationPipeline` owns the application sequence:
+`CsCodeGenerator` is the compatibility facade. Across the facade and `BindingGenerationPipeline`, configured generation runs in this order:
 
 1. validate the composed configuration;
-2. parse headers and report Clang diagnostics;
+2. parse headers before entering the pipeline and report Clang diagnostics;
 3. resolve the allowed-header closure;
 4. run preprocess steps and pre-patches;
 5. build shared `BindingModule` analysis data;
-6. run configured generation/emission steps in a staging directory;
+6. call `CSharpEmitter.EmitLegacy`, which runs configured `GenerationStep` implementations in a staging directory;
 7. apply post-patches;
 8. rewrite Runtime imports and remove empty generated declarations;
 9. compose optional SingleFile output through Roslyn;
 10. emit optional standalone Runtime source;
 11. atomically commit output and publish `BindingGenerationResult`.
 
-Post-patches run before SingleFile composition and Runtime emission. A failed stage does not replace last-good output.
+Post-patches run before SingleFile composition and Runtime emission. A failed stage does not replace last-good output. CLI `build` performs its warning-as-error consumer compilation after this pipeline succeeds.
 
 ## 2. Core Types
 
@@ -66,7 +66,9 @@ Main execution API:
 - `BindingDiagnostic` and `BindingGenerationResult`;
 - `IBindingEmitter` and `EmissionContext`.
 
-`BGCS.Facade.BindingGenerator.Generate(...)` returns a `BindingGenerationResult`. `Cpp2CCodeGenerator.LastResult` exposes the same result contract after C++ bridge generation. `BGCS.Emission.CSharpEmitter` and `BGCS.Cpp2C.Emission.CBridgeEmitter` both implement `IBindingEmitter`; the application pipelines also route compatibility generation passes through these emitter boundaries.
+`BGCS.Facade.BindingGenerator.Generate(...)` returns a `BindingGenerationResult`. `Cpp2CCodeGenerator.LastResult` exposes the same result contract after C++ bridge generation. `BGCS.Emission.CSharpEmitter` and `BGCS.Cpp2C.Emission.CBridgeEmitter` both implement `IBindingEmitter`.
+
+The IR-native `Emit(...)` methods are independently usable and tested, but they are not yet the default full-fidelity configured emitters. Primary C# generation uses `CSharpEmitter.EmitLegacy`; primary bridge generation uses `CBridgeEmitter.EmitAst`. See [Architecture](architecture.md) before implementing an emitter or assuming legacy metadata is absent.
 
 ## 4. Metadata APIs (`BGCS.Metadata`)
 
@@ -132,7 +134,7 @@ Customization:
 - `PreProcessStep`: `Configure`, `PreProcess`
 - `GenerationStep`: `Configure`, `Generate`, `CopyToMetadata`, `CopyFromMetadata`, `Reset`
 
-These are the main points for custom generator pipelines.
+These are compatibility extension points for the current full-fidelity generator. New cross-emitter analysis should prefer immutable Binding IR; use legacy steps only when the required output capability has not yet migrated.
 
 ## 8. Runtime Strategy
 

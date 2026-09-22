@@ -2,21 +2,34 @@
 
 [English](README.md) | [简体中文](README.cn.md) | [仓库 README](../README.cn.md)
 
-## 使用指南
+## 第一次使用
 
-1. [快速开始](getting-started.cn.md)
-2. [配置指南](configuration-guide.cn.md)
-3. [C# API 参考](api.md)
-4. [NuGet 包与导出 API](packages.cn.md)
-5. [C++ Bridge 配置](cpp2c.config.md)
-6. [测试说明](testing.md)
-7. [发布说明](publish.md)
+1. [快速开始](getting-started.cn.md)：从 header 到可编译的 bindings。
+2. [能力与边界](capabilities.cn.md)：先确认目标 ABI/C++ 特性是否在支持范围内。
+3. [配置指南](configuration-guide.cn.md)：选择 preset、target、import mode 和 marshalling policy。
+4. [诊断指南](diagnostics.cn.md)：处理 parser、ownership、buffer、callback 和 C++ lowering 问题。
+
+## 按任务查找
+
+| 任务 | 文档 |
+| --- | --- |
+| C Binding | [快速开始](getting-started.cn.md) |
+| C++ → C Bridge | [快速开始的 C++ 章节](getting-started.cn.md#c-bridge)、[具备专门回归测试的 C++ 配置条目](cpp2c.config.md) |
+| 完整配置属性 | 运行 `bindgen-cs schema bindgen.schema.json` |
+| 具备专门回归测试的配置条目 | [生成配置条目参考](config.md) |
+| 嵌入 C# 工具 | [C# API 参考](api.md) |
+| 选择 NuGet 包 | [NuGet 包与公开 API](packages.cn.md) |
+| 运行测试与验收 | [测试说明](testing.md)、[验收规范](acceptance.cn.md) |
+| 发布包 | [发布说明](publish.md) |
 
 ## 设计与质量
 
-- [架构说明](architecture.cn.md)
-- [验收规范](acceptance.cn.md)
+- [架构说明](architecture.cn.md)：分层、依赖规则和兼容层迁移状态。
+- [验收规范](acceptance.cn.md)：9.0 gate、性能预算和 target 隔离。
+- [能力与边界](capabilities.cn.md)：实现、证据和未覆盖范围的对照表。
 
-## 稳定功能与进行中功能
+## 当前成熟度
 
-七层架构、共享 IR、C#/Runtime/CBridge emitter、CLI/workspace 工作流、安全输出事务、SingleFile、target/toolchain model、NuGet 闭包、真实库性能预算、按 target 维护的确定性 snapshot、STL/smart-pointer lowering、managed virtual callback proxy、ownership diagnostics，以及 InnoEngine 五项目自动绑定 gate 均已可用。每份生成的验收报告是某一 target 实际通过范围的权威记录。
+CLI/workspace、安全输出事务、SingleFile、target/toolchain model、共享 IR、安全分析、明确的 emitter 边界、NuGet 闭包、真实库快照、选定 STL/smart-pointer lowering、managed virtual callback proxy、ownership diagnostics 和 InnoEngine 五项目自动生成 gate 均已可用。
+
+完整验收目前只证明 `macos-arm64-darwin`；其他 target 必须生成自己的验收报告。旧 AST generation steps 仍作为兼容实现存在，因此不要把清晰的目标分层误读成所有 legacy 路径已经移除。

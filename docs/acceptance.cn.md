@@ -2,7 +2,7 @@
 
 [Wiki](README.cn.md) | [English](acceptance.md)
 
-本文是规范性文档。评分必须由测试产物生成，维护者不得手工指定分数。
+本文是规范性文档。评分必须由测试产物生成，维护者不得手工指定分数。这里的 9.0 是 BindGen-CS 自己定义的 release-gate 等级，不是外部行业基准、完整 C++ 覆盖率或第三方审计分数。
 
 ## 总规则
 
@@ -24,8 +24,8 @@
 | 复杂现代 C++ | 9.0 | 选定模板、STL、智能指针、virtual callback |
 | 生成 API 美观程度 | 9.0 | 源码/public API 快照、analyzer、生成目录外零 native import |
 | 小白易用性 | 9.0 | 从 header 到验证输出最多五条命令 |
-| 外层架构 | 9.0 | 自动项目依赖边界测试 |
-| 内部架构 | 9.0 | 共享 IR、analyzer/emitter 独立测试 |
+| 外层架构 | 9.0 | Intermediate/Runtime dependency-boundary tests 与完整 solution build |
+| 内部架构 | 9.0 | 共享 IR、analyzer/IR-emitter tests，以及兼容迁移状态的明确记录 |
 | NuGet/测试/发布工程化 | 9.0 | 干净包、symbols、确定性输出、宿主原生与 managed 矩阵 |
 
 ## 真实库性能预算
@@ -63,15 +63,14 @@ ABI 测试必须使用同一组头文件编译 native test DLL，并比较 manag
 
 C++ Bridge 必须编译、链接并执行以下测试：
 
-- overloaded/default/deleted constructor 和 destructor；
-- instance、const、static、virtual、pure virtual、overloaded method；
-- namespace free function 和 policy 选中的 operator；
-- single/multiple/virtual inheritance 与生成的 pointer adjustment；
+- class lifecycle、instance/static/overloaded method；
+- namespace free function 与异常边界；
+- multiple inheritance 与生成的 pointer adjustment；
 - exception 捕获和 managed error 传播；
 - 显式 class/function template instance；
-- string、vector、span、optional、unique/shared pointer 和选定 variant adapter；
+- string、vector、span、blittable/non-blittable optional、unique/shared pointer adapter；
 - 配置的 abstract callback interface 的 managed implementation；
-- move-only 和 non-trivial return value 的安全 bridge storage。
+- native bridge compile，以及 synthetic lifecycle/method runtime invocation。
 
 无法支持的结构必须输出可执行诊断和可检查报告；静默生成 ABI 不安全签名直接判定失败。
 
@@ -81,7 +80,7 @@ C++ Bridge 必须编译、链接并执行以下测试：
 - 库特定行为必须放在 preset、policy 或生成目录外的 patch 中。
 - public API snapshot 必须审阅并编译。
 - 保留 raw imports；在 ownership 事实充分时，友好 API 使用 span、string、handle、result 和确定性命名。
-- XML 文档包含有效 summary、param、typeparam、returns、ownership 和 lifetime 信息。
+- 生成源码必须通过 warning-as-error 编译；文档和 lifetime 信息只在 native 声明或显式配置提供事实时生成。
 
 ## 小白流程证据
 
@@ -95,19 +94,18 @@ bindgen-cs generate
 bindgen-cs build
 ```
 
-`doctor` 报告工具链问题；`validate` 只解析和验证 IR，不替换输出；`build` 编译生成 C# 和需要的 C Bridge。所有跳过声明必须汇总，并提供建议的配置或源码操作。
+`doctor` 报告工具链问题；`validate` 只解析和验证 IR，不替换输出；`build` 编译生成 C#。C++ Bridge 的 native compile/link 由 real-C++ gate 或消费项目 build system 验证，不属于普通 `bindgen-cs build`。结构化 safety/C++ rejection 必须提供建议的配置路径或源码操作。
 
 ## 架构证据
 
-自动架构测试必须保证：
+当前自动架构测试直接保证：
 
 - Runtime 不依赖 generator；
 - Intermediate 不依赖 facade、emitter、Roslyn、filesystem 或 CLI；
-- Analysis 不依赖 emitter 或 CLI；
-- emitter 依赖 Intermediate contract，不依赖具体 facade；
-- Tool 只包含命令组合；
-- `CsCodeGenerator` 委托 Application，并只承担兼容 facade；
-- BGCS 与 Cpp2C 共享 request、diagnostic、IR、output 和 emission contract。
+- Intermediate assembly 不引用其他 BGCS assembly；
+- IR analyzer 与 IR-native `CSharpEmitter.Emit` 有独立行为测试。
+
+主配置路径仍调用 `CSharpEmitter.EmitLegacy` 和 `GenerationStep`。因此架构 9.0 表示当前声明的 boundary/build/test gate 通过，不表示 IR migration 已结束。完成标准见[架构说明](architecture.cn.md#迁移完成条件)。
 
 ## 包和发布证据
 

@@ -2,196 +2,176 @@
 
 [English](README.md) | [简体中文](README.cn.md)
 
-BindGen-CS is a cross-platform C/C++ to C# binding toolkit. It generates C# interop APIs for C-compatible libraries and can generate an ABI-stable C bridge for C++ APIs that cannot be called directly from .NET.
+BindGen-CS is a production-oriented, cross-platform C/C++ to C# binding toolchain. It generates C# interop for C ABIs and can turn C++ classes, explicit template instances, and selected STL types into an ABI-stable C bridge with matching C# bindings.
 
-> **Status:** the complete macOS arm64 acceptance matrix passes. Target modeling covers Windows, Linux, macOS, Android, iOS, and FreeBSD ABI families; deterministic real-library snapshots are maintained per verified host target. Unsupported C++ semantics are rejected with actionable diagnostics rather than guessed. Exact verified targets and remaining boundaries are recorded in each generated [acceptance report](docs/acceptance.md).
+> **Verified status:** the complete `macos-arm64-darwin` acceptance matrix passes, with all ten categories scoring 9.0/10.0. Windows, Linux, Android, iOS, and FreeBSD are represented in the target/ABI model, but design support is never presented as host verification without a target-specific acceptance report. BindGen-CS diagnoses semantics it cannot prove instead of guessing C++ ABI, ownership, or allocator behavior.
 
-## Goals
+## Choose a workflow
 
-> Automatically generate safe bindings for supported C/C++ ABIs and standard-library types; strictly diagnose declarations missing ownership, allocator, or instantiation information and request only the minimum required configuration.
+| Your input | Recommended entry point | Result |
+| --- | --- | --- |
+| C header / C ABI | `bindgen-cs init native.h` | C# imports, types, constants, and optional friendly overloads |
+| C++ classes / templates / STL | `bindgen-cs init library.hpp` | `bridge.json`, C bridge sources, and optional C# bindings |
+| Multiple native libraries | `bindgen-cs workspace ...` | One workspace for validation, generation, and deterministic diff |
+| Embedded build tooling | `BGCS` NuGet package | Stable facade, structured results, and shared binding IR |
+| Generated-code consumer only | `BGCS.Runtime` NuGet package | Pointer, callback, native-context, and ABI runtime types |
 
-- One configuration file and one command for common libraries.
-- Explicit platform, architecture, ABI, target-triple, sysroot, and toolchain modeling.
-- A shared binding IR consumed by C# and C bridge emitters.
-- Readable APIs similar to `Inno.Native.*`, without editing generated files.
-- Deterministic single-file output.
-- Stable Runtime, generator, C++ bridge, and .NET tool NuGet packages.
-- Compilation, ABI, runtime, package-consumer, and real-library regression tests.
+See the [capability matrix](docs/capabilities.md) for evidence levels and explicit boundaries.
 
-## Quick start
+## Generate a C binding in five minutes
+
+Requirements: .NET SDK 9.0 and a host Clang/GNU compiler driver or Windows LLVM.
 
 ```bash
 dotnet tool install --global BindGen-CS
-bindgen-cs init
+
+# native.h must already exist
+bindgen-cs init native.h
 bindgen-cs doctor
-bindgen-cs validate
-bindgen-cs generate
-bindgen-cs build
+bindgen-cs validate bindgen.json
+bindgen-cs generate bindgen.json
+bindgen-cs build bindgen.json
 ```
 
-The generated `bindgen.json` contains a host-portable configuration:
+The default output is `Generated/Bindings.cs`. `build` compiles the generated source in a temporary consumer project with nullable analysis and warnings as errors. It validates the managed bindings; it does not replace the upstream native-library build.
+
+`init native.h` creates an immediately runnable configuration. Before committing it, replace its absolute header/include paths with repository-relative paths resolved from the configuration file:
 
 ```json
 {
-  "Namespace": "Native.Bindings",
+  "Preset": "host-c,c-library",
+  "Namespace": "MyCompany.Native",
   "ApiName": "NativeApi",
   "LibName": "native",
-  "Preset": "host-c",
-  "EntryFiles": ["native.h"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
+  "EntryFiles": ["include/native.h"],
+  "IncludeFolders": ["include"],
   "OutputPath": "Generated",
-  "ImportType": "DllImport",
-  "MergeGeneratedFilesToSingleFile": true,
-  "SingleFileOutputName": "Bindings.cs",
-  "GenerateRuntimeSource": false
+  "ImportType": "DllImport"
 }
 ```
 
-Embedded usage remains available through the stable facade:
+Treat the output directory as reproducible build output. Customize naming, types, functions, marshalling, and ownership in configuration rather than editing generated files.
+
+## C++ bridge
+
+```bash
+bindgen-cs init include/library.hpp
+bindgen-cs bridge bridge.json
+```
+
+This emits a C ABI wrapper; the default `init` configuration also generates C# bindings from the bridge header. You still compile the generated `src/Classes.cpp` into a native shared library using the original library's compiler flags, include paths, and linker inputs.
+
+Verified C++ coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, explicit template instances, `std::string`, `std::vector`, `std::span`, blittable and non-blittable `std::optional`, `std::unique_ptr`, `std::shared_ptr`, and configured pure-virtual callback proxies. This is not an arbitrary C++ semantics translator; unknown specializations fail explicitly.
+
+## CLI
+
+| Command | Purpose |
+| --- | --- |
+| `init` | Create a starting configuration from a C/C++ header or config path |
+| `doctor` | Inspect the host target, compiler, system includes, and macOS SDK |
+| `validate` | Parse and analyze without writing final output |
+| `inspect` | Print the analyzed module summary or JSON |
+| `generate` | Generate bindings transactionally |
+| `build` | Generate and compile-check the C# output |
+| `diff` | Regenerate in temporary storage and compare checked-in bindings |
+| `workspace` | Batch `validate`, `generate`, or `diff` multiple projects |
+| `schema` | Generate complete JSON Schema from the installed version |
+| `bridge` | Generate a configuration-driven C++ to C bridge |
+
+See [Getting started](docs/getting-started.md) for complete examples and the [Configuration guide](docs/configuration-guide.md) for configuration decisions.
+
+## Core capabilities
+
+- Explicit platform, architecture, ABI, target-triple, sysroot, and compiler discovery.
+- `DllImport`, `LibraryImport`, and explicit function-table/native-context import modes.
+- Structs, unions, packing, bitfields, fixed arrays, typedefs, opaque handles, callbacks, and target-dependent primitives.
+- `MarshallingMappings` for string encoding, ownership, cleanup, pointer/count, capacity/written-count, and caller allocation.
+- The pipeline produces a shared Binding IR for safety analysis. Runtime/C Bridge use explicit emitter boundaries, while primary C# output still runs through compatibility `GenerationStep` implementations encapsulated by `CSharpEmitter`. Output replacement is transactional.
+- BaseConfig composition, presets, single-file output, workspaces, deterministic diff, and target-specific snapshots.
+- Separate CLI, generator, C++ bridge, Runtime, and dependency-free IR packages.
+
+## Safety contract
+
+BindGen-CS separates native declarations into three groups:
+
+1. ABI and lifetime are sufficiently defined: generate and compile-check automatically.
+2. Ownership, allocator, length, or callback lifetime is missing: emit an actionable `BGCS-SAFETY-*` diagnostic with the minimum configuration path.
+3. A C++ type cannot be lowered safely: reject it with `BGCSCPP001` or `BGCSCPP-INSTANTIATION`.
+
+That boundary is a correctness feature, not silent feature inflation. See the [diagnostics guide](docs/diagnostics.md).
+
+## InnoEngine production proof
+
+The sibling InnoEngine integration is not a toy-header demo. Its complete gate:
+
+- deterministically regenerates cimgui, cimguizmo, miniaudio, SDL3, and bgfx from configuration;
+- rejects hand-authored native imports outside `Generated/`;
+- builds every required native dependency from pinned source;
+- builds the complete InnoEngine solution with warnings as errors;
+- runs every native binding test project.
+
+The real-library matrix also generates, compiles, and snapshots miniaudio, SDL3, cimgui, cimguizmo, bgfx C99, and the bimg C++ bridge.
+
+## Architecture and embedding
+
+```text
+CLI / Embedded Facade
+        ↓
+Configuration → Parsing → Analysis → Binding IR
+                                      ↓
+                  C# / Runtime / C Bridge Emitters
+                                      ↓
+                         Transactional Output
+```
+
+Compatibility entry point:
 
 ```csharp
 using BGCS;
 
 CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
-bool success = generator.GenerateConfigured();
-
-if (!success)
+if (!generator.GenerateConfigured())
 {
     foreach (var diagnostic in generator.Messages)
         Console.Error.WriteLine(diagnostic);
 }
 ```
 
-Generate a configured C++ bridge with:
+Use `BGCS.Facade.BindingGenerator` when you need the structured IR. See [Architecture](docs/architecture.md) for the distinction between current C# compatibility emission and the IR-native target path, plus layer ownership and migration criteria.
 
-```bash
-bindgen-cs bridge bridge.json
-```
-
-New applications can obtain the analyzed intermediate representation:
-
-```csharp
-using BGCS.Facade;
-using BGCS.Intermediate;
-
-BindingGenerationResult result = BindingGenerator.Generate("bindgen.json");
-BindingModule? module = result.Module;
-```
-
-## Architecture
-
-```text
-BGCS
-├─ Facade
-│  ├─ CsCodeGenerator
-│  └─ BindingGenerator
-├─ Application
-│  └─ BindingGenerationPipeline
-├─ Configuration
-│  ├─ ConfigLoader
-│  ├─ ConfigComposer
-│  ├─ ConfigValidator
-│  └─ PresetResolver
-├─ Analysis
-│  ├─ DeclarationGraph
-│  ├─ TypeAnalyzer
-│  ├─ AbiLayoutAnalyzer
-│  ├─ OwnershipAnalyzer
-│  └─ OverloadPlanner
-├─ Intermediate
-│  ├─ BindingModule
-│  ├─ BindingType
-│  ├─ BindingFunction
-│  └─ MarshallingPlan
-├─ Emission
-│  ├─ CSharpEmitter
-│  ├─ CBridgeEmitter
-│  ├─ RuntimeEmitter
-│  └─ SingleFileComposer
-└─ Output
-   └─ OutputDirectoryTransaction
-```
-
-The compatibility facade now delegates orchestration to the application pipeline, and C#, Runtime, SingleFile, and C bridge output passes through explicit emitter boundaries. See the [architecture guide](docs/architecture.md).
-
-## Acceptance target
-
-A stable major release is accepted only when every category is independently measured at **9.0/10.0** and every mandatory gate passes on the reported target.
-
-| Category | Target | Mandatory evidence |
-| --- | ---: | --- |
-| Small C APIs | 9.0 | Generated C# compiles and runtime ABI tests pass without source edits |
-| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx regenerate within budgets; InnoEngine stays diff-clean |
-| Complex C ABI correctness | 9.0 | Host-native layout/invocation plus target-specific primitive, packing, union, bitfield, callback, and calling-convention tests |
-| Ordinary C++ class bridge | 9.0 | Constructors, destructors, methods, overloads, inheritance casts, and exception boundary tests |
-| Modern C++ | 9.0 | Explicit template instantiation, selected STL adapters, smart-pointer and virtual callback tests |
-| Generated API quality | 9.0 | Reflection public API snapshots and zero manual native imports outside generated output |
-| Beginner usability | 9.0 | Init/doctor/validate/generate/build workflow and actionable diagnostics |
-| External architecture | 9.0 | Enforced one-way project dependencies and stable facade contracts |
-| Internal architecture | 9.0 | Shared IR; analyzers and emitters independently tested; no generator god class |
-| NuGet/testing/release | 9.0 | Clean consumer install, symbols, tool install, native/C# tests, deterministic packages |
-
-The scoring rules, budgets, and pass/fail policy are normative in [docs/acceptance.md](docs/acceptance.md). Scores are not raised by documentation claims; `scripts/run-full-test-matrix.sh` writes the passing machine-readable result to `artifacts/acceptance/report.json` only after every mandatory layer succeeds.
-
-| Measured category | macOS arm64 score |
-| --- | ---: |
-| Small C APIs | 9.0 |
-| Medium/large C APIs | 9.0 |
-| Complex C ABI correctness | 9.0 |
-| Ordinary C++ class bridge | 9.0 |
-| Modern C++ | 9.0 |
-| Generated API quality | 9.0 |
-| Beginner usability | 9.0 |
-| External architecture | 9.0 |
-| Internal architecture | 9.0 |
-| NuGet/testing/release | 9.0 |
-
-The macOS arm64 real-library gate regenerates SingleFile bindings without generated-source edits and compiles them with zero C# warnings/errors:
-
-| Library | Budget | Verified behavior |
-| --- | ---: | --- |
-| miniaudio split | 60s | Generate and compile |
-| SDL3 umbrella header | 45s | Generate and compile |
-| cimgui | 30s | Generate and compile |
-| cimguizmo | 15s | Generate and compile |
-| bgfx C99 | 30s | Generate and compile |
-| bimg C++ | 15s | C bridge, clang++, C# rebind, API snapshot |
-
-Synthetic C and generated C++ bridge native runtime invocation gates pass. The InnoEngine gate additionally checks deterministic regeneration for all five binding projects, rejects hand-authored native imports, builds every required native dependency from its pinned source, builds the complete solution, and runs every native binding test project.
-
-## Packages
-
-Public entry packages:
-
-- `BGCS` — embeddable C/C++ to C# facade.
-- `BGCS.Cpp2C` — C++ to C bridge generation.
-- `BGCS.Runtime` — runtime primitives used by generated bindings.
-- `BindGen-CS` — the `bindgen-cs` .NET tool.
-- `BGCS.Intermediate` — dependency-free shared binding IR and diagnostics contracts.
-
-Implementation packages (`BGCS.Core`, `BGCS.Language`, and `BGCS.CppAst`) are restored transitively. All release packages use one version and are package-consumer tested before publishing.
-
-## Verification
+## Acceptance
 
 ```bash
 ./scripts/run-full-test-matrix.sh
-./scripts/test-nuget-packages.sh
 ```
 
-C++ bridge tests use `BGCS_CPP2C_CXX`/`CXX` or discover the host Clang/GNU driver. On macOS, the parser also discovers the active SDK through `SDKROOT` or `xcrun`.
+Reports are produced only after managed tests, native ABI/runtime gates, real C/C++ libraries, deterministic snapshots, the InnoEngine workspace/native-build/test gate, and NuGet/tool smoke tests all pass:
 
-## Wiki
+- `artifacts/acceptance/report.json`
+- `artifacts/acceptance/report.md`
 
-- [Wiki index](docs/README.md)
+See the [acceptance specification](docs/acceptance.md) for scoring and target isolation. The score proves quality within the declared scope, not complete coverage of the C++ language.
+
+## Packages
+
+- `BindGen-CS` — .NET tool providing the `bindgen-cs` command.
+- `BGCS` — embeddable C/C++ to C# facade.
+- `BGCS.Cpp2C` — C++ to C bridge generation.
+- `BGCS.Runtime` — runtime used by generated bindings.
+- `BGCS.Intermediate` — dependency-free Binding IR and diagnostics contracts.
+
+See [NuGet packages and public APIs](docs/packages.md) for selection guidance.
+
+## Documentation
+
+- [Documentation index](docs/README.md)
 - [Getting started](docs/getting-started.md)
-- [Architecture](docs/architecture.md)
+- [Capabilities and boundaries](docs/capabilities.md)
 - [Configuration guide](docs/configuration-guide.md)
+- [Diagnostics guide](docs/diagnostics.md)
+- [Architecture](docs/architecture.md)
 - [Acceptance specification](docs/acceptance.md)
-- [API reference](docs/api.md)
-- [NuGet packages and exports](docs/packages.md)
 - [Testing](docs/testing.md)
-- [Publishing](docs/publish.md)
 
 ## License
 

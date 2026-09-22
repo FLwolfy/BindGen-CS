@@ -2,7 +2,7 @@
 
 [Wiki](README.md) | [中文](acceptance.cn.md)
 
-This document is normative. A category score is generated from test artifacts; maintainers do not assign scores manually.
+This document is normative. A category score is generated from test artifacts; maintainers do not assign scores manually. The 9.0 value is a BindGen-CS internal release-gate level, not an external industry benchmark, complete C++ coverage percentage, or third-party audit score.
 
 ## General rule
 
@@ -21,8 +21,8 @@ The release workflow must write machine-readable results to `artifacts/acceptanc
 | Modern C++ | 9.0 | Selected templates/STL/smart pointers/virtual callbacks |
 | Generated API quality | 9.0 | Source/public-API snapshots; analyzers; no native imports outside generated output |
 | Beginner usability | 9.0 | Five-command maximum from header to validated output |
-| External architecture | 9.0 | Automated dependency-boundary test |
-| Internal architecture | 9.0 | Shared IR and independently tested analyzers/emitters |
+| External architecture | 9.0 | Intermediate/Runtime dependency-boundary tests and complete solution build |
+| Internal architecture | 9.0 | Shared IR, analyzer/IR-emitter tests, and explicitly documented compatibility migration state |
 | NuGet/testing/release | 9.0 | Clean packages, symbols, deterministic output, host-native and managed matrices |
 
 ## Real-library budgets
@@ -60,15 +60,14 @@ Generated compilation without native invocation is not sufficient ABI evidence.
 
 The bridge suite must compile, link, and execute tests for:
 
-- overloaded/default/deleted constructors and destructors;
-- instance, const, static, virtual, pure virtual, and overloaded methods;
-- namespace free functions and operators selected by policy;
-- single, multiple, and virtual inheritance with generated pointer adjustments;
+- class lifecycle plus instance/static/overloaded methods;
+- namespace free functions and exception boundaries;
+- multiple inheritance with generated pointer adjustments;
 - exception capture and managed error propagation;
 - explicit class/function template instantiations;
-- configured adapters for string, vector, span, optional, unique/shared pointers, and selected variants;
+- configured adapters for string, vector, span, blittable/non-blittable optional, and unique/shared pointers;
 - managed implementations of configured abstract callback interfaces;
-- move-only and non-trivial return values lowered through safe bridge storage.
+- native bridge compilation plus synthetic lifecycle/method runtime invocation.
 
 Unsupported constructs must produce actionable diagnostics and an inspectable report; silently emitting an ABI-unsafe signature fails the category.
 
@@ -78,7 +77,7 @@ Unsupported constructs must produce actionable diagnostics and an inspectable re
 - Library-specific behavior is represented by presets, policies, or patches stored outside generated output.
 - Public API snapshots are reviewed and compiled.
 - Raw imports remain available but friendly APIs use spans, strings, handles, results, and deterministic names where ownership facts permit.
-- XML documentation contains valid summary, parameter, type-parameter, return, ownership, and lifetime information.
+- Generated source compiles with warnings as errors; documentation and lifetime details are emitted only when native declarations or explicit configuration provide those facts.
 
 ## Beginner workflow evidence
 
@@ -92,19 +91,18 @@ bindgen-cs generate
 bindgen-cs build
 ```
 
-`doctor` reports toolchain problems, `validate` performs parsing and IR validation without replacing output, and `build` compiles generated C# plus any C bridge. Every skipped declaration is summarized with a suggested config or source action.
+`doctor` reports toolchain problems, `validate` performs parsing and IR validation without replacing output, and `build` compiles generated C#. Native compilation/linking of a C++ bridge is verified by the real-C++ gate or the consumer build system and is not part of ordinary `bindgen-cs build`. Structured safety/C++ rejections must include a suggested configuration path or source action.
 
 ## Architecture evidence
 
-Automated architecture tests enforce:
+Current automated architecture tests directly enforce:
 
 - Runtime has no generator dependency;
 - Intermediate has no facade, emitter, Roslyn, filesystem, or CLI dependency;
-- Analysis has no emitter or CLI dependency;
-- emitters depend on Intermediate contracts rather than concrete facades;
-- Tool contains command composition only;
-- `CsCodeGenerator` delegates application work and remains a compatibility facade;
-- BGCS and Cpp2C share request, diagnostic, IR, output, and emission contracts.
+- the Intermediate assembly references no other BGCS assembly;
+- IR analysis and IR-native `CSharpEmitter.Emit` have independent behavior tests.
+
+The primary configured path still calls `CSharpEmitter.EmitLegacy` and `GenerationStep`. Architecture 9.0 therefore means that the declared boundary/build/test gates pass; it does not mean IR migration is complete. See [Architecture](architecture.md#migration-completion-criteria) for completion criteria.
 
 ## Package and release evidence
 

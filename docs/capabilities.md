@@ -1,0 +1,95 @@
+# Capabilities and Boundaries
+
+[简体中文](capabilities.cn.md) | [Documentation index](README.md) | [Acceptance specification](acceptance.md)
+
+This document answers two questions: what BindGen-CS can reliably do today, and which capabilities still require explicit project semantics or more target evidence. It describes the current implementation rather than a roadmap disguised as a feature list.
+
+## Evidence levels
+
+| Level | Meaning |
+| --- | --- |
+| Host acceptance | Exercised on the declared target with real headers, generated-code compilation, native invocation, or integration tests |
+| Automated test | Covered by unit/integration/generated-code tests, without implying full real-library acceptance on every host |
+| Configuration support | The model and diagnostics exist, but the project must supply native semantics |
+| Explicit rejection | Generation fails when safe lowering cannot be established |
+
+## C and ABI
+
+| Capability | Status | Evidence or boundary |
+| --- | --- | --- |
+| Functions, enums, constants, typedefs | Host acceptance | Five real C APIs and InnoEngine bindings |
+| Structs, unions, packing, fixed arrays, bitfields | Host acceptance / automated test | Layout and native invocation gates |
+| Opaque handles, pointer typedefs, forward declarations | Host acceptance / automated test | SDL3, bgfx, cimgui, and compilation matrix |
+| Callbacks, function pointers, callback registry | Host acceptance / automated test | C ABI callback and Runtime tests |
+| C variadics | Configuration support | Fixed variants must use promoted argument types; currently limited to `DllImport` |
+| Target-dependent `long`, `wchar_t`, `long double` | Automated test | MSVC/GNU/Darwin mappings; the current host report is Darwin arm64 |
+| `DllImport`, `LibraryImport`, FunctionTable | Automated test / production integration | InnoEngine uses configured import modes and native contexts |
+
+## Friendly APIs and safety
+
+| Capability | Status | Evidence or boundary |
+| --- | --- | --- |
+| Naming, type, field, and function mappings | Host acceptance / automated test | Configuration entry tests and real API snapshots |
+| String encoding and ownership | Configuration support | Use `MarshallingMappings` when declarations do not express lifetime |
+| Pointer/count, capacity/written-count, Span | Configuration support / automated test | Conservative inference plus explicit mapping; strict mode can remove unsafe friendly overloads |
+| Cleanup functions and owned returns | Configuration support | Allocator and cleanup contracts must come from project configuration |
+| Callback lifetime | Configuration support | Missing lifetime emits `BGCS-SAFETY-CALLBACK` |
+| Generated API stability | Host acceptance | Deterministic source hashes and reflection public-API snapshots |
+
+## C++ bridge
+
+| Capability | Status | Evidence or boundary |
+| --- | --- | --- |
+| Classes, construction, destruction, instance/static methods | Host acceptance / automated test | Native bridge compilation and invocation gates |
+| Overloads, namespace functions, exception boundary | Host acceptance / automated test | Generated symbols and exception-channel tests |
+| Inheritance casts and pointer adjustment | Automated test | Avoids unsafe plain reinterpret casts |
+| Class/function templates | Configuration support / automated test | Only instances listed in `TemplateInstantiations` / `FunctionTemplateInstantiations` are emitted |
+| `std::string` | Automated test | Verified UTF-8 borrowed/return adapter scope |
+| `std::vector`, `std::span` | Automated test | Pointer/count views; ownership still comes from configuration |
+| `std::optional<T>` | Automated test | Both blittable presence/value and non-blittable owned-handle protocols have native compile tests |
+| `std::unique_ptr`, `std::shared_ptr` | Automated test | Supported ownership-transfer/retention paths |
+| Pure-virtual managed callback proxy | Automated test | Interfaces must be listed in `VirtualCallbackInterfaces` |
+| Arbitrary STL/container/template metaprogramming | Explicit rejection | Unknown specializations emit `BGCSCPP001` instead of pretending to be blittable |
+
+## Workflow and engineering
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| `init → doctor → validate → generate → build` | Host acceptance | Covered by tool-install and clean-consumer smoke tests |
+| Transactional output | Automated test | Failure preserves the last-good output |
+| Deterministic `diff` | Host acceptance | Real-library and InnoEngine workspace gates |
+| Multi-project workspaces | Production integration | Five InnoEngine binding projects |
+| BaseConfig and presets | Automated test | Relative paths, cycle detection, override precedence |
+| Complete installed-version schema | Available | `bindgen-cs schema bindgen.schema.json` |
+| Deterministic NuGet packages | Host acceptance | Two-pack content comparison, clean restore, tool install |
+
+## Target evidence
+
+| Target | Current evidence |
+| --- | --- |
+| macOS arm64 Darwin | Complete 9.0 acceptance: real C/C++, InnoEngine, native runtime, NuGet |
+| Windows x64 MSVC | ABI mapping, target-specific snapshots, cross-platform managed CI; no complete target report generated by this repository yet |
+| Linux x64 GNU | Target model and cross-platform managed CI; no complete real-library/integration report yet |
+| Android, iOS, FreeBSD | Target/triple/ABI model; each requires its own sysroot/toolchain and acceptance report |
+
+## Maturity assessment
+
+BindGen-CS is already a strong, engineered binding toolkit rather than a thin header-to-`DllImport` script. On its accepted target it has production-grade C binding, a substantial controlled C++ bridge, reproducible output, package verification, and large-project integration evidence.
+
+It cannot honestly claim automatic coverage of every C++ program or production verification on every modeled target. The main gaps are:
+
+- Windows and Linux do not yet have macOS-equivalent target-specific acceptance artifacts;
+- `init header` writes absolute input paths, which should be converted to repository-relative paths before committing;
+- the configuration model is powerful but still broad and flat for large libraries;
+- native compilation/linking of the C++ bridge remains the consumer build system's responsibility;
+- `std::variant`, arbitrary containers, complex allocators, and types beyond the verified optional protocols still require custom lowering.
+
+The accurate position is: **excellent within the accepted C ABI and explicitly supported C++ subset; not yet a zero-configuration universal translator for arbitrary C++ on every platform.**
+
+## Highest-value next steps
+
+1. Produce macOS-equivalent real-library, native-invocation, InnoEngine, and package reports on Windows x64 and Linux x64.
+2. Make `init header` emit configuration-relative paths and add CLI end-to-end tests.
+3. Add XML-doc descriptions, strict unknown-property validation, and editor examples to JSON Schema.
+4. Add configurable native build recipes for C++ bridges instead of stopping at source generation.
+5. Expand tested STL lowering while continuing to reject types without ownership or allocator evidence.

@@ -90,10 +90,14 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 
 除非直接使用这些扩展 API，普通应用不应单独安装它们。
 
-## 当前弊端
+## 当前边界
 
-- 已验证 `std::string`、输入 `std::span<T>`、blittable `std::optional<T>`、ownership-transfer `std::unique_ptr<T>` 和配置式 pure-virtual callback proxy。string、vector、span input/return、optional、unique_ptr、shared_ptr 默认 adapter 已验证；`std::variant` 和 non-blittable optional alternative 仍需显式 custom lowering。
+- 已验证 `std::string`、vector/span input/return、blittable optional presence/value、non-blittable optional owned-handle protocol、ownership-transfer `std::unique_ptr<T>`、retained `std::shared_ptr<T>` 和配置式 pure-virtual callback proxy；`std::variant` 与任意未知 specialization 仍需显式 custom lowering。
 - 仅凭 pointer 语法无法可靠推断 ownership 和 allocator 语义。
 - typed C variadic 当前要求 `DllImport` 和显式完成参数提升后的类型。
 - 五个真实 C 库 gate 与 bimg C++ Bridge 会编译生成输出并检查 target-specific 确定性 API snapshot；InnoEngine 还会单独构建其 native binary，并执行全部六个 native binding 测试项目。
 - 完整 solution、生成消费者和 package smoke project 均以 warning-as-error 模式通过编译。
+
+架构上，`BindingModule`、analysis 和 IR-native emitter API 已公开；配置驱动的主 C# 输出仍由 `CSharpEmitter.EmitLegacy` 封装旧 `GenerationStep`。需要编写新 emitter 的消费者可以直接使用 `BGCS.Intermediate`，但不应假定移除 legacy steps 已经完成。
+
+完整证据等级与下一阶段差距见[能力与边界](capabilities.cn.md)。
