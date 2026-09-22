@@ -18,7 +18,7 @@ CLI / CsCodeGenerator / BindingGenerator
           ├─ DeclarationGraph
           ├─ BindingModuleAnalyzer → BindingModule
           ├─ StrictSafetyAnalyzer
-          ├─ CSharpEmitter.EmitLegacy
+          ├─ AstGenerationStepEmitter (compatibility surface)
           │    └─ GenerationStep implementations
           ├─ post-patch / SingleFile / optional Runtime
           └─ GeneratedOutputTransaction.commit
@@ -27,9 +27,11 @@ CLI / CsCodeGenerator / BindingGenerator
 Important facts:
 
 - `BindingModule` is a real analysis result used by structured results, safety diagnostics, and the new emitter API.
-- Primary C# output currently calls `CSharpEmitter.EmitLegacy(...)`; that encapsulates but does not eliminate the AST/metadata-based `GenerationStep` path.
+- `CSharpEmitter` is IR-only. Primary C# output still calls the separately named `AstGenerationStepEmitter`; isolating that boundary removes AST dependencies from the IR emitter but does not count as completion of the default-path migration.
 - `CSharpEmitter.Emit(BindingModule, EmissionContext)` is an IR-native path, but is not yet the default configured generation implementation.
+- The IR-native C# emitter validates lossless capability before writing and raises structured `BGCSCS001` diagnostics for semantics it cannot yet preserve.
 - C++ bridging has its own analyzer and `CBridgeEmitter.EmitAst` path and also returns a `BindingModule`; it shares contracts with C# without every emission path being IR-only.
+- C++ bridge output includes an optional versioned build manifest. `INativeBuildPipelineProvider` converts it into shell-independent steps. Built-ins cover Clang/GNU, clang-cl, CMake, Meson, and MSBuild; binary export inspection uses `nm` or `dumpbin`.
 - CLI `build` creates a temporary .NET project after pipeline success for warning-as-error compilation. Compilation validation is not performed inside `BindingGenerationPipeline` itself.
 
 ## Target data flow
@@ -97,10 +99,26 @@ It is both a usable analysis result and the target model for legacy-emission mig
 
 ### Emission
 
-- `CSharpEmitter`: contains both IR-native `Emit` and the `EmitLegacy` adapter used by the current primary path.
+- `CSharpEmitter`: IR-only `Emit` plus lossless-capability validation. `AstGenerationStepEmitter` owns the remaining compatibility path so parser-specific types cannot leak back into `CSharpEmitter`.
 - `RuntimeEmitter`: emits standalone runtime contracts from a module.
 - `SingleFileComposer`: deterministic syntax-tree composition through Roslyn.
 - `CBridgeEmitter`: emits C++ to C wrappers and currently still consumes AST-specific generation data.
+
+### Native build
+
+- `CppBridgeBuildManifest`: versioned, deterministic, config-relative description of generated sources, target, toolchain inputs, and link inputs.
+- `INativeBuildPipelineProvider`: maps a manifest to deterministic generated build inputs and argument-list process steps without shell quoting.
+- Providers: direct Clang/GNU, clang-cl, CMake, Meson, and MSBuild.
+- `NativeBuildExecutor`: bounded multi-step execution with captured output and no global working-directory mutation.
+- `NativeExportInspector`: compares generated public C symbols with the built artifact export table.
+
+Configuration-driven C++ generation also resolves headers, include directories, sysroots, compiler paths, outputs, and file-based `BaseConfig` chains from an explicit configuration directory. It does not change `Environment.CurrentDirectory`, so concurrent generators do not race through process-global path state.
+
+## Cache and plugins
+
+Configured C and C++ generation use an immutable SHA-256 output cache. The key includes generator identity, serialized configuration, parser arguments, resolved compiler identity/version, plugin/adapter fingerprints, and exact contents of discovered C/C++ inputs. Entries publish atomically, restore through the same output transaction as generation, and are isolated by key. Custom state that cannot be fingerprinted disables cache hits.
+
+`BindingPluginContract` version 1 provides explicit assembly entry points and deterministic typed registrations. Plugin assemblies use an isolated dependency resolver while sharing host contracts; every assembly is preflighted and committed atomically, and its content hash/version enters the cache key. C++ plugins may register `ICppTypeAdapter` and `ICppCallableAdapter`; C# plugins may register additional `IBindingEmitter` services. Plugin assembly paths are explicit configuration, resolved relative to that configuration, and contract mismatches fail before generation.
 
 ### Output
 
@@ -114,7 +132,7 @@ Primary C# generation is fully IR-native only when all of the following are true
 2. Legacy `GenerationStep` implementations no longer determine public output semantics.
 3. Metadata/patch capabilities become IR transforms or are explicitly constrained to source post-processing.
 4. Real-library source/public-API snapshots and native tests remain unchanged.
-5. Removing `EmitLegacy` does not change generated output.
+5. Removing `AstGenerationStepEmitter` does not change generated output.
 
 The equivalent C++ bridge criterion is that the C Bridge emitter consumes a complete IR and the AST is confined to analysis.
 

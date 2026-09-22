@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using BGCS.Configuration;
+using BGCS.Core.Extensibility;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
 using Xunit;
@@ -25,6 +27,25 @@ public class CsCodeGeneratorConfigTests
         Assert.NotNull(cfg.Keywords);
         Assert.NotNull(cfg.FunctionMappings);
         Assert.NotNull(cfg.ArrayMappings);
+        Assert.NotNull(cfg.PluginAssemblies);
+    }
+
+    [Fact]
+    public void Validator_ShouldRejectInvalidCacheAndPluginSettings()
+    {
+        CsCodeGeneratorConfig config = new()
+        {
+            Namespace = "Test.Generated",
+            ApiName = "TestApi",
+            LibName = "test",
+            CacheDirectory = " ",
+            PluginAssemblies = [""]
+        };
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => ConfigValidator.Validate(config));
+
+        Assert.Contains("CacheDirectory", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("PluginAssemblies", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -73,6 +94,91 @@ public class CsCodeGeneratorConfigTests
             Assert.True(config.GenerateExtensions);
             Assert.Equal(ImportType.LibraryImport, config.ImportType);
             Assert.Equal(CppParserKind.C, config.ParserKind);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void ConfigLoader_FutureConfigVersion_ShouldFailBeforeGeneration()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-config-version-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string path = Path.Combine(temp, "bindings.json");
+        File.WriteAllText(path,
+            "{\"ConfigVersion\":999,\"Namespace\":\"Test.Generated\",\"ApiName\":\"TestApi\",\"LibName\":\"test\",\"EntryFiles\":[]}");
+
+        try
+        {
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => new ConfigLoader().Load(path));
+
+            Assert.Contains("ConfigVersion 999", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void ConfigLoader_LoadsConfiguredPluginAssemblyExactlyOnce()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-config-plugin-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string path = Path.Combine(temp, "bindings.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(new
+        {
+            Namespace = "Test.Generated",
+            ApiName = "TestApi",
+            LibName = "test",
+            PluginAssemblies = new[] { typeof(TestConfigPlugin).Assembly.Location }
+        }));
+
+        try
+        {
+            CsCodeGeneratorConfig config = new ConfigLoader().Load(path);
+
+            BindingPluginService<ICacheFingerprintProvider> service = Assert.Single(config.Plugins.GetServices<ICacheFingerprintProvider>());
+            Assert.Equal("configured-plugin", service.Id);
+            Assert.Equal("ready", service.Service.GetCacheFingerprint());
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void GenerateConfigured_FingerprintedPluginParticipatesInIncrementalCache()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-plugin-cache-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        File.WriteAllText(Path.Combine(temp, "api.h"), "int plugin_cache_value(void);\n");
+        string path = Path.Combine(temp, "bindings.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(new
+        {
+            Namespace = "Test.Generated",
+            ApiName = "TestApi",
+            LibName = "test",
+            EntryFiles = new[] { "api.h" },
+            OutputPath = "generated",
+            MergeGeneratedFilesToSingleFile = true,
+            GenerateExtensions = false,
+            PluginAssemblies = new[] { typeof(TestConfigPlugin).Assembly.Location }
+        }));
+
+        try
+        {
+            CsCodeGenerator first = CsCodeGenerator.Create(path);
+            Assert.True(first.GenerateConfigured());
+            Assert.False(first.LastResult!.CacheHit);
+
+            CsCodeGenerator second = CsCodeGenerator.Create(path);
+            Assert.True(second.GenerateConfigured());
+            Assert.True(second.LastResult!.CacheHit);
+            Assert.Equal(first.LastResult.CacheKey, second.LastResult.CacheKey);
         }
         finally
         {
@@ -256,6 +362,47 @@ public class CsCodeGeneratorConfigTests
     }
 
     [Fact]
+    public void GenerateConfigured_IncrementalCacheRestoresOutputsAndInvalidatesOnHeaderChange()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-configured-cache-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "api.h");
+        string configPath = Path.Combine(temp, "config.json");
+        File.WriteAllText(header, "int cache_first(void);\n");
+        File.WriteAllText(configPath,
+            "{\"Namespace\":\"Cache.Generated\",\"ApiName\":\"CacheApi\",\"LibName\":\"cache\"," +
+            "\"EntryFiles\":[\"api.h\"],\"OutputPath\":\"generated\",\"ImportType\":\"DllImport\"," +
+            "\"GenerateExtensions\":false,\"MergeGeneratedFilesToSingleFile\":true}");
+        try
+        {
+            CsCodeGenerator first = CsCodeGenerator.Create(configPath);
+            Assert.True(first.GenerateConfigured());
+            Assert.False(first.LastResult!.CacheHit);
+            string firstKey = Assert.IsType<string>(first.LastResult.CacheKey);
+            string bindings = Path.Combine(temp, "generated", "Bindings.cs");
+            File.WriteAllText(bindings, "corrupted");
+
+            CsCodeGenerator second = CsCodeGenerator.Create(configPath);
+            Assert.True(second.GenerateConfigured());
+            Assert.True(second.LastResult!.CacheHit);
+            Assert.NotNull(second.LastResult.Module);
+            Assert.Contains("CacheFirstNative", File.ReadAllText(bindings), StringComparison.Ordinal);
+
+            File.WriteAllText(header, "int cache_second(void);\n");
+            CsCodeGenerator third = CsCodeGenerator.Create(configPath);
+            Assert.True(third.GenerateConfigured());
+            Assert.False(third.LastResult!.CacheHit);
+            Assert.NotEqual(firstKey, third.LastResult.CacheKey);
+            Assert.Contains("CacheSecondNative", File.ReadAllText(bindings), StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void Generate_UnsquashedForwardTypedef_ShouldNotEmitVoidAlias()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-forward-" + Guid.NewGuid().ToString("N"));
@@ -297,5 +444,20 @@ public class CsCodeGeneratorConfigTests
         }
 
         internal CppParserOptions GetParserOptions() => PrepareSettings();
+    }
+}
+
+public sealed class TestConfigPlugin : IBindingPlugin
+{
+    public string Id => "bgcs.tests.config-plugin";
+    public string Version => "1.0.0";
+    public int ContractVersion => BindingPluginContract.CurrentVersion;
+
+    public void Configure(IBindingPluginHost host) =>
+        host.Register<ICacheFingerprintProvider>("configured-plugin", new Service());
+
+    private sealed class Service : ICacheFingerprintProvider
+    {
+        public string GetCacheFingerprint() => "ready";
     }
 }

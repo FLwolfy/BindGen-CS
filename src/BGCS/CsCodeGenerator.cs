@@ -2,6 +2,7 @@ namespace BGCS
 {
     using BGCS.Application;
     using BGCS.Core;
+    using BGCS.Core.Caching;
     using BGCS.Core.CSharp;
     using BGCS.Core.Logging;
     using BGCS.Configuration;
@@ -12,6 +13,7 @@ namespace BGCS
     using BGCS.CppAst.Model.Metadata;
     using BGCS.CppAst.Model.Types;
     using BGCS.CppAst.Parsing;
+    using BGCS.CppAst.Targeting;
     using BGCS.Emission;
     using BGCS.FunctionGeneration;
     using BGCS.Generation;
@@ -25,6 +27,7 @@ namespace BGCS
     using System.Diagnostics.CodeAnalysis;
     using System.Text;
     using System.Text.RegularExpressions;
+    using Newtonsoft.Json;
 
     /// <summary>
     /// Defines the public class <c>CsCodeGenerator</c> used by the generation pipeline.
@@ -177,16 +180,31 @@ namespace BGCS
         public bool GenerateConfigured(string? outputPath = null)
         {
             ConfiguredGenerationRequest request = ConfiguredGenerationRequestResolver.Resolve(config, outputPath);
-            string previousDirectory = Environment.CurrentDirectory;
-            try
+            CppParserOptions options = PrepareSettings();
+            IncrementalCacheKey? cacheKey = null;
+            IncrementalGenerationCache? cache = null;
+            if (CanUseIncrementalCache())
             {
-                Environment.CurrentDirectory = request.BaseDirectory;
-                return Generate(request.HeaderFiles.ToList(), request.OutputPath, request.AllowedHeaders?.ToList());
+                string cachePath = Path.GetFullPath(config.CacheDirectory, request.BaseDirectory);
+                cache = new(cachePath);
+                cacheKey = CreateCacheKey(request, options, cachePath);
+                if (cache.TryRestore(cacheKey, request.OutputPath, out string stateJson))
+                {
+                    CachedGenerationState state = JsonConvert.DeserializeObject<CachedGenerationState>(stateJson)
+                        ?? throw new InvalidDataException("Incremental C# binding cache metadata is invalid.");
+                    LastResult = new(state.Module, true, EnumerateOutputFiles(request.OutputPath), state.Diagnostics, true, cacheKey.Value);
+                    LogInfo($"Restored generated bindings from cache {cacheKey.Value[..12]}.");
+                    return true;
+                }
             }
-            finally
+            bool success = Generate(options, request.HeaderFiles.ToList(), request.OutputPath, request.AllowedHeaders?.ToList());
+            if (success && cache != null && cacheKey != null && LastResult != null)
             {
-                Environment.CurrentDirectory = previousDirectory;
+                cache.Store(cacheKey, request.OutputPath,
+                    JsonConvert.SerializeObject(new CachedGenerationState(LastResult.Module, LastResult.Diagnostics.ToArray())));
+                LastResult = new(LastResult.Module, true, LastResult.OutputFiles, LastResult.Diagnostics, false, cacheKey.Value);
             }
+            return success;
         }
 
         /// <summary>
@@ -196,17 +214,14 @@ namespace BGCS
         public BindingGenerationResult AnalyzeConfigured()
         {
             ConfiguredGenerationRequest request = ConfiguredGenerationRequestResolver.Resolve(config, null);
-            string previousDirectory = Environment.CurrentDirectory;
-            try
-            {
-                Environment.CurrentDirectory = request.BaseDirectory;
-                ConfigValidator.Validate(config);
-                LogInfo($"Analyzing: {config.ApiName}");
-                CppCompilation compilation = ParseFiles(PrepareSettings(), request.HeaderFiles.ToList());
+            ConfigValidator.Validate(config);
+            LogInfo($"Analyzing: {config.ApiName}");
+            CppParserOptions options = PrepareSettings();
+            CppCompilation compilation = ParseFiles(options, request.HeaderFiles.ToList());
                 LogCompilationDiagnostics(compilation);
                 List<string> allowedHeaders = request.AllowedHeaders?.ToList() ??
                     (config.IncludeTransitivelyReferencedHeaders
-                        ? ResolveTransitiveUserHeaders(compilation, request.HeaderFiles, config.IncludeFolders)
+                        ? ResolveTransitiveUserHeaders(compilation, request.HeaderFiles, options.IncludeFolders)
                         : request.HeaderFiles.ToList());
                 if (compilation.HasErrors)
                 {
@@ -222,11 +237,6 @@ namespace BGCS
                     .. module.StructuredDiagnostics
                 ]);
                 return LastResult;
-            }
-            finally
-            {
-                Environment.CurrentDirectory = previousDirectory;
-            }
         }
 
         /// <summary>
@@ -292,6 +302,9 @@ namespace BGCS
 
         protected virtual CppParserOptions PrepareSettings()
         {
+            string baseDirectory = config.ConfigDirectory ?? Environment.CurrentDirectory;
+            string? targetSysRoot = ResolveConfiguredPath(config.TargetSysRoot, baseDirectory, allowCommandName: false);
+            string? compilerPath = ResolveConfiguredPath(config.CompilerPath, baseDirectory, allowCommandName: true);
             var options = new CppParserOptions
             {
                 ParseMacros = config.ParseMacros,
@@ -304,7 +317,7 @@ namespace BGCS
 
                 AutoSquashTypedef = config.AutoSquashTypedef,
             };
-            options.ConfigureForTarget(config.ResolvedTarget, config.TargetSysRoot, config.CompilerPath);
+            options.ConfigureForTarget(config.ResolvedTarget, targetSysRoot, compilerPath);
 
             var additionalArguments = config.AdditionalArguments ?? [];
             var includeFolders = config.IncludeFolders ?? [];
@@ -318,12 +331,12 @@ namespace BGCS
 
             for (int i = 0; i < includeFolders.Count; i++)
             {
-                options.IncludeFolders.Add(includeFolders[i]);
+                options.IncludeFolders.Add(Path.GetFullPath(includeFolders[i], baseDirectory));
             }
 
             for (int i = 0; i < systemIncludeFolders.Count; i++)
             {
-                options.SystemIncludeFolders.Add(systemIncludeFolders[i]);
+                options.SystemIncludeFolders.Add(Path.GetFullPath(systemIncludeFolders[i], baseDirectory));
             }
 
             for (int i = 0; i < defines.Count; i++)
@@ -336,6 +349,41 @@ namespace BGCS
 
             return options;
         }
+
+        private static string? ResolveConfiguredPath(string? value, string baseDirectory, bool allowCommandName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+            if (allowCommandName && !Path.IsPathRooted(value) && !value.Contains('/') && !value.Contains('\\'))
+                return value;
+            return Path.GetFullPath(value, baseDirectory);
+        }
+
+        private bool CanUseIncrementalCache() =>
+            config.EnableIncrementalCache && GetType() == typeof(CsCodeGenerator) && config.HeaderInjector == null &&
+            copyFromPending.Count == 0;
+
+        private IncrementalCacheKey CreateCacheKey(ConfiguredGenerationRequest request, CppParserOptions options, string cachePath)
+        {
+            IReadOnlyList<string> inputs = IncrementalGenerationCache.DiscoverInputs(
+                request.HeaderFiles,
+                options.IncludeFolders.Concat(options.SystemIncludeFolders),
+                [request.OutputPath, cachePath]);
+            string assemblyIdentity = GetType().Assembly.ManifestModule.ModuleVersionId.ToString("D");
+            string optionsFingerprint = string.Join("\n", options.AdditionalArguments.Concat(options.Defines));
+            string fingerprint = "csharp\n" + assemblyIdentity + "\n" +
+                JsonConvert.SerializeObject(config, CsCodeGeneratorConfig.SerializerSettings) + "\n" + optionsFingerprint + "\n" +
+                CppToolchainDiscovery.GetCompilerFingerprint(config.ParserKind,
+                    ResolveConfiguredPath(config.CompilerPath, request.BaseDirectory, allowCommandName: true)) + "\n" +
+                config.Plugins.GetCacheFingerprint();
+            return IncrementalGenerationCache.CreateKey(fingerprint, inputs);
+        }
+
+        private static string[] EnumerateOutputFiles(string outputPath) =>
+            Directory.GetFiles(outputPath, "*", SearchOption.AllDirectories)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+
+        private sealed record CachedGenerationState(BindingModule? Module, BindingDiagnostic[] Diagnostics);
 
         protected virtual CppCompilation ParseFiles(CppParserOptions parserOptions, List<string> headerFiles)
         {
@@ -363,8 +411,10 @@ namespace BGCS
 
         internal List<string> ResolveAllowedHeaders(CppCompilation compilation, IReadOnlyList<string> headerFiles)
         {
+            string baseDirectory = config.ConfigDirectory ?? Environment.CurrentDirectory;
+            string[] includeFolders = config.IncludeFolders.Select(path => Path.GetFullPath(path, baseDirectory)).ToArray();
             return config.IncludeTransitivelyReferencedHeaders
-                ? ResolveTransitiveUserHeaders(compilation, headerFiles, config.IncludeFolders)
+                ? ResolveTransitiveUserHeaders(compilation, headerFiles, includeFolders)
                 : [.. headerFiles];
         }
 

@@ -2,6 +2,7 @@ namespace BGCS
 {
     using BGCS.Conversion;
     using BGCS.Core.Logging;
+    using BGCS.Core.Extensibility;
     using BGCS.CppAst.Parsing;
     using BGCS.CppAst.Targeting;
     using BGCS.Metadata;
@@ -19,6 +20,11 @@ namespace BGCS
     /// </remarks>
     public partial class CsCodeGeneratorConfig : IGeneratorConfig
     {
+        /// <summary>
+        /// Latest configuration contract version understood by this generator.
+        /// </summary>
+        public const int CurrentConfigVersion = 1;
+
         private readonly CppTypeConverter converter;
 
         /// <summary>
@@ -75,7 +81,32 @@ namespace BGCS
             TypeMappings = [];
             TypedefToEnumMappings = [];
             FunctionAliasMappings = [];
+            PluginAssemblies = [];
         }
+
+        /// <summary>Enables content-addressed restoration for unchanged configuration-driven generation.</summary>
+        [DefaultValue(true)]
+        public bool EnableIncrementalCache { get; set; } = true;
+
+        /// <summary>Cache directory relative to the configuration file.</summary>
+        [DefaultValue(".bindgen-cache")]
+        public string CacheDirectory { get; set; } = ".bindgen-cache";
+
+        /// <summary>Explicit third-party plugin assemblies, resolved relative to the configuration file.</summary>
+        public List<string> PluginAssemblies { get; set; }
+
+        /// <summary>Runtime services registered by explicitly loaded plugins.</summary>
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        public BindingPluginRegistry Plugins { get; } = new();
+
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        internal HashSet<string> LoadedPluginAssemblies { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Version of the JSON configuration contract. Missing values deserialize as the current version.
+        /// </summary>
+        [DefaultValue(CurrentConfigVersion)]
+        public int ConfigVersion { get; set; } = CurrentConfigVersion;
 
         /// <summary>
         /// Gets the type conversion service used to map C/C++ types to C# representations.

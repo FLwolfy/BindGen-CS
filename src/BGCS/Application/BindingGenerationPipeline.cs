@@ -72,8 +72,10 @@ public sealed class BindingGenerationPipeline
             ]));
             return false;
         }
-        new CSharpEmitter().EmitLegacy(generator, files, result, stagingPath, config,
+        AstGenerationStepEmitter.Emit(generator, files, result, stagingPath, config,
             generator.PipelineMetadata, explicitEmptyOutputFilter);
+        foreach (var pluginEmitter in config.Plugins.GetServices<IBindingEmitter>())
+            pluginEmitter.Service.Emit(safetyModule, new(stagingPath, config.MergeGeneratedFilesToSingleFile, config.SingleFileOutputName));
 
         generator.LogInfo("Applying Post-Patches...");
         generator.PatchEngine.ApplyPostPatches(generator.PipelineMetadata, stagingPath,

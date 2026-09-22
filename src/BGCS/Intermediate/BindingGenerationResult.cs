@@ -27,16 +27,22 @@ public sealed record BindingDiagnostic(BindingDiagnosticSeverity Severity, strin
 public sealed class BindingGenerationResult
 {
     public BindingGenerationResult(BindingModule? module, bool success, IReadOnlyList<string> outputFiles,
-        IReadOnlyList<BindingDiagnostic> diagnostics)
+        IReadOnlyList<BindingDiagnostic> diagnostics, bool cacheHit = false, string? cacheKey = null)
     {
         Module = module;
         Success = success;
         OutputFiles = outputFiles;
         Diagnostics = diagnostics;
+        CacheHit = cacheHit;
+        CacheKey = cacheKey;
     }
 
     public BindingModule? Module { get; }
     public bool Success { get; }
     public IReadOnlyList<string> OutputFiles { get; }
     public IReadOnlyList<BindingDiagnostic> Diagnostics { get; }
+    /// <summary>Gets whether the complete output was restored from the content-addressed cache.</summary>
+    public bool CacheHit { get; }
+    /// <summary>Gets the content-addressed cache key when incremental caching participated in the run.</summary>
+    public string? CacheKey { get; }
 }

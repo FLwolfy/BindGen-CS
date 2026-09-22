@@ -392,18 +392,30 @@ public class ClassGenerationStep : GenerationStep
             WriteVirtualCallbackProxy(cppClass, typeName, headerWriter, cppWriter);
             WriteConstructors(cppClass, typeName, headerWriter, cppWriter);
             WriteInheritanceCasts(cppClass, typeName, headerWriter, cppWriter);
-            bool canDestroy = cppClass.Destructors.Count == 0 || cppClass.Destructors.Any(destructor =>
+            CppFunction? callableDestructor = cppClass.Destructors.FirstOrDefault(destructor =>
                 (destructor.Visibility is CppVisibility.Public or CppVisibility.Default) && !destructor.Flags.HasFlag(CppFunctionFlags.Deleted));
+            bool canDestroy = cppClass.Destructors.Count == 0 || callableDestructor != null;
             if (canDestroy)
             {
-                headerWriter.WriteLine($"{config.NamePrefix}API(void) {typeName}Destroy({typeName}* self);");
-                using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(void) {typeName}Destroy({typeName}* self)"))
+                string defaultDestroyName = typeName + "Destroy";
+                if (callableDestructor != null && config.IsCallableExcluded(cppClass, callableDestructor, defaultDestroyName))
+                    canDestroy = false;
+                string destroyName = callableDestructor == null
+                    ? defaultDestroyName
+                    : config.GetCFunctionName(cppClass, callableDestructor, defaultDestroyName);
+                destroyName = GetAvailableFunctionName(destroyName);
+                if (canDestroy)
                 {
-                    WriteGuarded(cppWriter, "return;", writer =>
+                    definedFunctions.Add(destroyName);
+                    headerWriter.WriteLine($"{config.NamePrefix}API(void) {destroyName}({typeName}* self);");
+                    using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(void) {destroyName}({typeName}* self)"))
                     {
-                        writer.WriteLine($"auto* ptr = reinterpret_cast<{cppClass.FullName}*>(self);");
-                        writer.WriteLine("delete ptr;");
-                    });
+                        WriteGuarded(cppWriter, "return;", writer =>
+                        {
+                            writer.WriteLine($"auto* ptr = reinterpret_cast<{cppClass.FullName}*>(self);");
+                            writer.WriteLine("delete ptr;");
+                        });
+                    }
                 }
             }
 
@@ -415,6 +427,9 @@ public class ClassGenerationStep : GenerationStep
                 {
                     continue;
                 }
+                string defaultName = $"{config.GetCTypeName(cppClass)}_{f.Name}";
+                if (config.IsCallableExcluded(cppClass, f, defaultName))
+                    continue;
 
                 WriteFunctionH(cppClass, f, headerWriter);
                 WriteFunctionCpp(cppClass, f, cppWriter);
@@ -519,6 +534,8 @@ public class ClassGenerationStep : GenerationStep
                     function.Visibility is not (CppVisibility.Public or CppVisibility.Default))
                     continue;
                 string baseName = config.GetCFunctionName(function);
+                if (config.IsCallableExcluded(null, function, baseName))
+                    continue;
                 string name = baseName;
                 int suffix = 1;
                 while (!definedFunctions.Add(name))
@@ -640,7 +657,14 @@ public class ClassGenerationStep : GenerationStep
             for (int i = 0; i < constructors.Count; i++)
             {
                 CppFunction? constructor = constructors[i];
-                string name = typeName + "Create" + (i == 0 ? string.Empty : i.ToString());
+                string defaultName = typeName + "Create" + (i == 0 ? string.Empty : i.ToString());
+                if (constructor != null && config.IsCallableExcluded(cppClass, constructor, defaultName))
+                    continue;
+                string name = constructor == null
+                    ? defaultName
+                    : config.GetCFunctionName(cppClass, constructor, defaultName);
+                name = GetAvailableFunctionName(name);
+                definedFunctions.Add(name);
                 string cSignature = constructor == null ? "void" : GetCParameterSignature(cppClass, constructor.Parameters);
                 string arguments = constructor == null ? string.Empty : GetCppFunctionSignatureTypeless(constructor);
                 headerWriter.WriteLine($"{config.NamePrefix}API({typeName}*) {name}({cSignature});");
@@ -890,13 +914,17 @@ public class ClassGenerationStep : GenerationStep
 
         private string GetUniqueCFunctionName(CppClass c, CppFunction f)
         {
-            int iter = 0;
-            string cName = $"{config.GetCTypeName(c)}_{f.Name}";
-            string currentName = cName;
+            string defaultName = $"{config.GetCTypeName(c)}_{f.Name}";
+            string cName = config.GetCFunctionName(c, f, defaultName);
+            return GetAvailableFunctionName(cName);
+        }
+
+        private string GetAvailableFunctionName(string requestedName)
+        {
+            int suffix = 1;
+            string currentName = requestedName;
             while (definedFunctions.Contains(currentName))
-            {
-                currentName = $"{cName}{iter++}";
-            }
+                currentName = requestedName + suffix++;
             return currentName;
         }
 

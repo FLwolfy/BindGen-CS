@@ -10,6 +10,8 @@ Each category has an explicit set of automated mandatory gates. Every reported c
 
 The release workflow must write machine-readable results to `artifacts/acceptance/report.json` and a human-readable summary to `artifacts/acceptance/report.md`.
 
+Both reports record their UTC generation time, Git revision, and working-tree dirty state. A dirty local report is valid development evidence, but it cannot masquerade as evidence for an immutable release commit.
+
 ## Target matrix
 
 | Category | Target | Mandatory gates |
@@ -91,7 +93,7 @@ bindgen-cs generate
 bindgen-cs build
 ```
 
-`doctor` reports toolchain problems, `validate` performs parsing and IR validation without replacing output, and `build` compiles generated C#. Native compilation/linking of a C++ bridge is verified by the real-C++ gate or the consumer build system and is not part of ordinary `bindgen-cs build`. Structured safety/C++ rejections must include a suggested configuration path or source action.
+`doctor` reports toolchain problems, `validate` performs parsing and IR validation without replacing output, and `build` compiles generated C#. `bridge` emits a versioned native build manifest, and `native-build` can compile it with the built-in Clang/GNU-compatible provider; ordinary C# `build` remains separate. Structured safety/C++ rejections must include a suggested configuration path or source action.
 
 ## Architecture evidence
 
@@ -100,14 +102,16 @@ Current automated architecture tests directly enforce:
 - Runtime has no generator dependency;
 - Intermediate has no facade, emitter, Roslyn, filesystem, or CLI dependency;
 - the Intermediate assembly references no other BGCS assembly;
-- IR analysis and IR-native `CSharpEmitter.Emit` have independent behavior tests.
+- IR analysis and IR-native `CSharpEmitter.Emit` have independent behavior tests;
+- unsupported IR-native C# semantics fail before output with stable `BGCSCS001` diagnostics.
 
-The primary configured path still calls `CSharpEmitter.EmitLegacy` and `GenerationStep`. Architecture 9.0 therefore means that the declared boundary/build/test gates pass; it does not mean IR migration is complete. See [Architecture](architecture.md#migration-completion-criteria) for completion criteria.
+The primary configured path still calls the isolated `AstGenerationStepEmitter` and `GenerationStep`; `CSharpEmitter` no longer exposes or contains a legacy path. Architecture 9.0 therefore means that the declared boundary/build/test gates pass; it does not mean default-path IR migration is complete. See [Architecture](architecture.md#migration-completion-criteria) for completion criteria.
 
 ## Package and release evidence
 
 - All package IDs share one version.
 - A clean local feed restores public packages and all transitive implementation packages.
+- The consumer uses an isolated package cache; third-party packages already locked by solution restore are read only from the machine's global-packages fallback, so the release smoke does not depend on live nuget.org availability.
 - The tool installs into an empty tool path and completes init/generate/build smoke tests.
 - Two clean packs from the same commit produce equivalent package content after excluding NuGet signature metadata.
 - Symbol packages and repository metadata are present.

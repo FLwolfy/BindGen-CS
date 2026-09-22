@@ -43,14 +43,39 @@
         /// </summary>
         public void Compose(ref Cpp2CGeneratorConfig config)
         {
+            Compose(ref config, Environment.CurrentDirectory);
+        }
+
+        /// <summary>
+        /// Composes configuration inheritance while resolving file references from an explicit directory.
+        /// </summary>
+        public void Compose(ref Cpp2CGeneratorConfig config, string baseDirectory)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(baseDirectory);
             var stack = new Stack<Cpp2CGeneratorConfig>();
             var current = config;
+            string currentDirectory = Path.GetFullPath(baseDirectory);
+            StringComparer sourceComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            HashSet<string> visitedSources = new(sourceComparer);
+            List<string> sourceChain = [];
             while (true)
             {
                 stack.Push(current);
-                if (current.BaseConfig?.Url == null)
+                BaseConfig? baseConfig = current.BaseConfig;
+                if (baseConfig?.Url == null)
                     break;
-                current = LoadBaseConfig(current.BaseConfig);
+                var loaded = LoadBaseConfig(baseConfig, currentDirectory);
+                current = loaded.Config;
+                currentDirectory = loaded.BaseDirectory;
+                string sourceIdentity = loaded.SourceIdentity;
+                sourceChain.Add(sourceIdentity);
+                if (!visitedSources.Add(sourceIdentity))
+                {
+                    throw new InvalidOperationException(
+                        $"Cyclic C++ BaseConfig chain detected: {string.Join(" -> ", sourceChain)}");
+                }
             }
 
             var merged = Cpp2CGeneratorConfig.Default;
@@ -117,15 +142,19 @@
             }
         }
 
-        private Cpp2CGeneratorConfig LoadBaseConfig(BaseConfig baseConfig)
+        private (Cpp2CGeneratorConfig Config, string BaseDirectory, string SourceIdentity) LoadBaseConfig(
+            BaseConfig baseConfig,
+            string baseDirectory)
         {
             Cpp2CGeneratorConfig? baseGeneratorConfig = null;
+            string resolvedBaseDirectory = baseDirectory;
+            string sourceIdentity = baseConfig.Url!;
 
             ReadOnlySpan<char> url = baseConfig.Url;
 
             if (url.StartsWith(FileProtocol))
             {
-                var path = url[FileProtocol.Length..].ToString();
+                string path = Path.GetFullPath(url[FileProtocol.Length..].ToString(), baseDirectory);
                 if (!File.Exists(path))
                 {
                     LogCritical($"File not found: {path}");
@@ -133,6 +162,8 @@
                 }
 
                 baseGeneratorConfig = JsonConvert.DeserializeObject<Cpp2CGeneratorConfig>(File.ReadAllText(path));
+                resolvedBaseDirectory = Path.GetDirectoryName(path) ?? baseDirectory;
+                sourceIdentity = path;
             }
             if (url.StartsWith(HttpProtocol))
             {
@@ -150,7 +181,7 @@
                 throw new Exception($"Invalid URL: {url}");
             }
 
-            return baseGeneratorConfig;
+            return (baseGeneratorConfig, resolvedBaseDirectory, sourceIdentity);
         }
 
         private Cpp2CGeneratorConfig? DownloadConfig(ReadOnlySpan<char> url)

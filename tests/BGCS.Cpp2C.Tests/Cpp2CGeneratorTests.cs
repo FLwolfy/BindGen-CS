@@ -41,6 +41,25 @@ public class Cpp2CGeneratorTests
     }
 
     [Fact]
+    public void Config_FutureConfigVersion_ShouldFailBeforeGeneration()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-version-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string path = Path.Combine(temp, "bridge.json");
+        File.WriteAllText(path, "{\"ConfigVersion\":999,\"EntryFiles\":[]}");
+        try
+        {
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CGeneratorConfig.Load(path));
+
+            Assert.Contains("ConfigVersion 999", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void Config_GetCType_ShouldPreservePointerReferenceAndQualificationShape()
     {
         Cpp2CGeneratorConfig config = new();
@@ -127,6 +146,105 @@ public class Cpp2CGeneratorTests
         {
             if (Directory.Exists(temp))
                 Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void GenerateConfigured_IncrementalCacheRestoresBridgeAndInvalidatesOnHeaderChange()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-cache-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "sample.hpp");
+        string configPath = Path.Combine(temp, "bridge.json");
+        File.WriteAllText(header, "int cache_first();\n");
+        File.WriteAllText(configPath,
+            "{\"EntryFiles\":[\"sample.hpp\"],\"AllowedHeaders\":[\"sample.hpp\"],\"OutputPath\":\"bridge-output\"}");
+        try
+        {
+            Cpp2CCodeGenerator first = new(Cpp2CGeneratorConfig.Load(configPath));
+            first.GenerateConfigured();
+            Assert.True(first.LastResult?.Success);
+            Assert.False(first.LastResult!.CacheHit);
+            string firstKey = Assert.IsType<string>(first.LastResult.CacheKey);
+            string classes = Path.Combine(temp, "bridge-output", "include", "Classes.h");
+            File.WriteAllText(classes, "corrupted");
+
+            Cpp2CCodeGenerator second = new(Cpp2CGeneratorConfig.Load(configPath));
+            second.GenerateConfigured();
+            Assert.True(second.LastResult!.CacheHit);
+            Assert.NotNull(second.LastResult.Module);
+            Assert.Contains("cache_first", File.ReadAllText(classes), StringComparison.Ordinal);
+
+            File.WriteAllText(header, "int cache_second();\n");
+            Cpp2CCodeGenerator third = new(Cpp2CGeneratorConfig.Load(configPath));
+            third.GenerateConfigured();
+            Assert.False(third.LastResult!.CacheHit);
+            Assert.NotEqual(firstKey, third.LastResult.CacheKey);
+            Assert.Contains("cache_second", File.ReadAllText(classes), StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void GenerateConfigured_ShouldNotChangeProcessCurrentDirectory()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp-config-cwd-" + Guid.NewGuid().ToString("N"));
+        string configDirectory = Path.Combine(temp, "config");
+        Directory.CreateDirectory(Path.Combine(configDirectory, "include"));
+        File.WriteAllText(Path.Combine(configDirectory, "include", "sample.hpp"),
+            "class Demo { public: int Add(int value); };\n");
+        File.WriteAllText(Path.Combine(configDirectory, "bridge.json"),
+            """
+            {
+              "EntryFiles": ["include/sample.hpp"],
+              "IncludeFolders": ["include"],
+              "OutputPath": "GeneratedBridge"
+            }
+            """);
+        string originalDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load(Path.Combine(configDirectory, "bridge.json"));
+            Cpp2CCodeGenerator generator = new(config);
+
+            generator.GenerateConfigured();
+
+            Assert.True(generator.LastResult?.Success);
+            Assert.Equal(originalDirectory, Environment.CurrentDirectory);
+            Assert.True(File.Exists(Path.Combine(configDirectory, "GeneratedBridge", "bridge.manifest.json")));
+        }
+        finally
+        {
+            Assert.Equal(originalDirectory, Environment.CurrentDirectory);
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void Config_Load_ShouldRejectCyclicBaseConfiguration()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp-config-cycle-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string first = Path.Combine(temp, "first.json");
+        string second = Path.Combine(temp, "second.json");
+        File.WriteAllText(first, "{\"BaseConfig\":{\"Url\":\"file://second.json\"}}");
+        File.WriteAllText(second, "{\"BaseConfig\":{\"Url\":\"file://first.json\"}}");
+        try
+        {
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+                Cpp2CGeneratorConfig.Load(first));
+
+            Assert.Contains("Cyclic C++ BaseConfig chain", exception.Message, StringComparison.Ordinal);
+            Assert.Contains(Path.GetFullPath(first), exception.Message, StringComparison.Ordinal);
+            Assert.Contains(Path.GetFullPath(second), exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
         }
     }
 

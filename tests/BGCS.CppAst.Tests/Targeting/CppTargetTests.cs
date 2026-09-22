@@ -76,6 +76,21 @@ public sealed class CppTargetTests
         Assert.DoesNotContain("host", target.Identifier, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void CompilerFingerprint_ShouldBeStableAndIncludeResolvedDriverIdentity()
+    {
+        string compiler = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp)
+            ?? throw new InvalidOperationException("A host C++ compiler is required for toolchain fingerprinting.");
+
+        string first = CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.Cpp, compiler);
+        string second = CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.Cpp, compiler);
+
+        Assert.Equal(first, second);
+        Assert.Contains(compiler.Replace('\\', '/'), first, StringComparison.Ordinal);
+        Assert.Contains("length:", first, StringComparison.Ordinal);
+        Assert.DoesNotContain("version:unavailable", first, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc, 4, 2, 8)]
     [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu, 8, 4, 16)]

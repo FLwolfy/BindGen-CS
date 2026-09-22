@@ -11,7 +11,7 @@ This document focuses on BGCS generator APIs and extension points: the compatibi
 3. resolve the allowed-header closure;
 4. run preprocess steps and pre-patches;
 5. build shared `BindingModule` analysis data;
-6. call `CSharpEmitter.EmitLegacy`, which runs configured `GenerationStep` implementations in a staging directory;
+6. call the internal `AstGenerationStepEmitter`, which runs configured compatibility `GenerationStep` implementations in a staging directory;
 7. apply post-patches;
 8. rewrite Runtime imports and remove empty generated declarations;
 9. compose optional SingleFile output through Roslyn;
@@ -63,12 +63,14 @@ Main execution API:
 - `BindingType` / `BindingField` / `BindingEnumMember`;
 - `BindingFunction` / `BindingParameter`;
 - `MarshallingPlan`: strategy, ownership, encoding, length/capacity relationships, and cleanup;
-- `BindingDiagnostic` and `BindingGenerationResult`;
+- `BindingDiagnostic`, `BindingDiagnosticCatalog`, `BindingEmissionException`, and `BindingGenerationResult`;
 - `IBindingEmitter` and `EmissionContext`.
 
 `BGCS.Facade.BindingGenerator.Generate(...)` returns a `BindingGenerationResult`. `Cpp2CCodeGenerator.LastResult` exposes the same result contract after C++ bridge generation. `BGCS.Emission.CSharpEmitter` and `BGCS.Cpp2C.Emission.CBridgeEmitter` both implement `IBindingEmitter`.
 
-The IR-native `Emit(...)` methods are independently usable and tested, but they are not yet the default full-fidelity configured emitters. Primary C# generation uses `CSharpEmitter.EmitLegacy`; primary bridge generation uses `CBridgeEmitter.EmitAst`. See [Architecture](architecture.md) before implementing an emitter or assuming legacy metadata is absent.
+The IR-native `Emit(...)` methods are independently usable and tested, but they are not yet the default full-fidelity configured emitters. Primary C# generation uses the internal `AstGenerationStepEmitter`; primary bridge generation uses `CBridgeEmitter.EmitAst`. `CSharpEmitter.Validate(...)` reports unsupported IR semantics, and `Emit(...)` throws `BindingEmissionException` before creating output instead of silently dropping those declarations. See [Architecture](architecture.md) before implementing an emitter or assuming legacy metadata is absent.
+
+`Cpp2CCodeGenerator` can also emit a versioned `CppBridgeBuildManifest`. `ClangNativeBuildProvider` turns that manifest into a shell-independent `NativeBuildPlan`, and `NativeBuildExecutor` runs the plan with timeout and captured diagnostics. These APIs are generic bridge-build infrastructure; they do not contain per-library build rules.
 
 ## 4. Metadata APIs (`BGCS.Metadata`)
 
@@ -152,6 +154,7 @@ These are compatibility extension points for the current full-fidelity generator
 - patch behavior: `tests/BGCS.Patching.Tests/*`
 - generation pipeline + compile/runtime semantics: `tests/BGCS.Generation.Tests/*`
 - core unit/parser interop: `tests/BGCS.Tests/*`
+- CLI/config/build-manifest behavior: `tests/BGCS.Tool.Tests/*`
 - full matrix entrypoint: `docs/testing.md`
 
 ## 10. End-to-End Examples

@@ -1,8 +1,10 @@
 ﻿namespace BGCS.Cpp2C
 {
     using BGCS.Core.Logging;
+    using BGCS.Core.Extensibility;
     using BGCS.CppAst.Parsing;
     using BGCS.CppAst.Targeting;
+    using BGCS.Cpp2C.Adapters;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
     using System.ComponentModel;
@@ -12,6 +14,45 @@
     /// </summary>
     public partial class Cpp2CGeneratorConfig
     {
+        /// <summary>Initializes the configuration and registers all built-in type adapters through the public SPI.</summary>
+        public Cpp2CGeneratorConfig()
+        {
+            foreach (ICppTypeAdapter adapter in BuiltInCppTypeAdapters.All)
+                Adapters.Register(adapter);
+        }
+
+        /// <summary>
+        /// Runtime adapter registry. Adapter instances are deliberately excluded from JSON; plugins register them before generation.
+        /// </summary>
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        public CppAdapterRegistry Adapters { get; } = new();
+
+        /// <summary>Enables content-addressed restoration for unchanged configuration-driven bridge generation.</summary>
+        [DefaultValue(true)]
+        public bool EnableIncrementalCache { get; set; } = true;
+
+        /// <summary>Cache directory relative to the configuration file.</summary>
+        [DefaultValue(".bindgen-cache")]
+        public string CacheDirectory { get; set; } = ".bindgen-cache";
+
+        /// <summary>Explicit third-party plugin assemblies, resolved relative to the configuration file.</summary>
+        public List<string> PluginAssemblies { get; set; } = [];
+
+        /// <summary>Runtime services registered by explicitly loaded plugins.</summary>
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        public BindingPluginRegistry Plugins { get; } = new();
+
+        /// <summary>
+        /// Latest C++ bridge configuration contract version understood by this generator.
+        /// </summary>
+        public const int CurrentConfigVersion = 1;
+
+        /// <summary>
+        /// Version of the JSON configuration contract. Missing values deserialize as the current version.
+        /// </summary>
+        [DefaultValue(CurrentConfigVersion)]
+        public int ConfigVersion { get; set; } = CurrentConfigVersion;
+
         /// <summary>
         /// Optional base configuration source merged into this instance before generation.
         /// </summary>
@@ -33,6 +74,24 @@
         /// </summary>
         [DefaultValue("GeneratedBridge")]
         public string OutputPath { get; set; } = "GeneratedBridge";
+
+        /// <summary>
+        /// C++ language standard used when no explicit <c>-std=</c> compiler argument is supplied.
+        /// </summary>
+        [DefaultValue("c++23")]
+        public string LanguageStandard { get; set; } = "c++23";
+
+        /// <summary>
+        /// Emits a deterministic, target-specific native bridge build manifest.
+        /// </summary>
+        [DefaultValue(true)]
+        public bool GenerateBuildManifest { get; set; } = true;
+
+        /// <summary>
+        /// File name of the generated native bridge build manifest.
+        /// </summary>
+        [DefaultValue("bridge.manifest.json")]
+        public string BuildManifestFileName { get; set; } = "bridge.manifest.json";
 
         /// <summary>Gets or sets whether the CLI also generates C# bindings from the emitted C bridge header.</summary>
         [DefaultValue(false)]
@@ -97,6 +156,21 @@
         /// List of the additional arguments passed directly to the C++ Clang compiler. (Default: Empty)
         /// </summary>
         public List<string> AdditionalArguments { get; set; } = new();
+
+        /// <summary>
+        /// Library search directories used by native bridge build providers.
+        /// </summary>
+        public List<string> LibrarySearchFolders { get; set; } = [];
+
+        /// <summary>
+        /// Native libraries or library files linked by native bridge build providers.
+        /// </summary>
+        public List<string> LinkLibraries { get; set; } = [];
+
+        /// <summary>
+        /// Additional arguments passed to the native linker by build providers.
+        /// </summary>
+        public List<string> LinkerArguments { get; set; } = [];
 
         /// <summary>
         /// Fully qualified C++ class template specializations explicitly instantiated for bridge generation.

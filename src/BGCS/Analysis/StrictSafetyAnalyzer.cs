@@ -24,7 +24,7 @@ public sealed class StrictSafetyAnalyzer
         {
             config.MarshallingMappings.TryGetValue(function.NativeName, out FunctionMarshallingMapping? mapping);
             if (function.ReturnType.PointerDepth > 0 && mapping?.Return?.Ownership == null)
-                Add(module, "BGCS-SAFETY-OWNERSHIP", function,
+                Add(module, BindingDiagnosticCodes.Ownership, function,
                     "pointer return ownership is not declared",
                     $"MarshallingMappings.{function.NativeName}.Return.Ownership");
             for (int i = 0; i < function.Parameters.Count; i++)
@@ -33,17 +33,17 @@ public sealed class StrictSafetyAnalyzer
                 MarshallingMapping? parameterMapping = null;
                 mapping?.Parameters.TryGetValue(parameter.NativeName, out parameterMapping);
                 if (parameter.Marshalling.Strategy == MarshallingStrategy.Callback && parameterMapping == null)
-                    Add(module, "BGCS-SAFETY-CALLBACK", function,
+                    Add(module, BindingDiagnosticCodes.CallbackLifetime, function,
                         $"callback parameter '{parameter.NativeName}' retention/unregister lifetime is not declared",
                         $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}");
                 if (LooksLikeBuffer(parameter) && parameter.Marshalling.LengthParameter == null &&
                     parameter.Marshalling.CapacityParameter == null && parameterMapping == null)
-                    Add(module, "BGCS-SAFETY-LENGTH", function,
+                    Add(module, BindingDiagnosticCodes.BufferLength, function,
                         $"buffer parameter '{parameter.NativeName}' has no proven length or capacity relationship",
                         $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.LengthParameter");
                 if (parameter.Marshalling.Strategy == MarshallingStrategy.String &&
                     parameter.Direction != BindingDirection.In && parameter.Marshalling.CleanupFunction == null && parameterMapping == null)
-                    Add(module, "BGCS-SAFETY-ALLOCATOR", function,
+                    Add(module, BindingDiagnosticCodes.Allocator, function,
                         $"output string parameter '{parameter.NativeName}' has no cleanup allocator",
                         $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.CleanupFunction");
             }

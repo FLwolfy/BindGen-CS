@@ -9,6 +9,10 @@ internal static class CsCodeGeneratorConfigValidator
     {
         ArgumentNullException.ThrowIfNull(config);
         List<string> errors = [];
+        if (config.ConfigVersion < 1 || config.ConfigVersion > CsCodeGeneratorConfig.CurrentConfigVersion)
+        {
+            errors.Add($"ConfigVersion {config.ConfigVersion} is unsupported. This BindGen-CS version accepts configuration versions 1 through {CsCodeGeneratorConfig.CurrentConfigVersion}.");
+        }
         if (!SyntaxFacts.IsValidIdentifier(config.ApiName))
         {
             errors.Add("ApiName must be a valid C# identifier.");
@@ -20,6 +24,18 @@ internal static class CsCodeGeneratorConfigValidator
         if (!config.UseFunctionTable && string.IsNullOrWhiteSpace(config.LibName))
         {
             errors.Add("LibName is required for DllImport and LibraryImport generation.");
+        }
+        if (config.EnableIncrementalCache && string.IsNullOrWhiteSpace(config.CacheDirectory))
+        {
+            errors.Add("CacheDirectory is required when incremental caching is enabled.");
+        }
+        if (config.PluginAssemblies == null)
+        {
+            errors.Add("PluginAssemblies cannot be null.");
+        }
+        else if (config.PluginAssemblies.Any(string.IsNullOrWhiteSpace))
+        {
+            errors.Add("PluginAssemblies cannot contain an empty path.");
         }
         if (config.MergeGeneratedFilesToSingleFile)
         {

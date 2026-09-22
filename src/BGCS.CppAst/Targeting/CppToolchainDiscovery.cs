@@ -15,6 +15,7 @@ public static class CppToolchainDiscovery
 {
     private static readonly object Sync = new();
     private static readonly Dictionary<string, IReadOnlyList<string>> IncludeCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string> FingerprintCache = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Locates a compiler driver for the requested language on the current host.
@@ -56,6 +57,33 @@ public static class CppToolchainDiscovery
         lock (Sync)
             IncludeCache[key] = discovered;
         return discovered;
+    }
+
+    /// <summary>
+    /// Returns a stable compiler-driver identity for incremental generation keys.
+    /// The identity includes the resolved path, binary metadata, and complete <c>--version</c> output.
+    /// </summary>
+    public static string GetCompilerFingerprint(CppParserKind parserKind, string? compilerPath = null)
+    {
+        string? compiler = FindCompiler(parserKind, compilerPath);
+        if (compiler == null)
+            return "compiler:not-found";
+        lock (Sync)
+        {
+            if (FingerprintCache.TryGetValue(compiler, out string? cached))
+                return cached;
+        }
+
+        string version = RunForOutput(compiler, ["--version"]) ?? "version:unavailable";
+        FileInfo binary = new(compiler);
+        string fingerprint = string.Join("\n",
+            "compiler:" + compiler.Replace('\\', '/'),
+            "length:" + binary.Length,
+            "modified-utc:" + binary.LastWriteTimeUtc.Ticks,
+            version.Trim());
+        lock (Sync)
+            FingerprintCache[compiler] = fingerprint;
+        return fingerprint;
     }
 
     /// <summary>
@@ -199,6 +227,37 @@ public static class CppToolchainDiscovery
             if (!process.WaitForExit(5_000) || process.ExitCode != 0)
                 return null;
             return output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static string? RunForOutput(string executable, IReadOnlyList<string> arguments)
+    {
+        try
+        {
+            ProcessStartInfo start = new(executable)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            foreach (string argument in arguments)
+                start.ArgumentList.Add(argument);
+            using Process process = Process.Start(start)!;
+            Task<string> standardOutput = process.StandardOutput.ReadToEndAsync();
+            Task<string> standardError = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(5_000))
+            {
+                process.Kill(entireProcessTree: true);
+                return null;
+            }
+            string output = standardOutput.GetAwaiter().GetResult();
+            string error = standardError.GetAwaiter().GetResult();
+            return process.ExitCode == 0 ? output + error : null;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {

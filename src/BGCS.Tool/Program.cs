@@ -1,7 +1,6 @@
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Reflection;
 using System.Text.Json;
+using BGCS.Tool.Commands;
 using BGCS.Cpp2C;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
@@ -35,7 +34,9 @@ internal static class Program
                 "diff" => Diff(args[1..]),
                 "workspace" => WorkspaceCommand.Run(args[1..]),
                 "schema" => Schema(args[1..]),
+                "explain" => ExplainCommand.Run(args[1..], Console.Out, Console.Error),
                 "bridge" => Bridge(args[1..]),
+                "native-build" => NativeBuildCommand.Run(args[1..], Environment.CurrentDirectory, Console.Out, Console.Error),
                 "version" or "--version" => PrintVersion(),
                 _ when args[0].EndsWith(".json", StringComparison.OrdinalIgnoreCase) => Generate(args),
                 _ => Fail($"Unknown command '{args[0]}'.")
@@ -50,62 +51,7 @@ internal static class Program
 
     private static int Initialize(string[] args)
     {
-        if (args.Length > 1)
-        {
-            return Fail("init accepts zero or one configuration path.");
-        }
-
-        string argument = args.Length == 0 ? DefaultConfigPath : args[0];
-        string inputPath = Path.GetFullPath(argument);
-        string extension = Path.GetExtension(inputPath).ToLowerInvariant();
-        bool isHeader = extension is ".h" or ".hh" or ".hpp" or ".hxx";
-        if (isHeader && !File.Exists(inputPath))
-            return Fail($"Header does not exist: {inputPath}");
-        bool isCpp = extension is ".hh" or ".hpp" or ".hxx" ||
-            isHeader && (File.ReadAllText(inputPath).Contains("namespace ", StringComparison.Ordinal) ||
-                         File.ReadAllText(inputPath).Contains("template<", StringComparison.Ordinal));
-        string path = isHeader
-            ? Path.Combine(Environment.CurrentDirectory, isCpp ? "bridge.json" : DefaultConfigPath)
-            : inputPath;
-        if (File.Exists(path))
-            return Fail($"Configuration already exists: {path}");
-
-        string? directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-        string nativeInput = isHeader ? inputPath : Path.Combine(Path.GetDirectoryName(path)!, "native.h");
-        object config = isCpp
-            ? new
-            {
-                EntryFiles = new[] { inputPath },
-                AllowedHeaders = new[] { inputPath },
-                IncludeFolders = new[] { Path.GetDirectoryName(inputPath)! },
-                OutputPath = "GeneratedBridge",
-                GenerateCSharpBindings = true,
-                CSharpNamespace = "Native.Bindings",
-                CSharpApiName = "NativeApi",
-                NativeLibraryName = "native",
-                CSharpOutputPath = "Generated",
-                ParseSystemIncludes = false,
-                ParseComments = false
-            }
-            : new
-            {
-                Preset = "host-c",
-                Namespace = "Native.Bindings",
-                ApiName = "NativeApi",
-                LibName = "native",
-                EntryFiles = new[] { nativeInput },
-                AllowedHeaders = Array.Empty<string>(),
-                IncludeTransitivelyReferencedHeaders = true,
-                IncludeFolders = new[] { Path.GetDirectoryName(nativeInput)! },
-                OutputPath = "Generated",
-                ImportType = "DllImport",
-                MergeGeneratedFilesToSingleFile = true
-            };
-        File.WriteAllText(path, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine($"Created {path} for {nativeInput}");
-        return 0;
+        return InitCommand.Run(args, Environment.CurrentDirectory, Console.Out, Console.Error);
     }
 
     private static int Doctor()
@@ -217,57 +163,7 @@ internal static class Program
 
     private static int Schema(string[] args)
     {
-        if (args.Length > 1)
-            return Fail("schema accepts zero or one output path.");
-        string outputPath = Path.GetFullPath(args.Length == 0 ? "bindgen.schema.json" : args[0]);
-        SortedDictionary<string, object?> properties = new(StringComparer.Ordinal);
-        foreach (PropertyInfo property in typeof(CsCodeGeneratorConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                     .Where(property => property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0)
-                     .OrderBy(property => property.Name, StringComparer.Ordinal))
-        {
-            Dictionary<string, object?> schema = CreatePropertySchema(property.PropertyType);
-            DefaultValueAttribute? defaultValue = property.GetCustomAttribute<DefaultValueAttribute>();
-            if (defaultValue != null && defaultValue.Value != null)
-                schema["default"] = defaultValue.Value;
-            properties[property.Name] = schema;
-        }
-        Dictionary<string, object?> document = new()
-        {
-            ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
-            ["title"] = "BindGen-CS configuration",
-            ["type"] = "object",
-            ["properties"] = properties,
-            ["required"] = new[] { "Namespace", "ApiName", "LibName", "EntryFiles" },
-            ["additionalProperties"] = true
-        };
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        File.WriteAllText(outputPath, JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine($"Created {outputPath}");
-        return 0;
-    }
-
-    private static Dictionary<string, object?> CreatePropertySchema(Type type)
-    {
-        Type actualType = Nullable.GetUnderlyingType(type) ?? type;
-        if (actualType.IsEnum)
-            return new() { ["type"] = "string", ["enum"] = Enum.GetNames(actualType) };
-        if (actualType == typeof(bool))
-            return new() { ["type"] = "boolean" };
-        if (actualType == typeof(byte) || actualType == typeof(short) || actualType == typeof(int) || actualType == typeof(long) ||
-            actualType == typeof(ushort) || actualType == typeof(uint) || actualType == typeof(ulong))
-            return new() { ["type"] = "integer" };
-        if (actualType == typeof(float) || actualType == typeof(double) || actualType == typeof(decimal))
-            return new() { ["type"] = "number" };
-        Type? dictionaryInterface = actualType.GetInterfaces().FirstOrDefault(value =>
-            value.IsGenericType && value.GetGenericTypeDefinition() == typeof(IDictionary<,>));
-        if (dictionaryInterface != null)
-            return new() { ["type"] = "object", ["additionalProperties"] = CreatePropertySchema(dictionaryInterface.GetGenericArguments()[1]) };
-        if (actualType != typeof(string) && actualType.GetInterfaces().Any(value => value.IsGenericType && value.GetGenericTypeDefinition() == typeof(IEnumerable<>)))
-        {
-            Type? elementType = actualType.IsArray ? actualType.GetElementType() : actualType.GetGenericArguments().FirstOrDefault();
-            return new() { ["type"] = "array", ["items"] = CreatePropertySchema(elementType ?? typeof(object)) };
-        }
-        return new() { ["type"] = actualType == typeof(string) ? "string" : "object" };
+        return SchemaCommand.Run(args, Environment.CurrentDirectory, Console.Out, Console.Error);
     }
 
     private static int Diff(string[] args)
@@ -459,7 +355,7 @@ internal static class Program
     private static void PrintHelp()
     {
         Console.WriteLine("BindGen-CS");
-        Console.WriteLine("  bindgen-cs init [config.json|header.h|header.hpp]");
+        Console.WriteLine("  bindgen-cs init [config.json|header.h|header.hpp] [--language auto|c|cpp] [--config output.json]");
         Console.WriteLine("  bindgen-cs doctor");
         Console.WriteLine("  bindgen-cs validate [config.json]");
         Console.WriteLine("  bindgen-cs inspect [config.json] [--json]");
@@ -467,8 +363,12 @@ internal static class Program
         Console.WriteLine("  bindgen-cs build [config.json] [--output directory]");
         Console.WriteLine("  bindgen-cs diff [config.json] [--output directory]");
         Console.WriteLine("  bindgen-cs workspace <validate|generate|diff> <workspace.json>");
-        Console.WriteLine("  bindgen-cs schema [output.json]");
+        Console.WriteLine("  bindgen-cs schema [output.json] [--kind c|cpp] [--allow-unknown-properties]");
+        Console.WriteLine("  bindgen-cs explain [diagnostic-code] [--json]");
         Console.WriteLine("  bindgen-cs bridge [config.json] [--output directory]");
+        Console.WriteLine("  bindgen-cs native-build [bridge.manifest.json] [--provider auto|clang|clang-cl|cmake|meson|msbuild]");
+        Console.WriteLine("      [--output library] [--compiler path] [--build-tool path] [--export-tool path]");
+        Console.WriteLine("      [--no-verify-exports] [--timeout seconds] [--dry-run] [--json]");
         Console.WriteLine("  bindgen-cs <config.json> [--output directory]");
         Console.WriteLine("  bindgen-cs version");
     }

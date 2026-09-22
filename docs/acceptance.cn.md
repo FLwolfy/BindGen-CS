@@ -13,6 +13,8 @@
 - `artifacts/acceptance/report.json`：机器可读结果；
 - `artifacts/acceptance/report.md`：人工审阅摘要。
 
+两份报告必须记录 UTC 生成时间、Git revision 和 working-tree dirty 状态，使本地未提交验收与发布 commit 验收可以明确区分。dirty 报告可以作为开发证据，但不能冒充某个不可变 release commit 的证据。
+
 ## 目标矩阵
 
 | 方面 | 目标 | 强制 gate |
@@ -94,7 +96,7 @@ bindgen-cs generate
 bindgen-cs build
 ```
 
-`doctor` 报告工具链问题；`validate` 只解析和验证 IR，不替换输出；`build` 编译生成 C#。C++ Bridge 的 native compile/link 由 real-C++ gate 或消费项目 build system 验证，不属于普通 `bindgen-cs build`。结构化 safety/C++ rejection 必须提供建议的配置路径或源码操作。
+`doctor` 报告工具链问题；`validate` 只解析和验证 IR，不替换输出；`build` 编译生成 C#。`bridge` 生成带版本的 native build manifest，`native-build` 可使用内置 Clang/GNU-compatible provider 编译它；普通 C# `build` 仍保持独立。结构化 safety/C++ rejection 必须提供建议的配置路径或源码操作。
 
 ## 架构证据
 
@@ -103,14 +105,16 @@ bindgen-cs build
 - Runtime 不依赖 generator；
 - Intermediate 不依赖 facade、emitter、Roslyn、filesystem 或 CLI；
 - Intermediate assembly 不引用其他 BGCS assembly；
-- IR analyzer 与 IR-native `CSharpEmitter.Emit` 有独立行为测试。
+- IR analyzer 与 IR-native `CSharpEmitter.Emit` 有独立行为测试；
+- IR-native C# 不支持的语义会在写输出前以稳定 `BGCSCS001` 失败。
 
-主配置路径仍调用 `CSharpEmitter.EmitLegacy` 和 `GenerationStep`。因此架构 9.0 表示当前声明的 boundary/build/test gate 通过，不表示 IR migration 已结束。完成标准见[架构说明](architecture.cn.md#迁移完成条件)。
+主配置路径仍调用隔离的 `AstGenerationStepEmitter` 和 `GenerationStep`；`CSharpEmitter` 已不再包含或公开 legacy 路径。因此架构 9.0 表示当前声明的 boundary/build/test gate 通过，不表示默认路径 IR migration 已结束。完成标准见[架构说明](architecture.cn.md#迁移完成条件)。
 
 ## 包和发布证据
 
 - 全部 package ID 使用同一版本。
 - 干净 local feed 可以恢复 public package 和全部传递实现包。
+- 消费者使用隔离 package cache；已经由 solution restore 锁定的第三方包只从本机 global-packages fallback 读取，发布 smoke 不依赖 nuget.org 在线可用性。
 - Tool 安装到空 tool path，并完成 init/generate/build smoke。
 - 同一 commit 两次 clean pack 在排除 NuGet signature metadata 后内容等价。
 - symbol package 和 repository metadata 完整。

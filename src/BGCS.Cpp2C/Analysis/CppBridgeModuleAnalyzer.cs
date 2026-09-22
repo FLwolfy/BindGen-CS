@@ -6,6 +6,7 @@ using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
+using BGCS.Cpp2C.Adapters;
 using BGCS.Intermediate;
 
 /// <summary>
@@ -37,7 +38,7 @@ internal sealed class CppBridgeModuleAnalyzer
                 continue;
             module.StructuredDiagnostics.Add(new(BindingDiagnosticSeverity.Warning,
                 $"Primary template '{template.FullName}' is not emitted. Add only the required concrete specialization to TemplateInstantiations.",
-                "BGCSCPP-INSTANTIATION"));
+                BindingDiagnosticCodes.CppInstantiation));
         }
         foreach (CppEnum cppEnum in container.Enums)
             module.Types.Add(new(cppEnum.FullName, config.GetCTypeName(cppEnum), BindingTypeKind.Enumeration,
@@ -53,23 +54,59 @@ internal sealed class CppBridgeModuleAnalyzer
                     : cppClass.ClassKind == CppClassKind.Union ? BindingTypeKind.Union : BindingTypeKind.Structure,
                 cppClass.SizeOf, cppClass.AlignOf);
             module.Types.Add(type);
+            IReadOnlyList<CppFunction> availableConstructors = cppClass.Constructors.Count > 0
+                ? cppClass.Constructors.ToList()
+                : cppClass.SpecializedTemplate?.Constructors.ToList() ?? [];
+            List<CppFunction> constructors = availableConstructors.Where(constructor =>
+                (constructor.Visibility is CppVisibility.Public or CppVisibility.Default) &&
+                !constructor.Flags.HasFlag(CppFunctionFlags.Deleted)).ToList();
+            if (!functions.Any(function => function.Flags.HasFlag(CppFunctionFlags.Pure)))
+            {
+                if (constructors.Count == 0 && availableConstructors.Count == 0)
+                    module.Functions.Add(CreateImplicitLifecycle(cppClass, type.ManagedName + "Create", BindingFunctionKind.Constructor));
+                for (int index = 0; index < constructors.Count; index++)
+                {
+                    CppFunction constructor = constructors[index];
+                    string defaultName = type.ManagedName + "Create" + (index == 0 ? string.Empty : index.ToString());
+                    if (!config.IsCallableExcluded(cppClass, constructor, defaultName))
+                        module.Functions.Add(AnalyzeConstructor(cppClass, constructor, defaultName));
+                }
+            }
+            CppFunction? destructor = cppClass.Destructors.FirstOrDefault(value =>
+                (value.Visibility is CppVisibility.Public or CppVisibility.Default) &&
+                !value.Flags.HasFlag(CppFunctionFlags.Deleted));
+            string destroyName = type.ManagedName + "Destroy";
+            if (cppClass.Destructors.Count == 0)
+                module.Functions.Add(CreateImplicitLifecycle(cppClass, destroyName, BindingFunctionKind.Destructor));
+            else if (destructor != null && !config.IsCallableExcluded(cppClass, destructor, destroyName))
+                module.Functions.Add(AnalyzeDestructor(cppClass, destructor, destroyName));
             foreach (CppFunction function in functions)
-                module.Functions.Add(AnalyzeFunction(cppClass, function));
+            {
+                string defaultName = $"{config.GetCTypeName(cppClass)}_{function.Name}";
+                if (!config.IsCallableExcluded(cppClass, function, defaultName))
+                    module.Functions.Add(AnalyzeFunction(cppClass, function, defaultName));
+            }
         }
         foreach (CppFunction function in container.Functions.Where(function => function.TemplateParameters.Count == 0))
-            module.Functions.Add(AnalyzeFunction(null, function));
+        {
+            string defaultName = config.GetCFunctionName(function);
+            if (!config.IsCallableExcluded(null, function, defaultName))
+                module.Functions.Add(AnalyzeFunction(null, function, defaultName));
+        }
         foreach (CppNamespace cppNamespace in container.Namespaces)
             AnalyzeContainer(cppNamespace, module);
     }
 
-    private BindingFunction AnalyzeFunction(CppClass? declaringType, CppFunction function)
+    private BindingFunction AnalyzeFunction(CppClass? declaringType, CppFunction function, string defaultName)
     {
         BindingFunctionKind kind = function.Flags.HasFlag(CppFunctionFlags.Constructor)
             ? BindingFunctionKind.Constructor
             : function.Flags.HasFlag(CppFunctionFlags.Destructor)
                 ? BindingFunctionKind.Destructor
-                : declaringType == null ? BindingFunctionKind.Free : BindingFunctionKind.Instance;
-        BindingFunction result = new(function.Name, config.NamePrefix + function.Name, kind,
+                : declaringType == null ? BindingFunctionKind.Free
+                : (function.StorageQualifier & CppStorageQualifier.Static) != 0 ? BindingFunctionKind.Static
+                : BindingFunctionKind.Instance;
+        BindingFunction result = new(function.Name, config.GetCFunctionName(declaringType, function, defaultName), kind,
             AnalyzeType(declaringType, function.ReturnType), AnalyzeMarshalling(function.ReturnType, null))
         {
             CallingConvention = function.CallingConvention.ToString(),
@@ -82,24 +119,61 @@ internal sealed class CppBridgeModuleAnalyzer
         return result;
     }
 
+    private BindingFunction AnalyzeConstructor(CppClass declaringType, CppFunction constructor, string defaultName)
+    {
+        string typeName = config.GetCTypeName(declaringType);
+        BindingFunction result = new(constructor.Name, config.GetCFunctionName(declaringType, constructor, defaultName),
+            BindingFunctionKind.Constructor, new(declaringType.FullName + "*", typeName + "*", 1, false, nint.Size),
+            new(MarshallingStrategy.Handle, BindingOwnership.Owned))
+        {
+            DeclaringType = declaringType.FullName,
+            CallingConvention = constructor.CallingConvention.ToString()
+        };
+        foreach (CppParameter parameter in constructor.Parameters)
+            result.Parameters.Add(new(parameter.Name, parameter.Name, AnalyzeType(declaringType, parameter.Type), BindingDirection.In,
+                AnalyzeMarshalling(parameter.Type, parameter.Name)));
+        return result;
+    }
+
+    private BindingFunction AnalyzeDestructor(CppClass declaringType, CppFunction destructor, string defaultName)
+    {
+        BindingFunction result = CreateImplicitLifecycle(declaringType,
+            config.GetCFunctionName(declaringType, destructor, defaultName), BindingFunctionKind.Destructor);
+        return result;
+    }
+
+    private BindingFunction CreateImplicitLifecycle(CppClass declaringType, string exportedName, BindingFunctionKind kind)
+    {
+        BindingTypeReference returnType = kind == BindingFunctionKind.Constructor
+            ? new(declaringType.FullName + "*", config.GetCTypeName(declaringType) + "*", 1, false, nint.Size)
+            : new("void", "void", 0, false, 0);
+        BindingFunction result = new(kind == BindingFunctionKind.Constructor ? declaringType.Name : "~" + declaringType.Name,
+            exportedName, kind, returnType,
+            new(kind == BindingFunctionKind.Constructor ? MarshallingStrategy.Handle : MarshallingStrategy.Blittable,
+                kind == BindingFunctionKind.Constructor ? BindingOwnership.Owned : BindingOwnership.Borrowed))
+        {
+            DeclaringType = declaringType.FullName
+        };
+        if (kind == BindingFunctionKind.Destructor)
+            result.Parameters.Add(new("self", "self", new(declaringType.FullName + "*", config.GetCTypeName(declaringType) + "*", 1, false, nint.Size),
+                BindingDirection.In, new(MarshallingStrategy.Handle, BindingOwnership.Transferred)));
+        return result;
+    }
+
     private MarshallingPlan AnalyzeMarshalling(CppType type, string? parameterName)
     {
-        if (config.IsUtf8StringType(type))
-            return new(MarshallingStrategy.String, BindingOwnership.Borrowed, BindingStringEncoding.Utf8, NullTerminated: true);
-        if (config.IsUniquePtrType(type))
-            return new(MarshallingStrategy.Pointer, BindingOwnership.Transferred, RequiresCleanup: true);
-        if (config.IsSharedPtrType(type))
-            return new(MarshallingStrategy.Pointer, BindingOwnership.Shared);
-        if (config.IsSpanType(type) || config.IsVectorType(type))
-            return new(MarshallingStrategy.Span, BindingOwnership.Borrowed,
-                LengthParameter: parameterName == null ? "out_count" : parameterName + "_count");
-        if (config.IsOptionalType(type))
+        CppTypeAdapterPlan? adapter = config.ResolveTypeAdapter(type,
+            parameterName == null ? CppTypeAdapterUse.Return : CppTypeAdapterUse.Parameter);
+        if (adapter != null)
         {
-            bool nonBlittable = config.TryGetTemplateElementType(type, out CppType? elementType) &&
-                !config.IsBlittableBridgeType(elementType!);
-            return new(MarshallingStrategy.Optional,
-                nonBlittable ? BindingOwnership.Owned : BindingOwnership.Borrowed,
-                RequiresCleanup: nonBlittable);
+            string? length = adapter.Kind is CppTypeAdapterKind.Span or CppTypeAdapterKind.Vector
+                ? parameterName == null ? "out_count" : parameterName + "_count"
+                : null;
+            return new(adapter.Marshalling, adapter.Ownership,
+                adapter.Kind == CppTypeAdapterKind.Utf8String ? BindingStringEncoding.Utf8 : BindingStringEncoding.None,
+                NullTerminated: adapter.Kind == CppTypeAdapterKind.Utf8String,
+                LengthParameter: length,
+                RequiresCleanup: adapter.RequiresCleanup);
         }
         return new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed);
     }

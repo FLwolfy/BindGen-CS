@@ -1,5 +1,7 @@
 ﻿namespace BGCS.Cpp2C
 {
+    using BGCS.Cpp2C.Configuration;
+    using BGCS.Core.Extensibility;
     using Newtonsoft.Json;
 
 
@@ -39,8 +41,12 @@
         /// <returns>Result produced by <c>Create</c>.</returns>
         public static readonly JsonSerializer MergeSerializer = JsonSerializer.Create(MergeSerializerSettings);
 
-        [JsonIgnore]
-        internal string? ConfigDirectory { get; private set; }
+        /// <summary>
+        /// Gets the absolute directory of the loaded configuration, used to resolve relative paths without changing
+        /// the process current directory. It is null for configurations created directly in memory.
+        /// </summary>
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        public string? ConfigDirectory { get; private set; }
 
         /// <summary>
         /// Loads and composes a C++ bridge configuration without rewriting an existing source file.
@@ -59,19 +65,14 @@
                 result.Save(fullPath);
 
             composer ??= new ConfigComposer();
-            string previousDirectory = Environment.CurrentDirectory;
-            try
-            {
-                result.ConfigDirectory = Path.GetDirectoryName(fullPath) ?? previousDirectory;
-                Environment.CurrentDirectory = result.ConfigDirectory;
-                composer.Compose(ref result);
-                result.ConfigDirectory = Path.GetDirectoryName(fullPath) ?? previousDirectory;
-                return result;
-            }
-            finally
-            {
-                Environment.CurrentDirectory = previousDirectory;
-            }
+            string configDirectory = Path.GetDirectoryName(fullPath) ?? Environment.CurrentDirectory;
+            result.ConfigDirectory = configDirectory;
+            composer.Compose(ref result, configDirectory);
+            result.ConfigDirectory = configDirectory;
+            Cpp2CConfigValidator.Validate(result);
+            foreach (string pluginAssembly in result.PluginAssemblies)
+                BindingPluginLoader.Load(Path.GetFullPath(pluginAssembly, configDirectory), result.Plugins);
+            return result;
         }
 
         /// <summary>

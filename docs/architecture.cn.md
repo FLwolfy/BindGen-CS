@@ -18,7 +18,7 @@ CLI / CsCodeGenerator / BindingGenerator
           ├─ DeclarationGraph
           ├─ BindingModuleAnalyzer → BindingModule
           ├─ StrictSafetyAnalyzer
-          ├─ CSharpEmitter.EmitLegacy
+          ├─ AstGenerationStepEmitter（兼容 surface）
           │    └─ GenerationStep implementations
           ├─ post-patch / SingleFile / optional Runtime
           └─ GeneratedOutputTransaction.commit
@@ -27,9 +27,11 @@ CLI / CsCodeGenerator / BindingGenerator
 关键事实：
 
 - `BindingModule` 是真实分析结果，用于 structured result、安全诊断和新 emitter API。
-- 主 C# output 当前调用 `CSharpEmitter.EmitLegacy(...)`；它封装但没有消除旧 AST/metadata `GenerationStep`。
+- `CSharpEmitter` 已经只消费 IR。主 C# output 仍调用独立命名的 `AstGenerationStepEmitter`；这消除了 IR emitter 对 AST 的依赖，但不等于默认路径迁移完成。
 - `CSharpEmitter.Emit(BindingModule, EmissionContext)` 是 IR-native 路径，但还不是配置驱动生成的默认实现。
+- IR-native C# emitter 会在写文件前验证能否无损表达全部语义；暂不支持的语义通过结构化 `BGCSCS001` 报错，不会静默丢弃。
 - C++ Bridge 有独立 analyzer 和 `CBridgeEmitter.EmitAst` 路径，最终也返回 `BindingModule`；它与 C# 共享 contract，但并非所有 emission 都只消费 IR。
+- C++ Bridge 可生成带版本的 build manifest；`INativeBuildPipelineProvider` 将其转换为不依赖 shell 的多步骤计划。内置 direct Clang/GNU、clang-cl、CMake、Meson、MSBuild provider，并通过 `nm` / `dumpbin` 检查实际 export。
 - CLI `build` 在 pipeline 成功后另建临时 .NET 项目做 warning-as-error 编译；编译验证不属于 `BindingGenerationPipeline` 自身。
 
 ## 目标数据流
@@ -97,10 +99,25 @@ Analyzer 不创建正式输出文件。
 
 ### Emission
 
-- `CSharpEmitter`：同时包含 IR-native `Emit` 和当前主路径使用的 `EmitLegacy` adapter。
+- `CSharpEmitter`：只包含 IR-native `Emit` 与 lossless capability validation；剩余兼容路径由 `AstGenerationStepEmitter` 隔离。
 - `RuntimeEmitter`：从 module 生成 standalone runtime contract。
 - `SingleFileComposer`：通过 Roslyn syntax tree 做确定性合并。
 - `CBridgeEmitter`：生成 C++ → C wrapper；当前仍需要 AST-specific generation data。
+
+### Native build
+
+- `CppBridgeBuildManifest`：版本化、确定性、相对配置目录的 source、target、toolchain 与 link input 描述。
+- `INativeBuildProvider`：不通过 shell quoting，把 manifest 转换为 argument-list process plan。
+- `ClangNativeBuildProvider`：内置的跨平台 Clang/GNU-driver 实现。
+- `NativeBuildExecutor`：带 timeout、stdout/stderr 捕获的进程执行器，不修改全局 current directory。
+
+配置驱动的 C++ 生成也从显式 configuration directory 解析 header、include、sysroot、compiler path、output 和文件型 `BaseConfig` 链；它不会修改 `Environment.CurrentDirectory`，因此并发 generator 不会争用进程级路径状态。
+
+## Cache 与 Plugin
+
+C 与 C++ 配置生成使用 immutable SHA-256 output cache。Key 包含 generator identity、序列化配置、parser arguments、解析后的 compiler identity/version、plugin/adapter fingerprint，以及发现到的全部 C/C++ 输入精确内容。Entry 原子发布，并通过同一个 output transaction 恢复；无法稳定 fingerprint 的自定义状态会关闭 cache hit。
+
+`BindingPluginContract` version 1 提供显式 assembly entry point 和确定性 typed registration。Plugin assembly 使用隔离 dependency resolver，同时共享 host contract；整份 assembly 会先完整校验再原子注册，assembly 内容 hash 与 plugin version 会进入 cache key。C++ plugin 可注册 `ICppTypeAdapter` / `ICppCallableAdapter`，C# plugin 可注册附加 `IBindingEmitter`。
 
 ### Output
 
@@ -114,7 +131,7 @@ Analyzer 不创建正式输出文件。
 2. legacy `GenerationStep` 不再决定公开输出语义；
 3. metadata/patch 能力要么转成 IR transform，要么明确限定为 source post-processing；
 4. real-library source/public-API snapshots 与 native tests 保持一致；
-5. 删除 `EmitLegacy` 不会改变生成结果。
+5. 删除 `AstGenerationStepEmitter` 不会改变生成结果。
 
 C++ Bridge 的对应完成条件是：C Bridge emitter 只消费完整 IR，AST 只存在于 analysis 阶段。
 

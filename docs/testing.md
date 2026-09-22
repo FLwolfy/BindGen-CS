@@ -16,6 +16,7 @@ The test system separates fast managed feedback from target-specific release evi
 | Real C++ bridge | `./scripts/test-real-cpp-libraries.sh` | Bridge generation, native compiler validation, C# rebound, snapshots |
 | InnoEngine integration | `./scripts/test-innoengine-bindings.sh` | Workspace diff, import audit, native builds, full solution, native tests |
 | NuGet/tool | `./scripts/test-nuget-packages.sh` | Deterministic pack, clean restore, tool install and commands |
+| Performance | `./scripts/test-performance-budget.sh` | 10,000 declarations, cold generation and warm cache budgets |
 | Release acceptance | `./scripts/run-full-test-matrix.sh` | Every mandatory gate and machine-readable report |
 
 ## One-command full matrix
@@ -36,9 +37,10 @@ The full script runs all major BGCS capabilities in ordered layers:
 2. BGCS base/unit/parser logic (`BGCS.Tests`)
 3. Patch-specific behavior (`BGCS.Patching.Tests`)
 4. Generated output compile/runtime semantics (`BGCS.Generation.Tests`)
-5. `BGCS.Cpp2C` generation, native C++ syntax validation, DLL linking, and runtime invocation
-6. End-to-end demo generation (`runtime-generated` + `runtime-notgenerated`)
-7. NuGet dependency-closure restore, consumer compilation, execution, and `bindgen-cs` tool installation
+5. `BGCS.Cpp2C` generation, deterministic build manifests, native build-provider plans, C++ syntax validation, DLL linking, and runtime invocation
+6. CLI behavior (`init`, JSON Schema, diagnostic catalog, and native-build plans)
+7. End-to-end demo generation (`runtime-generated` + `runtime-notgenerated`)
+8. NuGet dependency-closure restore, consumer compilation, execution, and `bindgen-cs` tool installation
 
 On success it writes `artifacts/acceptance/report.json` and `report.md`. Report generation fails if any mandatory gate marker is missing. See [Acceptance](acceptance.md) for the scoring contract.
 
@@ -73,14 +75,23 @@ Demo semantics:
 `tests/BGCS.Cpp2C.Tests` covers:
 
 - C++ to C bridge generation semantics and metadata flow
+- deterministic, portable bridge build manifests and manifest validation
+- shell-independent Clang/GNU build plans and actual host shared-library compilation
 - configured STL adapters for string, vector, span, optional, unique_ptr, and shared_ptr
 - managed virtual callback proxy generation
 - multiple-inheritance cast adjustment
 - clang++ bridge DLL linking and Create/Invoke/Destroy/error-channel runtime calls
 
+`tests/BGCS.Tool.Tests` covers:
+
+- portable, config-relative `init` output and C/C++ language selection
+- strict C/C++ JSON Schema generation and compatibility opt-out
+- stable diagnostic lookup through `explain`
+- versioned manifest validation and shell-independent `native-build --dry-run` plans
+
 ## CI usage
 
-The repository workflow runs the managed solution on Windows, Linux, and macOS, and runs the complete acceptance job on its declared macOS arm64 target. Managed cross-platform CI is not a substitute for a target-specific native acceptance report.
+The repository workflow runs the managed solution and declares complete acceptance jobs for Windows x64, Linux x64, and macOS arm64. A target is accepted only after its job emits its own report; a configured job or managed-only pass is not a target acceptance report.
 
 CI can invoke:
 

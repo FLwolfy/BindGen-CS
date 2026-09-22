@@ -128,6 +128,10 @@ bash "${ROOT_DIR}/scripts/test-nuget-packages.sh"
 touch "${GATE_DIR}/nuget-tool"
 
 log "Layer 6: Machine-readable acceptance report"
+bash "${ROOT_DIR}/scripts/test-performance-budget.sh"
+touch "${GATE_DIR}/performance"
+
+log "Layer 7: Machine-readable acceptance report"
 bash "${ROOT_DIR}/scripts/write-acceptance-report.sh"
 
 log "All layers passed."

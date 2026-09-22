@@ -12,6 +12,27 @@ namespace BGCS.Tests;
 public class BindingIntermediateRepresentationTests
 {
     [Fact]
+    public void CSharpEmitter_UnsupportedSemantics_ShouldFailBeforeWritingOutput()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-emitter-validation-" + Guid.NewGuid().ToString("N"));
+        BindingModule module = new("UnsafeApi", "BGCS.Tests.Generated", "unsafe", "host");
+        BindingType type = new("Flags", "Flags", BindingTypeKind.Structure, 4, 4);
+        type.Fields.Add(new BindingField("enabled", "Enabled", new("unsigned int", "uint", 0, false, 4),
+            0, 0, 1, []));
+        module.Types.Add(type);
+        module.Functions.Add(new BindingFunction("log", "Log", BindingFunctionKind.Free,
+            new("void", "void", 0, false, 0),
+            new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)) { IsVariadic = true });
+
+        BindingEmissionException exception = Assert.Throws<BindingEmissionException>(() =>
+            new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
+
+        Assert.Equal(2, exception.Diagnostics.Count);
+        Assert.All(exception.Diagnostics, diagnostic => Assert.Equal(BindingDiagnosticCodes.CSharpUnsupported, diagnostic.Code));
+        Assert.False(Directory.Exists(temp));
+    }
+
+    [Fact]
     public void Generate_StrictSafetyError_ShouldRejectAndPreserveLastGoodOutput()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-strict-" + Guid.NewGuid().ToString("N"));

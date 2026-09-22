@@ -35,10 +35,11 @@ bindgen-cs build bindgen.json
 
 默认输出为 `Generated/Bindings.cs`。`build` 会在临时消费项目中以 nullable 和 warning-as-error 编译生成源码；它验证 managed bindings，不替代上游 native library 的构建。
 
-`init native.h` 会生成可立即运行的配置。准备提交配置前，应把其中的绝对 header/include 路径改成相对于配置文件的仓库路径：
+`init native.h` 会生成可立即运行、可提交的配置。Header 和 include 路径相对于配置文件并统一使用 `/`，因此同一配置可以在 Windows、macOS 和 Linux 使用：
 
 ```json
 {
+  "ConfigVersion": 1,
   "Preset": "host-c,c-library",
   "Namespace": "MyCompany.Native",
   "ApiName": "NativeApi",
@@ -57,9 +58,10 @@ bindgen-cs build bindgen.json
 ```bash
 bindgen-cs init include/library.hpp
 bindgen-cs bridge bridge.json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
-这会生成 C ABI wrapper；默认 `init` 配置还会从 bridge header 生成 C# bindings。你仍需使用原库的 compiler flags、include path 和 linker inputs，把生成的 `src/Classes.cpp` 编译进 native shared library。
+这会生成 C ABI wrapper；默认 `init` 配置还会从 bridge header 生成 C# bindings。`bridge.manifest.json` 会记录 generated/original sources、include directories、defines、compiler/linker arguments、language standard、libraries 和 resolved target。`native-build --provider auto|clang|clang-cl|cmake|meson|msbuild` 会将它转换为不经过 shell 的单步或多步构建流水线。构建成功后默认通过 `nm` / `dumpbin` 将所有生成的 `API(...)` 声明与真实二进制导出表逐项核对；只有外部发布 gate 已承担此检查时才使用 `--no-verify-exports`。
 
 已验证的 C++ 范围包括 class 构造/析构、instance/static method、overload、namespace function、异常边界、multiple-inheritance pointer adjustment、显式模板实例、`std::string`、`std::vector`、`std::span`、blittable/non-blittable `std::optional`、`std::unique_ptr`、`std::shared_ptr` 和配置式 pure-virtual callback proxy。它不是任意 C++ 语义的自动翻译器；未知 specialization 会明确失败。
 
@@ -75,8 +77,10 @@ bindgen-cs bridge bridge.json
 | `build` | 生成并编译验证 C# 输出 |
 | `diff` | 在临时目录重生成并检查 checked-in bindings 是否最新 |
 | `workspace` | 批量 `validate`、`generate` 或 `diff` 多个项目 |
-| `schema` | 从当前安装版本生成完整 JSON Schema |
+| `schema` | 从当前安装版本生成严格的 C 或 C++ JSON Schema |
+| `explain` | 以文本或 JSON 列举、解释稳定诊断代码 |
 | `bridge` | 生成配置驱动的 C++ → C Bridge |
+| `native-build` | 从 bridge manifest 编译 target shared library，或用 `--dry-run` 检查计划 |
 
 完整示例见[快速开始](docs/getting-started.cn.md)，配置决策见[配置指南](docs/configuration-guide.cn.md)。
 
@@ -86,8 +90,10 @@ bindgen-cs bridge bridge.json
 - 支持 `DllImport`、`LibraryImport` 和显式 function table/native context。
 - 处理 struct、union、packing、bitfield、fixed array、typedef、opaque handle、callback 和 target-dependent primitive。
 - 使用 `MarshallingMappings` 表达 string encoding、ownership、cleanup、pointer/count、capacity/written-count 和 caller allocation。
-- Pipeline 会生成共享 Binding IR 并据此执行安全分析；Runtime/C Bridge 已使用明确 emitter 边界，主 C# 输出仍经过兼容 `GenerationStep` 路径并由 `CSharpEmitter` 封装。输出通过 staging transaction 原子替换。
+- Pipeline 会生成共享 Binding IR 并据此执行安全分析；`CSharpEmitter` 本身已经只消费 IR。主 C# 兼容 surface 仍通过独立隔离的 AST generation-step lowerer，直到 constant、delegate、alias、friendly overload 和全部 snapshot 语义迁移完毕。输出通过 staging transaction 原子替换。
 - 支持 BaseConfig、可组合 preset、SingleFile、workspace、确定性 diff 和 target-specific snapshot。
+- 内容寻址增量缓存会精确 hash 输入、compiler/toolchain、配置、plugin 与 adapter fingerprint，原子发布/恢复并隔离 target；已有并发 writer 验收。无法稳定 fingerprint 的有状态自定义扩展会保守地关闭缓存命中。
+- 提供版本化第三方 plugin contract、隔离 dependency resolution、原子且确定性的 typed service registry 和 v1 API shape 锁定测试；C++ type/callable adapter 不需要修改核心分支。
 - 发布 CLI、generator、C++ Bridge、Runtime 和零依赖 IR 包。
 
 ## 安全契约
@@ -145,7 +151,7 @@ if (!generator.GenerateConfigured())
 ./scripts/run-full-test-matrix.sh
 ```
 
-报告只有在 managed tests、原生 ABI/runtime gate、真实 C/C++ 库、确定性 snapshot、InnoEngine workspace/native build/test 和 NuGet/tool smoke 全部通过后才生成：
+报告只有在 managed tests、原生 ABI/runtime gate、真实 C/C++ 库、确定性 snapshot、InnoEngine workspace/native build/test、NuGet/tool smoke 和 10,000 declaration 冷/热性能预算全部通过后才生成：
 
 - `artifacts/acceptance/report.json`
 - `artifacts/acceptance/report.md`
@@ -170,6 +176,8 @@ if (!generator.GenerateConfigured())
 - [配置指南](docs/configuration-guide.cn.md)
 - [诊断指南](docs/diagnostics.cn.md)
 - [架构说明](docs/architecture.cn.md)
+- [超级通用执行路线图](docs/roadmap.cn.md)
+- [工程成熟度审计](docs/assessment.cn.md)
 - [验收规范](docs/acceptance.cn.md)
 - [测试说明](docs/testing.md)
 

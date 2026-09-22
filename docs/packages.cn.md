@@ -20,7 +20,7 @@
 导出命令：
 
 ```text
-init, doctor, validate, inspect, generate, build, diff, schema, bridge, version
+init, doctor, validate, inspect, generate, build, diff, schema, explain, bridge, native-build, version
 ```
 
 Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码不依赖 Tool 包。
@@ -46,6 +46,8 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 主要公开 API：
 
 - `Cpp2CCodeGenerator`、`Cpp2CGeneratorConfig`；
+- `CppBridgeBuildManifest`、`CppBridgeBuildManifestEmitter` 和 `Cpp2CConfigValidator`；
+- `INativeBuildProvider`、`ClangNativeBuildProvider`、`NativeBuildPlan` 和 `NativeBuildExecutor`；
 - `BGCS.Cpp2C.Emission.CBridgeEmitter`；
 - bridge generation-step 扩展点；
 - C/C++ type lowering helpers 和生成函数 metadata。
@@ -63,6 +65,7 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 - `BindingGenerationResult`、`BindingDiagnostic`；
 - `IBindingEmitter`、`EmissionContext`；
 - type/function/direction/ownership/encoding/marshalling enum。
+- `BindingDiagnosticCodes`、`BindingDiagnosticDescriptor` 和 `BindingDiagnosticCatalog`。
 
 适合不应加载 Clang 或 Roslyn 的 analyzer、API diff、其他语言 emitter 和 build integration。
 
@@ -98,6 +101,6 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 - 五个真实 C 库 gate 与 bimg C++ Bridge 会编译生成输出并检查 target-specific 确定性 API snapshot；InnoEngine 还会单独构建其 native binary，并执行全部六个 native binding 测试项目。
 - 完整 solution、生成消费者和 package smoke project 均以 warning-as-error 模式通过编译。
 
-架构上，`BindingModule`、analysis 和 IR-native emitter API 已公开；配置驱动的主 C# 输出仍由 `CSharpEmitter.EmitLegacy` 封装旧 `GenerationStep`。需要编写新 emitter 的消费者可以直接使用 `BGCS.Intermediate`，但不应假定移除 legacy steps 已经完成。
+架构上，`BindingModule`、analysis 和 IR-native emitter API 已公开；配置驱动的主 C# 输出仍由内部 `AstGenerationStepEmitter` 隔离旧 `GenerationStep`，而 `CSharpEmitter` 本身只消费 IR。需要编写新 emitter 的消费者可以直接使用 `BGCS.Intermediate`，但不应假定移除 legacy steps 已经完成。
 
 完整证据等级与下一阶段差距见[能力与边界](capabilities.cn.md)。

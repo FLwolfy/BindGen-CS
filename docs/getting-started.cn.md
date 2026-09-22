@@ -51,7 +51,12 @@ dotnet add package BGCS.Runtime
 
 如果启用了 `GenerateRuntimeSource`，应编译生成的 `Runtime.cs`，不要同时引用重复 Runtime 类型。
 
-`init native.h` 为了立即可运行会写入绝对 header/include 路径。提交 `bindgen.json` 前，把它们改成相对于配置文件的仓库路径，以便 CI 和其他开发机复现。
+`init` 会写入相对于生成配置的可移植路径。对于语义不明确的 `.h`，可以显式选择工作流；使用 `--config` 可以把配置放在其他目录：
+
+```bash
+bindgen-cs init include/native.h --language c --config bindings/bindgen.json
+bindgen-cs init include/library.h --language cpp --config bindings/bridge.json
+```
 
 ## 使用 Umbrella Header
 
@@ -105,9 +110,12 @@ bindgen-cs init include/library.hpp
 
 ```json
 {
+  "ConfigVersion": 1,
   "EntryFiles": ["include/library.hpp"],
   "AllowedHeaders": ["include/library.hpp"],
-  "OutputPath": "GeneratedBridge"
+  "OutputPath": "GeneratedBridge",
+  "LanguageStandard": "c++23",
+  "GenerateBuildManifest": true
 }
 ```
 
@@ -115,6 +123,7 @@ bindgen-cs init include/library.hpp
 
 ```bash
 bindgen-cs bridge bridge.json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
 设置 `GenerateCSharpBindings=true`，并提供 `CSharpNamespace`、`CSharpApiName`、`NativeLibraryName`、`CSharpOutputPath`，即可在这一条命令中同时生成 native C Bridge 和 C# bindings。
@@ -130,6 +139,17 @@ generator.Generate("include/library.hpp", "GeneratedBridge");
 ```
 
 把生成的 `src/Classes.cpp`、`include` 和原库 include path 编译成 DLL，再让 BGCS 读取生成的 C 头。自动 native linking 仍取决于原库构建，是独立验收项。
+
+生成的 `bridge.manifest.json` 是交给 native build 自动化的确定性契约。路径尽量相对于 manifest，内容包括 target、C++ standard、generated/original files、include directories、defines、compiler/linker arguments、library search path 和 libraries。`LanguageStandard` 默认 `c++23`；`AdditionalArguments` 中已有的 `-std=` 仍作为显式兼容覆盖。
+
+可以只检查计划、覆盖 compiler，或指定明确 artifact path：
+
+```bash
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json --dry-run --json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json --compiler clang++ --output artifacts/libnative.dylib
+```
+
+`native-build` 不调用 command shell，可选择 `auto`、direct Clang/GNU、clang-cl、CMake、Meson 或 MSBuild。所有 provider 使用同一份 manifest 中的 library search path、link library、linker argument、target triple 和 sysroot（在对应 backend 支持范围内）；构建成功后默认将生成声明与二进制 export table 核对。
 
 不要假定任意 template/STL type 都能自动 lowering。显式实例和已支持 adapter 见[能力矩阵](capabilities.cn.md)；拒绝原因见[诊断指南](diagnostics.cn.md)。
 

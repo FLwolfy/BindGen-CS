@@ -35,10 +35,11 @@ bindgen-cs build bindgen.json
 
 The default output is `Generated/Bindings.cs`. `build` compiles the generated source in a temporary consumer project with nullable analysis and warnings as errors. It validates the managed bindings; it does not replace the upstream native-library build.
 
-`init native.h` creates an immediately runnable configuration. Before committing it, replace its absolute header/include paths with repository-relative paths resolved from the configuration file:
+`init native.h` creates an immediately runnable, portable configuration. Header and include paths are written relative to the configuration file and use `/` separators, so the same file can be committed and used on Windows, macOS, and Linux:
 
 ```json
 {
+  "ConfigVersion": 1,
   "Preset": "host-c,c-library",
   "Namespace": "MyCompany.Native",
   "ApiName": "NativeApi",
@@ -57,9 +58,10 @@ Treat the output directory as reproducible build output. Customize naming, types
 ```bash
 bindgen-cs init include/library.hpp
 bindgen-cs bridge bridge.json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
-This emits a C ABI wrapper; the default `init` configuration also generates C# bindings from the bridge header. You still compile the generated `src/Classes.cpp` into a native shared library using the original library's compiler flags, include paths, and linker inputs.
+This emits a C ABI wrapper; the default `init` configuration also generates C# bindings from the bridge header. `bridge.manifest.json` records generated/original sources, include directories, definitions, compiler/linker arguments, language standard, libraries, and resolved target. `native-build --provider auto|clang|clang-cl|cmake|meson|msbuild` consumes it as a shell-independent one- or multi-step pipeline. Successful builds verify every generated `API(...)` declaration against the actual `nm`/`dumpbin` export table by default; use `--no-verify-exports` only when another release gate owns that check.
 
 Verified C++ coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, explicit template instances, `std::string`, `std::vector`, `std::span`, blittable and non-blittable `std::optional`, `std::unique_ptr`, `std::shared_ptr`, and configured pure-virtual callback proxies. This is not an arbitrary C++ semantics translator; unknown specializations fail explicitly.
 
@@ -75,8 +77,10 @@ Verified C++ coverage includes construction/destruction, instance and static met
 | `build` | Generate and compile-check the C# output |
 | `diff` | Regenerate in temporary storage and compare checked-in bindings |
 | `workspace` | Batch `validate`, `generate`, or `diff` multiple projects |
-| `schema` | Generate complete JSON Schema from the installed version |
+| `schema` | Generate strict C or C++ JSON Schema from the installed version |
+| `explain` | List or explain stable diagnostic codes in text or JSON |
 | `bridge` | Generate a configuration-driven C++ to C bridge |
+| `native-build` | Compile a bridge manifest into a target shared library, or inspect the plan with `--dry-run` |
 
 See [Getting started](docs/getting-started.md) for complete examples and the [Configuration guide](docs/configuration-guide.md) for configuration decisions.
 
@@ -86,8 +90,10 @@ See [Getting started](docs/getting-started.md) for complete examples and the [Co
 - `DllImport`, `LibraryImport`, and explicit function-table/native-context import modes.
 - Structs, unions, packing, bitfields, fixed arrays, typedefs, opaque handles, callbacks, and target-dependent primitives.
 - `MarshallingMappings` for string encoding, ownership, cleanup, pointer/count, capacity/written-count, and caller allocation.
-- The pipeline produces a shared Binding IR for safety analysis. Runtime/C Bridge use explicit emitter boundaries, while primary C# output still runs through compatibility `GenerationStep` implementations encapsulated by `CSharpEmitter`. Output replacement is transactional.
+- The pipeline produces a shared Binding IR for safety analysis. `CSharpEmitter` itself is now IR-only; the primary compatibility surface still uses the separately isolated AST generation-step lowerer until constants, delegates, aliases, friendly overloads, and all snapshot semantics have been migrated. Output replacement is transactional.
 - BaseConfig composition, presets, single-file output, workspaces, deterministic diff, and target-specific snapshots.
+- Content-addressed incremental output caching with exact input, compiler/toolchain, config, plugin, and adapter fingerprints; atomic publication/restoration, target isolation, and concurrent-writer tests. Stateful custom extensions conservatively disable cache restoration unless their behavior has a stable fingerprint.
+- Versioned third-party plugin contracts, isolated dependency resolution, atomic deterministic service registration, and locked v1 API-shape tests; C++ type/callable adapters can be supplied without core branches.
 - Separate CLI, generator, C++ bridge, Runtime, and dependency-free IR packages.
 
 ## Safety contract
@@ -145,7 +151,7 @@ Use `BGCS.Facade.BindingGenerator` when you need the structured IR. See [Archite
 ./scripts/run-full-test-matrix.sh
 ```
 
-Reports are produced only after managed tests, native ABI/runtime gates, real C/C++ libraries, deterministic snapshots, the InnoEngine workspace/native-build/test gate, and NuGet/tool smoke tests all pass:
+Reports are produced only after managed tests, native ABI/runtime gates, real C/C++ libraries, deterministic snapshots, the InnoEngine workspace/native-build/test gate, NuGet/tool smoke tests, and the 10,000-declaration cold/warm performance budget all pass:
 
 - `artifacts/acceptance/report.json`
 - `artifacts/acceptance/report.md`
@@ -170,6 +176,8 @@ See [NuGet packages and public APIs](docs/packages.md) for selection guidance.
 - [Configuration guide](docs/configuration-guide.md)
 - [Diagnostics guide](docs/diagnostics.md)
 - [Architecture](docs/architecture.md)
+- [Universal execution roadmap](docs/roadmap.md)
+- [Engineering maturity assessment](docs/assessment.md)
 - [Acceptance specification](docs/acceptance.md)
 - [Testing](docs/testing.md)
 

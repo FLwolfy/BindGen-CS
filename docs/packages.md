@@ -20,7 +20,7 @@ All release packages are version-aligned and validated in a clean NuGet consumer
 Commands exported by the package:
 
 ```text
-init, doctor, validate, inspect, generate, build, diff, schema, bridge, version
+init, doctor, validate, inspect, generate, build, diff, schema, explain, bridge, native-build, version
 ```
 
 The tool depends on `BGCS` and `BGCS.Cpp2C` inside its isolated tool installation. Generated application code does not depend on the tool package.
@@ -46,6 +46,8 @@ Direct dependencies include `BGCS.Intermediate`, `BGCS.Core`, `BGCS.Language`, `
 Primary public APIs:
 
 - `Cpp2CCodeGenerator`, `Cpp2CGeneratorConfig`;
+- `CppBridgeBuildManifest`, `CppBridgeBuildManifestEmitter`, and `Cpp2CConfigValidator`;
+- `INativeBuildProvider`, `ClangNativeBuildProvider`, `NativeBuildPlan`, and `NativeBuildExecutor`;
 - `BGCS.Cpp2C.Emission.CBridgeEmitter`;
 - bridge generation-step extension points;
 - C/C++ type lowering helpers and generated-function metadata.
@@ -63,6 +65,7 @@ This package has no dependency on another BGCS assembly. It exports:
 - `BindingGenerationResult`, `BindingDiagnostic`;
 - `IBindingEmitter`, `EmissionContext`;
 - supporting type/function/direction/ownership/encoding/marshalling enums.
+- `BindingDiagnosticCodes`, `BindingDiagnosticDescriptor`, and `BindingDiagnosticCatalog`.
 
 Use it for analyzers, API diff tools, alternate language emitters, and build-system integrations that should not load Clang or Roslyn.
 
@@ -98,6 +101,6 @@ Applications should not install these individually unless they directly consume 
 - Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots. InnoEngine separately builds its native binaries and runs all six native binding test projects.
 - The complete solution, generated consumers, and package smoke projects compile with warnings treated as errors.
 
-Architecturally, `BindingModule`, analysis, and the IR-native emitter API are public. Primary configuration-driven C# output still routes through legacy `GenerationStep` implementations encapsulated by `CSharpEmitter.EmitLegacy`. Consumers can build new emitters against `BGCS.Intermediate`, but should not assume legacy-step removal is complete.
+Architecturally, `BindingModule`, analysis, and the IR-native emitter API are public. Primary configuration-driven C# output still routes through legacy `GenerationStep` implementations isolated by the internal `AstGenerationStepEmitter`; `CSharpEmitter` itself is IR-only. Consumers can build new emitters against `BGCS.Intermediate`, but should not assume legacy-step removal is complete.
 
 See [Capabilities and boundaries](capabilities.md) for the complete evidence levels and remaining gaps.

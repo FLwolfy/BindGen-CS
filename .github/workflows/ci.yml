@@ -40,9 +40,19 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: artifacts/test-results
 
-  acceptance-macos-arm64:
-    name: Acceptance (macOS arm64)
-    runs-on: macos-14
+  acceptance:
+    name: Acceptance (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64-gnu
+          - os: windows-latest
+            target: windows-x64-msvc
+          - os: macos-14
+            target: macos-arm64-darwin
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout BindGen-CS
@@ -61,6 +71,7 @@ jobs:
           dotnet-version: "9.0.x"
 
       - name: Run full acceptance matrix
+        shell: bash
         run: bash ./scripts/run-full-test-matrix.sh
         env:
           CONFIGURATION: "Release"
@@ -70,5 +81,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: acceptance-macos-arm64
+          name: acceptance-${{ matrix.target }}
           path: artifacts/acceptance

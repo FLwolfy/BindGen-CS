@@ -16,9 +16,10 @@ Generate an editor/CI schema with:
 
 ```bash
 bindgen-cs schema bindgen.schema.json
+bindgen-cs schema bridge.schema.json --kind cpp
 ```
 
-The schema is derived from the installed `CsCodeGeneratorConfig` version, including enum names and discoverable defaults. It is useful for property discovery; detailed semantics for object-valued mappings remain in this guide and the tests.
+Schemas are derived from the installed C or C++ configuration type, include nested public object shapes, enum names, and core semantic descriptions, and reject unknown root properties by default. Use `--allow-unknown-properties` only while migrating legacy configuration. Detailed marshalling semantics remain in this guide and the tests.
 
 ## Make four decisions first
 
@@ -33,6 +34,7 @@ The schema is derived from the installed `CsCodeGeneratorConfig` version, includ
 
 ```json
 {
+  "ConfigVersion": 1,
   "Namespace": "MyCompany.Native.Library",
   "ApiName": "LibraryApi",
   "LibName": "library",
@@ -45,6 +47,8 @@ The schema is derived from the installed `CsCodeGeneratorConfig` version, includ
 ```
 
 This configuration follows the host ABI. Reproducible release configurations should use an explicit target preset or set platform/architecture/ABI directly; the configured target must match the final native binary.
+
+`ConfigVersion` identifies the JSON contract. `init` writes the current version; an absent value is treated as version 1 for existing configurations, while a value newer than the installed generator fails before parsing or output replacement.
 
 ## Input and parser settings
 
@@ -82,6 +86,12 @@ Model support is not the same as completed host acceptance. See the [target evid
 - `GenerateRuntimeSource=false` expects a `BGCS.Runtime` reference.
 - `GenerateRuntimeSource=true` emits guarded standalone Runtime source.
 - Output is transactional; failed parsing/generation does not delete previous successful output.
+
+## Incremental cache and plugins
+
+`EnableIncrementalCache` defaults to `true`; `CacheDirectory` defaults to `.bindgen-cache` relative to the configuration file. A key contains the installed generator identity, complete serialized configuration, parser arguments, resolved compiler identity/version, plugin/adapter fingerprints, and exact contents of discovered C/C++ inputs. Restore and publication are transactional. Changing a header, target, toolchain, define, include, mapping, plugin binary, or generator binary creates a different key. Programmatic generators with unfingerprinted custom steps, metadata, delegates, or adapters bypass cache hits rather than risk stale output.
+
+`PluginAssemblies` lists explicit assembly paths relative to the configuration file. Each assembly must expose a public parameterless `IBindingPlugin` with `ContractVersion = 1`; mismatches and duplicate IDs fail before generation. Loading uses an isolated dependency resolver and atomic batch registration. Plugins register typed services through `IBindingPluginHost`. For C++, register `ICppTypeAdapter` or `ICppCallableAdapter`; for C# post-analysis output, register `IBindingEmitter`. Stateful adapters should implement `ICacheFingerprintProvider`. Plugins execute trusted code and should be pinned and reviewed like build tooling.
 
 ## Mappings and policies
 

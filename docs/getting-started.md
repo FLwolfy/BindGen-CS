@@ -51,7 +51,12 @@ dotnet add package BGCS.Runtime
 
 If `GenerateRuntimeSource` is enabled, compile the generated `Runtime.cs` instead and do not reference duplicate Runtime types.
 
-For immediate execution, `init native.h` writes absolute header/include paths. Convert them to paths relative to the configuration file before committing `bindgen.json`, so CI and other machines can reproduce generation.
+`init` writes portable paths relative to the generated configuration. For an ambiguous `.h`, select the workflow explicitly; use `--config` to place the configuration in another directory:
+
+```bash
+bindgen-cs init include/native.h --language c --config bindings/bindgen.json
+bindgen-cs init include/library.h --language cpp --config bindings/bridge.json
+```
 
 ## Use an umbrella header
 
@@ -105,9 +110,12 @@ Create `bridge.json`:
 
 ```json
 {
+  "ConfigVersion": 1,
   "EntryFiles": ["include/library.hpp"],
   "AllowedHeaders": ["include/library.hpp"],
-  "OutputPath": "GeneratedBridge"
+  "OutputPath": "GeneratedBridge",
+  "LanguageStandard": "c++23",
+  "GenerateBuildManifest": true
 }
 ```
 
@@ -115,6 +123,7 @@ Generate through the unified tool:
 
 ```bash
 bindgen-cs bridge bridge.json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
 Set `GenerateCSharpBindings=true` plus `CSharpNamespace`, `CSharpApiName`, `NativeLibraryName`, and `CSharpOutputPath` to emit both the native C bridge and C# bindings in this single command.
@@ -130,6 +139,17 @@ generator.Generate("include/library.hpp", "GeneratedBridge");
 ```
 
 Compile generated `src/Classes.cpp` as a DLL with the generated `include` directory and original include directories. Then run BGCS against the generated C headers. Automatic native linking remains dependent on the original library build and is a separate acceptance gate.
+
+The generated `bridge.manifest.json` is the deterministic handoff to native build automation. Paths are relative to the manifest when possible; it records the target, C++ standard, generated/original files, include directories, definitions, compiler/linker arguments, search directories, and libraries. `LanguageStandard` defaults to `c++23`; an existing `-std=` entry in `AdditionalArguments` remains an explicit compatibility override.
+
+Inspect without executing, override the compiler, or select an explicit artifact path:
+
+```bash
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json --dry-run --json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json --compiler clang++ --output artifacts/libnative.dylib
+```
+
+`native-build` never invokes a command shell. Select `auto`, direct Clang/GNU, clang-cl, CMake, Meson, or MSBuild; every provider consumes the same manifest library search paths, link libraries, linker arguments, target triple, and sysroot where the backend supports them. Successful builds verify generated declarations against the binary export table by default.
 
 Do not assume arbitrary template/STL types can be lowered automatically. See [Capabilities](capabilities.md) for explicit instances and supported adapters, and [Diagnostics](diagnostics.md) for rejection guidance.
 

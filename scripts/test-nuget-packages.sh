@@ -14,6 +14,16 @@ CONSUMER_DIR="${ROOT_DIR}/artifacts/nuget-consumer"
 CONSUMER_PACKAGE_CACHE="${ROOT_DIR}/artifacts/nuget-consumer-packages"
 TOOL_DIR="${ROOT_DIR}/artifacts/nuget-tool"
 TOOL_SMOKE_DIR="${ROOT_DIR}/artifacts/nuget-tool-smoke"
+GLOBAL_PACKAGE_CACHE="${NUGET_PACKAGES:-}"
+
+if [[ -z "${GLOBAL_PACKAGE_CACHE}" ]]; then
+  global_packages_output="$("${DOTNET_CMD}" nuget locals global-packages --list)"
+  GLOBAL_PACKAGE_CACHE="${global_packages_output#*: }"
+fi
+if [[ ! -d "${GLOBAL_PACKAGE_CACHE}" ]]; then
+  printf 'The restored NuGet global-packages fallback does not exist: %s\n' "${GLOBAL_PACKAGE_CACHE}" >&2
+  exit 1
+fi
 
 rm -rf "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}"
 mkdir -p "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}"
@@ -30,8 +40,8 @@ projects=(
 )
 
 for project in "${projects[@]}"; do
-  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -p:ContinuousIntegrationBuild=true -p:Version="${VERSION}"
-  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${SECOND_PACKAGE_DIR}" -p:ContinuousIntegrationBuild=true -p:Version="${VERSION}"
+  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
+  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${SECOND_PACKAGE_DIR}" -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
 done
 
 if ! command -v unzip > /dev/null 2>&1; then
@@ -110,9 +120,10 @@ EOF
 "${DOTNET_CMD}" restore "${CONSUMER_DIR}/PackageConsumer.csproj" \
   --packages "${CONSUMER_PACKAGE_CACHE}" \
   --source "${PACKAGE_DIR}" \
-  --source "https://api.nuget.org/v3/index.json"
+  --ignore-failed-sources \
+  -p:RestoreAdditionalProjectFallbackFolders="${GLOBAL_PACKAGE_CACHE}"
 "${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
-"${DOTNET_CMD}" tool install BindGen-CS --version "${VERSION}" --tool-path "${TOOL_DIR}" --add-source "${PACKAGE_DIR}"
+"${DOTNET_CMD}" tool install BindGen-CS --version "${VERSION}" --tool-path "${TOOL_DIR}" --add-source "${PACKAGE_DIR}" --ignore-failed-sources
 "${TOOL_DIR}/bindgen-cs" --help
 cat > "${TOOL_SMOKE_DIR}/native.h" <<'EOF'
 typedef struct NativePoint { int x; int y; } NativePoint;

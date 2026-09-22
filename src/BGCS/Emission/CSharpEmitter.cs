@@ -1,10 +1,7 @@
 namespace BGCS.Emission;
 
 using System.Text;
-using BGCS.Core;
-using BGCS.GenerationSteps;
 using BGCS.Intermediate;
-using BGCS.Metadata;
 
 /// <summary>
 /// Emits the ABI-level C# surface from shared binding IR.
@@ -13,26 +10,13 @@ public sealed class CSharpEmitter : IBindingEmitter
 {
     public string Name => "C# ABI emitter";
 
-    internal void EmitLegacy(CsCodeGenerator generator, FileSet files, ParseResult result, string outputPath,
-        CsCodeGeneratorConfig config, CsCodeGeneratorMetadata metadata, bool explicitEmptyOutputFilter)
-    {
-        generator.LogInfo("Configuring Steps...");
-        foreach (GenerationStep step in generator.GenerationSteps)
-            step.Configure(config);
-        if (explicitEmptyOutputFilter)
-            return;
-        foreach (GenerationStep step in generator.GenerationSteps.Where(step => step.Enabled))
-        {
-            generator.LogInfo($"Generating {step.Name}...");
-            step.Generate(files, result, outputPath, config, metadata);
-            step.CopyToMetadata(metadata);
-        }
-    }
-
     public IReadOnlyList<string> Emit(BindingModule module, EmissionContext context)
     {
         ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(context);
+        IReadOnlyList<BindingDiagnostic> diagnostics = Validate(module);
+        if (diagnostics.Count > 0)
+            throw new BindingEmissionException(diagnostics);
         string outputFile = Path.Combine(context.OutputPath, context.SingleFileName);
         Directory.CreateDirectory(context.OutputPath);
         StringBuilder writer = new();
@@ -54,6 +38,54 @@ public sealed class CSharpEmitter : IBindingEmitter
         writer.AppendLine("}");
         File.WriteAllText(outputFile, writer.ToString());
         return [outputFile];
+    }
+
+    /// <summary>
+    /// Validates that this IR-native emitter can preserve every declaration in a module.
+    /// </summary>
+    /// <remarks>
+    /// Unsupported declarations are errors. Callers can inspect these diagnostics before choosing an emitter;
+    /// <see cref="Emit"/> performs the same validation before creating its output directory.
+    /// </remarks>
+    public IReadOnlyList<BindingDiagnostic> Validate(BindingModule module)
+    {
+        ArgumentNullException.ThrowIfNull(module);
+        List<BindingDiagnostic> diagnostics = [];
+        foreach (BindingType type in module.Types)
+        {
+            if (type.Kind is BindingTypeKind.FunctionPointer or BindingTypeKind.Unexposed)
+            {
+                AddUnsupported(diagnostics,
+                    $"Type '{type.NativeName}' has kind '{type.Kind}', which the IR-native C# emitter cannot preserve yet.");
+            }
+            foreach (BindingField field in type.Fields.Where(field => field.BitWidth > 0))
+            {
+                AddUnsupported(diagnostics,
+                    $"Field '{type.NativeName}.{field.NativeName}' is a {field.BitWidth}-bit bitfield, which requires an explicit storage and accessor lowering.");
+            }
+        }
+        foreach (BindingFunction function in module.Functions)
+        {
+            if (function.Kind != BindingFunctionKind.Free)
+            {
+                AddUnsupported(diagnostics,
+                    $"Callable '{function.NativeName}' has kind '{function.Kind}'; only free C ABI functions are supported by this emitter.");
+            }
+            if (function.IsVariadic)
+            {
+                AddUnsupported(diagnostics,
+                    $"Function '{function.NativeName}' is variadic and requires explicitly configured fixed signatures.");
+            }
+        }
+        return diagnostics.AsReadOnly();
+    }
+
+    private static void AddUnsupported(ICollection<BindingDiagnostic> diagnostics, string message)
+    {
+        diagnostics.Add(new BindingDiagnostic(
+            BindingDiagnosticSeverity.Error,
+            message,
+            BindingDiagnosticCodes.CSharpUnsupported));
     }
 
     private static void EmitType(StringBuilder writer, BindingType type)

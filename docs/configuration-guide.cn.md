@@ -16,9 +16,10 @@
 
 ```bash
 bindgen-cs schema bindgen.schema.json
+bindgen-cs schema bridge.schema.json --kind cpp
 ```
 
-Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum 名称和可发现的默认值。当前 schema 适合属性发现，但 object-valued mapping 的详细语义仍以本指南和测试为准。
+Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 public object shape、enum 名称和核心语义说明，并默认拒绝未知 root property。只有迁移 legacy 配置时才使用 `--allow-unknown-properties`。详细 marshalling 语义仍以本指南和测试为准。
 
 ## 先做四个选择
 
@@ -33,6 +34,7 @@ Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum �
 
 ```json
 {
+  "ConfigVersion": 1,
   "Namespace": "MyCompany.Native.Library",
   "ApiName": "LibraryApi",
   "LibName": "library",
@@ -45,6 +47,8 @@ Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum �
 ```
 
 这个配置跟随宿主 ABI。可重现的发布配置应使用明确 target preset，或显式填写 platform/architecture/ABI；配置 target 必须与最终 native binary 一致。
+
+`ConfigVersion` 标识 JSON contract。`init` 会写入当前版本；已有配置缺省时按 version 1 处理，高于当前工具支持范围的版本会在解析或替换输出前失败。
 
 ## 输入和 Parser
 
@@ -82,6 +86,12 @@ Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum �
 - `GenerateRuntimeSource=false` 需要引用 `BGCS.Runtime`。
 - `GenerateRuntimeSource=true` 生成带 guard 的 standalone Runtime。
 - 输出是事务性的；解析/生成失败不会删除上一次成功结果。
+
+## 增量缓存与 Plugin
+
+`EnableIncrementalCache` 默认为 `true`，`CacheDirectory` 默认为配置文件相对路径 `.bindgen-cache`。Cache key 包含已安装 generator identity、完整序列化配置、parser arguments、解析后的 compiler identity/version、plugin/adapter fingerprint 和发现到的 C/C++ 输入精确内容。恢复和发布都是事务操作。Header、target、toolchain、define、include、mapping、plugin binary 或 generator binary 任一变化都会得到新 key。若程序化 generator 存在无法 fingerprint 的 custom step、metadata、delegate 或 adapter，则保守地绕过 cache hit，避免陈旧输出。
+
+`PluginAssemblies` 显式列出相对于配置文件的 assembly。每个 assembly 必须包含 public parameterless `IBindingPlugin` 且 `ContractVersion = 1`；版本不匹配或 ID 重复会在生成前失败。加载使用隔离 dependency resolver 和原子批量注册。Plugin 通过 `IBindingPluginHost` 注册 typed service；C++ 可注册 `ICppTypeAdapter` / `ICppCallableAdapter`，C# post-analysis output 可注册 `IBindingEmitter`。有状态 adapter 应实现 `ICacheFingerprintProvider`。Plugin 会执行可信代码，应当像 build tool 一样固定版本并审查。
 
 ## Mapping 与 Policy
 

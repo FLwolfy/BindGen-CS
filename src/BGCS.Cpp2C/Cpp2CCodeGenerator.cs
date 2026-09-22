@@ -1,15 +1,20 @@
 ﻿namespace BGCS.Cpp2C
 {
     using BGCS.Core;
+    using BGCS.Core.Caching;
     using BGCS.Core.IO;
     using BGCS.Cpp2C.Analysis;
+    using BGCS.Cpp2C.Build;
+    using BGCS.Cpp2C.Configuration;
     using BGCS.Cpp2C.Emission;
     using BGCS.Core.Logging;
     using BGCS.Cpp2C.GenerationSteps;
     using BGCS.Cpp2C.Metadata;
+    using BGCS.Cpp2C.Adapters;
     using BGCS.CppAst.Diagnostics;
     using BGCS.CppAst.Model.Metadata;
     using BGCS.CppAst.Parsing;
+    using BGCS.CppAst.Targeting;
     using BGCS.Intermediate;
     using Newtonsoft.Json;
     using System.Diagnostics.CodeAnalysis;
@@ -22,6 +27,8 @@
         private readonly Cpp2CGeneratorMetadata metadata = new();
         private readonly List<GenerationStep> generationSteps = [];
         private readonly List<Cpp2CGeneratorMetadata> copyFromPending = [];
+        private bool hasCustomGenerationSteps;
+        private bool pluginsApplied;
 
         /// <summary>
         /// Initializes a new instance of <see cref="Cpp2CCodeGenerator"/>.
@@ -45,6 +52,7 @@
         /// </summary>
         public void AddGenerationStep(GenerationStep step)
         {
+            hasCustomGenerationSteps = true;
             generationSteps.Add(step);
         }
 
@@ -53,6 +61,7 @@
         /// </summary>
         public void AddGenerationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : GenerationStep
         {
+            hasCustomGenerationSteps = true;
             var step = (T)Activator.CreateInstance(typeof(T), this, config)!;
             generationSteps.Add(step);
         }
@@ -79,6 +88,7 @@
         /// </summary>
         public void OverwriteGenerationStep<TTarget>(GenerationStep newStep) where TTarget : GenerationStep
         {
+            hasCustomGenerationSteps = true;
             for (int i = 0; i < generationSteps.Count; i++)
             {
                 var step = generationSteps[i];
@@ -91,6 +101,10 @@
 
         protected virtual CppParserOptions PrepareSettings()
         {
+            Cpp2CConfigValidator.Validate(config);
+            string baseDirectory = config.ConfigDirectory ?? Environment.CurrentDirectory;
+            string? targetSysRoot = ResolveConfiguredPath(config.TargetSysRoot, baseDirectory, allowCommandName: false);
+            string? compilerPath = ResolveConfiguredPath(config.CompilerPath, baseDirectory, allowCommandName: true);
             var options = new CppParserOptions
             {
                 ParseMacros = config.ParseMacros,
@@ -99,7 +113,7 @@
                 ParserKind = CppParserKind.Cpp,
                 AutoSquashTypedef = true,
             };
-            options.ConfigureForTarget(config.ResolvedTarget, config.TargetSysRoot, config.CompilerPath);
+            options.ConfigureForTarget(config.ResolvedTarget, targetSysRoot, compilerPath);
 
             for (int i = 0; i < config.AdditionalArguments.Count; i++)
             {
@@ -108,12 +122,12 @@
 
             for (int i = 0; i < config.IncludeFolders.Count; i++)
             {
-                options.IncludeFolders.Add(config.IncludeFolders[i]);
+                options.IncludeFolders.Add(Path.GetFullPath(config.IncludeFolders[i], baseDirectory));
             }
 
             for (int i = 0; i < config.SystemIncludeFolders.Count; i++)
             {
-                options.SystemIncludeFolders.Add(config.SystemIncludeFolders[i]);
+                options.SystemIncludeFolders.Add(Path.GetFullPath(config.SystemIncludeFolders[i], baseDirectory));
             }
 
             for (int i = 0; i < config.Defines.Count; i++)
@@ -122,7 +136,8 @@
             }
 
             //options.ConfigureForWindowsMsvc(CppTargetCpu.X86_64);
-            options.AdditionalArguments.Add("-std=c++23");
+            if (!options.AdditionalArguments.Any(argument => argument.StartsWith("-std=", StringComparison.Ordinal)))
+                options.AdditionalArguments.Add("-std=" + config.LanguageStandard);
             List<string> explicitInstantiations =
             [
                 .. config.TemplateInstantiations.Select(type => $"template class {type};"),
@@ -132,6 +147,15 @@
                 options.PostHeaderText = string.Join(Environment.NewLine, explicitInstantiations);
 
             return options;
+        }
+
+        private static string? ResolveConfiguredPath(string? value, string baseDirectory, bool allowCommandName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+            if (allowCommandName && !Path.IsPathRooted(value) && !value.Contains('/') && !value.Contains('\\'))
+                return value;
+            return Path.GetFullPath(value, baseDirectory);
         }
 
         private static string BuildFunctionTemplateForwarder(string declaration, int index)
@@ -187,15 +211,39 @@
                 ? null
                 : config.AllowedHeaders.Select(path => Path.GetFullPath(path, baseDirectory)).ToList();
             string resolvedOutput = Path.GetFullPath(outputPath ?? config.OutputPath, baseDirectory);
-            string previousDirectory = Environment.CurrentDirectory;
-            try
+            ApplyPluginServices();
+            CppParserOptions options = PrepareSettings();
+            IncrementalGenerationCache? cache = null;
+            IncrementalCacheKey? cacheKey = null;
+            if (CanUseIncrementalCache())
             {
-                Environment.CurrentDirectory = baseDirectory;
-                Generate(headers, resolvedOutput, allowedHeaders);
+                string cachePath = Path.GetFullPath(config.CacheDirectory, baseDirectory);
+                cache = new(cachePath);
+                IReadOnlyList<string> inputs = IncrementalGenerationCache.DiscoverInputs(headers,
+                    options.IncludeFolders.Concat(options.SystemIncludeFolders), [resolvedOutput, cachePath]);
+                string fingerprint = "cpp-bridge\n" + GetType().Assembly.ManifestModule.ModuleVersionId.ToString("D") + "\n" +
+                    JsonConvert.SerializeObject(config, Cpp2CGeneratorConfig.SerializerSettings) + "\n" +
+                    string.Join("\n", options.AdditionalArguments.Concat(options.Defines)) + "\n" +
+                    CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.Cpp,
+                        ResolveConfiguredPath(config.CompilerPath, baseDirectory, allowCommandName: true)) + "\n" +
+                    config.Plugins.GetCacheFingerprint() + "\n" +
+                    (config.Adapters.TryGetCacheFingerprint(out string adapterFingerprint) ? adapterFingerprint : "adapters:unfingerprinted");
+                cacheKey = IncrementalGenerationCache.CreateKey(fingerprint, inputs);
+                if (cache.TryRestore(cacheKey, resolvedOutput, out string stateJson))
+                {
+                    CachedGenerationState state = JsonConvert.DeserializeObject<CachedGenerationState>(stateJson)
+                        ?? throw new InvalidDataException("Incremental C++ bridge cache metadata is invalid.");
+                    LastResult = new(state.Module, true, EnumerateOutputFiles(resolvedOutput), state.Diagnostics, true, cacheKey.Value);
+                    LogInfo($"Restored generated C++ bridge from cache {cacheKey.Value[..12]}.");
+                    return;
+                }
             }
-            finally
+            Generate(options, headers, resolvedOutput, allowedHeaders);
+            if (LastResult?.Success == true && cache != null && cacheKey != null)
             {
-                Environment.CurrentDirectory = previousDirectory;
+                cache.Store(cacheKey, resolvedOutput,
+                    JsonConvert.SerializeObject(new CachedGenerationState(LastResult.Module, LastResult.Diagnostics.ToArray())));
+                LastResult = new(LastResult.Module, true, LastResult.OutputFiles, LastResult.Diagnostics, false, cacheKey.Value);
             }
         }
 
@@ -215,6 +263,13 @@
             EnsureGenerationPipeline();
             var options = PrepareSettings();
 
+            Generate(options, headerFiles, outputPath, allowedHeaders);
+        }
+
+        private void Generate(CppParserOptions options, List<string> headerFiles, string outputPath, List<string>? allowedHeaders)
+        {
+            EnsureGenerationPipeline();
+
             var compilation = CppParser.ParseFiles(headerFiles, options);
 
             Generate(compilation, headerFiles, outputPath, allowedHeaders);
@@ -225,6 +280,7 @@
         /// </summary>
         public virtual void Generate(CppCompilation compilation, List<string> headerFiles, string outputPath, List<string>? allowedHeaders)
         {
+            Cpp2CConfigValidator.Validate(config);
             EnsureGenerationPipeline();
             // Print diagnostic messages
             for (int i = 0; i < compilation.Diagnostics.Messages.Count; i++)
@@ -273,6 +329,8 @@
             {
                 ParseResult result = new(compilation, headerFiles);
                 new CBridgeEmitter().EmitAst(this, generationSteps, files, result, generationOutputPath, config, metadata);
+                if (config.GenerateBuildManifest)
+                    CppBridgeBuildManifestEmitter.Emit(config, headerFiles, generationOutputPath);
                 BindingModule module = new CppBridgeModuleAnalyzer(config).Analyze(compilation);
                 outputTransaction.Commit();
                 LastResult = new(module, true,
@@ -284,7 +342,7 @@
                 string remediation = BuildUnsupportedRemediation(exception);
                 LogError(remediation);
                 LastResult = new(null, false, [],
-                    [.. CreateDiagnostics(), new(BindingDiagnosticSeverity.Error, remediation, "BGCSCPP001")]);
+                    [.. CreateDiagnostics(), new(BindingDiagnosticSeverity.Error, remediation, BindingDiagnosticCodes.CppUnsupported)]);
             }
         }
 
@@ -358,6 +416,29 @@
 
             EnsureDefaultGenerationSteps();
         }
+
+        private void ApplyPluginServices()
+        {
+            if (pluginsApplied)
+                return;
+            foreach (var registration in config.Plugins.GetServices<ICppTypeAdapter>())
+                if (!config.Adapters.TypeAdapters.Any(adapter => string.Equals(adapter.Name, registration.Service.Name, StringComparison.Ordinal)))
+                    config.Adapters.Register(registration.Service);
+            foreach (var registration in config.Plugins.GetServices<ICppCallableAdapter>())
+                if (!config.Adapters.CallableAdapters.Any(adapter => string.Equals(adapter.Name, registration.Service.Name, StringComparison.Ordinal)))
+                    config.Adapters.Register(registration.Service);
+            pluginsApplied = true;
+        }
+
+        private bool CanUseIncrementalCache() => config.EnableIncrementalCache &&
+            GetType() == typeof(Cpp2CCodeGenerator) && !hasCustomGenerationSteps && copyFromPending.Count == 0 &&
+            config.Adapters.TryGetCacheFingerprint(out _);
+
+        private static string[] EnumerateOutputFiles(string outputPath) =>
+            Directory.GetFiles(outputPath, "*", SearchOption.AllDirectories)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+
+        private sealed record CachedGenerationState(BindingModule? Module, BindingDiagnostic[] Diagnostics);
 
         private void EnsureDefaultGenerationSteps()
         {

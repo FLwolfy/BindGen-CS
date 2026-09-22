@@ -1,6 +1,7 @@
 ﻿namespace BGCS
 {
     using BGCS.Configuration;
+    using BGCS.Core.Extensibility;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
 
@@ -94,7 +95,25 @@
                 }
             }
             result.ConfigDirectory = configDirectory;
+            result.LoadConfiguredPlugins();
             return result;
+        }
+
+        internal void LoadConfiguredPlugins()
+        {
+            if (PluginAssemblies == null)
+                throw new InvalidOperationException("PluginAssemblies cannot be null.");
+            string baseDirectory = ConfigDirectory ?? Environment.CurrentDirectory;
+            foreach (string pluginAssembly in PluginAssemblies)
+            {
+                if (string.IsNullOrWhiteSpace(pluginAssembly))
+                    throw new InvalidOperationException("PluginAssemblies cannot contain an empty path.");
+                string fullPath = Path.GetFullPath(pluginAssembly, baseDirectory);
+                if (LoadedPluginAssemblies.Contains(fullPath))
+                    continue;
+                BindingPluginLoader.Load(fullPath, Plugins);
+                LoadedPluginAssemblies.Add(fullPath);
+            }
         }
 
         /// <summary>

@@ -11,12 +11,15 @@ bindgen-cs doctor
 bindgen-cs validate bindgen.json
 bindgen-cs inspect bindgen.json
 bindgen-cs inspect bindgen.json --json
+bindgen-cs explain BGCS-SAFETY-OWNERSHIP
+bindgen-cs explain --json
 ```
 
 1. `doctor` 确认 compiler、system includes、target triple 和 SDK。
 2. `validate` 在写输出前暴露 parser、ABI 和 safety 问题。
 3. `inspect` 检查最终 target、type/function 数量和 IR diagnostics。
 4. 需要定位 lowering 时使用 `--json` 查看 Binding IR。
+5. 使用 `explain` 读取当前版本的稳定诊断目录；省略 code 可以列出全部 descriptor。
 
 ## StrictSafety 模式
 
@@ -36,6 +39,7 @@ bindgen-cs inspect bindgen.json --json
 | `BGCS-SAFETY-CALLBACK` | callback retention/unregister lifetime 未声明 | 为 callback 参数增加 marshalling mapping，并由消费层持有或注销 callback |
 | `BGCS-SAFETY-LENGTH` | buffer pointer 没有可证明的 length/capacity 关系 | 设置 `LengthParameter`、`CapacityParameter` 和可选 `WrittenCountParameter` |
 | `BGCS-SAFETY-ALLOCATOR` | output string 没有 cleanup allocator | 设置 `CleanupFunction`、ownership、encoding 和 cleanup requirement |
+| `BGCSCS001` | IR-native C# emitter 无法在不丢语义的前提下表达某个声明 | 保留 compatibility emitter，或实现通用且有测试的 IR lowering；emission 会在写文件前失败 |
 | `BGCSCPP-INSTANTIATION` | 发现 primary template，但没有请求 concrete instance | 把真正需要的完整 specialization 加入 `TemplateInstantiations` 或 `FunctionTemplateInstantiations` |
 | `BGCSCPP001` | C++ declaration 无法使用已知 adapter 安全 lowering | 配置对应 STL type list、显式 template instance，或实现带 ownership/allocator 语义的 custom generation step |
 

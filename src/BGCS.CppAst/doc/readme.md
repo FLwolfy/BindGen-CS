@@ -2,13 +2,13 @@
 
 ## Overview
 
-The entry point for parsing a C/C++ header files with CppAst is the class [`CppParser.Parse`](../src/CppAst/CppParser.cs) methods:
+The entry point for parsing C/C++ header files with CppAst is the [`CppParser`](../Parsing/CppParser.cs) class:
 
 - `CppParser.Parse` allows to parse directly C++ content
 - `CppParser.ParseFile` allows to parse a single C++ file from a specified file path
 - `CppParser.ParseFiles` allows to parse a multiple C++ file from the disk
 
-These methods return a [`CppCompilation`](../src/CppAst/CppCompilation.cs) object which contains:
+These methods return a [`CppCompilation`](../Model/Metadata/CppCompilation.cs) object which contains:
 
 - A property `HasErrors` sets to `true` if any `CppParser.Parse` methods failed to compile the header files.
 - A `Diagnostics` property to fetch any compilation errors
@@ -47,7 +47,7 @@ foreach(var cppStruct in compilation.Classes)
 
 ## Parser options
 
-You can configure the behavior of the parser by passing a [`CppParserOptions`]((../src/CppAst/CppParserOptions.cs)) object:
+You can configure the behavior of the parser by passing a [`CppParserOptions`](../Parsing/CppParserOptions.cs) object:
 
 ```c#
 var options = new CppParserOptions()
@@ -62,29 +62,29 @@ var compilation = CppParser.ParseFile("...",  options);
 
 ## Source information
 
-All elements inherit from the base class [`CppElement`](../src/CppAst/CppElement.cs) that provides precise source span/location information via the property `CppElement.Span`
+All elements inherit from the base class [`CppElement`](../Model/CppElement.cs) that provides precise source span/location information via the property `CppElement.Span`.
 
 ## Containers
 
 A few C/C++ elements can be container of other C++ elements:
 
-- A [`CppCompilation`](../src/CppAst/CppCompilation.cs) root container for all global scope C/C++ elements\
-- A [`CppClass`](../src/CppAst/CppClass.cs) can contain fields, classes/structs/unions, methods...
-- A [`CppNamespace`](../src/CppAst/CppNamespace.cs) can contain fields, classes/structs/unions, methods, nested namespaces
+- A [`CppCompilation`](../Model/Metadata/CppCompilation.cs) root container for all global-scope C/C++ elements
+- A [`CppClass`](../Model/Declarations/CppClass.cs) can contain fields, classes/structs/unions, methods...
+- A [`CppNamespace`](../Model/Declarations/CppNamespace.cs) can contain fields, classes/structs/unions, methods, and nested namespaces
 
 ## Type System
 
 All the type class in CppAst inherit from the class `CppType`:
 
-- [`CppPrimitiveType`](../src/CppAst/CppPrimitiveType.cs) for all primitive types (e.g `int`, `char`, `unsigned int`)
-- [`CppClass`](../src/CppAst/CppClass.cs) for struct, class and union. Use the property `CppClass.ClassKind` to detect which type is the underlying class
-- [`CppEnum`](../src/CppAst/CppEnum.cs) for enum types (C++ scoped and regular enums)
-- [`CppTypedef`](../src/CppAst/CppTypedef.cs) for a typedef (e.g `typedef int MyInteger`)
-- [`CppPointerType`](../src/CppAst/CppPointerType.cs) for pointer types (e.g `int*`)
-- [`CppReferenceType`](../src/CppAst/CppReferenceType.cs) for reference types (e.g `int&`)
-- [`CppArrayType`](../src/CppAst/CppArrayType.cs) for array types (e.g `int[5]`)
-- [`CppQualifiedType`](../src/CppAst/CppQualifiedType.cs) for qualified types (e.g `const int`)
-- [`CppFunctionType`]((../src/CppAst/CppFunctionType.cs)) for function types (e.g `void (*)(int, int)`)
+- [`CppPrimitiveType`](../Model/Types/CppPrimitiveType.cs) for all primitive types (e.g. `int`, `char`, `unsigned int`)
+- [`CppClass`](../Model/Declarations/CppClass.cs) for structs, classes, and unions. Use `CppClass.ClassKind` to distinguish them
+- [`CppEnum`](../Model/Declarations/CppEnum.cs) for scoped and unscoped enum types
+- [`CppTypedef`](../Model/Declarations/CppTypedef.cs) for a typedef (e.g. `typedef int MyInteger`)
+- [`CppPointerType`](../Model/Types/CppPointerType.cs) for pointer types (e.g. `int*`)
+- [`CppReferenceType`](../Model/Types/CppReferenceType.cs) for reference types (e.g. `int&`)
+- [`CppArrayType`](../Model/Types/CppArrayType.cs) for array types (e.g. `int[5]`)
+- [`CppQualifiedType`](../Model/Types/CppQualifiedType.cs) for qualified types (e.g. `const int`)
+- [`CppFunctionType`](../Model/Declarations/CppFunctionType.cs) for function types (e.g. `void (*)(int, int)`)
 
 ## Advanced
 

@@ -16,9 +16,12 @@ Command-line users can install the `BindGen-CS` .NET tool and run `bindgen-cs br
 
 ```json
 {
+  "ConfigVersion": 1,
   "EntryFiles": ["include/library.hpp"],
   "AllowedHeaders": ["include/library.hpp"],
   "OutputPath": "GeneratedBridge",
+  "LanguageStandard": "c++23",
+  "GenerateBuildManifest": true,
   "GenerateCSharpBindings": true,
   "CSharpNamespace": "Example.Native",
   "CSharpApiName": "NativeApi",
@@ -41,7 +44,7 @@ if (generator.LastResult is { Success: false } result)
 }
 ```
 
-Configuration paths are resolved relative to `bridge.json`. The bridge output contains C-facing headers and `src/Classes.cpp`. Compile that C++ source into a shared library with the original project's compiler flags, include paths, definitions, and linker inputs; BGCS does not replace the native build system.
+Configuration paths are resolved relative to `bridge.json`. The bridge output contains C-facing headers, `src/Classes.cpp`, and a deterministic `bridge.manifest.json` with target, source, include, definition, compiler/linker, language-standard, and library inputs. The `BindGen-CS` tool can compile this manifest with `native-build`; embedded consumers can use `ClangNativeBuildProvider` and `NativeBuildExecutor` directly.
 
 ## Verified bridge scope
 

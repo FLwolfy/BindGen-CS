@@ -8,6 +8,15 @@ GATE_DIR="${OUTPUT_DIR}/gates"
 mkdir -p "${OUTPUT_DIR}"
 
 snapshot_platform="$(detect_snapshot_platform)"
+generated_at_utc="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+source_revision="unavailable"
+source_dirty="true"
+if git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  source_revision="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+  if [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=all)" ]]; then
+    source_dirty="false"
+  fi
+fi
 case "${snapshot_platform}" in
   windows-*) target="${snapshot_platform}-msvc" ;;
   macos-*) target="${snapshot_platform}-darwin" ;;
@@ -36,14 +45,16 @@ cpp_bridge="$(score native-cpp-bridge managed-tests)"
 modern_cpp="$(score modern-cpp native-cpp-bridge real-cpp-libraries strict-safety)"
 api_quality="$(score real-libraries managed-tests innoengine-bindings)"
 usability="$(score demo nuget-tool strict-safety)"
-architecture="$(score solution-build managed-tests)"
-internal="$(score solution-build managed-tests strict-safety)"
-release="$(score solution-build managed-tests real-libraries innoengine-bindings nuget-tool)"
+architecture="$(score solution-build managed-tests performance)"
+internal="$(score solution-build managed-tests strict-safety performance)"
+release="$(score solution-build managed-tests real-libraries innoengine-bindings nuget-tool performance)"
 
 cat > "${OUTPUT_DIR}/report.json" <<EOF
 {
   "target": "${target}",
   "status": "passed",
+  "generatedAtUtc": "${generated_at_utc}",
+  "source": { "revision": "${source_revision}", "workingTreeDirty": ${source_dirty} },
   "calculation": "A category scores 9.0 only when every listed mandatory gate is present; report generation fails when any gate is absent.",
   "scoreRange": { "minimum": 9.0, "maximum": 9.0 },
   "categories": [
@@ -54,9 +65,9 @@ cat > "${OUTPUT_DIR}/report.json" <<EOF
     { "name": "modern-cpp", "score": ${modern_cpp}, "gates": ["modern-cpp", "native-cpp-bridge", "real-cpp-libraries", "strict-safety"] },
     { "name": "generated-api-quality", "score": ${api_quality}, "gates": ["real-libraries", "managed-tests", "innoengine-bindings"] },
     { "name": "beginner-usability", "score": ${usability}, "gates": ["demo", "nuget-tool", "strict-safety"] },
-    { "name": "outer-architecture", "score": ${architecture}, "gates": ["solution-build", "managed-tests"] },
-    { "name": "inner-architecture", "score": ${internal}, "gates": ["solution-build", "managed-tests", "strict-safety"] },
-    { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "innoengine-bindings", "nuget-tool"] }
+    { "name": "outer-architecture", "score": ${architecture}, "gates": ["solution-build", "managed-tests", "performance"] },
+    { "name": "inner-architecture", "score": ${internal}, "gates": ["solution-build", "managed-tests", "strict-safety", "performance"] },
+    { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "innoengine-bindings", "nuget-tool", "performance"] }
   ],
   "realLibraries": {
     "generatedAndCompiled": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
@@ -86,6 +97,8 @@ cat > "${OUTPUT_DIR}/report.md" <<EOF
 
 - Target: \`${target}\`
 - Status: **passed**
+- Generated at: \`${generated_at_utc}\`
+- Source: \`${source_revision}\` (working tree dirty: \`${source_dirty}\`)
 - Score policy: every mandatory gate must pass; a complete category scores 9.0/10.0.
 
 | Category | Score |

@@ -59,8 +59,12 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 | Transactional output | Automated test | Failure preserves the last-good output |
 | Deterministic `diff` | Host acceptance | Real-library and InnoEngine workspace gates |
 | Multi-project workspaces | Production integration | Five InnoEngine binding projects |
-| BaseConfig and presets | Automated test | Relative paths, cycle detection, override precedence |
-| Complete installed-version schema | Available | `bindgen-cs schema bindgen.schema.json` |
+| C++ native build manifest/providers | Native invocation + plan tests | Direct Clang/GNU and CMake compile/export verification on macOS; clang-cl, Meson, and MSBuild deterministic multi-step plans; default export inspection |
+| Incremental generation | Automated + performance test | SHA-256 input/config/compiler/plugin/adapter fingerprint, atomic immutable entries, concurrent publication, deleted-output restoration, 10k declaration cold/warm budgets |
+| Plugin/adapter contracts | External-assembly E2E + API-shape test | Version 1 isolated loader, atomic deterministic typed services, configured C# plugin cache, configured `ICppTypeAdapter` / `ICppCallableAdapter` generation and cache |
+| BaseConfig and presets | Automated test | Explicit config-directory context, cycle detection, override precedence, no process-CWD mutation |
+| Installed-version C/C++ schemas | Automated test | Strict root properties by default; nested public shapes and core descriptions are generated from the installed types |
+| Portable project initialization | Automated test | Config-relative `/` paths, explicit C/C++ selection, non-overwrite behavior |
 | Deterministic NuGet packages | Host acceptance | Two-pack content comparison, clean restore, tool install |
 
 ## Target evidence
@@ -79,9 +83,8 @@ BindGen-CS is already a strong, engineered binding toolkit rather than a thin he
 It cannot honestly claim automatic coverage of every C++ program or production verification on every modeled target. The main gaps are:
 
 - Windows and Linux do not yet have macOS-equivalent target-specific acceptance artifacts;
-- `init header` writes absolute input paths, which should be converted to repository-relative paths before committing;
 - the configuration model is powerful but still broad and flat for large libraries;
-- native compilation/linking of the C++ bridge remains the consumer build system's responsibility;
+- non-host execution evidence is still required for clang-cl/MSBuild and Linux provider pipelines; multi-RID packaging is not complete;
 - `std::variant`, arbitrary containers, complex allocators, and types beyond the verified optional protocols still require custom lowering.
 
 The accurate position is: **excellent within the accepted C ABI and explicitly supported C++ subset; not yet a zero-configuration universal translator for arbitrary C++ on every platform.**
@@ -89,7 +92,7 @@ The accurate position is: **excellent within the accepted C ABI and explicitly s
 ## Highest-value next steps
 
 1. Produce macOS-equivalent real-library, native-invocation, InnoEngine, and package reports on Windows x64 and Linux x64.
-2. Make `init header` emit configuration-relative paths and add CLI end-to-end tests.
-3. Add XML-doc descriptions, strict unknown-property validation, and editor examples to JSON Schema.
-4. Add configurable native build recipes for C++ bridges instead of stopping at source generation.
+2. Complete the IR-native C# emission migration and remove the legacy default path.
+3. Add packaged-tool end-to-end tests, configuration versioning, and complete semantic schema descriptions.
+4. Execute every provider on its owning target and add multi-RID artifact layout.
 5. Expand tested STL lowering while continuing to reject types without ownership or allocator evidence.

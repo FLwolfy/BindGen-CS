@@ -30,6 +30,7 @@ public sealed class ConfigLoader
             config.PresetDefaultsApplied = true;
         }
         ConfigValidator.Validate(config);
+        config.LoadConfiguredPlugins();
         return config;
     }
 }

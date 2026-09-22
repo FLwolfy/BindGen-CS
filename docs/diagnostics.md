@@ -11,12 +11,15 @@ bindgen-cs doctor
 bindgen-cs validate bindgen.json
 bindgen-cs inspect bindgen.json
 bindgen-cs inspect bindgen.json --json
+bindgen-cs explain BGCS-SAFETY-OWNERSHIP
+bindgen-cs explain --json
 ```
 
 1. `doctor` confirms compiler, system includes, target triple, and SDK discovery.
 2. `validate` exposes parser, ABI, and safety issues before output is written.
 3. `inspect` reports the resolved target, type/function counts, and IR diagnostics.
 4. Use `--json` to inspect the Binding IR when lowering needs investigation.
+5. Use `explain` to retrieve the versioned diagnostic catalog; omit the code to list every descriptor.
 
 ## StrictSafety modes
 
@@ -36,6 +39,7 @@ Use `StrictSafety=false` only when an external process completely audits these s
 | `BGCS-SAFETY-CALLBACK` | Callback retention/unregister lifetime is not declared | Add a parameter marshalling mapping and make the consumer retain or unregister the callback correctly |
 | `BGCS-SAFETY-LENGTH` | A buffer pointer has no proven length/capacity relationship | Set `LengthParameter`, `CapacityParameter`, and optionally `WrittenCountParameter` |
 | `BGCS-SAFETY-ALLOCATOR` | An output string has no cleanup allocator | Set `CleanupFunction`, ownership, encoding, and cleanup requirement |
+| `BGCSCS001` | The IR-native C# emitter cannot preserve a declaration without semantic loss | Keep the compatibility emitter or implement a general, tested IR lowering; emission fails before writing output |
 | `BGCSCPP-INSTANTIATION` | A primary template was found without a requested concrete instance | Add the required full specialization to `TemplateInstantiations` or `FunctionTemplateInstantiations` |
 | `BGCSCPP001` | A C++ declaration cannot be lowered safely through known adapters | Configure the matching STL type list, request a concrete template instance, or implement a custom generation step with ownership/allocator semantics |
 

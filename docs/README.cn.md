@@ -16,6 +16,8 @@
 | C Binding | [快速开始](getting-started.cn.md) |
 | C++ → C Bridge | [快速开始的 C++ 章节](getting-started.cn.md#c-bridge)、[具备专门回归测试的 C++ 配置条目](cpp2c.config.md) |
 | 完整配置属性 | 运行 `bindgen-cs schema bindgen.schema.json` |
+| 长期执行顺序与 gate | [超级通用执行路线图](roadmap.cn.md) |
+| 判断当前是否已达到“超级通用” | [工程成熟度审计](assessment.cn.md) |
 | 具备专门回归测试的配置条目 | [生成配置条目参考](config.md) |
 | 嵌入 C# 工具 | [C# API 参考](api.md) |
 | 选择 NuGet 包 | [NuGet 包与公开 API](packages.cn.md) |
@@ -27,6 +29,8 @@
 - [架构说明](architecture.cn.md)：分层、依赖规则和兼容层迁移状态。
 - [验收规范](acceptance.cn.md)：9.0 gate、性能预算和 target 隔离。
 - [能力与边界](capabilities.cn.md)：实现、证据和未覆盖范围的对照表。
+- [超级通用执行路线图](roadmap.cn.md)：分阶段任务、不可妥协规则和 9.0 完成条件。
+- [工程成熟度审计](assessment.cn.md)：量化评分、五项工作状态和仍不可宣称完成的边界。
 
 ## 当前成熟度
 

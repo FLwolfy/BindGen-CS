@@ -59,8 +59,12 @@
 | transactional output | 自动测试 | 失败不会破坏 last-good output |
 | deterministic `diff` | 实机验收 | 真实库与 InnoEngine workspace gate |
 | multi-project workspace | 实战集成 | InnoEngine 五个 binding 项目 |
-| BaseConfig 与 preset | 自动测试 | 相对路径、循环检测、override precedence |
-| complete installed-version schema | 可用 | `bindgen-cs schema bindgen.schema.json` |
+| C++ native build manifest/providers | native invocation + plan test | macOS 上 direct Clang/GNU 与 CMake 真实编译/export 核验；clang-cl、Meson、MSBuild 确定性多步骤 plan；默认 export inspection |
+| 增量生成 | 自动化 + 性能测试 | SHA-256 input/config/compiler/plugin/adapter fingerprint、原子 immutable entry、并发发布、删除 output 后恢复、10k declaration 冷/热预算 |
+| Plugin/adapter contract | 外部 assembly E2E + API-shape 测试 | Version 1 隔离 loader、原子确定性 typed service、配置驱动 C# plugin cache、`ICppTypeAdapter` / `ICppCallableAdapter` 生成与 cache |
+| BaseConfig 与 preset | 自动测试 | 显式 config-directory context、循环检测、override precedence，不修改进程 cwd |
+| 当前安装版本 C/C++ schema | 自动测试 | 默认严格 root property；从安装版本生成嵌套 public shape 和核心说明 |
+| 可移植项目初始化 | 自动测试 | config-relative `/` path、显式 C/C++ 选择、拒绝覆盖 |
 | deterministic NuGet packages | 实机验收 | 双次 pack 内容对比、干净 restore、Tool 安装 |
 
 ## Target 证据
@@ -79,9 +83,8 @@ BindGen-CS 已经是强大的工程化 binding toolkit，而不是简单的 head
 但“对所有 C++ 自动通吃”和“所有 target 都已生产验证”目前都不成立。主要差距是：
 
 - Windows/Linux 还缺与 macOS 同等级的完整 target-specific acceptance artifact；
-- `init header` 生成绝对输入路径，提交前需要手动改为仓库相对路径；
 - 配置模型能力很强但仍较扁平，大型库需要理解 mapping 与 safety policy；
-- C++ bridge 的 native compile/link 仍由消费项目的 build system 负责；
+- clang-cl/MSBuild 与 Linux provider 流水线仍需所属 target 的真实执行证据；multi-RID packaging 尚未完成；
 - `std::variant`、任意 container、复杂 allocator 和超出已验证 optional protocol 的类型仍需 custom lowering。
 
 因此，准确定位是：**在经过验收的 C ABI 与明确支持的 C++ 子集内非常优秀；作为“任意 C++、任意平台、零配置”的万能工具仍有清晰距离。**
@@ -89,7 +92,7 @@ BindGen-CS 已经是强大的工程化 binding toolkit，而不是简单的 head
 ## 下一阶段最高价值工作
 
 1. 在 Windows x64 和 Linux x64 运行与 macOS 同级的真实库、native invocation、InnoEngine 和包验收并生成独立报告。
-2. 让 `init header` 默认写入配置相对路径，并增加 CLI end-to-end tests。
-3. 为 JSON Schema 补充 XML-doc description、严格 unknown-property 检查和编辑器示例。
-4. 为 C++ bridge 增加可配置 native build recipe，而不是只生成源码。
+2. 完成 IR-native C# emission 迁移并移除 legacy 默认路径。
+3. 增加 packaged-tool end-to-end tests、配置版本和完整 schema 语义说明。
+4. 在各自 target 上执行全部 provider，并增加 multi-RID artifact layout。
 5. 扩展经过测试的 STL lowering，同时继续拒绝没有 ownership/allocator 证据的类型。

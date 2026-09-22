@@ -5,6 +5,8 @@
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Templates;
     using BGCS.CppAst.Model.Types;
+    using BGCS.Cpp2C.Adapters;
+    using BGCS.Intermediate;
     using System;
     using System.Text;
 
@@ -20,23 +22,9 @@
         public string GetCType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (IsUtf8StringType(type))
-                return "const char*";
-            if (IsSharedPtrType(type))
-                return GetSharedPtrHolderName(type) + "*";
-            if (IsUniquePtrType(type) || IsSpanType(type) || IsVectorType(type))
-            {
-                if (!TryGetTemplateElementType(type, out CppType? elementType))
-                    throw new NotSupportedException($"Unable to resolve STL adapter element type '{type}'.");
-                return GetCType(elementType!) + "*";
-            }
-            if (IsOptionalType(type))
-            {
-                if (!TryGetTemplateElementType(type, out CppType? elementType))
-                    throw new NotSupportedException($"Unable to resolve optional element type '{type}'.");
-                string elementCType = GetCType(elementType!);
-                return IsBlittableBridgeType(elementType!) ? elementCType : elementCType + "*";
-            }
+            CppTypeAdapterPlan? adapter = ResolveTypeAdapter(type, CppTypeAdapterUse.Field);
+            if (adapter != null)
+                return adapter.CAbiType;
             CppType unwrapped = UnwrapReferenceAndQualification(type);
             string displayName = unwrapped is CppClass standardClass ? standardClass.FullName : unwrapped.GetDisplayName();
             if (displayName.Replace(" ", string.Empty, StringComparison.Ordinal).StartsWith("std::", StringComparison.Ordinal) && displayName.Contains('<'))
@@ -57,6 +45,35 @@
         }
 
         /// <summary>
+        /// Resolves a registered or built-in semantic adapter for a C++ type.
+        /// </summary>
+        public CppTypeAdapterPlan? ResolveTypeAdapter(CppType type, CppTypeAdapterUse use)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            return Adapters.TryResolve(type, new(this, use), out CppTypeAdapterPlan? plan) ? plan : null;
+        }
+
+        /// <summary>Resolves third-party callable selection and naming.</summary>
+        public CppCallableAdapterPlan? ResolveCallableAdapter(CppClass? declaringType, CppFunction function, string defaultExportName)
+        {
+            ArgumentNullException.ThrowIfNull(function);
+            return Adapters.TryResolve(function, new(this, declaringType, defaultExportName), out CppCallableAdapterPlan? plan)
+                ? plan
+                : null;
+        }
+
+        /// <summary>Returns the final exported name for a free function or class method.</summary>
+        public string GetCFunctionName(CppClass? declaringType, CppFunction function, string defaultExportName)
+        {
+            CppCallableAdapterPlan? plan = ResolveCallableAdapter(declaringType, function, defaultExportName);
+            return plan?.ExportName ?? defaultExportName;
+        }
+
+        /// <summary>Determines whether a callable adapter excludes a declaration.</summary>
+        public bool IsCallableExcluded(CppClass? declaringType, CppFunction function, string defaultExportName) =>
+            ResolveCallableAdapter(declaringType, function, defaultExportName)?.Exclude == true;
+
+        /// <summary>
         /// Determines whether a C++ type uses the configured borrowed UTF-8 string adapter.
         /// </summary>
         /// <param name="type">C++ type to inspect.</param>
@@ -64,6 +81,12 @@
         public bool IsUtf8StringType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
+            if (ResolveCustomKind(type, CppTypeAdapterKind.Utf8String)) return true;
+            return IsUtf8StringTypeCore(type);
+        }
+
+        internal bool IsUtf8StringTypeCore(CppType type)
+        {
             CppType current = type;
             while (current is CppQualifiedType or CppReferenceType)
                 current = ((CppTypeWithElementType)current).ElementType;
@@ -94,6 +117,12 @@
         public bool IsUniquePtrType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
+            if (ResolveCustomKind(type, CppTypeAdapterKind.UniqueOwner)) return true;
+            return IsUniquePtrTypeCore(type);
+        }
+
+        internal bool IsUniquePtrTypeCore(CppType type)
+        {
             CppType current = UnwrapReferenceAndQualification(type);
             string compactName = current.GetDisplayName().Replace(" ", string.Empty, StringComparison.Ordinal);
             if (current is CppClass cppClass)
@@ -110,6 +139,12 @@
         public bool IsSharedPtrType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
+            if (ResolveCustomKind(type, CppTypeAdapterKind.SharedOwner)) return true;
+            return IsSharedPtrTypeCore(type);
+        }
+
+        internal bool IsSharedPtrTypeCore(CppType type)
+        {
             CppType current = UnwrapReferenceAndQualification(type);
             string compactName = current is CppClass cppClass
                 ? cppClass.FullName.Replace(" ", string.Empty, StringComparison.Ordinal)
@@ -138,6 +173,12 @@
         public bool IsSpanType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
+            if (ResolveCustomKind(type, CppTypeAdapterKind.Span)) return true;
+            return IsSpanTypeCore(type);
+        }
+
+        internal bool IsSpanTypeCore(CppType type)
+        {
             CppType current = UnwrapReferenceAndQualification(type);
             string compactName = current is CppClass cppClass
                 ? cppClass.FullName.Replace(" ", string.Empty, StringComparison.Ordinal)
@@ -154,6 +195,12 @@
         public bool IsVectorType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
+            if (ResolveCustomKind(type, CppTypeAdapterKind.Vector)) return true;
+            return IsVectorTypeCore(type);
+        }
+
+        internal bool IsVectorTypeCore(CppType type)
+        {
             CppType current = UnwrapReferenceAndQualification(type);
             string compactName = current is CppClass cppClass
                 ? cppClass.FullName.Replace(" ", string.Empty, StringComparison.Ordinal)
@@ -170,6 +217,12 @@
         public bool IsOptionalType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
+            if (ResolveCustomKind(type, CppTypeAdapterKind.Optional)) return true;
+            return IsOptionalTypeCore(type);
+        }
+
+        internal bool IsOptionalTypeCore(CppType type)
+        {
             CppType current = UnwrapReferenceAndQualification(type);
             string compactName = current is CppClass cppClass
                 ? cppClass.FullName.Replace(" ", string.Empty, StringComparison.Ordinal)
@@ -177,6 +230,9 @@
             return OptionalTypes.Any(candidate => compactName.StartsWith(
                 candidate.Replace(" ", string.Empty, StringComparison.Ordinal) + "<", StringComparison.Ordinal));
         }
+
+        private bool ResolveCustomKind(CppType type, CppTypeAdapterKind kind) =>
+            Adapters.TryResolve(type, new(this, CppTypeAdapterUse.Field), out CppTypeAdapterPlan? plan) && plan!.Kind == kind;
 
         /// <summary>
         /// Attempts to resolve the first type argument of a configured smart pointer, view, or optional type.
@@ -300,7 +356,8 @@
         {
             string parent = cppFunction.FullParentName.Replace("::", "_", StringComparison.Ordinal);
             string name = string.IsNullOrEmpty(parent) ? cppFunction.Name : parent + "_" + cppFunction.Name;
-            return NamePrefix + SanitizeCIdentifier(name);
+            string defaultName = NamePrefix + SanitizeCIdentifier(name);
+            return GetCFunctionName(null, cppFunction, defaultName);
         }
 
         /// <summary>
