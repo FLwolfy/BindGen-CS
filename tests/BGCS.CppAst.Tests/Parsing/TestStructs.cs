@@ -51,7 +51,7 @@ public:
                     {
                         var cppStruct = compilation.Classes[0];
                         Assert.Equal("Struct0", cppStruct.Name);
-                        Assert.Equal(0, cppStruct.Fields.Count);
+                        Assert.Empty(cppStruct.Fields);
                         Assert.Equal(sizeof(byte), cppStruct.SizeOf);
                         Assert.Equal(1, cppStruct.AlignOf);
                     }
@@ -59,8 +59,8 @@ public:
                     {
                         var cppStruct = compilation.Classes[1];
                         Assert.Equal("Struct1", cppStruct.Name);
-                        Assert.Equal(0, cppStruct.Fields.Count);
-                        Assert.Equal(1, cppStruct.BaseTypes.Count);
+                        Assert.Empty(cppStruct.Fields);
+                        Assert.Single(cppStruct.BaseTypes);
                         Assert.True(cppStruct.BaseTypes[0].Type is CppClass);
                         Assert.True(ReferenceEquals(compilation.Classes[0], cppStruct.BaseTypes[0].Type));
                         Assert.Equal(sizeof(byte), cppStruct.SizeOf);
@@ -70,7 +70,7 @@ public:
                     {
                         var cppStruct = compilation.Classes[2];
                         Assert.Equal("Struct2", cppStruct.Name);
-                        Assert.Equal(1, cppStruct.Fields.Count);
+                        Assert.Single(cppStruct.Fields);
                         Assert.Equal("field0", cppStruct.Fields[0].Name);
                         Assert.Equal(CppTypeKind.Primitive, cppStruct.Fields[0].Type.TypeKind);
                         Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppStruct.Fields[0].Type).Kind);
@@ -113,7 +113,7 @@ struct
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
 
                     {
                         var cppStruct = compilation.Classes[0];
@@ -150,7 +150,7 @@ struct HelloWorld
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
 
                     {
                         var cppStruct = compilation.Classes[0];
@@ -197,13 +197,13 @@ struct HelloWorld
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
 
                     {
                         var cppStruct = compilation.Classes[0];
 
                         // Only one union
-                        Assert.Equal(1, cppStruct.Classes.Count);
+                        Assert.Single(cppStruct.Classes);
 
                         // Only 2 fields
                         Assert.Equal(2, cppStruct.Fields.Count);
@@ -236,13 +236,13 @@ struct HelloWorld
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
 
                     {
                         var cppStruct = compilation.Classes[0];
 
                         // Only one union
-                        Assert.Equal(1, cppStruct.Classes.Count);
+                        Assert.Single(cppStruct.Classes);
 
                         // Only 2 fields
                         Assert.Equal(2, cppStruct.Fields.Count);

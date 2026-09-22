@@ -38,7 +38,7 @@ namespace BGCS.CppAst.Tests
                         var macro = compilation.Macros[0];
                         Assert.Equal("MACRO0", macro.Name);
                         Assert.Equal("", macro.Value);
-                        Assert.Equal(0, macro.Tokens.Count);
+                        Assert.Empty(macro.Tokens);
                         Assert.Null(macro.Parameters);
                     }
 
@@ -46,7 +46,7 @@ namespace BGCS.CppAst.Tests
                         var macro = compilation.Macros[1];
                         Assert.Equal("MACRO1", macro.Name);
                         Assert.Equal("1", macro.Value);
-                        Assert.Equal(1, macro.Tokens.Count);
+                        Assert.Single(macro.Tokens);
                         Assert.Equal("1", macro.Tokens[0].Text);
                         Assert.Equal(CppTokenKind.Literal, macro.Tokens[0].Kind);
                         Assert.Null(macro.Parameters);
@@ -57,7 +57,7 @@ namespace BGCS.CppAst.Tests
                         Assert.Equal("MACRO2", macro.Name);
                         Assert.Equal("", macro.Value);
                         Assert.NotNull(macro.Parameters);
-                        Assert.Equal(1, macro.Parameters.Count);
+                        Assert.Single(macro.Parameters);
                         Assert.Equal("x", macro.Parameters[0]);
                     }
 
@@ -66,7 +66,7 @@ namespace BGCS.CppAst.Tests
                         Assert.Equal("MACRO3", macro.Name);
                         Assert.Equal("x+1", macro.Value);
                         Assert.NotNull(macro.Parameters);
-                        Assert.Equal(1, macro.Parameters.Count);
+                        Assert.Single(macro.Parameters);
                         Assert.Equal("x", macro.Parameters[0]);
 
                         Assert.Equal(3, macro.Tokens.Count);

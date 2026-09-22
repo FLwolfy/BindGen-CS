@@ -30,7 +30,7 @@ public sealed class BindingModuleAnalyzer
     {
         ArgumentNullException.ThrowIfNull(graph);
         BindingModule module = new(config.ApiName, config.Namespace, config.LibName,
-            $"windows-{config.TargetArchitecture.ToString().ToLowerInvariant()}-msvc");
+            config.ResolvedTarget.Identifier);
         foreach (DeclarationGraphNode node in graph.TopologicalOrder())
         {
             try

@@ -77,11 +77,11 @@ class __cppast(script, is_browsable=true, desc=""a class"") TestClass
                     Assert.False(!cppClass.MetaAttributes.QueryArgumentAsBool("is_browsable", false));
                     Assert.Equal("a class", cppClass.MetaAttributes.QueryArgumentAsString("desc", ""));
 
-                    Assert.Equal(1, cppClass.Functions.Count);
+                    Assert.Single(cppClass.Functions);
                     Assert.Equal("a member function", cppClass.Functions[0].MetaAttributes.QueryArgumentAsString("desc", ""));
                     Assert.Equal("a member function 2", cppClass.Functions[0].MetaAttributes.QueryArgumentAsString("desc2", ""));
 
-                    Assert.Equal(1, cppClass.Fields.Count);
+                    Assert.Single(cppClass.Fields);
                     Assert.Equal("a member field", cppClass.Fields[0].MetaAttributes.QueryArgumentAsString("desc", ""));
                     Assert.Equal("a member field 2", cppClass.Fields[0].MetaAttributes.QueryArgumentAsString("desc2", ""));
 

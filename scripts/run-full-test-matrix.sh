@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/common.sh"
+DOTNET_CMD="$(resolve_dotnet_host)"
 CONFIGURATION="${CONFIGURATION:-Release}"
 SKIP_RESTORE_BUILD="${SKIP_RESTORE_BUILD:-0}"
 GATE_DIR="${ROOT_DIR}/artifacts/acceptance/gates"
@@ -15,7 +17,7 @@ log() {
 run_tests() {
   local project="$1"
   log "dotnet test ${project}"
-  dotnet test "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-build
+  "${DOTNET_CMD}" test "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-build
 }
 
 discover_test_projects() {
@@ -27,15 +29,22 @@ discover_test_projects() {
 
 if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
   log "dotnet restore BindGen-CS.sln"
-  dotnet restore "${ROOT_DIR}/BindGen-CS.sln"
+  "${DOTNET_CMD}" restore "${ROOT_DIR}/BindGen-CS.sln"
 
   log "dotnet build BindGen-CS.sln (${CONFIGURATION})"
-  dotnet build "${ROOT_DIR}/BindGen-CS.sln" --configuration "${CONFIGURATION}" --no-restore
+  "${DOTNET_CMD}" build "${ROOT_DIR}/BindGen-CS.sln" \
+    --configuration "${CONFIGURATION}" \
+    --no-restore \
+    --no-incremental \
+    -p:TreatWarningsAsErrors=true
 fi
 touch "${GATE_DIR}/solution-build"
 
 log "Layer 1: Auto-discovered test projects under tests/"
-mapfile -t TEST_PROJECTS < <(discover_test_projects)
+TEST_PROJECTS=()
+while IFS= read -r project_path; do
+  TEST_PROJECTS+=("${project_path}")
+done < <(discover_test_projects)
 
 if [[ "${#TEST_PROJECTS[@]}" -eq 0 ]]; then
   log "No test projects found under tests/"
@@ -48,13 +57,13 @@ for project_path in "${TEST_PROJECTS[@]}"; do
 done
 touch "${GATE_DIR}/managed-tests"
 
-dotnet test "${ROOT_DIR}/tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~WindowsNativeAbi"
+"${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~WindowsNativeAbi|FullyQualifiedName~NativeAbiTypeConversion"
 touch "${GATE_DIR}/native-c-abi"
-dotnet test "${ROOT_DIR}/tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~StrictSafety"
+"${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~StrictSafety"
 touch "${GATE_DIR}/strict-safety"
-dotnet test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~LinkAndInvokeNativeDll"
+"${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~LinkAndInvokeNativeDll"
 touch "${GATE_DIR}/native-cpp-bridge"
-dotnet test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~Adapter|FullyQualifiedName~VirtualCallback|FullyQualifiedName~TemplateInstantiation|FullyQualifiedName~NonBlittable"
+"${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~Adapter|FullyQualifiedName~VirtualCallback|FullyQualifiedName~TemplateInstantiation|FullyQualifiedName~NonBlittable"
 touch "${GATE_DIR}/modern-cpp"
 
 DEMO_DIR="${ROOT_DIR}/demo/BGCS.Demo"
@@ -68,8 +77,8 @@ pushd "${DEMO_DIR}" > /dev/null
 rm -rf "${DEMO_BIN_DIR}"
 mkdir -p "${DEMO_BIN_DIR}"
 
-dotnet run --project BGCS.Demo.csproj --configuration "${CONFIGURATION}" --no-build -- config.runtime-generated.json "${RUNTIME_GENERATED_OUT}"
-dotnet run --project BGCS.Demo.csproj --configuration "${CONFIGURATION}" --no-build -- config.runtime-notgenerated.json "${RUNTIME_NOTGENERATED_OUT}"
+"${DOTNET_CMD}" run --project BGCS.Demo.csproj --configuration "${CONFIGURATION}" --no-build -- config.runtime-generated.json "${RUNTIME_GENERATED_OUT}"
+"${DOTNET_CMD}" run --project BGCS.Demo.csproj --configuration "${CONFIGURATION}" --no-build -- config.runtime-notgenerated.json "${RUNTIME_NOTGENERATED_OUT}"
 
 if [[ ! -f "${RUNTIME_GENERATED_OUT}/Bindings.cs" ]]; then
   log "Expected ${RUNTIME_GENERATED_OUT}/Bindings.cs to exist"
@@ -105,16 +114,20 @@ popd > /dev/null
 touch "${GATE_DIR}/demo"
 
 log "Layer 3: Vendored real-library regeneration and compilation"
-bash "${ROOT_DIR}/scripts/test-real-libraries.sh"
+REQUIRE_REAL_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-libraries.sh"
 touch "${GATE_DIR}/real-libraries"
-bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"
+REQUIRE_REAL_CPP_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"
 touch "${GATE_DIR}/real-cpp-libraries"
 
-log "Layer 4: NuGet package dependency and consumer smoke test"
-"${ROOT_DIR}/scripts/test-nuget-packages.sh"
+log "Layer 4: InnoEngine generated-binding workspace"
+bash "${ROOT_DIR}/scripts/test-innoengine-bindings.sh"
+touch "${GATE_DIR}/innoengine-bindings"
+
+log "Layer 5: NuGet package dependency and consumer smoke test"
+bash "${ROOT_DIR}/scripts/test-nuget-packages.sh"
 touch "${GATE_DIR}/nuget-tool"
 
-log "Layer 5: Machine-readable acceptance report"
+log "Layer 6: Machine-readable acceptance report"
 bash "${ROOT_DIR}/scripts/write-acceptance-report.sh"
 
 log "All layers passed."

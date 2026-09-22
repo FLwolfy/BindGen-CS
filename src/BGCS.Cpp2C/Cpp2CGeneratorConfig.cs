@@ -2,6 +2,7 @@
 {
     using BGCS.Core.Logging;
     using BGCS.CppAst.Parsing;
+    using BGCS.CppAst.Targeting;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
     using System.ComponentModel;
@@ -158,10 +159,48 @@
         public string ErrorSymbolPrefix => string.IsNullOrEmpty(NamePrefix) ? "BGCS_" : NamePrefix;
 
         /// <summary>
-        /// Windows CPU target used by the C++ parser and generated bridge ABI.
+        /// Operating-system family targeted by the generated C bridge.
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
-        [DefaultValue(CppTargetCpu.X86_64)]
-        public CppTargetCpu TargetCpu { get; set; } = CppTargetCpu.X86_64;
+        [DefaultValue(CppTargetPlatform.Host)]
+        public CppTargetPlatform TargetPlatform { get; set; } = CppTargetPlatform.Host;
+
+        /// <summary>
+        /// Processor architecture targeted by the generated C bridge.
+        /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(CppTargetArchitecture.Host)]
+        public CppTargetArchitecture TargetArchitecture { get; set; } = CppTargetArchitecture.Host;
+
+        /// <summary>
+        /// Native ABI family. Default selects the conventional ABI for the target platform.
+        /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(CppTargetAbi.Default)]
+        public CppTargetAbi TargetAbi { get; set; } = CppTargetAbi.Default;
+
+        /// <summary>
+        /// Optional explicit Clang target triple.
+        /// </summary>
+        [DefaultValue(null)]
+        public string? TargetTriple { get; set; }
+
+        /// <summary>
+        /// Optional target SDK or sysroot used to parse C++ standard-library and platform headers.
+        /// </summary>
+        [DefaultValue(null)]
+        public string? TargetSysRoot { get; set; }
+
+        /// <summary>
+        /// Optional C++ compiler driver used for host system-header discovery and bridge verification.
+        /// </summary>
+        [DefaultValue(null)]
+        public string? CompilerPath { get; set; }
+
+        /// <summary>
+        /// Resolves target aliases into a validated concrete target.
+        /// </summary>
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        public CppTarget ResolvedTarget => CppTarget.Resolve(TargetPlatform, TargetArchitecture, TargetAbi, TargetTriple);
     }
 }

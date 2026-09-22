@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using BGCS.Core.Logging;
 using BGCS.Cpp2C;
+using BGCS.CppAst.Parsing;
+using BGCS.CppAst.Targeting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -270,18 +272,8 @@ public abstract class Cpp2CConfigurationEntryTestBase
 
     private static string ResolveCompilerPath()
     {
-        string? fromEnv = Environment.GetEnvironmentVariable("BGCS_CPP2C_CXX");
-        if (!string.IsNullOrWhiteSpace(fromEnv))
-            return fromEnv;
-
-        if (OperatingSystem.IsWindows())
-        {
-            string installedClang = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "LLVM", "bin", "clang++.exe");
-            if (File.Exists(installedClang))
-                return installedClang;
-        }
-
-        return "clang++";
+        return CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp)
+            ?? throw new InvalidOperationException("C++ compiler not available; set BGCS_CPP2C_CXX.");
     }
 
     private static string BuildCompileArguments(GeneratedOutput output, string source)

@@ -38,7 +38,7 @@
         /// <summary>
         /// Exposes public member <c>CppName</c>.
         /// </summary>
-        public string Identifier => CppName;
+        public string Identifier => Name;
 
         /// <summary>
         /// Gets or sets <c>CppName</c>.

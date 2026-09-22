@@ -31,7 +31,6 @@ public class CppNamespace : CppDeclaration, ICppMember, ICppGlobalDeclarationCon
         Typedefs = new CppContainerList<CppTypedef>(this);
         Namespaces = new CppContainerList<CppNamespace>(this);
         Attributes = [];
-        TokenAttributes = [];
         Properties = new CppContainerList<CppProperty>(this);
     }
 
@@ -73,7 +72,7 @@ public class CppNamespace : CppDeclaration, ICppMember, ICppGlobalDeclarationCon
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; }
+    public List<CppAttribute> TokenAttributes { get; } = [];
 
     /// <summary>
     /// Gets or sets <c>MetaAttributes</c>.

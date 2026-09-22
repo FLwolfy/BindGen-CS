@@ -4,6 +4,8 @@ using System.Linq;
 using BGCS.Core;
 using Xunit;
 
+#pragma warning disable xUnit2017 // TrieSet.Contains validates trie-key semantics, not enumerator item equality.
+
 namespace BGCS.Core.Tests;
 
 public class TrieSetTests
@@ -81,7 +83,6 @@ public class TrieSetTests
         Assert.Equal(new[] { "one", "two" }, copied);
 
         set.Clear();
-        Assert.Equal(0, set.Count);
         Assert.Empty(set);
     }
 }

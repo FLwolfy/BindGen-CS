@@ -47,7 +47,7 @@ The schema is derived from the installed `CsCodeGeneratorConfig` version, includ
 
 ## Target settings
 
-`TargetArchitecture` currently supports Windows `X86`, `X64`, and `Arm64`. Windows x64 is the mandatory execution platform. Defines and native binaries must match the selected architecture.
+`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, and FreeBSD with their valid x86/x64/Arm/Arm64 combinations. `TargetTriple`, `SysRoot`, and `CompilerPath` provide controlled overrides. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK.
 
 ## Import modes
 
@@ -149,14 +149,14 @@ Relative base files resolve from the referring config. Circular references fail 
 
 ## Presets
 
-The Windows matrix currently validates `sdl3`, `miniaudio`, `cimgui`, and `cimguizmo` presets. A preset supplies parser, typedef, callback, SingleFile, and required-define defaults; the project config still supplies paths, namespace, API name, and native library name.
+Presets are composable and generic: choose one target preset (`host-c`, `host-cpp`, `windows-c`, `windows-cpp`, `linux-c`, `linux-cpp`, `macos-c`, or `macos-cpp`) and optionally add API/output policies such as `c-library`, `function-table`, and `opaque-callbacks`. Library-specific facts stay in the consuming project's configuration rather than in BindGen-CS core.
 
 ```json
 {
-  "Preset": "sdl3",
+  "Preset": "host-c,c-library,opaque-callbacks",
   "EntryFiles": ["vendor/SDL/include/SDL3/SDL.h"],
   "IncludeFolders": ["vendor/SDL/include"]
 }
 ```
 
-The Windows COM preset remains an acceptance requirement.
+Explicit project settings override preset defaults, independent of preset order.

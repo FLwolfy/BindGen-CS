@@ -99,7 +99,7 @@ typedef struct {
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
                     Assert.Equal("MyStruct", compilation.Classes[0].Name);
 
                     var cppStruct = compilation.FindByName<CppClass>("MyStruct");
@@ -113,8 +113,8 @@ typedef struct {
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
-                    Assert.Equal(1, compilation.Typedefs.Count);
+                    Assert.Single(compilation.Classes);
+                    Assert.Single(compilation.Typedefs);
                     Assert.Equal("MyStruct", compilation.Classes[0].Name);
                     Assert.Equal("MyStruct", compilation.Typedefs[0].Name);
                 },

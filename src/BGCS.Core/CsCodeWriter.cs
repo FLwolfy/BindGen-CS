@@ -41,7 +41,12 @@
         /// <summary>
         /// Initializes a new instance of <see cref="CsCodeWriter"/>.
         /// </summary>
-        public CsCodeWriter(string fileName, string @namespace, IEnumerable<string> usings, HeaderInjectionDelegate? headerInjector)
+        public CsCodeWriter(
+            string fileName,
+            string @namespace,
+            IEnumerable<string> usings,
+            HeaderInjectionDelegate? headerInjector,
+            IEnumerable<string>? globalUsings = null)
         {
             fileName = FileNameHelper.SanitizeFileName(fileName);
             FileName = fileName;
@@ -66,6 +71,14 @@
             sb.AppendLine("// ------------------------------------------------------------------------------");
             sb.AppendLine();
 
+            if (globalUsings != null)
+            {
+                foreach (string ns in globalUsings)
+                {
+                    sb.AppendLine($"global using {ns};");
+                }
+            }
+
             foreach (string ns in usings)
             {
                 sb.AppendLine($"using {ns};");
@@ -73,7 +86,7 @@
 
             headerInjector?.Invoke(this, sb);
 
-            if (usings.Any())
+            if (usings.Any() || globalUsings?.Any() == true)
             {
                 sb.AppendLine();
             }

@@ -6,7 +6,7 @@ This document is normative. A category score is generated from test artifacts; m
 
 ## General rule
 
-Each category contains ten equally weighted evidence points. A point is awarded only when its automated gate passes on the release commit. The required range is **8.5-9.0**, calculated using half-points where a gate explicitly defines partial coverage. Any mandatory gate failure caps that category below 8.5. Cross-platform gates are deferred; the current required platform is Windows x64, with Windows x86 layout coverage where stated.
+Each category has an explicit set of automated mandatory gates. Every reported category scores **9.0/10.0** only when all of its gates pass on the release commit; report generation fails if any gate is absent. Reports are target-specific: a passing report proves only the platform, architecture, and ABI named in its `target` field.
 
 The release workflow must write machine-readable results to `artifacts/acceptance/report.json` and a human-readable summary to `artifacts/acceptance/report.md`.
 
@@ -14,20 +14,20 @@ The release workflow must write machine-readable results to `artifacts/acceptanc
 
 | Category | Target | Mandatory gates |
 | --- | ---: | --- |
-| Small C APIs | 8.5-9.0 | 100% generated compilation; ABI invocation; no source edits |
-| Medium/large C APIs | 8.5-9.0 | SDL3, miniaudio, cimgui regeneration and compilation |
-| Complex C ABI correctness | 8.5-9.0 | MSVC x86/x64 layout and calling-convention matrix |
-| Ordinary C++ class bridge | 8.5-9.0 | Native compile/link/run for lifecycle and methods |
-| Modern C++ | 8.5-9.0 | Selected templates/STL/smart pointers/virtual callbacks |
-| Generated API quality | 8.5-9.0 | Inno.Native snapshots; analyzers; zero manual generated patches |
-| Beginner usability | 8.5-9.0 | Five-command maximum from header to validated output |
-| External architecture | 8.5-9.0 | Automated dependency-boundary test |
-| Internal architecture | 8.5-9.0 | Shared IR and independently tested analyzers/emitters |
-| NuGet/testing/release | 8.5-9.0 | Clean packages, symbols, deterministic repeat pack, full Windows matrix |
+| Small C APIs | 9.0 | 100% generated compilation; ABI invocation; no source edits |
+| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx regeneration/compilation plus InnoEngine workspace diff |
+| Complex C ABI correctness | 9.0 | Host-native invocation and target-specific ABI/layout/calling-convention matrix |
+| Ordinary C++ class bridge | 9.0 | Native compile/link/run for lifecycle and methods |
+| Modern C++ | 9.0 | Selected templates/STL/smart pointers/virtual callbacks |
+| Generated API quality | 9.0 | Source/public-API snapshots; analyzers; no native imports outside generated output |
+| Beginner usability | 9.0 | Five-command maximum from header to validated output |
+| External architecture | 9.0 | Automated dependency-boundary test |
+| Internal architecture | 9.0 | Shared IR and independently tested analyzers/emitters |
+| NuGet/testing/release | 9.0 | Clean packages, symbols, deterministic output, host-native and managed matrices |
 
 ## Real-library budgets
 
-Measured on the pinned Windows CI runner after warm NuGet restore:
+Measured on the reported host target after warm NuGet restore:
 
 | Library | Generate budget | Required result |
 | --- | ---: | --- |
@@ -35,6 +35,8 @@ Measured on the pinned Windows CI runner after warm NuGet restore:
 | cimgui | 30 seconds | C# compile and API snapshot |
 | SDL3 | 45 seconds | C# compile and API snapshot |
 | miniaudio split header | 60 seconds | C# compile and API snapshot |
+| bgfx C99 | 30 seconds | C# compile and API snapshot |
+| bimg C++ | 15 seconds | C bridge, native syntax check, C# rebind, and API snapshot |
 
 A timeout, out-of-memory result, unbounded cache growth, or manual deletion of declarations fails the medium/large C category.
 
@@ -115,4 +117,4 @@ Automated architecture tests enforce:
 
 ## Current status
 
-The mandatory Windows x64 MSVC scope passes with every measured category between 8.5 and 9.0. `scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json` only after managed tests, native C/C++ runtime gates, four real-library generation/compilation budgets, source and reflection public-API snapshots, and NuGet/tool smoke tests pass. Other target ABIs and direct calls into upstream DLLs that are not built by this fixture are explicitly outside the verified claim.
+The macOS arm64 Darwin scope passes every measured category at 9.0. `scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json` and `report.md` only after managed tests, native C/C++ runtime gates, five real C libraries, the bimg C++ bridge, deterministic source/reflection snapshots, the InnoEngine five-project workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests pass. Windows and other target ABIs require separate target-specific reports; no report is treated as proof for a different target.

@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using BGCS.CppAst.Targeting;
 
 namespace BGCS.CppAst.Parsing;
 /// <summary>
@@ -43,6 +44,7 @@ public class CppParserOptions
         TargetVendor = "pc";
         TargetSystem = "windows";
         TargetAbi = "";
+        ConfigureForTarget(CppTarget.Resolve(), discoverHostToolchain: false);
     }
 
     /// <summary>
@@ -136,6 +138,11 @@ public class CppParserOptions
     public string TargetAbi { get; set; }
 
     /// <summary>
+    /// Gets or sets an explicit Clang target triple. When set, it takes precedence over the component fields.
+    /// </summary>
+    public string? TargetTriple { get; set; }
+
+    /// <summary>
     /// Gets or sets a C/C++ pre-header included before the files/text to parse
     /// </summary>
     public string? PreHeaderText { get; set; }
@@ -179,6 +186,14 @@ public class CppParserOptions
         TargetVendor = "pc";
         TargetSystem = "windows";
         TargetAbi = $"msvc{versionAsString}";
+        TargetTriple = targetCpu switch
+        {
+            CppTargetCpu.X86 => "i686-pc-windows-msvc",
+            CppTargetCpu.X86_64 => "x86_64-pc-windows-msvc",
+            CppTargetCpu.ARM => "armv7-pc-windows-msvc",
+            CppTargetCpu.ARM64 => "aarch64-pc-windows-msvc",
+            _ => throw new ArgumentOutOfRangeException(nameof(targetCpu), targetCpu, null)
+        };
 
         // See https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
 
@@ -209,6 +224,76 @@ public class CppParserOptions
         AdditionalArguments.Add("-fms-extensions");
         AdditionalArguments.Add("-fms-compatibility");
         AdditionalArguments.Add($"-fms-compatibility-version={versionAsString}");
+        return this;
+    }
+
+    /// <summary>
+    /// Configures this instance for a resolved cross-platform native target.
+    /// </summary>
+    /// <param name="target">Resolved target platform, architecture, ABI, and Clang triple.</param>
+    /// <param name="sysRoot">Optional target SDK or sysroot.</param>
+    /// <param name="compilerPath">Optional compiler driver used to discover host system headers.</param>
+    /// <param name="discoverHostToolchain">Whether to discover SDK and system include paths when the target matches the host.</param>
+    /// <returns>This instance.</returns>
+    public CppParserOptions ConfigureForTarget(
+        CppTarget target,
+        string? sysRoot = null,
+        string? compilerPath = null,
+        bool discoverHostToolchain = true)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        if (target.Platform == CppTargetPlatform.Windows)
+        {
+            ConfigureForWindowsMsvc(target.Cpu);
+        }
+        else
+        {
+            TargetCpu = target.Cpu;
+            TargetCpuSub = string.Empty;
+            TargetVendor = target.Platform is CppTargetPlatform.MacOS or CppTargetPlatform.IOS ? "apple" : "unknown";
+            TargetSystem = target.Platform switch
+            {
+                CppTargetPlatform.MacOS => "darwin",
+                CppTargetPlatform.IOS => "ios",
+                CppTargetPlatform.Android => "linux",
+                CppTargetPlatform.FreeBSD => "freebsd",
+                _ => "linux"
+            };
+            TargetAbi = target.Abi switch
+            {
+                CppTargetAbi.Gnu => "gnu",
+                CppTargetAbi.Musl => "musl",
+                CppTargetAbi.Android => "android",
+                _ => string.Empty
+            };
+        }
+        TargetTriple = target.Triple;
+
+        string? effectiveSysRoot = discoverHostToolchain && string.IsNullOrWhiteSpace(sysRoot) && target.Platform == CppTargetPlatform.MacOS
+            ? CppToolchainDiscovery.FindMacOsSdkRoot()
+            : sysRoot;
+        if (!string.IsNullOrWhiteSpace(effectiveSysRoot))
+        {
+            string fullSysRoot = System.IO.Path.GetFullPath(effectiveSysRoot);
+            AdditionalArguments.Add("-isysroot");
+            AdditionalArguments.Add(fullSysRoot);
+            if (ParserKind == CppParserKind.Cpp)
+            {
+                string libcxx = System.IO.Path.Combine(fullSysRoot, "usr", "include", "c++", "v1");
+                if (System.IO.Directory.Exists(libcxx) && !SystemIncludeFolders.Contains(libcxx))
+                    SystemIncludeFolders.Add(libcxx);
+            }
+        }
+
+        CppTarget host = CppTarget.Resolve();
+        if (discoverHostToolchain && target.Platform == host.Platform && target.Architecture == host.Architecture)
+        {
+            foreach (string include in CppToolchainDiscovery.DiscoverSystemIncludeFolders(ParserKind, compilerPath))
+            {
+                if (!SystemIncludeFolders.Contains(include))
+                    SystemIncludeFolders.Add(include);
+            }
+        }
         return this;
     }
 }

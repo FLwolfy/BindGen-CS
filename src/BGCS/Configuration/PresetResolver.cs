@@ -1,6 +1,7 @@
 namespace BGCS.Configuration;
 
 using BGCS.CppAst.Parsing;
+using BGCS.CppAst.Targeting;
 
 /// <summary>
 /// Applies named, versioned groups of generator defaults before validation.
@@ -12,34 +13,42 @@ public sealed class PresetResolver
 
     public PresetResolver()
     {
-        Register("windows-c", config =>
+        Register("host-c", config =>
         {
             config.ParserKind = CppParserKind.C;
-            config.TargetArchitecture = WindowsTargetArchitecture.X64;
+            config.TargetPlatform = CppTargetPlatform.Host;
+            config.TargetArchitecture = CppTargetArchitecture.Host;
+            config.TargetAbi = CppTargetAbi.Default;
             config.ParseSystemIncludes = false;
         });
-        Register("windows-cpp", config =>
+        Register("host-cpp", config =>
         {
             config.ParserKind = CppParserKind.Cpp;
-            config.TargetArchitecture = WindowsTargetArchitecture.X64;
+            config.TargetPlatform = CppTargetPlatform.Host;
+            config.TargetArchitecture = CppTargetArchitecture.Host;
+            config.TargetAbi = CppTargetAbi.Default;
             config.ParseSystemIncludes = false;
         });
-        Register("inno-function-table", config =>
+        RegisterTargetPreset("windows-c", CppParserKind.C, CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc);
+        RegisterTargetPreset("windows-cpp", CppParserKind.Cpp, CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc);
+        RegisterTargetPreset("linux-c", CppParserKind.C, CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu);
+        RegisterTargetPreset("linux-cpp", CppParserKind.Cpp, CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu);
+        RegisterTargetPreset("macos-c", CppParserKind.C, CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin);
+        RegisterTargetPreset("macos-cpp", CppParserKind.Cpp, CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin);
+        Register("function-table", config =>
         {
             config.ImportType = ImportType.FunctionTable;
             config.UseCustomContext = true;
             config.WrapPointersAsHandle = true;
             config.MergeGeneratedFilesToSingleFile = true;
         });
-        Register("bgfx", config =>
+        Register("c-library", config =>
         {
             config.ParserKind = CppParserKind.C;
-            config.TargetArchitecture = WindowsTargetArchitecture.X64;
             config.AutoSquashTypedef = false;
             config.ParseSystemIncludes = false;
             config.ParseMacros = false;
             config.ParseComments = false;
-            config.DelegatesAsVoidPointer = true;
             config.ImportType = ImportType.DllImport;
             config.GenerateExtensions = false;
             config.OneFilePerType = false;
@@ -47,72 +56,9 @@ public sealed class PresetResolver
             config.SingleFileOutputName = "Bindings.cs";
             config.GenerateRuntimeSource = false;
         });
-        Register("sdl3", config =>
+        Register("opaque-callbacks", config =>
         {
-            config.ParserKind = CppParserKind.C;
-            config.TargetArchitecture = WindowsTargetArchitecture.X64;
-            config.AutoSquashTypedef = false;
-            config.ParseSystemIncludes = false;
-            config.ParseMacros = false;
-            config.ParseComments = false;
             config.DelegatesAsVoidPointer = true;
-            config.ImportType = ImportType.DllImport;
-            config.GenerateExtensions = false;
-            config.OneFilePerType = false;
-            config.MergeGeneratedFilesToSingleFile = true;
-            config.SingleFileOutputName = "Bindings.cs";
-            config.GenerateRuntimeSource = false;
-        });
-        Register("cimguizmo", config =>
-        {
-            config.ParserKind = CppParserKind.C;
-            config.TargetArchitecture = WindowsTargetArchitecture.X64;
-            config.AutoSquashTypedef = false;
-            config.ParseSystemIncludes = false;
-            config.ParseMacros = false;
-            config.ParseComments = false;
-            config.DelegatesAsVoidPointer = true;
-            config.ImportType = ImportType.DllImport;
-            config.GenerateExtensions = false;
-            config.OneFilePerType = false;
-            config.MergeGeneratedFilesToSingleFile = true;
-            config.SingleFileOutputName = "Bindings.cs";
-            config.GenerateRuntimeSource = false;
-            if (!config.Defines.Contains("CIMGUI_DEFINE_ENUMS_AND_STRUCTS", StringComparer.Ordinal))
-                config.Defines.Add("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
-        });
-        Register("cimgui", config =>
-        {
-            config.ParserKind = CppParserKind.C;
-            config.TargetArchitecture = WindowsTargetArchitecture.X64;
-            config.AutoSquashTypedef = false;
-            config.ParseSystemIncludes = false;
-            config.ParseMacros = false;
-            config.ParseComments = false;
-            config.DelegatesAsVoidPointer = true;
-            config.ImportType = ImportType.DllImport;
-            config.GenerateExtensions = false;
-            config.OneFilePerType = false;
-            config.MergeGeneratedFilesToSingleFile = true;
-            config.SingleFileOutputName = "Bindings.cs";
-            config.GenerateRuntimeSource = false;
-            if (!config.Defines.Contains("CIMGUI_DEFINE_ENUMS_AND_STRUCTS", StringComparer.Ordinal))
-                config.Defines.Add("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
-        });
-        Register("miniaudio", config =>
-        {
-            config.ParserKind = CppParserKind.C;
-            config.TargetArchitecture = WindowsTargetArchitecture.X64;
-            config.AutoSquashTypedef = false;
-            config.ParseSystemIncludes = false;
-            config.ParseMacros = false;
-            config.ParseComments = false;
-            config.ImportType = ImportType.DllImport;
-            config.GenerateExtensions = false;
-            config.OneFilePerType = false;
-            config.MergeGeneratedFilesToSingleFile = true;
-            config.SingleFileOutputName = "Bindings.cs";
-            config.GenerateRuntimeSource = false;
         });
     }
 
@@ -141,5 +87,22 @@ public sealed class PresetResolver
                 throw new InvalidOperationException($"Unknown BindGen-CS preset '{name}'. Available presets: {string.Join(", ", Names.OrderBy(value => value))}.");
             apply(config);
         }
+    }
+
+    private void RegisterTargetPreset(
+        string name,
+        CppParserKind parserKind,
+        CppTargetPlatform platform,
+        CppTargetArchitecture architecture,
+        CppTargetAbi abi)
+    {
+        Register(name, config =>
+        {
+            config.ParserKind = parserKind;
+            config.TargetPlatform = platform;
+            config.TargetArchitecture = architecture;
+            config.TargetAbi = abi;
+            config.ParseSystemIncludes = false;
+        });
     }
 }

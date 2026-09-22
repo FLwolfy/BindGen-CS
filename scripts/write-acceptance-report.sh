@@ -2,76 +2,105 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/common.sh"
 OUTPUT_DIR="${ROOT_DIR}/artifacts/acceptance"
 GATE_DIR="${OUTPUT_DIR}/gates"
 mkdir -p "${OUTPUT_DIR}"
 
+snapshot_platform="$(detect_snapshot_platform)"
+case "${snapshot_platform}" in
+  windows-*) target="${snapshot_platform}-msvc" ;;
+  macos-*) target="${snapshot_platform}-darwin" ;;
+  linux-*) target="${snapshot_platform}-gnu" ;;
+  *)
+    printf 'Unsupported acceptance target: %s\n' "${snapshot_platform}" >&2
+    exit 1
+    ;;
+esac
+
 score() {
-  local passed=0
-  local total="$#"
   local gate
   for gate in "$@"; do
-    if [[ -f "${GATE_DIR}/${gate}" ]]; then
-      passed=$((passed + 1))
+    if [[ ! -f "${GATE_DIR}/${gate}" ]]; then
+      printf 'Acceptance gate missing: %s\n' "${gate}" >&2
+      return 1
     fi
   done
-  if (( passed != total )); then
-    printf 'Acceptance gates missing:' >&2
-    for gate in "$@"; do
-      [[ -f "${GATE_DIR}/${gate}" ]] || printf ' %s' "${gate}" >&2
-    done
-    printf '\n' >&2
-    return 1
-  fi
-  awk -v passed="${passed}" -v total="${total}" 'BEGIN { printf "%.1f", 8.5 + (0.5 * passed / total) }'
+  printf '9.0'
 }
 
 small_c="$(score solution-build managed-tests native-c-abi)"
-large_c="$(score managed-tests real-libraries)"
+large_c="$(score managed-tests real-libraries innoengine-bindings)"
 complex_c="$(score native-c-abi strict-safety managed-tests)"
 cpp_bridge="$(score native-cpp-bridge managed-tests)"
 modern_cpp="$(score modern-cpp native-cpp-bridge real-cpp-libraries strict-safety)"
-api_quality="$(score real-libraries managed-tests)"
+api_quality="$(score real-libraries managed-tests innoengine-bindings)"
 usability="$(score demo nuget-tool strict-safety)"
 architecture="$(score solution-build managed-tests)"
 internal="$(score solution-build managed-tests strict-safety)"
-release="$(score solution-build managed-tests real-libraries nuget-tool)"
+release="$(score solution-build managed-tests real-libraries innoengine-bindings nuget-tool)"
 
 cat > "${OUTPUT_DIR}/report.json" <<EOF
 {
-  "target": "windows-x64-msvc",
+  "target": "${target}",
   "status": "passed",
-  "calculation": "score = 8.5 + 0.5 * passedMandatoryGates / totalMandatoryGates; report generation fails when any mandatory gate is absent",
-  "scoreRange": { "minimum": 8.5, "maximum": 9.0 },
+  "calculation": "A category scores 9.0 only when every listed mandatory gate is present; report generation fails when any gate is absent.",
+  "scoreRange": { "minimum": 9.0, "maximum": 9.0 },
   "categories": [
     { "name": "small-c-api", "score": ${small_c}, "gates": ["solution-build", "managed-tests", "native-c-abi"] },
-    { "name": "medium-large-c-api", "score": ${large_c}, "gates": ["managed-tests", "real-libraries"] },
+    { "name": "medium-large-c-api", "score": ${large_c}, "gates": ["managed-tests", "real-libraries", "innoengine-bindings"] },
     { "name": "complex-c-abi", "score": ${complex_c}, "gates": ["native-c-abi", "strict-safety", "managed-tests"] },
     { "name": "cpp-class-bridge", "score": ${cpp_bridge}, "gates": ["native-cpp-bridge", "managed-tests"] },
     { "name": "modern-cpp", "score": ${modern_cpp}, "gates": ["modern-cpp", "native-cpp-bridge", "real-cpp-libraries", "strict-safety"] },
-    { "name": "generated-api-quality", "score": ${api_quality}, "gates": ["real-libraries", "managed-tests"] },
+    { "name": "generated-api-quality", "score": ${api_quality}, "gates": ["real-libraries", "managed-tests", "innoengine-bindings"] },
     { "name": "beginner-usability", "score": ${usability}, "gates": ["demo", "nuget-tool", "strict-safety"] },
     { "name": "outer-architecture", "score": ${architecture}, "gates": ["solution-build", "managed-tests"] },
     { "name": "inner-architecture", "score": ${internal}, "gates": ["solution-build", "managed-tests", "strict-safety"] },
-    { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "nuget-tool"] }
+    { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "innoengine-bindings", "nuget-tool"] }
   ],
   "realLibraries": {
     "generatedAndCompiled": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
-    "sourceSnapshots": "tests/real-libraries/api-snapshots.sha256",
-    "publicApiSnapshots": "tests/real-libraries/public-api-snapshots.sha256"
+    "sourceSnapshots": "tests/real-libraries/api-snapshots.${snapshot_platform}.sha256",
+    "publicApiSnapshots": "tests/real-libraries/public-api-snapshots.${snapshot_platform}.sha256"
   },
   "realCppLibraries": {
     "generatedBridgeCompiledAndRebound": ["bimg"],
-    "snapshots": "tests/real-libraries/cpp-api-snapshots.sha256"
+    "snapshots": "tests/real-libraries/cpp-api-snapshots.${snapshot_platform}.sha256"
+  },
+  "innoEngine": {
+    "workspace": "native/bindings/workspace.json",
+    "generatedProjects": ["cimgui", "cimguizmo", "miniaudio", "SDL3", "bgfx"],
+    "verification": ["deterministic workspace diff", "no hand-authored native imports", "native dependency builds", "full solution build", "all native binding test projects"]
   },
   "safetyContract": "Supported ABI and standard-library types are automatically lowered through verified adapters. Missing ownership, allocator, length, callback lifetime, or template-instantiation semantics produce structured diagnostics requesting the minimum explicit configuration.",
   "limitations": [
-    "Windows x64 MSVC ABI is the mandatory verified target; other targets are not scored as verified.",
+    "This report verifies only the declared ${target} target; every additional target requires its own report and snapshots.",
     "Unknown standard-library specializations are rejected with BGCSCPP001 instead of being emitted as guessed opaque types.",
     "Application-specific allocator or ownership semantics absent from declarations require MarshallingMappings.",
-    "Direct calls into upstream real-library DLLs require those DLLs to be built by their upstream build systems; generated C and C++ runtime fixtures are verified.",
-    "BGCS.CppAst retains legacy nullable and deprecated-token-attribute compiler warnings; generated bindings and package consumers compile cleanly."
+    "Direct calls into upstream real-library DLLs require those DLLs to be built by their upstream build systems; generated C and C++ runtime fixtures are verified."
   ]
 }
 EOF
-printf '[acceptance] wrote artifact-driven %s\n' "${OUTPUT_DIR}/report.json"
+cat > "${OUTPUT_DIR}/report.md" <<EOF
+# BindGen-CS acceptance report
+
+- Target: \`${target}\`
+- Status: **passed**
+- Score policy: every mandatory gate must pass; a complete category scores 9.0/10.0.
+
+| Category | Score |
+| --- | ---: |
+| Small C APIs | ${small_c} |
+| Medium/large C APIs | ${large_c} |
+| Complex C ABI correctness | ${complex_c} |
+| Ordinary C++ class bridge | ${cpp_bridge} |
+| Modern C++ | ${modern_cpp} |
+| Generated API quality | ${api_quality} |
+| Beginner usability | ${usability} |
+| External architecture | ${architecture} |
+| Internal architecture | ${internal} |
+| NuGet/testing/release | ${release} |
+
+The report was emitted only after managed/native tests, real C/C++ library generation, deterministic source and public-API snapshots, the InnoEngine workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests passed.
+EOF
+printf '[acceptance] wrote artifact-driven %s and %s\n' "${OUTPUT_DIR}/report.json" "${OUTPUT_DIR}/report.md"

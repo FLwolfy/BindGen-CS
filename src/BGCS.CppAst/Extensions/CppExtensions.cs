@@ -35,7 +35,7 @@ public static class CppExtensions
     public static string GetDisplayName(this CppType type)
     {
         if (type is ICppMember member) return member.Name;
-        return type.ToString();
+        return type.ToString() ?? string.Empty;
     }
 
     /// <summary>

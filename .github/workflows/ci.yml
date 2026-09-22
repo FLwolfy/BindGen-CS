@@ -8,7 +8,12 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    name: Build and test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -28,15 +33,42 @@ jobs:
       - name: Test
         run: dotnet test BindGen-CS.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./artifacts/test-results
 
-      - name: Full test matrix workflow
-        run: ./scripts/run-full-test-matrix.sh
-        env:
-          SKIP_RESTORE_BUILD: "1"
-          CONFIGURATION: "Release"
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.os }}
           path: artifacts/test-results
+
+  acceptance-macos-arm64:
+    name: Acceptance (macOS arm64)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout BindGen-CS
+        uses: actions/checkout@v4
+
+      - name: Checkout InnoEngine acceptance corpus
+        uses: actions/checkout@v4
+        with:
+          repository: FLwolfy/InnoEngine
+          path: .integration/InnoEngine
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Run full acceptance matrix
+        run: bash ./scripts/run-full-test-matrix.sh
+        env:
+          CONFIGURATION: "Release"
+          INNOENGINE_ROOT: ${{ github.workspace }}/.integration/InnoEngine
+
+      - name: Upload acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-macos-arm64
+          path: artifacts/acceptance

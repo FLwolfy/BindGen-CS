@@ -23,7 +23,7 @@ internal sealed class CppBridgeModuleAnalyzer
     internal BindingModule Analyze(BGCS.CppAst.Model.Metadata.CppCompilation compilation)
     {
         BindingModule module = new("CppBridge", "C", string.Empty,
-            $"windows-{config.TargetCpu.ToString().ToLowerInvariant()}-msvc");
+            config.ResolvedTarget.Identifier);
         AnalyzeContainer(compilation, module);
         return module;
     }

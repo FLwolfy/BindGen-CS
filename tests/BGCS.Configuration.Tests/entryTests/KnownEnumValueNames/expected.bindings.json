@@ -2,6 +2,6 @@
   "Contains": [
     "public enum StrangeEnum : int",
     "MyPrefixOff = unchecked(0)",
-    "MyPrefixOn = unchecked(1)"
+    "Enabled = unchecked(1)"
   ]
 }

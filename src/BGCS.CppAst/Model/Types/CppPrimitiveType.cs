@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using ClangSharp.Interop;
 using System;
 using System.Collections.Frozen;
+using System.Collections.Concurrent;
 
 namespace BGCS.CppAst.Model.Types;
 /// <summary>
@@ -13,6 +14,8 @@ namespace BGCS.CppAst.Model.Types;
 /// </summary>
 public sealed class CppPrimitiveType : CppType
 {
+    private static readonly ConcurrentDictionary<(CppPrimitiveKind Kind, int Size), CppPrimitiveType> AbiSizedTypes = new();
+
     /// <summary>
     /// Singleton instance of the `void` type.
     /// </summary>
@@ -145,6 +148,29 @@ public sealed class CppPrimitiveType : CppType
         UpdateSize(out _sizeOf);
     }
 
+    private CppPrimitiveType(CppPrimitiveKind kind, int sizeOf) : base(default, CppTypeKind.Primitive)
+    {
+        Kind = kind;
+        _sizeOf = sizeOf;
+    }
+
+    /// <summary>
+    /// Returns the canonical primitive instance for an ABI-reported size.
+    /// </summary>
+    /// <remarks>
+    /// Clang target triples can change the width of primitives such as <c>long</c>,
+    /// <c>wchar_t</c>, and <c>long double</c>. The historical static instances remain
+    /// canonical for their original sizes; target-specific variants are cached.
+    /// </remarks>
+    internal static CppPrimitiveType ForAbiSize(CppPrimitiveType primitiveType, long sizeOf)
+    {
+        ArgumentNullException.ThrowIfNull(primitiveType);
+        if (sizeOf <= 0 || sizeOf == primitiveType.SizeOf)
+            return primitiveType;
+        int size = checked((int)sizeOf);
+        return AbiSizedTypes.GetOrAdd((primitiveType.Kind, size), static key => new CppPrimitiveType(key.Kind, key.Size));
+    }
+
     /// <summary>
     /// The kind of primitive.
     /// </summary>
@@ -180,7 +206,7 @@ public sealed class CppPrimitiveType : CppType
 
             case CppPrimitiveKind.Long:
             case CppPrimitiveKind.UnsignedLong:
-                sizeOf = 4; // This is incorrect
+                sizeOf = 4;
                 break;
 
             case CppPrimitiveKind.LongLong:

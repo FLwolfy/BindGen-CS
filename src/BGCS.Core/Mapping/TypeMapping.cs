@@ -38,6 +38,11 @@
         public List<TypeFieldMapping> FieldMappings { get; set; } = new();
 
         /// <summary>
+        /// Gets or sets an optional sentinel-based validity property for this value type.
+        /// </summary>
+        public StructValidityMapping? Validity { get; set; }
+
+        /// <summary>
         /// Attempts to resolve data via <c>TryGetFieldMapping</c> without throwing.
         /// </summary>
         public bool TryGetFieldMapping(string valueName, [NotNullWhen(true)] out TypeFieldMapping? mapping)

@@ -17,10 +17,6 @@ using Xunit;
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using BGCS.CppAst.Extensions;
-using System;
-using System.Linq;
-
 namespace BGCS.CppAst.Tests
 {
     public class TestTypes : InlineTestBase
@@ -93,14 +89,15 @@ TemplateStruct<int, Struct2> unexposed;
 
                     Assert.Equal(2, compilation.Fields.Count);
 
-                    var exposed = compilation.Fields[0].Type as CppClass;
+                    var exposed = Assert.IsType<CppClass>(compilation.Fields[0].Type);
                     Assert.Equal("TemplateStruct", exposed.Name);
                     Assert.Equal(2, exposed.TemplateParameters.Count);
                     Assert.Equal(CppTemplateArgumentKind.AsType, exposed.TemplateSpecializedArguments[0]?.ArgKind);
-                    Assert.Equal(CppPrimitiveKind.Int, (exposed.TemplateSpecializedArguments[0]?.ArgAsType as CppPrimitiveType).Kind);
+                    var exposedPrimitive = Assert.IsType<CppPrimitiveType>(exposed.TemplateSpecializedArguments[0]?.ArgAsType);
+                    Assert.Equal(CppPrimitiveKind.Int, exposedPrimitive.Kind);
                     Assert.Equal("Struct2", (exposed.TemplateSpecializedArguments[1].ArgAsType as CppClass)?.Name);
 
-                    var specialized = exposed.SpecializedTemplate;
+                    var specialized = Assert.IsType<CppClass>(exposed.SpecializedTemplate);
                     Assert.Equal("TemplateStruct", specialized.Name);
                     Assert.Equal(2, specialized.Fields.Count);
                     Assert.Equal("field0", specialized.Fields[0].Name);
@@ -108,11 +105,11 @@ TemplateStruct<int, Struct2> unexposed;
                     Assert.Equal("field1", specialized.Fields[1].Name);
                     Assert.Equal("U", specialized.Fields[1].Type.GetDisplayName());
 
-                    var unexposed = compilation.Fields[1].Type as CppClass;
+                    var unexposed = Assert.IsType<CppClass>(compilation.Fields[1].Type);
                     Assert.Equal("TemplateStruct", unexposed.Name);
                     Assert.Equal(2, unexposed.TemplateParameters.Count);
                     Assert.Equal(CppTemplateArgumentKind.AsType, unexposed.TemplateSpecializedArguments[0]?.ArgKind);
-                    Assert.Equal(CppPrimitiveKind.Int, (exposed.TemplateSpecializedArguments[0]?.ArgAsType as CppPrimitiveType).Kind);
+                    Assert.Equal(CppPrimitiveKind.Int, exposedPrimitive.Kind);
                     Assert.Equal("Struct2", (unexposed.TemplateSpecializedArguments[1].ArgAsType as CppClass)?.Name);
 
                     Assert.NotEqual(exposed.GetHashCode(), specialized.GetHashCode());
@@ -148,10 +145,10 @@ class Derived : public ::BaseTemplate<::Derived>
                     Assert.Equal("Derived", derived.Name);
                     Assert.Equal("BaseTemplate", baseClassSpecialized.Name);
 
-                    Assert.Equal(1, derived.BaseTypes.Count);
+                    Assert.Single(derived.BaseTypes);
                     Assert.Equal(baseClassSpecialized, derived.BaseTypes[0].Type);
 
-                    Assert.Equal(1, baseClassSpecialized.TemplateParameters.Count);
+                    Assert.Single(baseClassSpecialized.TemplateParameters);
 
                     //Here change to argument as a template deduce instance, not as a Template Parameters~~
                     Assert.Equal(derived, baseClassSpecialized.TemplateSpecializedArguments[0].ArgAsType);
@@ -177,18 +174,18 @@ foo<int, int> foobar;
                     Assert.False(compilation.HasErrors);
 
                     Assert.Equal(3, compilation.Classes.Count);
-                    Assert.Equal(1, compilation.Fields.Count);
+                    Assert.Single(compilation.Fields);
 
                     var baseTemplate = compilation.Classes[0];
                     var fullSpecializedClass = compilation.Classes[1];
                     var partialSpecializedTemplate = compilation.Classes[2];
 
                     var field = compilation.Fields[0];
-                    Assert.Equal(field.Name, "foobar");
+                    Assert.Equal("foobar", field.Name);
 
-                    Assert.Equal(baseTemplate.TemplateKind, CppTemplateKind.TemplateClass);
-                    Assert.Equal(fullSpecializedClass.TemplateKind, CppTemplateKind.TemplateSpecializedClass);
-                    Assert.Equal(partialSpecializedTemplate.TemplateKind, CppTemplateKind.PartialTemplateClass);
+                    Assert.Equal(CppTemplateKind.TemplateClass, baseTemplate.TemplateKind);
+                    Assert.Equal(CppTemplateKind.TemplateSpecializedClass, fullSpecializedClass.TemplateKind);
+                    Assert.Equal(CppTemplateKind.PartialTemplateClass, partialSpecializedTemplate.TemplateKind);
 
                     //Need be a specialized for partial template here
                     Assert.Equal(fullSpecializedClass.SpecializedTemplate, partialSpecializedTemplate);
@@ -196,19 +193,19 @@ foo<int, int> foobar;
                     //Need be a full specialized class for this field
                     Assert.Equal(field.Type, fullSpecializedClass);
 
-                    Assert.Equal(partialSpecializedTemplate.TemplateSpecializedArguments.Count, 2);
+                    Assert.Equal(2, partialSpecializedTemplate.TemplateSpecializedArguments.Count);
                     //The first argument is integer now
-                    Assert.Equal(partialSpecializedTemplate.TemplateSpecializedArguments[0].ArgString, "int");
+                    Assert.Equal("int", partialSpecializedTemplate.TemplateSpecializedArguments[0].ArgString);
                     //The second argument is not a specialized argument, we do not specialized a `B` template parameter here(partial specialized template)
-                    Assert.Equal(partialSpecializedTemplate.TemplateSpecializedArguments[1].IsSpecializedArgument, false);
+                    Assert.False(partialSpecializedTemplate.TemplateSpecializedArguments[1].IsSpecializedArgument);
 
                     //The field use type is a full specialized type here~, so we can have two `int` template parmerater here
                     //It's a not template or partial template class, so we can instantiate it, see `foo<int, int> foobar;` before.
-                    Assert.Equal(fullSpecializedClass.TemplateSpecializedArguments.Count, 2);
+                    Assert.Equal(2, fullSpecializedClass.TemplateSpecializedArguments.Count);
                     //The first argument is integer now
-                    Assert.Equal(fullSpecializedClass.TemplateSpecializedArguments[0].ArgString, "int");
+                    Assert.Equal("int", fullSpecializedClass.TemplateSpecializedArguments[0].ArgString);
                     //The second argument is not a specialized argument
-                    Assert.Equal(fullSpecializedClass.TemplateSpecializedArguments[1].ArgString, "int");
+                    Assert.Equal("int", fullSpecializedClass.TemplateSpecializedArguments[1].ArgString);
                 }
             );
         }

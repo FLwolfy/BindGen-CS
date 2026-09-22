@@ -2,12 +2,20 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/common.sh"
+DOTNET_CMD="$(resolve_dotnet_host)"
+CXX_CMD="$(resolve_cxx_host)"
 INNOENGINE_ROOT="${INNOENGINE_ROOT:-$(cd "${ROOT_DIR}/.." && pwd)/InnoEngine}"
 ARTIFACTS_DIR="${ROOT_DIR}/artifacts/real-cpp-libraries"
 BIMG_HEADER="${INNOENGINE_ROOT}/extern/bimg/include/bimg/bimg.h"
 BIMG_INCLUDE="${INNOENGINE_ROOT}/extern/bimg/include"
 BX_INCLUDE="${INNOENGINE_ROOT}/extern/bx/include"
+REQUIRE_REAL_CPP_LIBRARIES="${REQUIRE_REAL_CPP_LIBRARIES:-0}"
 if [[ ! -f "${BIMG_HEADER}" ]]; then
+  if [[ "${REQUIRE_REAL_CPP_LIBRARIES}" == "1" ]]; then
+    echo "[real-cpp] Required bimg headers were not found under: ${INNOENGINE_ROOT}" >&2
+    exit 1
+  fi
   echo "[real-cpp] bimg headers unavailable; skipping."
   exit 0
 fi
@@ -25,8 +33,8 @@ else
   ROOT_DIR_JSON="${ROOT_DIR}"
 fi
 
-dotnet build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release
-dotnet build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release
 cat > "${ARTIFACTS_DIR}/bimg/bridge.json" <<EOF
 {
   "EntryFiles": ["${BIMG_HEADER_JSON}"],
@@ -44,17 +52,17 @@ cat > "${ARTIFACTS_DIR}/bimg/bridge.json" <<EOF
 }
 EOF
 start_seconds="$(date +%s)"
-dotnet run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- bridge "${ARTIFACTS_DIR}/bimg/bridge.json"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- bridge "${ARTIFACTS_DIR}/bimg/bridge.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
 if (( elapsed_seconds > 15 )); then echo "[real-cpp] bimg bridge exceeded 15 seconds: ${elapsed_seconds}s"; exit 1; fi
-"${BGCS_CPP2C_CXX:-C:/Program Files/LLVM/bin/clang++.exe}" -std=c++23 -fsyntax-only \
+"${CXX_CMD}" -std=c++23 -fsyntax-only \
   -I "${ARTIFACTS_DIR}/bimg/Bridge/include" -I "${INNOENGINE_ROOT}/extern/bimg/include/bimg" \
   -I "${BIMG_INCLUDE}" -I "${BX_INCLUDE}" "${ARTIFACTS_DIR}/bimg/Bridge/src/Classes.cpp"
 BRIDGE_HEADER_JSON="${ARTIFACTS_DIR}/bimg/Bridge/include/Classes.h"
 if command -v cygpath > /dev/null 2>&1; then BRIDGE_HEADER_JSON="$(cygpath -m "${BRIDGE_HEADER_JSON}")"; fi
 cat > "${ARTIFACTS_DIR}/bimg/bindgen.json" <<EOF
 {
-  "Preset": "windows-c",
+  "Preset": "host-c",
   "Namespace": "BGCS.RealLibraries.Bimg",
   "ApiName": "Bimg",
   "LibName": "bimg_bridge",
@@ -73,14 +81,15 @@ cat > "${ARTIFACTS_DIR}/bimg/bindgen.json" <<EOF
   "MergeGeneratedFilesToSingleFile": true
 }
 EOF
-dotnet run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- "${ARTIFACTS_DIR}/bimg/bindgen.json"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- "${ARTIFACTS_DIR}/bimg/bindgen.json"
 cat > "${ARTIFACTS_DIR}/bimg/consumer/Bimg.Generated.csproj" <<EOF
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net9.0</TargetFramework><AllowUnsafeBlocks>true</AllowUnsafeBlocks><Nullable>enable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup><ItemGroup><Compile Include="..\\GeneratedOneStep\\Bindings.cs" Link="Bindings.cs" /><ProjectReference Include="${ROOT_DIR_JSON}/src/BGCS.Runtime/BGCS.Runtime.csproj" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net9.0</TargetFramework><AllowUnsafeBlocks>true</AllowUnsafeBlocks><Nullable>enable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup><ItemGroup><Compile Include="../GeneratedOneStep/Bindings.cs" Link="Bindings.cs" /><ProjectReference Include="${ROOT_DIR_JSON}/src/BGCS.Runtime/BGCS.Runtime.csproj" /></ItemGroup></Project>
 EOF
-dotnet build "${ARTIFACTS_DIR}/bimg/consumer/Bimg.Generated.csproj" --configuration Release
-dotnet run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/bimg/consumer/Bimg.Generated.csproj" --configuration Release
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/bimg/consumer/bin/Release/net9.0/Bimg.Generated.dll" "${ARTIFACTS_DIR}/bimg/public-api.txt"
 pushd "${ROOT_DIR}" > /dev/null
-sha256sum --check "tests/real-libraries/cpp-api-snapshots.sha256"
+CPP_SNAPSHOT_MANIFEST="$(resolve_snapshot_manifest "tests/real-libraries/cpp-api-snapshots")"
+verify_sha256_manifest "${CPP_SNAPSHOT_MANIFEST}"
 popd > /dev/null
-echo "[real-cpp] bimg bridge, C# consumer, and API snapshots passed in ${elapsed_seconds}s."
+echo "[real-cpp] bimg bridge, C# consumer, and API snapshots passed for $(detect_snapshot_platform) in ${elapsed_seconds}s."

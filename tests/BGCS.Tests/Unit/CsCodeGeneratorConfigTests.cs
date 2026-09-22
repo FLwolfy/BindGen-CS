@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using BGCS.Configuration;
 using BGCS.CppAst.Parsing;
+using BGCS.CppAst.Targeting;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -28,7 +30,7 @@ public class CsCodeGeneratorConfigTests
     [Fact]
     public void PresetResolver_ShouldComposeNamedDefaultsAndRejectUnknownNames()
     {
-        CsCodeGeneratorConfig config = new() { Preset = "windows-c,inno-function-table" };
+        CsCodeGeneratorConfig config = new() { Preset = "windows-c,c-library,opaque-callbacks,function-table" };
 
         BGCS.Configuration.PresetResolver.Default.Apply(config);
 
@@ -36,14 +38,90 @@ public class CsCodeGeneratorConfigTests
         Assert.Equal(ImportType.FunctionTable, config.ImportType);
         Assert.True(config.UseCustomContext);
         Assert.True(config.WrapPointersAsHandle);
+        Assert.True(config.DelegatesAsVoidPointer);
+        Assert.False(config.ParseMacros);
         CsCodeGeneratorConfig invalid = new() { Preset = "missing-preset" };
         Assert.Throws<InvalidOperationException>(() => BGCS.Configuration.PresetResolver.Default.Apply(invalid));
     }
 
     [Fact]
+    public void ConfigLoader_ExplicitValuesShouldOverridePresetDefaults()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-preset-override-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string path = Path.Combine(temp, "bindings.json");
+        File.WriteAllText(path,
+            """
+            {
+              "Preset": "c-library",
+              "Namespace": "Test.Generated",
+              "ApiName": "TestApi",
+              "LibName": "test",
+              "AutoSquashTypedef": true,
+              "ParseMacros": true,
+              "GenerateExtensions": true,
+              "ImportType": "LibraryImport"
+            }
+            """);
+
+        try
+        {
+            CsCodeGeneratorConfig config = new ConfigLoader().Load(path);
+
+            Assert.True(config.AutoSquashTypedef);
+            Assert.True(config.ParseMacros);
+            Assert.True(config.GenerateExtensions);
+            Assert.Equal(ImportType.LibraryImport, config.ImportType);
+            Assert.Equal(CppParserKind.C, config.ParserKind);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void ConfigLoader_ChildExplicitValuesShouldOverrideInheritedPresetDefaults()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-preset-base-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string basePath = Path.Combine(temp, "base.json");
+        string childPath = Path.Combine(temp, "child.json");
+        File.WriteAllText(basePath, "{\"Preset\":\"c-library\",\"Namespace\":\"Base.Namespace\",\"ApiName\":\"TestApi\",\"LibName\":\"test\"}");
+        File.WriteAllText(childPath,
+            """
+            {
+              "BaseConfig": { "Url": "file://base.json" },
+              "AutoSquashTypedef": true,
+              "ParseMacros": true
+            }
+            """);
+
+        try
+        {
+            CsCodeGeneratorConfig config = new ConfigLoader().Load(childPath);
+
+            Assert.Equal("Base.Namespace", config.Namespace);
+            Assert.Equal("c-library", config.Preset);
+            Assert.True(config.AutoSquashTypedef);
+            Assert.True(config.ParseMacros);
+            Assert.False(config.GenerateExtensions);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void PrepareSettings_ShouldApplyConfiguredWindowsArchitecture()
     {
-        CsCodeGeneratorConfig config = new() { TargetArchitecture = WindowsTargetArchitecture.X86 };
+        CsCodeGeneratorConfig config = new()
+        {
+            TargetPlatform = CppTargetPlatform.Windows,
+            TargetArchitecture = CppTargetArchitecture.X86,
+            TargetAbi = CppTargetAbi.Msvc
+        };
         TestGenerator generator = new(config);
 
         CppParserOptions options = generator.GetParserOptions();

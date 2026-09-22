@@ -29,7 +29,6 @@ public sealed class CppEnum : CppTypeDeclaration, ICppMemberWithVisibility, ICpp
         Name = name;
         Items = new CppContainerList<CppEnumItem>(this);
         Attributes = [];
-        TokenAttributes = [];
         IntegerType = CppPrimitiveType.Int;
     }
 
@@ -87,7 +86,7 @@ public sealed class CppEnum : CppTypeDeclaration, ICppMemberWithVisibility, ICpp
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; }
+    public List<CppAttribute> TokenAttributes { get; } = [];
 
     /// <summary>
     /// Gets or sets <c>MetaAttributes</c>.

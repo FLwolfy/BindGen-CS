@@ -19,4 +19,4 @@
 
 ## 稳定功能与进行中功能
 
-七层架构、共享 IR、C#/Runtime/CBridge emitter、CLI 工作流、安全输出事务、SingleFile、NuGet 闭包、真实库性能预算和确定性 API snapshot 已经可用。高级 STL/smart-pointer lowering、managed virtual callback proxy、ownership annotation 和四个上游 native DLL 的直接调用仍属于进行中功能。
+七层架构、共享 IR、C#/Runtime/CBridge emitter、CLI/workspace 工作流、安全输出事务、SingleFile、target/toolchain model、NuGet 闭包、真实库性能预算、按 target 维护的确定性 snapshot、STL/smart-pointer lowering、managed virtual callback proxy、ownership diagnostics，以及 InnoEngine 五项目自动绑定 gate 均已可用。每份生成的验收报告是某一 target 实际通过范围的权威记录。

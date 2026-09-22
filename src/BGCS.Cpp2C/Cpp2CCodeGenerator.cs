@@ -99,7 +99,7 @@
                 ParserKind = CppParserKind.Cpp,
                 AutoSquashTypedef = true,
             };
-            options.ConfigureForWindowsMsvc(config.TargetCpu);
+            options.ConfigureForTarget(config.ResolvedTarget, config.TargetSysRoot, config.CompilerPath);
 
             for (int i = 0; i < config.AdditionalArguments.Count; i++)
             {

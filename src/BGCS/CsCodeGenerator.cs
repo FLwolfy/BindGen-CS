@@ -64,7 +64,11 @@ namespace BGCS
         /// <returns>Result produced by <c>CsCodeGenerator</c>.</returns>
         public CsCodeGenerator(CsCodeGeneratorConfig config) : base(config)
         {
-            PresetResolver.Default.Apply(config);
+            if (!config.PresetDefaultsApplied)
+            {
+                PresetResolver.Default.Apply(config);
+                config.PresetDefaultsApplied = true;
+            }
             pipeline = new(config);
         }
 
@@ -300,7 +304,7 @@ namespace BGCS
 
                 AutoSquashTypedef = config.AutoSquashTypedef,
             };
-            options.ConfigureForWindowsMsvc(WindowsAbi.GetTargetCpu(config.TargetArchitecture));
+            options.ConfigureForTarget(config.ResolvedTarget, config.TargetSysRoot, config.CompilerPath);
 
             var additionalArguments = config.AdditionalArguments ?? [];
             var includeFolders = config.IncludeFolders ?? [];
@@ -573,7 +577,7 @@ namespace BGCS
         private void WriteStandaloneRuntimeFile(string outputPath)
         {
             BindingModule module = new(config.ApiName, config.Namespace, config.LibName,
-                $"windows-{config.TargetArchitecture.ToString().ToLowerInvariant()}-msvc");
+                config.ResolvedTarget.Identifier);
             string runtimeNamespace = GetRuntimeNamespace();
             string runtimePath = new RuntimeEmitter().Emit(module,
                 new(outputPath, true, "Runtime.cs", runtimeNamespace)).Single();

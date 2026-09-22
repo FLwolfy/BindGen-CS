@@ -1,6 +1,8 @@
 using BGCS.Core;
 using Xunit;
 
+#pragma warning disable xUnit2017 // FileSet has path normalization semantics that collection assertions bypass.
+
 namespace BGCS.Core.Tests;
 
 public class FileSetTests

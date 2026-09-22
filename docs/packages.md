@@ -95,5 +95,5 @@ Applications should not install these individually unless they directly consume 
 - Verified modern C++ adapters cover `std::string`, input `std::span<T>`, blittable `std::optional<T>`, and ownership-transferring `std::unique_ptr<T>`, plus configured pure-virtual callback proxies. `std::variant` and non-blittable optional alternatives still require explicit custom lowering; string, vector, span input/return, optional, unique_ptr, and shared_ptr defaults are verified.
 - Ownership and allocator semantics cannot be inferred reliably from pointer syntax alone.
 - Typed C variadic variants currently require `DllImport` and explicit promoted argument types.
-- The four real-library gates compile generated C# and check deterministic API snapshots, but their upstream native DLLs are not present in the fixture checkout, so direct runtime calls into those four DLLs are not yet a passing gate.
-- `BGCS.CppAst` still contains nullable and deprecated-API warnings that are being removed; `BGCS.Core`, `BGCS.Language`, generator packages, generated consumers, and package smoke builds are clean.
+- Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots. InnoEngine separately builds its native binaries and runs all six native binding test projects.
+- The complete solution, generated consumers, and package smoke projects compile with warnings treated as errors.

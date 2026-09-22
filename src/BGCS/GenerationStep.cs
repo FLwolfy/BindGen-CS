@@ -64,5 +64,15 @@
         {
             return generator.GetGenerationStep<T>();
         }
+
+        /// <summary>
+        /// Opens the optional API container used for nested generated type declarations.
+        /// </summary>
+        protected IDisposable? PushApiTypeScope(ICodeWriter writer)
+        {
+            return config.NestGeneratedTypesInApi
+                ? writer.PushBlock($"public static partial class {config.ApiName}")
+                : null;
+        }
     }
 }

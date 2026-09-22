@@ -2,16 +2,16 @@
 
 [English](README.md) | [简体中文](README.cn.md)
 
-BindGen-CS is a Windows-first C/C++ to C# binding toolkit. It generates C# interop APIs for C-compatible libraries and can generate an ABI-stable C bridge for C++ APIs that cannot be called directly from .NET.
+BindGen-CS is a cross-platform C/C++ to C# binding toolkit. It generates C# interop APIs for C-compatible libraries and can generate an ABI-stable C bridge for C++ APIs that cannot be called directly from .NET.
 
-> **Status:** the Windows x64 safety and release gates pass. Unsupported C++ semantics are rejected with actionable diagnostics rather than guessed. The verified corpus and remaining platform/type boundaries are listed below and in the [acceptance specification](docs/acceptance.md).
+> **Status:** the complete macOS arm64 acceptance matrix passes. Target modeling covers Windows, Linux, macOS, Android, iOS, and FreeBSD ABI families; deterministic real-library snapshots are maintained per verified host target. Unsupported C++ semantics are rejected with actionable diagnostics rather than guessed. Exact verified targets and remaining boundaries are recorded in each generated [acceptance report](docs/acceptance.md).
 
 ## Goals
 
 > Automatically generate safe bindings for supported C/C++ ABIs and standard-library types; strictly diagnose declarations missing ownership, allocator, or instantiation information and request only the minimum required configuration.
 
 - One configuration file and one command for common libraries.
-- Correct Windows MSVC ABI layouts and calling conventions.
+- Explicit platform, architecture, ABI, target-triple, sysroot, and toolchain modeling.
 - A shared binding IR consumed by C# and C bridge emitters.
 - Readable APIs similar to `Inno.Native.*`, without editing generated files.
 - Deterministic single-file output.
@@ -29,19 +29,18 @@ bindgen-cs generate
 bindgen-cs build
 ```
 
-The generated `bindgen.json` contains a beginner-friendly Windows configuration:
+The generated `bindgen.json` contains a host-portable configuration:
 
 ```json
 {
   "Namespace": "Native.Bindings",
   "ApiName": "NativeApi",
   "LibName": "native",
+  "Preset": "host-c",
   "EntryFiles": ["native.h"],
   "AllowedHeaders": [],
   "IncludeTransitivelyReferencedHeaders": true,
   "OutputPath": "Generated",
-  "ParserKind": "C",
-  "TargetArchitecture": "X64",
   "ImportType": "DllImport",
   "MergeGeneratedFilesToSingleFile": true,
   "SingleFileOutputName": "Bindings.cs",
@@ -118,24 +117,24 @@ The compatibility facade now delegates orchestration to the application pipeline
 
 ## Acceptance target
 
-A stable major release is accepted only when every category is independently measured between **8.5 and 9.0** and its mandatory gates pass.
+A stable major release is accepted only when every category is independently measured at **9.0/10.0** and every mandatory gate passes on the reported target.
 
 | Category | Target | Mandatory evidence |
 | --- | ---: | --- |
-| Small C APIs | 8.5-9.0 | Generated C# compiles and runtime ABI tests pass without source edits |
-| Medium/large C APIs | 8.5-9.0 | SDL3, miniaudio, and cimgui regenerate within budgets |
-| Complex C ABI correctness | 8.5-9.0 | Mandatory Windows x64 layout, packing, union, bitfield, callback, and calling-convention tests |
-| Ordinary C++ class bridge | 8.5-9.0 | Constructors, destructors, methods, overloads, inheritance casts, and exception boundary tests |
-| Modern C++ | 8.5-9.0 | Explicit template instantiation, selected STL adapters, smart-pointer and virtual callback tests |
-| Generated API quality | 8.5-9.0 | Reflection public API snapshots and zero manual generated-file patches |
-| Beginner usability | 8.5-9.0 | Init/doctor/validate/generate/build workflow and actionable diagnostics |
-| External architecture | 8.5-9.0 | Enforced one-way project dependencies and stable facade contracts |
-| Internal architecture | 8.5-9.0 | Shared IR; analyzers and emitters independently tested; no generator god class |
-| NuGet/testing/release | 8.5-9.0 | Clean consumer install, symbols, tool install, native/C# tests, deterministic packages |
+| Small C APIs | 9.0 | Generated C# compiles and runtime ABI tests pass without source edits |
+| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx regenerate within budgets; InnoEngine stays diff-clean |
+| Complex C ABI correctness | 9.0 | Host-native layout/invocation plus target-specific primitive, packing, union, bitfield, callback, and calling-convention tests |
+| Ordinary C++ class bridge | 9.0 | Constructors, destructors, methods, overloads, inheritance casts, and exception boundary tests |
+| Modern C++ | 9.0 | Explicit template instantiation, selected STL adapters, smart-pointer and virtual callback tests |
+| Generated API quality | 9.0 | Reflection public API snapshots and zero manual native imports outside generated output |
+| Beginner usability | 9.0 | Init/doctor/validate/generate/build workflow and actionable diagnostics |
+| External architecture | 9.0 | Enforced one-way project dependencies and stable facade contracts |
+| Internal architecture | 9.0 | Shared IR; analyzers and emitters independently tested; no generator god class |
+| NuGet/testing/release | 9.0 | Clean consumer install, symbols, tool install, native/C# tests, deterministic packages |
 
 The scoring rules, budgets, and pass/fail policy are normative in [docs/acceptance.md](docs/acceptance.md). Scores are not raised by documentation claims; `scripts/run-full-test-matrix.sh` writes the passing machine-readable result to `artifacts/acceptance/report.json` only after every mandatory layer succeeds.
 
-| Measured category | Windows x64 score |
+| Measured category | macOS arm64 score |
 | --- | ---: |
 | Small C APIs | 9.0 |
 | Medium/large C APIs | 9.0 |
@@ -148,7 +147,7 @@ The scoring rules, budgets, and pass/fail policy are normative in [docs/acceptan
 | Internal architecture | 9.0 |
 | NuGet/testing/release | 9.0 |
 
-Current local Windows real-library gates regenerate SingleFile bindings without generated-source edits and compile with zero C# warnings/errors:
+The macOS arm64 real-library gate regenerates SingleFile bindings without generated-source edits and compiles them with zero C# warnings/errors:
 
 | Library | Budget | Verified behavior |
 | --- | ---: | --- |
@@ -159,7 +158,7 @@ Current local Windows real-library gates regenerate SingleFile bindings without 
 | bgfx C99 | 30s | Generate and compile |
 | bimg C++ | 15s | C bridge, clang++, C# rebind, API snapshot |
 
-Synthetic C and generated C++ bridge DLL runtime invocation gates pass. Direct calls into the four upstream DLLs remain conditional on building those DLLs with their upstream build systems and are not claimed as verified.
+Synthetic C and generated C++ bridge native runtime invocation gates pass. The InnoEngine gate additionally checks deterministic regeneration for all five binding projects, rejects hand-authored native imports, builds every required native dependency from its pinned source, builds the complete solution, and runs every native binding test project.
 
 ## Packages
 
@@ -180,7 +179,7 @@ Implementation packages (`BGCS.Core`, `BGCS.Language`, and `BGCS.CppAst`) are re
 ./scripts/test-nuget-packages.sh
 ```
 
-Windows C++ bridge tests use `BGCS_CPP2C_CXX` or discover `C:\Program Files\LLVM\bin\clang++.exe`.
+C++ bridge tests use `BGCS_CPP2C_CXX`/`CXX` or discover the host Clang/GNU driver. On macOS, the parser also discovers the active SDK through `SDKROOT` or `xcrun`.
 
 ## Wiki
 

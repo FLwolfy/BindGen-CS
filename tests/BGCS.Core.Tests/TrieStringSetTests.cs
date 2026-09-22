@@ -3,6 +3,8 @@ using System.Linq;
 using BGCS.Core;
 using Xunit;
 
+#pragma warning disable xUnit2017 // TrieStringSet.Contains honors its configured key comparer.
+
 namespace BGCS.Core.Tests;
 
 public class TrieStringSetTests

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using BGCS.Core.Logging;
+using BGCS.CppAst.Targeting;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Newtonsoft.Json;
@@ -46,6 +47,9 @@ public abstract class ConfigurationEntryTestBase
         {
             Environment.CurrentDirectory = temp;
             CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(tempConfigPath, new ConfigComposer());
+            config.TargetPlatform = CppTargetPlatform.Windows;
+            config.TargetArchitecture = CppTargetArchitecture.X64;
+            config.TargetAbi = CppTargetAbi.Msvc;
             CsCodeGenerator generator = new(config);
 
             bool success = generator.Generate(resolvedHeaderFiles.ToList(), outputPath, resolvedAllowedHeaders);

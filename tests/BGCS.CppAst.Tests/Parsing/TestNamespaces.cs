@@ -17,8 +17,6 @@ using Xunit;
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Collections.Generic;
-
 namespace BGCS.CppAst.Tests
 {
     public class TestNamespaces : InlineTestBase
@@ -54,10 +52,10 @@ namespace A::B::C
 
                     foreach (var nsName in namespaces)
                     {
-                        Assert.Equal(1, container.Namespaces.Count);
+                        Assert.Single(container.Namespaces);
                         var ns = container.Namespaces[0];
                         Assert.Equal(nsName, ns.Name);
-                        Assert.Equal(1, ns.Fields.Count);
+                        Assert.Single(ns.Fields);
                         Assert.Equal(nsName.ToLowerInvariant(), ns.Fields[0].Name);
 
                         // Continue on the sub-namespaces
@@ -81,10 +79,10 @@ A::a c;
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Namespaces.Count);
+                    Assert.Single(compilation.Namespaces);
                     ICppGlobalDeclarationContainer container = compilation.Namespaces[0];
-                    Assert.Equal(1, container.Typedefs.Count);
-                    Assert.Equal(1, compilation.Fields.Count);
+                    Assert.Single(container.Typedefs);
+                    Assert.Single(compilation.Fields);
 
                     CppTypedef typedef = container.Typedefs[0];
                     CppField field = compilation.Fields[0];
@@ -116,9 +114,9 @@ using MyStructInt = MyStruct<int>;
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Namespaces.Count);
+                    Assert.Single(compilation.Namespaces);
 
-                    var cppStruct = compilation.FindByFullName<CppClass>("A::MyStruct");
+                    var cppStruct = Assert.IsType<CppClass>(compilation.FindByFullName<CppClass>("A::MyStruct"));
                     Assert.Equal(compilation.Namespaces[0].Classes[0], cppStruct);
                 }
             );
@@ -149,20 +147,20 @@ inline namespace __1
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Namespaces.Count);
+                    Assert.Single(compilation.Namespaces);
 
                     var inlineNs = compilation.Namespaces[0].Namespaces[0];
-                    Assert.Equal(inlineNs.Name, "__1");
-                    Assert.Equal(true, inlineNs.IsInlineNamespace);
+                    Assert.Equal("__1", inlineNs.Name);
+                    Assert.True(inlineNs.IsInlineNamespace);
 
-                    var cppStruct = compilation.FindByFullName<CppClass>("A::MyStruct");
+                    var cppStruct = Assert.IsType<CppClass>(compilation.FindByFullName<CppClass>("A::MyStruct"));
                     Assert.Equal(inlineNs.Classes[0], cppStruct);
-                    Assert.Equal(cppStruct.FullName, "A::MyStruct<T>");
+                    Assert.Equal("A::MyStruct<T>", cppStruct.FullName);
 
-                    var cppTypedef = compilation.FindByFullName<CppTypedef>("A::MyStructInt");
-                    var cppStructInt = cppTypedef.ElementType as CppClass;
+                    var cppTypedef = Assert.IsType<CppTypedef>(compilation.FindByFullName<CppTypedef>("A::MyStructInt"));
+                    var cppStructInt = Assert.IsType<CppClass>(cppTypedef.ElementType);
                     //So now we can use this full name in exporter convenience.
-                    Assert.Equal(cppStructInt.FullName, "A::MyStruct<int>");
+                    Assert.Equal("A::MyStruct<int>", cppStructInt.FullName);
                 }
             );
         }

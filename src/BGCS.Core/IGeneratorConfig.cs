@@ -27,6 +27,7 @@
         List<DelegateMapping> DelegateMappings { get; set; }
         bool DelegatesAsVoidPointer { get; set; }
         List<EnumMapping> EnumMappings { get; set; }
+        List<string> FunctionPrefixes { get; set; }
         List<FunctionMapping> FunctionMappings { get; set; }
         bool GenerateConstants { get; set; }
         bool GenerateDelegates { get; set; }

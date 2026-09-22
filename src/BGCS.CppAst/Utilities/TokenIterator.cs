@@ -5,6 +5,7 @@ using System;
 
 using ClangSharp.Interop;
 using BGCS.CppAst.Model.Expressions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BGCS.CppAst.Utilities;
 /// <summary>
@@ -48,7 +49,7 @@ public class TokenIterator
     /// <summary>
     /// Executes public operation <c>PreviousToken</c>.
     /// </summary>
-    public CppToken PreviousToken()
+    public CppToken? PreviousToken()
     {
         if (index > 0)
         {
@@ -112,7 +113,7 @@ public class TokenIterator
     /// <summary>
     /// Executes public operation <c>Next</c>.
     /// </summary>
-    public bool Next(out CppToken token)
+    public bool Next([NotNullWhen(true)] out CppToken? token)
     {
         token = null;
         if (index < tokens.Count)
@@ -145,7 +146,7 @@ public class TokenIterator
     /// <summary>
     /// Executes public operation <c>Peek</c>.
     /// </summary>
-    public CppToken Peek()
+    public CppToken? Peek()
     {
         if (index < tokens.Count)
         {
@@ -157,7 +158,7 @@ public class TokenIterator
     /// <summary>
     /// Executes public operation <c>PeekText</c>.
     /// </summary>
-    public string PeekText()
+    public string? PeekText()
     {
         if (index < tokens.Count)
         {

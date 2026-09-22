@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using BGCS.Cpp2C;
+using BGCS.CppAst.Parsing;
+using BGCS.CppAst.Targeting;
 using BGCS.Emission;
 using BGCS.Intermediate;
 
@@ -31,6 +33,7 @@ internal static class Program
                 "generate" => Generate(args[1..]),
                 "build" => Build(args[1..]),
                 "diff" => Diff(args[1..]),
+                "workspace" => WorkspaceCommand.Run(args[1..]),
                 "schema" => Schema(args[1..]),
                 "bridge" => Bridge(args[1..]),
                 "version" or "--version" => PrintVersion(),
@@ -88,7 +91,7 @@ internal static class Program
             }
             : new
             {
-                Preset = "windows-c",
+                Preset = "host-c",
                 Namespace = "Native.Bindings",
                 ApiName = "NativeApi",
                 LibName = "native",
@@ -107,13 +110,20 @@ internal static class Program
 
     private static int Doctor()
     {
-        bool windows = OperatingSystem.IsWindows();
-        bool clang = TryFindClang(out string? clangPath);
+        CppTarget target = CppTarget.Resolve();
+        string? clangPath = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp);
+        bool clang = clangPath != null;
+        IReadOnlyList<string> includes = clang
+            ? CppToolchainDiscovery.DiscoverSystemIncludeFolders(CppParserKind.Cpp, clangPath)
+            : [];
         Console.WriteLine($"OS: {Environment.OSVersion}");
         Console.WriteLine($".NET: {Environment.Version}");
-        Console.WriteLine($"Windows target: {(windows ? "available" : "unsupported by the current acceptance matrix")}");
+        Console.WriteLine($"Host target: {target.Identifier} ({target.Triple})");
         Console.WriteLine($"C++ compiler: {(clang ? clangPath : "not found; set BGCS_CPP2C_CXX")}");
-        return windows && clang ? 0 : 1;
+        Console.WriteLine($"System includes: {includes.Count}");
+        if (target.Platform == CppTargetPlatform.MacOS)
+            Console.WriteLine($"macOS SDK: {CppToolchainDiscovery.FindMacOsSdkRoot() ?? "not found"}");
+        return clang && includes.Count > 0 ? 0 : 1;
     }
 
     private static int Validate(string[] args)
@@ -176,6 +186,12 @@ internal static class Program
                 Namespace = config.CSharpNamespace,
                 ApiName = config.CSharpApiName,
                 LibName = config.NativeLibraryName,
+                TargetPlatform = config.TargetPlatform,
+                TargetArchitecture = config.TargetArchitecture,
+                TargetAbi = config.TargetAbi,
+                TargetTriple = config.TargetTriple,
+                TargetSysRoot = config.TargetSysRoot,
+                CompilerPath = config.CompilerPath,
                 ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
                 AutoSquashTypedef = false,
                 ParseMacros = false,
@@ -328,13 +344,15 @@ internal static class Program
                   </PropertyGroup>
                 </Project>
                 """);
-            ProcessStartInfo startInfo = new("dotnet", "build GeneratedBindings.csproj --configuration Release --nologo")
+            ProcessStartInfo startInfo = new(DotNetHostDiscovery.FindOrThrow())
             {
                 WorkingDirectory = temp,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false
             };
+            foreach (string argument in new[] { "build", "GeneratedBindings.csproj", "--configuration", "Release", "--nologo" })
+                startInfo.ArgumentList.Add(argument);
             using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start dotnet build.");
             Task<string> stdout = process.StandardOutput.ReadToEndAsync();
             Task<string> stderr = process.StandardError.ReadToEndAsync();
@@ -414,24 +432,6 @@ internal static class Program
         throw new ArgumentException("Expected an optional config path or '--config <path>'.");
     }
 
-    private static bool TryFindClang(out string? path)
-    {
-        path = Environment.GetEnvironmentVariable("BGCS_CPP2C_CXX");
-        if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            return true;
-        if (OperatingSystem.IsWindows())
-        {
-            string installed = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "LLVM", "bin", "clang++.exe");
-            if (File.Exists(installed))
-            {
-                path = installed;
-                return true;
-            }
-        }
-        path = null;
-        return false;
-    }
-
     private static string ReadValue(string[] args, ref int index, string option)
     {
         if (++index >= args.Length || string.IsNullOrWhiteSpace(args[index]))
@@ -466,6 +466,7 @@ internal static class Program
         Console.WriteLine("  bindgen-cs generate [config.json] [--output directory]");
         Console.WriteLine("  bindgen-cs build [config.json] [--output directory]");
         Console.WriteLine("  bindgen-cs diff [config.json] [--output directory]");
+        Console.WriteLine("  bindgen-cs workspace <validate|generate|diff> <workspace.json>");
         Console.WriteLine("  bindgen-cs schema [output.json]");
         Console.WriteLine("  bindgen-cs bridge [config.json] [--output directory]");
         Console.WriteLine("  bindgen-cs <config.json> [--output directory]");

@@ -34,7 +34,7 @@ float function2(int);
                     {
                         var cppFunction = compilation.Functions[0];
                         Assert.Equal("function0", cppFunction.Name);
-                        Assert.Equal(0, cppFunction.Parameters.Count);
+                        Assert.Empty(cppFunction.Parameters);
                         Assert.Equal("void", cppFunction.ReturnType.ToString());
 
                         var cppFunction1 = compilation.FindByName<CppFunction>("function0");
@@ -59,7 +59,7 @@ float function2(int);
                     {
                         var cppFunction = compilation.Functions[2];
                         Assert.Equal("function2", cppFunction.Name);
-                        Assert.Equal(1, cppFunction.Parameters.Count);
+                        Assert.Single(cppFunction.Parameters);
                         Assert.Equal(string.Empty, cppFunction.Parameters[0].Name);
                         Assert.Equal(CppTypeKind.Primitive, cppFunction.Parameters[0].Type.TypeKind);
                         Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppFunction.Parameters[0].Type).Kind);
@@ -228,12 +228,12 @@ int function1();
 
                     {
                         var cppFunction = compilation.Functions[0];
-                        Assert.Equal(1, cppFunction.Attributes.Count);
+                        Assert.Single(cppFunction.Attributes);
                         Assert.True(cppFunction.IsPublicExport());
                     }
                     {
                         var cppFunction = compilation.Functions[1];
-                        Assert.Equal(0, cppFunction.Attributes.Count);
+                        Assert.Empty(cppFunction.Attributes);
                         Assert.True(cppFunction.IsPublicExport());
                     }
                 },
@@ -249,12 +249,12 @@ int function1();
 
                     {
                         var cppFunction = compilation.Functions[0];
-                        Assert.Equal(1, cppFunction.Attributes.Count);
+                        Assert.Single(cppFunction.Attributes);
                         Assert.True(cppFunction.IsPublicExport());
                     }
                     {
                         var cppFunction = compilation.Functions[1];
-                        Assert.Equal(0, cppFunction.Attributes.Count);
+                        Assert.Empty(cppFunction.Attributes);
                         Assert.True(cppFunction.IsPublicExport());
                     }
                 }, new CppParserOptions() { }.ConfigureForWindowsMsvc()
@@ -277,21 +277,21 @@ void function2(int, ...);
 
                     {
                         var cppFunction = compilation.Functions[0];
-                        Assert.Equal(0, cppFunction.Parameters.Count);
+                        Assert.Empty(cppFunction.Parameters);
                         Assert.Equal("void", cppFunction.ReturnType.ToString());
                         Assert.Equal(CppFunctionFlags.None, cppFunction.Flags & CppFunctionFlags.Variadic);
                     }
 
                     {
                         var cppFunction = compilation.Functions[1];
-                        Assert.Equal(0, cppFunction.Parameters.Count);
+                        Assert.Empty(cppFunction.Parameters);
                         Assert.Equal("void", cppFunction.ReturnType.ToString());
                         Assert.Equal(CppFunctionFlags.Variadic, cppFunction.Flags & CppFunctionFlags.Variadic);
                     }
 
                     {
                         var cppFunction = compilation.Functions[2];
-                        Assert.Equal(1, cppFunction.Parameters.Count);
+                        Assert.Single(cppFunction.Parameters);
                         Assert.Equal(string.Empty, cppFunction.Parameters[0].Name);
                         Assert.Equal(CppTypeKind.Primitive, cppFunction.Parameters[0].Type.TypeKind);
                         Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppFunction.Parameters[0].Type).Kind);
@@ -315,14 +315,14 @@ void function0(T t);
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Functions.Count);
+                    Assert.Single(compilation.Functions);
 
                     {
                         var cppFunction = compilation.Functions[0];
-                        Assert.Equal(1, cppFunction.Parameters.Count);
+                        Assert.Single(cppFunction.Parameters);
                         Assert.Equal("void", cppFunction.ReturnType.ToString());
-                        Assert.Equal(cppFunction.IsFunctionTemplate, true);
-                        Assert.Equal(cppFunction.TemplateParameters.Count, 1);
+                        Assert.True(cppFunction.IsFunctionTemplate);
+                        Assert.Single(cppFunction.TemplateParameters);
                     }
 
                 }
@@ -340,7 +340,7 @@ void function0(int a, int b, float (*callback)(void*, double));
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Functions.Count);
+                    Assert.Single(compilation.Functions);
 
                     {
                         var cppFunction = compilation.Functions[0];

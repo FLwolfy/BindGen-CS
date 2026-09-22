@@ -13,8 +13,6 @@ using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Extensions;
 using Xunit;
-using System;
-
 namespace BGCS.CppAst.Tests
 {
     public class TestPragma : InlineTestBase
@@ -32,7 +30,7 @@ namespace BGCS.CppAst.Tests
                     {
                         Console.WriteLine(message);
                     }
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
                 }
             );
         }

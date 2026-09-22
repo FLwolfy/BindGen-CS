@@ -15,7 +15,9 @@ This repository now includes a full test workflow modeled as a layered generatio
 ./scripts/test-real-cpp-libraries.sh
 ```
 
-The real-library matrix discovers a sibling InnoEngine checkout or uses `INNOENGINE_ROOT`. It regenerates and compiles miniaudio, SDL3, cimgui, and cimguizmo SingleFile bindings, enforces the Windows generation budgets, and checks deterministic generated-source fingerprints plus reflection-based public API snapshots in `tests/real-libraries/api-snapshots.sha256` and `tests/real-libraries/public-api-snapshots.sha256`. Set `REQUIRE_REAL_LIBRARIES=1` to fail instead of skipping when vendored headers are unavailable. The real C++ matrix additionally generates a bimg C bridge, validates it with clang++, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies bridge/source/public-API snapshots.
+The real-library matrix discovers a sibling InnoEngine checkout or uses `INNOENGINE_ROOT`. It regenerates and compiles miniaudio, SDL3, cimgui, cimguizmo, and bgfx SingleFile bindings, enforces host-independent generation budgets, and checks target-specific deterministic source plus reflection public-API snapshots. The full matrix requires these headers; the standalone script may set `REQUIRE_REAL_LIBRARIES=1` to make absence fatal. The real C++ matrix additionally generates a bimg C bridge, validates it with the discovered C++ driver, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies target-specific bridge/source/public-API snapshots.
+
+The InnoEngine workspace gate then verifies that all five checked-in binding outputs are reproducible from `native/bindings/workspace.json`, rejects hand-authored native imports outside `Generated/`, builds every required native dependency from its pinned source, builds the full engine solution, and runs every project under `tests/native`.
 
 The script runs all major BGCS capabilities in ordered layers:
 

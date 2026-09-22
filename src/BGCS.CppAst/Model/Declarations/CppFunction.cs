@@ -31,7 +31,6 @@ public sealed class CppFunction : CppDeclaration, ICppMemberWithVisibility, ICpp
         Parameters = new CppContainerList<CppParameter>(this);
         TemplateParameters = new CppContainerList<CppType>(this);
         Attributes = [];
-        TokenAttributes = [];
         ReturnType = CppPrimitiveType.Void;
     }
 
@@ -52,7 +51,7 @@ public sealed class CppFunction : CppDeclaration, ICppMemberWithVisibility, ICpp
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; }
+    public List<CppAttribute> TokenAttributes { get; } = [];
 
     /// <summary>
     /// Gets <c>MetaAttributes</c>.

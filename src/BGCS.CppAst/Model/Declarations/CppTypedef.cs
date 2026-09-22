@@ -28,7 +28,6 @@ public sealed class CppTypedef : CppTypeDeclaration, ICppMemberWithVisibility, I
         Name = name ?? throw new ArgumentNullException(nameof(name));
         ElementType = type;
         Attributes = [];
-        TokenAttributes = [];
         MetaAttributes = new MetaAttributeMap();
     }
 
@@ -41,7 +40,7 @@ public sealed class CppTypedef : CppTypeDeclaration, ICppMemberWithVisibility, I
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; }
+    public List<CppAttribute> TokenAttributes { get; } = [];
 
     /// <summary>
     /// Gets or sets <c>MetaAttributes</c>.

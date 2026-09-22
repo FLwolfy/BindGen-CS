@@ -42,7 +42,10 @@
         public static readonly JsonSerializer MergeSerializer = JsonSerializer.Create(MergeSerializerSettings);
 
         [JsonIgnore]
-        internal string? ConfigDirectory { get; private set; }
+        internal string? ConfigDirectory { get; set; }
+
+        [JsonIgnore]
+        internal bool PresetDefaultsApplied { get; set; }
 
         /// <summary>
         /// Performs the operation implemented by <c>Load</c>.

@@ -28,5 +28,5 @@ public class CppValue : CppElement
     public object Value { get; set; }
 
     /// <inheritdoc />
-    public override string ToString() => Value.ToString();
+    public override string ToString() => Value.ToString() ?? string.Empty;
 }

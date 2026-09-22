@@ -39,7 +39,7 @@ public class CppAttribute : CppElement
     /// <summary>
     /// Gets or sets the scope of this attribute
     /// </summary>
-    public string Scope { get; set; } = string.Empty;
+    public string? Scope { get; set; }
 
     /// <summary>
     /// Gets the attribute name.
@@ -49,7 +49,7 @@ public class CppAttribute : CppElement
     /// <summary>
     /// Gets the attribute arguments
     /// </summary>
-    public string Arguments { get; set; } = string.Empty;
+    public string? Arguments { get; set; }
 
     /// <summary>
     /// Gets a boolean indicating whether this attribute is variadic

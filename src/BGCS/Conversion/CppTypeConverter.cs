@@ -317,7 +317,8 @@
 
         private AnalysisResult ResolveTypedef(CppTypedef typedef)
         {
-            if (typedef.ElementType.IsDelegate(out var delegateType))
+            bool isDelegate = typedef.ElementType.IsDelegate(out var delegateType);
+            if (isDelegate)
             {
                 if (config.DelegatesAsVoidPointer)
                 {
@@ -337,7 +338,7 @@
             {
                 return new() { BaseType = name };
             }
-            if (!config.AutoSquashTypedef)
+            if (!config.AutoSquashTypedef && !isDelegate)
             {
                 return new() { BaseType = GetMapping(typedef) };
             }
@@ -368,12 +369,32 @@
             {
                 return name;
             }
+
+            if (config.TypeMappings.TryGetValue(member.Name, out name))
+            {
+                return name;
+            }
+
+            if (member is CppEnum cppEnum &&
+                config.TryGetEnumMapping(cppEnum.Name, out var enumMapping) &&
+                !string.IsNullOrWhiteSpace(enumMapping.FriendlyName))
+            {
+                return enumMapping.FriendlyName;
+            }
+
+            if (member is CppClass cppClass &&
+                config.TryGetTypeMapping(cppClass.Name, out var typeMapping) &&
+                !string.IsNullOrWhiteSpace(typeMapping.FriendlyName))
+            {
+                return typeMapping.FriendlyName;
+            }
+
             return config.GetCsCleanName(member.Name);
         }
 
-        private static string ConvertPrimitiveType(CppPrimitiveType primitiveType)
+        private string ConvertPrimitiveType(CppPrimitiveType primitiveType)
         {
-            return WindowsAbi.GetPrimitiveTypeName(primitiveType.Kind);
+            return NativeAbi.GetPrimitiveTypeName(primitiveType);
         }
     }
 }

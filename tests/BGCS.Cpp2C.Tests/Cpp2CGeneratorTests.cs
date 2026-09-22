@@ -9,6 +9,8 @@ using BGCS.Core;
 using BGCS.Core.Logging;
 using BGCS.Cpp2C.Metadata;
 using BGCS.CppAst.Model.Types;
+using BGCS.CppAst.Parsing;
+using BGCS.CppAst.Targeting;
 using BGCS.Intermediate;
 using Xunit;
 
@@ -539,13 +541,12 @@ public class Cpp2CGeneratorTests
     [Fact]
     public void Generate_CppBridge_ShouldLinkAndInvokeNativeDll()
     {
-        if (!OperatingSystem.IsWindows())
-            return;
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-runtime-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         string header = Path.Combine(temp, "runtime.hpp");
         string output = Path.Combine(temp, "out");
-        string library = Path.Combine(temp, "bridge.dll");
+        string library = Path.Combine(temp,
+            OperatingSystem.IsWindows() ? "bridge.dll" : OperatingSystem.IsMacOS() ? "libbridge.dylib" : "libbridge.so");
         File.WriteAllText(header,
             "class Demo { int value; public: Demo(int value):value(value){} int Add(int other){return value+other;} };");
         try
@@ -585,8 +586,8 @@ public class Cpp2CGeneratorTests
 
     private static bool CompileGeneratedBridgeDll(string output, string sourceDirectory, string library, out string diagnostics)
     {
-        string compiler = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "LLVM", "bin", "clang++.exe");
-        if (!File.Exists(compiler))
+        string? compiler = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp);
+        if (compiler == null)
         {
             diagnostics = "C++ compiler not available.";
             return false;
@@ -597,11 +598,13 @@ public class Cpp2CGeneratorTests
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        foreach (string argument in new[]
-                 {
-                     "-std=c++23", "-shared", "-I", Path.Combine(output, "include"), "-iquote", sourceDirectory,
-                     Path.Combine(output, "src", "Classes.cpp"), "-o", library
-                 })
+        List<string> arguments = ["-std=c++23"];
+        arguments.Add(OperatingSystem.IsMacOS() ? "-dynamiclib" : "-shared");
+        if (!OperatingSystem.IsWindows())
+            arguments.Add("-fPIC");
+        arguments.AddRange(["-I", Path.Combine(output, "include"), "-iquote", sourceDirectory,
+            Path.Combine(output, "src", "Classes.cpp"), "-o", library]);
+        foreach (string argument in arguments)
             start.ArgumentList.Add(argument);
         using Process process = Process.Start(start)!;
         Task<string> stdout = process.StandardOutput.ReadToEndAsync();
@@ -614,10 +617,8 @@ public class Cpp2CGeneratorTests
 
     private static bool CompileGeneratedBridge(string output, string sourceDirectory, out string diagnostics)
     {
-        string? compiler = Environment.GetEnvironmentVariable("BGCS_CPP2C_CXX");
-        if (string.IsNullOrWhiteSpace(compiler) && OperatingSystem.IsWindows())
-            compiler = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "LLVM", "bin", "clang++.exe");
-        if (string.IsNullOrWhiteSpace(compiler) || !File.Exists(compiler))
+        string? compiler = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp);
+        if (compiler == null)
         {
             diagnostics = "C++ compiler not available; set BGCS_CPP2C_CXX.";
             return false;

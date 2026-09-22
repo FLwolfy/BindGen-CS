@@ -358,6 +358,114 @@ public class GeneratedCodeCompilationMatrixTests
             },
             new()
             {
+                Name = "C_Handle_Properties_With_Aliases_And_Nested_Array",
+                Header = """
+                    typedef unsigned int BgcsUInt;
+                    typedef void BgcsOpaque;
+                    typedef struct BgcsHolder
+                    {
+                        struct NestedValue
+                        {
+                            int value;
+                        } items[2];
+                        BgcsUInt* values;
+                        BgcsOpaque* opaque;
+                    } BgcsHolder;
+                    void bgcs_use_holder(BgcsHolder* holder);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsHolder", "BgcsHolderPtr"],
+                Configure = cfg =>
+                {
+                    cfg.AutoSquashTypedef = false;
+                    cfg.WrapPointersAsHandle = true;
+                },
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type holder = assembly.GetType("Compile.Generated.BgcsHolder")!;
+                    Type holderPointer = assembly.GetType("Compile.Generated.BgcsHolderPtr")!;
+                    Type nested = holder.GetNestedType("NestedValue")!;
+                    Type opaque = assembly.GetType("Compile.Generated.BgcsOpaque")!;
+                    Assert.Equal(typeof(uint).MakePointerType(), holderPointer.GetProperty("Values")?.PropertyType);
+                    Assert.Equal(opaque.MakePointerType(), holderPointer.GetProperty("Opaque")?.PropertyType);
+                    Assert.Equal(typeof(Span<>).MakeGenericType(nested), holderPointer.GetProperty("Items")?.PropertyType);
+                }
+            },
+            new()
+            {
+                Name = "C_Handle_Properties_Wrap_Later_Declared_Pointers",
+                Header = """
+                    typedef struct BgcsTarget BgcsTarget;
+                    typedef struct BgcsOwner
+                    {
+                        BgcsTarget* target;
+                    } BgcsOwner;
+                    struct BgcsTarget
+                    {
+                        int value;
+                    };
+                    void bgcs_use_owner(BgcsOwner* owner);
+                    void bgcs_use_target(BgcsTarget* target);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsOwner", "BgcsOwnerPtr", "BgcsTarget", "BgcsTargetPtr"],
+                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type ownerPointer = assembly.GetType("Compile.Generated.BgcsOwnerPtr")!;
+                    Type targetPointer = assembly.GetType("Compile.Generated.BgcsTargetPtr")!;
+                    Assert.Equal(targetPointer.MakeByRefType(), ownerPointer.GetProperty("Target")?.PropertyType);
+                }
+            },
+            new()
+            {
+                Name = "C_Opaque_Pointer_Typedef_Does_Not_Emit_Underlying_Handle",
+                Header = """
+                    typedef struct BgcsOpaqueState *BgcsHandle;
+                    BgcsHandle bgcs_create_handle(void);
+                    void bgcs_destroy_handle(BgcsHandle handle);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsHandle"],
+                ExpectedMethodNames = ["BgcsCreateHandleNative", "BgcsDestroyHandleNative"],
+                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Assert.Null(assembly.GetType("Compile.Generated.BgcsOpaqueStatePtr"));
+                    Type handle = assembly.GetType("Compile.Generated.BgcsHandle")!;
+                    Assert.Equal(typeof(nint), handle.GetProperty("Handle")?.PropertyType);
+                }
+            },
+            new()
+            {
+                Name = "C_Handle_Properties_With_Named_Anonymous_Unions",
+                Header = """
+                    typedef struct BgcsPlatforms
+                    {
+                        union
+                        {
+                            int value;
+                        } first;
+                        union
+                        {
+                            float value;
+                        } second;
+                    } BgcsPlatforms;
+                    void bgcs_use_platforms(BgcsPlatforms* platforms);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsPlatforms", "BgcsPlatformsPtr"],
+                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type platforms = assembly.GetType("Compile.Generated.BgcsPlatforms")!;
+                    Type platformsPointer = assembly.GetType("Compile.Generated.BgcsPlatformsPtr")!;
+                    Assert.Equal(platforms.GetNestedType("FirstAnonymous")!.MakeByRefType(), platformsPointer.GetProperty("First")?.PropertyType);
+                    Assert.Equal(platforms.GetNestedType("SecondAnonymous")!.MakeByRefType(), platformsPointer.GetProperty("Second")?.PropertyType);
+                }
+            },
+            new()
+            {
                 Name = "C_Integer_Alias_Enum_Convention",
                 Header = """
                     typedef enum BgcsFlags_
@@ -406,6 +514,203 @@ public class GeneratedCodeCompilationMatrixTests
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsCallbackTable"],
                 Configure = cfg => cfg.DelegatesAsVoidPointer = true
+            },
+            new()
+            {
+                Name = "C_Unsquashed_Callback_Bool_And_Pointer",
+                Header = """
+                    typedef bool (*BgcsPredicate)(void* context, bool enabled);
+                    typedef struct BgcsPredicateTable
+                    {
+                        BgcsPredicate predicate;
+                    } BgcsPredicateTable;
+                    void bgcs_set_predicate(BgcsPredicate predicate);
+                    void bgcs_get_predicate(BgcsPredicate* predicate);
+                    """,
+                ImportType = ImportType.FunctionTable,
+                ExpectedTypeNames = ["BgcsPredicate", "BgcsPredicateTable"],
+                ExpectedMethodNames = ["BgcsSetPredicate", "BgcsGetPredicate"],
+                Configure = cfg =>
+                {
+                    cfg.AutoSquashTypedef = false;
+                    cfg.BoolType = BoolType.Byte;
+                    cfg.DelegatesAsVoidPointer = false;
+                },
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type predicate = assembly.GetType("Compile.Generated.BgcsPredicate")!;
+                    Assert.Equal(typeof(byte), predicate.GetMethod("Invoke")!.ReturnType);
+                    Assert.Equal(typeof(byte), predicate.GetMethod("Invoke")!.GetParameters()[1].ParameterType);
+                }
+            },
+            new()
+            {
+                Name = "C_Nested_Api_Types",
+                Header = """
+                    typedef struct BgcsValue { int value; } BgcsValue;
+                    typedef enum BgcsMode { BGCS_MODE_NONE = 0, BGCS_MODE_FAST = 1 } BgcsMode;
+                    typedef int (*BgcsTransform)(BgcsValue* value, BgcsMode mode);
+                    int bgcs_apply(BgcsValue* value, BgcsMode mode, BgcsTransform transform);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["CompileApi+BgcsValue", "CompileApi+BgcsMode", "CompileApi+BgcsTransform"],
+                ExpectedMethodNames = ["BgcsApply"],
+                Configure = cfg =>
+                {
+                    cfg.AutoSquashTypedef = false;
+                    cfg.NestGeneratedTypesInApi = true;
+                    cfg.DelegatesAsVoidPointer = false;
+                }
+            },
+            new()
+            {
+                Name = "C_Sentinel_Value_Handle",
+                Header = """
+                    typedef struct BgcsResourceHandle { unsigned short index; } BgcsResourceHandle;
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsResourceHandle"],
+                Configure = cfg =>
+                {
+                    cfg.MemberNamingConvention = NamingConvention.Unknown;
+                    cfg.ClassMappings.Add(new BGCS.Core.Mapping.TypeMapping(
+                        "BgcsResourceHandle",
+                        "BgcsResourceHandle",
+                        null)
+                    {
+                        Validity = new BGCS.Core.Mapping.StructValidityMapping(
+                            "index",
+                            "ushort.MaxValue",
+                            "Valid")
+                    });
+                },
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type handleType = assembly.GetType("Compile.Generated.BgcsResourceHandle")!;
+                    PropertyInfo property = handleType.GetProperty("Valid")!;
+                    object valid = Activator.CreateInstance(handleType)!;
+                    handleType.GetField("index")!.SetValue(valid, (ushort)7);
+                    Assert.True((bool)property.GetValue(valid)!);
+                    object invalid = Activator.CreateInstance(handleType)!;
+                    handleType.GetField("index")!.SetValue(invalid, ushort.MaxValue);
+                    Assert.False((bool)property.GetValue(invalid)!);
+                }
+            },
+            new()
+            {
+                Name = "Cpp_Signed_Bitfield_And_Bool_Array",
+                Header = """
+                    struct BgcsPackedState
+                    {
+                        signed int delta : 5;
+                        bool states[3];
+                    };
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsPackedState"],
+                Configure = cfg => cfg.BoolType = BoolType.Byte,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type type = assembly.GetType("Compile.Generated.BgcsPackedState")!;
+                    object value = Activator.CreateInstance(type)!;
+                    type.GetField("RawBits0")!.SetValue(value, 0b1_1111);
+                    Assert.Equal(-1, type.GetProperty("Delta")!.GetValue(value));
+                }
+            },
+            new()
+            {
+                Name = "C_Callback_Fields_With_Reused_Names",
+                Header = """
+                    typedef struct BgcsReader
+                    {
+                        void (*on_data)(int value);
+                    } BgcsReader;
+                    typedef struct BgcsWriter
+                    {
+                        void (*on_data)(float value);
+                    } BgcsWriter;
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsReader", "BgcsWriter", "OnData", "OnData1"],
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type first = assembly.GetType("Compile.Generated.OnData")!;
+                    Type second = assembly.GetType("Compile.Generated.OnData1")!;
+                    Type[] parameterTypes =
+                    [
+                        first.GetMethod("Invoke")!.GetParameters()[0].ParameterType,
+                        second.GetMethod("Invoke")!.GetParameters()[0].ParameterType
+                    ];
+                    Assert.Contains(typeof(int), parameterTypes);
+                    Assert.Contains(typeof(float), parameterTypes);
+                }
+            },
+            new()
+            {
+                Name = "C_Macro_Redefinition_Uses_Final_Value",
+                Header = """
+                    #define BGCS_VALUE 0
+                    #undef BGCS_VALUE
+                    #define BGCS_VALUE 42
+                    """,
+                ImportType = ImportType.DllImport,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type api = assembly.GetType("Compile.Generated.CompileApi")!;
+                    Assert.Equal(42, api.GetField("BGCS_VALUE")!.GetRawConstantValue());
+                }
+            },
+            new()
+            {
+                Name = "C_Incomplete_Record_Typedef_Callbacks",
+                Header = """
+                    struct BgcsEncoderS;
+                    typedef struct BgcsEncoderS BgcsEncoder;
+                    typedef BgcsEncoder* (*BgcsBeginCallback)(void);
+                    typedef void (*BgcsEndCallback)(struct BgcsEncoderS* encoder);
+                    BgcsEncoder* bgcs_encoder_begin(void);
+                    void bgcs_encoder_end(struct BgcsEncoderS* encoder);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsEncoder", "BgcsBeginCallback", "BgcsEndCallback"],
+                ExpectedMethodNames = ["BgcsEncoderBeginNative", "BgcsEncoderEndNative"],
+                Configure = cfg => cfg.AutoSquashTypedef = false,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type encoder = assembly.GetType("Compile.Generated.BgcsEncoder")!;
+                    Type begin = assembly.GetType("Compile.Generated.BgcsBeginCallback")!;
+                    Type end = assembly.GetType("Compile.Generated.BgcsEndCallback")!;
+                    Assert.Equal(encoder, begin.GetMethod("Invoke")!.ReturnType.GetElementType());
+                    Assert.Equal(encoder, end.GetMethod("Invoke")!.GetParameters()[0].ParameterType.GetElementType());
+                }
+            },
+            new()
+            {
+                Name = "C_External_Record_Typedef_Layout",
+                Header = """
+                    #include "external_types.h"
+                    typedef ExternalMutex BgcsMutex;
+                    typedef struct BgcsState
+                    {
+                        unsigned char tag;
+                        BgcsMutex mutex;
+                    } BgcsState;
+                    """,
+                AdditionalHeaders =
+                {
+                    ["external_types.h"] = "typedef struct ExternalMutex { long long storage[5]; } ExternalMutex;"
+                },
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsMutex", "BgcsState"],
+                Configure = cfg => cfg.AutoSquashTypedef = false,
+                VerifyAssembly = (assembly, _) =>
+                {
+                    Type mutex = assembly.GetType("Compile.Generated.BgcsMutex")!;
+                    Type state = assembly.GetType("Compile.Generated.BgcsState")!;
+                    Assert.Equal(40, Marshal.SizeOf(mutex));
+                    Assert.Equal(8, Marshal.OffsetOf(state, "Mutex").ToInt32());
+                    Assert.Equal(48, Marshal.SizeOf(state));
+                }
             },
             new()
             {
@@ -522,7 +827,8 @@ public class GeneratedCodeCompilationMatrixTests
 
     private static void AssertGeneratorSucceeded(string scenarioName, bool ok, IReadOnlyList<LogMessage> messages)
     {
-        Assert.True(ok);
+        string diagnostics = string.Join(Environment.NewLine, messages.Select(message => message.ToString()));
+        Assert.True(ok, $"Generation failed for scenario '{scenarioName}'.{Environment.NewLine}{diagnostics}");
         Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
     }
 
@@ -534,6 +840,8 @@ public class GeneratedCodeCompilationMatrixTests
         string headerPath = Path.Combine(temp, "input.h");
         string outputPath = Path.Combine(temp, "out");
         File.WriteAllText(headerPath, scenario.Header);
+        foreach ((string fileName, string contents) in scenario.AdditionalHeaders)
+            File.WriteAllText(Path.Combine(temp, fileName), contents);
 
         CsCodeGeneratorConfig cfg = new()
         {
@@ -605,6 +913,8 @@ public class GeneratedCodeCompilationMatrixTests
         public Action<CsCodeGeneratorConfig>? Configure { get; set; }
 
         public Action<Assembly, RunResult>? VerifyAssembly { get; set; }
+
+        public Dictionary<string, string> AdditionalHeaders { get; set; } = [];
 
         public List<string> ExpectedTypeNames { get; set; } = [];
 

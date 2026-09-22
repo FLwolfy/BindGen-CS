@@ -38,7 +38,7 @@ class MyClass0
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
 
                     var cppClass = compilation.Classes[0];
                     Assert.Equal("MyClass0", cppClass.Name);

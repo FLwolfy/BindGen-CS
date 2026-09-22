@@ -37,7 +37,7 @@ public class CppMacro : CppElement, ICppMember
     /// <summary>
     /// Gets or sets the parameters of this macro (e.g `param1` and `param2` in `#define MY_MACRO(param1, param2)`)
     /// </summary>
-    public List<string> Parameters { get; set; }
+    public List<string>? Parameters { get; set; }
 
     /// <summary>
     /// Gets or sets the tokens of the value of the macro. The full string of the tokens is accessible via the <see cref="Value"/> property.

@@ -27,7 +27,6 @@ public sealed class CppField : CppDeclaration, ICppMemberWithVisibility, ICppAtt
         Type = type ?? throw new ArgumentNullException(nameof(type));
         Name = name;
         Attributes = [];
-        TokenAttributes = [];
     }
 
     /// <inheritdoc />
@@ -47,7 +46,7 @@ public sealed class CppField : CppDeclaration, ICppMemberWithVisibility, ICppAtt
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; }
+    public List<CppAttribute> TokenAttributes { get; } = [];
 
     /// <summary>
     /// Gets or sets <c>MetaAttributes</c>.

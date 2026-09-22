@@ -133,7 +133,7 @@ public abstract class CppCommentCommand : CppComment
     /// <summary>
     /// Gets or sets <c>CommandName</c>.
     /// </summary>
-    public string CommandName { get; set; }
+    public string CommandName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets <c>Arguments</c>.
@@ -259,7 +259,7 @@ public class CppCommentParamCommand : CppCommentCommand
     /// <summary>
     /// Gets or sets the name of the parameter.
     /// </summary>
-    public string ParamName { get; set; }
+    public string ParamName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a boolean indicating if the <see cref="ParamIndex"/> is valid.
@@ -305,7 +305,7 @@ public class CppCommentTemplateParamCommand : CppCommentCommand
     /// <summary>
     /// Gets or sets the name of the parameter.
     /// </summary>
-    public string ParamName { get; set; }
+    public string ParamName { get; set; } = string.Empty;
 
     /// <summary>
     /// Depth or this parameter.
@@ -464,7 +464,7 @@ public abstract class CppCommentHtmlTag : CppComment
     /// <summary>
     /// Gets or sets <c>TagName</c>.
     /// </summary>
-    public string TagName { get; set; }
+    public string TagName { get; set; } = string.Empty;
 
     protected internal abstract override void ToString(StringBuilder builder);
 }

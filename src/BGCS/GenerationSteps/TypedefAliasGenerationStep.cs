@@ -61,8 +61,11 @@ namespace BGCS.GenerationSteps
             Directory.CreateDirectory(folder);
 
             string filePath = Path.Combine(folder, "TypedefAliases.cs");
-            using var writer = new CsCodeWriter(filePath, config.Namespace, [], config.HeaderInjector);
+            List<string> aliases = [];
             List<string> opaqueTypes = [];
+            List<(string AliasName, CppClass Record)> externalRecordAliases = [];
+            Dictionary<string, string> opaqueRecordNames = new(StringComparer.Ordinal);
+            string typeContainer = config.NestGeneratedTypesInApi ? $".{config.ApiName}" : string.Empty;
             HashSet<string> enumTypeNames = result.Compilation.Enums
                 .Select(cppEnum => config.GetCsCleanName(cppEnum.Name))
                 .ToHashSet(StringComparer.Ordinal);
@@ -80,13 +83,32 @@ namespace BGCS.GenerationSteps
                 }
 
                 string aliasName = config.GetCsCleanName(typedef.Name);
+                CppType target = GetUltimateType(typedef);
+
+                if (target is CppClass record && (!record.IsDefinition || !files.Contains(record.SourceFile)))
+                {
+                    string canonicalName = RegisterOpaqueRecordMapping(record, aliasName, opaqueRecordNames, out bool emitDefinition);
+                    if (!string.Equals(aliasName, canonicalName, StringComparison.Ordinal))
+                    {
+                        aliases.Add($"{aliasName} = global::{config.Namespace}{typeContainer}.{canonicalName}");
+                    }
+                    if (emitDefinition)
+                    {
+                        if (record.IsDefinition)
+                            externalRecordAliases.Add((canonicalName, record));
+                        else
+                            opaqueTypes.Add(canonicalName);
+                    }
+                    continue;
+                }
+
                 string targetType = GetAliasTargetTypeName(typedef);
 
                 if (string.IsNullOrWhiteSpace(targetType) || CsType.IsKnownPrimitive(aliasName) || enumTypeNames.Contains(aliasName))
                 {
                     continue;
                 }
-                if (targetType == "void" || IsIncompleteRecordAlias(typedef))
+                if (targetType == "void")
                 {
                     opaqueTypes.Add(aliasName);
                     continue;
@@ -98,13 +120,30 @@ namespace BGCS.GenerationSteps
 
                 if (targetType.Contains('*'))
                     targetType = "nint";
-                writer.WriteLine($"using {aliasName} = {targetType};");
+                if (target is CppClass)
+                    targetType = $"global::{config.Namespace}{typeContainer}.{targetType}";
+                aliases.Add($"{aliasName} = {targetType}");
+            }
+
+            List<string> usings = ["System.Runtime.InteropServices", "BGCS.Runtime", .. config.Usings];
+            using var writer = new CsCodeWriter(filePath, config.Namespace, usings, config.HeaderInjector, aliases);
+
+            foreach ((string aliasName, CppClass externalRecord) in externalRecordAliases)
+            {
+                writer.WriteLine();
+                using (PushApiTypeScope(writer))
+                {
+                    WriteOpaqueRecordAlias(writer, aliasName, externalRecord);
+                }
             }
 
             foreach (string opaqueType in opaqueTypes)
             {
                 writer.WriteLine();
-                writer.WriteLine($"public partial struct {opaqueType} {{ }}");
+                using (PushApiTypeScope(writer))
+                {
+                    writer.WriteLine($"public partial struct {opaqueType} {{ }}");
+                }
             }
         }
 
@@ -145,12 +184,63 @@ namespace BGCS.GenerationSteps
             return false;
         }
 
-        private static bool IsIncompleteRecordAlias(CppTypedef typedef)
+        private string RegisterOpaqueRecordMapping(
+            CppClass record,
+            string aliasName,
+            Dictionary<string, string> opaqueRecordNames,
+            out bool emitDefinition)
+        {
+            string recordKey = string.IsNullOrWhiteSpace(record.FullName) ? record.Name : record.FullName;
+            if (opaqueRecordNames.TryGetValue(recordKey, out string? canonicalName))
+            {
+                emitDefinition = false;
+                return canonicalName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(record.Name) && config.TypeMappings.TryGetValue(record.Name, out canonicalName))
+            {
+                opaqueRecordNames.Add(recordKey, canonicalName);
+                emitDefinition = false;
+                return canonicalName;
+            }
+
+            canonicalName = aliasName;
+            opaqueRecordNames.Add(recordKey, canonicalName);
+            if (!string.IsNullOrWhiteSpace(record.Name))
+                config.TypeMappings[record.Name] = canonicalName;
+            emitDefinition = true;
+            return canonicalName;
+        }
+
+        private static CppType GetUltimateType(CppTypedef typedef)
         {
             CppType current = typedef.ElementType;
             while (current is CppTypedef nested)
                 current = nested.ElementType;
-            return current is CppClass { IsDefinition: false };
+            return current;
+        }
+
+        private static void WriteOpaqueRecordAlias(CsCodeWriter writer, string aliasName, CppClass cppClass)
+        {
+            if (cppClass.SizeOf <= 0)
+                throw new NotSupportedException($"Cannot emit opaque typedef '{aliasName}' because native size information is unavailable.");
+            string alignmentType = cppClass.AlignOf switch
+            {
+                1 => "byte",
+                2 => "ushort",
+                4 => "uint",
+                8 => "ulong",
+                _ => throw new NotSupportedException(
+                    $"Cannot safely emit opaque typedef '{aliasName}' with native alignment {cppClass.AlignOf}. Add an explicit TypeMapping for this platform type.")
+            };
+            writer.WriteLine($"[StructLayout(LayoutKind.Sequential, Size = {cppClass.SizeOf}, Pack = {cppClass.AlignOf})]");
+            using (writer.PushBlock($"public partial struct {aliasName}"))
+            {
+                writer.WriteLine("#pragma warning disable CS0169");
+                writer.WriteLine($"private {alignmentType} _alignment;");
+                writer.WriteLine("#pragma warning restore CS0169");
+            }
+            writer.WriteLine();
         }
 
         private string GetAliasTargetTypeName(CppTypedef typedef)

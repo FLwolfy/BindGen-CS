@@ -57,32 +57,32 @@ class __cppast(script, is_browsable=true, desc=""a class"") TestClass
 
                     //annotate attribute support on global function
                     var cppFunc = compilation.Functions[0];
-                    Assert.Equal(1, cppFunc.Attributes.Count);
-                    Assert.Equal(cppFunc.Attributes[0].Kind, AttributeKind.AnnotateAttribute);
-                    Assert.Equal(cppFunc.Attributes[0].Arguments, "script, is_browsable=true, desc=\"a function\"");
+                    Assert.Single(cppFunc.Attributes);
+                    Assert.Equal(AttributeKind.AnnotateAttribute, cppFunc.Attributes[0].Kind);
+                    Assert.Equal("script, is_browsable=true, desc=\"a function\"", cppFunc.Attributes[0].Arguments);
 
                     //annotate attribute support on enum
                     var cppEnum = compilation.Enums[0];
-                    Assert.Equal(1, cppEnum.Attributes.Count);
-                    Assert.Equal(cppEnum.Attributes[0].Kind, AttributeKind.AnnotateAttribute);
-                    Assert.Equal(cppEnum.Attributes[0].Arguments, "script, is_browsable=true, desc=\"a enum\"");
+                    Assert.Single(cppEnum.Attributes);
+                    Assert.Equal(AttributeKind.AnnotateAttribute, cppEnum.Attributes[0].Kind);
+                    Assert.Equal("script, is_browsable=true, desc=\"a enum\"", cppEnum.Attributes[0].Arguments);
 
                     //annotate attribute support on class
                     var cppClass = compilation.Classes[0];
-                    Assert.Equal(1, cppClass.Attributes.Count);
-                    Assert.Equal(cppClass.Attributes[0].Kind, AttributeKind.AnnotateAttribute);
-                    Assert.Equal(cppClass.Attributes[0].Arguments, "script, is_browsable=true, desc=\"a class\"");
+                    Assert.Single(cppClass.Attributes);
+                    Assert.Equal(AttributeKind.AnnotateAttribute, cppClass.Attributes[0].Kind);
+                    Assert.Equal("script, is_browsable=true, desc=\"a class\"", cppClass.Attributes[0].Arguments);
 
-                    Assert.Equal(1, cppClass.Functions.Count);
+                    Assert.Single(cppClass.Functions);
                     var memFunc = cppClass.Functions[0];
-                    Assert.Equal(1, memFunc.Attributes.Count);
-                    Assert.Equal(memFunc.Attributes[0].Arguments, "desc=\"a member function\"");
+                    Assert.Single(memFunc.Attributes);
+                    Assert.Equal("desc=\"a member function\"", memFunc.Attributes[0].Arguments);
 
 
-                    Assert.Equal(1, cppClass.Fields.Count);
+                    Assert.Single(cppClass.Fields);
                     var memField = cppClass.Fields[0];
-                    Assert.Equal(1, memField.Attributes.Count);
-                    Assert.Equal(memField.Attributes[0].Arguments, "desc=\"a member field\"");
+                    Assert.Single(memField.Attributes);
+                    Assert.Equal("desc=\"a member field\"", memField.Attributes[0].Arguments);
                 }
             );
         }
@@ -110,9 +110,9 @@ namespace __cppast(script, is_browsable=true, desc=""a namespace test"") TestNs{
 
                     //annotate attribute support on namespace
                     var ns = compilation.Namespaces[0];
-                    Assert.Equal(1, ns.Attributes.Count);
-                    Assert.Equal(ns.Attributes[0].Kind, AttributeKind.AnnotateAttribute);
-                    Assert.Equal(ns.Attributes[0].Arguments, "script, is_browsable=true, desc=\"a namespace test\"");
+                    Assert.Single(ns.Attributes);
+                    Assert.Equal(AttributeKind.AnnotateAttribute, ns.Attributes[0].Kind);
+                    Assert.Equal("script, is_browsable=true, desc=\"a namespace test\"", ns.Attributes[0].Arguments);
 
                 }
             );
@@ -143,9 +143,9 @@ void TestFunc()
 
                     //annotate attribute support on namespace
                     var func = compilation.Functions[0];
-                    Assert.Equal(1, func.Attributes.Count);
-                    Assert.Equal(func.Attributes[0].Kind, AttributeKind.AnnotateAttribute);
-                    Assert.Equal(func.Attributes[0].Arguments, "id=12345, desc=\"a function with macro\"");
+                    Assert.Single(func.Attributes);
+                    Assert.Equal(AttributeKind.AnnotateAttribute, func.Attributes[0].Kind);
+                    Assert.Equal("id=12345, desc=\"a function with macro\"", func.Attributes[0].Arguments);
 
                 }
             );

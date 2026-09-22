@@ -95,5 +95,5 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 - 已验证 `std::string`、输入 `std::span<T>`、blittable `std::optional<T>`、ownership-transfer `std::unique_ptr<T>` 和配置式 pure-virtual callback proxy。string、vector、span input/return、optional、unique_ptr、shared_ptr 默认 adapter 已验证；`std::variant` 和 non-blittable optional alternative 仍需显式 custom lowering。
 - 仅凭 pointer 语法无法可靠推断 ownership 和 allocator 语义。
 - typed C variadic 当前要求 `DllImport` 和显式完成参数提升后的类型。
-- 四个真实库 gate 已编译 C# 并检查确定性 API snapshot，但 fixture 中没有对应上游 native DLL，因此四库直接 native runtime invocation 尚未通过。
-- `BGCS.CppAst` 仍有 nullable/deprecated API warning 正在清理；`BGCS.Core`、`BGCS.Language`、generator package、生成消费者和 package smoke 已干净编译。
+- 五个真实 C 库 gate 与 bimg C++ Bridge 会编译生成输出并检查 target-specific 确定性 API snapshot；InnoEngine 还会单独构建其 native binary，并执行全部六个 native binding 测试项目。
+- 完整 solution、生成消费者和 package smoke project 均以 warning-as-error 模式通过编译。

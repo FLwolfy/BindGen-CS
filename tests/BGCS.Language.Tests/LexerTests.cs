@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using BGCS.Language;
 using Xunit;
@@ -20,7 +21,8 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        var kinds = result.Tokens.Select(x => x.Type).ToArray();
+        var tokens = Assert.IsType<List<Token>>(result.Tokens);
+        var kinds = tokens.Select(x => x.Type).ToArray();
         Assert.Equal(
         [
             TokenType.Identifier,
@@ -39,9 +41,10 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        Assert.Single(result.Tokens);
-        Assert.Equal(TokenType.Literal, result.Tokens[0].Type);
-        Assert.Equal("Hello World", result.Tokens[0].AsString());
+        var tokens = Assert.IsType<List<Token>>(result.Tokens);
+        Assert.Single(tokens);
+        Assert.Equal(TokenType.Literal, tokens[0].Type);
+        Assert.Equal("Hello World", tokens[0].AsString());
     }
 
     [Fact]

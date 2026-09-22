@@ -37,6 +37,12 @@
         public string? Comment { get; set; }
 
         /// <summary>
+        /// Gets or sets the optional managed API class that receives the friendly overloads.
+        /// Native entry-point stubs remain on the primary configured API class.
+        /// </summary>
+        public string? ContainerName { get; set; }
+
+        /// <summary>
         /// Gets or sets <c>Defaults</c>.
         /// </summary>
         public Dictionary<string, string> Defaults { get; set; }

@@ -45,6 +45,7 @@
             if (mergeOptions.HasFlag(MergeOptions.ImportType))
             {
                 ImportType = baseConfig.ImportType;
+                EmitLibraryNameConstant = baseConfig.EmitLibraryNameConstant;
             }
 
             if (mergeOptions.HasFlag(MergeOptions.GenerateMetadata))
@@ -90,6 +91,7 @@
             if (mergeOptions.HasFlag(MergeOptions.OneFilePerType))
             {
                 OneFilePerType = baseConfig.OneFilePerType;
+                NestGeneratedTypesInApi = baseConfig.NestGeneratedTypesInApi;
             }
 
             if (mergeOptions.HasFlag(MergeOptions.GenerateRuntimeSource))
@@ -130,6 +132,9 @@
 
             MergeLists(ConstantMappings, baseConfig.ConstantMappings, mergeOptions, MergeOptions.ConstantMappings);
             MergeLists(EnumMappings, baseConfig.EnumMappings, mergeOptions, MergeOptions.EnumMappings);
+            // FunctionPrefixes are part of function-name mapping and therefore share the
+            // FunctionMappings merge flag. MergeOptions already occupies all 64 flag bits.
+            MergeLists(FunctionPrefixes, baseConfig.FunctionPrefixes, mergeOptions, MergeOptions.FunctionMappings);
             MergeLists(FunctionMappings, baseConfig.FunctionMappings, mergeOptions, MergeOptions.FunctionMappings);
             MergeLists(HandleMappings, baseConfig.HandleMappings, mergeOptions, MergeOptions.HandleMappings);
             MergeLists(ClassMappings, baseConfig.ClassMappings, mergeOptions, MergeOptions.ClassMappings);

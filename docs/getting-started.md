@@ -4,10 +4,10 @@
 
 ## Requirements
 
-- Windows 10/11 x64.
+- Windows, Linux, or macOS on a supported x86/x64/Arm/Arm64 target.
 - .NET SDK 9.0.
 - LibClang is restored through BGCS packages.
-- LLVM or Visual Studio C++ tools are required when compiling generated C bridges. Tests discover `C:\Program Files\LLVM\bin\clang++.exe` or use `BGCS_CPP2C_CXX`.
+- A C/C++ compiler driver is required for system-header discovery and generated C bridges. BindGen-CS discovers Clang/GNU drivers, the Windows LLVM installation, and the active macOS SDK; `BGCS_CC`, `BGCS_CPP2C_CXX`, `CC`, and `CXX` provide explicit overrides.
 
 ## Install the tool
 
@@ -125,4 +125,4 @@ The output transaction replaces the complete generated directory after success, 
 - **Parsing takes too long:** disable macros/comments when not required and report the header as a performance regression; the real-library budgets are mandatory.
 - **Unknown type:** add a `TypeMappings` entry or generate a C++ bridge specialization. Never map a non-trivial C++ value type directly to a blittable C# struct.
 - **Duplicate Runtime types:** reference `BGCS.Runtime` or compile generated `Runtime.cs`, not both without `BGCS_RUNTIME_EXTERNAL`.
-- **Native compiler missing:** set `BGCS_CPP2C_CXX` to `clang++.exe`.
+- **Native compiler missing:** set `BGCS_CC` and `BGCS_CPP2C_CXX` (or `CC`/`CXX`) to the appropriate compiler drivers.

@@ -19,4 +19,4 @@
 
 ## Stable behavior versus work in progress
 
-The seven-layer architecture, shared IR, C#/Runtime/CBridge emitters, CLI workflow, transactional output, SingleFile generation, package closure, real-library regeneration budgets, and deterministic API snapshots are available now. Advanced STL/smart-pointer lowering, managed virtual callback proxies, ownership annotations, and direct invocation of the four upstream native DLLs remain in progress until their gates pass.
+The seven-layer architecture, shared IR, C#/Runtime/CBridge emitters, CLI/workspace workflow, transactional output, SingleFile generation, target/toolchain modeling, package closure, real-library budgets, deterministic target-specific snapshots, STL/smart-pointer lowering, managed virtual callback proxies, ownership diagnostics, and InnoEngine's five-project generated-binding gate are available now. The generated acceptance report is the authoritative statement of what passed on a particular target.

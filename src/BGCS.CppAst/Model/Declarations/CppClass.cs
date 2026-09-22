@@ -38,7 +38,6 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
         Typedefs = new CppContainerList<CppTypedef>(this);
         TemplateParameters = new CppContainerList<CppType>(this);
         Attributes = [];
-        TokenAttributes = [];
         ObjCImplementedProtocols = [];
         Properties = new CppContainerList<CppProperty>(this);
         ObjCCategories = [];
@@ -134,7 +133,7 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; }
+    public List<CppAttribute> TokenAttributes { get; } = [];
 
     /// <summary>
     /// Gets or sets <c>MetaAttributes</c>.

@@ -119,7 +119,6 @@ public abstract class CppElement : ICppElement
         }
     }
 
-    [Obsolete("Remove me later, when all meta attributes are handled after the new api")]
     /// <summary>
     /// Executes public operation <c>ConvertToMetaAttributes</c>.
     /// </summary>
@@ -133,7 +132,7 @@ public abstract class CppElement : ICppElement
             {
                 MetaAttribute? metaAttr = null;
 
-                metaAttr = CustomAttributeTool.ParseMetaStringFor(attr.Arguments, out string? errorMessage);
+                metaAttr = CustomAttributeTool.ParseMetaStringFor(attr.Arguments ?? string.Empty, out string? errorMessage);
 
                 if (!string.IsNullOrEmpty(errorMessage))
                 {

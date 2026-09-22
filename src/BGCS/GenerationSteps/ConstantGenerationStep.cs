@@ -117,17 +117,17 @@
 
             using CsSplitCodeWriter writer = new(filePath, config.Namespace, SetupConstantUsings(), config.HeaderInjector);
             GenContext context = new(result, filePath, writer);
-            List<CsConstantMetadata> constants = [];
+            Dictionary<string, CppMacro> effectiveMacros = new(StringComparer.Ordinal);
 
             for (int i = 0; i < compilation.Macros.Count; i++)
             {
-                if (string.IsNullOrEmpty(compilation.Macros[i].SourceFile) || !files.Contains(compilation.Macros[i].SourceFile))
+                CppMacro macro = compilation.Macros[i];
+                if (string.IsNullOrEmpty(macro.SourceFile) || !files.Contains(macro.SourceFile))
                     continue;
-
-                var constant = ParseConstant(compilation.Macros[i]);
-
-                constants.Add(constant);
+                effectiveMacros[macro.Name] = macro;
             }
+
+            List<CsConstantMetadata> constants = effectiveMacros.Values.Select(ParseConstant).ToList();
 
             Dictionary<string, CsConstantMetadata> constantsLookupTable = [];
             foreach (var constant in constants)

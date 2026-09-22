@@ -54,12 +54,14 @@ enum Enum0
 
                     var cppElements = compilation.Children.ToList();
                     Assert.Equal(4, cppElements.Count);
+                    Assert.All(cppElements, element => Assert.NotNull(element.Comment));
 
-                    var results = cppElements.Select(x => (x.Comment.ToString(), x.GetType())).ToList();
+                    var results = cppElements.Select(x => (x.Comment!.ToString(), x.GetType())).ToList();
 
-                    Assert.Equal(1, compilation.Enums.Count);
+                    Assert.Single(compilation.Enums);
 
-                    results.AddRange(compilation.Enums[0].Children.Select(x => (x.Comment.ToString(), x.GetType())));
+                    Assert.All(compilation.Enums[0].Children, element => Assert.NotNull(element.Comment));
+                    results.AddRange(compilation.Enums[0].Children.Select(x => (x.Comment!.ToString(), x.GetType())));
 
                     var expectedResults = new List<(string, Type)>()
                     {
@@ -118,7 +120,7 @@ And another line with @a x and @a y in italics
 
 @exception FileNotFoundException if file does not exist.";
 
-                Assert.Equal(1, compilation.Functions.Count);
+                Assert.Single(compilation.Functions);
                 var resultText = compilation.Functions[0].Comment?.ToString();
 
                 expectedText = expectedText.Replace("\r\n", "\n");
@@ -139,7 +141,7 @@ int function1(int a, int b);
 
                 var expectedText = @"[infinite loop)";
 
-                Assert.Equal(1, compilation.Functions.Count);
+                Assert.Single(compilation.Functions);
                 var resultText = compilation.Functions[0].Comment?.ToString();
 
                 expectedText = expectedText.Replace("\r\n", "\n");

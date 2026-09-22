@@ -17,8 +17,6 @@ using Xunit;
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System;
-
 namespace BGCS.CppAst.Tests
 {
     public class TestExpressions : InlineTestBase
@@ -38,7 +36,7 @@ DEFINE_GUID(IID_ID3D11DeviceChild,0x1841e5c8,0x16b0,0x489b,0xbc,0xc8,0x44,0xcf,0
 ", compilation =>
                 {
                     Assert.False(compilation.HasErrors);
-                    Assert.Equal(1, compilation.Fields.Count);
+                    Assert.Single(compilation.Fields);
                     var cppField = compilation.Fields[0];
 
                     Assert.Null(cppField.InitValue);
@@ -62,7 +60,7 @@ const int x = (0 + 1) << 2;
 ", compilation =>
             {
                 Assert.False(compilation.HasErrors);
-                Assert.Equal(1, compilation.Fields.Count);
+                Assert.Single(compilation.Fields);
                 var cppField = compilation.Fields[0];
 
                 Assert.NotNull(cppField.InitValue?.Value);
@@ -83,7 +81,7 @@ const int x = ~(128 + 2);
 ", compilation =>
             {
                 Assert.False(compilation.HasErrors);
-                Assert.Equal(1, compilation.Fields.Count);
+                Assert.Single(compilation.Fields);
                 var cppField = compilation.Fields[0];
 
                 Assert.NotNull(cppField.InitValue?.Value);
@@ -105,7 +103,7 @@ const int x = 12|1;
 ", compilation =>
             {
                 Assert.False(compilation.HasErrors);
-                Assert.Equal(1, compilation.Fields.Count);
+                Assert.Single(compilation.Fields);
                 var cppField = compilation.Fields[0];
 
                 Assert.NotNull(cppField.InitValue?.Value);
@@ -127,9 +125,9 @@ void MyFunction(int x = (1 + 2) * 3);
 ", compilation =>
             {
                 Assert.False(compilation.HasErrors);
-                Assert.Equal(1, compilation.Functions.Count);
+                Assert.Single(compilation.Functions);
                 var parameters = compilation.Functions[0].Parameters;
-                Assert.Equal(1, parameters.Count);
+                Assert.Single(parameters);
                 var cppParam = parameters[0];
 
                 Assert.NotNull(cppParam.InitValue?.Value);
@@ -152,7 +150,7 @@ const void* NullPtr = nullptr;
 ", compilation =>
             {
                 Assert.False(compilation.HasErrors);
-                Assert.Equal(1, compilation.Fields.Count);
+                Assert.Single(compilation.Fields);
                 var cppField = compilation.Fields[0];
 
                 Assert.Null(cppField.InitValue?.Value);

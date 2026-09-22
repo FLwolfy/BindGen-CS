@@ -17,8 +17,6 @@ using Xunit;
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System;
-
 namespace BGCS.CppAst.Tests
 {
     public class TestSystemAttributes : InlineTestBase
@@ -58,19 +56,19 @@ void *fun2(int align) __attribute__((alloc_align(1)));
 
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Fields.Count);
+                    Assert.Single(compilation.Fields);
                     Assert.NotNull(compilation.Fields[0].Attributes);
                     Assert.Equal("dllimport", compilation.Fields[0].Attributes[0].Name);
 
                     Assert.Equal(3, compilation.Functions.Count);
                     Assert.NotNull(compilation.Functions[0].Attributes);
-                    Assert.Equal(1, compilation.Functions[0].Attributes.Count);
+                    Assert.Single(compilation.Functions[0].Attributes);
                     Assert.Equal("dllexport", compilation.Functions[0].Attributes[0].Name);
 
                     Assert.Equal(CppCallingConvention.X86StdCall, compilation.Functions[1].CallingConvention);
 
                     Assert.NotNull(compilation.Functions[2].Attributes);
-                    Assert.Equal(1, compilation.Functions[2].Attributes.Count);
+                    Assert.Single(compilation.Functions[2].Attributes);
                     Assert.Equal("allocalign", compilation.Functions[2].Attributes[0].Name);
 
                 },
@@ -89,7 +87,7 @@ struct __declspec(uuid(""1841e5c8-16b0-489b-bcc8-44cfb0d5deae"")) __declspec(nov
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
 
                     Assert.NotNull(compilation.Classes[0].Attributes);
 
@@ -116,8 +114,8 @@ alignas(128) char cacheline[128];", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Fields.Count);
-                Assert.Equal(1, compilation.Fields[0].Attributes.Count);
+                Assert.Single(compilation.Fields);
+                Assert.Single(compilation.Fields[0].Attributes);
                 {
                     var attr = compilation.Fields[0].Attributes[0];
                     Assert.Equal("alignas", attr.Name);
@@ -136,8 +134,8 @@ struct alignas(8) S {};", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Classes.Count);
-                Assert.Equal(1, compilation.Classes[0].Attributes.Count);
+                Assert.Single(compilation.Classes);
+                Assert.Single(compilation.Classes[0].Attributes);
                 {
                     var attr = compilation.Classes[0].Attributes[0];
                     Assert.Equal("alignas", attr.Name);
@@ -156,7 +154,7 @@ struct [[deprecated(""abc"")]] alignas(8) S {};", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Classes.Count);
+                Assert.Single(compilation.Classes);
                 Assert.Equal(2, compilation.Classes[0].Attributes.Count);
                 {
                     var attr = compilation.Classes[0].Attributes[0];
@@ -190,13 +188,13 @@ struct [[deprecated(""old"")]] TestMessage{
                 Assert.False(compilation.HasErrors);
 
                 Assert.Equal(2, compilation.Classes.Count);
-                Assert.Equal(1, compilation.Classes[0].Attributes.Count);
+                Assert.Single(compilation.Classes[0].Attributes);
                 {
                     var attr = compilation.Classes[0].Attributes[0];
                     Assert.Equal("deprecated", attr.Name);
                 }
 
-                Assert.Equal(1, compilation.Classes[1].Attributes.Count);
+                Assert.Single(compilation.Classes[1].Attributes);
                 {
                     var attr = compilation.Classes[1].Attributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -220,16 +218,16 @@ struct Test{
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Classes.Count);
+                Assert.Single(compilation.Classes);
                 Assert.Equal(2, compilation.Classes[0].Fields.Count);
-                Assert.Equal(1, compilation.Classes[0].Fields[0].Attributes.Count);
+                Assert.Single(compilation.Classes[0].Fields[0].Attributes);
                 {
                     var attr = compilation.Classes[0].Fields[0].Attributes[0];
                     Assert.Equal("deprecated", attr.Name);
                 }
 
-                Assert.Equal(1, compilation.Fields.Count);
-                Assert.Equal(1, compilation.Fields[0].Attributes.Count);
+                Assert.Single(compilation.Fields);
+                Assert.Single(compilation.Fields[0].Attributes);
                 {
                     var attr = compilation.Fields[0].Attributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -248,8 +246,8 @@ struct Test{
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Functions.Count);
-                Assert.Equal(1, compilation.Functions[0].Attributes.Count);
+                Assert.Single(compilation.Functions);
+                Assert.Single(compilation.Functions[0].Attributes);
                 {
                     var attr = compilation.Functions[0].Attributes[0];
                     Assert.Equal("cxx11noreturn", attr.Name);
@@ -268,8 +266,8 @@ namespace [[deprecated]] cppast {};", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Namespaces.Count);
-                Assert.Equal(1, compilation.Namespaces[0].Attributes.Count);
+                Assert.Single(compilation.Namespaces);
+                Assert.Single(compilation.Namespaces[0].Attributes);
                 {
                     var attr = compilation.Namespaces[0].Attributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -288,8 +286,8 @@ enum [[deprecated]] E { };", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Enums.Count);
-                Assert.Equal(1, compilation.Enums[0].Attributes.Count);
+                Assert.Single(compilation.Enums);
+                Assert.Single(compilation.Enums[0].Attributes);
                 {
                     var attr = compilation.Enums[0].Attributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -310,8 +308,8 @@ template<> struct [[deprecated]] X<int> {};", compilation =>
                 Assert.False(compilation.HasErrors);
 
                 Assert.Equal(2, compilation.Classes.Count);
-                Assert.Equal(0, compilation.Classes[0].Attributes.Count);
-                Assert.Equal(1, compilation.Classes[1].Attributes.Count);
+                Assert.Empty(compilation.Classes[0].Attributes);
+                Assert.Single(compilation.Classes[1].Attributes);
                 {
                     var attr = compilation.Classes[1].Attributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -331,8 +329,8 @@ template<> struct [[deprecated]] X<int> {};", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Functions.Count);
-                Assert.Equal(1, compilation.Functions[0].Attributes.Count);
+                Assert.Single(compilation.Functions);
+                Assert.Single(compilation.Functions[0].Attributes);
             },
             // we are using a C++14 attribute because it can be used everywhere
             new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
@@ -358,7 +356,7 @@ class EXPORT_API TestClass
                     Assert.False(compilation.HasErrors);
 
                     var cppClass = compilation.Classes[0];
-                    Assert.Equal(1, cppClass.Attributes.Count);
+                    Assert.Single(cppClass.Attributes);
                     Assert.True(cppClass.IsPublicExport());
 
                 },
@@ -370,7 +368,7 @@ class EXPORT_API TestClass
                     Assert.False(compilation.HasErrors);
 
                     var cppClass = compilation.Classes[0];
-                    Assert.Equal(1, cppClass.Attributes.Count);
+                    Assert.Single(cppClass.Attributes);
                     Assert.True(cppClass.IsPublicExport());
                 }, new CppParserOptions() { }.ConfigureForWindowsMsvc()
             );

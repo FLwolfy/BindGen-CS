@@ -8,7 +8,7 @@
         /// <summary>
         /// Gets <c>Default</c>.
         /// </summary>
-        public static CsCodeGeneratorConfig Default { get; } = new CsCodeGeneratorConfig()
+        public static CsCodeGeneratorConfig Default => new CsCodeGeneratorConfig()
         {
             TypeMappings = new()
             {

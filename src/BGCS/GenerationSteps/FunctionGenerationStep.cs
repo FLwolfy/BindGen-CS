@@ -12,6 +12,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Text;
 
     /// <summary>
@@ -41,6 +42,11 @@
 
         private FunctionGenerator funcGen = null!;
         private FunctionTableBuilder FunctionTableBuilder = null!;
+
+        private sealed record DeferredFunction(
+            string ContainerName,
+            CsFunction Function,
+            CsFunctionOverload Overload);
 
         /// <summary>
         /// Initializes a new instance of <see cref="FunctionGenerationStep"/>.
@@ -181,6 +187,7 @@
             string filePath = Path.Combine(folder, "Functions.cs");
 
             DefinedVariationsFunctions.Clear();
+            List<DeferredFunction> deferredFunctions = [];
 
             // Generate Functions
             using var writer = new CsSplitCodeWriter(filePath, config.Namespace, SetupFunctionUsings(), config.HeaderInjector);
@@ -189,7 +196,7 @@
             FunctionTableBuilder.Append(config.FunctionTableEntries);
             using (writer.PushBlock($"public unsafe partial class {config.ApiName}"))
             {
-                if (!config.UseFunctionTable)
+                if (!config.UseFunctionTable && config.EmitLibraryNameConstant)
                 {
                     writer.WriteLine($"internal const string LibName = \"{config.LibName}\";\n");
                 }
@@ -329,9 +336,19 @@
                         foreach (CsFunctionVariation safeVariation in safeVariations)
                             overload.Variations.Add(safeVariation);
                     }
-                    WriteFunctions(context, DefinedVariationsFunctions, function, overload, WriteFunctionFlags.None, "public static");
+                    string containerName = GetFunctionContainerName(cppFunction.Name);
+                    if (string.Equals(containerName, config.ApiName, StringComparison.Ordinal))
+                    {
+                        WriteFunctions(context, DefinedVariationsFunctions, function, overload, WriteFunctionFlags.None, "public static");
+                    }
+                    else
+                    {
+                        deferredFunctions.Add(new DeferredFunction(containerName, function, overload));
+                    }
                 }
             }
+
+            WriteDeferredFunctionContainers(result, folder, deferredFunctions);
 
             if (config.UseFunctionTable)
             {
@@ -380,6 +397,60 @@
                     using (writerfuncTable.PushBlock("public static void FreeApi()"))
                     {
                         writerfuncTable.WriteLine("funcTable.Free();");
+                    }
+                }
+            }
+        }
+
+        private string GetFunctionContainerName(string exportedName)
+        {
+            if (!config.TryGetFunctionMapping(exportedName, out var mapping) ||
+                string.IsNullOrWhiteSpace(mapping.ContainerName))
+            {
+                return config.ApiName;
+            }
+
+            string containerName = config.GetCsCleanName(mapping.ContainerName);
+            if (containerName.Contains('.', StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Function mapping '{exportedName}' has invalid ContainerName '{mapping.ContainerName}'. " +
+                    "ContainerName must be a simple C# type name in the configured namespace.");
+            }
+
+            return containerName;
+        }
+
+        private void WriteDeferredFunctionContainers(
+            ParseResult result,
+            string folder,
+            List<DeferredFunction> deferredFunctions)
+        {
+            foreach (IGrouping<string, DeferredFunction> group in deferredFunctions.GroupBy(
+                         item => item.ContainerName,
+                         StringComparer.Ordinal))
+            {
+                string filePath = Path.Combine(folder, $"Functions.{group.Key}.cs");
+                using var writer = new CsCodeWriter(
+                    filePath,
+                    config.Namespace,
+                    SetupFunctionUsings(),
+                    config.HeaderInjector);
+                GenContext context = new(result, filePath, writer);
+                HashSet<CsFunctionVariation> definedFunctions = new(IdentifierComparer<CsFunctionVariation>.Default);
+
+                using (writer.PushBlock($"public unsafe partial class {group.Key}"))
+                {
+                    foreach (DeferredFunction item in group)
+                    {
+                        WriteFunctions(
+                            context,
+                            definedFunctions,
+                            item.Function,
+                            item.Overload,
+                            WriteFunctionFlags.None,
+                            config.ApiName,
+                            ["public static"]);
                     }
                 }
             }
@@ -519,9 +590,28 @@
         /// </summary>
         public virtual void WriteFunctions(GenContext context, HashSet<CsFunctionVariation> definedFunctions, CsFunction csFunction, CsFunctionOverload overload, WriteFunctionFlags flags, params string[] modifiers)
         {
+            WriteFunctions(context, definedFunctions, csFunction, overload, flags, null, modifiers);
+        }
+
+        private void WriteFunctions(
+            GenContext context,
+            HashSet<CsFunctionVariation> definedFunctions,
+            CsFunction csFunction,
+            CsFunctionOverload overload,
+            WriteFunctionFlags flags,
+            string? nativeOwner,
+            IReadOnlyList<string> modifiers)
+        {
             foreach (CsFunctionVariation variation in overload.Variations)
             {
-                WriteFunctionEx(context, definedFunctions, csFunction, overload, variation, flags, modifiers);
+                if (nativeOwner is null)
+                {
+                    WriteFunctionEx(context, definedFunctions, csFunction, overload, variation, flags, modifiers.ToArray());
+                }
+                else
+                {
+                    WriteFunctionEx(context, definedFunctions, csFunction, overload, variation, flags, nativeOwner, modifiers);
+                }
 
                 foreach (var alias in context.ParseResult.EnumerateFunctionAliases(overload.ExportedName))
                 {
@@ -539,7 +629,7 @@
                         }
                     }
 
-                    WriteAlias(context, definedFunctions, csFunction, overload, variation, flags, alias, modifiers);
+                    WriteAlias(context, definedFunctions, csFunction, overload, variation, flags, alias, modifiers.ToArray());
                 }
             }
         }
@@ -595,7 +685,35 @@
             ParameterWriters.Sort(new ParameterPriorityComparer());
         }
 
-        protected virtual bool WriteFunctionEx(GenContext context, HashSet<CsFunctionVariation> definedFunctions, CsFunction function, CsFunctionOverload overload, CsFunctionVariation variation, WriteFunctionFlags flags, params string[] modifiers)
+        protected virtual bool WriteFunctionEx(
+            GenContext context,
+            HashSet<CsFunctionVariation> definedFunctions,
+            CsFunction function,
+            CsFunctionOverload overload,
+            CsFunctionVariation variation,
+            WriteFunctionFlags flags,
+            params string[] modifiers)
+        {
+            return WriteFunctionEx(
+                context,
+                definedFunctions,
+                function,
+                overload,
+                variation,
+                flags,
+                null,
+                modifiers);
+        }
+
+        protected virtual bool WriteFunctionEx(
+            GenContext context,
+            HashSet<CsFunctionVariation> definedFunctions,
+            CsFunction function,
+            CsFunctionOverload overload,
+            CsFunctionVariation variation,
+            WriteFunctionFlags flags,
+            string? nativeOwner,
+            IReadOnlyList<string> modifiers)
         {
             var writer = context.Writer;
             CsType csReturnType = variation.ReturnType;
@@ -644,6 +762,10 @@
                 if (flags != WriteFunctionFlags.None)
                 {
                     sb.Append($"{config.ApiName}.");
+                }
+                else if (!hasManaged && !string.IsNullOrWhiteSpace(nativeOwner))
+                {
+                    sb.Append($"{nativeOwner}.");
                 }
 
                 if (hasManaged)

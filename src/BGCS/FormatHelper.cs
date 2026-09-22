@@ -102,9 +102,11 @@
         /// </summary>
         public static bool IsPointerOf(this CppType type, CppType pointer)
         {
+            type = UnwrapAliases(type);
+            pointer = UnwrapAliases(pointer);
             if (pointer is CppPointerType pointerType)
             {
-                return pointerType.ElementType.GetDisplayName() == type.GetDisplayName();
+                return UnwrapAliases(pointerType.ElementType).GetDisplayName() == type.GetDisplayName();
             }
             return false;
         }
@@ -114,22 +116,40 @@
         /// </summary>
         public static bool IsPointerOf(this CppType type, CppType pointer, ref int depth)
         {
+            type = UnwrapAliases(type);
+            pointer = UnwrapAliases(pointer);
             if (pointer is CppPointerType pointerType)
             {
-                if (pointerType.ElementType is CppPointerType cppPointer)
+                CppType elementType = UnwrapAliases(pointerType.ElementType);
+                if (elementType is CppPointerType cppPointer)
                 {
                     depth++;
                     return IsPointerOf(type, cppPointer, ref depth);
                 }
                 depth++;
-                if (pointerType.ElementType is CppQualifiedType qualifiedType && qualifiedType.Qualifier == CppTypeQualifier.Const)
-                    return qualifiedType.ElementType.GetDisplayName() == type.GetDisplayName();
-                else
-                    return pointerType.ElementType.GetDisplayName() == type.GetDisplayName();
+                return elementType.GetDisplayName() == type.GetDisplayName();
             }
 
             depth = 0;
             return false;
+        }
+
+        private static CppType UnwrapAliases(CppType type)
+        {
+            while (true)
+            {
+                switch (type)
+                {
+                    case CppTypedef typedef:
+                        type = typedef.ElementType;
+                        continue;
+                    case CppQualifiedType qualified:
+                        type = qualified.ElementType;
+                        continue;
+                    default:
+                        return type;
+                }
+            }
         }
 
         /// <summary>

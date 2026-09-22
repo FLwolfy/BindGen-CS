@@ -58,6 +58,24 @@ public class CsCodeGeneratorConfigTypeApiTests
     }
 
     [Fact]
+    public void TypeConverter_ShouldUseFriendlyMappingsForDeclaredTypes()
+    {
+        CsCodeGeneratorConfig config = new();
+        CppEnum nativeMode = new(default, "NATIVE_MODE") { IntegerType = CppPrimitiveType.Int };
+        CppClass nativeContext = new(default, "native_context");
+        config.EnumMappings.Add(new EnumMapping("NATIVE_MODE", "NativeMode", null));
+        config.ClassMappings.Add(new TypeMapping("native_context", "NativeContext", null));
+
+        Assert.Equal("NativeMode", config.TypeConverter.Convert(nativeMode, CsTypeStyle.Raw));
+        Assert.Equal("NativeContext", config.TypeConverter.Convert(nativeContext, CsTypeStyle.Raw));
+
+        config.TypeMappings["NATIVE_MODE"] = "ExternalMode";
+        config.TypeMappings["native_context"] = "ExternalContext";
+        Assert.Equal("ExternalMode", config.TypeConverter.Convert(nativeMode, CsTypeStyle.Raw));
+        Assert.Equal("ExternalContext", config.TypeConverter.Convert(nativeContext, CsTypeStyle.Raw));
+    }
+
+    [Fact]
     public void TypeConverter_ShouldRequireExplicitMappingsForUnexposedAndGenericTypes()
     {
         CsCodeGeneratorConfig config = new();
@@ -174,6 +192,22 @@ public class CsCodeGeneratorConfigTypeApiTests
     }
 
     [Fact]
+    public void GetCsFunctionName_ShouldPreferMappingThenStripLongestExactPrefix()
+    {
+        CsCodeGeneratorConfig cfg = new();
+        cfg.FunctionPrefixes.Add("Im");
+        cfg.FunctionPrefixes.Add("ImGuizmo_");
+        cfg.FunctionMappings.Add(new FunctionMapping("ImGuizmo_BeginFrame", "StartFrame", null, [], []));
+
+        Assert.Equal("SetRect", cfg.GetCsFunctionName("ImGuizmo_SetRect"));
+        Assert.Equal("StartFrame", cfg.GetCsFunctionName("ImGuizmo_BeginFrame"));
+        Assert.Equal("ImGuizmoSetRect", cfg.GetCsFunctionName("imGuizmoSetRect"));
+
+        cfg.FunctionNamingConvention = NamingConvention.Unknown;
+        Assert.Equal("SetRect", cfg.GetCsFunctionName("ImGuizmo_SetRect"));
+    }
+
+    [Fact]
     public void GetBoolType_ShouldRespectConfiguredBoolMode()
     {
         CsCodeGeneratorConfig cfg = new();
@@ -188,6 +222,34 @@ public class CsCodeGeneratorConfigTypeApiTests
         cfg.BoolType = BoolType.Bool32;
         Assert.Equal("Bool32", cfg.GetBoolType());
         Assert.Equal("Bool32", cfg.GetBoolType(ptr: true));
+
+        cfg.BoolType = BoolType.Byte;
+        Assert.Equal("byte", cfg.GetBoolType());
+        Assert.Equal("byte", cfg.GetBoolType(ptr: true));
+
+        cfg.BoolType = BoolType.Int32;
+        Assert.Equal("int", cfg.GetBoolType());
+        Assert.Equal("int", cfg.GetBoolType(ptr: true));
+    }
+
+    [Fact]
+    public void DelegatePointerType_ShouldUseConfiguredNativeBoolRepresentation()
+    {
+        CsCodeGeneratorConfig cfg = new()
+        {
+            BoolType = BoolType.Byte,
+            DelegatesAsVoidPointer = false
+        };
+        CppFunctionType callbackType = new(default, CppPrimitiveType.Bool)
+        {
+            CallingConvention = CppCallingConvention.C
+        };
+        callbackType.Parameters.Add(new CppParameter(default, CppPrimitiveType.Bool, "enabled"));
+
+        string pointerType = cfg.GetDelegatePointerType(callbackType, withConvention: true);
+
+        Assert.Contains("<byte, byte>", pointerType);
+        Assert.DoesNotContain("bool", pointerType, StringComparison.Ordinal);
     }
 
     [Fact]

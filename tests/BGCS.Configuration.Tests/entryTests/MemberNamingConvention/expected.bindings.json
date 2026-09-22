@@ -1,8 +1,8 @@
 {
   "Contains": [
     "public partial struct SampleType",
-    "public int ValueOne;",
-    "public int ValueTwo;",
+    "public int valueOne;",
+    "public int valueTwo;",
     "internal static extern int SampleUseNative(SampleType value);"
   ]
 }

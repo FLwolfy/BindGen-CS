@@ -6,7 +6,7 @@
 
 ## 总规则
 
-每个分类包含十个等权证据点。只有对应自动 gate 在发布 commit 上通过才得分；明确支持半覆盖的 gate 可以得到 0.5 分。要求每项达到 **8.5-9.0**。任一 mandatory gate 失败都会把该项限制在 8.5 以下。跨平台验收暂缓；当前强制平台是 Windows x64，并在明确要求处验证 Windows x86 layout。
+每个分类都有明确的一组自动 mandatory gate。只有这些 gate 在发布 commit 上全部通过，该分类才得到 **9.0/10.0**；缺少任何 gate 时，报告生成直接失败。报告按 target 隔离：通过只证明 `target` 字段声明的平台、架构和 ABI。
 
 发布流程必须生成：
 
@@ -17,20 +17,20 @@
 
 | 方面 | 目标 | 强制 gate |
 | --- | ---: | --- |
-| 普通小型 C API | 8.5-9.0 | 生成编译率 100%、ABI 调用、生成源码零手改 |
-| 中大型 C API | 8.5-9.0 | SDL3、miniaudio、cimgui 重新生成和编译 |
-| 复杂 C ABI 正确性 | 8.5-9.0 | MSVC x86/x64 layout 和调用约定矩阵 |
-| 普通 C++ class bridge | 8.5-9.0 | lifecycle/method 原生编译、链接和运行 |
-| 复杂现代 C++ | 8.5-9.0 | 选定模板、STL、智能指针、virtual callback |
-| 生成 API 美观程度 | 8.5-9.0 | Inno.Native 快照、analyzer、生成文件零手改 |
-| 小白易用性 | 8.5-9.0 | 从 header 到验证输出最多五条命令 |
-| 外层架构 | 8.5-9.0 | 自动项目依赖边界测试 |
-| 内部架构 | 8.5-9.0 | 共享 IR、analyzer/emitter 独立测试 |
-| NuGet/测试/发布工程化 | 8.5-9.0 | 干净包、symbols、确定性重复 pack、完整 Windows 矩阵 |
+| 普通小型 C API | 9.0 | 生成编译率 100%、ABI 调用、生成源码零手改 |
+| 中大型 C API | 9.0 | SDL3、miniaudio、cimgui、cimguizmo、bgfx 重新生成/编译及 InnoEngine workspace diff |
+| 复杂 C ABI 正确性 | 9.0 | 宿主原生 invocation 与 target-specific ABI/layout/调用约定矩阵 |
+| 普通 C++ class bridge | 9.0 | lifecycle/method 原生编译、链接和运行 |
+| 复杂现代 C++ | 9.0 | 选定模板、STL、智能指针、virtual callback |
+| 生成 API 美观程度 | 9.0 | 源码/public API 快照、analyzer、生成目录外零 native import |
+| 小白易用性 | 9.0 | 从 header 到验证输出最多五条命令 |
+| 外层架构 | 9.0 | 自动项目依赖边界测试 |
+| 内部架构 | 9.0 | 共享 IR、analyzer/emitter 独立测试 |
+| NuGet/测试/发布工程化 | 9.0 | 干净包、symbols、确定性输出、宿主原生与 managed 矩阵 |
 
 ## 真实库性能预算
 
-在固定 Windows CI runner、NuGet 已 warm restore 的条件下测量：
+在报告声明的宿主 target、NuGet 已 warm restore 的条件下测量：
 
 | 库 | 生成预算 | 强制结果 |
 | --- | ---: | --- |
@@ -38,6 +38,8 @@
 | cimgui | 30 秒 | C# 编译和 API 快照 |
 | SDL3 | 45 秒 | C# 编译和 API 快照 |
 | miniaudio split header | 60 秒 | C# 编译和 API 快照 |
+| bgfx C99 | 30 秒 | C# 编译和 API 快照 |
+| bimg C++ | 15 秒 | C Bridge、原生语法检查、C# 回绑和 API 快照 |
 
 超时、OOM、无限 cache 增长或为了通过测试手工删除声明，都判定中大型 C 分类失败。
 
@@ -118,4 +120,4 @@ bindgen-cs build
 
 ## 当前状态
 
-强制 Windows x64 MSVC 范围已经通过，全部测量分类位于 8.5–9.0。`scripts/run-full-test-matrix.sh` 只有在 managed tests、native C/C++ runtime gate、四库生成/编译预算、源码与 reflection public API snapshot、NuGet/Tool smoke 全部通过后，才写入 `artifacts/acceptance/report.json`。其他 target ABI，以及 fixture 未构建的上游 DLL 直接调用，不属于已验证声明。
+macOS arm64 Darwin 范围的全部测量分类均达到 9.0。`scripts/run-full-test-matrix.sh` 只有在 managed tests、native C/C++ runtime gate、五个真实 C 库、bimg C++ Bridge、确定性源码/reflection 快照、InnoEngine 五项目 workspace/native dependency/build/native-test gate 以及 NuGet/Tool smoke 全部通过后，才写入 `artifacts/acceptance/report.json` 与 `report.md`。Windows 和其他 ABI 必须分别生成 target-specific 报告；任何报告都不能被当作其他 target 的证明。

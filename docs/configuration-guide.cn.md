@@ -47,7 +47,7 @@ Schema 直接来自当前安装版本的 `CsCodeGeneratorConfig`，包含 enum �
 
 ## Target
 
-`TargetArchitecture` 当前包含 Windows `X86`、`X64`、`Arm64`。Windows x64 是强制执行验证平台。Defines 和 native binary 必须与目标架构一致。
+`TargetPlatform`、`TargetArchitecture` 和 `TargetAbi` 共同组成经过验证的 target。`Host` 会解析为当前运行平台/架构；显式 target 覆盖 Windows、Linux、macOS、Android、iOS、FreeBSD 及其有效的 x86/x64/Arm/Arm64 组合。`TargetTriple`、`SysRoot`、`CompilerPath` 提供受控覆盖。Defines 和 native binary 必须与解析后的 target 一致。宿主解析会发现编译器 system include，macOS 还会发现活动 SDK。
 
 ## Import Mode
 
@@ -149,14 +149,14 @@ Mapping 不能掩盖 ABI 不确定性。非平凡 C++ 类型跨边界时必须�
 
 ## Preset
 
-Windows 真实库矩阵当前验证 `sdl3`、`miniaudio`、`cimgui` 和 `cimguizmo` preset。Preset 提供 parser、typedef、callback、SingleFile 和必需 define 默认值；项目配置仍负责路径、namespace、API 名和 native library 名。
+Preset 可以组合且保持通用：选择一个 target preset（`host-c`、`host-cpp`、`windows-c`、`windows-cpp`、`linux-c`、`linux-cpp`、`macos-c` 或 `macos-cpp`），再按需追加 `c-library`、`function-table`、`opaque-callbacks` 等 API/output policy。库特定事实保留在消费项目配置中，不进入 BindGen-CS core。
 
 ```json
 {
-  "Preset": "sdl3",
+  "Preset": "host-c,c-library,opaque-callbacks",
   "EntryFiles": ["vendor/SDL/include/SDL3/SDL.h"],
   "IncludeFolders": ["vendor/SDL/include"]
 }
 ```
 
-Windows COM preset 仍属于待完成验收项。
+显式项目配置始终覆盖 preset 默认值，并且与 preset 顺序无关。

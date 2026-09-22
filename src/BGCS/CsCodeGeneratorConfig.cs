@@ -3,6 +3,7 @@ namespace BGCS
     using BGCS.Conversion;
     using BGCS.Core.Logging;
     using BGCS.CppAst.Parsing;
+    using BGCS.CppAst.Targeting;
     using BGCS.Metadata;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
@@ -36,6 +37,7 @@ namespace BGCS
             KnownDefaultValueNames = [];
             KnownConstructors = [];
             KnownMemberFunctions = [];
+            FunctionPrefixes = [];
             IgnoredParts = [];
             Keywords = [];
             IgnoredFunctions = [];
@@ -146,11 +148,49 @@ namespace BGCS
         public string OutputPath { get; set; } = "Generated";
 
         /// <summary>
-        /// Windows architecture used for Clang parsing and native ABI mapping. (Default: <see cref="WindowsTargetArchitecture.X64"/>)
+        /// Operating-system family used for Clang parsing and native ABI mapping. Host resolves at generation time.
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
-        [DefaultValue(WindowsTargetArchitecture.X64)]
-        public WindowsTargetArchitecture TargetArchitecture { get; set; } = WindowsTargetArchitecture.X64;
+        [DefaultValue(CppTargetPlatform.Host)]
+        public CppTargetPlatform TargetPlatform { get; set; } = CppTargetPlatform.Host;
+
+        /// <summary>
+        /// Processor architecture used for Clang parsing and native ABI mapping. Host resolves at generation time.
+        /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(CppTargetArchitecture.Host)]
+        public CppTargetArchitecture TargetArchitecture { get; set; } = CppTargetArchitecture.Host;
+
+        /// <summary>
+        /// Native ABI family. Default selects the conventional ABI for <see cref="TargetPlatform"/>.
+        /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(CppTargetAbi.Default)]
+        public CppTargetAbi TargetAbi { get; set; } = CppTargetAbi.Default;
+
+        /// <summary>
+        /// Optional explicit Clang target triple for specialized or versioned toolchains.
+        /// </summary>
+        [DefaultValue(null)]
+        public string? TargetTriple { get; set; }
+
+        /// <summary>
+        /// Optional target SDK or sysroot used when parsing platform and standard-library headers.
+        /// </summary>
+        [DefaultValue(null)]
+        public string? TargetSysRoot { get; set; }
+
+        /// <summary>
+        /// Optional C/C++ compiler driver used to discover host system include directories.
+        /// </summary>
+        [DefaultValue(null)]
+        public string? CompilerPath { get; set; }
+
+        /// <summary>
+        /// Resolves the configured target aliases into a validated concrete target.
+        /// </summary>
+        [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+        public CppTarget ResolvedTarget => CppTarget.Resolve(TargetPlatform, TargetArchitecture, TargetAbi, TargetTriple);
 
         /// <summary>
         /// The log level of the generator. (Default <see cref="LogSeverity.Warning"/>)
@@ -291,6 +331,13 @@ namespace BGCS
         public ImportType ImportType { get; set; } = ImportType.FunctionTable;
 
         /// <summary>
+        /// Emits the default <c>LibName</c> constant used by DllImport and LibraryImport declarations.
+        /// Disable this when a user-authored partial API class supplies a conditional or platform-specific constant.
+        /// </summary>
+        [DefaultValue(true)]
+        public bool EmitLibraryNameConstant { get; set; } = true;
+
+        /// <summary>
         /// The generator will generate [NativeName] attributes.
         /// </summary>
         [DefaultValue(false)]
@@ -345,6 +392,13 @@ namespace BGCS
         public bool OneFilePerType { get; set; } = true;
 
         /// <summary>
+        /// Nests generated enums, structs, handles, delegates, and opaque records inside the API class.
+        /// This supports C libraries whose established managed surface uses a single container type.
+        /// </summary>
+        [DefaultValue(false)]
+        public bool NestGeneratedTypesInApi { get; set; }
+
+        /// <summary>
         /// Merge all generated .cs files into a single file in the output root directory. (Default: <see langword="false"/>)
         /// </summary>
         [DefaultValue(false)]
@@ -373,6 +427,7 @@ namespace BGCS
         /// Controls native bool representation in generated signatures.
         /// <see cref="BoolType.Bool8"/> uses <c>BGCS.Runtime.Bool8</c>.
         /// <see cref="BoolType.Bool32"/> uses <c>BGCS.Runtime.Bool32</c>.
+        /// <see cref="BoolType.Byte"/> and <see cref="BoolType.Int32"/> use unmanaged numeric primitives.
         /// </summary>
         [DefaultValue(BoolType.Bool8)]
         public BoolType BoolType { get; set; } = BoolType.Bool8;
@@ -424,6 +479,16 @@ namespace BGCS
         /// </summary>
         [DefaultValue(null)]
         public Dictionary<string, List<string>> KnownMemberFunctions { get; set; } = null!;
+
+        /// <summary>
+        /// Exact native prefixes removed from function names before applying the configured naming convention.
+        /// </summary>
+        /// <remarks>
+        /// When multiple prefixes match, the longest prefix wins. Explicit <see cref="FunctionMappings"/>
+        /// friendly names take precedence over this collection.
+        /// </remarks>
+        [DefaultValue(null)]
+        public List<string> FunctionPrefixes { get; set; } = null!;
 
         /// <summary>
         /// Ignores parts like OpenAl in OpenALFunction -> Function. (Default: Empty)

@@ -73,6 +73,9 @@
         protected virtual bool FilterHandle(GenContext? context, CsHandleMetadata csHandle)
         {
             var typedef = csHandle.CppType;
+            if (typedef.ElementType is not CppPointerType pointerType || pointerType.ElementType is CppFunctionType)
+                return true;
+
             if (config.AllowedTypedefs.Count != 0 && !config.AllowedTypedefs.Contains(typedef.Name))
                 return true;
 
@@ -89,13 +92,7 @@
             }
 
             DefinedTypedefs.Add(csHandle.Name);
-
-            if (typedef.ElementType is CppPointerType pointerType && pointerType.ElementType is not CppFunctionType)
-            {
-                return false;
-            }
-
-            return true;
+            return false;
         }
 
         /// <summary>
@@ -123,10 +120,14 @@
                     if (FilterHandle(null, handle))
                         continue;
 
+                    RegisterHandleMappings(handle);
                     string filePath = Path.Combine(folder, $"{handle.Name}.cs");
                     using var writer = new CsCodeWriter(filePath, config.Namespace, SetupHandleUsings(), config.HeaderInjector);
                     GenContext context = new(result, filePath, writer);
-                    WriteHandle(context, handle);
+                    using (PushApiTypeScope(writer))
+                    {
+                        WriteHandle(context, handle);
+                    }
                 }
             }
             else
@@ -144,7 +145,11 @@
                     var handle = ParseHandle(typedef);
                     if (FilterHandle(context, handle))
                         continue;
-                    WriteHandle(context, handle);
+                    RegisterHandleMappings(handle);
+                    using (PushApiTypeScope(writer))
+                    {
+                        WriteHandle(context, handle);
+                    }
                     if (i + 1 != compilation.Typedefs.Count)
                     {
                         writer.WriteLine();
@@ -173,15 +178,18 @@
                 }
             }
 
-            // Keep typedef-to-managed-handle mapping consistent for all later type resolution paths.
+            return metadata;
+        }
+
+        private void RegisterHandleMappings(CsHandleMetadata metadata)
+        {
+            CppTypedef typedef = metadata.CppType;
             config.TypeMappings[typedef.Name] = metadata.Name;
             CppType target = typedef.ElementType;
             while (target is CppTypedef nested)
                 target = nested.ElementType;
             if (target is CppClass cppClass && !string.IsNullOrWhiteSpace(cppClass.Name))
                 config.TypeMappings[cppClass.Name] = metadata.Name;
-
-            return metadata;
         }
 
         protected virtual void WriteHandle(GenContext context, CsHandleMetadata csHandle)

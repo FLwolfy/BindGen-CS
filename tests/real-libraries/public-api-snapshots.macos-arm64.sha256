@@ -1,0 +1,5 @@
+76942b34dc03d6257d7624f73e35760e6ee08b36d63f37ff273a03026890cb20 *artifacts/real-libraries/miniaudio/public-api.txt
+14a8c6e5c0a0616b1fb2d0f18afa9c03e3adba57edaa9ef612d0416ebfe91292 *artifacts/real-libraries/sdl3/public-api.txt
+b82f7083a7e1084422903af6fcd01f9ac6ec8a432944802972e43d097e38dace *artifacts/real-libraries/cimgui/public-api.txt
+76cf74112b63bb1602bf659163ee76cb0b77f2d309fd98a7a2be3daf7f31d9e4 *artifacts/real-libraries/cimguizmo/public-api.txt
+0d176ce853845cac01ce8eb8f0f8a4bd12e46c599f52a949b25d6772071b6760 *artifacts/real-libraries/bgfx/public-api.txt

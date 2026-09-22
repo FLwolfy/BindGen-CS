@@ -18,8 +18,17 @@ public sealed class ConfigLoader
     {
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("A configuration path is required.", nameof(path));
-        CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(path, composer);
-        presets.Apply(config);
+        CsCodeGeneratorConfig config;
+        if (composer == null || composer is ConfigComposer)
+        {
+            config = new ConfigDocumentLoader(presets).Load(path);
+        }
+        else
+        {
+            config = CsCodeGeneratorConfig.Load(path, composer);
+            presets.Apply(config);
+            config.PresetDefaultsApplied = true;
+        }
         ConfigValidator.Validate(config);
         return config;
     }

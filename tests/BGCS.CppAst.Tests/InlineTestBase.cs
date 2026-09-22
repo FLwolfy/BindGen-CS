@@ -13,7 +13,15 @@ public class InlineTestBase
     {
         ArgumentNullException.ThrowIfNull(assertCompilation);
 
-        options ??= new CppParserOptions();
+        options ??= new CppParserOptions
+        {
+            TargetCpu = CppTargetCpu.X86_64,
+            TargetCpuSub = string.Empty,
+            TargetVendor = "pc",
+            TargetSystem = "windows",
+            TargetAbi = string.Empty,
+            TargetTriple = "x86_64-pc-windows-msvc"
+        };
         var headerFilename = $"bgcs-cppast-{Guid.NewGuid():N}.h";
         var headerFile = Path.Combine(Environment.CurrentDirectory, headerFilename);
 

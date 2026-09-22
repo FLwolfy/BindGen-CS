@@ -17,7 +17,7 @@ using Xunit;
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System;
+#pragma warning disable CS0618 // This suite verifies the compatibility surface of the obsolete token-attribute API.
 
 namespace BGCS.CppAst.Tests
 {
@@ -58,19 +58,19 @@ void *fun2(int align) __attribute__((alloc_align(1)));
 
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Fields.Count);
+                    Assert.Single(compilation.Fields);
                     Assert.NotNull(compilation.Fields[0].TokenAttributes);
                     Assert.Equal("dllimport", compilation.Fields[0].TokenAttributes[0].Name);
 
                     Assert.Equal(3, compilation.Functions.Count);
                     Assert.NotNull(compilation.Functions[0].TokenAttributes);
-                    Assert.Equal(1, compilation.Functions[0].TokenAttributes.Count);
+                    Assert.Single(compilation.Functions[0].TokenAttributes);
                     Assert.Equal("dllexport", compilation.Functions[0].TokenAttributes[0].Name);
 
                     Assert.Equal(CppCallingConvention.X86StdCall, compilation.Functions[1].CallingConvention);
 
                     Assert.NotNull(compilation.Functions[2].TokenAttributes);
-                    Assert.Equal(1, compilation.Functions[2].TokenAttributes.Count);
+                    Assert.Single(compilation.Functions[2].TokenAttributes);
                     Assert.Equal("alloc_align(1)", compilation.Functions[2].TokenAttributes[0].ToString());
 
                 },
@@ -89,7 +89,7 @@ struct __declspec(uuid(""1841e5c8-16b0-489b-bcc8-44cfb0d5deae"")) __declspec(nov
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
+                    Assert.Single(compilation.Classes);
 
                     Assert.NotNull(compilation.Classes[0].TokenAttributes);
 
@@ -118,8 +118,8 @@ alignas(128) char cacheline[128];", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Fields.Count);
-                Assert.Equal(1, compilation.Fields[0].TokenAttributes.Count);
+                Assert.Single(compilation.Fields);
+                Assert.Single(compilation.Fields[0].TokenAttributes);
                 {
                     var attr = compilation.Fields[0].TokenAttributes[0];
                     Assert.Equal("alignas", attr.Name);
@@ -147,13 +147,13 @@ struct [[deprecated(""old"")]] TestMessage{
                 Assert.False(compilation.HasErrors);
 
                 Assert.Equal(2, compilation.Classes.Count);
-                Assert.Equal(1, compilation.Classes[0].TokenAttributes.Count);
+                Assert.Single(compilation.Classes[0].TokenAttributes);
                 {
                     var attr = compilation.Classes[0].TokenAttributes[0];
                     Assert.Equal("deprecated", attr.Name);
                 }
 
-                Assert.Equal(1, compilation.Classes[1].TokenAttributes.Count);
+                Assert.Single(compilation.Classes[1].TokenAttributes);
                 {
                     var attr = compilation.Classes[1].TokenAttributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -179,8 +179,8 @@ Test{
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Classes.Count);
-                    Assert.Equal(1, compilation.Classes[0].TokenAttributes.Count);
+                    Assert.Single(compilation.Classes);
+                    Assert.Single(compilation.Classes[0].TokenAttributes);
                     {
                         var attr = compilation.Classes[0].TokenAttributes[0];
                         Assert.Equal("complex_attribute", attr.Scope);
@@ -206,16 +206,16 @@ struct Test{
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Classes.Count);
+                Assert.Single(compilation.Classes);
                 Assert.Equal(2, compilation.Classes[0].Fields.Count);
-                Assert.Equal(1, compilation.Classes[0].Fields[0].TokenAttributes.Count);
+                Assert.Single(compilation.Classes[0].Fields[0].TokenAttributes);
                 {
                     var attr = compilation.Classes[0].Fields[0].TokenAttributes[0];
                     Assert.Equal("deprecated", attr.Name);
                 }
 
-                Assert.Equal(1, compilation.Fields.Count);
-                Assert.Equal(1, compilation.Fields[0].TokenAttributes.Count);
+                Assert.Single(compilation.Fields);
+                Assert.Single(compilation.Fields[0].TokenAttributes);
                 {
                     var attr = compilation.Fields[0].TokenAttributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -234,8 +234,8 @@ struct Test{
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Functions.Count);
-                Assert.Equal(1, compilation.Functions[0].TokenAttributes.Count);
+                Assert.Single(compilation.Functions);
+                Assert.Single(compilation.Functions[0].TokenAttributes);
                 {
                     var attr = compilation.Functions[0].TokenAttributes[0];
                     Assert.Equal("noreturn", attr.Name);
@@ -255,8 +255,8 @@ void x() {};", compilation =>
                 {
                     Assert.False(compilation.HasErrors);
 
-                    Assert.Equal(1, compilation.Functions.Count);
-                    Assert.Equal(1, compilation.Functions[0].TokenAttributes.Count);
+                    Assert.Single(compilation.Functions);
+                    Assert.Single(compilation.Functions[0].TokenAttributes);
                     {
                         var attr = compilation.Functions[0].TokenAttributes[0];
                         Assert.Equal("noreturn", attr.Name);
@@ -275,8 +275,8 @@ namespace [[deprecated]] cppast {};", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Namespaces.Count);
-                Assert.Equal(1, compilation.Namespaces[0].TokenAttributes.Count);
+                Assert.Single(compilation.Namespaces);
+                Assert.Single(compilation.Namespaces[0].TokenAttributes);
                 {
                     var attr = compilation.Namespaces[0].TokenAttributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -295,8 +295,8 @@ enum [[deprecated]] E { };", compilation =>
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Enums.Count);
-                Assert.Equal(1, compilation.Enums[0].TokenAttributes.Count);
+                Assert.Single(compilation.Enums);
+                Assert.Single(compilation.Enums[0].TokenAttributes);
                 {
                     var attr = compilation.Enums[0].TokenAttributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -317,8 +317,8 @@ template<> struct [[deprecated]] X<int> {};", compilation =>
                 Assert.False(compilation.HasErrors);
 
                 Assert.Equal(2, compilation.Classes.Count);
-                Assert.Equal(0, compilation.Classes[0].TokenAttributes.Count);
-                Assert.Equal(1, compilation.Classes[1].TokenAttributes.Count);
+                Assert.Empty(compilation.Classes[0].TokenAttributes);
+                Assert.Single(compilation.Classes[1].TokenAttributes);
                 {
                     var attr = compilation.Classes[1].TokenAttributes[0];
                     Assert.Equal("deprecated", attr.Name);
@@ -346,13 +346,13 @@ struct [[cppast(""old"")]] TestMessage{
                 Assert.False(compilation.HasErrors);
 
                 Assert.Equal(2, compilation.Classes.Count);
-                Assert.Equal(1, compilation.Classes[0].TokenAttributes.Count);
+                Assert.Single(compilation.Classes[0].TokenAttributes);
                 {
                     var attr = compilation.Classes[0].TokenAttributes[0];
                     Assert.Equal("cppast", attr.Name);
                 }
 
-                Assert.Equal(1, compilation.Classes[1].TokenAttributes.Count);
+                Assert.Single(compilation.Classes[1].TokenAttributes);
                 {
                     var attr = compilation.Classes[1].TokenAttributes[0];
                     Assert.Equal("cppast", attr.Name);
@@ -378,14 +378,14 @@ int function1(int a, int b);
 
                 var expectedText = @"[infinite loop)";
 
-                Assert.Equal(1, compilation.Functions.Count);
+                Assert.Single(compilation.Functions);
                 var resultText = compilation.Functions[0].Comment?.ToString();
 
                 expectedText = expectedText.Replace("\r\n", "\n");
                 resultText = resultText?.Replace("\r\n", "\n");
                 Assert.Equal(expectedText, resultText);
 
-                Assert.Equal(0, compilation.Functions[0].TokenAttributes.Count);
+                Assert.Empty(compilation.Functions[0].TokenAttributes);
             },
             new CppParserOptions() { ParseTokenAttributes = true });
         }
@@ -402,14 +402,14 @@ int function1(int a, int b);
 
                 var expectedText = @"[infinite loop)";
 
-                Assert.Equal(1, compilation.Functions.Count);
+                Assert.Single(compilation.Functions);
                 var resultText = compilation.Functions[0].Comment?.ToString();
 
                 expectedText = expectedText.Replace("\r\n", "\n");
                 resultText = resultText?.Replace("\r\n", "\n");
                 Assert.Equal(expectedText, resultText);
 
-                Assert.Equal(1, compilation.Functions[0].TokenAttributes.Count);
+                Assert.Single(compilation.Functions[0].TokenAttributes);
             },
             new CppParserOptions() { ParseTokenAttributes = true });
         }
@@ -429,14 +429,14 @@ int function1(int a, int b);", compilation =>
 [[infinite loop]]
 bug(infinite loop)";
 
-                Assert.Equal(1, compilation.Functions.Count);
+                Assert.Single(compilation.Functions);
                 var resultText = compilation.Functions[0].Comment?.ToString();
 
                 expectedText = expectedText.Replace("\r\n", "\n");
                 resultText = resultText?.Replace("\r\n", "\n");
                 Assert.Equal(expectedText, resultText);
 
-                Assert.Equal(0, compilation.Functions[0].TokenAttributes.Count);
+                Assert.Empty(compilation.Functions[0].TokenAttributes);
             },
             new CppParserOptions() { ParseTokenAttributes = true });
         }
@@ -449,7 +449,7 @@ bug(infinite loop)";
 int function1(int a, int b);", compilation =>
             {
                 Assert.False(compilation.HasErrors);
-                Assert.Equal(0, compilation.Functions[0].TokenAttributes.Count);
+                Assert.Empty(compilation.Functions[0].TokenAttributes);
             },
             new CppParserOptions() { ParseTokenAttributes = true });
         }
@@ -462,7 +462,7 @@ int function1(int a, int b);", compilation =>
 int function1(int a, int b);", compilation =>
             {
                 Assert.False(compilation.HasErrors);
-                Assert.Equal(0, compilation.Functions[0].TokenAttributes.Count);
+                Assert.Empty(compilation.Functions[0].TokenAttributes);
             },
             new CppParserOptions() { ParseTokenAttributes = true });
         }
@@ -482,8 +482,8 @@ struct Test{
                 Assert.False(compilation.HasErrors);
 
                 Assert.Equal(3, compilation.Classes.Count);
-                Assert.Equal(1, compilation.Classes[1].Fields.Count);
-                Assert.Equal(1, compilation.Classes[1].Fields[0].TokenAttributes.Count);
+                Assert.Single(compilation.Classes[1].Fields);
+                Assert.Single(compilation.Classes[1].Fields[0].TokenAttributes);
                 {
                     var attr = compilation.Classes[1].Fields[0].TokenAttributes[0];
                     Assert.Equal("cppast", attr.Name);
@@ -506,9 +506,9 @@ struct Test{
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Classes.Count);
-                Assert.Equal(1, compilation.Classes[0].Functions.Count);
-                Assert.Equal(1, compilation.Classes[0].Functions[0].TokenAttributes.Count);
+                Assert.Single(compilation.Classes);
+                Assert.Single(compilation.Classes[0].Functions);
+                Assert.Single(compilation.Classes[0].Functions[0].TokenAttributes);
                 {
                     var attr = compilation.Classes[0].Functions[0].TokenAttributes[0];
                     Assert.Equal("cppast", attr.Name);
@@ -529,8 +529,8 @@ struct Test{
             {
                 Assert.False(compilation.HasErrors);
 
-                Assert.Equal(1, compilation.Functions.Count);
-                Assert.Equal(0, compilation.Functions[0].TokenAttributes.Count);
+                Assert.Single(compilation.Functions);
+                Assert.Empty(compilation.Functions[0].TokenAttributes);
             },
             // we are using a C++14 attribute because it can be used everywhere
             new CppParserOptions() { AdditionalArguments = { "-std=c++14" }, ParseTokenAttributes = false }

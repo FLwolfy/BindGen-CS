@@ -126,6 +126,7 @@
             }
 
             var fields = cppClass.Fields;
+            TypeMapping? typeMapping = settings.GetTypeMapping(cppClass.FullName);
 
             CsParameterInfo[] parameterList = new CsParameterInfo[fields.Count];
             CsParameterInfo[] spanParameterList = new CsParameterInfo[fields.Count];
@@ -134,11 +135,17 @@
                 CppField cppField = fields[i];
                 CppPrimitiveKind kind = cppField.Type.GetPrimitiveKind();
 
-                var fieldCsName = settings.GetFieldName(cppField.Name);
+                var fieldCsName = settings.GetFieldName(
+                    cppField.Name,
+                    typeMapping?.GetFieldMapping(cppField.Name)?.DisplayName);
                 var paramCsTypeName = settings.GetCsTypeName(cppField.Type);
                 var paramCsName = settings.GetParameterName(i, cppField.Name);
                 var direction = cppField.Type.GetDirection();
                 CppType? arrayElementType = null;
+                if (cppField.Type.IsDelegate(out CppFunctionType? constructorDelegate))
+                {
+                    paramCsTypeName = settings.GetDelegatePointerType(constructorDelegate, withConvention: true);
+                }
                 if (cppField.Type is CppArrayType constructorArray)
                 {
                     arrayElementType = constructorArray;

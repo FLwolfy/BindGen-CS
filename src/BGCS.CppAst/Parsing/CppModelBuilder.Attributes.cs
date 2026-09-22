@@ -130,7 +130,9 @@ public unsafe partial class CppModelBuilder
             CppTokenUtil.ParseCursorAttributes(globalDeclarationContainer, cursor, ref attributes);
         }
 
+#pragma warning disable CS0618 // Explicit compatibility path for token-attribute parsing.
         attrContainer.TokenAttributes.AddRange(attributes);
+#pragma warning restore CS0618
     }
 
     /// <summary>

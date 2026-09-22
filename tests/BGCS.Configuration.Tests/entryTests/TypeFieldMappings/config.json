@@ -1,0 +1,21 @@
+{
+  "Namespace": "EntryTests.Generated",
+  "ApiName": "EntryApi",
+  "LibName": "entry-lib",
+  "MergeGeneratedFilesToSingleFile": true,
+  "ImportType": "DllImport",
+  "GenerateExtensions": false,
+  "GenerateRuntimeSource": false,
+  "MemberNamingConvention": "PascalCase",
+  "ClassMappings": [
+    {
+      "ExportedName": "sample_type",
+      "FriendlyName": "SampleType",
+      "FieldMappings": [
+        { "ExportedName": "id", "DisplayName": "ID" },
+        { "ExportedName": "url", "DisplayName": "URL" },
+        { "ExportedName": "cpu", "DisplayName": "CPU" }
+      ]
+    }
+  ]
+}

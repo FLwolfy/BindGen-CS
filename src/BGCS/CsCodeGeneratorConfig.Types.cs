@@ -271,26 +271,32 @@ namespace BGCS
         /// <returns>Result produced by <c>MakeDelegatePointer</c>.</returns>
         public string MakeDelegatePointer(CppFunctionType functionType, bool withConvention = false)
         {
+            string returnType = GetCsTypeNameInternal(functionType.ReturnType);
+            if (returnType == "bool")
+            {
+                returnType = GetBoolType();
+            }
+
             if (withConvention)
             {
                 if (functionType.Parameters.Count == 0)
                 {
-                    return $"delegate* unmanaged[{functionType.CallingConvention.GetCallingConventionDelegate()}]<{GetCsTypeNameInternal(functionType.ReturnType)}>";
+                    return $"delegate* unmanaged[{functionType.CallingConvention.GetCallingConventionDelegate()}]<{returnType}>";
                 }
                 else
                 {
-                    return $"delegate* unmanaged[{functionType.CallingConvention.GetCallingConventionDelegate()}]<{GetNamelessParameterSignature(functionType.Parameters, false, true)}, {GetCsTypeNameInternal(functionType.ReturnType)}>";
+                    return $"delegate* unmanaged[{functionType.CallingConvention.GetCallingConventionDelegate()}]<{GetNamelessParameterSignature(functionType.Parameters, false, true)}, {returnType}>";
                 }
             }
             else
             {
                 if (functionType.Parameters.Count == 0)
                 {
-                    return $"delegate*<{GetCsTypeNameInternal(functionType.ReturnType)}>";
+                    return $"delegate*<{returnType}>";
                 }
                 else
                 {
-                    return $"delegate*<{GetNamelessParameterSignature(functionType.Parameters, false, true)}, {GetCsTypeNameInternal(functionType.ReturnType)}>";
+                    return $"delegate*<{GetNamelessParameterSignature(functionType.Parameters, false, true)}, {returnType}>";
                 }
             }
         }
@@ -749,12 +755,22 @@ namespace BGCS
                     return mapping.FriendlyName;
             }
 
-            if (FunctionNamingConvention == NamingConvention.Unknown)
+            string candidate = function;
+            string? prefix = FunctionPrefixes
+                .Where(value => value.Length != 0 && candidate.StartsWith(value, StringComparison.Ordinal))
+                .OrderByDescending(value => value.Length)
+                .FirstOrDefault();
+            if (prefix != null)
             {
-                return function;
+                candidate = candidate[prefix.Length..];
             }
 
-            string[] parts = GetCsCleanName(function).SplitByCase();
+            if (FunctionNamingConvention == NamingConvention.Unknown)
+            {
+                return candidate;
+            }
+
+            string[] parts = GetCsCleanName(candidate).SplitByCase();
 
             StringBuilder sb = new();
             for (int i = 0; i < parts.Length; i++)
@@ -934,13 +950,13 @@ namespace BGCS
         /// <returns>Result produced by <c>GetEnumNameEx</c>.</returns>
         public string GetEnumNameEx(string value, EnumPrefix enumPrefix)
         {
-            return GetEnumName(value, enumPrefix);
-            /*
             if (KnownEnumValueNames.TryGetValue(value, out string? knownName))
             {
                 return knownName;
             }
 
+            return GetEnumName(value, enumPrefix);
+            /*
             string[] parts = GetEnumNamePrefix(value).Parts;
             string[] prefixParts = enumPrefix.Parts;
 
@@ -1131,14 +1147,7 @@ namespace BGCS
         /// <returns>Result produced by <c>GetFieldName</c>.</returns>
         public string GetFieldName(string name)
         {
-            var parts = name.Split('_', StringSplitOptions.RemoveEmptyEntries);
-            StringBuilder sb = new();
-            for (int i = 0; i < parts.Length; i++)
-            {
-                sb.Append(char.ToUpper(parts[i][0]));
-                sb.Append(parts[i][1..]);
-            }
-            name = sb.ToString();
+            name = NamingHelper.ConvertTo(name, MemberNamingConvention);
             if (Keywords.Contains(name))
             {
                 return "@" + name;
@@ -1151,6 +1160,24 @@ namespace BGCS
         }
 
         /// <summary>
+        /// Returns an explicitly mapped member name without applying the global naming convention.
+        /// </summary>
+        public string GetFieldName(string name, string? mappedName)
+        {
+            if (string.IsNullOrWhiteSpace(mappedName))
+            {
+                return GetFieldName(name);
+            }
+
+            if (Keywords.Contains(mappedName))
+            {
+                return "@" + mappedName;
+            }
+
+            return char.IsDigit(mappedName[0]) ? '_' + mappedName : mappedName;
+        }
+
+        /// <summary>
         /// Performs the operation implemented by <c>GetBoolType</c>.
         /// </summary>
         /// <returns>Result produced by <c>GetBoolType</c>.</returns>
@@ -1160,6 +1187,8 @@ namespace BGCS
             {
                 BoolType.Bool8 => "Bool8",
                 BoolType.Bool32 => "Bool32",
+                BoolType.Byte => "byte",
+                BoolType.Int32 => "int",
                 _ => throw new NotSupportedException(),
             };
         }
@@ -1174,6 +1203,8 @@ namespace BGCS
             {
                 BoolType.Bool8 => "Bool8",
                 BoolType.Bool32 => "Bool32",
+                BoolType.Byte => "byte",
+                BoolType.Int32 => "int",
                 _ => throw new NotSupportedException(),
             };
         }

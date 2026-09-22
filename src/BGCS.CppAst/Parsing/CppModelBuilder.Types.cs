@@ -50,7 +50,7 @@ public unsafe partial class CppModelBuilder
     {
         if (CppPrimitiveType.KindToPrimitive.TryGetValue(type.kind, out var primitiveType))
         {
-            return primitiveType;
+            return CppPrimitiveType.ForAbiSize(primitiveType, type.SizeOf);
         }
 
         switch (type.kind)
@@ -124,7 +124,12 @@ public unsafe partial class CppModelBuilder
 
             case CXTypeKind.CXType_ObjCTypeParam:
                 {
-                    CppTemplateParameterType templateArgType = context.TryToCreateTemplateParametersObjC(cursor);
+                    CppTemplateParameterType? templateArgType = context.TryToCreateTemplateParametersObjC(cursor);
+                    if (templateArgType is null)
+                    {
+                        WarningUnhandled(cursor, parent, type);
+                        return new CppUnexposedType(cursor, CXUtil.GetTypeSpelling(type)) { SizeOf = (int)type.SizeOf };
+                    }
 
                     // Record that a typedef is using a template parameter type
                     // which will require to re-parent the typedef to the Obj-C interface it belongs to

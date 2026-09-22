@@ -11,6 +11,7 @@ using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Expressions;
 using BGCS.CppAst.Model.Metadata;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace BGCS.CppAst.Utilities;
@@ -34,7 +35,7 @@ internal static unsafe class CppTokenUtil
 
             // If we have a keyword, try to skip it and process following elements
             // for example attribute put right after a struct __declspec(uuid("...")) Test {...}
-            if (tokenIt.Peek().Kind == CppTokenKind.Keyword)
+            if (tokenIt.Peek()!.Kind == CppTokenKind.Keyword)
             {
                 tokenIt.Next();
                 continue;
@@ -139,7 +140,7 @@ internal static unsafe class CppTokenUtil
 
             // If we have a keyword, try to skip it and process following elements
             // for example attribute put right after a struct __declspec(uuid("...")) Test {...}
-            if (tokenIt.Peek().Kind == CppTokenKind.Keyword)
+            if (tokenIt.Peek()!.Kind == CppTokenKind.Keyword)
             {
                 tokenIt.Next();
                 continue;
@@ -333,7 +334,7 @@ internal static unsafe class CppTokenUtil
         Error,
     }
 
-    private static (string, string) GetNameSpaceAndAttribute(string fullAttribute)
+    private static (string? Scope, string Name) GetNameSpaceAndAttribute(string fullAttribute)
     {
         string[] colons = { "::" };
         string[] tokens = fullAttribute.Split(colons, StringSplitOptions.None);
@@ -347,14 +348,14 @@ internal static unsafe class CppTokenUtil
         }
     }
 
-    private static (string, string) GetNameAndArguments(string name)
+    private static (string Name, string? Arguments) GetNameAndArguments(string name)
     {
         if (name.Contains("("))
         {
             char[] seperator = { '(' };
             var argumentTokens = name.Split(seperator, 2);
             var length = argumentTokens[1].LastIndexOf(')');
-            string argument = null;
+            string? argument = null;
             if (length > 0)
             {
                 argument = argumentTokens[1].Substring(0, length);
@@ -447,14 +448,15 @@ internal static unsafe class CppTokenUtil
         {
             if (macro.Value.StartsWith("[[") && macro.Value.EndsWith("]]"))
             {
-                CppAttribute attribute = null;
                 var fullAttribute = macro.Value.Substring(2, macro.Value.Length - 4);
                 var (scope, name) = GetNameSpaceAndAttribute(fullAttribute);
                 var (attributeName, arguments) = GetNameAndArguments(name);
 
-                attribute = new CppAttribute(tokenIt.Cursor, attributeName, AttributeKind.TokenAttribute);
-                attribute.Scope = scope;
-                attribute.Arguments = arguments;
+                CppAttribute attribute = new(tokenIt.Cursor, attributeName, AttributeKind.TokenAttribute)
+                {
+                    Scope = scope,
+                    Arguments = arguments,
+                };
 
                 if (attributes == null)
                 {
@@ -469,7 +471,7 @@ internal static unsafe class CppTokenUtil
         return false;
     }
 
-    private static bool ParseAttribute(TokenIterator tokenIt, out CppAttribute attribute)
+    private static bool ParseAttribute(TokenIterator tokenIt, [NotNullWhen(true)] out CppAttribute? attribute)
     {
         // (identifier ::)? identifier ('(' tokens ')' )? (...)?
         attribute = null;
@@ -478,12 +480,15 @@ internal static unsafe class CppTokenUtil
         {
             return false;
         }
-        tokenIt.Next(out token);
+        if (!tokenIt.Next(out token))
+        {
+            return false;
+        }
 
         var firstToken = token;
 
         // try (identifier ::)?
-        string scope = null;
+        string? scope = null;
         if (tokenIt.Skip("::"))
         {
             scope = token.Text;
@@ -493,13 +498,16 @@ internal static unsafe class CppTokenUtil
             {
                 return false;
             }
-            tokenIt.Next(out token);
+            if (!tokenIt.Next(out token))
+            {
+                return false;
+            }
         }
 
         // identifier
         string tokenIdentifier = token.Text;
 
-        string arguments = null;
+        string? arguments = null;
 
         // ('(' tokens ')' )?
         if (tokenIt.Skip("("))
@@ -526,6 +534,10 @@ internal static unsafe class CppTokenUtil
         var isVariadic = tokenIt.Skip("...");
 
         var previousToken = tokenIt.PreviousToken();
+        if (previousToken is null)
+        {
+            return false;
+        }
 
         attribute = new CppAttribute(tokenIt.Cursor, tokenIdentifier, AttributeKind.TokenAttribute)
         {

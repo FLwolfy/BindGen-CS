@@ -39,7 +39,6 @@ public class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclarationCo
         Typedefs = new CppContainerList<CppTypedef>(this);
         Namespaces = new CppContainerList<CppNamespace>(this);
         Attributes = [];
-        TokenAttributes = [];
         Properties = new CppContainerList<CppProperty>(this);
         InclusionDirectives = new CppContainerList<CppInclusionDirective>(this);
     }
@@ -80,7 +79,7 @@ public class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclarationCo
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; }
+    public List<CppAttribute> TokenAttributes { get; } = [];
 
     /// <summary>
     /// Gets or sets <c>MetaAttributes</c>.

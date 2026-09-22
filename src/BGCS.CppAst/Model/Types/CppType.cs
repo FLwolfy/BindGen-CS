@@ -45,7 +45,7 @@ public abstract class CppType : CppElement
     {
         get
         {
-            return ToString();
+            return ToString() ?? string.Empty;
         }
     }
 }

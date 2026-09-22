@@ -3,6 +3,7 @@
     using BGCS.Core;
     using BGCS.Core.Collections;
     using BGCS.Core.CSharp;
+    using BGCS.CppAst.Model;
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Interfaces;
     using BGCS.CppAst.Model.Types;
@@ -20,6 +21,7 @@
         /// </summary>
         public readonly HashSet<CsDelegate> DefinedDelegates = new(IdentifierComparer<CsDelegate>.Default);
         private readonly HashSet<string> csDelegateNames = [];
+        private readonly HashSet<string> nativeDelegateIdentities = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Initializes a new instance of <see cref="DelegateGenerationStep"/>.
@@ -65,6 +67,7 @@
             LibDefinedDelegates.Clear();
             DefinedDelegates.Clear();
             csDelegateNames.Clear();
+            nativeDelegateIdentities.Clear();
         }
 
         protected virtual List<string> SetupDelegateUsings()
@@ -141,7 +144,10 @@
                 if (FilterIgnoredType(context, cppClass))
                     continue;
 
-                WriteClassDelegates(context, cppClass);
+                using (PushApiTypeScope(writer))
+                {
+                    WriteClassDelegates(context, cppClass);
+                }
 
                 writer.TrySplit();
             }
@@ -155,7 +161,10 @@
 
                 if (typedef.ElementType is CppPointerType pointerType && pointerType.ElementType is CppFunctionType functionType)
                 {
-                    WriteDelegate(context, typedef, functionType);
+                    using (PushApiTypeScope(writer))
+                    {
+                        WriteDelegate(context, typedef, functionType);
+                    }
                 }
 
                 writer.TrySplit();
@@ -205,6 +214,12 @@
 
         private void WriteDelegate<T>(GenContext context, T field, CppFunctionType functionType) where T : class, ICppDeclaration, ICppMember
         {
+            string nativeIdentity = field is CppElement element && !string.IsNullOrWhiteSpace(element.FullParentName)
+                ? $"{element.FullParentName}::{field.Name}"
+                : field.Name;
+            if (!nativeDelegateIdentities.Add(nativeIdentity))
+                return;
+
             string csDelegateName = config.GetDelegateName(field.Name);
 
             int i = 1;

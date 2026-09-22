@@ -4,10 +4,10 @@
 
 ## 环境要求
 
-- Windows 10/11 x64。
+- 支持的 x86/x64/Arm/Arm64 target 上的 Windows、Linux 或 macOS。
 - .NET SDK 9.0。
 - LibClang 由 BGCS 包恢复。
-- 编译 C Bridge 需要 LLVM 或 Visual Studio C++ 工具。测试会发现 `C:\Program Files\LLVM\bin\clang++.exe`，也可以设置 `BGCS_CPP2C_CXX`。
+- 发现系统头和编译 C Bridge 需要 C/C++ compiler driver。BindGen-CS 会发现 Clang/GNU driver、Windows LLVM 安装和活动 macOS SDK；也可以通过 `BGCS_CC`、`BGCS_CPP2C_CXX`、`CC`、`CXX` 显式覆盖。
 
 ## 安装工具
 
@@ -125,4 +125,4 @@ generator.Generate("include/library.hpp", "GeneratedBridge");
 - **解析过慢：** 不需要时关闭宏和注释，并把对应头作为性能回归；真实库预算是强制验收项。
 - **未知类型：** 添加 `TypeMappings` 或生成 C++ bridge specialization；禁止把非平凡 C++ value type 直接映射成 blittable C# struct。
 - **Runtime 重复：** 使用 `BGCS.Runtime` 或生成 `Runtime.cs`，不要无保护地同时使用。
-- **找不到 C++ 编译器：** 把 `BGCS_CPP2C_CXX` 指向 `clang++.exe`。
+- **找不到原生编译器：** 把 `BGCS_CC` 与 `BGCS_CPP2C_CXX`（或 `CC`/`CXX`）指向对应 compiler driver。

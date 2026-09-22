@@ -32,8 +32,6 @@ public class ClassGenerationStep : GenerationStep
 
 #if defined(_WIN32) || defined(_WIN64)
 #define {PREFIX}CALL __cdecl
-#elif defined(__GNUC__) || defined(__clang__)
-#define {PREFIX}CALL __attribute__((__cdecl__))
 #else
 #define {PREFIX}CALL
 #endif

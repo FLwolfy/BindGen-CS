@@ -55,6 +55,11 @@ public class FormatHelperTests
         depth = 0;
         Assert.True(intType.IsPointerOf(ptrPtr, ref depth));
         Assert.Equal(2, depth);
+
+        CppTypedef alias = new(default, "AliasInt", intType);
+        CppType aliasPointer = new CppPointerType(default, alias);
+        Assert.True(intType.IsPointerOf(aliasPointer));
+        Assert.True(alias.IsPointerOf(ptr));
     }
 
     [Fact]

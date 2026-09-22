@@ -29,6 +29,14 @@ public unsafe class MacroDefinitionVisitor : MemberVisitor
 
         // Try to extend the parsing of the macro to the end of line in order to recover comments
         originalRange.End.GetFileLocation(out var startFile, out var endLine, out var endColumn, out var startOffset);
+        // LibClang can expose target-specific predefined macros in the detailed
+        // preprocessing record. They have no source file and are not part of the
+        // parsed API, so do not leak them into the user macro collection.
+        if (startFile.Handle == nint.Zero)
+        {
+            return null;
+        }
+
         var range = originalRange;
         if (startFile.Handle != nint.Zero)
         {
@@ -87,7 +95,7 @@ public unsafe class MacroDefinitionVisitor : MemberVisitor
                 }
                 else if (token.Kind != CXTokenKind.CXToken_Punctuation)
                 {
-                    macroParameters.Add(tokenStr);
+                    macroParameters!.Add(tokenStr);
                 }
             }
             else if (i > 0)

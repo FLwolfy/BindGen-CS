@@ -12,7 +12,7 @@ public class MetaAttribute
     /// <summary>
     /// Exposes public member <c>FeatureName</c>.
     /// </summary>
-    public string FeatureName;
+    public string FeatureName = string.Empty;
     /// <summary>
     /// Exposes public member <c>[]</c>.
     /// </summary>
@@ -84,7 +84,7 @@ public class MetaAttributeMap
     /// <summary>
     /// Executes public operation <c>QueryArgument</c>.
     /// </summary>
-    public object QueryArgument(string argName)
+    public object? QueryArgument(string argName)
     {
         if (list.Count == 0) return null;
 
@@ -149,7 +149,7 @@ public class MetaAttributeMap
         {
             try
             {
-                return Convert.ToString(obj);
+                return Convert.ToString(obj) ?? defaultVal;
             }
             catch (Exception)
             {
@@ -238,7 +238,7 @@ public static class CustomAttributeTool
     /// <summary>
     /// Executes public operation <c>ParseMetaStringFor</c>.
     /// </summary>
-    public static MetaAttribute ParseMetaStringFor(string meta, string needLeaderWord, out string errorMessage)
+    public static MetaAttribute? ParseMetaStringFor(string meta, string needLeaderWord, out string? errorMessage)
     {
         string feature = "", arguments = "";
         errorMessage = "";
@@ -277,7 +277,7 @@ public static class CustomAttributeTool
     /// <summary>
     /// Executes public operation <c>ParseMetaStringFor</c>.
     /// </summary>
-    public static MetaAttribute ParseMetaStringFor(string meta, out string errorMessage)
+    public static MetaAttribute? ParseMetaStringFor(string meta, out string? errorMessage)
     {
         errorMessage = "";
         MetaAttribute attribute = new();

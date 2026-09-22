@@ -106,7 +106,7 @@
             if (DefinedEnums.Contains(metadata))
             {
                 var e = DefinedCppEnums[metadata.Identifier];
-                if (e.Name == metadata.CppName)
+                if (e.CppName == metadata.CppName && e.BaseType == metadata.BaseType)
                 {
                     if (e.Items.Count == metadata.Items.Count)
                     {
@@ -127,7 +127,7 @@
                     }
                 }
 
-                LogWarn($"{context?.FilePath}: {metadata} is already defined!");
+                LogWarn($"{context?.FilePath}: enum '{metadata.CppName}' has conflicting definitions; keeping the first definition.");
                 return true;
             }
 
@@ -237,7 +237,10 @@
 
                 for (int i = 0; i < enums.Count; i++)
                 {
-                    WriteEnum(context, enums[i]);
+                    using (PushApiTypeScope(writer))
+                    {
+                        WriteEnum(context, enums[i]);
+                    }
                     if (i + 1 != enums.Count)
                     {
                         writer.WriteLine();
@@ -267,7 +270,10 @@
         {
             using var writer = new CsCodeWriter(Path.Combine(folder, $"{csEnum.Name}.cs"), config.Namespace, SetupEnumUsings(), config.HeaderInjector);
             GenContext context = new(result, filePath, writer);
-            WriteEnum(context, csEnum);
+            using (PushApiTypeScope(writer))
+            {
+                WriteEnum(context, csEnum);
+            }
         }
 
         protected virtual CsEnumMetadata ParseEnum(CppEnum cppEnum, ICppMember cppMember)

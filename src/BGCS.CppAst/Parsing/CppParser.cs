@@ -282,6 +282,8 @@ public static class CppParser
 
     private static string GetTripleFromOptions(CppParserOptions options)
     {
+        if (!string.IsNullOrWhiteSpace(options.TargetTriple))
+            return options.TargetTriple;
         // From https://clang.llvm.org/docs/CrossCompilation.html
         // <arch><sub>-<vendor>-<sys>-<abi>
         var targetCpu = GetTargetCpuAsString(options.TargetCpu);
