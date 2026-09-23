@@ -2,67 +2,26 @@
 
 [English](README.md) | [简体中文](README.cn.md)
 
-BindGen-CS is a production-oriented, cross-platform C/C++ to C# binding toolchain. It generates C# interop for C ABIs and can turn C++ classes, explicit template instances, and selected STL types into an ABI-stable C bridge with matching C# bindings.
+BindGen-CS is a cross-platform C/C++ to C# binding toolchain. It generates C# interop directly from C APIs, or turns C++ classes, template instances, and common STL types into a stable C ABI bridge with matching C# bindings.
 
-> **Verified status:** the current source has a complete passing `macos-arm64-darwin` report with all ten acceptance categories at 9.0/10. Every other platform listed below is a formal BindGen-CS support target, but remains ⚠️ until its implementation, packaging, and current-version host evidence are complete; evidence from one platform never substitutes for another. BindGen-CS diagnoses semantics it cannot prove instead of guessing C++ ABI, ownership, or allocator behavior.
+## What it does
 
-## Purpose, goals, and boundaries
+- Generates `DllImport`, `LibraryImport`, or function-table bindings from C/C++ headers.
+- Emits a raw ABI API plus practical `string`, `Span<T>`, `ref`, and `out` overloads.
+- Handles structs, unions, packing, bitfields, fixed arrays, typedefs, opaque handles, callbacks, and target-dependent primitives.
+- Builds C bridges for C++ classes, construction/destruction, methods, overloads, inheritance, template instances, common STL containers, smart pointers, paths, and chrono values.
+- Discovers compilers, target triples, sysroots, and system includes, then writes a reproducible native build manifest.
+- Verifies real shared-library exports, creates multi-RID native package layouts, and tests clean NuGet consumers.
+- Manages multiple native libraries through one workspace with deterministic diffs, transactional output, and incremental caching.
+- Extends project-specific semantics through declarative lowerings, independent plugins, or project-owned C shims—without adding library-specific branches to BGCS core.
 
-BindGen-CS exists to make **common C/C++ to C# binding automatic, complex semantics explicitly extensible, and every result reproducible and verifiable—without maintaining hand-edited generated code.**
+BGCS does not translate arbitrary C++ source line by line into C#. Its job is to expose callable native capabilities to C# reliably. When ABI, ownership, allocator, or lifetime semantics cannot be proven, generation stops with a diagnostic instead of guessing. A capability that can be wrapped in a stable C ABI can usually be integrated through configuration, a plugin, or a shim.
 
-| Goal | How BGCS delivers it |
-| --- | --- |
-| One-minute start | Create configuration from a header; generate with one command and compile-check with one command |
-| Safe defaults | Fail closed when ABI, ownership, allocator, buffer, or callback-lifetime evidence is missing |
-| Practical C++ | Generate a stable C ABI bridge for C++ classes/templates/STL, then generate the C# surface |
-| Project extensibility | Recipes, typed lowering plugins, and project-owned C shims instead of library-name branches in core |
-| Maintainable engineering | Transactional output, deterministic diff, workspaces, incremental cache, target reports, and release gates |
+## Getting started
 
-Explicit limits: BGCS is not a compiler that translates arbitrary C++ source line by line into C#. Compile-time metaprogramming, inaccessible private behavior, uninstantiated templates, and capabilities without a stable ABI/lifetime contract cannot be bound out of thin air. A capability that can be exposed through a stable callable C ABI can usually be integrated through configuration, a plugin, or a C shim. `AllowUnsafe` accepts a known risk; it cannot repair an invalid ABI. Generated directories are reproducible output and must not be hand edited.
+You need .NET SDK 9.0. C++ bridges also need a local C/C++ compiler; run `bindgen-cs doctor` to check the host environment.
 
-## Support status
-
-Legend: completely verified ✅　implementation or host acceptance pending ⚠️. Every listed platform is a support target; promotion to ✅ requires implementation, packaging, tests, and a current-version host report.
-
-| Capability / target | Status | Boundary and evidence |
-| --- | :---: | --- |
-| Default IR-native C# raw + string/span/ref/out friendly surface | ✅ | The only C# emission path; pre-release legacy backends and config migration were removed |
-| Multi-RID native package layout | ✅ | `runtimes/<rid>/native/` for win/linux/osx x64/arm64 plus clean consumer invocation |
-| SBOM, provenance, API/license/vulnerability gates | ✅ | Deterministic SPDX/SLSA payloads and release gates; see the [pre-release policy](docs/compatibility-policy.md) |
-| OIDC/Sigstore signed release execution | ⚠️ | The release workflow is implemented and requests GitHub OIDC; a real signed attestation can only be produced by an authorized GitHub release run and has not been claimed by this local report |
-| `map/set/array/variant/expected/path/chrono` lowerings | ✅ | Compiled and invoked native bridge tests; unsupported specializations fail closed |
-| Final C++ extension architecture | ✅ | Built-ins, declarative recipes, typed lowering plugins, explicit C shims, managed/native artifacts, and auditable safety bypass share one registry |
-| Complex inheritance/specialization and lifetime contracts | ✅ | Native pointer-adjustment/template tests plus allocator/callback/async models and race tests |
-
-## Platform support and acceptance
-
-| Platform / architecture | Status | Current evidence and promotion requirement |
-| --- | :---: | --- |
-| macOS arm64 | ✅ | Complete `macos-arm64-darwin` report passed; all ten mandatory categories score 9.0/10 |
-| Windows x64 | ⚠️ | Runner and clang-cl/MSBuild/DLL tests are configured; same-version complete host report and NuGet native consumer result are pending |
-| Linux x64 | ⚠️ | Runner is configured; same-version complete host report and NuGet native consumer result are pending |
-| macOS x64 | ⚠️ | Intel runner is configured; same-version complete host report and NuGet native consumer result are pending |
-| Windows arm64 | ⚠️ | Target and desktop RID model exist; provider, native invocation, and complete report remain to be verified |
-| Linux arm64 | ⚠️ | Target and desktop RID model exist; a current-version independent complete report is required |
-| Android (arm/arm64/x64) | ⚠️ | Formal support target; target model exists, while NDK/sysroot, package layout, and device/emulator runtime acceptance remain |
-| iOS (device/simulator) | ⚠️ | Formal support target; target model exists, while Xcode SDK, framework/XCFramework layout, and device/simulator acceptance remain |
-| FreeBSD (x64/arm64) | ⚠️ | Formal support target; toolchain, package layout, and independent runtime report remain |
-
-## Choose a workflow
-
-| Your input | Recommended entry point | Result |
-| --- | --- | --- |
-| C header / C ABI | `bindgen-cs init native.h` | C# imports, types, constants, and optional friendly overloads |
-| C++ classes / templates / STL | `bindgen-cs init library.hpp` | `bridge.json`, C bridge sources, and optional C# bindings |
-| Multiple native libraries | `bindgen-cs workspace ...` | One workspace for validation, generation, and deterministic diff |
-| Embedded build tooling | `BGCS` NuGet package | Stable facade, structured results, and shared binding IR |
-| Generated-code consumer only | `BGCS.Runtime` NuGet package | Pointer, callback, native-context, and ABI runtime types |
-
-See the [capability matrix](docs/capabilities.md) for evidence levels and explicit boundaries.
-
-## 1 minute: generate your first binding
-
-With an existing C header, you need .NET SDK 9.0 and a host Clang/GNU compiler driver or Windows LLVM:
+### Generate C# from a C header
 
 ```bash
 dotnet tool install --global BindGen-CS
@@ -71,9 +30,25 @@ bindgen-cs generate bindgen.json
 bindgen-cs build bindgen.json
 ```
 
-The result is `Generated/Bindings.cs`. `build` compiles the generated source in a temporary consumer project with nullable analysis and warnings as errors. It validates the managed bindings; it does not replace the upstream native-library build. For a first integration, also run `bindgen-cs doctor` and `bindgen-cs validate bindgen.json` to inspect the toolchain and safety diagnostics.
+The result is:
 
-A C++ header uses the same entry point; its extension makes `init` create `bridge.json`:
+```text
+Generated/
+└─ Bindings.cs
+```
+
+`init` creates a runnable `bindgen.json`. `generate` writes the bindings, and `build` compiles them in a temporary consumer project with nullable analysis and warnings as errors.
+
+For a first integration, run the complete check:
+
+```bash
+bindgen-cs doctor
+bindgen-cs validate bindgen.json
+bindgen-cs inspect bindgen.json
+bindgen-cs build bindgen.json
+```
+
+### Generate a C bridge and C# from C++
 
 ```bash
 bindgen-cs init path/to/library.hpp
@@ -81,113 +56,101 @@ bindgen-cs bridge bridge.json
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
-See [Getting started](docs/getting-started.md) for complete layouts, C/C++ examples, a NuGet consumer, and troubleshooting.
+The default configuration produces:
 
-`init native.h` creates an immediately runnable, portable configuration. Header and include paths are written relative to the configuration file and use `/` separators, so the same file can be committed and used on Windows, macOS, and Linux:
-
-```json
-{
-  "ConfigVersion": 1,
-  "Preset": "host-c,c-library",
-  "Namespace": "MyCompany.Native",
-  "ApiName": "NativeApi",
-  "LibName": "native",
-  "EntryFiles": ["include/native.h"],
-  "IncludeFolders": ["include"],
-  "OutputPath": "Generated",
-  "ImportType": "DllImport"
-}
+```text
+GeneratedBridge/        # C ABI headers, C++ wrappers, and build manifest
+Generated/              # matching C# bindings
 ```
 
-Treat the output directory as reproducible build output. Customize naming, types, functions, marshalling, and ownership in configuration rather than editing generated files.
-
-## C++ bridge
+To stage the native library into a NuGet RID layout:
 
 ```bash
-bindgen-cs init include/library.hpp
-bindgen-cs bridge bridge.json
-bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root package
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json \
+  --package-root artifacts/native-package
 ```
 
-This emits a C ABI wrapper; the default `init` configuration also generates C# bindings from the bridge header. `bridge.manifest.json` records generated/original sources, include directories, definitions, compiler/linker arguments, language standard, libraries, and resolved target. `native-build --provider auto|clang|clang-cl|cmake|meson|msbuild` consumes it as a shell-independent one- or multi-step pipeline. Successful builds verify every generated `API(...)` declaration against the actual `nm`/`dumpbin` export table by default. `--package-root` then stages the binary under standard multi-RID `runtimes/<rid>/native/` layout with a SHA-256 asset index. Use `--no-verify-exports` only when another release gate owns that check.
+Generated directories are reproducible output; do not edit them. Put naming, type, marshalling, ownership, and function-selection rules in configuration. See [Getting started](docs/getting-started.md) for complete project layouts and troubleshooting.
 
-Verified C++ coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, full/partial template specializations, explicit template instances, `std::string`, `vector`, `span`, `array`, `map`, `set`, `optional`, `variant`, `expected`, `filesystem::path`, `chrono` duration/time-point, smart pointers, and configured pure-virtual callback proxies. Complex project semantics can be added through declarative lowering recipes, a typed lowering plugin, or an explicit C ABI shim. Unproven rules fail by default; `LoweringSafetyPolicy=AllowUnsafe` is an explicit, diagnosed risk transfer rather than silent guessing. See the [final lowering architecture](docs/lowering.md).
+## Current support status
 
-## CLI
+Legend: implemented and accepted on the current version ✅　implementation or host acceptance still pending ⚠️.
+
+| Capability | Status | Notes |
+| --- | :---: | --- |
+| C to C# bindings | ✅ | Raw ABI and friendly APIs share one IR-native generation path |
+| C++ to C bridge to C# | ✅ | Classes, inheritance, template instances, common STL, and smart pointers have native invocation tests |
+| Project extensions | ✅ | Declarative lowerings, typed plugins, C shims, and managed/native artifacts |
+| Multi-RID native packages | ✅ | `runtimes/<rid>/native/` for Windows, Linux, and macOS x64/arm64 |
+| SBOM, provenance, API/license/vulnerability gates | ✅ | Local generation and release gates are implemented |
+| GitHub OIDC release signing | ⚠️ | The workflow is configured; a real signature requires an authorized GitHub release run |
+
+### Platform acceptance
+
+Every listed platform is a support target. ⚠️ means the current version does not yet have a complete independent host report; it does not mean permanently unsupported.
+
+| Platform / architecture | Status | Current state |
+| --- | :---: | --- |
+| macOS arm64 | ✅ | Complete `macos-arm64-darwin` report passed |
+| Windows x64 | ⚠️ | Real clang-cl, MSBuild, DLL invocation, and NuGet consumer report pending |
+| Linux x64 | ⚠️ | Same-version complete host and NuGet consumer report pending |
+| macOS x64 | ⚠️ | Intel-host complete report and NuGet consumer report pending |
+| Windows arm64 | ⚠️ | Target/RID model exists; provider and runtime acceptance pending |
+| Linux arm64 | ⚠️ | Target/RID model exists; independent complete report pending |
+| Android | ⚠️ | NDK/sysroot, package layout, and device/emulator acceptance pending |
+| iOS | ⚠️ | Xcode SDK, XCFramework layout, and device/simulator acceptance pending |
+| FreeBSD | ⚠️ | Toolchain, package layout, and runtime acceptance pending |
+
+See [Capabilities and boundaries](docs/capabilities.md) and the [Acceptance specification](docs/acceptance.md) for detailed evidence.
+
+## Choose a workflow
+
+| Input or scenario | Use |
+| --- | --- |
+| C header / C ABI | `bindgen-cs init native.h`, then `generate` or `build` |
+| C++ class / template / STL | `bindgen-cs init library.hpp`, then `bridge` and `native-build` |
+| Multiple native libraries | `bindgen-cs workspace validate/generate/diff` |
+| Embed in existing build tooling | Reference `BGCS` or `BGCS.Cpp2C` |
+| Consume generated code only | Reference `BGCS.Runtime` |
+
+## C++ coverage and extension
+
+Verified coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, full and partial template specializations, explicit template instances, `string`, `vector`, `span`, `array`, `map`, `set`, `optional`, `variant`, `expected`, `filesystem::path`, `chrono`, `unique_ptr`, `shared_ptr`, and configured pure-virtual callback proxies.
+
+There are three ways to add project-specific behavior:
+
+1. `TypeLowerings` / `CallableLowerings` for stable conversions expressible in JSON.
+2. A typed lowering plugin when matching needs AST inspection, target branches, or extra generated artifacts.
+3. `NativeShims` when project C/C++ must define the stable C ABI boundary.
+
+The [C++ extension cookbook](docs/cpp-extension-cookbook.md) contains a runnable shim, an independent plugin project, callback/async/allocator patterns, and guidance for `AllowUnsafe`.
+
+## Common commands
 
 | Command | Purpose |
 | --- | --- |
-| `init` | Create a starting configuration from a C/C++ header or config path |
-| `doctor` | Inspect the host target, compiler, system includes, and macOS SDK |
-| `validate` | Parse and analyze without writing final output |
-| `inspect` | Print the analyzed module summary or JSON |
-| `generate` | Generate bindings transactionally |
-| `build` | Generate and compile-check the C# output |
-| `diff` | Regenerate in temporary storage and compare checked-in bindings |
-| `workspace` | Batch `validate`, `generate`, or `diff` multiple projects |
-| `schema` | Generate strict C or C++ JSON Schema from the installed version |
-| `explain` | List or explain stable diagnostic codes in text or JSON |
-| `bridge` | Generate a configuration-driven C++ to C bridge |
-| `native-build` | Compile a bridge manifest into a target shared library, or inspect the plan with `--dry-run` |
-| `supply-chain` | Generate SPDX 2.3 SBOM and SLSA v1 provenance for package/native artifacts |
+| `init` | Create a starting configuration from a header |
+| `doctor` | Inspect the host target, compiler, system includes, and SDK |
+| `validate` | Parse and analyze a C binding configuration without writing final output |
+| `inspect` | View the analyzed module summary or JSON |
+| `generate` | Transactionally generate C# bindings |
+| `build` | Generate and compile-check C# bindings |
+| `diff` | Check whether committed bindings need regeneration |
+| `workspace` | Process multiple configurations as one workspace |
+| `bridge` | Generate a C++ to C bridge and optional C# bindings |
+| `native-build` | Compile a bridge, verify exports, and optionally stage a RID package |
+| `schema` | Generate strict JSON Schema from the installed version |
+| `explain` | Explain stable diagnostic codes |
+| `supply-chain` | Generate SPDX SBOM and SLSA provenance |
 
-See [Getting started](docs/getting-started.md) for complete examples and the [Configuration guide](docs/configuration-guide.md) for configuration decisions.
+## Safety behavior
 
-## BGCS capability map
+- Clear ABI and lifetime: generate and compile-check.
+- Missing ownership, allocator, buffer length, or callback lifetime: emit a `BGCS-SAFETY-*` diagnostic with the relevant configuration path.
+- No accepted C++ lowering: stop until a recipe, plugin, or shim is supplied.
+- `AllowUnsafe` explicitly transfers risk and keeps an audit diagnostic; it cannot repair an invalid ABI.
 
-| Area | Implemented capabilities |
-| --- | --- |
-| Input and parsing | C/C++ headers, umbrella/transitive headers, macros and constants, target system includes, LibClang parsing, explicit template instances |
-| C ABI | Functions, enums, typedefs, opaque handles, structs/unions, packing, bitfields, fixed arrays, function pointers, and callbacks |
-| C++ bridge | Class lifetime, instance/static/overloaded/namespace functions, exception boundaries, multiple-inheritance pointer adjustment, template specializations, common STL, smart pointers, callback proxies |
-| C# output | `DllImport`, `LibraryImport`, function table/native context; raw ABI and string/span/ref/out friendly APIs from one IR-native emitter |
-| Marshalling | String encoding, ownership, cleanup, pointer/count, capacity/written-count, caller allocation, external managed ABI carriers |
-| Target/toolchain | Platform, architecture, ABI, triple, sysroot, compiler discovery; Clang/GNU, clang-cl, CMake, Meson, and MSBuild providers |
-| Build and packaging | Native build manifest, real export inspection, multi-RID `runtimes/<rid>/native/`, clean NuGet consumers |
-| Configuration and scale | Presets, BaseConfig, strict schema, SingleFile, workspace batches, target-specific output, 10,000-declaration performance gate |
-| Reproducibility | Staging transactions, deterministic output/diff, content-addressed cache, concurrent-writer isolation, input/toolchain/plugin fingerprints |
-| Extensibility | Type/callable recipes, typed lowering plugins, native/managed artifact contributors, explicit project-owned C shims |
-| Diagnostics and safety | Typed diagnostics, ABI/layout/ownership/lifetime analysis, fail-closed policies, auditable `AllowUnsafe` bypass |
-| Release governance | Public API gate, license/vulnerability gate, SPDX SBOM, SLSA provenance, OIDC attestation workflow |
-| Embedding | CLI, `BGCS` facade, `BGCS.Cpp2C`, `BGCS.Runtime`, dependency-free `BGCS.Intermediate` IR |
-
-See [Capabilities and boundaries](docs/capabilities.md) for per-feature evidence, verified semantics, and targets still awaiting acceptance.
-
-## Advanced extension
-
-- [C++ extension cookbook](docs/cpp-extension-cookbook.md): complete shim project, independent plugin `.csproj`, `CallableLowerings`, a decision tree, and recommended ownership/allocator/callback/async contracts.
-- [Final lowering architecture](docs/lowering.md): extension contracts and safety policy.
-- [Configuration guide](docs/configuration-guide.md): target, mapping, marshalling, and policy.
-- [Diagnostics guide](docs/diagnostics.md): map a diagnostic code to the smallest safe fix.
-- [Architecture](docs/architecture.md): IR-native pipeline, layers, and dependency boundaries.
-
-## Safety contract
-
-BindGen-CS separates native declarations into three groups:
-
-1. ABI and lifetime are sufficiently defined: generate and compile-check automatically.
-2. Ownership, allocator, length, or callback lifetime is missing: emit an actionable `BGCS-SAFETY-*` diagnostic with the minimum configuration path.
-3. A C++ type has no accepted lowering: add a recipe/plugin/shim, reject it with `BGCSCPP001` / `BGCSCPP-INSTANTIATION`, or deliberately continue under `AllowUnsafe` and retain the `BGCS-SAFETY-LOWERING-BYPASS` audit diagnostic.
-
-That boundary is a correctness feature, not silent feature inflation. See the [diagnostics guide](docs/diagnostics.md).
-
-## InnoEngine integration
-
-InnoEngine now owns five BindGen-CS configurations for miniaudio, SDL3, cimgui, cimguizmo, and bgfx. A single workspace cleanly regenerates target-scoped output; the acceptance gate rejects handwritten imports outside `Generated/`, builds all pinned native dependencies, builds the full engine solution, and runs all six native-binding test projects. The current macOS Arm64 run passed this complete gate. This integration lives only in the InnoEngine repository; BindGen-CS core contains no InnoEngine library-name or path special case. The still-pending desktop-x64 reports remain independent BGCS release requirements.
-
-## Architecture and embedding
-
-```text
-CLI / Embedded Facade
-        ↓
-Configuration → Parsing → Analysis → Binding IR
-                                      ↓
-                  C# / Runtime / C Bridge Emitters
-                                      ↓
-                         Transactional Output
-```
-
-Stable entry point:
+## Embed the generator
 
 ```csharp
 using BGCS;
@@ -200,21 +163,19 @@ if (!generator.GenerateConfigured())
 }
 ```
 
-Use `BGCS.Facade.BindingGenerator` when you need the structured IR. See [Architecture](docs/architecture.md) for the IR-native path and layer ownership.
+Use `BGCS.Facade.BindingGenerator` and the Binding IR in `BGCS.Intermediate` when structured results are required.
 
-## Acceptance
+## InnoEngine integration
+
+InnoEngine uses five configurations for miniaudio, SDL3, cimgui, cimguizmo, and bgfx. Generation logic and configuration live in the InnoEngine repository; BGCS core contains no special cases for those libraries. Clean regeneration, native dependency builds, the solution build, and native-binding tests currently pass on macOS arm64. Other platforms remain subject to the independent acceptance table above.
+
+## Testing and release
 
 ```bash
 ./scripts/run-full-test-matrix.sh
 ```
 
-Reports are produced only after managed tests, native ABI/runtime gates, advanced C++/lifetime semantics, real C/C++ libraries, API and deterministic snapshots, clean NuGet/tool/native-RID consumers, license/vulnerability policy, and the 10,000-declaration cold/warm performance budget all pass:
-
-- `artifacts/acceptance/report.json`
-- `artifacts/acceptance/report.md`
-- `artifacts/acceptance/reports/<target>/report.{json,md}`
-
-See the [acceptance specification](docs/acceptance.md) for scoring and target isolation. The score proves quality within the declared scope, not complete coverage of the C++ language.
+The full matrix covers managed tests, native ABI/runtime behavior, C++ semantics, real libraries, public APIs, deterministic snapshots, NuGet consumers, license/vulnerability policy, and performance. See the [Acceptance specification](docs/acceptance.md) for report details and [Publishing](docs/publish.md) for release and OIDC requirements.
 
 ## Packages
 
@@ -222,23 +183,18 @@ See the [acceptance specification](docs/acceptance.md) for scoring and target is
 - `BGCS` — embeddable C/C++ to C# facade.
 - `BGCS.Cpp2C` — C++ to C bridge generation.
 - `BGCS.Runtime` — runtime used by generated bindings.
-- `BGCS.Intermediate` — dependency-free Binding IR and diagnostics contracts.
-
-See [NuGet packages and public APIs](docs/packages.md) for selection guidance.
+- `BGCS.Intermediate` — Binding IR and diagnostics contracts without generator dependencies.
 
 ## Documentation
 
 - [Documentation index](docs/README.md)
 - [Getting started](docs/getting-started.md)
+- [Configuration guide](docs/configuration-guide.md)
 - [Capabilities and boundaries](docs/capabilities.md)
 - [C++ extension cookbook](docs/cpp-extension-cookbook.md)
-- [Configuration guide](docs/configuration-guide.md)
 - [Diagnostics guide](docs/diagnostics.md)
 - [Architecture](docs/architecture.md)
-- [Universal execution roadmap](docs/roadmap.md)
-- [Engineering maturity assessment](docs/assessment.md)
-- [Acceptance specification](docs/acceptance.md)
-- [Testing](docs/testing.md)
+- [Testing and acceptance](docs/testing.md)
 - [Publishing and OIDC](docs/publish.md)
 
 ## License
