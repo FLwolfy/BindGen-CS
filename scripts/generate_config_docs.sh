@@ -189,7 +189,7 @@ generate_cpp2c_doc() {
     echo
     echo "This behavioral catalog is generated from dedicated entry tests in \`BGCS.Cpp2C.Configuration.Tests\`. It does not enumerate every \`Cpp2CGeneratorConfig\` property."
     echo
-    echo "Use [Getting Started](getting-started.md#c-bridge), [Capabilities](capabilities.md#c-bridge), and the public configuration type for the complete bridge workflow and current STL/template adapter scope."
+    echo "Use [Getting Started](getting-started.md#c-bridge), [Capabilities](capabilities.md#c-bridge), the [final lowering architecture](lowering.md), and the public configuration type for the complete bridge workflow and current STL/template lowering scope."
     echo
     while IFS= read -r folder; do
       print_entry_block "$(basename "$folder")" "$folder" "cpp" "CPP2C"

@@ -118,13 +118,13 @@ Analyzer 不创建正式输出文件。
 - `NativeBuildExecutor`：带 timeout、stdout/stderr 捕获的多步骤进程执行器，不修改全局 current directory。
 - `NativeExportInspector`：通过 `nm` 或 `dumpbin` 对比生成的公开 C symbol 与实际 artifact export table。
 
-配置驱动的 C++ 生成也从显式 configuration directory 解析 header、include、sysroot、compiler path、output 和文件型 `BaseConfig` 链；它不会修改 `Environment.CurrentDirectory`，因此并发 generator 不会争用进程级路径状态。
+配置驱动的 C++ 生成也从显式 configuration directory 解析 header、include、sysroot、compiler path、output、lowering recipe、native shim 和文件型 `BaseConfig` 链；它不会修改 `Environment.CurrentDirectory`，因此并发 generator 不会争用进程级路径状态。
 
 ## Cache 与 Plugin
 
-C 与 C++ 配置生成使用 immutable SHA-256 output cache。Key 包含 generator identity、序列化配置、parser arguments、解析后的 compiler identity/version、plugin/adapter fingerprint，以及发现到的全部 C/C++ 输入精确内容。Entry 原子发布，并通过同一个 output transaction 恢复；无法稳定 fingerprint 的自定义状态会关闭 cache hit。
+C 与 C++ 配置生成使用 immutable SHA-256 output cache。Key 包含 generator identity、序列化配置、parser arguments、解析后的 compiler identity/version、plugin/lowering/shim fingerprint，以及发现到的全部 C/C++ 输入精确内容。Entry 原子发布，并通过同一个 output transaction 恢复；无法稳定 fingerprint 的自定义状态会关闭 cache hit。
 
-`BindingPluginContract` version 1 提供显式 assembly entry point 和确定性 typed registration。Plugin assembly 使用隔离 dependency resolver，同时共享 host contract；整份 assembly 会先完整校验再原子注册，assembly 内容 hash 与 plugin version 会进入 cache key。C++ plugin 可注册 `ICppTypeAdapter` / `ICppCallableAdapter`，C# plugin 可注册附加 `IBindingEmitter`。
+`BindingPluginContract` version 2 提供显式 assembly entry point 和确定性 typed registration。旧 adapter service 已删除，不存在 compatibility wrapper。C++ plugin 注册 `ICppTypeLowering`、`ICppCallableLowering` 和 `ICppArtifactContributor`；同一 registry 同时承载 built-in、声明式 recipe 与 plugin lowering。Plugin assembly 使用隔离 dependency resolver并原子注册，assembly 内容 hash、plugin version 和 lowering fingerprint 进入 cache key。
 
 ### Output
 
@@ -138,4 +138,4 @@ C++ Bridge 的对应完成条件是：C Bridge emitter 只消费完整 IR，AST 
 
 ## 扩展模型
 
-新扩展优先接收 immutable config/request、Binding IR 和 scoped diagnostics。不要依赖 CLI、修改全局 current directory，或把单一 native library 的名称/布局硬编码进 core。库特定事实应留在消费项目配置、preset composition 或显式 custom adapter 中。
+新扩展优先接收 immutable config/request、Binding IR 和 scoped diagnostics。不要依赖 CLI、修改全局 current directory，或把单一 native library 的名称/布局硬编码进 core。库特定事实应留在声明式 lowering、typed lowering plugin 或显式 C ABI shim 中。详见[最终 lowering 架构](lowering.cn.md)。

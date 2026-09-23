@@ -138,6 +138,8 @@
             MergeLists(FunctionMappings, baseConfig.FunctionMappings, mergeOptions, MergeOptions.FunctionMappings);
             MergeLists(HandleMappings, baseConfig.HandleMappings, mergeOptions, MergeOptions.HandleMappings);
             MergeLists(ClassMappings, baseConfig.ClassMappings, mergeOptions, MergeOptions.ClassMappings);
+            // External carrier contracts refine TypeMappings and intentionally share its merge flag.
+            MergeLists(ExternalTypeContracts, baseConfig.ExternalTypeContracts, mergeOptions, MergeOptions.TypeMappings);
             MergeLists(DelegateMappings, baseConfig.DelegateMappings, mergeOptions, MergeOptions.DelegateMappings);
             MergeLists(ArrayMappings, baseConfig.ArrayMappings, mergeOptions, MergeOptions.ArrayMappings);
             MergeLists(Usings, baseConfig.Usings, mergeOptions, MergeOptions.Usings);

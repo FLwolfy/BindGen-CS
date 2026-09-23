@@ -12,7 +12,7 @@ using Xunit;
 
 namespace BGCS.Cpp2C.Tests;
 
-public sealed class AdvancedCppAdapterTests
+public sealed class AdvancedCppLoweringTests
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int ArraySum(nint values, nuint count);

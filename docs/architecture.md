@@ -118,13 +118,13 @@ It is both a usable analysis result and the only input to C# emission. The C++ b
 - `NativeBuildExecutor`: bounded multi-step execution with captured output and no global working-directory mutation.
 - `NativeExportInspector`: compares generated public C symbols with the built artifact export table.
 
-Configuration-driven C++ generation also resolves headers, include directories, sysroots, compiler paths, outputs, and file-based `BaseConfig` chains from an explicit configuration directory. It does not change `Environment.CurrentDirectory`, so concurrent generators do not race through process-global path state.
+Configuration-driven C++ generation also resolves headers, include directories, sysroots, compiler paths, outputs, lowering recipes, native shims, and file-based `BaseConfig` chains from an explicit configuration directory. It does not change `Environment.CurrentDirectory`, so concurrent generators do not race through process-global path state.
 
 ## Cache and plugins
 
-Configured C and C++ generation use an immutable SHA-256 output cache. The key includes generator identity, serialized configuration, parser arguments, resolved compiler identity/version, plugin/adapter fingerprints, and exact contents of discovered C/C++ inputs. Entries publish atomically, restore through the same output transaction as generation, and are isolated by key. Custom state that cannot be fingerprinted disables cache hits.
+Configured C and C++ generation use an immutable SHA-256 output cache. The key includes generator identity, serialized configuration, parser arguments, resolved compiler identity/version, plugin/lowering/shim fingerprints, and exact contents of discovered C/C++ inputs. Entries publish atomically, restore through the same output transaction as generation, and are isolated by key. Custom state that cannot be fingerprinted disables cache hits.
 
-`BindingPluginContract` version 1 provides explicit assembly entry points and deterministic typed registrations. Plugin assemblies use an isolated dependency resolver while sharing host contracts; every assembly is preflighted and committed atomically, and its content hash/version enters the cache key. C++ plugins may register `ICppTypeAdapter` and `ICppCallableAdapter`; C# plugins may register additional `IBindingEmitter` services. Plugin assembly paths are explicit configuration, resolved relative to that configuration, and contract mismatches fail before generation.
+`BindingPluginContract` version 2 provides explicit assembly entry points and deterministic typed registrations. The old adapter services were deleted and have no compatibility wrapper. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, and `ICppArtifactContributor`; the same registry carries built-ins, declarative recipes, and plugin lowerings. Plugin assemblies use an isolated dependency resolver and atomic registration, while assembly content hashes, versions, and lowering fingerprints enter the cache key.
 
 ### Output
 
@@ -138,4 +138,4 @@ The equivalent C++ bridge criterion is that the C Bridge emitter consumes a comp
 
 ## Extension model
 
-New extensions should receive immutable configuration/requests, Binding IR, and scoped diagnostics. They must not depend on the CLI, change the global current directory, or hardcode one native library's names/layout into core. Library-specific facts belong in consumer configuration, preset composition, or an explicit custom adapter.
+New extensions should receive immutable configuration/requests, Binding IR, and scoped diagnostics. They must not depend on the CLI, change the global current directory, or hardcode one native library's names/layout into core. Library-specific facts belong in declarative lowerings, typed lowering plugins, or explicit C ABI shims. See the [final lowering architecture](lowering.md).

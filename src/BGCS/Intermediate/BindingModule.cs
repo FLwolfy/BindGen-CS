@@ -33,6 +33,7 @@ public sealed class BindingModule
     public IList<string> VaryingTypes { get; } = new List<string>();
     public IList<string> Usings { get; } = new List<string>();
     public IList<BindingType> Types { get; } = new List<BindingType>();
+    public IList<BindingExternalTypeContract> ExternalTypes { get; } = new List<BindingExternalTypeContract>();
     public IList<BindingConstant> Constants { get; } = new List<BindingConstant>();
     public IList<BindingDelegate> Delegates { get; } = new List<BindingDelegate>();
     public IList<BindingFunction> Functions { get; } = new List<BindingFunction>();

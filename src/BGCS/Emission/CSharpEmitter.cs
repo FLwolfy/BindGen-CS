@@ -405,10 +405,10 @@ public sealed class CSharpEmitter : IBindingEmitter
     private static void EmitType(StringBuilder writer, BindingType type, BindingModule? module = null)
     {
         EmitComment(writer, type.Comment, 1);
-        foreach (string attribute in type.Attributes)
-            writer.Append("    ").AppendLine(attribute);
         if (module != null)
             EmitPlaceholderComment(writer, module, 1, type.Comment);
+        foreach (string attribute in type.Attributes)
+            writer.Append("    ").AppendLine(attribute);
         switch (type.Kind)
         {
             case BindingTypeKind.Enumeration:
@@ -567,14 +567,14 @@ public sealed class CSharpEmitter : IBindingEmitter
                 (value, dimension) => dimension <= 0 ? 0 : checked(value * dimension));
             if (field.ArrayDimensions.Count == 0)
             {
-                writer.Append("            ").Append(field.ManagedName).Append(" = ").Append(parameterName).AppendLine(";");
+                writer.Append("            this.").Append(field.ManagedName).Append(" = ").Append(parameterName).AppendLine(";");
                 continue;
             }
             writer.Append("            if (").Append(parameterName).AppendLine(" != null)");
             writer.AppendLine("            {");
             for (int element = 0; element < count; element++)
             {
-                writer.Append("                ").Append(field.ManagedName);
+                writer.Append("                this.").Append(field.ManagedName);
                 if (count > 1)
                     writer.Append('_').Append(element);
                 writer.Append(" = ");
@@ -703,13 +703,13 @@ public sealed class CSharpEmitter : IBindingEmitter
             switch (module.ImportMode)
             {
                 case BindingImportMode.DllImport:
-                    writer.Append("        [DllImport(").Append(module.EmitLibraryNameConstant ? "LibName" : $"\"{EscapeString(module.LibraryName)}\"")
+                    writer.Append("        [DllImport(LibName")
                         .Append(", CallingConvention = CallingConvention.").Append(GetCallingConvention(function.CallingConvention))
                         .Append(", EntryPoint = \"").Append(function.NativeName).AppendLine("\")]");
                     EmitExternFunction(writer, module, function, "internal static extern");
                     break;
                 case BindingImportMode.LibraryImport:
-                    writer.Append("        [LibraryImport(").Append(module.EmitLibraryNameConstant ? "LibName" : $"\"{EscapeString(module.LibraryName)}\"")
+                    writer.Append("        [LibraryImport(LibName")
                         .Append(", EntryPoint = \"")
                         .Append(function.NativeName).AppendLine("\")] ");
                     writer.Append("        [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConv")
@@ -727,9 +727,9 @@ public sealed class CSharpEmitter : IBindingEmitter
         writer.AppendLine("    }");
         writer.AppendLine();
         foreach (IGrouping<string, BindingFunction> group in module.Functions
-                     .Where(function => function.Kind == BindingFunctionKind.Free &&
-                         function.ManagedKind != BindingManagedFunctionKind.Instance)
-                     .GroupBy(function => string.IsNullOrWhiteSpace(function.ManagedContainer)
+                     .Where(function => function.Kind == BindingFunctionKind.Free)
+                     .GroupBy(function => function.ManagedKind == BindingManagedFunctionKind.Instance ||
+                         string.IsNullOrWhiteSpace(function.ManagedContainer)
                          ? module.Name
                          : function.ManagedContainer!, StringComparer.Ordinal))
         {
@@ -741,9 +741,11 @@ public sealed class CSharpEmitter : IBindingEmitter
             string nativeOwner = string.Equals(group.Key, module.Name, StringComparison.Ordinal)
                 ? string.Empty
                 : module.Name + ".";
-            foreach (BindingFunction function in group)
+            BindingFunction[] functions = group.ToArray();
+            HashSet<string> publicSignatures = BuildReservedFunctionSignatures(module, functions);
+            foreach (BindingFunction function in functions)
             {
-                EmitManagedFunctions(writer, module, function, nativeOwner);
+                EmitManagedFunctions(writer, module, function, nativeOwner, publicSignatures);
                 writer.AppendLine();
             }
             writer.AppendLine("    }");
@@ -768,13 +770,25 @@ public sealed class CSharpEmitter : IBindingEmitter
     }
 
     private static void EmitManagedFunctions(StringBuilder writer, BindingModule module, BindingFunction function,
-        string nativeOwner)
+        string nativeOwner, HashSet<string> publicSignatures)
     {
         FriendlyFunctionPlan friendly = CreateFriendlyPlan(function);
-        if (module.WrapPointersAsHandle && TryGetPointerHandleParameter(module, function, out _, out _))
+        if (module.WrapPointersAsHandle && HasPointerHandleUsage(module, function))
         {
-            EmitPointerHandleManagedFunctions(writer, module, function, nativeOwner);
-            EmitDefaultValueOverload(writer, module, function, nativeOwner);
+            IReadOnlyList<PointerHandleSpec> specs = GetPointerHandleSpecs(module);
+            FriendlyFunctionPlan pointerFriendly = CreatePointerHandleFriendlyPlan(friendly, specs, function);
+            bool suppressRawHandle = (pointerFriendly.ReturnsString || pointerFriendly.ReturnsBool) &&
+                !pointerFriendly.HasNonPointerHandleParameterTransform;
+            EmitPointerHandleManagedFunctions(writer, module, function, nativeOwner, specs, suppressRawHandle);
+            if (friendly.HasTransform)
+            {
+                if (pointerFriendly.HasNonPointerHandleTransform)
+                {
+                    writer.AppendLine();
+                    EmitFriendlyManagedFunction(writer, module, function, pointerFriendly, nativeOwner);
+                }
+            }
+            EmitDefaultValueOverload(writer, module, function, publicSignatures);
             return;
         }
         bool sameSignatureWithDifferentReturn = (friendly.ReturnsString || friendly.ReturnsBool) && !friendly.HasParameterTransform;
@@ -782,7 +796,7 @@ public sealed class CSharpEmitter : IBindingEmitter
             EmitRawManagedFunction(writer, function, nativeOwner);
         if (friendly.HasTransform)
             EmitFriendlyManagedFunction(writer, module, function, friendly, nativeOwner);
-        EmitDefaultValueOverload(writer, module, function, nativeOwner);
+        EmitDefaultValueOverload(writer, module, function, publicSignatures);
         EmitCallbackManagedFunction(writer, module, function, nativeOwner);
         EmitAdditionalPointerOverloads(writer, module, function, nativeOwner);
     }
@@ -827,51 +841,177 @@ public sealed class CSharpEmitter : IBindingEmitter
     }
 
     private static void EmitDefaultValueOverload(StringBuilder writer, BindingModule module,
-        BindingFunction function, string nativeOwner)
+        BindingFunction function, HashSet<string> publicSignatures)
     {
-        if (function.ManagedKind != BindingManagedFunctionKind.Static)
+        if (function.ManagedKind == BindingManagedFunctionKind.Extension)
             return;
-        int firstDefault = -1;
-        for (int index = 0; index < function.Parameters.Count; index++)
+        FriendlyFunctionPlan friendly = CreateFriendlyPlan(function);
+        if (module.WrapPointersAsHandle && HasPointerHandleUsage(module, function))
+            friendly = CreatePointerHandleFriendlyPlan(friendly, GetPointerHandleSpecs(module), function);
+        foreach (IReadOnlySet<int> omitted in EnumerateDefaultOmissionSets(function, friendly))
         {
-            if (function.Parameters[index].DefaultValue != null)
-            {
-                firstDefault = index;
-                break;
-            }
+            string signature = BuildFriendlySignatureKey(function, friendly, omitted);
+            if (!publicSignatures.Add(signature))
+                continue;
+            EmitFriendlyDefaultValueOverload(writer, module, function, friendly, omitted);
         }
-        if (firstDefault < 0 || function.Parameters.Skip(firstDefault).Any(parameter => parameter.DefaultValue == null))
-            return;
+    }
+
+    private static IReadOnlyList<IReadOnlySet<int>> EnumerateDefaultOmissionSets(BindingFunction function,
+        FriendlyFunctionPlan plan)
+    {
+        int[] defaultable = plan.Parameters
+            .Where(parameter => parameter.Parameter.DefaultValue != null &&
+                parameter.Kind is not (FriendlyParameterKind.Span or FriendlyParameterKind.Ref or
+                    FriendlyParameterKind.Out or FriendlyParameterKind.RefBool))
+            .Select(parameter => function.Parameters.IndexOf(parameter.Parameter))
+            .Where(index => index >= 0)
+            .Distinct()
+            .Order()
+            .ToArray();
+        if (defaultable.Length == 0)
+            return [];
+        List<(HashSet<int> Omitted, bool Suffix, string Order)> sets = [];
+        Enumerate(0, []);
+        return sets.OrderByDescending(item => item.Suffix)
+            .ThenByDescending(item => item.Omitted.Count)
+            .ThenBy(item => item.Order, StringComparer.Ordinal)
+            .Select(item => (IReadOnlySet<int>)item.Omitted)
+            .ToArray();
+
+        void Enumerate(int position, HashSet<int> omitted)
+        {
+            if (position < defaultable.Length)
+            {
+                Enumerate(position + 1, omitted);
+                HashSet<int> withCurrent = new(omitted) { defaultable[position] };
+                Enumerate(position + 1, withCurrent);
+                return;
+            }
+            if (omitted.Count == 0)
+                return;
+
+            bool suffix = true;
+            bool sawOmitted = false;
+            StringBuilder order = new(defaultable.Length);
+            foreach (int index in defaultable)
+            {
+                bool isOmitted = omitted.Contains(index);
+                order.Append(isOmitted ? '1' : '0');
+                sawOmitted |= isOmitted;
+                if (sawOmitted && !isOmitted)
+                    suffix = false;
+            }
+            sets.Add((omitted, suffix, order.ToString()));
+        }
+    }
+
+    private static string BuildFriendlySignatureKey(BindingFunction function, FriendlyFunctionPlan plan,
+        IReadOnlySet<int>? omitted)
+    {
+        StringBuilder key = new(function.ManagedName);
+        foreach (FriendlyParameterPlan parameter in plan.Parameters)
+        {
+            int nativeIndex = function.Parameters.IndexOf(parameter.Parameter);
+            if (omitted?.Contains(nativeIndex) == true)
+                continue;
+            key.Append('|').Append(parameter.Kind switch
+            {
+                FriendlyParameterKind.Out => "out ",
+                FriendlyParameterKind.Ref or FriendlyParameterKind.RefBool => "ref ",
+                _ => string.Empty
+            }).Append(NormalizeSignatureType(parameter.ManagedType));
+        }
+        return key.ToString();
+    }
+
+    private static HashSet<string> BuildReservedFunctionSignatures(BindingModule module,
+        IReadOnlyList<BindingFunction> functions)
+    {
+        HashSet<string> signatures = new(StringComparer.Ordinal);
+        IReadOnlyList<PointerHandleSpec> specs = module.WrapPointersAsHandle
+            ? GetPointerHandleSpecs(module)
+            : [];
+        foreach (BindingFunction function in functions)
+        {
+            StringBuilder raw = new(function.ManagedName);
+            foreach (BindingParameter parameter in function.Parameters)
+                raw.Append('|').Append(NormalizeSignatureType(parameter.Type.ManagedName));
+            signatures.Add(raw.ToString());
+
+            FriendlyFunctionPlan friendly = CreateFriendlyPlan(function);
+            if (module.WrapPointersAsHandle && HasPointerHandleUsage(module, function))
+                friendly = CreatePointerHandleFriendlyPlan(friendly, specs, function);
+            signatures.Add(BuildFriendlySignatureKey(function, friendly, null));
+        }
+        return signatures;
+    }
+
+    private static void EmitFriendlyDefaultValueOverload(StringBuilder writer, BindingModule module,
+        BindingFunction function, FriendlyFunctionPlan plan, IReadOnlySet<int> omitted)
+    {
         writer.AppendLine();
         EmitPlaceholderComment(writer, module, 2);
-        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+        string returnType = GetFriendlyReturnType(function, plan);
+        writer.Append("        public static ").Append(returnType).Append(' ')
             .Append(function.ManagedName).Append('(');
-        for (int index = 0; index < firstDefault; index++)
+        bool firstParameter = true;
+        foreach (FriendlyParameterPlan parameter in plan.Parameters)
         {
-            if (index > 0)
+            if (omitted.Contains(function.Parameters.IndexOf(parameter.Parameter)))
+                continue;
+            if (!firstParameter)
                 writer.Append(", ");
-            BindingParameter parameter = function.Parameters[index];
-            writer.Append(parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+            firstParameter = false;
+            if (parameter.Kind == FriendlyParameterKind.Out)
+                writer.Append("out ");
+            else if (parameter.Kind is FriendlyParameterKind.Ref or FriendlyParameterKind.RefBool)
+                writer.Append("ref ");
+            writer.Append(parameter.ManagedType).Append(' ').Append(parameter.Parameter.ManagedName);
         }
         writer.AppendLine(")");
         writer.AppendLine("        {");
         writer.Append("            ");
-        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
-            writer.Append(function.ReturnType.ManagedName).Append(" ret = ");
-        writer.Append(nativeOwner).Append(GetRawManagedName(function)).Append("Native(");
-        for (int index = 0; index < function.Parameters.Count; index++)
+        if (!string.Equals(returnType, "void", StringComparison.Ordinal))
+            writer.Append("return ");
+        writer.Append(function.ManagedName).Append('(');
+        for (int index = 0; index < plan.Parameters.Count; index++)
         {
             if (index > 0)
                 writer.Append(", ");
-            BindingParameter parameter = function.Parameters[index];
-            writer.Append(index < firstDefault
-                ? parameter.ManagedName
-                : $"({parameter.Type.ManagedName})({parameter.DefaultValue})");
+            FriendlyParameterPlan parameter = plan.Parameters[index];
+            int nativeIndex = function.Parameters.IndexOf(parameter.Parameter);
+            if (!omitted.Contains(nativeIndex))
+            {
+                if (parameter.Kind == FriendlyParameterKind.Out)
+                    writer.Append("out ");
+                else if (parameter.Kind is FriendlyParameterKind.Ref or FriendlyParameterKind.RefBool)
+                    writer.Append("ref ");
+                writer.Append(parameter.Parameter.ManagedName);
+            }
+            else
+            {
+                writer.Append(FormatFriendlyDefault(parameter));
+            }
         }
         writer.AppendLine(");");
-        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
-            writer.AppendLine("            return ret;");
         writer.AppendLine("        }");
+    }
+
+    private static string FormatFriendlyDefault(FriendlyParameterPlan parameter)
+    {
+        string value = parameter.Parameter.DefaultValue?.Trim() ?? "default";
+        if (parameter.Kind == FriendlyParameterKind.String)
+            return value is "NULL" or "nullptr" ? "(string?)null" : value == "default" ? "(string?)default" : value;
+        if (value is "NULL" or "nullptr")
+            return "default";
+        return parameter.Kind switch
+        {
+            FriendlyParameterKind.Bool when string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) => "true",
+            FriendlyParameterKind.Bool when string.Equals(value, "false", StringComparison.OrdinalIgnoreCase) => "false",
+            FriendlyParameterKind.Bool => $"({value}) != 0",
+            _ => $"({parameter.ManagedType})({value})"
+        };
     }
 
     private static void EmitInstanceManagedFunction(StringBuilder writer, BindingModule module,
@@ -949,7 +1089,10 @@ public sealed class CSharpEmitter : IBindingEmitter
             writer.Append("        private string DebuggerDisplay => string.Format(\"").Append(spec.WrapperName)
                 .AppendLine(" [0x{0}]\", ((nuint)Handle).ToString(\"X\"));");
             if (spec.Depth == 1)
+            {
                 EmitPointerHandleProperties(writer, spec, specs);
+                EmitPointerHandleMemberFunctions(writer, module, spec, specs);
+            }
             writer.AppendLine("    }");
             writer.AppendLine();
         }
@@ -977,9 +1120,10 @@ public sealed class CSharpEmitter : IBindingEmitter
                 }
                 else
                 {
+                    string backingField = count > 1 ? field.ManagedName + "_0" : field.ManagedName;
                     writer.Append("        public Span<").Append(spanType).Append("> ")
                         .Append(field.ManagedName).Append(" => new((void*)&Handle->")
-                        .Append(field.ManagedName).Append("_0, ").Append(count).AppendLine(");");
+                        .Append(backingField).Append(", ").Append(count).AppendLine(");");
                 }
                 continue;
             }
@@ -992,7 +1136,14 @@ public sealed class CSharpEmitter : IBindingEmitter
             }
             PointerHandleSpec? wrappedField = specs.FirstOrDefault(candidate =>
                 string.Equals(candidate.PointerType, field.Type.ManagedName, StringComparison.Ordinal));
-            if (wrappedField != null)
+            if (IsNativeBool(field.Type))
+            {
+                writer.Append("        public bool ").Append(field.ManagedName).Append(" { get => Handle->")
+                    .Append(field.ManagedName).Append(" != 0; set => Handle->").Append(field.ManagedName)
+                    .Append(" = value ? (").Append(fieldManagedType).Append(")1 : (")
+                    .Append(fieldManagedType).AppendLine(")0; }");
+            }
+            else if (wrappedField != null)
             {
                 writer.Append("        public ref ").Append(wrappedField.WrapperName).Append(' ')
                     .Append(field.ManagedName).Append(" => ref Unsafe.AsRef<").Append(wrappedField.WrapperName)
@@ -1012,6 +1163,134 @@ public sealed class CSharpEmitter : IBindingEmitter
             }
         }
     }
+
+    private static void EmitPointerHandleMemberFunctions(StringBuilder writer, BindingModule module,
+        PointerHandleSpec spec, IReadOnlyList<PointerHandleSpec> specs)
+    {
+        var members = module.Functions.Where(candidate =>
+                candidate.Kind == BindingFunctionKind.Free &&
+                candidate.ManagedKind == BindingManagedFunctionKind.Instance &&
+                string.Equals(candidate.ManagedReceiverType, spec.Type.ManagedName, StringComparison.Ordinal))
+            .Select(function =>
+            {
+                int receiverIndex = function.ManagedReceiverIndex.GetValueOrDefault();
+                FriendlyFunctionPlan plan = CreatePointerHandleFriendlyPlan(CreateFriendlyPlan(function), specs, function);
+                FriendlyParameterPlan? receiver = plan.Parameters.FirstOrDefault(parameter =>
+                    ReferenceEquals(parameter.Parameter, function.Parameters[receiverIndex]));
+                return (Function: function, Plan: plan, Receiver: receiver);
+            })
+            .Where(member => member.Receiver != null)
+            .ToArray();
+        HashSet<string> emittedSignatures = new(StringComparer.Ordinal);
+        foreach (var member in members)
+            emittedSignatures.Add(BuildPointerHandleMemberSignatureKey(member.Function, member.Plan,
+                member.Receiver!, null));
+
+        foreach (var member in members)
+        {
+            BindingFunction function = member.Function;
+            FriendlyFunctionPlan plan = member.Plan;
+            FriendlyParameterPlan receiver = member.Receiver!;
+
+            writer.AppendLine();
+            EmitPlaceholderComment(writer, module, 2);
+            EmitPointerHandleMemberSignature(writer, function, plan, receiver, null);
+            writer.AppendLine("        {");
+            EmitPointerHandleMemberInvocation(writer, module, function, plan, receiver, null);
+            writer.AppendLine("        }");
+
+            foreach (IReadOnlySet<int> omitted in EnumerateDefaultOmissionSets(function, plan))
+            {
+                string signature = BuildPointerHandleMemberSignatureKey(function, plan, receiver, omitted);
+                if (!emittedSignatures.Add(signature))
+                    continue;
+                writer.AppendLine();
+                EmitPlaceholderComment(writer, module, 2);
+                EmitPointerHandleMemberSignature(writer, function, plan, receiver, omitted);
+                writer.AppendLine("        {");
+                EmitPointerHandleMemberInvocation(writer, module, function, plan, receiver, omitted);
+                writer.AppendLine("        }");
+            }
+        }
+    }
+
+    private static void EmitPointerHandleMemberSignature(StringBuilder writer, BindingFunction function,
+        FriendlyFunctionPlan plan, FriendlyParameterPlan receiver, IReadOnlySet<int>? omitted)
+    {
+        writer.Append("        public ").Append(GetFriendlyReturnType(function, plan)).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        bool first = true;
+        foreach (FriendlyParameterPlan parameter in plan.Parameters)
+        {
+            if (ReferenceEquals(parameter, receiver) ||
+                omitted?.Contains(function.Parameters.IndexOf(parameter.Parameter)) == true)
+                continue;
+            if (!first)
+                writer.Append(", ");
+            first = false;
+            if (parameter.Kind == FriendlyParameterKind.Out)
+                writer.Append("out ");
+            else if (parameter.Kind is FriendlyParameterKind.Ref or FriendlyParameterKind.RefBool)
+                writer.Append("ref ");
+            writer.Append(parameter.ManagedType).Append(' ').Append(parameter.Parameter.ManagedName);
+        }
+        writer.AppendLine(")");
+    }
+
+    private static void EmitPointerHandleMemberInvocation(StringBuilder writer, BindingModule module,
+        BindingFunction function, FriendlyFunctionPlan plan, FriendlyParameterPlan receiver,
+        IReadOnlySet<int>? omitted)
+    {
+        writer.Append("            ");
+        if (!string.Equals(GetFriendlyReturnType(function, plan), "void", StringComparison.Ordinal))
+            writer.Append("return ");
+        writer.Append(module.Name).Append('.').Append(function.ManagedName).Append('(');
+        bool first = true;
+        foreach (FriendlyParameterPlan parameter in plan.Parameters)
+        {
+            if (!first)
+                writer.Append(", ");
+            first = false;
+            if (ReferenceEquals(parameter, receiver))
+            {
+                writer.Append("this");
+                continue;
+            }
+            if (omitted?.Contains(function.Parameters.IndexOf(parameter.Parameter)) == true)
+            {
+                writer.Append(FormatFriendlyDefault(parameter));
+                continue;
+            }
+            if (parameter.Kind == FriendlyParameterKind.Out)
+                writer.Append("out ");
+            else if (parameter.Kind is FriendlyParameterKind.Ref or FriendlyParameterKind.RefBool)
+                writer.Append("ref ");
+            writer.Append(parameter.Parameter.ManagedName);
+        }
+        writer.AppendLine(");");
+    }
+
+    private static string BuildPointerHandleMemberSignatureKey(BindingFunction function,
+        FriendlyFunctionPlan plan, FriendlyParameterPlan receiver, IReadOnlySet<int>? omitted)
+    {
+        StringBuilder key = new(function.ManagedName);
+        foreach (FriendlyParameterPlan parameter in plan.Parameters)
+        {
+            if (ReferenceEquals(parameter, receiver) ||
+                omitted?.Contains(function.Parameters.IndexOf(parameter.Parameter)) == true)
+                continue;
+            key.Append('|').Append(parameter.Kind switch
+            {
+                FriendlyParameterKind.Out => "out ",
+                FriendlyParameterKind.Ref or FriendlyParameterKind.RefBool => "ref ",
+                _ => string.Empty
+            }).Append(NormalizeSignatureType(parameter.ManagedType));
+        }
+        return key.ToString();
+    }
+
+    private static string NormalizeSignatureType(string managedType) =>
+        managedType.EndsWith("?", StringComparison.Ordinal) ? managedType[..^1] : managedType;
 
     private static string GetSpanElementType(string managedType)
     {
@@ -1060,59 +1339,58 @@ public sealed class CSharpEmitter : IBindingEmitter
         return specs.Values.OrderBy(spec => spec.WrapperName, StringComparer.Ordinal).ToArray();
     }
 
-    private static bool TryGetPointerHandleParameter(BindingModule module, BindingFunction function,
-        out BindingParameter? pointerParameter, out string? elementType)
+    private static bool HasPointerHandleUsage(BindingModule module, BindingFunction function)
     {
         IReadOnlyList<PointerHandleSpec> specs = GetPointerHandleSpecs(module);
-        foreach (BindingParameter parameter in function.Parameters)
-        {
-            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
-                string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
-            if (spec == null)
-                continue;
-            pointerParameter = parameter;
-            elementType = spec.Type.ManagedName;
-            return true;
-        }
-        pointerParameter = null;
-        elementType = null;
-        return false;
+        return specs.Any(spec => string.Equals(spec.PointerType, function.ReturnType.ManagedName,
+                   StringComparison.Ordinal)) ||
+            function.Parameters.Any(parameter => specs.Any(spec => string.Equals(spec.PointerType,
+                parameter.Type.ManagedName, StringComparison.Ordinal)));
     }
 
     private static void EmitPointerHandleManagedFunctions(StringBuilder writer, BindingModule module,
-        BindingFunction function, string nativeOwner)
+        BindingFunction function, string nativeOwner, IReadOnlyList<PointerHandleSpec> specs,
+        bool suppressRawHandle)
     {
-        IReadOnlyList<PointerHandleSpec> specs = GetPointerHandleSpecs(module);
-        writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
-            .Append(function.ManagedName).Append('(');
-        for (int index = 0; index < function.Parameters.Count; index++)
+        PointerHandleSpec? returnSpec = specs.FirstOrDefault(candidate =>
+            string.Equals(candidate.PointerType, function.ReturnType.ManagedName, StringComparison.Ordinal));
+        if (!suppressRawHandle)
         {
-            if (index > 0)
-                writer.Append(", ");
-            BindingParameter parameter = function.Parameters[index];
-            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
-                string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
-            if (function.ManagedKind == BindingManagedFunctionKind.Extension && function.ManagedReceiverIndex == index)
-                writer.Append("this ");
-            writer.Append(spec?.WrapperName ?? parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+            writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            writer.Append("        public static ").Append(returnSpec?.WrapperName ?? function.ReturnType.ManagedName).Append(' ')
+                .Append(function.ManagedName).Append('(');
+            for (int index = 0; index < function.Parameters.Count; index++)
+            {
+                if (index > 0)
+                    writer.Append(", ");
+                BindingParameter parameter = function.Parameters[index];
+                PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
+                    string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
+                if (function.ManagedKind == BindingManagedFunctionKind.Extension && function.ManagedReceiverIndex == index)
+                    writer.Append("this ");
+                writer.Append(spec?.WrapperName ?? parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+            }
+            writer.AppendLine(")");
+            writer.AppendLine("        {");
+            EmitNativeInvocation(writer, function, nativeOwner, 3, parameter =>
+            {
+                PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
+                    string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
+                return spec == null ? parameter.ManagedName : parameter.ManagedName + ".Handle";
+            }, returnSpec?.WrapperName);
+            writer.AppendLine("        }");
         }
-        writer.AppendLine(")");
-        writer.AppendLine("        {");
-        EmitNativeInvocation(writer, function, nativeOwner, 3, parameter =>
-        {
-            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
-                string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
-            return spec == null ? parameter.ManagedName : parameter.ManagedName + ".Handle";
-        });
-        writer.AppendLine("        }");
 
-        if (function.Parameters.Any(parameter => specs.Any(spec => spec.Depth != 1 &&
+        List<BindingParameter> pointerParameters = function.Parameters.Where(parameter => specs.Any(spec =>
+            string.Equals(spec.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal))).ToList();
+        if (pointerParameters.Count == 0 || pointerParameters.Any(parameter => specs.Any(spec => spec.Depth != 1 &&
             string.Equals(spec.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal))))
             return;
-        writer.AppendLine();
+        if (!suppressRawHandle)
+            writer.AppendLine();
         writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+        bool friendlyBoolReturn = IsNativeBool(function.ReturnType);
+        writer.Append("        public static ").Append(friendlyBoolReturn ? "bool" : function.ReturnType.ManagedName).Append(' ')
             .Append(function.ManagedName).Append('(');
         for (int index = 0; index < function.Parameters.Count; index++)
         {
@@ -1129,8 +1407,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         }
         writer.AppendLine(")");
         writer.AppendLine("        {");
-        List<BindingParameter> fixedParameters = function.Parameters.Where(parameter => specs.Any(spec =>
-            string.Equals(spec.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal))).ToList();
+        List<BindingParameter> fixedParameters = pointerParameters;
         int indent = 3;
         foreach (BindingParameter parameter in fixedParameters)
         {
@@ -1142,7 +1419,8 @@ public sealed class CSharpEmitter : IBindingEmitter
             indent++;
         }
         EmitNativeInvocation(writer, function, nativeOwner, indent, parameter =>
-            fixedParameters.Contains(parameter) ? GetTemporaryName(parameter) : parameter.ManagedName);
+            fixedParameters.Contains(parameter) ? GetTemporaryName(parameter) : parameter.ManagedName,
+            convertBool: friendlyBoolReturn);
         for (int index = fixedParameters.Count - 1; index >= 0; index--)
         {
             indent--;
@@ -1150,6 +1428,56 @@ public sealed class CSharpEmitter : IBindingEmitter
             writer.AppendLine("}");
         }
         writer.AppendLine("        }");
+    }
+
+    private static FriendlyFunctionPlan CreatePointerHandleFriendlyPlan(FriendlyFunctionPlan plan,
+        IReadOnlyList<PointerHandleSpec> specs, BindingFunction function)
+    {
+        int receiverIndex = function.ManagedKind == BindingManagedFunctionKind.Instance
+            ? function.ManagedReceiverIndex.GetValueOrDefault(-1)
+            : -1;
+        BindingParameter? receiverParameter = receiverIndex >= 0 && receiverIndex < function.Parameters.Count
+            ? function.Parameters[receiverIndex]
+            : null;
+        FriendlyParameterPlan? originalReceiver = plan.Parameters.FirstOrDefault(parameter =>
+            ReferenceEquals(parameter.Parameter, receiverParameter));
+        List<FriendlyParameterPlan> parameters = plan.Parameters.Select(parameter =>
+        {
+            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
+                string.Equals(candidate.PointerType, parameter.Parameter.Type.ManagedName, StringComparison.Ordinal));
+            bool isReceiver = ReferenceEquals(parameter.Parameter, receiverParameter);
+            return spec == null || parameter.Kind == FriendlyParameterKind.Span && !isReceiver
+                ? parameter
+                : parameter with
+                {
+                    Kind = FriendlyParameterKind.PointerHandle,
+                    ManagedType = spec.WrapperName,
+                    ElementType = spec.Type.ManagedName
+                };
+        }).ToList();
+        HashSet<string> hiddenLengths = new(plan.HiddenLengths, StringComparer.Ordinal);
+        if (originalReceiver?.Kind == FriendlyParameterKind.Span &&
+            !string.IsNullOrWhiteSpace(originalReceiver.Parameter.Marshalling.LengthParameter))
+        {
+            string lengthName = originalReceiver.Parameter.Marshalling.LengthParameter!;
+            BindingParameter? lengthParameter = function.Parameters.FirstOrDefault(parameter =>
+                string.Equals(parameter.NativeName, lengthName, StringComparison.Ordinal) ||
+                string.Equals(parameter.ManagedName, lengthName, StringComparison.Ordinal));
+            if (lengthParameter != null && parameters.All(parameter => !ReferenceEquals(parameter.Parameter, lengthParameter)))
+                parameters.Add(new(lengthParameter, FriendlyParameterKind.Raw, lengthParameter.Type.ManagedName, null));
+            hiddenLengths.Remove(lengthName);
+            if (lengthParameter != null)
+            {
+                hiddenLengths.Remove(lengthParameter.NativeName);
+                hiddenLengths.Remove(lengthParameter.ManagedName);
+            }
+        }
+        parameters.Sort((left, right) => function.Parameters.IndexOf(left.Parameter)
+            .CompareTo(function.Parameters.IndexOf(right.Parameter)));
+        PointerHandleSpec? returnSpec = specs.FirstOrDefault(candidate =>
+            string.Equals(candidate.PointerType, function.ReturnType.ManagedName, StringComparison.Ordinal));
+        return new(parameters, hiddenLengths, plan.ReturnsString, plan.ReturnsBool,
+            returnSpec?.WrapperName);
     }
 
     private static void EmitCallbackManagedFunction(StringBuilder writer, BindingModule module,
@@ -1300,7 +1628,8 @@ public sealed class CSharpEmitter : IBindingEmitter
     }
 
     private static void EmitNativeInvocation(StringBuilder writer, BindingFunction function, string nativeOwner,
-        int indent, Func<BindingParameter, string> getArgument)
+        int indent, Func<BindingParameter, string> getArgument, string? returnWrapper = null,
+        bool convertBool = false)
     {
         AppendIndent(writer, indent);
         if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
@@ -1316,7 +1645,12 @@ public sealed class CSharpEmitter : IBindingEmitter
         if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
         {
             AppendIndent(writer, indent);
-            writer.AppendLine("return ret;");
+            if (convertBool)
+                writer.AppendLine("return ret != 0;");
+            else if (returnWrapper == null)
+                writer.AppendLine("return ret;");
+            else
+                writer.Append("return new ").Append(returnWrapper).AppendLine("(ret);");
         }
     }
 
@@ -1326,6 +1660,18 @@ public sealed class CSharpEmitter : IBindingEmitter
         string.Equals(type.NativeName.Trim(), "bool", StringComparison.Ordinal) ||
         string.Equals(type.ManagedName, "Bool8", StringComparison.Ordinal) ||
         string.Equals(type.ManagedName, "Bool32", StringComparison.Ordinal);
+
+    private static bool IsNativeBoolPointer(BindingTypeReference type)
+    {
+        if (type.PointerDepth != 1)
+            return false;
+        string nativeName = type.NativeName.Trim();
+        if (!nativeName.EndsWith("*", StringComparison.Ordinal))
+            return false;
+        nativeName = nativeName[..^1].Replace("const", string.Empty, StringComparison.Ordinal)
+            .Replace("volatile", string.Empty, StringComparison.Ordinal).Trim();
+        return nativeName is "bool" or "_Bool";
+    }
 
     private static string GetRawManagedName(BindingFunction function) =>
         string.IsNullOrWhiteSpace(function.RawManagedName) ? function.ManagedName : function.RawManagedName;
@@ -1354,7 +1700,15 @@ public sealed class CSharpEmitter : IBindingEmitter
                 parameter.Marshalling.StringEncoding is BindingStringEncoding.Utf8 or BindingStringEncoding.Utf16)
             {
                 kind = FriendlyParameterKind.String;
-                managedType = "string";
+                managedType = IsNullPointerDefault(parameter.DefaultValue) ? "string?" : "string";
+            }
+            else if (IsNativeBoolPointer(parameter.Type) &&
+                parameter.Direction is BindingDirection.Out or BindingDirection.InOut &&
+                !IsNullPointerDefault(parameter.DefaultValue))
+            {
+                kind = FriendlyParameterKind.RefBool;
+                managedType = "bool";
+                elementType = "bool";
             }
             else if (IsNativeBool(parameter.Type))
             {
@@ -1373,7 +1727,8 @@ public sealed class CSharpEmitter : IBindingEmitter
             }
             else if (elementType != null && !string.Equals(elementType, "void", StringComparison.Ordinal) &&
                 parameter.Type.PointerDepth == 1 && parameter.Marshalling.Strategy == MarshallingStrategy.Pointer &&
-                parameter.Direction is BindingDirection.Out or BindingDirection.InOut)
+                parameter.Direction is BindingDirection.Out or BindingDirection.InOut &&
+                !IsNullPointerDefault(parameter.DefaultValue))
             {
                 kind = parameter.Direction == BindingDirection.Out
                     ? FriendlyParameterKind.Out
@@ -1391,14 +1746,17 @@ public sealed class CSharpEmitter : IBindingEmitter
             function.ReturnMarshalling.StringEncoding is BindingStringEncoding.Utf8 or BindingStringEncoding.Utf16 &&
             function.ReturnType.PointerDepth > 0;
         bool returnsBool = IsNativeBool(function.ReturnType);
-        return new(parameters, hiddenLengths, returnsString, returnsBool);
+        return new(parameters, hiddenLengths, returnsString, returnsBool, null);
     }
+
+    private static bool IsNullPointerDefault(string? value) =>
+        value?.Trim() is "NULL" or "nullptr" or "default";
 
     private static void EmitFriendlyManagedFunction(StringBuilder writer, BindingModule module,
         BindingFunction function, FriendlyFunctionPlan plan, string nativeOwner)
     {
         writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        writer.Append("        public static ").Append(plan.ReturnsString ? "string?" : plan.ReturnsBool ? "bool" : function.ReturnType.ManagedName)
+        writer.Append("        public static ").Append(GetFriendlyReturnType(function, plan))
             .Append(' ').Append(function.ManagedName).Append('(');
         for (int index = 0; index < plan.Parameters.Count; index++)
         {
@@ -1410,7 +1768,7 @@ public sealed class CSharpEmitter : IBindingEmitter
                 writer.Append("this ");
             if (parameter.Kind == FriendlyParameterKind.Out)
                 writer.Append("out ");
-            else if (parameter.Kind == FriendlyParameterKind.Ref)
+            else if (parameter.Kind is FriendlyParameterKind.Ref or FriendlyParameterKind.RefBool)
                 writer.Append("ref ");
             writer.Append(parameter.ManagedType).Append(' ').Append(parameter.Parameter.ManagedName);
         }
@@ -1439,7 +1797,8 @@ public sealed class CSharpEmitter : IBindingEmitter
 
         int baseIndent = strings.Count > 0 ? 4 : 3;
         List<FriendlyParameterPlan> fixedParameters = plan.Parameters
-            .Where(parameter => parameter.Kind is FriendlyParameterKind.Span or FriendlyParameterKind.Ref or FriendlyParameterKind.Out)
+            .Where(parameter => parameter.Kind is FriendlyParameterKind.Span or FriendlyParameterKind.Ref or
+                FriendlyParameterKind.Out or FriendlyParameterKind.RefBool)
             .ToList();
         foreach (FriendlyParameterPlan parameter in fixedParameters)
         {
@@ -1462,7 +1821,12 @@ public sealed class CSharpEmitter : IBindingEmitter
         else if (plan.ReturnsBool)
             writer.Append(function.ReturnType.ManagedName).Append(" ret = ");
         else if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
-            writer.Append("return ");
+        {
+            if (plan.ReturnTypeOverride == null)
+                writer.Append("return ");
+            else
+                writer.Append(function.ReturnType.ManagedName).Append(" ret = ");
+        }
         writer.Append(nativeOwner).Append(GetRawManagedName(function)).Append("Native(");
         bool firstArgument = true;
         for (int index = 0; index < function.Parameters.Count; index++)
@@ -1478,8 +1842,11 @@ public sealed class CSharpEmitter : IBindingEmitter
                 writer.Append(parameter.Kind switch
                 {
                     FriendlyParameterKind.String => $"({nativeParameter.Type.ManagedName}){GetTemporaryName(nativeParameter)}",
-                    FriendlyParameterKind.Span or FriendlyParameterKind.Ref or FriendlyParameterKind.Out =>
+                    FriendlyParameterKind.Span or FriendlyParameterKind.Ref or FriendlyParameterKind.Out or
+                        FriendlyParameterKind.RefBool =>
                         $"({nativeParameter.Type.ManagedName}){GetTemporaryName(nativeParameter)}",
+                    FriendlyParameterKind.PointerHandle =>
+                        $"({nativeParameter.Type.ManagedName}){nativeParameter.ManagedName}.Handle",
                     FriendlyParameterKind.Bool =>
                         $"{nativeParameter.ManagedName} ? ({nativeParameter.Type.ManagedName})1 : ({nativeParameter.Type.ManagedName})0",
                     _ => nativeParameter.ManagedName
@@ -1539,6 +1906,11 @@ public sealed class CSharpEmitter : IBindingEmitter
             AppendIndent(writer, baseIndent);
             writer.AppendLine("return ret != 0;");
         }
+        else if (plan.ReturnTypeOverride != null)
+        {
+            AppendIndent(writer, baseIndent);
+            writer.Append("return new ").Append(plan.ReturnTypeOverride).AppendLine("(ret);");
+        }
 
         for (int index = fixedParameters.Count - 1; index >= 0; index--)
         {
@@ -1581,19 +1953,31 @@ public sealed class CSharpEmitter : IBindingEmitter
         Span,
         Ref,
         Out,
-        Bool
+        Bool,
+        RefBool,
+        PointerHandle
     }
 
     private sealed record FriendlyParameterPlan(BindingParameter Parameter, FriendlyParameterKind Kind,
         string ManagedType, string? ElementType);
 
     private sealed record FriendlyFunctionPlan(IReadOnlyList<FriendlyParameterPlan> Parameters,
-        IReadOnlySet<string> HiddenLengths, bool ReturnsString, bool ReturnsBool)
+        IReadOnlySet<string> HiddenLengths, bool ReturnsString, bool ReturnsBool, string? ReturnTypeOverride)
     {
         public bool HasParameterTransform => Parameters.Any(parameter => parameter.Kind != FriendlyParameterKind.Raw) ||
             HiddenLengths.Count > 0;
-        public bool HasTransform => HasParameterTransform || ReturnsString || ReturnsBool;
+        public bool HasTransform => HasParameterTransform || ReturnsString || ReturnsBool || ReturnTypeOverride != null;
+        public bool HasNonPointerHandleParameterTransform =>
+            Parameters.Any(parameter => parameter.Kind is not FriendlyParameterKind.Raw and
+                not FriendlyParameterKind.PointerHandle) || HiddenLengths.Count > 0;
+        public bool HasNonPointerHandleTransform =>
+            HasNonPointerHandleParameterTransform || ReturnsString || ReturnsBool;
     }
+
+    private static string GetFriendlyReturnType(BindingFunction function, FriendlyFunctionPlan plan) =>
+        plan.ReturnsString ? "string?" :
+        plan.ReturnsBool ? "bool" :
+        plan.ReturnTypeOverride ?? function.ReturnType.ManagedName;
 
     private static void EmitExternFunction(StringBuilder writer, BindingModule module, BindingFunction function, string modifiers)
     {
@@ -1636,7 +2020,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         int tableSize = module.FunctionTableEntries.Max(entry => entry.Index) + 1;
         writer.Append("    public unsafe partial class ").AppendLine(module.Name);
         writer.AppendLine("    {");
-        writer.AppendLine("        internal static FunctionTable funcTable;");
+        writer.AppendLine("        internal static FunctionTable funcTable = null!;");
         writer.AppendLine();
         if (module.UseCustomContext)
         {

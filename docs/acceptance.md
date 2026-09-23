@@ -67,7 +67,7 @@ The bridge suite must compile, link, and execute tests for:
 - multiple inheritance with generated pointer adjustments;
 - exception capture and managed error propagation;
 - explicit class/function template instantiations;
-- configured adapters for string, vector, span, array, map, set, optional, variant, expected, path, chrono, and unique/shared pointers;
+- configured lowerings for string, vector, span, array, map, set, optional, variant, expected, path, chrono, and unique/shared pointers;
 - allocator/deallocator pairing, retained callback unregister/drain races, and async completion lifetime;
 - managed implementations of configured abstract callback interfaces;
 - native bridge compilation plus synthetic lifecycle/method runtime invocation.
@@ -117,10 +117,11 @@ Primary configured generation calls `CSharpEmitter` from canonical IR and covers
 - The tool installs into an empty tool path and completes init/generate/build smoke tests.
 - Two clean packs from the same commit produce equivalent package content after excluding NuGet signature metadata.
 - A clean consumer selects and invokes the current host binary from `runtimes/<rid>/native/`.
-- Reviewed API baselines, dependency licenses, known-vulnerability queries, SPDX/SLSA payloads, and OIDC attestations gate release.
+- Reviewed API baselines, dependency licenses, known-vulnerability queries, and deterministic SPDX/SLSA payloads gate local release-candidate construction.
+- A published release additionally requires the GitHub release job to obtain an OIDC identity and produce verifiable Sigstore attestations. Workflow presence is tested locally, but is never reported as an executed signature.
 - Symbol packages and repository metadata are present.
 - No release push runs before all mandatory gates pass.
 
 ## Current status
 
-`scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json`, `report.md`, and target-retained copies only after every BGCS gate above passes. The required maintenance-candidate desktop reports are Windows x64 MSVC, Linux x64 GNU, and macOS x64 Darwin; Windows additionally requires real clang-cl and MSBuild DLL build/export/invocation. These same-version reports remain pending until their runners complete. InnoEngine regeneration is deliberately a later phase and is not part of this BGCS report.
+`scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json`, `report.md`, and target-retained copies only after every local BGCS gate above passes. The required maintenance-candidate desktop reports are Windows x64 MSVC, Linux x64 GNU, and macOS x64 Darwin; Windows additionally requires real clang-cl and MSBuild DLL build/export/invocation. These same-version reports remain pending until their runners complete. InnoEngine clean regeneration and its full native/build/test gate now pass separately on macOS Arm64 and are intentionally not folded into the BGCS score. A real OIDC/Sigstore signature likewise remains a release-run artifact, not local evidence.

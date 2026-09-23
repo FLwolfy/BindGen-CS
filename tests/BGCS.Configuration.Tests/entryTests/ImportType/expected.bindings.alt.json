@@ -4,6 +4,6 @@
     "internal static extern int SampleAddNative(int a, int b);"
   ],
   "NotContains": [
-    "internal static FunctionTable funcTable;"
+    "internal static FunctionTable funcTable = null !;"
   ]
 }

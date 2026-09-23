@@ -44,7 +44,7 @@
 | overload、namespace function、异常边界 | 实机验收/自动测试 | 生成 symbol 与 exception channel 测试 |
 | 继承 cast 与 pointer adjustment | 自动测试 | 不使用不安全的简单 reinterpret cast |
 | class/function template | 配置支持/自动测试 | 只生成 `TemplateInstantiations` / `FunctionTemplateInstantiations` 明确列出的实例 |
-| `std::string` | 自动测试 | UTF-8 borrowed/return adapter 的已验证范围 |
+| `std::string` | 自动测试 | UTF-8 borrowed/return lowering 的已验证范围 |
 | `std::vector`、`std::span` | 自动测试 | pointer/count view；ownership 仍由配置决定 |
 | `std::optional<T>` | 自动测试 | blittable presence/value 与 non-blittable owned-handle protocol 均有 native compile test |
 | `std::array/map/set` | native invocation test | fixed extent 与 owned-holder protocol 实际编译执行 |
@@ -61,10 +61,10 @@
 | `init → doctor → validate → generate → build` | 实机验收 | Tool 安装与干净消费 smoke test 覆盖 |
 | transactional output | 自动测试 | 失败不会破坏 last-good output |
 | deterministic `diff` | 实机验收 | 真实库与隔离输出 gate |
-| multi-project workspace | 自动测试 | workspace validate/generate/diff；InnoEngine adoption 延后 |
+| multi-project workspace | 实机验收 | workspace validate/generate/diff；InnoEngine 五项目 clean regeneration 与 native/build/test gate 已在 macOS Arm64 通过 |
 | C++ native build manifest/providers | native invocation + plan test | direct Clang/GNU 与 CMake 宿主执行；Windows clang-cl/MSBuild tests 在所属 runner build/export/invoke DLL；Meson plan coverage |
-| 增量生成 | 自动化 + 性能测试 | SHA-256 input/config/compiler/plugin/adapter fingerprint、原子 immutable entry、并发发布、删除 output 后恢复、10k declaration 冷/热预算 |
-| Plugin/adapter contract | 外部 assembly E2E + API-shape 测试 | Version 1 隔离 loader、原子确定性 typed service、配置驱动 C# plugin cache、`ICppTypeAdapter` / `ICppCallableAdapter` 生成与 cache |
+| 增量生成 | 自动化 + 性能测试 | SHA-256 input/config/compiler/plugin/lowering/shim fingerprint、原子 immutable entry、并发发布、删除 output 后恢复、10k declaration 冷/热预算 |
+| 最终 lowering 扩展 contract | native invocation + 外部 assembly E2E + API-shape 测试 | 隔离 plugin loader、确定性 typed service、声明式 recipe、显式 shim、managed/native artifact、安全 bypass 诊断与稳定 cache fingerprint |
 | BaseConfig 与 preset | 自动测试 | 显式 config-directory context、循环检测、override precedence，不修改进程 cwd |
 | 当前安装版本 C/C++ schema | 自动测试 | 默认严格 root property；从安装版本生成嵌套 public shape 和核心说明 |
 | 可移植项目初始化 | 自动测试 | config-relative `/` path、显式 C/C++ 选择、拒绝覆盖 |
@@ -95,7 +95,7 @@ BindGen-CS 已经是强大的工程化 binding toolkit，而不是简单的 head
 - Windows 与 x64 宿主还缺同等级的完整 target-specific acceptance artifact；
 - 配置模型能力很强但仍较扁平，大型库需要理解 mapping 与 safety policy；
 - clang-cl/MSBuild 仍需所属 Windows target 的真实执行证据；桌面 multi-RID packaging 已实现，但 Windows runtime 仍未实机证明；
-- 任意 metaprogramming、custom allocator 与超出声明 adapter protocol 的类型仍需显式 lowering。
+- 任意 metaprogramming、custom allocator 与超出内置协议的类型需要声明式 lowering、版本化 plugin 或显式 C ABI shim。
 
 因此，准确定位是：**在经过验收的 C ABI 与明确支持的 C++ 子集内非常优秀；作为“任意 C++、任意平台、零配置”的万能工具仍有清晰距离。**
 
@@ -104,5 +104,6 @@ BindGen-CS 已经是强大的工程化 binding toolkit，而不是简单的 head
 1. 在 Windows x64、Linux x64 与 macOS x64 运行同级真实库、native invocation 和包验收并生成独立报告。
 2. 持续增加 IR-native public-API snapshot；当前不存在预发布 legacy 路径。
 3. 在各自 target 上执行全部 provider，并保留 multi-RID consumer 证据。
-4. 三份报告通过后，再执行独立 InnoEngine clean-regeneration migration。
-5. 持续扩展 schema/adapter，同时拒绝没有 ownership/allocator 证据的类型。
+4. 在每个采用 target 上重复并保持 InnoEngine clean-regeneration/import-audit/native-build/full-solution/native-test gate。
+5. 在授权 GitHub release 环境真实执行 OIDC/Sigstore 签名发布。
+6. 持续扩展内置语义/schema，并将项目专用语义统一接入最终 lowering 架构。

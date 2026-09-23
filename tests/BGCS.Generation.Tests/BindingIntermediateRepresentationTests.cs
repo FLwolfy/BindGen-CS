@@ -25,6 +25,7 @@ public class BindingIntermediateRepresentationTests
             "int bgcs_name_length(const char* name);\n" +
             "const char* bgcs_name(void);\n" +
             "void bgcs_sum(const int* values, int count);\n" +
+            "void bgcs_far_size(int size, int kind, int mode, const int* data);\n" +
             "void bgcs_read(int* value);\n");
         try
         {
@@ -73,6 +74,8 @@ public class BindingIntermediateRepresentationTests
             Assert.Contains("public static int BgcsNameLength(string name)", source);
             Assert.Contains("public static string? BgcsName()", source);
             Assert.Contains("public static void BgcsSum(ReadOnlySpan<int> values)", source);
+            Assert.Contains("public static void BgcsFarSize(int size, int kind, int mode, int* data)", source);
+            Assert.DoesNotContain("BgcsFarSize(int kind, int mode, ReadOnlySpan<int>", source);
             Assert.Contains("public static void BgcsRead(out int result)", source);
             Assert.Contains("internal static extern int BgcsAddNative", source);
             Assert.All(generator.LastResult.OutputFiles, file =>
@@ -231,7 +234,7 @@ public class BindingIntermediateRepresentationTests
         }
     }
 
-    private static void AssertCompiles(string source)
+    private static void AssertCompiles(params string[] sources)
     {
         string trustedAssemblies = Assert.IsType<string>(AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"));
         HashSet<string> references = trustedAssemblies.Split(Path.PathSeparator)
@@ -239,7 +242,7 @@ public class BindingIntermediateRepresentationTests
         references.Add(typeof(BGCS.Runtime.Bool8).Assembly.Location);
         CSharpCompilation compilation = CSharpCompilation.Create(
             "BGCS.Generated.IrFriendly",
-            [CSharpSyntaxTree.ParseText(source)],
+            sources.Select(source => CSharpSyntaxTree.ParseText(source)),
             references.Select(path => MetadataReference.CreateFromFile(path)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true,
                 nullableContextOptions: NullableContextOptions.Enable));
@@ -489,6 +492,38 @@ public class BindingIntermediateRepresentationTests
         }
     }
 
+    [Theory]
+    [InlineData(BindingImportMode.DllImport, "[DllImport(LibName")]
+    [InlineData(BindingImportMode.LibraryImport, "[LibraryImport(LibName")]
+    public void CSharpEmitter_ExternalLibraryNameConstant_ShouldRemainADeclarativeExtensionPoint(
+        BindingImportMode mode,
+        string expectedImport)
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-emitter-library-name-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            BindingModule module = new("NativeApi", "BGCS.Tests.Generated", "native", "host")
+            {
+                ImportMode = mode,
+                EmitLibraryNameConstant = false
+            };
+            module.Functions.Add(new BindingFunction("bgcs_add", "BgcsAdd", BindingFunctionKind.Free,
+                new("int", "int", 0, false, 4),
+                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)));
+
+            string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
+            string source = File.ReadAllText(emitted);
+
+            Assert.Contains(expectedImport, source, StringComparison.Ordinal);
+            Assert.DoesNotContain("internal const string LibName", source, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
     [Fact]
     public void CSharpEmitter_Bitfields_ShouldUseExplicitStorageAndSignedAccessors()
     {
@@ -593,6 +628,275 @@ public class BindingIntermediateRepresentationTests
     }
 
     [Fact]
+    public void Generate_ExternalManagedCarrier_WithMatchingLayout_ShouldCompileAndRemainAuditable()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-external-carrier-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "external.h");
+        string output = Path.Combine(temp, "out");
+        File.WriteAllText(header,
+            "typedef struct NativeVector { float x; float y; } NativeVector; " +
+            "NativeVector vector_add(NativeVector left, NativeVector right);");
+        try
+        {
+            CsCodeGeneratorConfig config = CreateExternalVectorConfig();
+            CsCodeGenerator generator = new(config);
+
+            Assert.True(generator.Generate(header, output));
+            string source = File.ReadAllText(Assert.Single(generator.LastResult!.OutputFiles,
+                file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)));
+            Assert.Contains("Vector2 left", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("struct Vector2", source, StringComparison.Ordinal);
+            Assert.Contains(generator.LastResult.Diagnostics, diagnostic =>
+                diagnostic.Code == BindingDiagnosticCodes.ExternalType &&
+                diagnostic.Severity == BindingDiagnosticSeverity.Warning);
+            BindingExternalTypeContract contract = Assert.Single(generator.LastResult.Module!.ExternalTypes);
+            Assert.Equal("Vector2", contract.ManagedType);
+            Assert.True(contract.AllowsByValue);
+            Assert.False(contract.LayoutValidationBypassed);
+            AssertCompiles(source);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void Generate_ExternalManagedCarrier_RejectsMismatchUnlessPreciselyBypassed()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-external-carrier-policy-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "external.h");
+        File.WriteAllText(header,
+            "typedef struct NativeVector { float x; float y; } NativeVector; " +
+            "NativeVector vector_identity(NativeVector value);");
+        try
+        {
+            CsCodeGeneratorConfig rejected = CreateExternalVectorConfig();
+            rejected.ExternalTypeContracts[0].Size = 16;
+            CsCodeGenerator rejectedGenerator = new(rejected);
+            Assert.False(rejectedGenerator.Generate(header, Path.Combine(temp, "rejected")));
+            Assert.Contains(rejectedGenerator.LastResult!.Diagnostics, diagnostic =>
+                diagnostic.Code == BindingDiagnosticCodes.ExternalType &&
+                diagnostic.Severity == BindingDiagnosticSeverity.Error);
+
+            CsCodeGeneratorConfig bypassed = CreateExternalVectorConfig();
+            bypassed.ExternalTypeContracts[0].Size = 16;
+            bypassed.ExternalTypeContracts[0].ByValuePolicy = ExternalTypeByValuePolicy.BypassLayoutValidation;
+            CsCodeGenerator bypassedGenerator = new(bypassed);
+            Assert.True(bypassedGenerator.Generate(header, Path.Combine(temp, "bypassed")));
+            Assert.Contains(bypassedGenerator.LastResult!.Diagnostics, diagnostic =>
+                diagnostic.Code == BindingDiagnosticCodes.ExternalType &&
+                diagnostic.Severity == BindingDiagnosticSeverity.Warning);
+            Assert.True(Assert.Single(bypassedGenerator.LastResult.Module!.ExternalTypes).LayoutValidationBypassed);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void Generate_ExternalGenericCarrierSelectors_ShouldCoverClosedTypeMappings()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-external-generic-carrier-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "external.h");
+        string output = Path.Combine(temp, "out");
+        File.WriteAllText(header,
+            "typedef struct NativeVector_int { int size; int capacity; int* data; } NativeVector_int; " +
+            "NativeVector_int vector_get(void);");
+        try
+        {
+            CsCodeGeneratorConfig config = new()
+            {
+                ApiName = "ExternalGenericApi",
+                Namespace = "BGCS.Tests.Generated",
+                LibName = "external_generic",
+                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                ImportType = ImportType.DllImport,
+                SingleFileOutputName = "Bindings.cs"
+            };
+            config.TypeMappings["NativeVector_int"] = "NativeVector<int>";
+            config.IgnoredTypes.Add("NativeVector_int");
+            config.IgnoredTypedefs.Add("NativeVector_int");
+            config.ExternalTypeContracts.Add(new()
+            {
+                NativeTypes = ["NativeVector_*"],
+                ManagedTypes = ["NativeVector<*>"],
+                Size = 16,
+                Alignment = 8,
+                ByValuePolicy = ExternalTypeByValuePolicy.RequireLayoutMatch
+            });
+            CsCodeGenerator generator = new(config);
+
+            Assert.True(generator.Generate(header, output),
+                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            string source = File.ReadAllText(Assert.Single(generator.LastResult!.OutputFiles,
+                file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)));
+            Assert.Contains("NativeVector<int>", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("struct NativeVector<int>", source, StringComparison.Ordinal);
+            BindingExternalTypeContract contract = Assert.Single(generator.LastResult.Module!.ExternalTypes);
+            Assert.Equal("NativeVector<int>", contract.ManagedType);
+            AssertCompiles(source + Environment.NewLine +
+                "namespace BGCS.Tests.Generated { public unsafe struct NativeVector<T> where T : unmanaged " +
+                "{ public int Size; public int Capacity; public T* Data; } }");
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void Generate_IrPresentation_ShouldDistinguishFactoriesFromInstanceMembersAndHonorDelegateSwitch()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-ir-member-presentation-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "members.h");
+        string output = Path.Combine(temp, "out");
+        File.WriteAllText(header,
+            "typedef struct NativeThing { unsigned char data[1]; void (*notify)(int); } NativeThing; " +
+            "NativeThing* NativeThing_NativeThing(int value); " +
+            "void NativeThing_Reset(NativeThing* self); " +
+            "void NativeThing_Resize(NativeThing* self, int size); " +
+            "int NativeThing_SetEnabled(NativeThing* self, _Bool* enabled); " +
+            "int NativeBegin(const char* label, unsigned char* p_open, unsigned int flags); " +
+            "int NativeFormat(const char* label, const char* format);");
+        try
+        {
+            CsCodeGeneratorConfig config = new()
+            {
+                ApiName = "NativeApi",
+                Namespace = "BGCS.Tests.Generated",
+                LibName = "native",
+                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                ImportType = ImportType.DllImport,
+                SingleFileOutputName = "Bindings.cs",
+                GenerateDelegates = false,
+                GenerateExtensions = false,
+                WrapPointersAsHandle = true,
+                MemberNamingConvention = NamingConvention.Unknown
+            };
+            config.FunctionMappings.Add(new("NativeThing_NativeThing", "NativeThing", null, [], []));
+            config.FunctionMappings.Add(new("NativeThing_Reset", "Reset", null, [], []));
+            config.FunctionMappings.Add(new("NativeThing_Resize", "Resize", null, [], []));
+            config.FunctionMappings.Add(new("NativeThing_SetEnabled", "SetEnabled", null, [], []));
+            config.FunctionMappings.Add(new("NativeBegin", "NativeBegin", null,
+                new() { ["p_open"] = "NULL", ["flags"] = "0" }, []));
+            config.FunctionMappings.Add(new("NativeFormat", "NativeFormat", null,
+                new() { ["format"] = "\"%.3f\"" }, []));
+            config.KnownMemberFunctions["NativeThing"] =
+                ["NativeThing_NativeThing", "NativeThing_Reset", "NativeThing_Resize", "NativeThing_SetEnabled"];
+            CsCodeGenerator generator = new(config);
+
+            Assert.True(generator.Generate(header, output),
+                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            BindingFunction factory = Assert.Single(generator.LastResult!.Module!.Functions,
+                function => function.NativeName == "NativeThing_NativeThing");
+            BindingFunction reset = Assert.Single(generator.LastResult.Module.Functions,
+                function => function.NativeName == "NativeThing_Reset");
+            Assert.Equal(BindingManagedFunctionKind.Static, factory.ManagedKind);
+            Assert.Equal(BindingManagedFunctionKind.Instance, reset.ManagedKind);
+            Assert.Empty(generator.LastResult.Module.Delegates);
+            string[] generatedSources = generator.LastResult.OutputFiles
+                .Where(file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText)
+                .Where(text => !text.Contains("namespace BGCS.Runtime", StringComparison.Ordinal))
+                .ToArray();
+            string source = string.Join(Environment.NewLine, generatedSources);
+            Assert.Contains("public static NativeThingPtr NativeThing(int value)", source, StringComparison.Ordinal);
+            Assert.Contains("public void Reset()", source, StringComparison.Ordinal);
+            Assert.Contains("NativeApi.Reset(this);", source, StringComparison.Ordinal);
+            Assert.Contains("public void Resize(int size)", source, StringComparison.Ordinal);
+            Assert.Contains("NativeApi.Resize(this, size);", source, StringComparison.Ordinal);
+            Assert.Contains("public int SetEnabled(ref bool enabled)", source, StringComparison.Ordinal);
+            Assert.Contains("this.data = data[0]", source, StringComparison.Ordinal);
+            Assert.Contains("Handle->data, 1", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Handle->data_0", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("delegate void Notify", source, StringComparison.Ordinal);
+            Assert.Contains("public static int NativeFormat(string label)", source, StringComparison.Ordinal);
+            Assert.Contains("return NativeFormat(label, \"%.3f\")", source, StringComparison.Ordinal);
+            Assert.Contains("public static int NativeBegin(string label, uint flags)", source, StringComparison.Ordinal);
+            Assert.Contains("public static int NativeBegin(string label)", source, StringComparison.Ordinal);
+            AssertCompiles(generatedSources);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void Generate_OpaqueRecordsAndPointerFriendlyTransforms_ShouldUseFinalHandleSurface()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-ir-handle-presentation-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "handles.h");
+        string output = Path.Combine(temp, "out");
+        File.WriteAllText(header,
+            "typedef struct NativeWindowS NativeWindow; " +
+            "typedef struct NativeEngine { int state; } NativeEngine; " +
+            "NativeWindow* Native_CreateWindow(const char* title); " +
+            "void Native_DestroyWindow(NativeWindow* window); " +
+            "NativeWindow** Native_GetWindows(int* count); " +
+            "NativeEngine* Native_GetEngine(void); " +
+            "int Native_Open(NativeEngine* engine, const char* path);");
+        try
+        {
+            CsCodeGeneratorConfig config = new()
+            {
+                ApiName = "NativeApi",
+                Namespace = "BGCS.Tests.Generated",
+                LibName = "native",
+                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                ImportType = ImportType.DllImport,
+                SingleFileOutputName = "Bindings.cs",
+                GenerateExtensions = false,
+                WrapPointersAsHandle = true
+            };
+            CsCodeGenerator generator = new(config);
+
+            Assert.True(generator.Generate(header, output),
+                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            BindingType window = Assert.Single(generator.LastResult!.Module!.Types,
+                type => type.NativeName.Contains("NativeWindow", StringComparison.Ordinal) &&
+                    type.Kind == BindingTypeKind.OpaqueHandle);
+            Assert.Equal("NativeWindow", window.ManagedName);
+            BindingFunction create = Assert.Single(generator.LastResult.Module.Functions,
+                function => function.NativeName == "Native_CreateWindow");
+            Assert.Equal("NativeWindow", create.ReturnType.ManagedName);
+            Assert.Equal(1, create.ReturnType.PointerDepth);
+            BindingFunction getWindows = Assert.Single(generator.LastResult.Module.Functions,
+                function => function.NativeName == "Native_GetWindows");
+            Assert.Equal("NativeWindow*", getWindows.ReturnType.ManagedName);
+            Assert.Equal(2, getWindows.ReturnType.PointerDepth);
+
+            string[] generatedSources = generator.LastResult.OutputFiles
+                .Where(file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText)
+                .Where(text => !text.Contains("namespace BGCS.Runtime", StringComparison.Ordinal))
+                .ToArray();
+            string source = string.Join(Environment.NewLine, generatedSources);
+            Assert.Contains("public static NativeWindow NativeCreateWindow(string title)", source, StringComparison.Ordinal);
+            Assert.Contains("public static void NativeDestroyWindow(NativeWindow window)", source, StringComparison.Ordinal);
+            Assert.Contains("public static NativeEnginePtr NativeGetEngine()", source, StringComparison.Ordinal);
+            Assert.Contains("public static int NativeOpen(NativeEnginePtr engine, string path)", source, StringComparison.Ordinal);
+            AssertCompiles(generatedSources);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void Generate_StrictSafetyError_ShouldRejectAndPreserveLastGoodOutput()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-strict-" + Guid.NewGuid().ToString("N"));
@@ -626,6 +930,32 @@ public class BindingIntermediateRepresentationTests
             if (Directory.Exists(temp))
                 Directory.Delete(temp, true);
         }
+    }
+
+    private static CsCodeGeneratorConfig CreateExternalVectorConfig()
+    {
+        CsCodeGeneratorConfig config = new()
+        {
+            ApiName = "ExternalApi",
+            Namespace = "BGCS.Tests.Generated",
+            LibName = "external",
+            ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+            ImportType = ImportType.DllImport,
+            SingleFileOutputName = "Bindings.cs"
+        };
+        config.TypeMappings["NativeVector"] = "Vector2";
+        config.IgnoredTypes.Add("NativeVector");
+        config.IgnoredTypedefs.Add("NativeVector");
+        config.Usings.Add("System.Numerics");
+        config.ExternalTypeContracts.Add(new()
+        {
+            NativeTypes = ["NativeVector"],
+            ManagedTypes = ["Vector2"],
+            Size = 8,
+            Alignment = 4,
+            ByValuePolicy = ExternalTypeByValuePolicy.RequireLayoutMatch
+        });
+        return config;
     }
 
     [Fact]

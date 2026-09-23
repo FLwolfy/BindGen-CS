@@ -14,8 +14,10 @@ BindGen-CS 是一个面向生产环境的跨平台 C/C++ → C# Binding 工具�
 | --- | :---: | --- |
 | 默认 IR-native C#（raw + string/span/ref/out friendly surface） | ✅ | 唯一 C# emission 路径；预发布旧 backend 与旧配置迁移已删除 |
 | multi-RID native package layout | ✅ | win/linux/osx x64/arm64 的 `runtimes/<rid>/native/` 与 clean consumer invocation |
-| SBOM、provenance、API/license/vulnerability gates | ✅ | SPDX/SLSA payload 与 GitHub OIDC attestation；见[预发布政策](docs/compatibility-policy.cn.md) |
-| `map/set/array/variant/expected/path/chrono` adapter | ✅ | 已编译并调用真实 native bridge；未知 specialization fail-closed |
+| SBOM、provenance、API/license/vulnerability gates | ✅ | 确定性 SPDX/SLSA payload 与发布 gate；见[预发布政策](docs/compatibility-policy.cn.md) |
+| OIDC/Sigstore 正式发布签名执行 | ⚠️ | release workflow 已实现并申请 GitHub OIDC；真实签名只能由获授权的 GitHub release run 生成，本地报告不冒充该证据 |
+| `map/set/array/variant/expected/path/chrono` lowering | ✅ | 已编译并调用真实 native bridge；未知 specialization fail-closed |
+| 最终 C++ 扩展架构 | ✅ | 内置 lowering、声明式 recipe、typed lowering plugin、显式 C shim、managed/native artifact 与可审计安全 bypass 共用一个 registry |
 | 复杂继承/模板特化与 lifetime contract | ✅ | native 指针调整/模板测试，以及 allocator/callback/async model 与 race test |
 
 ## 平台支持与验收
@@ -89,7 +91,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root pack
 
 这会生成 C ABI wrapper；默认 `init` 配置还会从 bridge header 生成 C# bindings。`bridge.manifest.json` 会记录 generated/original sources、include directories、defines、compiler/linker arguments、language standard、libraries 和 resolved target。`native-build --provider auto|clang|clang-cl|cmake|meson|msbuild` 会将它转换为不经过 shell 的单步或多步构建流水线。构建成功后默认通过 `nm` / `dumpbin` 将所有生成的 `API(...)` 声明与真实二进制导出表逐项核对；`--package-root` 随后写入标准 multi-RID `runtimes/<rid>/native/` 目录及带 SHA-256 的资产索引。只有外部发布 gate 已承担 export 检查时才使用 `--no-verify-exports`。
 
-已验证的 C++ 范围包括 class 构造/析构、instance/static method、overload、namespace function、异常边界、multiple-inheritance pointer adjustment、完整/部分模板特化、显式模板实例、`string/vector/span/array/map/set/optional/variant/expected/filesystem::path/chrono`、smart pointer 和配置式 pure-virtual callback proxy。它不是任意 C++ 语义的自动翻译器；未知 specialization 会明确失败。
+已验证的 C++ 范围包括 class 构造/析构、instance/static method、overload、namespace function、异常边界、multiple-inheritance pointer adjustment、完整/部分模板特化、显式模板实例、`string/vector/span/array/map/set/optional/variant/expected/filesystem::path/chrono`、smart pointer 和配置式 pure-virtual callback proxy。复杂项目语义可以通过声明式 lowering recipe、typed lowering plugin 或显式 C ABI shim 接入。未证明的规则默认拒绝；`LoweringSafetyPolicy=AllowUnsafe` 是会产生诊断的显式风险接管，不是静默猜测。详见[最终 lowering 架构](docs/lowering.cn.md)。
 
 ## CLI
 
@@ -117,10 +119,11 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root pack
 - 支持 `DllImport`、`LibraryImport` 和显式 function table/native context。
 - 处理 struct、union、packing、bitfield、fixed array、typedef、opaque handle、callback 和 target-dependent primitive。
 - 使用 `MarshallingMappings` 表达 string encoding、ownership、cleanup、pointer/count、capacity/written-count 和 caller allocation。
+- 使用 `ExternalTypeContracts` 声明项目提供的 managed ABI carrier，并为每个类型选择拒绝、严格 size/alignment 匹配或显式 bypass。
 - canonical `BindingModule` 是唯一 C# emission 输入，同时驱动 raw ABI 与 public string/span/ref/out friendly overload；无法无损表达的语义会在提交前 fail-closed，输出通过 staging transaction 原子替换。
 - 支持 BaseConfig、可组合 preset、SingleFile、workspace、确定性 diff 和 target-specific snapshot。
-- 内容寻址增量缓存会精确 hash 输入、compiler/toolchain、配置、plugin 与 adapter fingerprint，原子发布/恢复并隔离 target；已有并发 writer 验收。无法稳定 fingerprint 的有状态自定义扩展会保守地关闭缓存命中。
-- 提供版本化第三方 plugin contract、隔离 dependency resolution、原子且确定性的 typed service registry 和 v1 API shape 锁定测试；C++ type/callable adapter 不需要修改核心分支。
+- 内容寻址增量缓存会精确 hash 输入、compiler/toolchain、配置、plugin、lowering 与 shim fingerprint，原子发布/恢复并隔离 target；已有并发 writer 验收。无法稳定 fingerprint 的有状态自定义扩展会保守地关闭缓存命中。
+- 只有一套最终 C++ lowering 扩展架构：声明式 type/callable recipe、typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugin、显式 C shim、隔离 dependency resolution、确定性注册和 reviewed API-shape tests。已删除的预发布 adapter contract 没有 compatibility wrapper。
 - 发布 CLI、generator、C++ Bridge、Runtime 和零依赖 IR 包。
 
 ## 安全契约
@@ -129,13 +132,13 @@ BindGen-CS 将 native 声明分成三类：
 
 1. ABI 和 lifetime 足够明确：自动生成并编译验证。
 2. 声明缺少 ownership、allocator、length 或 callback lifetime：给出 `BGCS-SAFETY-*` 诊断和最小配置路径。
-3. C++ 类型无法安全 lowering：以 `BGCSCPP001` / `BGCSCPP-INSTANTIATION` 拒绝生成。
+3. C++ 类型没有被接受的 lowering：添加 recipe/plugin/shim，以 `BGCSCPP001` / `BGCSCPP-INSTANTIATION` 拒绝，或在 `AllowUnsafe` 下明确继续并保留 `BGCS-SAFETY-LOWERING-BYPASS` 审计诊断。
 
 这条边界是正确性设计，不是功能缺失的静默掩盖。诊断处理方式见[诊断指南](docs/diagnostics.cn.md)。
 
-## InnoEngine 执行顺序
+## InnoEngine 集成
 
-在 BGCS 稳定之前，InnoEngine 迁移有意暂停。当前只把它锁定的 miniaudio、SDL3、cimgui、cimguizmo、bgfx、bimg headers 作为只读真实库语料，不重写 InnoEngine bindings。只有 Windows x64、Linux x64、macOS x64 三份完整报告通过后，才开始 clean regeneration、移除手写 import、构建 native dependency 并运行 engine tests。
+InnoEngine 已为 miniaudio、SDL3、cimgui、cimguizmo 与 bgfx 建立五份 BindGen-CS 配置。一份 workspace 可以 clean regeneration 全部 target-scoped 输出；验收 gate 会拒绝 `Generated/` 外的手写 import、构建全部锁定 native dependency、构建完整 engine solution，并运行全部六个 native-binding test project。当前 macOS Arm64 已完整通过该 gate。集成逻辑只存在于 InnoEngine 仓库，BindGen-CS 核心没有 InnoEngine library-name/path 特判。尚未完成的 desktop-x64 报告仍是独立的 BGCS 发布门槛。
 
 ## 架构与嵌入
 

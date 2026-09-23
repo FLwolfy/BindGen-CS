@@ -79,7 +79,7 @@ touch "${GATE_DIR}/native-c-abi"
 touch "${GATE_DIR}/strict-safety"
 "${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~LinkAndInvokeNativeDll"
 touch "${GATE_DIR}/native-cpp-bridge"
-"${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~Adapter|FullyQualifiedName~VirtualCallback|FullyQualifiedName~TemplateInstantiation|FullyQualifiedName~NonBlittable"
+"${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~Lowering|FullyQualifiedName~VirtualCallback|FullyQualifiedName~TemplateInstantiation|FullyQualifiedName~NonBlittable"
 touch "${GATE_DIR}/modern-cpp"
 
 DEMO_DIR="${ROOT_DIR}/demo/BGCS.Demo"

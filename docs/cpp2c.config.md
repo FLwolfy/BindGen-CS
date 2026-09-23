@@ -2,7 +2,7 @@
 
 This behavioral catalog is generated from dedicated entry tests in `BGCS.Cpp2C.Configuration.Tests`. It does not enumerate every `Cpp2CGeneratorConfig` property.
 
-Use [Getting Started](getting-started.md#c-bridge), [Capabilities](capabilities.md#c-bridge), and the public configuration type for the complete bridge workflow and current STL/template adapter scope.
+Use [Getting Started](getting-started.md#c-bridge), [Capabilities](capabilities.md#c-bridge), the [final lowering architecture](lowering.md), and the public configuration type for the complete bridge workflow and current STL/template lowering scope.
 
 ## AdditionalArguments
 
@@ -233,4 +233,3 @@ Sys_Counter_Add
 #define Sys_API(type)
 // NotContains
 ```
-

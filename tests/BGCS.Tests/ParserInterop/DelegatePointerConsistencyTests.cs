@@ -35,12 +35,12 @@ public class DelegatePointerConsistencyTests
 
             if (delegatesAsVoidPointer)
             {
-                Assert.DoesNotContain("delegate*<", run.GeneratedCode, StringComparison.Ordinal);
+                Assert.DoesNotContain("delegate*", run.GeneratedCode, StringComparison.Ordinal);
                 Assert.Contains("void* callback", run.GeneratedCode, StringComparison.Ordinal);
             }
             else
             {
-                Assert.Contains("delegate*<int, void>", run.GeneratedCode, StringComparison.Ordinal);
+                Assert.Contains("delegate* unmanaged[Cdecl]<int, void>", run.GeneratedCode, StringComparison.Ordinal);
                 Assert.DoesNotContain("void* callback", run.GeneratedCode, StringComparison.Ordinal);
             }
         }

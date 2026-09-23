@@ -11,6 +11,8 @@ public static class BindingDiagnosticCodes
     public const string AsyncLifetime = "BGCS-SAFETY-ASYNC";
     public const string BufferLength = "BGCS-SAFETY-LENGTH";
     public const string Allocator = "BGCS-SAFETY-ALLOCATOR";
+    public const string UnsafeLowering = "BGCS-SAFETY-LOWERING-BYPASS";
+    public const string ExternalType = "BGCS-SAFETY-EXTERNAL-TYPE";
     public const string CSharpUnsupported = "BGCSCS001";
     public const string CppInstantiation = "BGCSCPP-INSTANTIATION";
     public const string CppUnsupported = "BGCSCPP001";
@@ -63,6 +65,16 @@ public static class BindingDiagnosticCatalog
             "A pointer return does not declare whether it is borrowed, owned, transferred, shared, or caller-managed.",
             "Set the return Ownership and, for owned values, the CleanupFunction and RequiresCleanup contract."),
         new(
+            BindingDiagnosticCodes.ExternalType,
+            "External managed carrier requires explicit ABI evidence",
+            "A project-supplied managed value type crosses the native ABI by value without a matching target size/alignment contract, or layout validation was explicitly bypassed.",
+            "Add an ExternalTypeContracts entry with all native aliases, the managed carrier, target size/alignment, and RequireLayoutMatch. Use BypassLayoutValidation only with independent native invocation tests."),
+        new(
+            BindingDiagnosticCodes.UnsafeLowering,
+            "Unsafe lowering was explicitly enabled",
+            "A declarative recipe, plugin, or shim marked Unsafe was accepted through LoweringSafetyPolicy=AllowUnsafe.",
+            "Retain project-owned ABI compile, native invocation, allocator, and lifetime tests for the affected lowering. Prefer UserAsserted or Verified once evidence exists."),
+        new(
             BindingDiagnosticCodes.CSharpUnsupported,
             "C# emitter cannot preserve the declaration",
             "The IR-native C# emitter encountered a declaration whose ABI semantics it cannot emit without loss, such as a bitfield, variadic function, non-free callable, or unexposed type.",
@@ -76,7 +88,7 @@ public static class BindingDiagnosticCatalog
             BindingDiagnosticCodes.CppUnsupported,
             "C++ declaration has no safe lowering",
             "The bridge encountered a C++ type or callable that no registered lowering can represent with a proven C ABI and lifetime.",
-            "Use a supported adapter, request an explicit template instance, or implement a general custom generation step/adapter that declares ownership and allocator semantics.")
+            "Add a declarative lowering recipe, request an explicit template instance, register a typed lowering plugin, or provide an explicit C ABI shim with ownership and allocator semantics.")
     ];
 
     private static readonly IReadOnlyDictionary<string, BindingDiagnosticDescriptor> byCode =

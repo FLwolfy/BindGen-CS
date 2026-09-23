@@ -12,7 +12,7 @@ BindGen-CS 尚未发布首个稳定版，因此当前产品明确**不承诺**�
 - ABI 与内存安全优先于保留原型行为。无法证明 ownership、allocator、callback、async、inheritance 或 template 语义时 fail-closed。
 - 平台支持必须由同一源码 revision 的 target-specific report 证明；plan、cross compile 或其他架构报告都不能替代。
 
-架构仍保留显式配置版本、typed diagnostics、adapter/plugin contract 和 API diff 自动化，以便稳定版后干净地引入 compatibility；这些扩展点不等于保留已删除行为。
+架构仍保留显式配置版本、typed diagnostics、plugin revision 握手和 API diff 自动化，以便稳定版后干净地引入 compatibility。当前只有一套 lowering contract；它不会加载或包装已删除的预发布 adapter SPI。revision 握手只是实现层保护，不是对外的“v1/v2”产品标记。
 
 ## 首个稳定版之后
 
@@ -30,4 +30,4 @@ BindGen-CS 尚未发布首个稳定版，因此当前产品明确**不承诺**�
 
 ## 发布证据
 
-`bindgen-cs supply-chain` 生成确定性的 SPDX 2.3 SBOM 与 SLSA v1 provenance payload，记录 artifact SHA-256、source revision、builder identity 和 build parameters。release workflow 还通过 GitHub OIDC/Sigstore 对 package provenance 与 SBOM association 签名。Release candidate 同时必须通过 public API、dependency license、vulnerability、deterministic package、clean native-RID consumer 与完整 desktop acceptance gates。
+`bindgen-cs supply-chain` 生成确定性的 SPDX 2.3 SBOM 与 SLSA v1 provenance payload，记录 artifact SHA-256、source revision、builder identity 和 build parameters。release workflow 已配置为通过 GitHub OIDC/Sigstore 对 package provenance 与 SBOM association 签名。只有获授权的 release job 实际取得 OIDC identity 并发布可验证 attestation 时，签名才构成证据；本地运行不能满足或模拟该条件。Release candidate 同时必须通过 public API、dependency license、vulnerability、deterministic package、clean native-RID consumer 与完整 desktop acceptance gates。

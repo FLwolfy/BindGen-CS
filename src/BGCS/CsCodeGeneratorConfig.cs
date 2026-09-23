@@ -79,6 +79,7 @@ namespace BGCS
             ArrayMappings = [];
             NameMappings = [];
             TypeMappings = [];
+            ExternalTypeContracts = [];
             TypedefToEnumMappings = [];
             FunctionAliasMappings = [];
             PluginAssemblies = [];

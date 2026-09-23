@@ -88,14 +88,16 @@ cat > "${OUTPUT_DIR}/report.json" <<EOF
     "snapshots": "tests/real-libraries/cpp-api-snapshots.${snapshot_platform}.sha256"
   },
   "releaseGovernance": {
-    "verification": ["reviewed public API baseline", "deterministic NuGet contents", "desktop RID native consumer invocation", "NuGet vulnerability audit", "dependency license policy"]
+    "verification": ["reviewed public API baseline", "deterministic NuGet contents", "desktop RID native consumer invocation", "NuGet vulnerability audit", "dependency license policy"],
+    "oidcSigstore": "workflow-ready; actual attestation requires an authorized GitHub release run"
   }${platform_specific_json},
-  "safetyContract": "Supported ABI and standard-library types are automatically lowered through verified adapters. Missing ownership, allocator, length, callback lifetime, or template-instantiation semantics produce structured diagnostics requesting the minimum explicit configuration.",
+  "safetyContract": "Supported ABI and standard-library types are automatically lowered through verified built-ins. Complex semantics use declarative recipes, typed lowering plugins, or explicit C shims. Missing evidence produces structured diagnostics unless an auditable safety bypass is explicitly selected.",
   "limitations": [
     "This report verifies only the declared ${target} target; every additional target requires its own report and snapshots.",
     "Unknown standard-library specializations are rejected with BGCSCPP001 instead of being emitted as guessed opaque types.",
     "Application-specific allocator or ownership semantics absent from declarations require MarshallingMappings.",
-    "Direct calls into upstream real-library DLLs require those DLLs to be built by their upstream build systems; generated C and C++ runtime fixtures are verified."
+    "Direct calls into upstream real-library DLLs require those DLLs to be built by their upstream build systems; generated C and C++ runtime fixtures are verified.",
+    "This local report validates the OIDC/Sigstore workflow but is not an executed release signature."
   ]
 }
 EOF
@@ -122,7 +124,7 @@ ${platform_specific_markdown}
 | Internal architecture | ${internal} |
 | NuGet/testing/release | ${release} |
 
-The report was emitted only after managed/native tests, warning-free IR-native generation for five real C libraries, real C++ bridge generation, advanced standard-library/lifetime semantics, deterministic source and public-API gates, NuGet/tool/native-RID consumer tests, dependency policy, and performance budgets passed. InnoEngine migration is deliberately outside this BGCS maintenance-candidate report and begins only after all required desktop reports exist.
+The report was emitted only after managed/native tests, warning-free IR-native generation for five real C libraries, real C++ bridge generation, advanced standard-library/lifetime semantics, deterministic source and public-API gates, NuGet/tool/native-RID consumer tests, dependency policy, and performance budgets passed. The separate InnoEngine clean-regeneration/native-build/full-solution/native-test gate passes on macOS Arm64 but is not folded into this BGCS score. This local report validates the OIDC/Sigstore workflow; only an authorized GitHub release run can produce the actual signed attestation.
 EOF
 
 # Keep the stable latest-report paths for existing automation while retaining

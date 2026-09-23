@@ -4,7 +4,7 @@
     using BGCS.Core.Extensibility;
     using BGCS.CppAst.Parsing;
     using BGCS.CppAst.Targeting;
-    using BGCS.Cpp2C.Adapters;
+    using BGCS.Cpp2C.Lowering;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
     using System.ComponentModel;
@@ -14,18 +14,31 @@
     /// </summary>
     public partial class Cpp2CGeneratorConfig
     {
-        /// <summary>Initializes the configuration and registers all built-in type adapters through the public SPI.</summary>
+        /// <summary>Initializes the configuration and registers all built-in type lowerings through the public SPI.</summary>
         public Cpp2CGeneratorConfig()
         {
-            foreach (ICppTypeAdapter adapter in BuiltInCppTypeAdapters.All)
-                Adapters.Register(adapter);
+            foreach (ICppTypeLowering lowering in BuiltInCppTypeLowerings.All)
+                Lowerings.Register(lowering);
         }
 
         /// <summary>
-        /// Runtime adapter registry. Adapter instances are deliberately excluded from JSON; plugins register them before generation.
+        /// Runtime lowering registry. Extension instances are excluded from JSON; plugins register them before generation.
         /// </summary>
         [JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
-        public CppAdapterRegistry Adapters { get; } = new();
+        public CppLoweringRegistry Lowerings { get; } = new();
+
+        /// <summary>Declarative type lowering recipes applied before parsing and emission.</summary>
+        public List<CppTypeLoweringRecipe> TypeLowerings { get; set; } = [];
+
+        /// <summary>Declarative callable lowering recipes applied before parsing and emission.</summary>
+        public List<CppCallableLoweringRecipe> CallableLowerings { get; set; } = [];
+
+        /// <summary>Explicit user-owned C ABI shim headers and sources copied into generated bridge output.</summary>
+        public List<CppNativeShim> NativeShims { get; set; } = [];
+
+        /// <summary>Controls whether only verified, user-asserted, or explicitly unsafe lowering extensions may run.</summary>
+        [DefaultValue(CppLoweringSafetyPolicy.VerifiedOnly)]
+        public CppLoweringSafetyPolicy LoweringSafetyPolicy { get; set; } = CppLoweringSafetyPolicy.VerifiedOnly;
 
         /// <summary>Enables content-addressed restoration for unchanged configuration-driven bridge generation.</summary>
         [DefaultValue(true)]

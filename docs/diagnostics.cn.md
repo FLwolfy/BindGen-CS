@@ -41,7 +41,9 @@ bindgen-cs explain --json
 | `BGCS-SAFETY-ALLOCATOR` | output string 没有 cleanup allocator | 设置 `CleanupFunction`、ownership、encoding 和 cleanup requirement |
 | `BGCSCS001` | IR-native C# emitter 无法在不丢语义的前提下表达某个声明 | 实现通用且有测试的 IR lowering，或显式排除该声明；emission 会在写文件前失败 |
 | `BGCSCPP-INSTANTIATION` | 发现 primary template，但没有请求 concrete instance | 把真正需要的完整 specialization 加入 `TemplateInstantiations` 或 `FunctionTemplateInstantiations` |
-| `BGCSCPP001` | C++ declaration 无法使用已知 adapter 安全 lowering | 配置对应 STL type list、显式 template instance，或实现带 ownership/allocator 语义的 custom generation step |
+| `BGCSCPP001` | C++ declaration 没有被接受的 lowering | 配置内置 type list、显式 template instance、添加声明式 lowering/typed plugin/显式 C shim，或选择可审计的安全策略 |
+| `BGCS-SAFETY-LOWERING-BYPASS` | 显式允许了 `Unsafe` lowering | 保留项目拥有的 ABI、native invocation、allocator 与 lifetime 测试；证据完备后将 lowering 提升为 `UserAsserted` 或 `Verified` |
+| `BGCS-SAFETY-EXTERNAL-TYPE` | 项目提供的 managed value carrier 跨越 ABI | 用 `RequireLayoutMatch` 声明匹配的 target size/alignment、改用 pointer，或显式 bypass 并保留 native invocation 测试 |
 
 ## 最小 mapping 示例
 

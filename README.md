@@ -14,8 +14,10 @@ Legend: completely verified ✅　implementation or host acceptance pending ⚠�
 | --- | :---: | --- |
 | Default IR-native C# raw + string/span/ref/out friendly surface | ✅ | The only C# emission path; pre-release legacy backends and config migration were removed |
 | Multi-RID native package layout | ✅ | `runtimes/<rid>/native/` for win/linux/osx x64/arm64 plus clean consumer invocation |
-| SBOM, provenance, API/license/vulnerability gates | ✅ | SPDX/SLSA payloads and GitHub OIDC attestation workflow; see the [pre-release policy](docs/compatibility-policy.md) |
-| `map/set/array/variant/expected/path/chrono` adapters | ✅ | Compiled and invoked native bridge tests; unsupported specializations fail closed |
+| SBOM, provenance, API/license/vulnerability gates | ✅ | Deterministic SPDX/SLSA payloads and release gates; see the [pre-release policy](docs/compatibility-policy.md) |
+| OIDC/Sigstore signed release execution | ⚠️ | The release workflow is implemented and requests GitHub OIDC; a real signed attestation can only be produced by an authorized GitHub release run and has not been claimed by this local report |
+| `map/set/array/variant/expected/path/chrono` lowerings | ✅ | Compiled and invoked native bridge tests; unsupported specializations fail closed |
+| Final C++ extension architecture | ✅ | Built-ins, declarative recipes, typed lowering plugins, explicit C shims, managed/native artifacts, and auditable safety bypass share one registry |
 | Complex inheritance/specialization and lifetime contracts | ✅ | Native pointer-adjustment/template tests plus allocator/callback/async models and race tests |
 
 ## Platform support and acceptance
@@ -89,7 +91,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root pack
 
 This emits a C ABI wrapper; the default `init` configuration also generates C# bindings from the bridge header. `bridge.manifest.json` records generated/original sources, include directories, definitions, compiler/linker arguments, language standard, libraries, and resolved target. `native-build --provider auto|clang|clang-cl|cmake|meson|msbuild` consumes it as a shell-independent one- or multi-step pipeline. Successful builds verify every generated `API(...)` declaration against the actual `nm`/`dumpbin` export table by default. `--package-root` then stages the binary under standard multi-RID `runtimes/<rid>/native/` layout with a SHA-256 asset index. Use `--no-verify-exports` only when another release gate owns that check.
 
-Verified C++ coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, full/partial template specializations, explicit template instances, `std::string`, `vector`, `span`, `array`, `map`, `set`, `optional`, `variant`, `expected`, `filesystem::path`, `chrono` duration/time-point, smart pointers, and configured pure-virtual callback proxies. This is not an arbitrary C++ semantics translator; unknown specializations fail explicitly.
+Verified C++ coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, full/partial template specializations, explicit template instances, `std::string`, `vector`, `span`, `array`, `map`, `set`, `optional`, `variant`, `expected`, `filesystem::path`, `chrono` duration/time-point, smart pointers, and configured pure-virtual callback proxies. Complex project semantics can be added through declarative lowering recipes, a typed lowering plugin, or an explicit C ABI shim. Unproven rules fail by default; `LoweringSafetyPolicy=AllowUnsafe` is an explicit, diagnosed risk transfer rather than silent guessing. See the [final lowering architecture](docs/lowering.md).
 
 ## CLI
 
@@ -117,10 +119,11 @@ See [Getting started](docs/getting-started.md) for complete examples and the [Co
 - `DllImport`, `LibraryImport`, and explicit function-table/native-context import modes.
 - Structs, unions, packing, bitfields, fixed arrays, typedefs, opaque handles, callbacks, and target-dependent primitives.
 - `MarshallingMappings` for string encoding, ownership, cleanup, pointer/count, capacity/written-count, and caller allocation.
+- `ExternalTypeContracts` for project-supplied managed ABI carriers, with target size/alignment checks and a per-type reject/match/bypass policy.
 - The canonical `BindingModule` is the only C# emission input and drives both raw ABI and public string/span/ref/out friendly overloads. Unrepresentable semantics fail before commit, and output replacement remains transactional.
 - BaseConfig composition, presets, single-file output, workspaces, deterministic diff, and target-specific snapshots.
-- Content-addressed incremental output caching with exact input, compiler/toolchain, config, plugin, and adapter fingerprints; atomic publication/restoration, target isolation, and concurrent-writer tests. Stateful custom extensions conservatively disable cache restoration unless their behavior has a stable fingerprint.
-- Versioned third-party plugin contracts, isolated dependency resolution, atomic deterministic service registration, and locked v1 API-shape tests; C++ type/callable adapters can be supplied without core branches.
+- Content-addressed incremental output caching with exact input, compiler/toolchain, config, plugin, lowering, and shim fingerprints; atomic publication/restoration, target isolation, and concurrent-writer tests. Stateful custom extensions conservatively disable cache restoration unless their behavior has a stable fingerprint.
+- One final C++ lowering extension architecture: declarative type/callable recipes, typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugins, explicit C shims, isolated dependency resolution, deterministic registration, and reviewed API-shape tests. The deleted pre-release adapter contract has no compatibility wrapper.
 - Separate CLI, generator, C++ bridge, Runtime, and dependency-free IR packages.
 
 ## Safety contract
@@ -129,13 +132,13 @@ BindGen-CS separates native declarations into three groups:
 
 1. ABI and lifetime are sufficiently defined: generate and compile-check automatically.
 2. Ownership, allocator, length, or callback lifetime is missing: emit an actionable `BGCS-SAFETY-*` diagnostic with the minimum configuration path.
-3. A C++ type cannot be lowered safely: reject it with `BGCSCPP001` or `BGCSCPP-INSTANTIATION`.
+3. A C++ type has no accepted lowering: add a recipe/plugin/shim, reject it with `BGCSCPP001` / `BGCSCPP-INSTANTIATION`, or deliberately continue under `AllowUnsafe` and retain the `BGCS-SAFETY-LOWERING-BYPASS` audit diagnostic.
 
 That boundary is a correctness feature, not silent feature inflation. See the [diagnostics guide](docs/diagnostics.md).
 
-## InnoEngine sequencing
+## InnoEngine integration
 
-InnoEngine migration is intentionally paused while BGCS is stabilized. Its pinned third-party headers are used only as a read-only real-library corpus for miniaudio, SDL3, cimgui, cimguizmo, bgfx, and bimg. BGCS does not rewrite InnoEngine bindings in this phase. Clean InnoEngine regeneration, handwritten-import removal, native dependency builds, and engine tests begin only after the three required desktop-x64 reports pass.
+InnoEngine now owns five BindGen-CS configurations for miniaudio, SDL3, cimgui, cimguizmo, and bgfx. A single workspace cleanly regenerates target-scoped output; the acceptance gate rejects handwritten imports outside `Generated/`, builds all pinned native dependencies, builds the full engine solution, and runs all six native-binding test projects. The current macOS Arm64 run passed this complete gate. This integration lives only in the InnoEngine repository; BindGen-CS core contains no InnoEngine library-name or path special case. The still-pending desktop-x64 reports remain independent BGCS release requirements.
 
 ## Architecture and embedding
 

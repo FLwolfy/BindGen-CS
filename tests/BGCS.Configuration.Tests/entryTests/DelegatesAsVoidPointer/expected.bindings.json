@@ -3,9 +3,9 @@
     "ApplyCbNative",
     "SetNotifyNative",
     "DispatchMixNative",
-    "delegate*<int, int> cb",
-    "delegate*<void> cb",
-    "delegate*<"
+    "delegate* unmanaged[Cdecl]<int, int> cb",
+    "delegate* unmanaged[Cdecl]<void> cb",
+    "delegate* unmanaged["
   ],
   "NotContains": [
     "void* cb"

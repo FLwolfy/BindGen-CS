@@ -5,7 +5,7 @@
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Templates;
     using BGCS.CppAst.Model.Types;
-    using BGCS.Cpp2C.Adapters;
+    using BGCS.Cpp2C.Lowering;
     using BGCS.Intermediate;
     using System;
     using System.Text;
@@ -52,9 +52,9 @@
         public string GetCType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            CppTypeAdapterPlan? adapter = ResolveTypeAdapter(type, CppTypeAdapterUse.Field);
-            if (adapter != null)
-                return adapter.CAbiType;
+            CppTypeLoweringPlan? lowering = ResolveTypeLowering(type, CppTypeLoweringUse.Field);
+            if (lowering != null)
+                return lowering.CAbiType;
             CppType unwrapped = UnwrapReferenceAndQualification(type);
             string displayName = unwrapped is CppClass standardClass ? standardClass.FullName : unwrapped.GetDisplayName();
             if (displayName.Replace(" ", string.Empty, StringComparison.Ordinal).StartsWith("std::", StringComparison.Ordinal) && displayName.Contains('<'))
@@ -75,19 +75,19 @@
         }
 
         /// <summary>
-        /// Resolves a registered or built-in semantic adapter for a C++ type.
+        /// Resolves a registered, declarative, or built-in lowering for a C++ type.
         /// </summary>
-        public CppTypeAdapterPlan? ResolveTypeAdapter(CppType type, CppTypeAdapterUse use)
+        public CppTypeLoweringPlan? ResolveTypeLowering(CppType type, CppTypeLoweringUse use)
         {
             ArgumentNullException.ThrowIfNull(type);
-            return Adapters.TryResolve(type, new(this, use), out CppTypeAdapterPlan? plan) ? plan : null;
+            return Lowerings.TryResolve(type, new(this, use), out CppTypeLoweringPlan? plan) ? plan : null;
         }
 
-        /// <summary>Resolves third-party callable selection and naming.</summary>
-        public CppCallableAdapterPlan? ResolveCallableAdapter(CppClass? declaringType, CppFunction function, string defaultExportName)
+        /// <summary>Resolves callable selection, naming, and optional invocation lowering.</summary>
+        public CppCallableLoweringPlan? ResolveCallableLowering(CppClass? declaringType, CppFunction function, string defaultExportName)
         {
             ArgumentNullException.ThrowIfNull(function);
-            return Adapters.TryResolve(function, new(this, declaringType, defaultExportName), out CppCallableAdapterPlan? plan)
+            return Lowerings.TryResolve(function, new(this, declaringType, defaultExportName), out CppCallableLoweringPlan? plan)
                 ? plan
                 : null;
         }
@@ -95,13 +95,22 @@
         /// <summary>Returns the final exported name for a free function or class method.</summary>
         public string GetCFunctionName(CppClass? declaringType, CppFunction function, string defaultExportName)
         {
-            CppCallableAdapterPlan? plan = ResolveCallableAdapter(declaringType, function, defaultExportName);
+            CppCallableLoweringPlan? plan = ResolveCallableLowering(declaringType, function, defaultExportName);
             return plan?.ExportName ?? defaultExportName;
         }
 
-        /// <summary>Determines whether a callable adapter excludes a declaration.</summary>
+        /// <summary>Determines whether a callable lowering excludes a declaration.</summary>
         public bool IsCallableExcluded(CppClass? declaringType, CppFunction function, string defaultExportName) =>
-            ResolveCallableAdapter(declaringType, function, defaultExportName)?.Exclude == true;
+            ResolveCallableLowering(declaringType, function, defaultExportName)?.Exclude == true;
+
+        internal string ApplyCallableInvocation(CppClass? declaringType, CppFunction function,
+            string defaultExportName, string invocation)
+        {
+            CppCallableLoweringPlan? plan = ResolveCallableLowering(declaringType, function, defaultExportName);
+            return string.IsNullOrWhiteSpace(plan?.InvocationExpression)
+                ? invocation
+                : plan.InvocationExpression.Replace("{invocation}", invocation, StringComparison.Ordinal);
+        }
 
         /// <summary>
         /// Determines whether a C++ type uses the configured borrowed UTF-8 string adapter.
@@ -111,7 +120,7 @@
         public bool IsUtf8StringType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (ResolveCustomKind(type, CppTypeAdapterKind.Utf8String)) return true;
+            if (ResolveCustomKind(type, CppTypeLoweringKind.Utf8String)) return true;
             return IsUtf8StringTypeCore(type);
         }
 
@@ -147,7 +156,7 @@
         public bool IsUniquePtrType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (ResolveCustomKind(type, CppTypeAdapterKind.UniqueOwner)) return true;
+            if (ResolveCustomKind(type, CppTypeLoweringKind.UniqueOwner)) return true;
             return IsUniquePtrTypeCore(type);
         }
 
@@ -169,7 +178,7 @@
         public bool IsSharedPtrType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (ResolveCustomKind(type, CppTypeAdapterKind.SharedOwner)) return true;
+            if (ResolveCustomKind(type, CppTypeLoweringKind.SharedOwner)) return true;
             return IsSharedPtrTypeCore(type);
         }
 
@@ -203,7 +212,7 @@
         public bool IsSpanType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (ResolveCustomKind(type, CppTypeAdapterKind.Span)) return true;
+            if (ResolveCustomKind(type, CppTypeLoweringKind.Span)) return true;
             return IsSpanTypeCore(type);
         }
 
@@ -218,14 +227,14 @@
         }
 
         /// <summary>
-        /// Determines whether a C++ type uses the configured contiguous-container adapter.
+        /// Determines whether a C++ type uses the configured contiguous-container lowering.
         /// </summary>
         /// <param name="type">C++ type to inspect.</param>
         /// <returns><see langword="true"/> when the type is a configured vector specialization.</returns>
         public bool IsVectorType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (ResolveCustomKind(type, CppTypeAdapterKind.Vector)) return true;
+            if (ResolveCustomKind(type, CppTypeLoweringKind.Vector)) return true;
             return IsVectorTypeCore(type);
         }
 
@@ -247,7 +256,7 @@
         public bool IsOptionalType(CppType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (ResolveCustomKind(type, CppTypeAdapterKind.Optional)) return true;
+            if (ResolveCustomKind(type, CppTypeLoweringKind.Optional)) return true;
             return IsOptionalTypeCore(type);
         }
 
@@ -262,35 +271,35 @@
         }
 
         /// <summary>Determines whether a type is a configured fixed-size array specialization.</summary>
-        public bool IsArrayType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Array) || IsArrayTypeCore(type);
+        public bool IsArrayType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.Array) || IsArrayTypeCore(type);
         internal bool IsArrayTypeCore(CppType type) => IsConfiguredType(type, ArrayTypes, requireTemplate: true);
 
         /// <summary>Determines whether a type is a configured map specialization.</summary>
-        public bool IsMapType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Map) || IsMapTypeCore(type);
+        public bool IsMapType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.Map) || IsMapTypeCore(type);
         internal bool IsMapTypeCore(CppType type) => IsConfiguredType(type, MapTypes, requireTemplate: true);
 
         /// <summary>Determines whether a type is a configured set specialization.</summary>
-        public bool IsSetType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Set) || IsSetTypeCore(type);
+        public bool IsSetType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.Set) || IsSetTypeCore(type);
         internal bool IsSetTypeCore(CppType type) => IsConfiguredType(type, SetTypes, requireTemplate: true);
 
         /// <summary>Determines whether a type is a configured variant specialization.</summary>
-        public bool IsVariantType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Variant) || IsVariantTypeCore(type);
+        public bool IsVariantType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.Variant) || IsVariantTypeCore(type);
         internal bool IsVariantTypeCore(CppType type) => IsConfiguredType(type, VariantTypes, requireTemplate: true);
 
         /// <summary>Determines whether a type is a configured expected specialization.</summary>
-        public bool IsExpectedType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Expected) || IsExpectedTypeCore(type);
+        public bool IsExpectedType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.Expected) || IsExpectedTypeCore(type);
         internal bool IsExpectedTypeCore(CppType type) => IsConfiguredType(type, ExpectedTypes, requireTemplate: true);
 
         /// <summary>Determines whether a type is a configured filesystem path.</summary>
-        public bool IsPathType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Path) || IsPathTypeCore(type);
+        public bool IsPathType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.Path) || IsPathTypeCore(type);
         internal bool IsPathTypeCore(CppType type) => IsConfiguredType(type, PathTypes, requireTemplate: false);
 
         /// <summary>Determines whether a type is a configured chrono duration.</summary>
-        public bool IsChronoDurationType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.ChronoDuration) || IsChronoDurationTypeCore(type);
+        public bool IsChronoDurationType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.ChronoDuration) || IsChronoDurationTypeCore(type);
         internal bool IsChronoDurationTypeCore(CppType type) => IsConfiguredType(type, ChronoDurationTypes, requireTemplate: true);
 
         /// <summary>Determines whether a type is a configured chrono time point.</summary>
-        public bool IsChronoTimePointType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.ChronoTimePoint) || IsChronoTimePointTypeCore(type);
+        public bool IsChronoTimePointType(CppType type) => ResolveCustomKind(type, CppTypeLoweringKind.ChronoTimePoint) || IsChronoTimePointTypeCore(type);
         internal bool IsChronoTimePointTypeCore(CppType type) => IsConfiguredType(type, ChronoTimePointTypes, requireTemplate: true);
 
         /// <summary>Returns all type-valued arguments of a specialized template in declaration order.</summary>
@@ -344,23 +353,23 @@
             return NamePrefix + "Value_" + SanitizeCIdentifier(displayName);
         }
 
-        internal void ValidateOpaqueAdapterArguments(CppType type, CppTypeAdapterKind kind)
+        internal void ValidateOpaqueLoweringArguments(CppType type, CppTypeLoweringKind kind)
         {
             IReadOnlyList<CppType> arguments = GetTemplateTypeArguments(type);
-            int required = kind is CppTypeAdapterKind.Map or CppTypeAdapterKind.Expected ? 2 : 1;
+            int required = kind is CppTypeLoweringKind.Map or CppTypeLoweringKind.Expected ? 2 : 1;
             if (arguments.Count < required)
                 throw new NotSupportedException($"Adapter '{kind}' cannot resolve the required template arguments for '{type}'.");
             int count = kind switch
             {
-                CppTypeAdapterKind.Map or CppTypeAdapterKind.Expected => 2,
-                CppTypeAdapterKind.Set => 1,
+                CppTypeLoweringKind.Map or CppTypeLoweringKind.Expected => 2,
+                CppTypeLoweringKind.Set => 1,
                 _ => arguments.Count
             };
             for (int index = 0; index < count; index++)
             {
                 if (arguments[index] is CppPrimitiveType { Kind: CppPrimitiveKind.Void } ||
                     !IsBlittableBridgeType(arguments[index]))
-                    throw new NotSupportedException($"Adapter '{kind}' requires ABI-value template arguments; argument {index} of '{type}' is '{arguments[index]}'. Register a custom adapter with an explicit ownership protocol.");
+                    throw new NotSupportedException($"Lowering '{kind}' requires ABI-value template arguments; argument {index} of '{type}' is '{arguments[index]}'. Register a custom lowering with an explicit ownership protocol.");
             }
         }
 
@@ -465,8 +474,8 @@
             return result;
         }
 
-        private bool ResolveCustomKind(CppType type, CppTypeAdapterKind kind) =>
-            Adapters.TryResolve(type, new(this, CppTypeAdapterUse.Field), out CppTypeAdapterPlan? plan) && plan!.Kind == kind;
+        private bool ResolveCustomKind(CppType type, CppTypeLoweringKind kind) =>
+            Lowerings.TryResolve(type, new(this, CppTypeLoweringUse.Field), out CppTypeLoweringPlan? plan) && plan!.Kind == kind;
 
         /// <summary>
         /// Attempts to resolve the first type argument of a configured smart pointer, view, or optional type.

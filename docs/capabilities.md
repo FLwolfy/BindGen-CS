@@ -44,7 +44,7 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 | Overloads, namespace functions, exception boundary | Host acceptance / automated test | Generated symbols and exception-channel tests |
 | Inheritance casts and pointer adjustment | Automated test | Avoids unsafe plain reinterpret casts |
 | Class/function templates | Configuration support / automated test | Only instances listed in `TemplateInstantiations` / `FunctionTemplateInstantiations` are emitted |
-| `std::string` | Automated test | Verified UTF-8 borrowed/return adapter scope |
+| `std::string` | Automated test | Verified UTF-8 borrowed/return lowering scope |
 | `std::vector`, `std::span` | Automated test | Pointer/count views; ownership still comes from configuration |
 | `std::optional<T>` | Automated test | Both blittable presence/value and non-blittable owned-handle protocols have native compile tests |
 | `std::array`, `std::map`, `std::set` | Native invocation test | Fixed extent and owned-holder protocols compile and execute |
@@ -61,10 +61,10 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 | `init → doctor → validate → generate → build` | Host acceptance | Covered by tool-install and clean-consumer smoke tests |
 | Transactional output | Automated test | Failure preserves the last-good output |
 | Deterministic `diff` | Host acceptance | Real-library and isolated output gates |
-| Multi-project workspaces | Automated test | Workspace validation/generation/diff; InnoEngine adoption is deferred |
+| Multi-project workspaces | Host acceptance | Workspace validation/generation/diff; InnoEngine five-project clean regeneration and native/build/test gate pass on macOS Arm64 |
 | C++ native build manifest/providers | Native invocation + plan tests | Direct Clang/GNU and CMake host execution; Windows clang-cl/MSBuild tests build, inspect, and invoke DLLs on the owning runner; Meson plan coverage |
-| Incremental generation | Automated + performance test | SHA-256 input/config/compiler/plugin/adapter fingerprint, atomic immutable entries, concurrent publication, deleted-output restoration, 10k declaration cold/warm budgets |
-| Plugin/adapter contracts | External-assembly E2E + API-shape test | Version 1 isolated loader, atomic deterministic typed services, configured C# plugin cache, configured `ICppTypeAdapter` / `ICppCallableAdapter` generation and cache |
+| Incremental generation | Automated + performance test | SHA-256 input/config/compiler/plugin/lowering/shim fingerprint, atomic immutable entries, concurrent publication, deleted-output restoration, 10k declaration cold/warm budgets |
+| Final lowering extension contract | Native invocation + external-assembly E2E + API-shape test | Isolated plugin loader, deterministic typed services, declarative recipe, explicit shim, managed/native artifact, safety bypass diagnostic, and stable cache fingerprint |
 | BaseConfig and presets | Automated test | Explicit config-directory context, cycle detection, override precedence, no process-CWD mutation |
 | Installed-version C/C++ schemas | Automated test | Strict root properties by default; nested public shapes and core descriptions are generated from the installed types |
 | Portable project initialization | Automated test | Config-relative `/` paths, explicit C/C++ selection, non-overwrite behavior |
@@ -95,7 +95,7 @@ It cannot honestly claim automatic coverage of every C++ program or production v
 - Windows and x64 hosts do not yet have equivalent target-specific acceptance artifacts;
 - the configuration model is powerful but still broad and flat for large libraries;
 - non-host execution evidence is still required for clang-cl/MSBuild; multi-RID desktop packaging is implemented but Windows runtime execution remains unverified;
-- arbitrary metaprogramming, custom allocators, and types beyond the declared adapter protocols still require explicit lowering.
+- arbitrary metaprogramming, custom allocators, and types beyond built-in protocols require a declarative lowering, versioned plugin, or explicit C ABI shim.
 
 The accurate position is: **excellent within the accepted C ABI and explicitly supported C++ subset; not yet a zero-configuration universal translator for arbitrary C++ on every platform.**
 
@@ -103,5 +103,6 @@ The accurate position is: **excellent within the accepted C ABI and explicitly s
 
 1. Produce equivalent real-library, native-invocation, and package reports on Windows x64, Linux x64, and macOS x64.
 2. Execute every provider on its owning target and retain the multi-RID consumer evidence.
-3. After those reports pass, perform the separate InnoEngine clean-regeneration migration.
-4. Continue semantic/schema and adapter coverage while rejecting types without ownership or allocator evidence.
+3. Preserve and repeat the passing InnoEngine clean-regeneration/import-audit/native-build/full-solution/native-test gate on each adopted target.
+4. Execute a real OIDC/Sigstore signed release in an authorized GitHub release environment.
+5. Continue built-in semantic/schema coverage while routing project-specific semantics through the final lowering architecture.

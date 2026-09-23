@@ -70,7 +70,7 @@ C++ Bridge 必须编译、链接并执行以下测试：
 - multiple inheritance 与生成的 pointer adjustment；
 - exception 捕获和 managed error 传播；
 - 显式 class/function template instance；
-- string、vector、span、array、map、set、optional、variant、expected、path、chrono、unique/shared pointer adapter；
+- string、vector、span、array、map、set、optional、variant、expected、path、chrono、unique/shared pointer lowering；
 - allocator/deallocator pairing、retained callback unregister/drain race 与 async completion lifetime；
 - 配置的 abstract callback interface 的 managed implementation；
 - native bridge compile，以及 synthetic lifecycle/method runtime invocation。
@@ -120,10 +120,11 @@ bindgen-cs build
 - Tool 安装到空 tool path，并完成 init/generate/build smoke。
 - 同一 commit 两次 clean pack 在排除 NuGet signature metadata 后内容等价。
 - clean consumer 会从 `runtimes/<rid>/native/` 选择并调用当前 host binary。
-- reviewed API baseline、dependency license、known-vulnerability query、SPDX/SLSA payload 与 OIDC attestation 共同 gate release。
+- reviewed API baseline、dependency license、known-vulnerability query 与确定性 SPDX/SLSA payload 共同 gate 本地 release-candidate 构建。
+- 正式发布还必须由 GitHub release job 获取 OIDC identity 并生成可验证 Sigstore attestation；本地只验证 workflow，不会把“工作流存在”冒充为“已执行签名”。
 - symbol package 和 repository metadata 完整。
 - mandatory gate 全部通过前不得发布。
 
 ## 当前状态
 
-`scripts/run-full-test-matrix.sh` 只有在上述 BGCS gates 全部通过后，才写入 `artifacts/acceptance/report.json`、`report.md` 与 target-specific 副本。维护候选必须具备 Windows x64 MSVC、Linux x64 GNU、macOS x64 Darwin 三份报告；Windows 还必须真实执行 clang-cl/MSBuild DLL build/export/invocation。三份同版本报告在 runner 完成前均保持 pending。InnoEngine clean regeneration 属于后续阶段，不计入当前 BGCS report。
+`scripts/run-full-test-matrix.sh` 只有在上述本地 BGCS gates 全部通过后，才写入 `artifacts/acceptance/report.json`、`report.md` 与 target-specific 副本。维护候选必须具备 Windows x64 MSVC、Linux x64 GNU、macOS x64 Darwin 三份报告；Windows 还必须真实执行 clang-cl/MSBuild DLL build/export/invocation。三份同版本报告在 runner 完成前均保持 pending。InnoEngine clean regeneration 与完整 native/build/test gate 已在 macOS Arm64 独立通过，不计入 BGCS 分数。真实 OIDC/Sigstore 签名同样属于 release runner 产物，不是本地证据。

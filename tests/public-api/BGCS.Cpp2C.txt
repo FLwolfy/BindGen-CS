@@ -1,90 +1,3 @@
-class BGCS.Cpp2C.Adapters.CppAdapterContract
-  field System.Int32 CurrentVersion
-class BGCS.Cpp2C.Adapters.CppAdapterRegistry
-  ctor()
-  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Adapters.ICppCallableAdapter> CallableAdapters { get }
-  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Adapters.ICppTypeAdapter> TypeAdapters { get }
-  method System.Void Register(BGCS.Cpp2C.Adapters.ICppCallableAdapter adapter)
-  method System.Void Register(BGCS.Cpp2C.Adapters.ICppTypeAdapter adapter)
-class BGCS.Cpp2C.Adapters.CppCallableAdapterContext
-  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration, BGCS.CppAst.Model.Declarations.CppClass DeclaringType, System.String DefaultExportName)
-  property BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration { get; set }
-  property BGCS.CppAst.Model.Declarations.CppClass DeclaringType { get; set }
-  property System.String DefaultExportName { get; set }
-  method BGCS.Cpp2C.Adapters.CppCallableAdapterContext <Clone>$()
-  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppCallableAdapterContext other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method System.Void Deconstruct(BGCS.Cpp2C.Cpp2CGeneratorConfig& Configuration, BGCS.CppAst.Model.Declarations.CppClass& DeclaringType, System.String& DefaultExportName)
-class BGCS.Cpp2C.Adapters.CppCallableAdapterPlan
-  ctor(System.String AdapterName, System.String ExportName, System.Boolean Exclude)
-  property System.String AdapterName { get; set }
-  property System.Boolean Exclude { get; set }
-  property System.String ExportName { get; set }
-  method BGCS.Cpp2C.Adapters.CppCallableAdapterPlan <Clone>$()
-  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppCallableAdapterPlan other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method System.Void Deconstruct(System.String& AdapterName, System.String& ExportName, System.Boolean& Exclude)
-class BGCS.Cpp2C.Adapters.CppTypeAdapterContext
-  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration, BGCS.Cpp2C.Adapters.CppTypeAdapterUse Use)
-  property BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration { get; set }
-  property BGCS.Cpp2C.Adapters.CppTypeAdapterUse Use { get; set }
-  method BGCS.Cpp2C.Adapters.CppTypeAdapterContext <Clone>$()
-  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppTypeAdapterContext other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method System.Void Deconstruct(BGCS.Cpp2C.Cpp2CGeneratorConfig& Configuration, BGCS.Cpp2C.Adapters.CppTypeAdapterUse& Use)
-enum BGCS.Cpp2C.Adapters.CppTypeAdapterKind
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Array
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind ChronoDuration
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind ChronoTimePoint
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Custom
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Expected
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Map
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Optional
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Path
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Set
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind SharedOwner
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Span
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind UniqueOwner
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Utf8String
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Variant
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Vector
-  field System.Int32 value__
-class BGCS.Cpp2C.Adapters.CppTypeAdapterPlan
-  ctor(System.String AdapterName, BGCS.Cpp2C.Adapters.CppTypeAdapterKind Kind, System.String CAbiType, BGCS.Intermediate.MarshallingStrategy Marshalling, BGCS.Intermediate.BindingOwnership Ownership, System.Boolean RequiresCleanup, System.String CleanupFunction)
-  property System.String AdapterName { get; set }
-  property System.String CAbiType { get; set }
-  property System.String CleanupFunction { get; set }
-  property BGCS.Cpp2C.Adapters.CppTypeAdapterKind Kind { get; set }
-  property BGCS.Intermediate.MarshallingStrategy Marshalling { get; set }
-  property BGCS.Intermediate.BindingOwnership Ownership { get; set }
-  property System.Boolean RequiresCleanup { get; set }
-  method BGCS.Cpp2C.Adapters.CppTypeAdapterPlan <Clone>$()
-  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppTypeAdapterPlan other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method System.Void Deconstruct(System.String& AdapterName, BGCS.Cpp2C.Adapters.CppTypeAdapterKind& Kind, System.String& CAbiType, BGCS.Intermediate.MarshallingStrategy& Marshalling, BGCS.Intermediate.BindingOwnership& Ownership, System.Boolean& RequiresCleanup, System.String& CleanupFunction)
-enum BGCS.Cpp2C.Adapters.CppTypeAdapterUse
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterUse Field
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterUse Parameter
-  field BGCS.Cpp2C.Adapters.CppTypeAdapterUse Return
-  field System.Int32 value__
-interface BGCS.Cpp2C.Adapters.ICppCallableAdapter
-  property System.String Name { get }
-  property System.Int32 Priority { get }
-  method BGCS.Cpp2C.Adapters.CppCallableAdapterPlan CreatePlan(BGCS.CppAst.Model.Declarations.CppFunction function, BGCS.Cpp2C.Adapters.CppCallableAdapterContext context)
-  method System.Boolean CanAdapt(BGCS.CppAst.Model.Declarations.CppFunction function, BGCS.Cpp2C.Adapters.CppCallableAdapterContext context)
-interface BGCS.Cpp2C.Adapters.ICppTypeAdapter
-  property System.String Name { get }
-  property System.Int32 Priority { get }
-  method BGCS.Cpp2C.Adapters.CppTypeAdapterPlan CreatePlan(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Adapters.CppTypeAdapterContext context)
-  method System.Boolean CanAdapt(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Adapters.CppTypeAdapterContext context)
 class BGCS.Cpp2C.BaseConfig
   ctor()
   property System.Collections.Generic.HashSet<System.String> IgnoredProperties { get; set }
@@ -341,7 +254,6 @@ class BGCS.Cpp2C.Cpp2CGeneratorConfig
   field Newtonsoft.Json.JsonSerializer Serializer
   field Newtonsoft.Json.JsonSerializerSettings SerializerSettings
   ctor()
-  property BGCS.Cpp2C.Adapters.CppAdapterRegistry Adapters { get }
   property System.Collections.Generic.List<System.String> AdditionalArguments { get; set }
   property System.Collections.Generic.List<System.String> AllowedHeaders { get; set }
   property System.Collections.Generic.List<System.String> ArrayTypes { get; set }
@@ -351,6 +263,7 @@ class BGCS.Cpp2C.Cpp2CGeneratorConfig
   property System.String CSharpNamespace { get; set }
   property System.String CSharpOutputPath { get; set }
   property System.String CacheDirectory { get; set }
+  property System.Collections.Generic.List<BGCS.Cpp2C.Lowering.CppCallableLoweringRecipe> CallableLowerings { get; set }
   property System.Collections.Generic.List<System.String> ChronoDurationTypes { get; set }
   property System.Collections.Generic.List<System.String> ChronoTimePointTypes { get; set }
   property System.String CompilerPath { get; set }
@@ -371,9 +284,12 @@ class BGCS.Cpp2C.Cpp2CGeneratorConfig
   property System.Collections.Generic.List<System.String> LinkLibraries { get; set }
   property System.Collections.Generic.List<System.String> LinkerArguments { get; set }
   property BGCS.Core.Logging.LogSeverity LogLevel { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringSafetyPolicy LoweringSafetyPolicy { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringRegistry Lowerings { get }
   property System.Collections.Generic.List<System.String> MapTypes { get; set }
   property System.String NamePrefix { get; set }
   property System.String NativeLibraryName { get; set }
+  property System.Collections.Generic.List<BGCS.Cpp2C.Lowering.CppNativeShim> NativeShims { get; set }
   property System.Collections.Generic.List<System.String> OptionalTypes { get; set }
   property System.String OutputPath { get; set }
   property System.Boolean ParseComments { get; set }
@@ -393,14 +309,15 @@ class BGCS.Cpp2C.Cpp2CGeneratorConfig
   property System.String TargetSysRoot { get; set }
   property System.String TargetTriple { get; set }
   property System.Collections.Generic.List<System.String> TemplateInstantiations { get; set }
+  property System.Collections.Generic.List<BGCS.Cpp2C.Lowering.CppTypeLoweringRecipe> TypeLowerings { get; set }
   property System.Collections.Generic.List<System.String> UniquePtrTypes { get; set }
   property System.Collections.Generic.List<System.String> Utf8StringTypes { get; set }
   property System.Collections.Generic.List<System.String> VariantTypes { get; set }
   property System.Collections.Generic.List<System.String> VectorTypes { get; set }
   property System.Collections.Generic.List<System.String> VirtualCallbackInterfaces { get; set }
-  method BGCS.Cpp2C.Adapters.CppCallableAdapterPlan ResolveCallableAdapter(BGCS.CppAst.Model.Declarations.CppClass declaringType, BGCS.CppAst.Model.Declarations.CppFunction function, System.String defaultExportName)
-  method BGCS.Cpp2C.Adapters.CppTypeAdapterPlan ResolveTypeAdapter(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Adapters.CppTypeAdapterUse use)
   method BGCS.Cpp2C.Cpp2CGeneratorConfig Load(System.String file, BGCS.Cpp2C.IConfigComposer composer)
+  method BGCS.Cpp2C.Lowering.CppCallableLoweringPlan ResolveCallableLowering(BGCS.CppAst.Model.Declarations.CppClass declaringType, BGCS.CppAst.Model.Declarations.CppFunction function, System.String defaultExportName)
+  method BGCS.Cpp2C.Lowering.CppTypeLoweringPlan ResolveTypeLowering(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Lowering.CppTypeLoweringUse use)
   method System.Boolean IsArrayType(BGCS.CppAst.Model.Types.CppType type)
   method System.Boolean IsBlittableBridgeType(BGCS.CppAst.Model.Types.CppType type)
   method System.Boolean IsCallableExcluded(BGCS.CppAst.Model.Declarations.CppClass declaringType, BGCS.CppAst.Model.Declarations.CppFunction function, System.String defaultExportName)
@@ -477,6 +394,218 @@ struct BGCS.Cpp2C.IncludeBuilder
   method BGCS.Cpp2C.IncludeBuilder& AddInclude(System.String include)
   method BGCS.Cpp2C.IncludeBuilder& AddSystemInclude(System.String include)
   method System.String Build()
+class BGCS.Cpp2C.Lowering.CppAbiParameter
+  ctor(System.String NameSuffix, System.String CAbiType)
+  property System.String CAbiType { get; set }
+  property System.String NameSuffix { get; set }
+  method BGCS.Cpp2C.Lowering.CppAbiParameter <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppAbiParameter other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& NameSuffix, System.String& CAbiType)
+enum BGCS.Cpp2C.Lowering.CppAbiShape
+  field BGCS.Cpp2C.Lowering.CppAbiShape Custom
+  field BGCS.Cpp2C.Lowering.CppAbiShape Direct
+  field BGCS.Cpp2C.Lowering.CppAbiShape OpaqueHandle
+  field BGCS.Cpp2C.Lowering.CppAbiShape OptionalValue
+  field BGCS.Cpp2C.Lowering.CppAbiShape PointerAndLength
+  field System.Int32 value__
+class BGCS.Cpp2C.Lowering.CppArtifactContext
+  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration, System.String TargetIdentifier, BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind Stage)
+  property BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration { get; set }
+  property BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind Stage { get; set }
+  property System.String TargetIdentifier { get; set }
+  method BGCS.Cpp2C.Lowering.CppArtifactContext <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppArtifactContext other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.Cpp2C.Cpp2CGeneratorConfig& Configuration, System.String& TargetIdentifier, BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind& Stage)
+class BGCS.Cpp2C.Lowering.CppCallableLoweringContext
+  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration, BGCS.CppAst.Model.Declarations.CppClass DeclaringType, System.String DefaultExportName)
+  property BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration { get; set }
+  property BGCS.CppAst.Model.Declarations.CppClass DeclaringType { get; set }
+  property System.String DefaultExportName { get; set }
+  method BGCS.Cpp2C.Lowering.CppCallableLoweringContext <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppCallableLoweringContext other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.Cpp2C.Cpp2CGeneratorConfig& Configuration, BGCS.CppAst.Model.Declarations.CppClass& DeclaringType, System.String& DefaultExportName)
+class BGCS.Cpp2C.Lowering.CppCallableLoweringPlan
+  ctor(System.String LoweringName, System.String ExportName)
+  property System.Boolean Exclude { get; set }
+  property System.String ExportName { get; set }
+  property System.String InvocationExpression { get; set }
+  property System.String LoweringName { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> RequiredHeaders { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringSafety Safety { get; set }
+  method BGCS.Cpp2C.Lowering.CppCallableLoweringPlan <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppCallableLoweringPlan other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& LoweringName, System.String& ExportName)
+class BGCS.Cpp2C.Lowering.CppCallableLoweringRecipe
+  ctor()
+  property System.Boolean Exclude { get; set }
+  property System.String ExportName { get; set }
+  property System.String FunctionPattern { get; set }
+  property System.String InvocationExpression { get; set }
+  property System.String Name { get; set }
+  property System.Int32 Priority { get; set }
+  property System.Collections.Generic.List<System.String> RequiredHeaders { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringSafety Safety { get; set }
+class BGCS.Cpp2C.Lowering.CppExtensionArtifactEmitter
+  method System.Collections.Generic.IReadOnlyList<System.String> EmitManaged(BGCS.Cpp2C.Cpp2CGeneratorConfig config, System.String outputPath)
+  method System.Collections.Generic.IReadOnlyList<System.String> EmitNative(BGCS.Cpp2C.Cpp2CGeneratorConfig config, System.String outputPath)
+class BGCS.Cpp2C.Lowering.CppGeneratedArtifact
+  ctor(System.String RelativePath, System.String Content, BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind Kind, System.Boolean ExposeToBindings, BGCS.Cpp2C.Lowering.CppLoweringSafety Safety)
+  property System.String Content { get; set }
+  property System.Boolean ExposeToBindings { get; set }
+  property BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind Kind { get; set }
+  property System.String RelativePath { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringSafety Safety { get; set }
+  method BGCS.Cpp2C.Lowering.CppGeneratedArtifact <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppGeneratedArtifact other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& RelativePath, System.String& Content, BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind& Kind, System.Boolean& ExposeToBindings, BGCS.Cpp2C.Lowering.CppLoweringSafety& Safety)
+enum BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind
+  field BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind ManagedSource
+  field BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind NativeSource
+  field BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind PublicHeader
+  field BGCS.Cpp2C.Lowering.CppGeneratedArtifactKind Resource
+  field System.Int32 value__
+class BGCS.Cpp2C.Lowering.CppLoweringRegistry
+  ctor()
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Lowering.ICppArtifactContributor> ArtifactContributors { get }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Lowering.ICppCallableLowering> CallableLowerings { get }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Lowering.ICppTypeLowering> TypeLowerings { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> UnsafeBypasses { get }
+  method System.Void Register(BGCS.Cpp2C.Lowering.ICppArtifactContributor contributor)
+  method System.Void Register(BGCS.Cpp2C.Lowering.ICppCallableLowering lowering)
+  method System.Void Register(BGCS.Cpp2C.Lowering.ICppTypeLowering lowering)
+enum BGCS.Cpp2C.Lowering.CppLoweringSafety
+  field BGCS.Cpp2C.Lowering.CppLoweringSafety Unsafe
+  field BGCS.Cpp2C.Lowering.CppLoweringSafety UserAsserted
+  field BGCS.Cpp2C.Lowering.CppLoweringSafety Verified
+  field System.Int32 value__
+enum BGCS.Cpp2C.Lowering.CppLoweringSafetyPolicy
+  field BGCS.Cpp2C.Lowering.CppLoweringSafetyPolicy AllowUnsafe
+  field BGCS.Cpp2C.Lowering.CppLoweringSafetyPolicy AllowUserAsserted
+  field BGCS.Cpp2C.Lowering.CppLoweringSafetyPolicy VerifiedOnly
+  field System.Int32 value__
+class BGCS.Cpp2C.Lowering.CppManagedProjection
+  ctor(System.String ManagedType, System.String ManagedToNativeExpression, System.String NativeToManagedExpression, System.String RequiredNamespace)
+  property System.String ManagedToNativeExpression { get; set }
+  property System.String ManagedType { get; set }
+  property System.String NativeToManagedExpression { get; set }
+  property System.String RequiredNamespace { get; set }
+  method BGCS.Cpp2C.Lowering.CppManagedProjection <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppManagedProjection other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& ManagedType, System.String& ManagedToNativeExpression, System.String& NativeToManagedExpression, System.String& RequiredNamespace)
+class BGCS.Cpp2C.Lowering.CppNativeShim
+  ctor()
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<System.String> PublicHeaders { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringSafety Safety { get; set }
+  property System.Collections.Generic.List<System.String> SourceFiles { get; set }
+class BGCS.Cpp2C.Lowering.CppTypeLoweringContext
+  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration, BGCS.Cpp2C.Lowering.CppTypeLoweringUse Use)
+  property BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration { get; set }
+  property BGCS.Cpp2C.Lowering.CppTypeLoweringUse Use { get; set }
+  method BGCS.Cpp2C.Lowering.CppTypeLoweringContext <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppTypeLoweringContext other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.Cpp2C.Cpp2CGeneratorConfig& Configuration, BGCS.Cpp2C.Lowering.CppTypeLoweringUse& Use)
+enum BGCS.Cpp2C.Lowering.CppTypeLoweringKind
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Array
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind ChronoDuration
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind ChronoTimePoint
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Custom
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Expected
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Map
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Optional
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Path
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Set
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind SharedOwner
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Span
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind UniqueOwner
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Utf8String
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Variant
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringKind Vector
+  field System.Int32 value__
+class BGCS.Cpp2C.Lowering.CppTypeLoweringPlan
+  ctor(System.String LoweringName, BGCS.Cpp2C.Lowering.CppTypeLoweringKind Kind, System.String CAbiType, BGCS.Intermediate.MarshallingStrategy Marshalling, BGCS.Intermediate.BindingOwnership Ownership)
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Lowering.CppAbiParameter> AbiParameters { get; set }
+  property BGCS.Cpp2C.Lowering.CppAbiShape AbiShape { get; set }
+  property System.String AllocatorFunction { get; set }
+  property BGCS.Intermediate.BindingAllocatorKind AllocatorKind { get; set }
+  property System.String CAbiType { get; set }
+  property System.String CleanupFunction { get; set }
+  property BGCS.Cpp2C.Lowering.CppTypeLoweringKind Kind { get; set }
+  property System.String LoweringName { get; set }
+  property BGCS.Cpp2C.Lowering.CppManagedProjection ManagedProjection { get; set }
+  property BGCS.Intermediate.MarshallingStrategy Marshalling { get; set }
+  property BGCS.Intermediate.BindingOwnership Ownership { get; set }
+  property System.String ParameterToCppExpression { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> RequiredHeaders { get; set }
+  property System.Boolean RequiresCleanup { get; set }
+  property System.String ReturnToCExpression { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringSafety Safety { get; set }
+  method BGCS.Cpp2C.Lowering.CppTypeLoweringPlan <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Lowering.CppTypeLoweringPlan other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& LoweringName, BGCS.Cpp2C.Lowering.CppTypeLoweringKind& Kind, System.String& CAbiType, BGCS.Intermediate.MarshallingStrategy& Marshalling, BGCS.Intermediate.BindingOwnership& Ownership)
+class BGCS.Cpp2C.Lowering.CppTypeLoweringRecipe
+  ctor()
+  property System.Collections.Generic.List<BGCS.Cpp2C.Lowering.CppAbiParameter> AbiParameters { get; set }
+  property BGCS.Cpp2C.Lowering.CppAbiShape AbiShape { get; set }
+  property System.String AllocatorFunction { get; set }
+  property BGCS.Intermediate.BindingAllocatorKind AllocatorKind { get; set }
+  property System.String CAbiType { get; set }
+  property System.String CleanupFunction { get; set }
+  property BGCS.Cpp2C.Lowering.CppTypeLoweringKind Kind { get; set }
+  property BGCS.Cpp2C.Lowering.CppManagedProjection ManagedProjection { get; set }
+  property BGCS.Intermediate.MarshallingStrategy Marshalling { get; set }
+  property System.String Name { get; set }
+  property BGCS.Intermediate.BindingOwnership Ownership { get; set }
+  property System.String ParameterToCppExpression { get; set }
+  property System.Int32 Priority { get; set }
+  property System.Collections.Generic.List<System.String> RequiredHeaders { get; set }
+  property System.Boolean RequiresCleanup { get; set }
+  property System.String ReturnToCExpression { get; set }
+  property BGCS.Cpp2C.Lowering.CppLoweringSafety Safety { get; set }
+  property System.String TypePattern { get; set }
+enum BGCS.Cpp2C.Lowering.CppTypeLoweringUse
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringUse Field
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringUse Parameter
+  field BGCS.Cpp2C.Lowering.CppTypeLoweringUse Return
+  field System.Int32 value__
+interface BGCS.Cpp2C.Lowering.ICppArtifactContributor
+  property System.String Name { get }
+  property System.Int32 Priority { get }
+  method System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Lowering.CppGeneratedArtifact> Contribute(BGCS.Cpp2C.Lowering.CppArtifactContext context)
+interface BGCS.Cpp2C.Lowering.ICppCallableLowering
+  property System.String Name { get }
+  property System.Int32 Priority { get }
+  method BGCS.Cpp2C.Lowering.CppCallableLoweringPlan CreatePlan(BGCS.CppAst.Model.Declarations.CppFunction function, BGCS.Cpp2C.Lowering.CppCallableLoweringContext context)
+  method System.Boolean CanLower(BGCS.CppAst.Model.Declarations.CppFunction function, BGCS.Cpp2C.Lowering.CppCallableLoweringContext context)
+interface BGCS.Cpp2C.Lowering.ICppTypeLowering
+  property System.String Name { get }
+  property System.Int32 Priority { get }
+  method BGCS.Cpp2C.Lowering.CppTypeLoweringPlan CreatePlan(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Lowering.CppTypeLoweringContext context)
+  method System.Boolean CanLower(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Lowering.CppTypeLoweringContext context)
 class BGCS.Cpp2C.Metadata.CFunction
   ctor(System.String exportedName, System.String friendlyName, System.String comment)
   property System.String Comment { get; set }

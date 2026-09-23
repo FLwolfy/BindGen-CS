@@ -68,7 +68,20 @@ public sealed class BindingModuleAnalyzer
         }
         HashSet<string> delegateNames = new(StringComparer.Ordinal);
         Dictionary<CppClass, string> opaqueRecordNames = new();
-        foreach (DeclarationGraphNode node in graph.TopologicalOrder())
+        DeclarationGraphNode[] orderedNodes = graph.TopologicalOrder().ToArray();
+        foreach (CppTypedef typedef in orderedNodes.Select(node => node.Declaration).OfType<CppTypedef>()
+                     .Where(typedef => ShouldIncludeTypedef(typedef.Name)))
+        {
+            CppType ultimateType = GetUltimateType(typedef);
+            if (ultimateType is not CppClass { IsDefinition: false } record ||
+                opaqueRecordNames.ContainsKey(record))
+                continue;
+            string canonicalName = config.GetManagedHandleName(typedef.Name);
+            opaqueRecordNames.Add(record, canonicalName);
+            typeAnalyzer.RegisterManagedAlias(record, canonicalName);
+            typeAnalyzer.RegisterManagedAlias(typedef, canonicalName);
+        }
+        foreach (DeclarationGraphNode node in orderedNodes)
         {
             try
             {
@@ -76,8 +89,11 @@ public sealed class BindingModuleAnalyzer
                 {
                     case CppClass cppClass when cppClass.ClassKind != CppClassKind.Class && config.GenerateTypes &&
                         (cppClass.IsDefinition || config.GenerateHandles) && ShouldIncludeType(cppClass.Name):
-                        module.Types.Add(layoutAnalyzer.Analyze(cppClass));
-                        AnalyzeFieldDelegates(cppClass, module, delegateNames);
+                        module.Types.Add(!cppClass.IsDefinition && opaqueRecordNames.TryGetValue(cppClass, out string? opaqueName)
+                            ? layoutAnalyzer.Analyze(cppClass, opaqueName)
+                            : layoutAnalyzer.Analyze(cppClass));
+                        if (config.GenerateDelegates)
+                            AnalyzeFieldDelegates(cppClass, module, delegateNames);
                         break;
                     case CppEnum cppEnum when config.GenerateEnums && ShouldIncludeEnum(cppEnum.Name):
                         BindingType enumType = new(cppEnum.FullName, config.GetManagedEnumName(cppEnum.Name),
@@ -189,6 +205,44 @@ public sealed class BindingModuleAnalyzer
         {
             if (!defined.Add(reference.ManagedName))
                 continue;
+            ExternalTypeContract? external = FindExternalTypeContract(reference);
+            if (external != null)
+            {
+                bool byValue = !reference.BehindPointerOnly;
+                bool layoutMatches = reference.Size > 0 && reference.Size == external.Size &&
+                    reference.Alignment == external.Alignment;
+                bool bypassed = byValue && external.ByValuePolicy == ExternalTypeByValuePolicy.BypassLayoutValidation;
+                bool accepted = !byValue ||
+                    external.ByValuePolicy == ExternalTypeByValuePolicy.RequireLayoutMatch && layoutMatches ||
+                    bypassed;
+                if (accepted)
+                {
+                    module.ExternalTypes.Add(new(
+                        [reference.NativeName],
+                        reference.ManagedName,
+                        external.Size,
+                        external.Alignment,
+                        byValue,
+                        bypassed));
+                    if (byValue)
+                    {
+                        string evidence = bypassed
+                            ? "native layout validation was explicitly bypassed"
+                            : $"native layout matched size {reference.Size} and alignment {reference.Alignment}";
+                        module.StructuredDiagnostics.Add(new(BindingDiagnosticSeverity.Warning,
+                            $"External managed carrier '{reference.ManagedName}' represents '{reference.NativeName}' by value; {evidence}. The project owns managed layout and runtime invocation evidence.",
+                            BindingDiagnosticCodes.ExternalType));
+                    }
+                    continue;
+                }
+
+                string reason = external.ByValuePolicy == ExternalTypeByValuePolicy.Reject
+                    ? "its ByValuePolicy is Reject"
+                    : $"parsed native layout {reference.Size}/{reference.Alignment} does not match declared carrier layout {external.Size}/{external.Alignment}";
+                module.StructuredDiagnostics.Add(new(BindingDiagnosticSeverity.Error,
+                    $"External managed carrier '{reference.ManagedName}' cannot represent '{reference.NativeName}' by value because {reason}. Use RequireLayoutMatch with the correct target layout, use a pointer, or deliberately select BypassLayoutValidation with independent native invocation tests.",
+                    BindingDiagnosticCodes.ExternalType));
+            }
             module.Types.Add(new(reference.NativeName, reference.ManagedName, BindingTypeKind.Structure,
                 reference.Size, reference.Alignment)
             {
@@ -200,6 +254,26 @@ public sealed class BindingModuleAnalyzer
                     $"Referenced record '{reference.NativeName}' is unavailable as a definition but is used by value; only pointer use of synthesized opaque storage is ABI-safe.");
             }
         }
+    }
+
+    private ExternalTypeContract? FindExternalTypeContract(TypeAnalyzer.ReferencedRecord reference)
+    {
+        return config.ExternalTypeContracts.FirstOrDefault(contract =>
+            contract.ManagedTypes.Any(selector => ExternalTypeContract.MatchesSelector(
+                selector, reference.ManagedName)) &&
+            contract.NativeTypes.Any(selector => ExternalTypeContract.MatchesSelector(
+                NormalizeNativeType(selector), NormalizeNativeType(reference.NativeName))));
+    }
+
+    private static string NormalizeNativeType(string value)
+    {
+        string normalized = value.Trim();
+        foreach (string prefix in new[] { "struct ", "union ", "class " })
+        {
+            if (normalized.StartsWith(prefix, StringComparison.Ordinal))
+                return normalized[prefix.Length..].Trim();
+        }
+        return normalized;
     }
 
     private static IEnumerable<BindingType> EnumerateTypes(IEnumerable<BindingType> types)
@@ -548,8 +622,13 @@ public sealed class BindingModuleAnalyzer
         {
             if (!functions.Contains(function.Name, StringComparer.Ordinal) || function.Parameters.Count == 0)
                 continue;
+            string expectedReceiverType = config.GetManagedTypeName(nativeType);
+            BindingTypeReference actualReceiver = typeAnalyzer.Analyze(function.Parameters[0].Type);
+            string actualReceiverType = actualReceiver.ManagedName.TrimEnd('*').TrimEnd();
+            if (!string.Equals(expectedReceiverType, actualReceiverType, StringComparison.Ordinal))
+                continue;
             managedKind = BindingManagedFunctionKind.Instance;
-            receiverType = config.GetManagedTypeName(nativeType);
+            receiverType = expectedReceiverType;
             receiverIndex = 0;
             managedContainer = receiverType;
             return;

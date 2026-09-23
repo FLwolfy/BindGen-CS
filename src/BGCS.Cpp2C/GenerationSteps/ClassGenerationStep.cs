@@ -5,7 +5,7 @@ using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
-using BGCS.Cpp2C.Adapters;
+using BGCS.Cpp2C.Lowering;
 using System.Text;
 
 namespace BGCS.Cpp2C.GenerationSteps;
@@ -138,7 +138,6 @@ public class ClassGenerationStep : GenerationStep
             }
             string cppPreamble = $"#define {config.NamePrefix}BUILD_SHARED\n" + cppIncludes.Build();
             using var cppWriter = new CodeWriter(filePathCpp, cppPreamble, null);
-            WriteErrorSupport(cppWriter);
 
             List<CppClass> allClasses = [.. compilation.Classes];
             foreach (var ns in compilation.EnumerateNamespaces())
@@ -153,6 +152,11 @@ public class ClassGenerationStep : GenerationStep
             List<CppFunction> allFunctions = [.. functions, .. classes.SelectMany(GetBridgeFunctions)];
             foreach (CppFunction function in allFunctions)
                 RegisterSourceTypeSpellings(function);
+            foreach (string requiredHeader in GetRequiredLoweringHeaders(allFunctions))
+                cppWriter.WriteLine(requiredHeader.StartsWith('<') || requiredHeader.StartsWith('"')
+                    ? $"#include {requiredHeader}"
+                    : $"#include <{requiredHeader}>");
+            WriteErrorSupport(cppWriter);
             WriteReferencedOpaqueTypes(classes, allFunctions, headerWriter);
             WriteSharedPtrSupport(allFunctions, headerWriter, cppWriter);
             WriteOpaqueValueSupport(allFunctions, headerWriter, cppWriter);
@@ -312,7 +316,7 @@ public class ClassGenerationStep : GenerationStep
 
             foreach ((string holder, CppType type) in holderTypes.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
-                config.ResolveTypeAdapter(type, CppTypeAdapterUse.Field);
+                config.ResolveTypeLowering(type, CppTypeLoweringUse.Field);
                 string cppType = GetCppValueTypeName(type);
                 if (definedTypes.Add(holder))
                     headerWriter.WriteLine($"typedef struct {holder} {holder};");
@@ -499,7 +503,7 @@ public class ClassGenerationStep : GenerationStep
 
         private bool IsSupportedClass(CppClass cppClass)
         {
-            return config.ResolveTypeAdapter(cppClass, BGCS.Cpp2C.Adapters.CppTypeAdapterUse.Field) == null &&
+            return config.ResolveTypeLowering(cppClass, CppTypeLoweringUse.Field) == null &&
                 (cppClass.ClassKind is CppClassKind.Class or CppClassKind.Struct) &&
                 cppClass.TemplateKind != CppTemplateKind.TemplateClass && cppClass.SourceFile != null && cppClass.IsDefinition;
         }
@@ -767,7 +771,8 @@ public class ClassGenerationStep : GenerationStep
                         string qualifiedName = string.IsNullOrEmpty(function.FullParentName)
                             ? function.Name
                             : function.FullParentName + "::" + function.Name;
-                        string invocation = $"{qualifiedName}({arguments})";
+                        string invocation = config.ApplyCallableInvocation(null, function, baseName,
+                            $"{qualifiedName}({arguments})");
                         if (returnsVoid)
                             writer.WriteLine(invocation + ";");
                         else if (returnsCollection)
@@ -904,6 +909,13 @@ public class ClassGenerationStep : GenerationStep
 
         private IEnumerable<string> GetCParameterDeclarations(CppClass? cppClass, CppParameter parameter)
         {
+            CppTypeLoweringPlan? lowering = config.ResolveTypeLowering(parameter.Type, CppTypeLoweringUse.Parameter);
+            if (lowering?.AbiParameters.Count > 0)
+            {
+                foreach (CppAbiParameter abiParameter in lowering.AbiParameters)
+                    yield return $"{abiParameter.CAbiType} {parameter.Name}{abiParameter.NameSuffix}";
+                yield break;
+            }
             string type = cppClass == null ? config.GetCType(parameter.Type) : GetSpecializedCType(cppClass, parameter.Type);
             yield return $"{type} {parameter.Name}";
             if (IsContiguousCollection(parameter.Type))
@@ -991,8 +1003,11 @@ public class ClassGenerationStep : GenerationStep
                 : $"reinterpret_cast<{cReturnType}>(&({invocation}))";
         }
 
-        private static string GetCppReturnExpression(CppType type, string cReturnType, string invocation)
+        private string GetCppReturnExpression(CppType type, string cReturnType, string invocation)
         {
+            CppTypeLoweringPlan? lowering = config.ResolveTypeLowering(type, CppTypeLoweringUse.Return);
+            if (!string.IsNullOrWhiteSpace(lowering?.ReturnToCExpression))
+                return RenderTypeExpression(lowering.ReturnToCExpression!, type, invocation);
             if (Cpp2CGeneratorConfig.IsFunctionPointerType(type))
                 return $"reinterpret_cast<{cReturnType}>({invocation})";
             CppType current = type;
@@ -1005,6 +1020,40 @@ public class ClassGenerationStep : GenerationStep
             if (current is CppPointerType)
                 return $"reinterpret_cast<{cReturnType}>({invocation})";
             return invocation;
+        }
+
+        private string RenderTypeExpression(string template, CppType type, string value)
+        {
+            string name = value.All(character => char.IsLetterOrDigit(character) || character == '_') ? value : "value";
+            return template
+                .Replace("{value}", value, StringComparison.Ordinal)
+                .Replace("{name}", name, StringComparison.Ordinal)
+                .Replace("{count}", name + "_count", StringComparison.Ordinal)
+                .Replace("{cppType}", GetCppValueTypeName(type), StringComparison.Ordinal);
+        }
+
+        private IReadOnlyList<string> GetRequiredLoweringHeaders(IEnumerable<CppFunction> functions)
+        {
+            SortedSet<string> headers = new(StringComparer.Ordinal);
+            foreach (CppFunction function in functions)
+            {
+                CppTypeLoweringPlan? returnPlan = config.ResolveTypeLowering(function.ReturnType, CppTypeLoweringUse.Return);
+                if (returnPlan != null)
+                    headers.UnionWith(returnPlan.RequiredHeaders);
+                foreach (CppParameter parameter in function.Parameters)
+                {
+                    CppTypeLoweringPlan? parameterPlan = config.ResolveTypeLowering(parameter.Type, CppTypeLoweringUse.Parameter);
+                    if (parameterPlan != null)
+                        headers.UnionWith(parameterPlan.RequiredHeaders);
+                }
+                string defaultName = string.IsNullOrEmpty(function.FullParentName)
+                    ? config.GetCFunctionName(function)
+                    : $"{function.FullParentName}_{function.Name}";
+                CppCallableLoweringPlan? callable = config.ResolveCallableLowering(function.Parent as CppClass, function, defaultName);
+                if (callable != null)
+                    headers.UnionWith(callable.RequiredHeaders);
+            }
+            return headers.ToArray();
         }
 
         private string GetOriginalCppTypeName(CppType type)
@@ -1025,6 +1074,9 @@ public class ClassGenerationStep : GenerationStep
         private string GetCppArgumentExpression(CppParameter parameter)
         {
             CppType type = parameter.Type;
+            CppTypeLoweringPlan? lowering = config.ResolveTypeLowering(type, CppTypeLoweringUse.Parameter);
+            if (!string.IsNullOrWhiteSpace(lowering?.ParameterToCppExpression))
+                return RenderTypeExpression(lowering.ParameterToCppExpression!, type, parameter.Name);
             CppType current = type;
             while (current is CppQualifiedType qualified)
                 current = qualified.ElementType;
@@ -1188,6 +1240,7 @@ public class ClassGenerationStep : GenerationStep
                     string invocation = isStatic
                         ? $"{c.FullName}::{f.Name}({signature})"
                         : $"ptr->{f.Name}({signature})";
+                    invocation = config.ApplyCallableInvocation(c, f, $"{config.GetCTypeName(c)}_{f.Name}", invocation);
                     if (returnsVoid)
                     {
                         guardedWriter.WriteLine($"{invocation};");

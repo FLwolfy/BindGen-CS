@@ -62,7 +62,11 @@ public sealed class OverloadPlanner
 
         int pointerCount = function.Parameters.Count(parameter =>
             parameter.Marshalling.Strategy is MarshallingStrategy.Pointer or MarshallingStrategy.Span);
-        return pointerCount == 1 && candidates.Length == 1 ? candidates[0].ManagedName : null;
+        if (pointerCount != 1 || candidates.Length != 1)
+            return null;
+        int pointerIndex = function.Parameters.IndexOf(pointer);
+        int candidateIndex = function.Parameters.IndexOf(candidates[0]);
+        return Math.Abs(pointerIndex - candidateIndex) == 1 ? candidates[0].ManagedName : null;
     }
 
     private static bool IsIntegralCountType(string managedType) => managedType is

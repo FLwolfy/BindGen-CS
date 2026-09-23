@@ -154,7 +154,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root arti
 
 `--package-root` 把通过 export verification 的桌面 binary 放入 `runtimes/<rid>/native/`，并在 `bgcs.native-assets.json` 写入 target 与 SHA-256。Windows/Linux/macOS x64/arm64 当前会映射到 NuGet RID；Android/iOS/FreeBSD 是正式支持目标，但其 target-specific 包布局尚待实现与验收，因此当前该 helper 会给出明确诊断。Pack 完成后可运行 `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>` 生成发布证据。
 
-不要假定任意 template/STL type 都能自动 lowering。显式实例和已支持 adapter 见[能力矩阵](capabilities.cn.md)；拒绝原因见[诊断指南](diagnostics.cn.md)。
+不要假定任意 template/STL type 都能自动 lowering。显式实例和内置 lowering 见[能力矩阵](capabilities.cn.md)，项目扩展见[最终 lowering 架构](lowering.cn.md)，拒绝原因见[诊断指南](diagnostics.cn.md)。
 
 ## 多项目 Workspace
 

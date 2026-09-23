@@ -26,6 +26,11 @@ public sealed class SchemaCommandTests
         JsonElement backend = root.GetProperty("properties").GetProperty("CSharpEmissionBackend");
         Assert.Contains("IntermediateRepresentation", backend.GetProperty("enum").ToString(), StringComparison.Ordinal);
         Assert.Equal("IntermediateRepresentation", backend.GetProperty("default").GetString());
+        JsonElement externalTypes = root.GetProperty("properties").GetProperty("ExternalTypeContracts");
+        Assert.Equal("array", externalTypes.GetProperty("type").GetString());
+        JsonElement policy = externalTypes.GetProperty("items").GetProperty("properties").GetProperty("ByValuePolicy");
+        Assert.Contains("RequireLayoutMatch", policy.GetProperty("enum").ToString(), StringComparison.Ordinal);
+        Assert.Contains("BypassLayoutValidation", policy.GetProperty("enum").ToString(), StringComparison.Ordinal);
         Assert.False(root.GetProperty("properties").TryGetProperty("HeaderInjector", out _));
     }
 
@@ -41,6 +46,10 @@ public sealed class SchemaCommandTests
         JsonElement root = schema.RootElement;
         Assert.Contains("C++ bridge", root.GetProperty("title").GetString(), StringComparison.Ordinal);
         Assert.True(root.GetProperty("properties").TryGetProperty("TemplateInstantiations", out _));
+        Assert.True(root.GetProperty("properties").TryGetProperty("TypeLowerings", out JsonElement typeLowerings));
+        Assert.Equal("array", typeLowerings.GetProperty("type").GetString());
+        Assert.True(root.GetProperty("properties").TryGetProperty("NativeShims", out _));
+        Assert.Contains("AllowUnsafe", root.GetProperty("properties").GetProperty("LoweringSafetyPolicy").GetProperty("enum").ToString(), StringComparison.Ordinal);
         Assert.Equal("EntryFiles", root.GetProperty("required")[0].GetString());
     }
 

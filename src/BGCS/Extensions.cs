@@ -50,7 +50,9 @@
         {
             return convention switch
             {
-                CppCallingConvention.C => "Cdecl",
+                CppCallingConvention.Default or CppCallingConvention.C or CppCallingConvention.Win64 or
+                    CppCallingConvention.X86_64SysV or CppCallingConvention.AAPCS or
+                    CppCallingConvention.AAPCS_VFP => "Cdecl",
                 CppCallingConvention.X86FastCall => "Fastcall",
                 CppCallingConvention.X86StdCall => "Stdcall",
                 CppCallingConvention.X86ThisCall => "Thiscall",

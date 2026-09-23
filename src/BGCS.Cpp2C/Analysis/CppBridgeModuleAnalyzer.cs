@@ -6,7 +6,7 @@ using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
-using BGCS.Cpp2C.Adapters;
+using BGCS.Cpp2C.Lowering;
 using BGCS.Intermediate;
 
 /// <summary>
@@ -26,6 +26,10 @@ internal sealed class CppBridgeModuleAnalyzer
         BindingModule module = new("CppBridge", "C", string.Empty,
             config.ResolvedTarget.Identifier);
         AnalyzeContainer(compilation, module);
+        foreach (string lowering in config.Lowerings.UnsafeBypasses)
+            module.StructuredDiagnostics.Add(new(BindingDiagnosticSeverity.Warning,
+                $"Unsafe lowering '{lowering}' was explicitly allowed by LoweringSafetyPolicy=AllowUnsafe. The generated ABI must be covered by project-owned compile, invocation, and lifetime tests.",
+                BindingDiagnosticCodes.UnsafeLowering));
         return module;
     }
 
@@ -44,7 +48,7 @@ internal sealed class CppBridgeModuleAnalyzer
             module.Types.Add(new(cppEnum.FullName, config.GetCTypeName(cppEnum), BindingTypeKind.Enumeration,
                 cppEnum.IntegerType?.SizeOf ?? sizeof(int), cppEnum.IntegerType?.SizeOf ?? sizeof(int)));
         foreach (CppClass cppClass in container.Classes.Where(cppClass => cppClass.SourceFile != null &&
-            cppClass.TemplateKind != CppTemplateKind.TemplateClass && !IsAdapterType(cppClass)))
+            cppClass.TemplateKind != CppTemplateKind.TemplateClass && !IsLoweredType(cppClass)))
         {
             IReadOnlyList<CppFunction> functions = cppClass.Functions.Count > 0
                 ? cppClass.Functions.ToList()
@@ -163,27 +167,28 @@ internal sealed class CppBridgeModuleAnalyzer
 
     private MarshallingPlan AnalyzeMarshalling(CppType type, string? parameterName)
     {
-        CppTypeAdapterPlan? adapter = config.ResolveTypeAdapter(type,
-            parameterName == null ? CppTypeAdapterUse.Return : CppTypeAdapterUse.Parameter);
-        if (adapter != null)
+        CppTypeLoweringPlan? lowering = config.ResolveTypeLowering(type,
+            parameterName == null ? CppTypeLoweringUse.Return : CppTypeLoweringUse.Parameter);
+        if (lowering != null)
         {
-            string? length = adapter.Kind is CppTypeAdapterKind.Span or CppTypeAdapterKind.Vector or CppTypeAdapterKind.Array
+            string? length = lowering.Kind is CppTypeLoweringKind.Span or CppTypeLoweringKind.Vector or CppTypeLoweringKind.Array
                 ? parameterName == null ? "out_count" : parameterName + "_count"
                 : null;
-            return new(adapter.Marshalling, adapter.Ownership,
-                adapter.Kind is CppTypeAdapterKind.Utf8String or CppTypeAdapterKind.Path
+            return new(lowering.Marshalling, lowering.Ownership,
+                lowering.Kind is CppTypeLoweringKind.Utf8String or CppTypeLoweringKind.Path
                     ? BindingStringEncoding.Utf8
                     : BindingStringEncoding.None,
                 LengthParameter: length,
-                RequiresCleanup: adapter.RequiresCleanup,
-                CleanupFunction: adapter.CleanupFunction,
-                NullTerminated: adapter.Kind is CppTypeAdapterKind.Utf8String or CppTypeAdapterKind.Path,
-                AllocatorKind: adapter.RequiresCleanup ? BindingAllocatorKind.NativeFunction : BindingAllocatorKind.Unspecified);
+                RequiresCleanup: lowering.RequiresCleanup,
+                CleanupFunction: lowering.CleanupFunction,
+                NullTerminated: lowering.Kind is CppTypeLoweringKind.Utf8String or CppTypeLoweringKind.Path,
+                AllocatorKind: lowering.AllocatorKind,
+                AllocatorFunction: lowering.AllocatorFunction);
         }
         return new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed);
     }
 
-    private bool IsAdapterType(CppType type) => config.ResolveTypeAdapter(type, CppTypeAdapterUse.Field) != null;
+    private bool IsLoweredType(CppType type) => config.ResolveTypeLowering(type, CppTypeLoweringUse.Field) != null;
 
     private BindingTypeReference AnalyzeType(CppClass? declaringType, CppType type)
     {

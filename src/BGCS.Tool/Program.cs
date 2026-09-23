@@ -163,6 +163,8 @@ internal static class Program
                 GenerationDiagnosticWriter.WriteFailure(csharpGenerator.LastResult, Console.Error);
                 return 1;
             }
+            BGCS.Cpp2C.Lowering.CppExtensionArtifactEmitter.EmitManaged(
+                config, Path.GetFullPath(config.CSharpOutputPath, baseDirectory));
             Console.WriteLine($"Generated C# bridge bindings in {Path.GetFullPath(config.CSharpOutputPath, baseDirectory)}.");
         }
         return 0;

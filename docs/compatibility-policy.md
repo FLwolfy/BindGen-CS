@@ -12,7 +12,7 @@ BindGen-CS has not published its first stable release. Therefore the current pro
 - ABI and memory safety take priority over preserving prototype behavior. Unknown ownership, allocator, callback, async, inheritance, or template semantics fail closed.
 - Platform support exists only when the same source revision has a target-specific acceptance report. A plan, cross-compile, or report from another architecture is not evidence.
 
-The architecture keeps explicit configuration versions, typed diagnostics, adapter/plugin contracts, and API-diff automation so compatibility can be introduced cleanly later. Those extension points do not keep deleted behavior alive today.
+The architecture keeps explicit configuration versions, typed diagnostics, a plugin revision handshake, and API-diff automation so compatibility can be introduced cleanly later. There is one current lowering contract; it does not load or wrap the deleted pre-release adapter SPI. The revision handshake is an implementation guard, not a public “v1/v2” product label.
 
 ## Policy starting with the first stable release
 
@@ -30,4 +30,4 @@ There is currently no deprecation register because there is no stable legacy con
 
 ## Release evidence
 
-`bindgen-cs supply-chain` emits deterministic SPDX 2.3 SBOM and SLSA v1 provenance payloads containing artifact SHA-256 values, source revision, builder identity, and build parameters. The release workflow additionally signs package provenance and the SBOM association through GitHub OIDC/Sigstore attestations. Release candidates must also pass public API, dependency license, vulnerability, deterministic package, clean native-RID consumer, and complete desktop acceptance gates.
+`bindgen-cs supply-chain` emits deterministic SPDX 2.3 SBOM and SLSA v1 provenance payloads containing artifact SHA-256 values, source revision, builder identity, and build parameters. The release workflow is configured to sign package provenance and the SBOM association through GitHub OIDC/Sigstore attestations. A signature is valid evidence only when an authorized release job actually obtains the OIDC identity and publishes verifiable attestations; a local run cannot satisfy or simulate that condition. Release candidates must also pass public API, dependency license, vulnerability, deterministic package, clean native-RID consumer, and complete desktop acceptance gates.

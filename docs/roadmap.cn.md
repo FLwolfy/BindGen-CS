@@ -4,7 +4,7 @@
 
 ## 最终定义
 
-“超级通用”不表示对未知 C++ 语义进行猜测。BindGen-CS 的最终标准是：在明确的 target、ABI、ownership 和 build contract 下自动生成正确代码；可扩展的类型通过通用 adapter 接入；无法证明安全的声明给出稳定、可修复的诊断。
+“超级通用”不表示对未知 C++ 语义进行猜测。BindGen-CS 的最终标准是：在明确的 target、ABI、ownership 和 build contract 下自动生成正确代码；项目语义通过声明式 lowering、版本化 plugin 与显式 C shim 接入；未证明的规则要么给出稳定诊断，要么只能经显式、可审计的 bypass 继续。
 
 最终发布门槛：下列维度全部达到 9.0/10.0，任何单项失败都不能以平均分掩盖。
 
@@ -16,7 +16,7 @@
 | 易用性 | 新项目可通过 `init → doctor → validate → generate → build` 完成；错误包含具体配置修复路径 |
 | 跨平台 | 每个宣称生产支持的 target 都有独立 acceptance artifact，不以模型支持代替实机证据 |
 | 架构 | parser、analysis、IR、emitter、runtime、tool/build provider 依赖单向且有自动边界测试 |
-| 可扩展性 | 新 type adapter、emitter、build provider 不需要修改无关核心层或添加 library-name 特判 |
+| 可扩展性 | 新 type/callable/artifact lowering、emitter、build provider 不需要修改无关核心层或添加 library-name 特判 |
 | 性能与确定性 | 冷/热生成预算、缓存命中、稳定 hash、并发安全均有 gate |
 | 发布与供应链 | deterministic package、SBOM/provenance、兼容策略、干净消费者测试全部通过 |
 | InnoEngine | native bindings 全部由配置和生成流程拥有，禁止手写 import，完整 native/build/test gate 通过 |
@@ -24,7 +24,7 @@
 ## 不可妥协的设计规则
 
 1. 不在核心代码中识别某个 native library 名称并走特殊分支。
-2. 特殊 native 语义只能表达为通用配置、adapter/provider 接口或可复用分析规则。
+2. 特殊 native 语义只能表达为通用配置、lowering/provider contract、显式 C shim 或可复用分析规则。
 3. raw ABI 正确性优先于 friendly API 数量；无法证明 lifetime 时保留 raw API 并诊断。
 4. target support 必须绑定 compiler、triple、sysroot、ABI 和真实运行/编译证据。
 5. 生成目录是完整事务输出；用户扩展放在配置、插件或独立 partial 文件中。
@@ -37,15 +37,15 @@
 1. 默认 IR-native friendly C# surface（已落地，持续补 API snapshot）；
 2. multi-RID native asset/package layout（已落地）；
 3. SBOM、provenance、预发布 compatibility governance（已落地）；
-4. C/C++ 语义、adapter 与 lifetime contract（声明范围内已落地）；
+4. C/C++ 语义、lowering 与 lifetime contract（声明范围内已落地）；
 5. Windows x64 → Linux x64 → macOS x64 → Windows Arm64 的独立实机报告；
 6. Android/iOS/FreeBSD 是正式支持目标；依次补齐专属 toolchain/sysroot、包布局与实机报告，完成前标记为 ⚠️。
 
 ### Phase 0：可度量基线
 
-状态：已完成。
+状态：BGCS 已完成；独立的 InnoEngine macOS Arm64 集成 gate 也已通过。
 
-- 建立十类 acceptance scoring、真实库矩阵、package/native consumer smoke tests；InnoEngine 迁移属于后续阶段。
+- 建立十类 acceptance scoring、真实库矩阵、package/native consumer smoke tests，并保留独立 InnoEngine 集成验收。
 - 文档区分实机验收、自动测试、配置支持和明确拒绝。
 - 每个 target 生成隔离报告，禁止复用另一个 target 的 9.0 分数。
 
@@ -88,18 +88,18 @@
 
 完成条件：真实 C 库失败只能来自明确 unsupported contract，不来自 silent mis-generation。
 
-### Phase 4：C++ 语义 Bridge 与 Adapter SPI
+### Phase 4：C++ 语义 Bridge 与最终 Lowering SPI
 
-状态：声明的桌面子集已完成。`ICppTypeAdapter` / `ICppCallableAdapter` 具备确定性顺序；内置 string/vector/span/array/map/set/optional/variant/expected/path/chrono/smart-pointer 使用同一个 registry。
+状态：声明的桌面子集已完成。内置 lowering、`TypeLowerings` / `CallableLowerings`、typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugin 和显式 `NativeShims` 使用同一个确定性 registry。被取代的预发布 adapter SPI 已删除，没有 compatibility layer。
 
 - 完整覆盖 ctor/dtor、static/instance、cv/ref qualifier、overload、operator、namespace 和异常边界。
 - inheritance graph、virtual/non-virtual base、pointer adjustment、RTTI 可用性形成显式模型。
 - template 坚持 explicit instantiation；full/partial specialization 选择已有 native compile test。
-- 首个稳定版后通过 reviewed API gate 维护 adapter contract。
-- 每种 adapter 都持续声明 ABI、ownership 与 invalidation。
+- 首个稳定版后通过 reviewed API gate 维护 lowering contract。
+- 每种内置 lowering 都持续声明 ABI、ownership 与 invalidation。
 - callback proxy 持续维护 lifetime token、threading policy、exception translation 与 dispose race tests。
 
-完成条件：增加一个新容器 adapter 不修改 parser、核心 emitter 或既有 adapter；未知 specialization 稳定失败。
+完成条件：增加一个项目 lowering 不修改 parser 或无关 emitter；未知 specialization 稳定失败，除非显式 `AllowUnsafe` 接受一个可审计的 recipe/plugin/shim。
 
 ### Phase 5：Ownership、Marshalling 与 Safety Contract
 
@@ -139,7 +139,7 @@
 
 状态：第一组 release gate 已完成。C/C++ 配置生成使用内容寻址 immutable cache，具备原子恢复/发布和并发 writer 测试；10,000 declaration 冷/热预算进入完整验收。Workspace DAG、内存趋势和共享 parser cache 仍待完成。
 
-- 持续维护 declaration、configuration、compiler/toolchain、plugin 与 adapter 的版本化 cache fingerprint。
+- 持续维护 declaration、configuration、compiler/toolchain、plugin、lowering 与 shim 的版本化 cache fingerprint。
 - workspace project DAG、并行生成、共享 parser cache 和 isolated output transaction。
 - 真实库建立 cold/warm time、peak memory、output size 和 diff stability budgets。
 - 10k+ declarations、多个 translation units 和大型模板实例具备压力测试。
@@ -150,7 +150,7 @@
 
 状态：预发布 API gate 已完成。首个稳定版前没有 legacy support 或 obsolete window；稳定版后再启动正式 lifecycle。
 
-- 将 IR、diagnostics、adapter、emitter、build provider 分别定义稳定 public contracts。
+- 将 IR、diagnostics、lowering、emitter、build provider 分别定义稳定 public contracts。
 - 当前维护 reviewed API baseline；obsolete window 与 config migration command 只在首个稳定 contract 后引入。
 - 提供 Roslyn source-generator/MSBuild task 的薄集成，但核心 generation 保持 host-independent。
 - 插件加载具备版本检查、隔离诊断和 deterministic ordering。
@@ -159,9 +159,9 @@
 
 ### Phase 10：InnoEngine 全自动迁移
 
-状态：有意暂停，直到 Windows x64、Linux x64、macOS x64 三份 BGCS 报告全部通过。
+状态：macOS Arm64 已完成。五个 native project 全部由配置拥有并按 target 隔离；clean workspace diff、`Generated/` 外零手写 import、全部 native dependency build、完整 solution build 与六个 native-binding test project 全部通过。其他宿主仍需各自独立证据。
 
-- 为每个 native dependency 建立独立 config；共享规则通过 preset/base config/adapter 组合。
+- 为每个 native dependency 建立独立 config；共享规则通过 preset/base config/lowering 组合。
 - 禁止 `Generated/` 外手写 `DllImport`、`LibraryImport`、function pointer import 和 native layout mirror。
 - workspace 一条命令完成 validate/generate/diff/native build/managed build/native tests。
 - 删除旧 binding、重复 runtime 和临时 patch；任何保留 patch 必须是通用、带测试的 transformation。
@@ -170,7 +170,7 @@
 
 ### Phase 11：发布与长期维护
 
-- deterministic NuGet/tool packages、SPDX SBOM、SLSA provenance、license inventory、vulnerability gate 与 GitHub OIDC attestation 已完成。
+- deterministic NuGet/tool packages、SPDX SBOM、SLSA provenance、license inventory、vulnerability gate 与 GitHub OIDC attestation workflow 已完成；真实签名只接受授权 release run 的产物。
 - versioned schema、configuration migration、release notes、兼容性表和最小复现模板。
 - 每次发布保留全部 target acceptance artifacts 和性能趋势。
 
@@ -180,10 +180,10 @@
 
 1. 完成 Phase 1，立即降低所有后续测试和采用成本。
 2. Phase 2 与 Phase 3 并行演进，任何新 ABI 功能先进入 IR。
-3. Phase 4/5 建立 adapter 与 safety contract 后，再扩展新的 STL 类型。
+3. 新 STL 类型只能通过 Phase 4 lowering 与 Phase 5 safety contract 扩展。
 4. Phase 6 完成后扩展 Phase 7 实机平台矩阵。
-5. Windows x64、Linux x64、macOS x64 三份 BGCS 报告通过后才开始 InnoEngine 迁移。
-6. Phase 8/9/11 贯穿所有阶段并成为 release gate。
+5. 持续保持已完成的 InnoEngine migration gate，并在每个采用 target 上独立重复；macOS Arm64 结果不能替代其他宿主。
+6. Phase 8/9/11 贯穿所有阶段并成为 release gate，其中包括一次真实 OIDC 签名发布执行。
 
 ## 每次变更的 Definition of Done
 

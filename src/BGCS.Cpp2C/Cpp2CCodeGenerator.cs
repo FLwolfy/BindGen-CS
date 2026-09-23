@@ -10,7 +10,7 @@
     using BGCS.Core.Logging;
     using BGCS.Cpp2C.GenerationSteps;
     using BGCS.Cpp2C.Metadata;
-    using BGCS.Cpp2C.Adapters;
+    using BGCS.Cpp2C.Lowering;
     using BGCS.CppAst.Diagnostics;
     using BGCS.CppAst.Model.Metadata;
     using BGCS.CppAst.Parsing;
@@ -28,7 +28,7 @@
         private readonly List<GenerationStep> generationSteps = [];
         private readonly List<Cpp2CGeneratorMetadata> copyFromPending = [];
         private bool hasCustomGenerationSteps;
-        private bool pluginsApplied;
+        private bool loweringsApplied;
 
         /// <summary>
         /// Initializes a new instance of <see cref="Cpp2CCodeGenerator"/>.
@@ -101,6 +101,7 @@
 
         protected virtual CppParserOptions PrepareSettings()
         {
+            ApplyLoweringServices();
             Cpp2CConfigValidator.Validate(config);
             string baseDirectory = config.ConfigDirectory ?? Environment.CurrentDirectory;
             string? targetSysRoot = ResolveConfiguredPath(config.TargetSysRoot, baseDirectory, allowCommandName: false);
@@ -211,7 +212,7 @@
                 ? null
                 : config.AllowedHeaders.Select(path => Path.GetFullPath(path, baseDirectory)).ToList();
             string resolvedOutput = Path.GetFullPath(outputPath ?? config.OutputPath, baseDirectory);
-            ApplyPluginServices();
+            ApplyLoweringServices();
             CppParserOptions options = PrepareSettings();
             IncrementalGenerationCache? cache = null;
             IncrementalCacheKey? cacheKey = null;
@@ -227,7 +228,7 @@
                     CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.Cpp,
                         ResolveConfiguredPath(config.CompilerPath, baseDirectory, allowCommandName: true)) + "\n" +
                     config.Plugins.GetCacheFingerprint() + "\n" +
-                    (config.Adapters.TryGetCacheFingerprint(out string adapterFingerprint) ? adapterFingerprint : "adapters:unfingerprinted");
+                    (config.Lowerings.TryGetCacheFingerprint(out string loweringFingerprint) ? loweringFingerprint : "lowerings:unfingerprinted");
                 cacheKey = IncrementalGenerationCache.CreateKey(fingerprint, inputs);
                 if (cache.TryRestore(cacheKey, resolvedOutput, out string stateJson))
                 {
@@ -280,6 +281,7 @@
         /// </summary>
         public virtual void Generate(CppCompilation compilation, List<string> headerFiles, string outputPath, List<string>? allowedHeaders)
         {
+            ApplyLoweringServices();
             Cpp2CConfigValidator.Validate(config);
             EnsureGenerationPipeline();
             // Print diagnostic messages
@@ -327,6 +329,7 @@
 
             try
             {
+                config.Lowerings.BeginGeneration();
                 ParseResult result = new(compilation, headerFiles);
                 new CBridgeEmitter().EmitAst(this, generationSteps, files, result, generationOutputPath, config, metadata);
                 if (config.GenerateBuildManifest)
@@ -349,8 +352,8 @@
         private static string BuildUnsupportedRemediation(Exception exception)
         {
             return $"C++ bridge generation rejected an unsupported declaration: {exception.Message} " +
-                "Add the required type name to the matching configurable adapter list (string, span/vector/array, map/set, optional/expected/variant, path, chrono, or smart pointer); " +
-                "request a concrete class through TemplateInstantiations; or provide a custom generation step for ownership/allocator semantics.";
+                "Add a declarative TypeLowerings recipe, request a concrete class through TemplateInstantiations, " +
+                "register a typed lowering plugin, or provide an explicit NativeShims C ABI boundary with ownership and allocator semantics.";
         }
 
         private BindingDiagnostic[] CreateDiagnostics()
@@ -417,22 +420,29 @@
             EnsureDefaultGenerationSteps();
         }
 
-        private void ApplyPluginServices()
+        private void ApplyLoweringServices()
         {
-            if (pluginsApplied)
+            if (loweringsApplied)
                 return;
-            foreach (var registration in config.Plugins.GetServices<ICppTypeAdapter>())
-                if (!config.Adapters.TypeAdapters.Any(adapter => string.Equals(adapter.Name, registration.Service.Name, StringComparison.Ordinal)))
-                    config.Adapters.Register(registration.Service);
-            foreach (var registration in config.Plugins.GetServices<ICppCallableAdapter>())
-                if (!config.Adapters.CallableAdapters.Any(adapter => string.Equals(adapter.Name, registration.Service.Name, StringComparison.Ordinal)))
-                    config.Adapters.Register(registration.Service);
-            pluginsApplied = true;
+            foreach (CppTypeLoweringRecipe recipe in config.TypeLowerings)
+                config.Lowerings.Register(new ConfiguredCppTypeLowering(recipe));
+            foreach (CppCallableLoweringRecipe recipe in config.CallableLowerings)
+                config.Lowerings.Register(new ConfiguredCppCallableLowering(recipe));
+            string configDirectory = config.ConfigDirectory ?? Environment.CurrentDirectory;
+            foreach (CppNativeShim shim in config.NativeShims)
+                config.Lowerings.Register(new ConfiguredNativeShimContributor(shim, configDirectory));
+            foreach (var registration in config.Plugins.GetServices<ICppTypeLowering>())
+                config.Lowerings.Register(registration.Service);
+            foreach (var registration in config.Plugins.GetServices<ICppCallableLowering>())
+                config.Lowerings.Register(registration.Service);
+            foreach (var registration in config.Plugins.GetServices<ICppArtifactContributor>())
+                config.Lowerings.Register(registration.Service);
+            loweringsApplied = true;
         }
 
         private bool CanUseIncrementalCache() => config.EnableIncrementalCache &&
             GetType() == typeof(Cpp2CCodeGenerator) && !hasCustomGenerationSteps && copyFromPending.Count == 0 &&
-            config.Adapters.TryGetCacheFingerprint(out _);
+            config.Lowerings.TryGetCacheFingerprint(out _);
 
         private static string[] EnumerateOutputFiles(string outputPath) =>
             Directory.GetFiles(outputPath, "*", SearchOption.AllDirectories)

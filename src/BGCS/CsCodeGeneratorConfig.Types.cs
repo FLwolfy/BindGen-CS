@@ -270,7 +270,7 @@ namespace BGCS
         /// Performs the operation implemented by <c>MakeDelegatePointer</c>.
         /// </summary>
         /// <returns>Result produced by <c>MakeDelegatePointer</c>.</returns>
-        public string MakeDelegatePointer(CppFunctionType functionType, bool withConvention = false)
+        public string MakeDelegatePointer(CppFunctionType functionType, bool withConvention = true)
         {
             string returnType = GetCsTypeNameInternal(functionType.ReturnType);
             if (returnType == "bool")
@@ -306,7 +306,7 @@ namespace BGCS
         /// Performs the operation implemented by <c>GetDelegatePointerType</c>.
         /// </summary>
         /// <returns>Result produced by <c>GetDelegatePointerType</c>.</returns>
-        public string GetDelegatePointerType(CppFunctionType functionType, bool withConvention = false)
+        public string GetDelegatePointerType(CppFunctionType functionType, bool withConvention = true)
         {
             if (DelegatesAsVoidPointer)
             {

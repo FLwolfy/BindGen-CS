@@ -41,7 +41,9 @@ Use `StrictSafety=false` only when an external process completely audits these s
 | `BGCS-SAFETY-ALLOCATOR` | An output string has no cleanup allocator | Set `CleanupFunction`, ownership, encoding, and cleanup requirement |
 | `BGCSCS001` | The IR-native C# emitter cannot preserve a declaration without semantic loss | Implement a general, tested IR lowering or explicitly exclude the declaration; emission fails before writing output |
 | `BGCSCPP-INSTANTIATION` | A primary template was found without a requested concrete instance | Add the required full specialization to `TemplateInstantiations` or `FunctionTemplateInstantiations` |
-| `BGCSCPP001` | A C++ declaration cannot be lowered safely through known adapters | Configure the matching STL type list, request a concrete template instance, or implement a custom generation step with ownership/allocator semantics |
+| `BGCSCPP001` | A C++ declaration has no accepted lowering | Configure a built-in type list, request a concrete template instance, add a declarative lowering/typed plugin/explicit C shim, or choose an auditable safety policy |
+| `BGCS-SAFETY-LOWERING-BYPASS` | An `Unsafe` lowering was explicitly allowed | Keep project-owned ABI, native invocation, allocator, and lifetime tests; promote the lowering to `UserAsserted` or `Verified` when evidence exists |
+| `BGCS-SAFETY-EXTERNAL-TYPE` | A project-supplied managed value carrier crosses the ABI | Declare matching target size/alignment with `RequireLayoutMatch`, use pointer-only semantics, or explicitly bypass and retain native invocation tests |
 
 ## Minimal mapping example
 

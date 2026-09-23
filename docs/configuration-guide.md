@@ -93,9 +93,9 @@ Model support is not the same as completed host acceptance. See the [target evid
 
 ## Incremental cache and plugins
 
-`EnableIncrementalCache` defaults to `true`; `CacheDirectory` defaults to `.bindgen-cache` relative to the configuration file. A key contains the installed generator identity, complete serialized configuration, parser arguments, resolved compiler identity/version, plugin/adapter fingerprints, and exact contents of discovered C/C++ inputs. Restore and publication are transactional. Changing a header, target, toolchain, define, include, mapping, plugin binary, or generator binary creates a different key. Programmatic generators with unfingerprinted custom steps, metadata, delegates, or adapters bypass cache hits rather than risk stale output.
+`EnableIncrementalCache` defaults to `true`; `CacheDirectory` defaults to `.bindgen-cache` relative to the configuration file. A key contains the installed generator identity, complete serialized configuration, parser arguments, resolved compiler identity/version, plugin/lowering fingerprints, and exact contents of discovered C/C++ inputs. Restore and publication are transactional. Changing a header, target, toolchain, define, include, mapping, plugin binary, shim, or generator binary creates a different key. Programmatic generators with unfingerprinted custom state bypass cache hits rather than risk stale output.
 
-`PluginAssemblies` lists explicit assembly paths relative to the configuration file. Each assembly must expose a public parameterless `IBindingPlugin` with `ContractVersion = 1`; mismatches and duplicate IDs fail before generation. Loading uses an isolated dependency resolver and atomic batch registration. Plugins register typed services through `IBindingPluginHost`. For C++, register `ICppTypeAdapter` or `ICppCallableAdapter`; for C# post-analysis output, register `IBindingEmitter`. Stateful adapters should implement `ICacheFingerprintProvider`. Plugins execute trusted code and should be pinned and reviewed like build tooling.
+`PluginAssemblies` lists explicit assembly paths relative to the configuration file. Each assembly must expose a public parameterless `IBindingPlugin` and return `BindingPluginContract.CurrentVersion` from its `ContractVersion` property; mismatches and duplicate IDs fail before generation. The revision is a load-time compatibility guard, not a marketed plugin generation. Loading uses an isolated dependency resolver and atomic batch registration. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, or `ICppArtifactContributor`; C# post-analysis output can register `IBindingEmitter`. Stateful lowerings must implement `ICacheFingerprintProvider`. See the [final lowering architecture](lowering.md) for recipes, plugins, shims, and safety policy.
 
 ## Mappings and policies
 
@@ -106,13 +106,33 @@ Use mappings only for facts that cannot be inferred safely:
 - string encoding and ownership;
 - pointer/count relationships that names cannot identify;
 - constructors and member-style functions;
-- explicit template instantiations and C++ adapters.
+- explicit template instantiations and C++ lowerings.
 
 A mapping must not hide ABI uncertainty. If a non-trivial C++ type crosses a boundary, generate a C bridge instead.
 
 ## Strict safety diagnostics
 
 `StrictSafety` defaults to `true`. `StrictSafetySeverity` selects `Warning` (diagnose while preserving compatibility), `SuppressFriendly` (keep raw ABI and remove high-risk string/Span/array/delegate overloads), or `Error` (make validate/generate/build fail before commit). Diagnostics use `BGCS-SAFETY-*` codes and include the exact minimum `MarshallingMappings` path. Set `StrictSafety=false` only when an external audit owns those semantics.
+
+When `TypeMappings` redirects a native record to a project-supplied managed value type, add an `ExternalTypeContracts` entry. `NativeTypes` and `ManagedTypes` are ordinal selectors that accept `*` and `?`, so one audited contract can cover closed generic carriers such as `NativeVector_*` to `NativeVector<*>`. Every selected `TypeMappings` pair is validated and overlapping contracts are rejected. `ByValuePolicy=Reject` permits pointer-only use, `RequireLayoutMatch` accepts by-value use only when parsed native size/alignment match the declared carrier, and `BypassLayoutValidation` explicitly continues without that proof. Accepted by-value carriers remain visible in Binding IR and emit `BGCS-SAFETY-EXTERNAL-TYPE`; the project must keep managed-layout and native-invocation tests.
+
+```json
+{
+  "TypeMappings": { "NativeVec2": "Vector2" },
+  "Usings": ["System.Numerics"],
+  "ExternalTypeContracts": [
+    {
+      "NativeTypes": ["NativeVec2"],
+      "ManagedTypes": ["Vector2"],
+      "Size": 8,
+      "Alignment": 4,
+      "ByValuePolicy": "RequireLayoutMatch"
+    }
+  ]
+}
+```
+
+For C++ bridges, `LoweringSafetyPolicy` defaults to `VerifiedOnly`. Use `AllowUserAsserted` for reviewed project recipes/plugins/shims, and `AllowUnsafe` only when the project explicitly owns ABI and lifetime risk. The latter continues generation but emits the auditable `BGCS-SAFETY-LOWERING-BYPASS` diagnostic.
 
 ## Ownership and buffer marshalling
 

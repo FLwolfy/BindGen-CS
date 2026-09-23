@@ -6,7 +6,7 @@
     "void* cb"
   ],
   "NotContains": [
-    "delegate*<int, int> cb",
-    "delegate*<void> cb"
+    "delegate* unmanaged[Cdecl]<int, int> cb",
+    "delegate* unmanaged[Cdecl]<void> cb"
   ]
 }

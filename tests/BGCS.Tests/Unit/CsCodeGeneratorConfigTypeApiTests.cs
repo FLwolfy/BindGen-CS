@@ -262,7 +262,7 @@ public class CsCodeGeneratorConfigTypeApiTests
 
         cfg.DelegatesAsVoidPointer = false;
         string pointerType = cfg.GetDelegatePointerType(callbackType);
-        Assert.Contains("delegate*<", pointerType);
+        Assert.Contains("delegate* unmanaged[", pointerType);
         Assert.Contains("int", pointerType);
 
         cfg.DelegatesAsVoidPointer = true;

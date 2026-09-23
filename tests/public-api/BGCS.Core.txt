@@ -457,6 +457,20 @@ class BGCS.Core.Mapping.EnumMapping
   property System.Collections.Generic.List<BGCS.Core.Mapping.EnumItemMapping> ItemMappings { get; set }
   method BGCS.Core.Mapping.EnumItemMapping GetItemMapping(System.String valueName)
   method System.Boolean TryGetItemMapping(System.String valueName, BGCS.Core.Mapping.EnumItemMapping& mapping)
+enum BGCS.Core.Mapping.ExternalTypeByValuePolicy
+  field BGCS.Core.Mapping.ExternalTypeByValuePolicy BypassLayoutValidation
+  field BGCS.Core.Mapping.ExternalTypeByValuePolicy Reject
+  field BGCS.Core.Mapping.ExternalTypeByValuePolicy RequireLayoutMatch
+  field System.Int32 value__
+class BGCS.Core.Mapping.ExternalTypeContract
+  ctor()
+  property System.Int32 Alignment { get; set }
+  property BGCS.Core.Mapping.ExternalTypeByValuePolicy ByValuePolicy { get; set }
+  property System.Collections.Generic.List<System.String> ManagedTypes { get; set }
+  property System.Collections.Generic.List<System.String> NativeTypes { get; set }
+  property System.Int32 Size { get; set }
+  method System.Boolean Matches(System.String nativeType, System.String managedType)
+  method System.Boolean MatchesSelector(System.String selector, System.String value)
 class BGCS.Core.Mapping.FunctionAliasMapping
   ctor(System.String exportedName, System.String exportedAliasName, System.String friendlyName, System.String comment)
   property System.String Comment { get; set }

@@ -26,6 +26,23 @@ public enum BindingTypeKind
 public sealed record BindingTypeReference(string NativeName, string ManagedName, int PointerDepth, bool IsConst, int Size);
 
 /// <summary>
+/// Records target-specific ABI evidence for a managed carrier supplied outside generated source.
+/// </summary>
+/// <param name="NativeTypes">Native aliases represented by the carrier.</param>
+/// <param name="ManagedType">Managed carrier type name.</param>
+/// <param name="Size">Declared carrier size in bytes.</param>
+/// <param name="Alignment">Declared carrier alignment in bytes.</param>
+/// <param name="AllowsByValue">Whether the contract accepts ABI by-value positions.</param>
+/// <param name="LayoutValidationBypassed">Whether native layout matching was explicitly bypassed.</param>
+public sealed record BindingExternalTypeContract(
+    IReadOnlyList<string> NativeTypes,
+    string ManagedType,
+    int Size,
+    int Alignment,
+    bool AllowsByValue,
+    bool LayoutValidationBypassed);
+
+/// <summary>
 /// Describes one ABI-positioned field in a structure or union.
 /// </summary>
 /// <param name="NativeName">Native field name.</param>

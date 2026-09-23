@@ -57,6 +57,14 @@ public sealed class TypeAnalyzer
             managedName = config.GetManagedTypeName(voidAlias.Name) + new string('*', pointerDepth);
         if (current is CppPrimitiveType { Kind: CppPrimitiveKind.Bool })
             managedName = config.GetBoolType() + new string('*', pointerDepth);
+        if (config.GenerateHandles && pointerDepth > 0 && IsIncompleteRecord(current) &&
+            managedName.EndsWith('*'))
+        {
+            // An incomplete record is emitted as an nint-backed opaque handle. One native
+            // pointer indirection is therefore represented by the handle value itself;
+            // additional indirections remain explicit (T** -> Handle*).
+            managedName = managedName[..^1].TrimEnd();
+        }
         TrackReferencedRecord(type, managedName);
         return new(type.GetDisplayName(), managedName, pointerDepth, isConst, type.SizeOf);
     }
@@ -113,7 +121,7 @@ public sealed class TypeAnalyzer
             return;
         }
         referencedRecords.Add(name, new(record.FullName, name, Math.Max(0, record.SizeOf),
-            Math.Clamp(record.AlignOf, 1, 8), behindPointer));
+            Math.Max(1, record.AlignOf), behindPointer));
     }
 
     private static bool IsVoidPointerAlias(CppTypedef typedef)
@@ -153,6 +161,24 @@ public sealed class TypeAnalyzer
             break;
         }
         return current is CppPrimitiveType { Kind: CppPrimitiveKind.Void };
+    }
+
+    private static bool IsIncompleteRecord(CppType type)
+    {
+        while (true)
+        {
+            switch (type)
+            {
+                case CppQualifiedType qualified:
+                    type = qualified.ElementType;
+                    continue;
+                case CppTypedef typedef when !typedef.IsOpaqueHandle():
+                    type = typedef.ElementType;
+                    continue;
+                default:
+                    return type is CppClass { IsDefinition: false };
+            }
+        }
     }
 
     internal sealed record ReferencedRecord(string NativeName, string ManagedName, int Size, int Alignment,

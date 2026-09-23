@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace BGCS.Core.Extensibility;
 
-/// <summary>Version of the stable third-party plugin service contract.</summary>
+/// <summary>Load-time revision of the current third-party plugin service contract.</summary>
 public static class BindingPluginContract
 {
     public const int CurrentVersion = 1;

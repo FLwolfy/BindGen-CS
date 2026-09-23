@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using BGCS.Configuration;
 using BGCS.Core.Extensibility;
+using BGCS.Core.Mapping;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
 using Xunit;
@@ -51,11 +52,58 @@ public class CsCodeGeneratorConfigTests
         Assert.NotNull(cfg.Defines);
         Assert.NotNull(cfg.AdditionalArguments);
         Assert.NotNull(cfg.TypeMappings);
+        Assert.NotNull(cfg.ExternalTypeContracts);
         Assert.NotNull(cfg.NameMappings);
         Assert.NotNull(cfg.Keywords);
         Assert.NotNull(cfg.FunctionMappings);
         Assert.NotNull(cfg.ArrayMappings);
         Assert.NotNull(cfg.PluginAssemblies);
+    }
+
+    [Fact]
+    public void Validator_ShouldRejectIncompleteOrConflictingExternalTypeContracts()
+    {
+        CsCodeGeneratorConfig config = new()
+        {
+            Namespace = "Test.Generated",
+            ApiName = "TestApi",
+            LibName = "test"
+        };
+        config.TypeMappings["NativeValue"] = "ManagedValue";
+        config.ExternalTypeContracts.Add(new()
+        {
+            NativeTypes = ["NativeValue"],
+            ManagedTypes = ["ManagedValue"],
+            Size = 0,
+            Alignment = 3,
+            ByValuePolicy = (ExternalTypeByValuePolicy)99
+        });
+        config.ExternalTypeContracts.Add(new()
+        {
+            NativeTypes = ["NativeValue"],
+            ManagedTypes = ["ManagedValue"],
+            Size = 8,
+            Alignment = 4
+        });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => ConfigValidator.Validate(config));
+
+        Assert.Contains("positive Size", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("power of two", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("invalid ByValuePolicy", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("duplicate native selector", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("duplicate managed selector", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("NativeVector_*", "NativeVector_int", true)]
+    [InlineData("NativeVector_?", "NativeVector_i", true)]
+    [InlineData("NativeVector<*>", "NativeVector<int>", true)]
+    [InlineData("NativeVector<*>", "OtherVector<int>", false)]
+    [InlineData("Exact", "Exact", true)]
+    public void ExternalTypeSelector_ShouldUseOrdinalGlobMatching(string selector, string value, bool expected)
+    {
+        Assert.Equal(expected, ExternalTypeContract.MatchesSelector(selector, value));
     }
 
     [Fact]

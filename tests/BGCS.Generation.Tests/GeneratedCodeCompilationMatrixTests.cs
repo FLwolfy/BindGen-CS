@@ -749,8 +749,8 @@ public class GeneratedCodeCompilationMatrixTests
                     Type encoder = assembly.GetType("Compile.Generated.BgcsEncoder")!;
                     Type begin = assembly.GetType("Compile.Generated.BgcsBeginCallback")!;
                     Type end = assembly.GetType("Compile.Generated.BgcsEndCallback")!;
-                    Assert.Equal(encoder, begin.GetMethod("Invoke")!.ReturnType.GetElementType());
-                    Assert.Equal(encoder, end.GetMethod("Invoke")!.GetParameters()[0].ParameterType.GetElementType());
+                    Assert.Equal(encoder, begin.GetMethod("Invoke")!.ReturnType);
+                    Assert.Equal(encoder, end.GetMethod("Invoke")!.GetParameters()[0].ParameterType);
                 }
             },
             new()

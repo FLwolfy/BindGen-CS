@@ -1,6 +1,6 @@
 {
   "Contains": [
-    "internal static FunctionTable funcTable;",
+    "internal static FunctionTable funcTable = null !;",
     "private static string GetLibraryName()",
     "public static void InitApi()",
     "funcTable = new FunctionTable(LibraryLoader.LoadLibrary(GetLibraryName, null), 1);",

@@ -151,6 +151,7 @@ class BGCS.CsCodeGeneratorConfig
   property System.Collections.Generic.List<BGCS.Core.Mapping.EnumMapping> EnumMappings { get; set }
   property BGCS.NamingConvention EnumNamingConvention { get; set }
   property BGCS.NamingConvention ExtensionNamingConvention { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.ExternalTypeContract> ExternalTypeContracts { get; set }
   property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<BGCS.Core.Mapping.FunctionAliasMapping>> FunctionAliasMappings { get; set }
   property System.Collections.Generic.List<BGCS.Core.Mapping.FunctionMapping> FunctionMappings { get; set }
   property BGCS.NamingConvention FunctionNamingConvention { get; set }

@@ -1,7 +1,7 @@
 {
   "Contains": [
     "ApplyCbNative",
-    "delegate*<int, int> cb"
+    "delegate* unmanaged[Cdecl]<int, int> cb"
   ],
   "NotContains": [
     "void* cb"

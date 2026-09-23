@@ -93,9 +93,9 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 
 ## 增量缓存与 Plugin
 
-`EnableIncrementalCache` 默认为 `true`，`CacheDirectory` 默认为配置文件相对路径 `.bindgen-cache`。Cache key 包含已安装 generator identity、完整序列化配置、parser arguments、解析后的 compiler identity/version、plugin/adapter fingerprint 和发现到的 C/C++ 输入精确内容。恢复和发布都是事务操作。Header、target、toolchain、define、include、mapping、plugin binary 或 generator binary 任一变化都会得到新 key。若程序化 generator 存在无法 fingerprint 的 custom step、metadata、delegate 或 adapter，则保守地绕过 cache hit，避免陈旧输出。
+`EnableIncrementalCache` 默认为 `true`，`CacheDirectory` 默认为配置文件相对路径 `.bindgen-cache`。Cache key 包含已安装 generator identity、完整序列化配置、parser arguments、解析后的 compiler identity/version、plugin/lowering fingerprint 和发现到的 C/C++ 输入精确内容。恢复和发布都是事务操作。Header、target、toolchain、define、include、mapping、plugin binary、shim 或 generator binary 任一变化都会得到新 key。若程序化 generator 存在无法 fingerprint 的 custom state，则保守地绕过 cache hit，避免陈旧输出。
 
-`PluginAssemblies` 显式列出相对于配置文件的 assembly。每个 assembly 必须包含 public parameterless `IBindingPlugin` 且 `ContractVersion = 1`；版本不匹配或 ID 重复会在生成前失败。加载使用隔离 dependency resolver 和原子批量注册。Plugin 通过 `IBindingPluginHost` 注册 typed service；C++ 可注册 `ICppTypeAdapter` / `ICppCallableAdapter`，C# post-analysis output 可注册 `IBindingEmitter`。有状态 adapter 应实现 `ICacheFingerprintProvider`。Plugin 会执行可信代码，应当像 build tool 一样固定版本并审查。
+`PluginAssemblies` 显式列出相对于配置文件的 assembly。每个 assembly 必须包含 public parameterless `IBindingPlugin`，并从 `ContractVersion` 返回 `BindingPluginContract.CurrentVersion`；不匹配或 ID 重复会在生成前失败。这个 revision 只用于加载时兼容性校验，不是对外宣传的 plugin 代际。加载使用隔离 dependency resolver 和原子批量注册。C++ plugin 可注册 `ICppTypeLowering`、`ICppCallableLowering`、`ICppArtifactContributor`；C# post-analysis output 可注册 `IBindingEmitter`。有状态 lowering 必须实现 `ICacheFingerprintProvider`。完整 recipe、plugin、shim 与安全策略见[最终 lowering 架构](lowering.cn.md)。
 
 ## Mapping 与 Policy
 
@@ -106,13 +106,33 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 - string encoding 和 ownership；
 - 无法通过名称识别的 pointer/count 关系；
 - constructor 和 member-style function；
-- 显式 template instance 和 C++ adapter。
+- 显式 template instance 和 C++ lowering。
 
 Mapping 不能掩盖 ABI 不确定性。非平凡 C++ 类型跨边界时必须生成 C Bridge。
 
 ## 严格安全诊断
 
 `StrictSafety` 默认是 `true`。`StrictSafetySeverity` 可选 `Warning`（诊断但保持兼容）、`SuppressFriendly`（保留 raw ABI，删除高风险 string/Span/array/delegate overload）或 `Error`（validate/generate/build 在 commit 前失败）。诊断使用 `BGCS-SAFETY-*` code，并给出最小 `MarshallingMappings` 路径。只有外部审计明确负责这些语义时才应设为 `false`。
+
+当 `TypeMappings` 把 native record 映射到项目提供的 managed value type 时，必须增加 `ExternalTypeContracts`。`NativeTypes` 与 `ManagedTypes` 是 ordinal selector，支持 `*` 与 `?`，因此一个经审计的 contract 可以覆盖 `NativeVector_*` 到 `NativeVector<*>` 这样的闭合泛型 carrier；每个被选中的 `TypeMappings` pair 都会验证，重叠 contract 会被拒绝。`ByValuePolicy=Reject` 只允许 pointer 使用；`RequireLayoutMatch` 仅在解析出的 native size/alignment 与声明 carrier 一致时允许按值传递；`BypassLayoutValidation` 会在没有该证据时显式继续。通过的按值 carrier 会保留在 Binding IR 中并产生 `BGCS-SAFETY-EXTERNAL-TYPE`，项目必须保留 managed layout 与 native invocation 测试。
+
+```json
+{
+  "TypeMappings": { "NativeVec2": "Vector2" },
+  "Usings": ["System.Numerics"],
+  "ExternalTypeContracts": [
+    {
+      "NativeTypes": ["NativeVec2"],
+      "ManagedTypes": ["Vector2"],
+      "Size": 8,
+      "Alignment": 4,
+      "ByValuePolicy": "RequireLayoutMatch"
+    }
+  ]
+}
+```
+
+C++ bridge 的 `LoweringSafetyPolicy` 默认为 `VerifiedOnly`；项目 recipe/plugin/shim 使用 `AllowUserAsserted`，只有明确接管 ABI 与 lifetime 风险时才使用 `AllowUnsafe`。后者继续生成，但输出 `BGCS-SAFETY-LOWERING-BYPASS` 审计诊断。
 
 ## Ownership 与 Buffer Marshalling
 

@@ -75,6 +75,16 @@
         public Dictionary<string, string> TypeMappings { get; set; } = null!;
 
         /// <summary>
+        /// Declares target-specific ABI evidence for managed value types supplied by the consuming project.
+        /// </summary>
+        /// <remarks>
+        /// A contract does not generate the managed carrier. Pair every native name with a matching
+        /// <see cref="TypeMappings"/> entry and make the carrier available through <see cref="CsCodeGeneratorConfig.Usings"/>.
+        /// </remarks>
+        [DefaultValue(null)]
+        public List<ExternalTypeContract> ExternalTypeContracts { get; set; } = null!;
+
+        /// <summary>
         /// Gets or sets the mappings from typedef names to corresponding enum names.
         /// </summary>
         /// <remarks>Use this property to specify how typedefs should be mapped to enums during code

@@ -3,6 +3,7 @@ namespace BGCS.Cpp2C.Emission;
 using System.Text;
 using BGCS.Core;
 using BGCS.Cpp2C.Metadata;
+using BGCS.Cpp2C.Lowering;
 using BGCS.Intermediate;
 using SharedEmissionContext = BGCS.Emission.EmissionContext;
 using SharedEmitter = BGCS.Emission.IBindingEmitter;
@@ -68,5 +69,6 @@ public sealed class CBridgeEmitter : SharedEmitter
             step.Generate(files, result, outputPath, config, metadata);
             step.CopyToMetadata(metadata);
         }
+        CppExtensionArtifactEmitter.EmitNative(config, outputPath);
     }
 }

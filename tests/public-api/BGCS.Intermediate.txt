@@ -97,7 +97,9 @@ class BGCS.Intermediate.BindingDiagnosticCodes
   field System.String CallbackThreading
   field System.String CppInstantiation
   field System.String CppUnsupported
+  field System.String ExternalType
   field System.String Ownership
+  field System.String UnsafeLowering
 class BGCS.Intermediate.BindingDiagnosticDescriptor
   ctor(System.String Code, System.String Title, System.String Cause, System.String Resolution)
   property System.String Cause { get; set }
@@ -139,6 +141,20 @@ class BGCS.Intermediate.BindingEnumMember
   method System.Int32 GetHashCode()
   method System.String ToString()
   method System.Void Deconstruct(System.String& NativeName, System.String& ManagedName, System.String& Value)
+class BGCS.Intermediate.BindingExternalTypeContract
+  ctor(System.Collections.Generic.IReadOnlyList<System.String> NativeTypes, System.String ManagedType, System.Int32 Size, System.Int32 Alignment, System.Boolean AllowsByValue, System.Boolean LayoutValidationBypassed)
+  property System.Int32 Alignment { get; set }
+  property System.Boolean AllowsByValue { get; set }
+  property System.Boolean LayoutValidationBypassed { get; set }
+  property System.String ManagedType { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> NativeTypes { get; set }
+  property System.Int32 Size { get; set }
+  method BGCS.Intermediate.BindingExternalTypeContract <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingExternalTypeContract other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.Collections.Generic.IReadOnlyList<System.String>& NativeTypes, System.String& ManagedType, System.Int32& Size, System.Int32& Alignment, System.Boolean& AllowsByValue, System.Boolean& LayoutValidationBypassed)
 class BGCS.Intermediate.BindingField
   ctor(System.String NativeName, System.String ManagedName, BGCS.Intermediate.BindingTypeReference Type, System.Int64 Offset, System.Int64 BitOffset, System.Int32 BitWidth, System.Collections.Generic.IReadOnlyList<System.Int32> ArrayDimensions, System.Boolean IsBitField, System.Boolean IsSignedBitField)
   property System.Collections.Generic.IReadOnlyList<System.Int32> ArrayDimensions { get; set }
@@ -216,6 +232,7 @@ class BGCS.Intermediate.BindingModule
   property System.Collections.Generic.IList<BGCS.Intermediate.BindingDelegate> Delegates { get }
   property System.Collections.Generic.IList<System.String> Diagnostics { get }
   property System.Boolean EmitLibraryNameConstant { get; set }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingExternalTypeContract> ExternalTypes { get }
   property System.Collections.Generic.IList<BGCS.Intermediate.BindingFunctionTableEntry> FunctionTableEntries { get }
   property System.Collections.Generic.IList<BGCS.Intermediate.BindingFunction> Functions { get }
   property System.Boolean GenerateAdditionalOverloads { get; set }

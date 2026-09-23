@@ -95,10 +95,10 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 
 ## 当前边界
 
-- 已验证 `std::string`、vector/span、optional、array、map、set、variant、expected、filesystem path、chrono duration/time-point、smart pointer 和配置式 pure-virtual callback proxy；任意未知 specialization 仍需显式 lowering。
+- 已验证 `std::string`、vector/span、optional、array、map、set、variant、expected、filesystem path、chrono duration/time-point、smart pointer 和配置式 pure-virtual callback proxy；任意未知 specialization 仍需显式 recipe、plugin 或 C shim。
 - 仅凭 pointer 语法无法可靠推断 ownership 和 allocator 语义。
 - typed C variadic 当前要求 `DllImport` 和显式完成参数提升后的类型。
-- 五个真实 C 库 gate 与 bimg C++ Bridge 会编译生成输出并检查 target-specific 确定性 API snapshot；InnoEngine adoption 会在三份 desktop-x64 BGCS 报告通过后再开始。
+- 五个真实 C 库 gate 与 bimg C++ Bridge 会编译生成输出并检查 target-specific 确定性 API snapshot；InnoEngine 独立拥有五个生成绑定项目，其 macOS Arm64 clean-regeneration/native-build/full-solution/native-test gate 已通过。
 - 完整 solution、生成消费者和 package smoke project 均以 warning-as-error 模式通过编译。
 
 主 C# 输出只由 IR-native `CSharpEmitter` 负责；不存在预发布 compatibility emitter。`native-build --package-root` 生成 multi-RID runtime asset tree；`supply-chain` 为正式包生成 SPDX/SLSA 证据。

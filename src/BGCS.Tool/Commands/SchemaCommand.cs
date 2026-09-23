@@ -27,6 +27,7 @@ internal static class SchemaCommand
         [nameof(CsCodeGeneratorConfig.TargetTriple)] = "Optional compiler target triple override.",
         [nameof(CsCodeGeneratorConfig.TargetSysRoot)] = "Optional target SDK or sysroot path.",
         [nameof(CsCodeGeneratorConfig.MarshallingMappings)] = "Function-level ownership, encoding, length, allocation, and cleanup contracts.",
+        [nameof(CsCodeGeneratorConfig.ExternalTypeContracts)] = "Target-specific ABI evidence for project-supplied managed value-type carriers, including an explicit by-value safety policy.",
         [nameof(CsCodeGeneratorConfig.StrictSafety)] = "Enables diagnostics for native semantics that cannot be proven safely.",
         [nameof(CsCodeGeneratorConfig.GenerateRuntimeSource)] = "Emits standalone Runtime.cs instead of requiring the BGCS.Runtime package."
     };
@@ -46,6 +47,11 @@ internal static class SchemaCommand
         [nameof(Cpp2CGeneratorConfig.LinkerArguments)] = "Additional native linker arguments preserved in the build manifest.",
         [nameof(Cpp2CGeneratorConfig.TemplateInstantiations)] = "Fully qualified class-template specializations to instantiate explicitly.",
         [nameof(Cpp2CGeneratorConfig.FunctionTemplateInstantiations)] = "Complete function-template specialization declarations to expose.",
+        [nameof(Cpp2CGeneratorConfig.TypeLowerings)] = "Declarative, deterministic C++ type-to-C ABI lowering recipes.",
+        [nameof(Cpp2CGeneratorConfig.CallableLowerings)] = "Declarative callable selection, naming, and invocation-lowering recipes.",
+        [nameof(Cpp2CGeneratorConfig.NativeShims)] = "Explicit user-owned C ABI shim headers and sources copied into bridge output.",
+        [nameof(Cpp2CGeneratorConfig.LoweringSafetyPolicy)] = "Maximum accepted trust level for declarative and plugin-supplied lowering code.",
+        [nameof(Cpp2CGeneratorConfig.PluginAssemblies)] = "Typed lowering plugin assemblies loaded relative to this configuration.",
         [nameof(Cpp2CGeneratorConfig.GenerateCSharpBindings)] = "Generates matching C# bindings from the emitted C bridge header.",
         [nameof(Cpp2CGeneratorConfig.CSharpOutputPath)] = "Output directory for optional matching C# bindings.",
         [nameof(Cpp2CGeneratorConfig.NativeLibraryName)] = "Native library name used by optional generated C# imports.",

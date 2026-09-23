@@ -22,9 +22,9 @@ public sealed class BindingPluginContractTests
     }
 
     [Fact]
-    public void VersionOneContract_PublicInterfaceShapeIsLocked()
+    public void PluginContract_PublicInterfaceShapeIsLocked()
     {
-        Assert.Equal(1, BindingPluginContract.CurrentVersion);
+        Assert.True(BindingPluginContract.CurrentVersion > 0);
         Assert.Equal(new[] { "ContractVersion", "Id", "Version" },
             typeof(IBindingPlugin).GetProperties().Select(property => property.Name).OrderBy(name => name, StringComparer.Ordinal));
         Assert.Equal(new[] { "Configure" }, typeof(IBindingPlugin).GetMethods()

@@ -154,7 +154,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root arti
 
 `--package-root` stages a verified desktop binary under `runtimes/<rid>/native/` and updates `bgcs.native-assets.json` with target and SHA-256. Windows, Linux, and macOS x64/arm64 currently map to NuGet RIDs. Android, iOS, and FreeBSD are formal support targets, but their target-specific package layouts still require implementation and acceptance, so this helper currently emits an explicit diagnostic for them. After packing, generate release evidence with `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>`.
 
-Do not assume arbitrary template/STL types can be lowered automatically. See [Capabilities](capabilities.md) for explicit instances and supported adapters, and [Diagnostics](diagnostics.md) for rejection guidance.
+Do not assume arbitrary template/STL types can be lowered automatically. See [Capabilities](capabilities.md) for explicit instances and built-in lowerings, the [final lowering architecture](lowering.md) for project extensions, and [Diagnostics](diagnostics.md) for rejection guidance.
 
 ## Multi-project workspaces
 

@@ -32,6 +32,7 @@ public static class CppBridgeBuildManifestEmitter
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
         string[] includeDirectories = new[] { Path.Combine(outputRoot, "include") }
+            .Concat(publicHeaders.Select(path => Path.GetDirectoryName(Path.GetFullPath(path, outputRoot))!))
             .Concat(originalHeaders.Select(path => Path.GetDirectoryName(Path.GetFullPath(path, configRoot))!))
             .Concat(config.IncludeFolders.Select(path => Path.GetFullPath(path, configRoot)))
             .Select(path => MakeManifestPath(outputRoot, path))

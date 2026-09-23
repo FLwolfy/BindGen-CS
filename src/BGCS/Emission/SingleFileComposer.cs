@@ -44,7 +44,7 @@ public sealed class SingleFileComposer
             SyntaxTree tree = CSharpSyntaxTree.ParseText(sourceText, path: sourceFile);
             Diagnostic[] errors = tree.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
             if (errors.Length > 0)
-                throw new InvalidOperationException($"Cannot compose invalid generated source '{sourceFile}':{Environment.NewLine}{string.Join(Environment.NewLine, errors.Select(error => error.ToString()))}");
+                throw new InvalidOperationException($"Cannot compose invalid generated source '{sourceFile}':{Environment.NewLine}{FormatParsingErrors(sourceText, errors)}");
             CompilationUnitSyntax root = tree.GetCompilationUnitRoot();
             nullableEnabled |= root.DescendantTrivia(descendIntoTrivia: true)
                 .Select(trivia => trivia.GetStructure())
@@ -91,5 +91,18 @@ public sealed class SingleFileComposer
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputFile))!);
         File.WriteAllText(outputFile, text);
         return outputFile;
+    }
+
+    private static string FormatParsingErrors(string sourceText, IReadOnlyList<Diagnostic> errors)
+    {
+        string[] lines = sourceText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        return string.Join(Environment.NewLine, errors.Select(error =>
+        {
+            int line = error.Location.GetLineSpan().StartLinePosition.Line;
+            string excerpt = line >= 0 && line < lines.Length ? lines[line].TrimEnd() : string.Empty;
+            return excerpt.Length == 0
+                ? error.ToString()
+                : $"{error}{Environment.NewLine}    {excerpt}";
+        }));
     }
 }

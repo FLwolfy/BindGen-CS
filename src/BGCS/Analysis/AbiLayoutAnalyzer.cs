@@ -26,7 +26,7 @@ public sealed class AbiLayoutAnalyzer
         return Analyze(cppClass, config.GetManagedTypeName(cppClass.Name));
     }
 
-    private BindingType Analyze(CppClass cppClass, string managedName)
+    internal BindingType Analyze(CppClass cppClass, string managedName)
     {
         BindingTypeKind kind = !cppClass.IsDefinition
             ? BindingTypeKind.OpaqueHandle
