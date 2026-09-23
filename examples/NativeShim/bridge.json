@@ -1,0 +1,23 @@
+{
+  "ConfigVersion": 1,
+  "EntryFiles": ["native/entry.hpp"],
+  "AllowedHeaders": ["native/entry.hpp"],
+  "IncludeFolders": ["native"],
+  "OutputPath": "GeneratedBridge",
+  "LanguageStandard": "c++23",
+  "GenerateBuildManifest": true,
+  "GenerateCSharpBindings": true,
+  "CSharpNamespace": "BGCS.Examples.NativeShim",
+  "CSharpApiName": "WidgetNative",
+  "NativeLibraryName": "widget_bridge",
+  "CSharpOutputPath": "Generated",
+  "LoweringSafetyPolicy": "AllowUserAsserted",
+  "NativeShims": [
+    {
+      "Name": "widget",
+      "PublicHeaders": ["shims/widget_c.h"],
+      "SourceFiles": ["shims/widget_c.cpp"],
+      "Safety": "UserAsserted"
+    }
+  ]
+}

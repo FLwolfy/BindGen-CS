@@ -2,6 +2,8 @@
 
 [English](lowering.md) | [配置指南](configuration-guide.cn.md) | [架构](architecture.cn.md)
 
+需要从目录结构、源码、配置一直运行到 native/C# invocation 的教程，请直接阅读[C++ 扩展实战手册](cpp-extension-cookbook.cn.md)。
+
 BindGen-CS 使用一条统一的 lowering pipeline 处理内置 STL 类型、声明式项目规则、编译插件和显式 C ABI shim。旧的 `ICppTypeAdapter` / `ICppCallableAdapter` contract 已删除；预发布版本不提供兼容层。
 
 ## 选择扩展层级

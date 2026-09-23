@@ -2,6 +2,8 @@
 
 [简体中文](lowering.cn.md) | [Configuration](configuration-guide.md) | [Architecture](architecture.md)
 
+For a directory-to-native/C#-invocation tutorial with complete source and configuration, use the [C++ extension cookbook](cpp-extension-cookbook.md).
+
 BindGen-CS uses one lowering pipeline for built-in STL semantics, declarative project rules, compiled plugins, and explicit C ABI shims. The old `ICppTypeAdapter` / `ICppCallableAdapter` contract was deleted; this pre-release line has no compatibility wrapper.
 
 ## Choose an extension level

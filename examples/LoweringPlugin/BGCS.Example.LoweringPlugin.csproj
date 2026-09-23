@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../../src/BGCS.CppAst/BGCS.CppAst.csproj" />
+    <ProjectReference Include="../../src/BGCS.Cpp2C/BGCS.Cpp2C.csproj" />
+  </ItemGroup>
+</Project>

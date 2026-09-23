@@ -63,6 +63,7 @@ Unknown template specializations and undeclared ownership or allocator contracts
 - [Capabilities and boundaries](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/capabilities.md#c-bridge)
 - [C++ configuration catalog](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/cpp2c.config.md)
 - [Final lowering architecture](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/lowering.md)
+- [C++ extension cookbook](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/cpp-extension-cookbook.md)
 - [Diagnostics](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/diagnostics.md)
 
 BindGen-CS is licensed under the MIT License. Portions derived from CppAst/HexaGen retain their original notices.

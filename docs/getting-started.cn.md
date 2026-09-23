@@ -156,6 +156,8 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root arti
 
 不要假定任意 template/STL type 都能自动 lowering。显式实例和内置 lowering 见[能力矩阵](capabilities.cn.md)，项目扩展见[最终 lowering 架构](lowering.cn.md)，拒绝原因见[诊断指南](diagnostics.cn.md)。
 
+需要完整的 recipe、plugin、native shim、ownership、callback 和 async 示例时，继续阅读[C++ 扩展实战手册](cpp-extension-cookbook.cn.md)。
+
 ## 多项目 Workspace
 
 当一个仓库包含多个 native library 时，用 workspace 固定生成顺序和配置入口：

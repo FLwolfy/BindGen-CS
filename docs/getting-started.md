@@ -156,6 +156,8 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root arti
 
 Do not assume arbitrary template/STL types can be lowered automatically. See [Capabilities](capabilities.md) for explicit instances and built-in lowerings, the [final lowering architecture](lowering.md) for project extensions, and [Diagnostics](diagnostics.md) for rejection guidance.
 
+For complete recipe, plugin, native-shim, ownership, callback, and async examples, continue with the [C++ extension cookbook](cpp-extension-cookbook.md).
+
 ## Multi-project workspaces
 
 When a repository owns several native libraries, use a workspace to make configuration entry points and generation order explicit:

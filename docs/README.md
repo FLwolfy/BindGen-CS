@@ -17,6 +17,7 @@
 | C bindings | [Getting started](getting-started.md) |
 | C++ to C bridge | [C++ section of Getting started](getting-started.md#c-bridge), [C++ options with dedicated regression tests](cpp2c.config.md) |
 | Extend complex C++ semantics | [Final lowering architecture](lowering.md): declarative recipes, typed lowering plugins, explicit C shims, and safety policy |
+| Build a project-specific adaptation | [C++ extension cookbook](cpp-extension-cookbook.md): runnable shim/plugin, callable recipe, decision tree, and lifetime patterns |
 | Complete configuration property list | Run `bindgen-cs schema bindgen.schema.json` |
 | Long-term execution order and gates | [Universal execution roadmap](roadmap.md) |
 | Decide whether the tool is already “super-universal” | [Engineering maturity assessment](assessment.md) |
@@ -29,6 +30,7 @@
 ## Design and quality
 
 - [Architecture](architecture.md): layers, dependency rules, and the IR-native data flow.
+- [C++ extension cookbook](cpp-extension-cookbook.md): advanced extensions from configuration through real native/C# invocation.
 - [Acceptance specification](acceptance.md): 9.0 gates, budgets, and target isolation.
 - [Capabilities and boundaries](capabilities.md): implementation, evidence, and unsupported-scope matrix.
 - [Universal execution roadmap](roadmap.md): phased work, non-negotiable rules, and 9.0 exit criteria.

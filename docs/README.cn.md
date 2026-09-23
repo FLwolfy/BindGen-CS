@@ -17,6 +17,7 @@
 | C Binding | [快速开始](getting-started.cn.md) |
 | C++ → C Bridge | [快速开始的 C++ 章节](getting-started.cn.md#c-bridge)、[具备专门回归测试的 C++ 配置条目](cpp2c.config.md) |
 | 扩展复杂 C++ 语义 | [最终 lowering 架构](lowering.cn.md)：声明式 recipe、typed lowering plugin、显式 C shim 与安全策略 |
+| 从零实现项目适配 | [C++ 扩展实战手册](cpp-extension-cookbook.cn.md)：可运行 shim/plugin、callable recipe、决策树与 lifetime 模式 |
 | 完整配置属性 | 运行 `bindgen-cs schema bindgen.schema.json` |
 | 长期执行顺序与 gate | [超级通用执行路线图](roadmap.cn.md) |
 | 判断当前是否已达到“超级通用” | [工程成熟度审计](assessment.cn.md) |
@@ -24,11 +25,12 @@
 | 嵌入 C# 工具 | [C# API 参考](api.md) |
 | 选择 NuGet 包 | [NuGet 包与公开 API](packages.cn.md) |
 | 运行测试与验收 | [测试说明](testing.md)、[验收规范](acceptance.cn.md) |
-| 发布包 | [发布说明](publish.md) |
+| 发布包 | [发布说明](publish.cn.md) |
 
 ## 设计与质量
 
 - [架构说明](architecture.cn.md)：分层、依赖规则和 IR-native 数据流。
+- [C++ 扩展实战手册](cpp-extension-cookbook.cn.md)：从配置到真实 native/C# invocation 的高级扩展教程。
 - [验收规范](acceptance.cn.md)：9.0 gate、性能预算和 target 隔离。
 - [能力与边界](capabilities.cn.md)：实现、证据和未覆盖范围的对照表。
 - [超级通用执行路线图](roadmap.cn.md)：分阶段任务、不可妥协规则和 9.0 完成条件。

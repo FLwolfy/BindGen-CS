@@ -6,6 +6,20 @@ BindGen-CS 是一个面向生产环境的跨平台 C/C++ → C# Binding 工具�
 
 > **当前可信状态：** 当前源码已经产出完整通过的 `macos-arm64-darwin` 报告，十个验收分类全部达到 9.0/10。其余平台都是 BindGen-CS 的正式支持目标，但在各自实现、打包和当前版本实机报告全部闭环之前统一标为 ⚠️，不会用其他平台的结果代替。BindGen-CS 对无法证明安全的语义给出诊断，不猜测 ownership、allocator 或 C++ ABI。
 
+## 产品宗旨、目标与边界
+
+BindGen-CS 的宗旨是：**让常见 C/C++ → C# binding 默认自动、复杂语义显式可扩展、所有结果可重复构建并可验证，而不是靠手改生成代码维持。**
+
+| 目标 | BGCS 的做法 |
+| --- | --- |
+| 一分钟开始 | 从 header 生成配置；一条命令生成，一条命令编译检查 |
+| 安全默认值 | ABI、ownership、allocator、buffer 和 callback lifetime 证据不足时 fail-closed |
+| C++ 可用性 | 为 C++ class/template/STL 生成稳定 C ABI bridge，再生成 C# surface |
+| 项目可扩展 | recipe、typed lowering plugin 和项目拥有的 C shim，不向 core 加库名特判 |
+| 工程可维护 | 事务性输出、确定性 diff、workspace、增量缓存、target report 和发布 gate |
+
+明确限制：BGCS 不是“把任意 C++ 源码逐行翻译成 C#”的编译器。宏元编程、不可访问的 private 行为、未实例化模板和无法建立稳定 ABI/lifetime 契约的能力不能凭空绑定；但只要能力能暴露为稳定可调用的 C ABI，通常都可以通过配置、plugin 或 C shim 接入。`AllowUnsafe` 只接管已知风险，不能修复无效 ABI。生成目录始终是可重建产物，不应手工编辑。
+
 ## 支持状态总览
 
 图例：完整验证 ✅　实现或实机验收待完成 ⚠️。所有列出的平台都是支持目标；升级为 ✅ 要求代码、打包、测试与当前版本实机报告同时成立。
@@ -46,22 +60,28 @@ BindGen-CS 是一个面向生产环境的跨平台 C/C++ → C# Binding 工具�
 
 更完整的支持范围、证据等级和明确边界见[能力矩阵](docs/capabilities.cn.md)。
 
-## 五分钟生成第一个 C Binding
+## 1 minute：生成第一个 Binding
 
-要求：.NET SDK 9.0，以及宿主平台上的 Clang/GNU compiler driver 或 Windows LLVM。
+已有一个 C header 时，只需要 .NET SDK 9.0 和宿主平台上的 Clang/GNU compiler driver 或 Windows LLVM：
 
 ```bash
 dotnet tool install --global BindGen-CS
-
-# native.h 必须已经存在
-bindgen-cs init native.h
-bindgen-cs doctor
-bindgen-cs validate bindgen.json
+bindgen-cs init path/to/native.h
 bindgen-cs generate bindgen.json
 bindgen-cs build bindgen.json
 ```
 
-默认输出为 `Generated/Bindings.cs`。`build` 会在临时消费项目中以 nullable 和 warning-as-error 编译生成源码；它验证 managed bindings，不替代上游 native library 的构建。
+完成后得到 `Generated/Bindings.cs`。`build` 会在临时消费项目中以 nullable 和 warning-as-error 编译生成源码；它验证 managed bindings，不替代上游 native library 的构建。首次接入建议再运行 `bindgen-cs doctor` 和 `bindgen-cs validate bindgen.json` 查看 toolchain 与安全诊断。
+
+C++ header 使用同样入口；扩展名会让 `init` 创建 `bridge.json`：
+
+```bash
+bindgen-cs init path/to/library.hpp
+bindgen-cs bridge bridge.json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json
+```
+
+完整目录、C/C++ 示例、NuGet consumer 和故障排查见[快速开始](docs/getting-started.cn.md)。
 
 `init native.h` 会生成可立即运行、可提交的配置。Header 和 include 路径相对于配置文件并统一使用 `/`，因此同一配置可以在 Windows、macOS 和 Linux 使用：
 
@@ -113,18 +133,33 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root pack
 
 完整示例见[快速开始](docs/getting-started.cn.md)，配置决策见[配置指南](docs/configuration-guide.cn.md)。
 
-## 核心能力
+## BGCS 能力全景
 
-- 显式建模 platform、architecture、ABI、target triple、sysroot 和 compiler discovery。
-- 支持 `DllImport`、`LibraryImport` 和显式 function table/native context。
-- 处理 struct、union、packing、bitfield、fixed array、typedef、opaque handle、callback 和 target-dependent primitive。
-- 使用 `MarshallingMappings` 表达 string encoding、ownership、cleanup、pointer/count、capacity/written-count 和 caller allocation。
-- 使用 `ExternalTypeContracts` 声明项目提供的 managed ABI carrier，并为每个类型选择拒绝、严格 size/alignment 匹配或显式 bypass。
-- canonical `BindingModule` 是唯一 C# emission 输入，同时驱动 raw ABI 与 public string/span/ref/out friendly overload；无法无损表达的语义会在提交前 fail-closed，输出通过 staging transaction 原子替换。
-- 支持 BaseConfig、可组合 preset、SingleFile、workspace、确定性 diff 和 target-specific snapshot。
-- 内容寻址增量缓存会精确 hash 输入、compiler/toolchain、配置、plugin、lowering 与 shim fingerprint，原子发布/恢复并隔离 target；已有并发 writer 验收。无法稳定 fingerprint 的有状态自定义扩展会保守地关闭缓存命中。
-- 只有一套最终 C++ lowering 扩展架构：声明式 type/callable recipe、typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugin、显式 C shim、隔离 dependency resolution、确定性注册和 reviewed API-shape tests。已删除的预发布 adapter contract 没有 compatibility wrapper。
-- 发布 CLI、generator、C++ Bridge、Runtime 和零依赖 IR 包。
+| 分类 | 已实现能力 |
+| --- | --- |
+| 输入与解析 | C/C++ header、umbrella/transitive header、宏与常量、target system include、LibClang 解析、显式模板实例 |
+| C ABI | function、enum、typedef、opaque handle、struct/union、packing、bitfield、fixed array、function pointer 与 callback |
+| C++ Bridge | class 生命周期、instance/static/overload/namespace function、异常边界、多继承 pointer adjustment、模板特化、常见 STL、smart pointer、callback proxy |
+| C# 输出 | `DllImport`、`LibraryImport`、function table/native context；raw ABI 与 string/span/ref/out friendly API 共用 IR-native emitter |
+| Marshalling | string encoding、ownership、cleanup、pointer/count、capacity/written-count、caller allocation、external managed ABI carrier |
+| Target/toolchain | platform、architecture、ABI、target triple、sysroot、compiler discovery；Clang/GNU、clang-cl、CMake、Meson、MSBuild provider |
+| 构建与打包 | native build manifest、真实 export inspection、multi-RID `runtimes/<rid>/native/`、clean NuGet consumer |
+| 配置与规模化 | preset、BaseConfig、strict schema、SingleFile、workspace batch、target-specific output、10,000 declaration 性能 gate |
+| 可重复性 | staging transaction、确定性输出与 diff、内容寻址增量缓存、并发 writer 隔离、输入/toolchain/plugin fingerprint |
+| 可扩展性 | type/callable recipe、typed lowering plugin、native/managed artifact contributor、显式项目 C shim |
+| 诊断与安全 | typed diagnostics、ABI/layout/ownership/lifetime 分析、fail-closed policy、可审计 `AllowUnsafe` bypass |
+| 发布治理 | public API gate、license/vulnerability gate、SPDX SBOM、SLSA provenance、OIDC attestation workflow |
+| 嵌入 | CLI、`BGCS` facade、`BGCS.Cpp2C`、`BGCS.Runtime`、零依赖 `BGCS.Intermediate` IR |
+
+逐项证据、已验证语义和未验收 target 见[能力与边界](docs/capabilities.cn.md)。
+
+## 高级扩展
+
+- [C++ 扩展实战手册](docs/cpp-extension-cookbook.cn.md)：完整 shim 项目、独立 plugin `.csproj`、`CallableLowerings`、决策树，以及 ownership/allocator/callback/async 推荐契约。
+- [最终 lowering 架构](docs/lowering.cn.md)：extension contract 与安全策略。
+- [配置指南](docs/configuration-guide.cn.md)：target、mapping、marshalling 和 policy。
+- [诊断指南](docs/diagnostics.cn.md)：从诊断代码定位最小修复路径。
+- [架构说明](docs/architecture.cn.md)：IR-native pipeline、分层和依赖边界。
 
 ## 安全契约
 
@@ -196,6 +231,7 @@ if (!generator.GenerateConfigured())
 - [中文文档入口](docs/README.cn.md)
 - [快速开始](docs/getting-started.cn.md)
 - [能力与边界](docs/capabilities.cn.md)
+- [C++ 扩展实战手册](docs/cpp-extension-cookbook.cn.md)
 - [配置指南](docs/configuration-guide.cn.md)
 - [诊断指南](docs/diagnostics.cn.md)
 - [架构说明](docs/architecture.cn.md)
@@ -203,6 +239,7 @@ if (!generator.GenerateConfigured())
 - [工程成熟度审计](docs/assessment.cn.md)
 - [验收规范](docs/acceptance.cn.md)
 - [测试说明](docs/testing.md)
+- [发布与 OIDC](docs/publish.cn.md)
 
 ## License
 
