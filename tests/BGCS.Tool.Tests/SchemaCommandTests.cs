@@ -23,6 +23,9 @@ public sealed class SchemaCommandTests
         Assert.Equal("array", root.GetProperty("properties").GetProperty("EntryFiles").GetProperty("type").GetString());
         Assert.Contains("relative", root.GetProperty("properties").GetProperty("EntryFiles").GetProperty("description").GetString(), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("DllImport", root.GetProperty("properties").GetProperty("ImportType").GetProperty("enum").ToString(), StringComparison.Ordinal);
+        JsonElement backend = root.GetProperty("properties").GetProperty("CSharpEmissionBackend");
+        Assert.Contains("IntermediateRepresentation", backend.GetProperty("enum").ToString(), StringComparison.Ordinal);
+        Assert.Equal("Compatibility", backend.GetProperty("default").GetString());
         Assert.False(root.GetProperty("properties").TryGetProperty("HeaderInjector", out _));
     }
 

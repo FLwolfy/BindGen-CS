@@ -79,6 +79,15 @@ Model support is not the same as completed host acceptance. See the [target evid
 - `LibraryImport`: source-generated imports; signatures must satisfy source-generator restrictions.
 - `FunctionTable`: explicit native context and symbol resolution, matching the current Inno.Native style.
 
+## C# emission backend
+
+`CSharpEmissionBackend` selects the source path that owns the final C# output:
+
+- `Compatibility` (default) preserves the established full public surface, friendly overloads, and snapshot compatibility.
+- `IntermediateRepresentation` emits one C# source directly from the canonical `BindingModule`. It covers constants, enums, aliases, opaque handles, delegates, anonymous/nested structs and unions, fixed arrays, bitfields, and all three import modes. Its raw ABI surface is compile-gated against five real libraries. Semantics it cannot yet preserve—such as variadic functions, non-free C ABI callables, unexposed/function-pointer types, or opaque storage passed by value—fail with `BGCSCS001` before transaction commit.
+
+The IR backend never falls back silently and a failed run preserves last-good output. It is currently an explicit opt-in for migration, extension development, and raw-ABI auditing; do not bulk-switch established production configurations until friendly APIs and all real-library snapshots are equivalent.
+
 ## Output and Runtime
 
 - `OutputPath` is resolved relative to the config file by `GenerateConfigured`.
@@ -195,10 +204,17 @@ Explicit project settings override preset defaults, independent of preset order.
 
 A workspace stores multiple configuration paths for repository-level automation:
 
+```json
+{
+  "TargetOutputSubdirectories": true,
+  "Configs": ["cimgui.json", "sdl3.json", "bgfx.json"]
+}
+```
+
 ```bash
 bindgen-cs workspace validate native/bindings/workspace.json
 bindgen-cs workspace generate native/bindings/workspace.json
 bindgen-cs workspace diff native/bindings/workspace.json
 ```
 
-Put `workspace diff` in CI to validate all checked-in bindings without overwriting final output.
+With `TargetOutputSubdirectories=true`, `generate` and `diff` resolve each config's normal output as `OutputPath/<target-id>` (for example `Generated/linux-arm64-gnu`). Use it whenever one repository retains bindings for multiple ABIs; consumers must select exactly one target directory. Put `workspace diff` in CI to validate all checked-in bindings without overwriting final output.

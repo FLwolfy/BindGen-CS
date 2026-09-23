@@ -119,7 +119,10 @@ internal static class Program
         Cpp2CCodeGenerator generator = new(config);
         generator.GenerateConfigured(outputPath);
         if (generator.LastResult?.Success != true)
+        {
+            GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
             return 1;
+        }
         Console.WriteLine($"Generated C++ bridge with {generator.LastResult.Module!.Types.Count} types and {generator.LastResult.Module.Functions.Count} functions.");
         if (config.GenerateCSharpBindings)
         {
@@ -155,7 +158,10 @@ internal static class Program
             BGCS.Configuration.ConfigValidator.Validate(csharpConfig);
             CsCodeGenerator csharpGenerator = new(csharpConfig);
             if (!csharpGenerator.Generate(bridgeHeader, Path.GetFullPath(config.CSharpOutputPath, baseDirectory)))
+            {
+                GenerationDiagnosticWriter.WriteFailure(csharpGenerator.LastResult, Console.Error);
                 return 1;
+            }
             Console.WriteLine($"Generated C# bridge bindings in {Path.GetFullPath(config.CSharpOutputPath, baseDirectory)}.");
         }
         return 0;
@@ -219,7 +225,10 @@ internal static class Program
         CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
         generator.LogToConsole();
         if (!generator.GenerateConfigured(outputPath) || generator.LastResult?.Module == null)
+        {
+            GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
             return 1;
+        }
 
         string temp = Path.Combine(Path.GetTempPath(), "bindgen-cs-build-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -277,6 +286,7 @@ internal static class Program
 
         if (!success)
         {
+            GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
             return 1;
         }
         Console.WriteLine($"Generated bindings from {Path.GetFullPath(configPath)}");

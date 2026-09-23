@@ -20,7 +20,7 @@
 | 方面 | 目标 | 强制 gate |
 | --- | ---: | --- |
 | 普通小型 C API | 9.0 | 生成编译率 100%、ABI 调用、生成源码零手改 |
-| 中大型 C API | 9.0 | SDL3、miniaudio、cimgui、cimguizmo、bgfx 重新生成/编译及 InnoEngine workspace diff |
+| 中大型 C API | 9.0 | SDL3、miniaudio、cimgui、cimguizmo、bgfx compatibility snapshot、IR-native 零警告编译及 InnoEngine workspace diff |
 | 复杂 C ABI 正确性 | 9.0 | 宿主原生 invocation 与 target-specific ABI/layout/调用约定矩阵 |
 | 普通 C++ class bridge | 9.0 | lifecycle/method 原生编译、链接和运行 |
 | 复杂现代 C++ | 9.0 | 选定模板、STL、智能指针、virtual callback |
@@ -107,6 +107,7 @@ bindgen-cs build
 - Intermediate assembly 不引用其他 BGCS assembly；
 - IR analyzer 与 IR-native `CSharpEmitter.Emit` 有独立行为测试；
 - IR-native C# 不支持的语义会在写输出前以稳定 `BGCSCS001` 失败。
+- 五个真实 C 库全部通过 IR-native backend 重生成并以 warning-as-error 编译；不完整 opaque storage 的按值传递会明确拒绝而不是猜测。
 
 主配置路径仍调用隔离的 `AstGenerationStepEmitter` 和 `GenerationStep`；`CSharpEmitter` 已不再包含或公开 legacy 路径。因此架构 9.0 表示当前声明的 boundary/build/test gate 通过，不表示默认路径 IR migration 已结束。完成标准见[架构说明](architecture.cn.md#迁移完成条件)。
 
@@ -122,4 +123,4 @@ bindgen-cs build
 
 ## 当前状态
 
-macOS arm64 Darwin 范围的全部测量分类均达到 9.0。`scripts/run-full-test-matrix.sh` 只有在 managed tests、native C/C++ runtime gate、五个真实 C 库、bimg C++ Bridge、确定性源码/reflection 快照、InnoEngine 五项目 workspace/native dependency/build/native-test gate 以及 NuGet/Tool smoke 全部通过后，才写入 `artifacts/acceptance/report.json` 与 `report.md`。Windows 和其他 ABI 必须分别生成 target-specific 报告；任何报告都不能被当作其他 target 的证明。
+macOS arm64 Darwin 与 Linux arm64 GNU 范围的全部测量分类均分别达到 9.0。`scripts/run-full-test-matrix.sh` 只有在 managed tests、native C/C++ runtime gate、五个真实 C 库的 compatibility snapshot 与 IR-native 零警告编译、bimg C++ Bridge、InnoEngine 五项目 workspace/native dependency/build/native-test gate 以及 NuGet/Tool smoke 全部通过后，才写入最新的 `artifacts/acceptance/report.json`、`report.md`，并在 `artifacts/acceptance/reports/<target>/` 保留 target-specific 副本。Windows 和其他 ABI 必须分别生成报告；任何报告都不能被当作其他 target 的证明。

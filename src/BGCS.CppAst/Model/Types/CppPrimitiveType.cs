@@ -327,6 +327,9 @@ public sealed class CppPrimitiveType : CppType
         { CXTypeKind.CXType_ULong, UnsignedLong },
         { CXTypeKind.CXType_ULongLong, UnsignedLongLong },
         { CXTypeKind.CXType_SChar, Char },
+        // Plain char follows the target ABI's default signedness. It remains the
+        // C/C++ char type in the binding model rather than becoming unsigned byte.
+        { CXTypeKind.CXType_Char_U, Char },
         { CXTypeKind.CXType_Char_S, Char },
         { CXTypeKind.CXType_WChar, WChar },
         { CXTypeKind.CXType_Short, Short },

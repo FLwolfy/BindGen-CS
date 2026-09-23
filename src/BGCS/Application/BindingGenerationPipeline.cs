@@ -72,10 +72,39 @@ public sealed class BindingGenerationPipeline
             ]));
             return false;
         }
-        AstGenerationStepEmitter.Emit(generator, files, result, stagingPath, config,
-            generator.PipelineMetadata, explicitEmptyOutputFilter);
+        if (config.CSharpEmissionBackend == CSharpEmissionBackend.IntermediateRepresentation)
+        {
+            if (!explicitEmptyOutputFilter)
+            {
+                CSharpEmitter emitter = new();
+                IReadOnlyList<BindingDiagnostic> emissionDiagnostics = emitter.Validate(safetyModule);
+                if (emissionDiagnostics.Count > 0)
+                {
+                    foreach (BindingDiagnostic diagnostic in emissionDiagnostics)
+                        safetyModule.StructuredDiagnostics.Add(diagnostic);
+                    generator.SetLastResult(new(safetyModule, false, [],
+                    [
+                        .. generator.Messages.Select(diagnostic => new BindingDiagnostic(
+                            (BindingDiagnosticSeverity)(int)diagnostic.Severtiy, diagnostic.Message)),
+                        .. safetyModule.StructuredDiagnostics
+                    ]));
+                    return false;
+                }
+                string irFileName = config.MergeGeneratedFilesToSingleFile
+                    ? ".bgcs-ir.cs"
+                    : SingleFileOutputNameResolver.Resolve(config);
+                emitter.Emit(safetyModule,
+                    new(stagingPath, true, irFileName, ResolveRuntimeNamespace()));
+            }
+        }
+        else
+        {
+            AstGenerationStepEmitter.Emit(generator, files, result, stagingPath, config,
+                generator.PipelineMetadata, explicitEmptyOutputFilter);
+        }
         foreach (var pluginEmitter in config.Plugins.GetServices<IBindingEmitter>())
-            pluginEmitter.Service.Emit(safetyModule, new(stagingPath, config.MergeGeneratedFilesToSingleFile, config.SingleFileOutputName));
+            pluginEmitter.Service.Emit(safetyModule, new(stagingPath, config.MergeGeneratedFilesToSingleFile,
+                config.SingleFileOutputName, ResolveRuntimeNamespace()));
 
         generator.LogInfo("Applying Post-Patches...");
         generator.PatchEngine.ApplyPostPatches(generator.PipelineMetadata, stagingPath,
@@ -107,7 +136,9 @@ public sealed class BindingGenerationPipeline
         FileSet files = new(allowedHeaders.Select(PathHelper.GetPath));
         config.TypeConverter.Initialize(new ParseResult(compilation));
         DeclarationGraph graph = DeclarationGraph.Create(compilation, declaration => IsAllowed(declaration, files));
-        return new BindingModuleAnalyzer(config).Analyze(graph);
+        IEnumerable<CppMacro> macros = compilation.Macros.Where(macro =>
+            !string.IsNullOrWhiteSpace(macro.SourceFile) && files.Contains(macro.SourceFile));
+        return new BindingModuleAnalyzer(config).Analyze(graph, macros);
     }
 
     public BindingGenerationResult CreateResult(CppCompilation compilation, IEnumerable<string> allowedHeaders,
@@ -130,4 +161,8 @@ public sealed class BindingGenerationPipeline
     {
         return declaration is CppElement element && files.Contains(element.SourceFile);
     }
+
+    private string ResolveRuntimeNamespace() => string.IsNullOrWhiteSpace(config.RuntimeNamespace)
+        ? "BGCS.Runtime"
+        : config.RuntimeNamespace;
 }

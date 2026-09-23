@@ -36,7 +36,8 @@ public sealed record BindingTypeReference(string NativeName, string ManagedName,
 /// <param name="BitWidth">Bit width, or zero for a non-bitfield.</param>
 /// <param name="ArrayDimensions">Fixed array dimensions from outermost to innermost.</param>
 public sealed record BindingField(string NativeName, string ManagedName, BindingTypeReference Type, long Offset,
-    long BitOffset, int BitWidth, IReadOnlyList<int> ArrayDimensions);
+    long BitOffset, int BitWidth, IReadOnlyList<int> ArrayDimensions, bool IsBitField = false,
+    bool IsSignedBitField = false);
 
 /// <summary>
 /// Describes one named enumeration value.
@@ -68,6 +69,15 @@ public sealed class BindingType
     public BindingTypeKind Kind { get; }
     public int Size { get; }
     public int Alignment { get; }
+    /// <summary>
+    /// Gets whether this type preserves only native size and alignment because its field definition was unavailable.
+    /// Such storage is safe behind pointers but cannot be passed by value without target-specific ABI classification.
+    /// </summary>
+    public bool IsOpaqueStorage { get; init; }
+    /// <summary>Resolved target of an alias, or <see langword="null"/> for non-alias types.</summary>
+    public BindingTypeReference? UnderlyingType { get; init; }
+    /// <summary>Types declared inside this native type, preserving their managed ownership scope.</summary>
+    public IList<BindingType> NestedTypes { get; } = new List<BindingType>();
     public IList<BindingField> Fields { get; } = new List<BindingField>();
     public IList<BindingEnumMember> EnumMembers { get; } = new List<BindingEnumMember>();
 }

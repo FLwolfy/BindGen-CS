@@ -11,7 +11,7 @@ This document focuses on BGCS generator APIs and extension points: the compatibi
 3. resolve the allowed-header closure;
 4. run preprocess steps and pre-patches;
 5. build shared `BindingModule` analysis data;
-6. call the internal `AstGenerationStepEmitter`, which runs configured compatibility `GenerationStep` implementations in a staging directory;
+6. select `CSharpEmissionBackend`: call the internal `AstGenerationStepEmitter` for compatibility output, or validate and call the IR-native `CSharpEmitter` directly;
 7. apply post-patches;
 8. rewrite Runtime imports and remove empty generated declarations;
 9. compose optional SingleFile output through Roslyn;
@@ -27,6 +27,7 @@ Post-patches run before SingleFile composition and Runtime emission. A failed st
 Main behavior switchboard:
 
 - output: `OutputPath`, `MergeGeneratedFilesToSingleFile`, `SingleFileOutputName` (defaults to `Bindings.cs`)
+- emission: `CSharpEmissionBackend` (`Compatibility` / fail-closed `IntermediateRepresentation`)
 - runtime: `GenerateRuntimeSource`, `RuntimeNamespace`
 - import mode: `ImportType` (`DllImport` / `LibraryImport` / `FunctionTable`)
 - generation toggles: `GenerateConstants/Enums/Functions/Types/Handles/Delegates/Extensions`
@@ -68,7 +69,7 @@ Main execution API:
 
 `BGCS.Facade.BindingGenerator.Generate(...)` returns a `BindingGenerationResult`. `Cpp2CCodeGenerator.LastResult` exposes the same result contract after C++ bridge generation. `BGCS.Emission.CSharpEmitter` and `BGCS.Cpp2C.Emission.CBridgeEmitter` both implement `IBindingEmitter`.
 
-The IR-native `Emit(...)` methods are independently usable and tested, but they are not yet the default full-fidelity configured emitters. Primary C# generation uses the internal `AstGenerationStepEmitter`; primary bridge generation uses `CBridgeEmitter.EmitAst`. `CSharpEmitter.Validate(...)` reports unsupported IR semantics, and `Emit(...)` throws `BindingEmissionException` before creating output instead of silently dropping those declarations. See [Architecture](architecture.md) before implementing an emitter or assuming legacy metadata is absent.
+The IR-native C# emitter is independently usable and is also available through `CSharpEmissionBackend.IntermediateRepresentation`. It is not yet the default full-fidelity configured emitter: `Compatibility` still selects the internal `AstGenerationStepEmitter`, and primary bridge generation uses `CBridgeEmitter.EmitAst`. `CSharpEmitter.Validate(...)` reports unsupported IR semantics; configured IR emission returns an unsuccessful structured result before committing output, while direct `Emit(...)` throws `BindingEmissionException` before creating output. See [Architecture](architecture.md) before implementing an emitter or assuming legacy metadata is absent.
 
 `Cpp2CCodeGenerator` can also emit a versioned `CppBridgeBuildManifest`. `ClangNativeBuildProvider` turns that manifest into a shell-independent `NativeBuildPlan`, and `NativeBuildExecutor` runs the plan with timeout and captured diagnostics. These APIs are generic bridge-build infrastructure; they do not contain per-library build rules.
 

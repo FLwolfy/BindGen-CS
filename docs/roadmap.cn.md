@@ -56,7 +56,7 @@
 
 ### Phase 2：完整 IR-native 架构迁移
 
-状态：进行中，仍是当前最高架构优先级。`CSharpEmitter` 已严格只消费 IR，`EmitLegacy` 已删除；默认兼容 surface 被隔离到 `AstGenerationStepEmitter`，但在 snapshot 零回退前仍不能删除。
+状态：进行中，仍是当前最高架构优先级。`CSharpEmitter` 已严格只消费 IR，`EmitLegacy` 已删除，配置生成可通过 `CSharpEmissionBackend.IntermediateRepresentation` 直接使用它。Canonical IR/emission 已覆盖 constant、alias、delegate、enum underlying type、opaque handle/storage、匿名/嵌套 record、bitfield 和三种 import mode，并具备 fail-closed 回滚；五个真实 C 库的 raw ABI 已全部重生成并以零警告编译，opaque storage 按值传递会 fail closed。默认兼容 surface 仍隔离在 `AstGenerationStepEmitter`，直到 friendly overload 与完整 public-API snapshot 等价被证明。
 
 - frontend 只负责解析和 source diagnostics；analysis 产生唯一 canonical `BindingModule`。
 - C#、Runtime、C Bridge、inspection 和 future emitters 只消费 IR + emission context。
@@ -118,7 +118,7 @@
 
 ### Phase 7：跨平台实机矩阵
 
-状态：macOS arm64 完整；Windows/Linux 仍需同等级报告。
+状态：macOS arm64 与 Linux arm64 已有独立 9.0 报告；Windows 及剩余 x64/arm64 宿主仍需同等级报告。
 
 - Tier 1：Windows x64/arm64（MSVC、clang-cl）、Linux x64/arm64（GCC/Clang）、macOS arm64/x64。
 - Tier 2：Android arm64/x64、iOS device/simulator、FreeBSD x64；使用显式 sysroot/toolchain。

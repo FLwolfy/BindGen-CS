@@ -4,7 +4,7 @@
 
 BindGen-CS 是一个面向生产环境的跨平台 C/C++ → C# Binding 工具链：C ABI 可以直接生成 C# interop；C++ class、模板实例和选定 STL 类型可以先生成 ABI 稳定的 C Bridge，再自动生成对应 C# bindings。
 
-> **当前可信状态：** `macos-arm64-darwin` 完整验收矩阵已通过，十个分类均为 9.0/10.0。Windows、Linux、Android、iOS 和 FreeBSD 已进入 target/ABI model，但没有对应 target 的验收报告时，不把设计支持写成实机通过。BindGen-CS 对无法证明安全的语义给出诊断，不猜测 ownership、allocator 或 C++ ABI。
+> **当前可信状态：** `macos-arm64-darwin` 与 `linux-arm64-gnu` 完整验收矩阵已分别通过，每个 target 的十个分类均为 9.0/10.0。Windows、x64 宿主、Android、iOS 和 FreeBSD 已进入 target/ABI model，但没有对应 target 的验收报告时，不把设计支持写成实机通过。BindGen-CS 对无法证明安全的语义给出诊断，不猜测 ownership、allocator 或 C++ ABI。
 
 ## 选择正确的工作流
 
@@ -90,7 +90,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 - 支持 `DllImport`、`LibraryImport` 和显式 function table/native context。
 - 处理 struct、union、packing、bitfield、fixed array、typedef、opaque handle、callback 和 target-dependent primitive。
 - 使用 `MarshallingMappings` 表达 string encoding、ownership、cleanup、pointer/count、capacity/written-count 和 caller allocation。
-- Pipeline 会生成共享 Binding IR 并据此执行安全分析；`CSharpEmitter` 本身已经只消费 IR。主 C# 兼容 surface 仍通过独立隔离的 AST generation-step lowerer，直到 constant、delegate、alias、friendly overload 和全部 snapshot 语义迁移完毕。输出通过 staging transaction 原子替换。
+- Pipeline 会生成共享 Binding IR 并据此执行安全分析；`CSharpEmissionBackend=IntermediateRepresentation` 提供配置驱动、fail-closed 的 IR 路径，覆盖 constant、delegate、alias、handle、匿名/嵌套 record、bitfield 和全部 import mode。五个真实 C 库的 raw ABI 输出均通过独立生成与 warning-as-error 编译；只有大小/对齐而缺少字段定义的 opaque storage 若按值跨 ABI 传递会被拒绝。默认兼容 surface 继续隔离，直到 friendly overload 与全部 public-API snapshot 语义等价。输出通过 staging transaction 原子替换。
 - 支持 BaseConfig、可组合 preset、SingleFile、workspace、确定性 diff 和 target-specific snapshot。
 - 内容寻址增量缓存会精确 hash 输入、compiler/toolchain、配置、plugin 与 adapter fingerprint，原子发布/恢复并隔离 target；已有并发 writer 验收。无法稳定 fingerprint 的有状态自定义扩展会保守地关闭缓存命中。
 - 提供版本化第三方 plugin contract、隔离 dependency resolution、原子且确定性的 typed service registry 和 v1 API shape 锁定测试；C++ type/callable adapter 不需要修改核心分支。
@@ -111,12 +111,13 @@ BindGen-CS 将 native 声明分成三类：
 同仓的 InnoEngine 集成不是演示用 toy header。完整 gate 会：
 
 - 从配置确定性重生成 cimgui、cimguizmo、miniaudio、SDL3 和 bgfx；
+- 把 C# 输出隔离到 `Generated/<target>/`，并只编译当前 target，杜绝跨 ABI 产物误用；
 - 拒绝 `Generated/` 之外的手写 native import；
 - 从锁定源码构建全部 native dependency；
 - 以 warning-as-error 构建完整 InnoEngine solution；
 - 运行所有 native binding 测试项目。
 
-真实库 gate 还覆盖 miniaudio、SDL3、cimgui、cimguizmo、bgfx C99 和 bimg C++ Bridge 的生成、编译与 target-specific API snapshot。
+真实库 gate 会对 miniaudio、SDL3、cimgui、cimguizmo、bgfx C99 的 compatibility 输出执行生成、编译和 target-specific API snapshot，并独立用 IR-native backend 重生成五个库、以 warning-as-error 编译。bimg C++ Bridge 使用独立的 native/rebound/snapshot gate。
 
 ## 架构与嵌入
 
@@ -155,6 +156,7 @@ if (!generator.GenerateConfigured())
 
 - `artifacts/acceptance/report.json`
 - `artifacts/acceptance/report.md`
+- `artifacts/acceptance/reports/<target>/report.{json,md}`
 
 评分规则和 target 隔离原则见[验收规范](docs/acceptance.cn.md)。当前验收分数证明声明范围内的质量，不代表完整 C++ 语言覆盖。
 

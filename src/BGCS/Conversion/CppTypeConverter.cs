@@ -123,6 +123,10 @@
         /// </summary>
         public string Convert(CppType type, CsTypeStyle style)
         {
+            if (PlatformAbiTypeClassifier.TryGetManagedCarrier(type, out string managedType))
+            {
+                return managedType;
+            }
             var result = AnalyzeType(type);
             return Format(result, style);
         }

@@ -22,26 +22,50 @@ public sealed class AbiLayoutAnalyzer
     public BindingType Analyze(CppClass cppClass)
     {
         ArgumentNullException.ThrowIfNull(cppClass);
+        return Analyze(cppClass, config.GetCsCleanName(cppClass.Name));
+    }
+
+    private BindingType Analyze(CppClass cppClass, string managedName)
+    {
         BindingTypeKind kind = cppClass.ClassKind switch
         {
             CppClassKind.Union => BindingTypeKind.Union,
             CppClassKind.Class when !cppClass.IsDefinition => BindingTypeKind.OpaqueHandle,
             _ => BindingTypeKind.Structure
         };
-        BindingType bindingType = new(cppClass.FullName, config.GetCsCleanName(cppClass.Name), kind,
+        BindingType bindingType = new(cppClass.FullName, managedName, kind,
             cppClass.SizeOf, cppClass.AlignOf);
-        foreach (CppField field in cppClass.Fields)
+        for (int index = 0; index < cppClass.Classes.Count; index++)
         {
+            CppClass nestedClass = cppClass.Classes[index];
+            string nestedManagedName = config.GetCsSubTypeName(cppClass, managedName, nestedClass, index);
+            if (nestedClass.IsAnonymous)
+                config.TypeConverter.AddAnonymousMapping(nestedClass, nestedManagedName);
+            bindingType.NestedTypes.Add(Analyze(nestedClass, nestedManagedName));
+        }
+        for (int fieldIndex = 0; fieldIndex < cppClass.Fields.Count; fieldIndex++)
+        {
+            CppField field = cppClass.Fields[fieldIndex];
             IReadOnlyList<int> dimensions = GetArrayDimensions(field.Type);
             BindingTypeReference type = typeAnalyzer.Analyze(GetInnermostElement(field.Type));
-            BindingField bindingField = new(field.Name, config.GetFieldName(field.Name), type, field.Offset,
-                field.BitOffset, field.IsBitField ? field.BitFieldWidth : 0, dimensions);
+            string managedFieldName = string.IsNullOrWhiteSpace(field.Name)
+                ? $"AnonymousField{fieldIndex}"
+                : config.GetFieldName(field.Name);
+            BindingField bindingField = new(field.Name, managedFieldName, type, field.Offset,
+                field.BitOffset, field.IsBitField ? field.BitFieldWidth : 0, dimensions, field.IsBitField,
+                field.IsBitField && IsSignedBitfield(field.Type));
             bindingType.Fields.Add(bindingField);
             if (cppClass.ClassKind != CppClassKind.Union && cppClass.SizeOf > 0 && dimensions.All(size => size > 0) &&
                 field.Offset + Math.Max(0, field.Type.SizeOf) > cppClass.SizeOf)
                 throw new InvalidOperationException($"Field '{cppClass.FullName}::{field.Name}' exceeds the {cppClass.SizeOf}-byte native layout.");
         }
         return bindingType;
+    }
+
+    private static bool IsSignedBitfield(CppType type)
+    {
+        return type.GetPrimitiveKind() is CppPrimitiveKind.Char or CppPrimitiveKind.Short or CppPrimitiveKind.Int or
+            CppPrimitiveKind.Long or CppPrimitiveKind.LongLong or CppPrimitiveKind.Int128;
     }
 
     private static IReadOnlyList<int> GetArrayDimensions(CppType type)

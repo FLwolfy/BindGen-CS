@@ -39,7 +39,11 @@ else
 fi
 
 printf '[inno-bindings] Restore the complete InnoEngine solution.\n'
-"${DOTNET_CMD}" restore "${INNOENGINE_ROOT}/InnoEngine.sln" --nologo
+"${DOTNET_CMD}" restore "${INNOENGINE_ROOT}/InnoEngine.sln" \
+  -p:BuildInParallel=false \
+  /m:1 \
+  /nodeReuse:false \
+  --nologo
 
 run_native_build() {
   local project="$1"

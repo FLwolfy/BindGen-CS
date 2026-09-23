@@ -436,6 +436,14 @@ namespace BGCS
         public bool MergeGeneratedFilesToSingleFile { get; set; }
 
         /// <summary>
+        /// Selects the C# emission backend. The IR backend is fail-closed and rejects semantics it cannot yet
+        /// preserve instead of falling back implicitly.
+        /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(CSharpEmissionBackend.Compatibility)]
+        public CSharpEmissionBackend CSharpEmissionBackend { get; set; } = CSharpEmissionBackend.Compatibility;
+
+        /// <summary>
         /// File name used for merged C# bindings in the output root. (Default: <c>Bindings.cs</c>)
         /// </summary>
         [DefaultValue("Bindings.cs")]

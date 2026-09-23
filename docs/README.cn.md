@@ -36,4 +36,4 @@
 
 CLI/workspace、安全输出事务、SingleFile、target/toolchain model、共享 IR、安全分析、明确的 emitter 边界、NuGet 闭包、真实库快照、选定 STL/smart-pointer lowering、managed virtual callback proxy、ownership diagnostics 和 InnoEngine 五项目自动生成 gate 均已可用。
 
-完整验收目前只证明 `macos-arm64-darwin`；其他 target 必须生成自己的验收报告。旧 AST generation steps 仍作为兼容实现存在，因此不要把清晰的目标分层误读成所有 legacy 路径已经移除。
+完整验收目前证明 `macos-arm64-darwin` 与 `linux-arm64-gnu`；其他 target 必须生成自己的验收报告。旧 AST generation steps 仍作为兼容实现存在，因此不要把清晰的目标分层误读成所有 legacy 路径已经移除。

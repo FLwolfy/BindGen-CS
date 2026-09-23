@@ -18,8 +18,10 @@ CLI / CsCodeGenerator / BindingGenerator
           ├─ DeclarationGraph
           ├─ BindingModuleAnalyzer → BindingModule
           ├─ StrictSafetyAnalyzer
-          ├─ AstGenerationStepEmitter（兼容 surface）
-          │    └─ GenerationStep implementations
+          ├─ CSharpEmissionBackend
+          │    ├─ Compatibility → AstGenerationStepEmitter
+          │    │                    └─ GenerationStep implementations
+          │    └─ IntermediateRepresentation → CSharpEmitter(BindingModule)
           ├─ post-patch / SingleFile / optional Runtime
           └─ GeneratedOutputTransaction.commit
 ```
@@ -27,9 +29,9 @@ CLI / CsCodeGenerator / BindingGenerator
 关键事实：
 
 - `BindingModule` 是真实分析结果，用于 structured result、安全诊断和新 emitter API。
-- `CSharpEmitter` 已经只消费 IR。主 C# output 仍调用独立命名的 `AstGenerationStepEmitter`；这消除了 IR emitter 对 AST 的依赖，但不等于默认路径迁移完成。
-- `CSharpEmitter.Emit(BindingModule, EmissionContext)` 是 IR-native 路径，但还不是配置驱动生成的默认实现。
-- IR-native C# emitter 会在写文件前验证能否无损表达全部语义；暂不支持的语义通过结构化 `BGCSCS001` 报错，不会静默丢弃。
+- `CSharpEmitter` 已经只消费 IR。配置生成现在可以通过 `CSharpEmissionBackend.IntermediateRepresentation` 显式选择它；默认 `Compatibility` 仍调用独立命名的 `AstGenerationStepEmitter`。
+- IR-native 路径已经承载 constant、alias、delegate、opaque handle、enum underlying type、匿名/嵌套 record、bitfield，以及 DllImport/LibraryImport/function-table metadata；miniaudio、SDL3、cimgui、cimguizmo、bgfx 的 raw ABI 均已生成并以零警告编译。Friendly overload 等价和全部 legacy public-API 语义尚未完成，因此默认路径迁移仍未关闭。
+- IR-native C# emitter 会在写文件前验证能否无损表达全部语义；配置生成对暂不支持的语义返回结构化 `BGCSCS001`，绝不隐式回退，失败时保留 last-good output。缺少字段定义的 opaque storage 可以通过 pointer 使用，但按值调用会被拒绝，因为仅凭 size/alignment 无法证明 target ABI classification。
 - C++ Bridge 有独立 analyzer 和 `CBridgeEmitter.EmitAst` 路径，最终也返回 `BindingModule`；它与 C# 共享 contract，但并非所有 emission 都只消费 IR。
 - C++ Bridge 可生成带版本的 build manifest；`INativeBuildPipelineProvider` 将其转换为不依赖 shell 的多步骤计划。内置 direct Clang/GNU、clang-cl、CMake、Meson、MSBuild provider，并通过 `nm` / `dumpbin` 检查实际 export。
 - CLI `build` 在 pipeline 成功后另建临时 .NET 项目做 warning-as-error 编译；编译验证不属于 `BindingGenerationPipeline` 自身。
@@ -80,6 +82,13 @@ BGCS.Intermediate 不依赖其他 BGCS assembly
 
 `BGCS.CppAst` 使用 Clang 构建 declaration/type/comment/token model，并通过 `CppTarget` 与 `CppToolchainDiscovery` 注入 target triple、system includes 和 sysroot。
 
+### Target 与 Runtime 可移植性
+
+- `BGCS.CppAst` 会按 RID 选择并预加载 Windows、macOS、Linux x64/arm64 的 Clang/ClangSharp runtime，不依赖宿主全局 `libclang` 名称。
+- ABI classifier 集中处理 target-dependent primitive 和 compiler carrier。Linux Arm64 的 unsigned plain `char` 与 AAPCS64 `va_list` 已显式建模；SysV x64 的 array-decayed `va_list` 保持独立规则。
+- `BGCS.Runtime.NativeLibrary` 使用 .NET 跨平台 loader 处理 module 与 export，避免 `libdl.so` 等平台 soname 假设。
+- Workspace target 子目录与 target-specific snapshot/report 防止一个宿主生成的 ABI 被另一个宿主误编译或误验收。
+
 ### Analysis
 
 - `DeclarationGraph`：声明及其 ABI 依赖排序。
@@ -107,9 +116,10 @@ Analyzer 不创建正式输出文件。
 ### Native build
 
 - `CppBridgeBuildManifest`：版本化、确定性、相对配置目录的 source、target、toolchain 与 link input 描述。
-- `INativeBuildProvider`：不通过 shell quoting，把 manifest 转换为 argument-list process plan。
-- `ClangNativeBuildProvider`：内置的跨平台 Clang/GNU-driver 实现。
-- `NativeBuildExecutor`：带 timeout、stdout/stderr 捕获的进程执行器，不修改全局 current directory。
+- `INativeBuildPipelineProvider`：不通过 shell quoting，把 manifest 转换为确定性的 build input 与 argument-list 多步骤计划。
+- Provider：direct Clang/GNU、clang-cl、CMake、Meson 与 MSBuild。
+- `NativeBuildExecutor`：带 timeout、stdout/stderr 捕获的多步骤进程执行器，不修改全局 current directory。
+- `NativeExportInspector`：通过 `nm` 或 `dumpbin` 对比生成的公开 C symbol 与实际 artifact export table。
 
 配置驱动的 C++ 生成也从显式 configuration directory 解析 header、include、sysroot、compiler path、output 和文件型 `BaseConfig` 链；它不会修改 `Environment.CurrentDirectory`，因此并发 generator 不会争用进程级路径状态。
 

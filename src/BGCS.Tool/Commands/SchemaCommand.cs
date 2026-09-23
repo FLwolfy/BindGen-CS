@@ -20,6 +20,7 @@ internal static class SchemaCommand
         [nameof(CsCodeGeneratorConfig.SystemIncludeFolders)] = "System include directories passed to the parser.",
         [nameof(CsCodeGeneratorConfig.OutputPath)] = "Generated-output directory, resolved relative to the configuration file.",
         [nameof(CsCodeGeneratorConfig.ImportType)] = "Interop import strategy used by generated functions.",
+        [nameof(CsCodeGeneratorConfig.CSharpEmissionBackend)] = "C# source backend. Compatibility preserves the established surface; IntermediateRepresentation uses the fail-closed IR-native backend.",
         [nameof(CsCodeGeneratorConfig.TargetPlatform)] = "Explicit native target platform; Auto resolves from the host.",
         [nameof(CsCodeGeneratorConfig.TargetArchitecture)] = "Explicit native target architecture; Auto resolves from the host.",
         [nameof(CsCodeGeneratorConfig.TargetAbi)] = "Explicit native ABI; Auto resolves from the selected target.",
@@ -123,7 +124,9 @@ internal static class SchemaCommand
                 schema["description"] = description;
             DefaultValueAttribute? defaultValue = property.GetCustomAttribute<DefaultValueAttribute>();
             if (defaultValue?.Value != null)
-                schema["default"] = defaultValue.Value;
+                schema["default"] = defaultValue.Value is Enum enumValue
+                    ? enumValue.ToString()
+                    : defaultValue.Value;
             properties[property.Name] = schema;
         }
 

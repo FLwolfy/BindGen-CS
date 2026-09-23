@@ -38,6 +38,7 @@ public sealed class SingleFileComposer
         List<AttributeListSyntax> attributes = [];
         List<MemberDeclarationSyntax> namespaceMembers = [];
         List<MemberDeclarationSyntax> otherMembers = [];
+        bool nullableEnabled = false;
         foreach ((string sourceFile, string sourceText) in sources.OrderBy(source => source.Path, StringComparer.OrdinalIgnoreCase))
         {
             SyntaxTree tree = CSharpSyntaxTree.ParseText(sourceText, path: sourceFile);
@@ -45,6 +46,10 @@ public sealed class SingleFileComposer
             if (errors.Length > 0)
                 throw new InvalidOperationException($"Cannot compose invalid generated source '{sourceFile}':{Environment.NewLine}{string.Join(Environment.NewLine, errors.Select(error => error.ToString()))}");
             CompilationUnitSyntax root = tree.GetCompilationUnitRoot();
+            nullableEnabled |= root.DescendantTrivia(descendIntoTrivia: true)
+                .Select(trivia => trivia.GetStructure())
+                .OfType<NullableDirectiveTriviaSyntax>()
+                .Any(directive => directive.SettingToken.IsKind(SyntaxKind.EnableKeyword));
             foreach (UsingDirectiveSyntax directive in root.Usings)
                 usings.TryAdd(directive.WithoutTrivia().ToFullString(), directive.WithoutTrivia());
             attributes.AddRange(root.AttributeLists.Select(attribute => attribute.WithoutTrivia()));
@@ -81,7 +86,8 @@ public sealed class SingleFileComposer
         output = output.WithMembers(SyntaxFactory.List(members));
         string normalized = output.NormalizeWhitespace("    ", Environment.NewLine).ToFullString()
             .Replace("> )", ">)", StringComparison.Ordinal);
-        string text = Header + normalized + Environment.NewLine;
+        string nullableDirective = nullableEnabled ? $"#nullable enable{Environment.NewLine}" : string.Empty;
+        string text = Header + nullableDirective + normalized + Environment.NewLine;
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputFile))!);
         File.WriteAllText(outputFile, text);
         return outputFile;

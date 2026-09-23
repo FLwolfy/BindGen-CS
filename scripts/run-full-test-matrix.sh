@@ -29,7 +29,10 @@ discover_test_projects() {
 
 if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
   log "dotnet restore BindGen-CS.sln"
-  "${DOTNET_CMD}" restore "${ROOT_DIR}/BindGen-CS.sln"
+  "${DOTNET_CMD}" restore "${ROOT_DIR}/BindGen-CS.sln" \
+    -p:BuildInParallel=false \
+    /m:1 \
+    /nodeReuse:false
 
   log "dotnet build BindGen-CS.sln (${CONFIGURATION})"
   "${DOTNET_CMD}" build "${ROOT_DIR}/BindGen-CS.sln" \
@@ -116,6 +119,7 @@ touch "${GATE_DIR}/demo"
 log "Layer 3: Vendored real-library regeneration and compilation"
 REQUIRE_REAL_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-libraries.sh"
 touch "${GATE_DIR}/real-libraries"
+touch "${GATE_DIR}/ir-native-real-libraries"
 REQUIRE_REAL_CPP_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"
 touch "${GATE_DIR}/real-cpp-libraries"
 
@@ -127,7 +131,7 @@ log "Layer 5: NuGet package dependency and consumer smoke test"
 bash "${ROOT_DIR}/scripts/test-nuget-packages.sh"
 touch "${GATE_DIR}/nuget-tool"
 
-log "Layer 6: Machine-readable acceptance report"
+log "Layer 6: Performance and cache budget"
 bash "${ROOT_DIR}/scripts/test-performance-budget.sh"
 touch "${GATE_DIR}/performance"
 

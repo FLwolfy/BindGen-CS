@@ -17,7 +17,7 @@ Both reports record their UTC generation time, Git revision, and working-tree di
 | Category | Target | Mandatory gates |
 | --- | ---: | --- |
 | Small C APIs | 9.0 | 100% generated compilation; ABI invocation; no source edits |
-| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx regeneration/compilation plus InnoEngine workspace diff |
+| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx compatibility snapshots plus warning-free IR-native compilation and InnoEngine workspace diff |
 | Complex C ABI correctness | 9.0 | Host-native invocation and target-specific ABI/layout/calling-convention matrix |
 | Ordinary C++ class bridge | 9.0 | Native compile/link/run for lifecycle and methods |
 | Modern C++ | 9.0 | Selected templates/STL/smart pointers/virtual callbacks |
@@ -104,6 +104,7 @@ Current automated architecture tests directly enforce:
 - the Intermediate assembly references no other BGCS assembly;
 - IR analysis and IR-native `CSharpEmitter.Emit` have independent behavior tests;
 - unsupported IR-native C# semantics fail before output with stable `BGCSCS001` diagnostics.
+- all five real C libraries regenerate through the IR-native backend and compile with warnings as errors; incomplete opaque storage passed by value is rejected instead of guessed.
 
 The primary configured path still calls the isolated `AstGenerationStepEmitter` and `GenerationStep`; `CSharpEmitter` no longer exposes or contains a legacy path. Architecture 9.0 therefore means that the declared boundary/build/test gates pass; it does not mean default-path IR migration is complete. See [Architecture](architecture.md#migration-completion-criteria) for completion criteria.
 
@@ -119,4 +120,4 @@ The primary configured path still calls the isolated `AstGenerationStepEmitter` 
 
 ## Current status
 
-The macOS arm64 Darwin scope passes every measured category at 9.0. `scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json` and `report.md` only after managed tests, native C/C++ runtime gates, five real C libraries, the bimg C++ bridge, deterministic source/reflection snapshots, the InnoEngine five-project workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests pass. Windows and other target ABIs require separate target-specific reports; no report is treated as proof for a different target.
+The macOS arm64 Darwin and Linux arm64 GNU scopes each pass every measured category at 9.0. `scripts/run-full-test-matrix.sh` writes the latest `artifacts/acceptance/report.json` and `report.md`, plus retained target copies under `artifacts/acceptance/reports/<target>/`, only after managed tests, native C/C++ runtime gates, compatibility snapshots and warning-free IR-native compilation for five real C libraries, the bimg C++ bridge, the InnoEngine five-project workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests pass. Windows and other target ABIs require separate target-specific reports; no report is treated as proof for a different target.

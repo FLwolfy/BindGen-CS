@@ -56,5 +56,6 @@ public sealed class BindingFunction
     public string CallingConvention { get; init; } = "Cdecl";
     public bool IsVariadic { get; init; }
     public string? DeclaringType { get; init; }
+    public int? FunctionTableIndex { get; set; }
     public IList<BindingParameter> Parameters { get; } = new List<BindingParameter>();
 }

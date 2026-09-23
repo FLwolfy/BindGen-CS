@@ -39,14 +39,14 @@ score() {
 }
 
 small_c="$(score solution-build managed-tests native-c-abi)"
-large_c="$(score managed-tests real-libraries innoengine-bindings)"
+large_c="$(score managed-tests real-libraries ir-native-real-libraries innoengine-bindings)"
 complex_c="$(score native-c-abi strict-safety managed-tests)"
 cpp_bridge="$(score native-cpp-bridge managed-tests)"
 modern_cpp="$(score modern-cpp native-cpp-bridge real-cpp-libraries strict-safety)"
 api_quality="$(score real-libraries managed-tests innoengine-bindings)"
 usability="$(score demo nuget-tool strict-safety)"
 architecture="$(score solution-build managed-tests performance)"
-internal="$(score solution-build managed-tests strict-safety performance)"
+internal="$(score solution-build managed-tests strict-safety ir-native-real-libraries performance)"
 release="$(score solution-build managed-tests real-libraries innoengine-bindings nuget-tool performance)"
 
 cat > "${OUTPUT_DIR}/report.json" <<EOF
@@ -59,18 +59,19 @@ cat > "${OUTPUT_DIR}/report.json" <<EOF
   "scoreRange": { "minimum": 9.0, "maximum": 9.0 },
   "categories": [
     { "name": "small-c-api", "score": ${small_c}, "gates": ["solution-build", "managed-tests", "native-c-abi"] },
-    { "name": "medium-large-c-api", "score": ${large_c}, "gates": ["managed-tests", "real-libraries", "innoengine-bindings"] },
+    { "name": "medium-large-c-api", "score": ${large_c}, "gates": ["managed-tests", "real-libraries", "ir-native-real-libraries", "innoengine-bindings"] },
     { "name": "complex-c-abi", "score": ${complex_c}, "gates": ["native-c-abi", "strict-safety", "managed-tests"] },
     { "name": "cpp-class-bridge", "score": ${cpp_bridge}, "gates": ["native-cpp-bridge", "managed-tests"] },
     { "name": "modern-cpp", "score": ${modern_cpp}, "gates": ["modern-cpp", "native-cpp-bridge", "real-cpp-libraries", "strict-safety"] },
     { "name": "generated-api-quality", "score": ${api_quality}, "gates": ["real-libraries", "managed-tests", "innoengine-bindings"] },
     { "name": "beginner-usability", "score": ${usability}, "gates": ["demo", "nuget-tool", "strict-safety"] },
     { "name": "outer-architecture", "score": ${architecture}, "gates": ["solution-build", "managed-tests", "performance"] },
-    { "name": "inner-architecture", "score": ${internal}, "gates": ["solution-build", "managed-tests", "strict-safety", "performance"] },
+    { "name": "inner-architecture", "score": ${internal}, "gates": ["solution-build", "managed-tests", "strict-safety", "ir-native-real-libraries", "performance"] },
     { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "innoengine-bindings", "nuget-tool", "performance"] }
   ],
   "realLibraries": {
-    "generatedAndCompiled": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
+    "compatibilityGeneratedCompiledAndSnapshotted": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
+    "irNativeGeneratedAndWarningFreeCompiled": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
     "sourceSnapshots": "tests/real-libraries/api-snapshots.${snapshot_platform}.sha256",
     "publicApiSnapshots": "tests/real-libraries/public-api-snapshots.${snapshot_platform}.sha256"
   },
@@ -114,6 +115,17 @@ cat > "${OUTPUT_DIR}/report.md" <<EOF
 | Internal architecture | ${internal} |
 | NuGet/testing/release | ${release} |
 
-The report was emitted only after managed/native tests, real C/C++ library generation, deterministic source and public-API snapshots, the InnoEngine workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests passed.
+The report was emitted only after managed/native tests, compatibility plus warning-free IR-native generation for five real C libraries, real C++ bridge generation, deterministic source and public-API snapshots, the InnoEngine workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests passed.
 EOF
-printf '[acceptance] wrote artifact-driven %s and %s\n' "${OUTPUT_DIR}/report.json" "${OUTPUT_DIR}/report.md"
+
+# Keep the stable latest-report paths for existing automation while retaining
+# immutable-by-target evidence when more than one host is verified locally.
+TARGET_OUTPUT_DIR="${OUTPUT_DIR}/reports/${target}"
+mkdir -p "${TARGET_OUTPUT_DIR}"
+cp "${OUTPUT_DIR}/report.json" "${TARGET_OUTPUT_DIR}/report.json"
+cp "${OUTPUT_DIR}/report.md" "${TARGET_OUTPUT_DIR}/report.md"
+
+printf '[acceptance] wrote artifact-driven %s, %s, and target-specific copies under %s\n' \
+  "${OUTPUT_DIR}/report.json" \
+  "${OUTPUT_DIR}/report.md" \
+  "${TARGET_OUTPUT_DIR}"

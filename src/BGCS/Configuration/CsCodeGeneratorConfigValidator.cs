@@ -37,7 +37,7 @@ internal static class CsCodeGeneratorConfigValidator
         {
             errors.Add("PluginAssemblies cannot contain an empty path.");
         }
-        if (config.MergeGeneratedFilesToSingleFile)
+        if (config.MergeGeneratedFilesToSingleFile || config.CSharpEmissionBackend == CSharpEmissionBackend.IntermediateRepresentation)
         {
             try
             {

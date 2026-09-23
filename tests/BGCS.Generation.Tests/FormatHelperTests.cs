@@ -93,6 +93,16 @@ public class FormatHelperTests
     }
 
     [Theory]
+    [InlineData("\"alpha\" \"beta\"", "\"alphabeta\"")]
+    [InlineData("\"[\\\"\" \"item\" \"\\\"]\"", "\"[\\\"item\\\"]\"")]
+    [InlineData("u8\"utf\" L\"8\"", "\"utf8\"")]
+    public void NormalizeConstantValue_AdjacentCStringLiterals_ShouldProduceOneCSharpLiteral(
+        string input, string expected)
+    {
+        Assert.Equal(expected, input.NormalizeConstantValue());
+    }
+
+    [Theory]
     [InlineData("1+2*3", true)]
     [InlineData("A+B", true)]
     [InlineData("A_B+1", false)]

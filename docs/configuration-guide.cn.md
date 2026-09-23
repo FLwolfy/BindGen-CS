@@ -79,6 +79,15 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 - `LibraryImport`：source-generated import；签名必须满足 source generator 限制。
 - `FunctionTable`：显式 native context 和 symbol resolution，与当前 Inno.Native 风格一致。
 
+## C# emission backend
+
+`CSharpEmissionBackend` 控制正式 C# 源码由哪条路径输出：
+
+- `Compatibility`（默认）：保留现有完整 public surface、friendly overload 和快照兼容性。
+- `IntermediateRepresentation`：直接从 canonical `BindingModule` 输出单个 C# 文件。它支持 constant、enum、alias、opaque handle、delegate、匿名/嵌套 struct/union、fixed array、bitfield，以及三种 import mode；raw ABI surface 已进入五个真实库的编译 gate。遇到 variadic、非 free C ABI callable、unexposed/function-pointer type 或 opaque storage 按值传递等尚不能无损表达的语义时，以 `BGCSCS001` 在事务提交前失败。
+
+IR backend 不会隐式退回兼容 emitter，也不会在失败时覆盖上一次正确输出。它目前是用于迁移、扩展开发和 raw ABI 审计的显式 opt-in；在 friendly API 与全部真实库快照等价前，不应批量替换现有生产配置。
+
 ## Output 与 Runtime
 
 - `GenerateConfigured` 以 config 所在目录解析 `OutputPath`。
@@ -195,10 +204,17 @@ Preset 可以组合且保持通用：选择一个 target preset（`host-c`、`ho
 
 Workspace 文件保存多个 config path，适合仓库级自动化：
 
+```json
+{
+  "TargetOutputSubdirectories": true,
+  "Configs": ["cimgui.json", "sdl3.json", "bgfx.json"]
+}
+```
+
 ```bash
 bindgen-cs workspace validate native/bindings/workspace.json
 bindgen-cs workspace generate native/bindings/workspace.json
 bindgen-cs workspace diff native/bindings/workspace.json
 ```
 
-把 `workspace diff` 放入 CI，可以在不覆盖正式输出的情况下验证全部 checked-in bindings。
+`TargetOutputSubdirectories=true` 时，`generate` 与 `diff` 会把每份配置的普通输出解析为 `OutputPath/<target-id>`（例如 `Generated/linux-arm64-gnu`）。同一仓库保留多个 ABI 的 bindings 时应开启此项，并由消费项目严格选择一个 target 目录。把 `workspace diff` 放入 CI，可以在不覆盖正式输出的情况下验证全部 checked-in bindings。

@@ -47,8 +47,8 @@ BGFX_INCLUDE_JSON="$(dirname "$(dirname "${BGFX_HEADER_JSON}")")"
 BX_INCLUDE_JSON="${INNOENGINE_ROOT}/extern/bx/include"
 if command -v cygpath > /dev/null 2>&1; then BX_INCLUDE_JSON="$(cygpath -m "${BX_INCLUDE_JSON}")"; fi
 
-"${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release
-"${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release -m:1 /nodeReuse:false
+"${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release -m:1 /nodeReuse:false
 
 cat > "${ARTIFACTS_DIR}/miniaudio/bindgen.json" <<EOF
 {
@@ -89,7 +89,7 @@ cat > "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
 printf '[real-libraries] miniaudio passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/sdl3/consumer"
@@ -149,7 +149,7 @@ cat > "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
 printf '[real-libraries] SDL3 passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/cimgui/consumer"
@@ -212,7 +212,7 @@ cat > "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
 printf '[real-libraries] cimgui passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/cimguizmo/consumer"
@@ -275,7 +275,7 @@ cat > "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
 printf '[real-libraries] cimguizmo passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/bgfx/consumer"
@@ -315,8 +315,62 @@ cat > "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" <<EOF
   </ItemGroup>
 </Project>
 EOF
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" --configuration Release
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
 printf '[real-libraries] bgfx passed in %ss.\n' "${elapsed_seconds}"
+
+verify_ir_backend() {
+  local library_name="$1"
+  local project_name="$2"
+  local library_dir="${ARTIFACTS_DIR}/${library_name}"
+  local consumer_dir="${library_dir}/ir-consumer"
+  mkdir -p "${consumer_dir}"
+
+  cat > "${library_dir}/bindgen.ir.json" <<EOF
+{
+  "BaseConfig": { "Url": "file://bindgen.json" },
+  "CSharpEmissionBackend": "IntermediateRepresentation",
+  "SingleFileOutputName": "Bindings.cs",
+  "OutputPath": "IRGenerated"
+}
+EOF
+
+  local start_seconds
+  local elapsed_seconds
+  start_seconds="$(date +%s)"
+  "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
+    "${library_dir}/bindgen.ir.json"
+  elapsed_seconds="$(( $(date +%s) - start_seconds ))"
+  if (( elapsed_seconds > 120 )); then
+    echo "[real-libraries] ${library_name} IR generation exceeded 120 seconds: ${elapsed_seconds}s"
+    exit 1
+  fi
+
+  cat > "${consumer_dir}/${project_name}.IR.Generated.csproj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../IRGenerated/Bindings.cs" Link="Bindings.cs" />
+    <ProjectReference Include="${ROOT_DIR_JSON}/src/BGCS.Runtime/BGCS.Runtime.csproj" />
+  </ItemGroup>
+</Project>
+EOF
+
+  "${DOTNET_CMD}" build "${consumer_dir}/${project_name}.IR.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
+  printf '[real-libraries] %s IR-native ABI generation and warning-free compilation passed in %ss.\n' \
+    "${library_name}" "${elapsed_seconds}"
+}
+
+verify_ir_backend "miniaudio" "MiniAudio"
+verify_ir_backend "sdl3" "SDL3"
+verify_ir_backend "cimgui" "CImGui"
+verify_ir_backend "cimguizmo" "CImGuizmo"
+verify_ir_backend "bgfx" "Bgfx"
 
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/miniaudio/consumer/bin/Release/net9.0/MiniAudio.Generated.dll" "${ARTIFACTS_DIR}/miniaudio/public-api.txt"

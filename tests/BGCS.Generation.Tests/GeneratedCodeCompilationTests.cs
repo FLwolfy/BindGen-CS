@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
+using BGCS.CppAst.Targeting;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -14,6 +15,71 @@ namespace BGCS.Tests;
 
 public class GeneratedCodeCompilationTests
 {
+    [Fact]
+    public void Generate_Aapcs64VaListParameter_ShouldUseBlittableRuntimeCarrierAndCompile()
+    {
+        const string header = "typedef __builtin_va_list bgcs_va_list; void consume_args(bgcs_va_list args);";
+        var run = RunGenerator(header, static options =>
+            options.ConfigureForTarget(
+                CppTarget.Resolve(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Gnu),
+                discoverHostToolchain: false));
+
+        try
+        {
+            AssertGeneratorSucceeded(run.Ok, run.Messages);
+            string generated = string.Join(Environment.NewLine,
+                Directory.GetFiles(run.OutputPath, "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
+            Assert.Contains("ConsumeArgsNative(global::BGCS.Runtime.Aapcs64VaList args)", generated, StringComparison.Ordinal);
+            Assert.DoesNotContain(" VaList args", generated, StringComparison.Ordinal);
+            _ = CompileGeneratedSources(run.OutputPath, "BGCS.Generated.Aapcs64VaList");
+        }
+        finally
+        {
+            Cleanup(run.TempDirectory);
+        }
+    }
+
+    [Fact]
+    public void Generate_SysVVaListParameter_ShouldLowerToNativeIntegerAndCompile()
+    {
+        const string header = """
+            #define BGCS_JSON_ARRAY1(N1) "[\"" N1 "\"]"
+            #define BGCS_ADJACENT "left" "right"
+
+            typedef struct __va_list_tag
+            {
+                unsigned int gp_offset;
+                unsigned int fp_offset;
+                void* overflow_arg_area;
+                void* reg_save_area;
+            } __va_list_tag;
+            typedef __va_list_tag va_list[1];
+
+            void consume_args(va_list args);
+            """;
+
+        var run = RunGenerator(header);
+        try
+        {
+            AssertGeneratorSucceeded(run.Ok, run.Messages);
+            string generated = string.Join(Environment.NewLine,
+                Directory.GetFiles(run.OutputPath, "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
+            Assert.Contains("ConsumeArgsNative(nint args)", generated, StringComparison.Ordinal);
+            Assert.DoesNotContain("VaListTag* args", generated, StringComparison.Ordinal);
+            Assert.DoesNotContain("BGCS_JSON_ARRAY1", generated, StringComparison.Ordinal);
+            Assert.Contains("BGCS_ADJACENT = \"leftright\"", generated, StringComparison.Ordinal);
+            Assembly assembly = CompileGeneratedSources(run.OutputPath, "BGCS.Generated.VaList");
+            MethodInfo method = assembly.GetTypes()
+                .SelectMany(type => type.GetMethods(BindingFlags.NonPublic | BindingFlags.Static))
+                .Single(value => value.Name == "ConsumeArgsNative");
+            Assert.Equal(typeof(nint), Assert.Single(method.GetParameters()).ParameterType);
+        }
+        finally
+        {
+            Cleanup(run.TempDirectory);
+        }
+    }
+
     [Fact]
     public void Generate_CBindings_OutputShouldCompileAndContainExpectedSymbols()
     {
@@ -99,6 +165,7 @@ public class GeneratedCodeCompilationTests
 
         paths.Add(typeof(CsCodeGenerator).Assembly.Location);
         paths.Add(typeof(CsCodeGeneratorConfig).Assembly.Location);
+        paths.Add(typeof(BGCS.Runtime.Aapcs64VaList).Assembly.Location);
 
         return paths.Select(static path => MetadataReference.CreateFromFile(path));
     }
@@ -109,7 +176,9 @@ public class GeneratedCodeCompilationTests
         Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
     }
 
-    private static (bool Ok, string TempDirectory, string OutputPath, IReadOnlyList<LogMessage> Messages) RunGenerator(string headerText)
+    private static (bool Ok, string TempDirectory, string OutputPath, IReadOnlyList<LogMessage> Messages) RunGenerator(
+        string headerText,
+        Action<CppParserOptions>? configureParser = null)
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-compile-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -140,6 +209,7 @@ public class GeneratedCodeCompilationTests
             AutoSquashTypedef = false
         };
         parserOptions.AdditionalArguments.Add("-undef");
+        configureParser?.Invoke(parserOptions);
 
         bool ok = ((CsCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath);
 

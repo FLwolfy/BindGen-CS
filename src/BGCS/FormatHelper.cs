@@ -310,6 +310,11 @@
                 return "~0u - 3";
             }
 
+            if (TryCombineAdjacentCStringLiterals(value, out string? combinedString))
+            {
+                return combinedString;
+            }
+
             if ((value.StartsWith("L\"") || value.StartsWith("R\"") || value.StartsWith("LR\"")) && value.EndsWith("\"") && value.Count(c => c == '"') > 2)
             {
                 string[] parts = value.Split('"', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -347,6 +352,59 @@
             }
 
             return value.Replace("ULL", "UL");
+        }
+
+        private static bool TryCombineAdjacentCStringLiterals(string value, [NotNullWhen(true)] out string? result)
+        {
+            StringBuilder combined = new();
+            int index = 0;
+            int literals = 0;
+            while (true)
+            {
+                while (index < value.Length && char.IsWhiteSpace(value[index]))
+                    index++;
+                if (index >= value.Length)
+                    break;
+                if (value.AsSpan(index).StartsWith("u8\"", StringComparison.Ordinal))
+                    index += 2;
+                else if (value[index] is 'L' or 'u' or 'U')
+                    index++;
+                if (index >= value.Length || value[index] != '"')
+                {
+                    result = null;
+                    return false;
+                }
+                index++;
+                bool closed = false;
+                while (index < value.Length)
+                {
+                    char current = value[index++];
+                    if (current == '\\' && index < value.Length)
+                    {
+                        combined.Append(current).Append(value[index++]);
+                        continue;
+                    }
+                    if (current == '"')
+                    {
+                        closed = true;
+                        break;
+                    }
+                    combined.Append(current);
+                }
+                if (!closed)
+                {
+                    result = null;
+                    return false;
+                }
+                literals++;
+            }
+            if (literals < 2)
+            {
+                result = null;
+                return false;
+            }
+            result = $"\"{combined}\"";
+            return true;
         }
 
         /// <summary>

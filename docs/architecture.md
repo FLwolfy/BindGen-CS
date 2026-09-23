@@ -18,8 +18,10 @@ CLI / CsCodeGenerator / BindingGenerator
           ├─ DeclarationGraph
           ├─ BindingModuleAnalyzer → BindingModule
           ├─ StrictSafetyAnalyzer
-          ├─ AstGenerationStepEmitter (compatibility surface)
-          │    └─ GenerationStep implementations
+          ├─ CSharpEmissionBackend
+          │    ├─ Compatibility → AstGenerationStepEmitter
+          │    │                    └─ GenerationStep implementations
+          │    └─ IntermediateRepresentation → CSharpEmitter(BindingModule)
           ├─ post-patch / SingleFile / optional Runtime
           └─ GeneratedOutputTransaction.commit
 ```
@@ -27,9 +29,9 @@ CLI / CsCodeGenerator / BindingGenerator
 Important facts:
 
 - `BindingModule` is a real analysis result used by structured results, safety diagnostics, and the new emitter API.
-- `CSharpEmitter` is IR-only. Primary C# output still calls the separately named `AstGenerationStepEmitter`; isolating that boundary removes AST dependencies from the IR emitter but does not count as completion of the default-path migration.
-- `CSharpEmitter.Emit(BindingModule, EmissionContext)` is an IR-native path, but is not yet the default configured generation implementation.
-- The IR-native C# emitter validates lossless capability before writing and raises structured `BGCSCS001` diagnostics for semantics it cannot yet preserve.
+- `CSharpEmitter` is IR-only. Configured generation can select it explicitly through `CSharpEmissionBackend.IntermediateRepresentation`; `Compatibility` remains the default and calls the separately named `AstGenerationStepEmitter`.
+- The IR-native path carries constants, aliases, delegates, opaque handles, enum underlying types, anonymous/nested records, bitfields, and DllImport/LibraryImport/function-table metadata. It now generates and warning-free compiles the raw ABI for miniaudio, SDL3, cimgui, cimguizmo, and bgfx. Friendly overload parity and every legacy public-API semantic are not complete, so the default-path migration is still open.
+- The IR-native C# emitter validates lossless capability before writing and returns structured `BGCSCS001` diagnostics from configured generation for semantics it cannot preserve. It never falls back silently and failed emission leaves last-good output intact. Opaque storage whose fields are unavailable may be used through pointers, but by-value calls fail because size/alignment alone cannot prove platform ABI classification.
 - C++ bridging has its own analyzer and `CBridgeEmitter.EmitAst` path and also returns a `BindingModule`; it shares contracts with C# without every emission path being IR-only.
 - C++ bridge output includes an optional versioned build manifest. `INativeBuildPipelineProvider` converts it into shell-independent steps. Built-ins cover Clang/GNU, clang-cl, CMake, Meson, and MSBuild; binary export inspection uses `nm` or `dumpbin`.
 - CLI `build` creates a temporary .NET project after pipeline success for warning-as-error compilation. Compilation validation is not performed inside `BindingGenerationPipeline` itself.
@@ -79,6 +81,13 @@ BGCS.Intermediate depends on no other BGCS assembly
 ### Parsing
 
 `BGCS.CppAst` uses Clang to build declaration/type/comment/token models. `CppTarget` and `CppToolchainDiscovery` supply target triples, system includes, and sysroots.
+
+### Target and runtime portability
+
+- `BGCS.CppAst` selects and preloads the RID-specific bundled Clang/ClangSharp runtime for Windows, macOS, and Linux x64/arm64 instead of relying on a host-global `libclang` name.
+- ABI classification owns target-specific primitive and compiler carrier rules. Linux Arm64 unsigned plain `char` and AAPCS64 `va_list` are modeled explicitly; SysV x64 array-decayed `va_list` remains a separate rule.
+- `BGCS.Runtime.NativeLibrary` delegates module loading and export lookup to the .NET cross-platform loader, avoiding platform soname assumptions such as `libdl.so`.
+- Workspace target subdirectories and target-specific snapshots/reports prevent one host's generated ABI from being compiled or accepted as another host's output.
 
 ### Analysis
 

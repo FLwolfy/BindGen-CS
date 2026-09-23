@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using ClangSharp.Interop;
+using BGCS.CppAst.Interop;
 using BGCS.CppAst.Model.Metadata;
 
 namespace BGCS.CppAst.Parsing;
@@ -79,6 +80,8 @@ public static class CppParser
     {
         if (cppFiles == null) throw new ArgumentNullException(nameof(cppFiles));
 
+        ClangNativeRuntime.EnsureLoaded();
+
         options = options ?? new CppParserOptions();
 
         var arguments = new List<string>();
@@ -113,6 +116,10 @@ public static class CppParser
 
             case CppParserKind.ObjC:
                 arguments.Add("-xobjective-c");
+                // Blocks are part of the Objective-C surface modeled by CppBlockFunctionType.
+                // Clang does not enable the extension uniformly for every non-Apple host,
+                // even when an Apple target triple is selected.
+                arguments.Add("-fblocks");
                 break;
 
             default:

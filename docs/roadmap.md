@@ -50,7 +50,7 @@ Exit: a new user reaches a compiling managed consumer on Windows, macOS, and Lin
 
 ### Phase 2 — Complete IR-native architecture migration
 
-Status: in progress and still the highest architectural priority. `CSharpEmitter` is now strictly IR-only and `EmitLegacy` has been removed; the default compatibility surface is isolated in `AstGenerationStepEmitter`, which still must be eliminated without snapshot loss.
+Status: in progress and still the highest architectural priority. `CSharpEmitter` is strictly IR-only, `EmitLegacy` is gone, and configured generation can opt into it through `CSharpEmissionBackend.IntermediateRepresentation`. Canonical IR and emission cover constants, aliases, delegates, enum underlying types, opaque handles/storage, anonymous/nested records, bitfields, and all three import modes with fail-closed rollback. The raw ABI now regenerates and warning-free compiles all five real C libraries; opaque storage passed by value fails closed. The default compatibility surface remains isolated in `AstGenerationStepEmitter` until friendly-overload and full public-API snapshot parity are proven.
 
 - Frontends only parse; analysis produces the single canonical `BindingModule`.
 - C#, Runtime, C Bridge, inspection, and future emitters consume only IR plus an emission context.
@@ -108,7 +108,7 @@ Exit: the C++ demo and bimg bridge produce native artifacts from configuration p
 
 ### Phase 7 — Real cross-platform matrix
 
-Status: macOS arm64 complete; Windows and Linux still require equivalent reports.
+Status: macOS arm64 and Linux arm64 complete with independent 9.0 reports; Windows and remaining x64/arm64 hosts still require equivalent reports.
 
 - Tier 1: Windows x64/arm64 with MSVC and clang-cl; Linux x64/arm64 with GCC/Clang; macOS arm64/x64.
 - Tier 2: Android arm64/x64, iOS device/simulator, and FreeBSD x64 using explicit toolchains/sysroots.

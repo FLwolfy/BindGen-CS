@@ -31,6 +31,11 @@
     <PackageReference Include="libClangSharp.runtime.win-x64" Version="20.1.2" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-arm64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'win-arm64'">
+    <PackageReference Include="libclang.runtime.win-arm64" Version="20.1.2" />
+    <PackageReference Include="libClangSharp.runtime.win-arm64" Version="20.1.2" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'osx-arm64'">
     <PackageReference Include="libclang.runtime.osx-arm64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.osx-arm64" Version="20.1.2" />
@@ -44,6 +49,11 @@
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'linux-x64'">
     <PackageReference Include="libclang.runtime.linux-x64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.linux-x64" Version="20.1.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm64' Or '$(NETCoreSdkRuntimeIdentifier)' == 'linux-arm64'">
+    <PackageReference Include="libclang.runtime.linux-arm64" Version="20.1.2" />
+    <PackageReference Include="libClangSharp.runtime.linux-arm64" Version="20.1.2" />
   </ItemGroup>
 
   <ItemGroup>

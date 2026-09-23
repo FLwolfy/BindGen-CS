@@ -4,7 +4,7 @@
 
 BindGen-CS is a production-oriented, cross-platform C/C++ to C# binding toolchain. It generates C# interop for C ABIs and can turn C++ classes, explicit template instances, and selected STL types into an ABI-stable C bridge with matching C# bindings.
 
-> **Verified status:** the complete `macos-arm64-darwin` acceptance matrix passes, with all ten categories scoring 9.0/10.0. Windows, Linux, Android, iOS, and FreeBSD are represented in the target/ABI model, but design support is never presented as host verification without a target-specific acceptance report. BindGen-CS diagnoses semantics it cannot prove instead of guessing C++ ABI, ownership, or allocator behavior.
+> **Verified status:** the complete `macos-arm64-darwin` and `linux-arm64-gnu` acceptance matrices pass independently, with all ten categories scoring 9.0/10.0 on each target. Windows, x64 hosts, Android, iOS, and FreeBSD are represented in the target/ABI model, but design support is never presented as host verification without a target-specific acceptance report. BindGen-CS diagnoses semantics it cannot prove instead of guessing C++ ABI, ownership, or allocator behavior.
 
 ## Choose a workflow
 
@@ -90,7 +90,7 @@ See [Getting started](docs/getting-started.md) for complete examples and the [Co
 - `DllImport`, `LibraryImport`, and explicit function-table/native-context import modes.
 - Structs, unions, packing, bitfields, fixed arrays, typedefs, opaque handles, callbacks, and target-dependent primitives.
 - `MarshallingMappings` for string encoding, ownership, cleanup, pointer/count, capacity/written-count, and caller allocation.
-- The pipeline produces a shared Binding IR for safety analysis. `CSharpEmitter` itself is now IR-only; the primary compatibility surface still uses the separately isolated AST generation-step lowerer until constants, delegates, aliases, friendly overloads, and all snapshot semantics have been migrated. Output replacement is transactional.
+- The pipeline produces a shared Binding IR for safety analysis. `CSharpEmissionBackend=IntermediateRepresentation` provides an explicit fail-closed path for constants, delegates, aliases, handles, anonymous/nested records, bitfields, and all import modes. Its raw ABI output is generated and compiled with warnings as errors for all five real C libraries; opaque storage with no field definition is rejected when passed by value. The default compatibility surface remains isolated until friendly overloads and every public-API snapshot semantic are equivalent. Output replacement is transactional.
 - BaseConfig composition, presets, single-file output, workspaces, deterministic diff, and target-specific snapshots.
 - Content-addressed incremental output caching with exact input, compiler/toolchain, config, plugin, and adapter fingerprints; atomic publication/restoration, target isolation, and concurrent-writer tests. Stateful custom extensions conservatively disable cache restoration unless their behavior has a stable fingerprint.
 - Versioned third-party plugin contracts, isolated dependency resolution, atomic deterministic service registration, and locked v1 API-shape tests; C++ type/callable adapters can be supplied without core branches.
@@ -111,12 +111,13 @@ That boundary is a correctness feature, not silent feature inflation. See the [d
 The sibling InnoEngine integration is not a toy-header demo. Its complete gate:
 
 - deterministically regenerates cimgui, cimguizmo, miniaudio, SDL3, and bgfx from configuration;
+- stores generated C# under `Generated/<target>/` and compiles exactly the current target, preventing cross-ABI output reuse;
 - rejects hand-authored native imports outside `Generated/`;
 - builds every required native dependency from pinned source;
 - builds the complete InnoEngine solution with warnings as errors;
 - runs every native binding test project.
 
-The real-library matrix also generates, compiles, and snapshots miniaudio, SDL3, cimgui, cimguizmo, bgfx C99, and the bimg C++ bridge.
+The real-library matrix generates, compiles, and snapshots the compatibility output for miniaudio, SDL3, cimgui, cimguizmo, and bgfx C99; it independently regenerates all five through the IR-native backend and compiles those consumers with warnings as errors. The bimg C++ bridge has its own native/rebound/snapshot gate.
 
 ## Architecture and embedding
 
@@ -155,6 +156,7 @@ Reports are produced only after managed tests, native ABI/runtime gates, real C/
 
 - `artifacts/acceptance/report.json`
 - `artifacts/acceptance/report.md`
+- `artifacts/acceptance/reports/<target>/report.{json,md}`
 
 See the [acceptance specification](docs/acceptance.md) for scoring and target isolation. The score proves quality within the declared scope, not complete coverage of the C++ language.
 

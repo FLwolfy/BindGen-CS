@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BGCS.Intermediate;
+using BGCS.Tool.Commands;
 
 namespace BGCS.Tool;
 
@@ -26,8 +27,8 @@ internal static class WorkspaceCommand
         return operation switch
         {
             "validate" => Validate(configPaths),
-            "generate" => Generate(configPaths),
-            "diff" => Diff(configPaths),
+            "generate" => Generate(configPaths, manifest),
+            "diff" => Diff(configPaths, manifest),
             _ => throw new InvalidOperationException($"Unsupported workspace operation '{operation}'.")
         };
     }
@@ -72,16 +73,22 @@ internal static class WorkspaceCommand
             generator.LogToConsole();
             BindingGenerationResult result = generator.AnalyzeConfigured();
             if (!result.Success || result.Module == null)
+            {
+                GenerationDiagnosticWriter.WriteFailure(result, Console.Error);
                 return 1;
+            }
             if (result.Module.StructuredDiagnostics.Any(diagnostic =>
                     diagnostic.Severity == BindingDiagnosticSeverity.Error))
+            {
+                GenerationDiagnosticWriter.WriteFailure(result, Console.Error);
                 return 1;
+            }
         }
         Console.WriteLine($"Validated {configPaths.Count} binding configurations.");
         return 0;
     }
 
-    private static int Generate(IReadOnlyList<string> configPaths)
+    private static int Generate(IReadOnlyList<string> configPaths, BindingWorkspaceManifest manifest)
     {
         // Validate every input before replacing any generated directory.
         if (Validate(configPaths) != 0)
@@ -92,27 +99,32 @@ internal static class WorkspaceCommand
             Console.WriteLine($"Generating {configPath}");
             CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
             generator.LogToConsole();
-            if (!generator.GenerateConfigured())
+            if (!generator.GenerateConfigured(ResolveOutputPath(configPath, manifest)))
+            {
+                GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
                 return 1;
+            }
         }
         Console.WriteLine($"Generated {configPaths.Count} binding projects.");
         return 0;
     }
 
-    private static int Diff(IReadOnlyList<string> configPaths)
+    private static int Diff(IReadOnlyList<string> configPaths, BindingWorkspaceManifest manifest)
     {
         bool hasChanges = false;
         foreach (string configPath in configPaths)
         {
             CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(configPath);
-            string configDirectory = Path.GetDirectoryName(configPath)!;
-            string expectedOutput = Path.GetFullPath(config.OutputPath, configDirectory);
+            string expectedOutput = ResolveOutputPath(configPath, config, manifest);
             string temporaryOutput = Path.Combine(Path.GetTempPath(), "bindgen-cs-workspace-diff-" + Guid.NewGuid().ToString("N"));
             try
             {
                 CsCodeGenerator generator = new(config);
                 if (!generator.GenerateConfigured(temporaryOutput))
+                {
+                    GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
                     return 2;
+                }
                 IReadOnlyDictionary<string, string> expected = ReadDirectory(temporaryOutput);
                 IReadOnlyDictionary<string, string> actual = Directory.Exists(expectedOutput)
                     ? ReadDirectory(expectedOutput)
@@ -132,6 +144,26 @@ internal static class WorkspaceCommand
         if (!hasChanges)
             Console.WriteLine($"All {configPaths.Count} generated binding projects are up to date.");
         return hasChanges ? 1 : 0;
+    }
+
+    private static string? ResolveOutputPath(string configPath, BindingWorkspaceManifest manifest)
+    {
+        if (!manifest.TargetOutputSubdirectories)
+            return null;
+        CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(configPath);
+        return ResolveOutputPath(configPath, config, manifest);
+    }
+
+    private static string ResolveOutputPath(
+        string configPath,
+        CsCodeGeneratorConfig config,
+        BindingWorkspaceManifest manifest)
+    {
+        string configDirectory = Path.GetDirectoryName(configPath)!;
+        string output = Path.GetFullPath(config.OutputPath, configDirectory);
+        return manifest.TargetOutputSubdirectories
+            ? Path.Combine(output, config.ResolvedTarget.Identifier)
+            : output;
     }
 
     private static IReadOnlyDictionary<string, string> ReadDirectory(string directory)
@@ -162,5 +194,7 @@ internal static class WorkspaceCommand
     private sealed class BindingWorkspaceManifest
     {
         public List<string> Configs { get; init; } = [];
+
+        public bool TargetOutputSubdirectories { get; init; }
     }
 }

@@ -23,6 +23,10 @@
         /// </summary>
         public override CsParameterInfo CreateParameter(CppParameter cppParameter, ParameterMapping? mapping, string csParamName, CppPrimitiveKind kind, Direction direction, CsCodeGeneratorConfig settings, IList<CppParameter> cppParameters, CsParameterInfo[] csParameterList, int paramIndex, CsFunctionVariation variation)
         {
+            if (BGCS.Conversion.PlatformAbiTypeClassifier.IsVaList(cppParameter.Type))
+            {
+                return CreateDefaultParameter(cppParameter, mapping, csParamName, kind, direction, settings);
+            }
             if (cppParameter.Type is T t && IsMatch(cppParameter, t))
             {
                 return CreateParameter(cppParameter, mapping, t, csParamName, kind, direction, settings);

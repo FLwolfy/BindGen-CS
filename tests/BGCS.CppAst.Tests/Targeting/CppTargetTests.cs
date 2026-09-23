@@ -94,6 +94,7 @@ public sealed class CppTargetTests
     [Theory]
     [InlineData(CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc, 4, 2, 8)]
     [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu, 8, 4, 16)]
+    [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Gnu, 8, 4, 16)]
     [InlineData(CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin, 8, 4, 8)]
     public void Parse_Primitives_ShouldUseTargetAbiSizes(
         CppTargetPlatform platform,
@@ -113,11 +114,13 @@ public sealed class CppTargetTests
         options.ConfigureForTarget(CppTarget.Resolve(platform, architecture, abi), discoverHostToolchain: false);
 
         CppCompilation compilation = CppParser.Parse(
-            "struct NativeAbiValues { long signedLong; unsigned long unsignedLong; wchar_t wide; long double extendedValue; };",
+            "struct NativeAbiValues { char plainChar; long signedLong; unsigned long unsignedLong; wchar_t wide; long double extendedValue; };",
             options);
 
         Assert.False(compilation.HasErrors, string.Join(Environment.NewLine, compilation.Diagnostics.Messages));
         CppClass type = Assert.Single(compilation.Classes, value => value.Name == "NativeAbiValues");
+        Assert.Equal(CppPrimitiveKind.Char,
+            Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "plainChar").Type).Kind);
         Assert.Equal(longSize, Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "signedLong").Type).SizeOf);
         Assert.Equal(longSize, Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "unsignedLong").Type).SizeOf);
         Assert.Equal(wcharSize, Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "wide").Type).SizeOf);

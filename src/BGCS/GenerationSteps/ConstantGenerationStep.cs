@@ -122,7 +122,8 @@
             for (int i = 0; i < compilation.Macros.Count; i++)
             {
                 CppMacro macro = compilation.Macros[i];
-                if (string.IsNullOrEmpty(macro.SourceFile) || !files.Contains(macro.SourceFile))
+                if (string.IsNullOrEmpty(macro.SourceFile) || !files.Contains(macro.SourceFile) ||
+                    macro.Parameters is { Count: > 0 })
                     continue;
                 effectiveMacros[macro.Name] = macro;
             }

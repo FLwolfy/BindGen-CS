@@ -36,4 +36,4 @@
 
 The CLI/workspace workflow, transactional output, single-file generation, target/toolchain model, shared IR, safety analysis, explicit emitter boundaries, package closure, real-library snapshots, selected STL/smart-pointer lowering, managed virtual callback proxies, ownership diagnostics, and InnoEngine's five-project generation gate are available now.
 
-Complete acceptance currently proves only `macos-arm64-darwin`; every other target needs its own report. Legacy AST generation steps still exist as compatibility implementation, so the clean target architecture should not be read as a claim that every legacy path has already been removed.
+Complete acceptance currently proves `macos-arm64-darwin` and `linux-arm64-gnu`; every other target needs its own report. Legacy AST generation steps still exist as compatibility implementation, so the clean target architecture should not be read as a claim that every legacy path has already been removed.
