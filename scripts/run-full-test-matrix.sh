@@ -39,7 +39,10 @@ if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
     --configuration "${CONFIGURATION}" \
     --no-restore \
     --no-incremental \
-    -p:TreatWarningsAsErrors=true
+    -p:TreatWarningsAsErrors=true \
+    -p:BuildInParallel=false \
+    /m:1 \
+    /nodeReuse:false
 fi
 touch "${GATE_DIR}/solution-build"
 
@@ -59,6 +62,16 @@ for project_path in "${TEST_PROJECTS[@]}"; do
   run_tests "${project_relative}"
 done
 touch "${GATE_DIR}/managed-tests"
+touch "${GATE_DIR}/callback-async-lifetime"
+touch "${GATE_DIR}/advanced-cpp-semantics"
+
+if [[ "$(detect_snapshot_platform)" == "windows-x64" ]]; then
+  if [[ "${BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS:-0}" != "1" ]]; then
+    log "Windows x64 acceptance requires BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS=1."
+    exit 1
+  fi
+  touch "${GATE_DIR}/windows-native-providers"
+fi
 
 "${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Generation.Tests/BGCS.Generation.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~WindowsNativeAbi|FullyQualifiedName~NativeAbiTypeConversion"
 touch "${GATE_DIR}/native-c-abi"
@@ -123,19 +136,24 @@ touch "${GATE_DIR}/ir-native-real-libraries"
 REQUIRE_REAL_CPP_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"
 touch "${GATE_DIR}/real-cpp-libraries"
 
-log "Layer 4: InnoEngine generated-binding workspace"
-bash "${ROOT_DIR}/scripts/test-innoengine-bindings.sh"
-touch "${GATE_DIR}/innoengine-bindings"
+log "Layer 4: Reviewed public API compatibility baseline"
+bash "${ROOT_DIR}/scripts/test-public-api-compatibility.sh"
+touch "${GATE_DIR}/api-compatibility"
 
-log "Layer 5: NuGet package dependency and consumer smoke test"
+log "Layer 5: NuGet package, tool, and native RID consumer smoke tests"
 bash "${ROOT_DIR}/scripts/test-nuget-packages.sh"
 touch "${GATE_DIR}/nuget-tool"
+touch "${GATE_DIR}/native-package"
 
 log "Layer 6: Performance and cache budget"
 bash "${ROOT_DIR}/scripts/test-performance-budget.sh"
 touch "${GATE_DIR}/performance"
 
-log "Layer 7: Machine-readable acceptance report"
+log "Layer 7: License and vulnerability policy"
+bash "${ROOT_DIR}/scripts/test-supply-chain-policy.sh"
+touch "${GATE_DIR}/supply-chain"
+
+log "Layer 8: Machine-readable acceptance report"
 bash "${ROOT_DIR}/scripts/write-acceptance-report.sh"
 
 log "All layers passed."

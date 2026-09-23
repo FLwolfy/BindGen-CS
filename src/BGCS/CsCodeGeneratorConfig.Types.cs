@@ -13,6 +13,7 @@ namespace BGCS
     using System.Linq;
     using System.Text;
     using System.Xml.Linq;
+    using Microsoft.CodeAnalysis.CSharp;
 
     /// <summary>
     /// Defines the public class <c>CsCodeGeneratorConfig</c> used by the generation pipeline.
@@ -354,7 +355,7 @@ namespace BGCS
         /// Performs the operation implemented by <c>GetParameterSignature</c>.
         /// </summary>
         /// <returns>Result produced by <c>GetParameterSignature</c>.</returns>
-        public string GetParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool attributes = true, bool names = true, bool delegateType = false, bool compatibility = false)
+        public string GetParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool attributes = true, bool names = true, bool delegateType = false)
         {
             StringBuilder argumentBuilder = new();
             int index = 0;
@@ -397,11 +398,6 @@ namespace BGCS
                 {
                     argumentBuilder.Append("out ");
                     paramCsTypeName = GetCsTypeName(cppTypeDeclaration);
-                }
-
-                if (compatibility && paramCsTypeName.Contains('*'))
-                {
-                    paramCsTypeName = "nint";
                 }
 
                 argumentBuilder.Append(paramCsTypeName);
@@ -461,7 +457,7 @@ namespace BGCS
         /// Performs the operation implemented by <c>GetNamelessParameterSignature</c>.
         /// </summary>
         /// <returns>Result produced by <c>GetNamelessParameterSignature</c>.</returns>
-        public string GetNamelessParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool delegateType = false, bool compatibility = false)
+        public string GetNamelessParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool delegateType = false)
         {
             var argumentBuilder = new StringBuilder();
             int index = 0;
@@ -504,11 +500,6 @@ namespace BGCS
                     paramCsTypeName = GetCsTypeName(cppTypeDeclaration);
                 }
 
-                if (compatibility && paramCsTypeName.Contains('*'))
-                {
-                    paramCsTypeName = "nint";
-                }
-
                 argumentBuilder.Append(paramCsTypeName);
                 if (index < parameters.Count - 1)
                 {
@@ -525,7 +516,7 @@ namespace BGCS
         /// Performs the operation implemented by <c>WriteFunctionMarshalling</c>.
         /// </summary>
         /// <returns>Result produced by <c>WriteFunctionMarshalling</c>.</returns>
-        public string WriteFunctionMarshalling(IList<CppParameter> parameters, bool compatibility = false)
+        public string WriteFunctionMarshalling(IList<CppParameter> parameters)
         {
             var argumentBuilder = new StringBuilder();
             int index = 0;
@@ -533,44 +524,8 @@ namespace BGCS
             for (int i = 0; i < parameters.Count; i++)
             {
                 CppParameter cppParameter = parameters[i];
-                string direction = string.Empty;
-                var paramCsTypeName = GetCsTypeName(cppParameter.Type);
                 var paramCsName = GetParameterName(i, cppParameter.Name);
-
-                CppType ptrType = cppParameter.Type;
-                int depth = 0;
-                if (cppParameter.Type.IsPointer(ref depth, out var pointerType))
-                {
-                    ptrType = pointerType;
-                }
-
-                if (cppParameter.Type is CppQualifiedType qualifiedType)
-                {
-                    ptrType = qualifiedType.ElementType;
-                }
-
-                if (ptrType is CppTypedef typedef && typedef.ElementType.IsDelegate())
-                {
-                    if (compatibility)
-                    {
-                        argumentBuilder.Append($"(nint){paramCsName}");
-                    }
-                    else
-                    {
-                        argumentBuilder.Append($"{paramCsName}");
-                    }
-                }
-                else
-                {
-                    if (compatibility && (paramCsTypeName.Contains('*') || depth > 0))
-                    {
-                        argumentBuilder.Append($"(nint){paramCsName}");
-                    }
-                    else
-                    {
-                        argumentBuilder.Append($"{paramCsName}");
-                    }
-                }
+                argumentBuilder.Append(paramCsName);
 
                 if (index < parameters.Count - 1)
                 {
@@ -627,7 +582,7 @@ namespace BGCS
             {
                 return "str";
             }
-            if (Keywords.Contains(name))
+            if (IsCSharpKeyword(name))
             {
                 return "@" + name;
             }
@@ -682,7 +637,7 @@ namespace BGCS
                 newName = "value";
             }
 
-            if (Keywords.Contains(newName))
+            if (IsCSharpKeyword(newName))
             {
                 newName = "@" + newName;
             }
@@ -1148,7 +1103,7 @@ namespace BGCS
         public string GetFieldName(string name)
         {
             name = NamingHelper.ConvertTo(name, MemberNamingConvention);
-            if (Keywords.Contains(name))
+            if (IsCSharpKeyword(name))
             {
                 return "@" + name;
             }
@@ -1169,13 +1124,16 @@ namespace BGCS
                 return GetFieldName(name);
             }
 
-            if (Keywords.Contains(mappedName))
+            if (IsCSharpKeyword(mappedName))
             {
                 return "@" + mappedName;
             }
 
             return char.IsDigit(mappedName[0]) ? '_' + mappedName : mappedName;
         }
+
+        private bool IsCSharpKeyword(string value) => Keywords.Contains(value) ||
+            SyntaxFacts.GetKeywordKind(value) != SyntaxKind.None;
 
         /// <summary>
         /// Performs the operation implemented by <c>GetBoolType</c>.

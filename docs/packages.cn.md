@@ -7,7 +7,7 @@
 | 目标 | 安装 | 说明 |
 | --- | --- | --- |
 | 使用命令行 | `dotnet tool install --global BindGen-CS` | 提供 `bindgen-cs`；不要把 Tool 包加入应用项目。 |
-| 在程序中嵌入 C/C++ → C# 生成 | `BGCS` | 主 facade、配置、分析、C# emission、patch 和兼容 generation passes。 |
+| 在程序中嵌入 C/C++ → C# 生成 | `BGCS` | 主 facade、配置、分析、IR-native C# emission 和 patch。 |
 | 为 C++ 生成 C ABI bridge | `BGCS.Cpp2C` | 嵌入 bridge 生成时安装；CLI Tool 已携带该包。 |
 | 编译并运行生成的 bindings | `BGCS.Runtime` | 通常安装到消费生成代码的应用；也可选择 standalone Runtime source。 |
 | 开发 emitter 或 IR 工具 | `BGCS.Intermediate` | 零依赖共享 contract，不需要加载 Clang、Roslyn 或 Runtime。 |
@@ -20,7 +20,7 @@
 导出命令：
 
 ```text
-init, doctor, validate, inspect, generate, build, diff, schema, explain, bridge, native-build, version
+init, doctor, validate, inspect, generate, build, diff, schema, explain, bridge, native-build, supply-chain, version
 ```
 
 Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码不依赖 Tool 包。
@@ -35,7 +35,7 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 - `ConfigLoader`、`ConfigValidator`、`PresetResolver`；
 - `DeclarationGraph`、`BindingModuleAnalyzer`、`TypeAnalyzer`、`AbiLayoutAnalyzer`、`OwnershipAnalyzer`、`OverloadPlanner`；
 - `CSharpEmitter`、`RuntimeEmitter`、`SingleFileComposer`；
-- generation/preprocess steps、function rules 和 parameter writers；
+- parsed-input preprocess hook 与 Binding IR 扩展 contract；
 - patching 与 generator metadata API；
 - 用于显式 C 可变参数签名的 `VariadicFunctionVariant`。
 
@@ -46,7 +46,7 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 主要公开 API：
 
 - `Cpp2CCodeGenerator`、`Cpp2CGeneratorConfig`；
-- `CppBridgeBuildManifest`、`CppBridgeBuildManifestEmitter` 和 `Cpp2CConfigValidator`；
+- `CppBridgeBuildManifest`、`CppBridgeBuildManifestEmitter`、`NativeAssetLayout` 和 `Cpp2CConfigValidator`；
 - `INativeBuildProvider`、`ClangNativeBuildProvider`、`NativeBuildPlan` 和 `NativeBuildExecutor`；
 - `BGCS.Cpp2C.Emission.CBridgeEmitter`；
 - bridge generation-step 扩展点；
@@ -95,12 +95,12 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 
 ## 当前边界
 
-- 已验证 `std::string`、vector/span input/return、blittable optional presence/value、non-blittable optional owned-handle protocol、ownership-transfer `std::unique_ptr<T>`、retained `std::shared_ptr<T>` 和配置式 pure-virtual callback proxy；`std::variant` 与任意未知 specialization 仍需显式 custom lowering。
+- 已验证 `std::string`、vector/span、optional、array、map、set、variant、expected、filesystem path、chrono duration/time-point、smart pointer 和配置式 pure-virtual callback proxy；任意未知 specialization 仍需显式 lowering。
 - 仅凭 pointer 语法无法可靠推断 ownership 和 allocator 语义。
 - typed C variadic 当前要求 `DllImport` 和显式完成参数提升后的类型。
-- 五个真实 C 库 gate 与 bimg C++ Bridge 会编译生成输出并检查 target-specific 确定性 API snapshot；InnoEngine 还会单独构建其 native binary，并执行全部六个 native binding 测试项目。
+- 五个真实 C 库 gate 与 bimg C++ Bridge 会编译生成输出并检查 target-specific 确定性 API snapshot；InnoEngine adoption 会在三份 desktop-x64 BGCS 报告通过后再开始。
 - 完整 solution、生成消费者和 package smoke project 均以 warning-as-error 模式通过编译。
 
-架构上，`BindingModule`、analysis 和 IR-native emitter API 已公开；配置驱动的主 C# 输出仍由内部 `AstGenerationStepEmitter` 隔离旧 `GenerationStep`，而 `CSharpEmitter` 本身只消费 IR。需要编写新 emitter 的消费者可以直接使用 `BGCS.Intermediate`，但不应假定移除 legacy steps 已经完成。
+主 C# 输出只由 IR-native `CSharpEmitter` 负责；不存在预发布 compatibility emitter。`native-build --package-root` 生成 multi-RID runtime asset tree；`supply-chain` 为正式包生成 SPDX/SLSA 证据。
 
 完整证据等级与下一阶段差距见[能力与边界](capabilities.cn.md)。

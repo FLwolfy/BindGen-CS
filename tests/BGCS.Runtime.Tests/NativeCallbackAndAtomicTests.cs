@@ -4,6 +4,9 @@ using Xunit;
 
 namespace BGCS.Runtime.Tests;
 
+using System.Threading;
+using System.Threading.Tasks;
+
 public class NativeCallbackAndAtomicTests
 {
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Cdecl)]
@@ -91,6 +94,82 @@ public class NativeCallbackAndAtomicTests
     }
 
     [Fact]
+    public async Task NativeCallbackRegistration_DisposeShouldUnregisterThenDrainInFlightInvocation()
+    {
+        using ManualResetEventSlim entered = new();
+        using ManualResetEventSlim release = new();
+        int unregisterCalls = 0;
+        NativeCallbackRegistration<RegistryCallback> registration = new(_ => { }, () => Interlocked.Increment(ref unregisterCalls));
+        Task callback = Task.Run(() =>
+        {
+            Assert.True(registration.TryEnterInvocation(out NativeCallbackRegistration<RegistryCallback>.InvocationLease? lease));
+            using (lease)
+            {
+                entered.Set();
+                release.Wait();
+            }
+        });
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+
+        Task dispose = Task.Run(registration.Dispose);
+        Assert.True(SpinWait.SpinUntil(() => Volatile.Read(ref unregisterCalls) == 1, TimeSpan.FromSeconds(5)));
+        Assert.False(dispose.IsCompleted);
+        Assert.False(registration.TryEnterInvocation(out _));
+        release.Set();
+
+        await Task.WhenAll(callback, dispose);
+        Assert.Equal(1, unregisterCalls);
+        registration.Dispose();
+        Assert.Equal(1, unregisterCalls);
+    }
+
+    [Fact]
+    public async Task NativeAsyncOperation_ShouldRetainResourcesUntilExactlyOneTerminalSignal()
+    {
+        CountingDisposable first = new();
+        CountingDisposable second = new();
+        using NativeAsyncOperation<int> operation = new([first, second]);
+
+        Assert.Equal(0, first.DisposeCount);
+        Assert.True(operation.TrySetResult(42));
+        Assert.False(operation.TrySetCanceled());
+        Assert.Equal(42, await operation.Task);
+        Assert.Equal(1, first.DisposeCount);
+        Assert.Equal(1, second.DisposeCount);
+        operation.Dispose();
+        Assert.Equal(1, first.DisposeCount);
+    }
+
+    [Fact]
+    public async Task NativeAsyncOperation_CleanupFailureShouldFaultTerminalTaskWithoutLosingCompletion()
+    {
+        using NativeAsyncOperation<int> operation = new([new ThrowingDisposable()]);
+
+        Assert.True(operation.TrySetResult(42));
+        AggregateException exception = await Assert.ThrowsAsync<AggregateException>(async () => await operation.Task);
+        Assert.Contains("failed to release", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(operation.TrySetException(new InvalidOperationException("late")));
+    }
+
+    [Fact]
+    public void NativeCallbackRegistration_UnregisterFailureShouldRemainRetainedAndPermitRetry()
+    {
+        int attempts = 0;
+        NativeCallbackRegistration<RegistryCallback> registration = new(_ => { }, () =>
+        {
+            if (Interlocked.Increment(ref attempts) == 1)
+                throw new InvalidOperationException("temporary unregister failure");
+        });
+
+        Assert.Throws<InvalidOperationException>(registration.Dispose);
+        Assert.True(registration.IsClosing);
+        Assert.False(registration.TryEnterInvocation(out _));
+        registration.Dispose();
+        registration.Dispose();
+        Assert.Equal(2, attempts);
+    }
+
+    [Fact]
     public unsafe void NativeAotCallback_ShouldExposeStaticUnmanagedThunk()
     {
         delegate* unmanaged[Cdecl]<int, int> callback = &AotCallback;
@@ -138,5 +217,16 @@ public class NativeCallbackAndAtomicTests
         Assert.True(first);
         Assert.False(second);
         Assert.Equal((ulong)30, atomic.Value);
+    }
+
+    private sealed class CountingDisposable : IDisposable
+    {
+        public int DisposeCount;
+        public void Dispose() => Interlocked.Increment(ref DisposeCount);
+    }
+
+    private sealed class ThrowingDisposable : IDisposable
+    {
+        public void Dispose() => throw new InvalidOperationException("cleanup failed");
     }
 }

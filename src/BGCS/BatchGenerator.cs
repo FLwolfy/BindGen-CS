@@ -209,16 +209,6 @@
         }
 
         /// <summary>
-        /// Performs the operation implemented by <c>CopyFromMetadata</c>.
-        /// </summary>
-        /// <returns>Result produced by <c>CopyFromMetadata</c>.</returns>
-        public BatchGenerator CopyFromMetadata(CsCodeGeneratorMetadata metadata)
-        {
-            generator.CopyFrom(metadata);
-            return this;
-        }
-
-        /// <summary>
         /// Performs the operation implemented by <c>Finish</c>.
         /// </summary>
         public void Finish()

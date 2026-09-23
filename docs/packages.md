@@ -7,7 +7,7 @@
 | Goal | Install | Notes |
 | --- | --- | --- |
 | Use the command line | `dotnet tool install --global BindGen-CS` | Provides `bindgen-cs`; do not add it to an application project. |
-| Embed C/C++ → C# generation | `BGCS` | Main facade, configuration, analysis, C# emission, patching, and compatibility generation passes. |
+| Embed C/C++ → C# generation | `BGCS` | Main facade, configuration, analysis, IR-native C# emission, and patching. |
 | Generate a C ABI bridge for C++ | `BGCS.Cpp2C` | Add this when embedding bridge generation; the CLI tool already carries it. |
 | Compile generated bindings | `BGCS.Runtime` | Install in the application that consumes generated code, unless standalone Runtime emission is enabled. |
 | Write an emitter or IR tool | `BGCS.Intermediate` | Dependency-free shared contracts; does not require Clang, Roslyn, or Runtime. |
@@ -20,7 +20,7 @@ All release packages are version-aligned and validated in a clean NuGet consumer
 Commands exported by the package:
 
 ```text
-init, doctor, validate, inspect, generate, build, diff, schema, explain, bridge, native-build, version
+init, doctor, validate, inspect, generate, build, diff, schema, explain, bridge, native-build, supply-chain, version
 ```
 
 The tool depends on `BGCS` and `BGCS.Cpp2C` inside its isolated tool installation. Generated application code does not depend on the tool package.
@@ -35,7 +35,7 @@ Primary public APIs:
 - `ConfigLoader`, `ConfigValidator`, `PresetResolver`;
 - `DeclarationGraph`, `BindingModuleAnalyzer`, `TypeAnalyzer`, `AbiLayoutAnalyzer`, `OwnershipAnalyzer`, `OverloadPlanner`;
 - `CSharpEmitter`, `RuntimeEmitter`, `SingleFileComposer`;
-- generation/preprocess steps, function-generation rules and parameter writers;
+- parsed-input preprocess hooks and Binding IR extension contracts;
 - patching and generator metadata APIs;
 - `VariadicFunctionVariant` for explicit promoted C variadic signatures.
 
@@ -46,7 +46,7 @@ Direct dependencies include `BGCS.Intermediate`, `BGCS.Core`, `BGCS.Language`, `
 Primary public APIs:
 
 - `Cpp2CCodeGenerator`, `Cpp2CGeneratorConfig`;
-- `CppBridgeBuildManifest`, `CppBridgeBuildManifestEmitter`, and `Cpp2CConfigValidator`;
+- `CppBridgeBuildManifest`, `CppBridgeBuildManifestEmitter`, `NativeAssetLayout`, and `Cpp2CConfigValidator`;
 - `INativeBuildProvider`, `ClangNativeBuildProvider`, `NativeBuildPlan`, and `NativeBuildExecutor`;
 - `BGCS.Cpp2C.Emission.CBridgeEmitter`;
 - bridge generation-step extension points;
@@ -95,12 +95,12 @@ Applications should not install these individually unless they directly consume 
 
 ## Current boundaries
 
-- Verified modern C++ adapters cover `std::string`, vector/span input and return views, blittable optional presence/value, the non-blittable optional owned-handle protocol, ownership-transferring `std::unique_ptr<T>`, retained `std::shared_ptr<T>`, and configured pure-virtual callback proxies. `std::variant` and arbitrary unknown specializations still require explicit custom lowering.
+- Verified modern C++ adapters cover `std::string`, vector/span views, optional, array, map, set, variant, expected, filesystem path, chrono duration/time-point, smart pointers, and configured pure-virtual callback proxies. Arbitrary unknown specializations still require explicit lowering.
 - Ownership and allocator semantics cannot be inferred reliably from pointer syntax alone.
 - Typed C variadic variants currently require `DllImport` and explicit promoted argument types.
-- Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots. InnoEngine separately builds its native binaries and runs all six native binding test projects.
+- Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots. InnoEngine adoption is intentionally deferred until the three desktop-x64 BGCS reports pass.
 - The complete solution, generated consumers, and package smoke projects compile with warnings treated as errors.
 
-Architecturally, `BindingModule`, analysis, and the IR-native emitter API are public. Primary configuration-driven C# output still routes through legacy `GenerationStep` implementations isolated by the internal `AstGenerationStepEmitter`; `CSharpEmitter` itself is IR-only. Consumers can build new emitters against `BGCS.Intermediate`, but should not assume legacy-step removal is complete.
+Primary C# output is owned exclusively by IR-native `CSharpEmitter`; no pre-release compatibility emitter remains. `native-build --package-root` produces a multi-RID runtime asset tree, and `supply-chain` emits SPDX/SLSA release evidence.
 
 See [Capabilities and boundaries](capabilities.md) for the complete evidence levels and remaining gaps.

@@ -9,9 +9,9 @@ public static class Cpp2CConfigValidator
     {
         ArgumentNullException.ThrowIfNull(config);
         List<string> errors = [];
-        if (config.ConfigVersion < 1 || config.ConfigVersion > Cpp2CGeneratorConfig.CurrentConfigVersion)
+        if (config.ConfigVersion != Cpp2CGeneratorConfig.CurrentConfigVersion)
         {
-            errors.Add($"ConfigVersion {config.ConfigVersion} is unsupported. This BGCS.Cpp2C version accepts configuration versions 1 through {Cpp2CGeneratorConfig.CurrentConfigVersion}.");
+            errors.Add($"ConfigVersion {config.ConfigVersion} is unsupported. This pre-release BGCS.Cpp2C build accepts only configuration version {Cpp2CGeneratorConfig.CurrentConfigVersion}; no legacy migration is provided before the first stable release.");
         }
         if (string.IsNullOrWhiteSpace(config.LanguageStandard))
             errors.Add("LanguageStandard is required.");

@@ -5,6 +5,7 @@ using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
+using BGCS.Cpp2C.Adapters;
 using System.Text;
 
 namespace BGCS.Cpp2C.GenerationSteps;
@@ -124,7 +125,13 @@ public class ClassGenerationStep : GenerationStep
             string filePathCpp = Path.Combine(outputPath, "src", $"Classes.cpp");
             using var headerWriter = new CodeWriter(filePathHeader, IncludeBuilder.Create().AddInclude("common.h").AddInclude("enums.h").Build(), null);
             IncludeBuilder cppIncludes = IncludeBuilder.Create();
-            cppIncludes.AddInclude(headerName).AddSystemInclude("exception").AddSystemInclude("string");
+            cppIncludes.AddInclude(headerName)
+                .AddSystemInclude("algorithm")
+                .AddSystemInclude("exception")
+                .AddSystemInclude("iterator")
+                .AddSystemInclude("stdexcept")
+                .AddSystemInclude("string")
+                .AddSystemInclude("utility");
             foreach (string sourceFile in result.EntryFiles.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase))
             {
                 cppIncludes.AddInclude(Path.GetFileName(sourceFile));
@@ -144,10 +151,33 @@ public class ClassGenerationStep : GenerationStep
             foreach (var ns in compilation.EnumerateNamespaces())
                 functions.AddRange(ns.Functions.Where(function => files.Contains(function.SourceFile)));
             List<CppFunction> allFunctions = [.. functions, .. classes.SelectMany(GetBridgeFunctions)];
+            foreach (CppFunction function in allFunctions)
+                RegisterSourceTypeSpellings(function);
             WriteReferencedOpaqueTypes(classes, allFunctions, headerWriter);
             WriteSharedPtrSupport(allFunctions, headerWriter, cppWriter);
+            WriteOpaqueValueSupport(allFunctions, headerWriter, cppWriter);
             WriteClasses(classes, headerWriter, cppWriter);
             WriteFreeFunctions(functions, headerWriter, cppWriter);
+        }
+
+        private void RegisterSourceTypeSpellings(CppFunction function)
+        {
+            config.RegisterSourceTypeSpelling(function.ReturnType, GetTypeSpelling(function.Cursor.ResultType));
+            foreach (CppParameter parameter in function.Parameters)
+                config.RegisterSourceTypeSpelling(parameter.Type, GetTypeSpelling(parameter.Cursor.Type));
+        }
+
+        private static string GetTypeSpelling(ClangSharp.Interop.CXType type)
+        {
+            ClangSharp.Interop.CXString spelling = type.Spelling;
+            try
+            {
+                return spelling.ToString();
+            }
+            finally
+            {
+                spelling.Dispose();
+            }
         }
 
         private static void WriteCommon(string outputPath, Cpp2CGeneratorConfig config)
@@ -268,6 +298,179 @@ public class ClassGenerationStep : GenerationStep
             }
         }
 
+        private void WriteOpaqueValueSupport(IEnumerable<CppFunction> functions, ICodeWriter headerWriter, ICodeWriter cppWriter)
+        {
+            Dictionary<string, CppType> holderTypes = new(StringComparer.Ordinal);
+            foreach (CppFunction function in functions)
+            {
+                foreach (CppType type in new[] { function.ReturnType }.Concat(function.Parameters.Select(parameter => parameter.Type)))
+                {
+                    if (IsOpaqueValueType(type))
+                        holderTypes.TryAdd(config.GetOpaqueValueHolderName(type), type);
+                }
+            }
+
+            foreach ((string holder, CppType type) in holderTypes.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                config.ResolveTypeAdapter(type, CppTypeAdapterUse.Field);
+                string cppType = GetCppValueTypeName(type);
+                if (definedTypes.Add(holder))
+                    headerWriter.WriteLine($"typedef struct {holder} {holder};");
+                headerWriter.WriteLine($"{config.NamePrefix}API({holder}*) {holder}Create(void);");
+                headerWriter.WriteLine($"{config.NamePrefix}API({holder}*) {holder}Clone(const {holder}* self);");
+                headerWriter.WriteLine($"{config.NamePrefix}API(void) {holder}Destroy({holder}* self);");
+                using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL({holder}*) {holder}Create(void)"))
+                    cppWriter.WriteLine($"return reinterpret_cast<{holder}*>(new {cppType}());");
+                using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL({holder}*) {holder}Clone(const {holder}* self)"))
+                    cppWriter.WriteLine($"return self == nullptr ? nullptr : reinterpret_cast<{holder}*>(new {cppType}(*reinterpret_cast<const {cppType}*>(self)));");
+                using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(void) {holder}Destroy({holder}* self)"))
+                    cppWriter.WriteLine($"delete reinterpret_cast<{cppType}*>(self);");
+
+                if (config.IsMapType(type))
+                    WriteMapSupport(type, holder, cppType, headerWriter, cppWriter);
+                else if (config.IsSetType(type))
+                    WriteSetSupport(type, holder, cppType, headerWriter, cppWriter);
+                else if (config.IsVariantType(type))
+                    WriteVariantSupport(type, holder, cppType, headerWriter, cppWriter);
+                else if (config.IsExpectedType(type))
+                    WriteExpectedSupport(type, holder, cppType, headerWriter, cppWriter);
+                headerWriter.WriteLine();
+            }
+        }
+
+        private void WriteMapSupport(CppType type, string holder, string cppType, ICodeWriter headerWriter, ICodeWriter cppWriter)
+        {
+            IReadOnlyList<CppType> arguments = config.GetTemplateTypeArguments(type);
+            CppType key = arguments[0];
+            CppType value = arguments[1];
+            string cKey = config.GetCType(key);
+            string cValue = config.GetCType(value);
+            headerWriter.WriteLine($"{config.NamePrefix}API(size_t) {holder}Size(const {holder}* self);");
+            headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}Insert({holder}* self, {cKey} key, {cValue} value);");
+            headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}TryGetAt(const {holder}* self, size_t index, {cKey}* out_key, {cValue}* out_value);");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(size_t) {holder}Size(const {holder}* self)"))
+                cppWriter.WriteLine($"return self == nullptr ? 0 : reinterpret_cast<const {cppType}*>(self)->size();");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}Insert({holder}* self, {cKey} key, {cValue} value)"))
+            {
+                cppWriter.WriteLine("if (self == nullptr) return false;");
+                cppWriter.WriteLine($"return reinterpret_cast<{cppType}*>(self)->insert_or_assign({ConvertCToCpp(key, "key")}, {ConvertCToCpp(value, "value")}).second;");
+            }
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}TryGetAt(const {holder}* self, size_t index, {cKey}* out_key, {cValue}* out_value)"))
+            {
+                cppWriter.WriteLine($"if (self == nullptr || index >= reinterpret_cast<const {cppType}*>(self)->size()) return false;");
+                cppWriter.WriteLine($"auto iterator = reinterpret_cast<const {cppType}*>(self)->begin();");
+                cppWriter.WriteLine("std::advance(iterator, index);");
+                cppWriter.WriteLine($"if (out_key != nullptr) *out_key = {ConvertCppToC(key, "iterator->first")};");
+                cppWriter.WriteLine($"if (out_value != nullptr) *out_value = {ConvertCppToC(value, "iterator->second")};");
+                cppWriter.WriteLine("return true;");
+            }
+        }
+
+        private void WriteSetSupport(CppType type, string holder, string cppType, ICodeWriter headerWriter, ICodeWriter cppWriter)
+        {
+            CppType value = config.GetTemplateTypeArguments(type)[0];
+            string cValue = config.GetCType(value);
+            headerWriter.WriteLine($"{config.NamePrefix}API(size_t) {holder}Size(const {holder}* self);");
+            headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}Add({holder}* self, {cValue} value);");
+            headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}TryGetAt(const {holder}* self, size_t index, {cValue}* out_value);");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(size_t) {holder}Size(const {holder}* self)"))
+                cppWriter.WriteLine($"return self == nullptr ? 0 : reinterpret_cast<const {cppType}*>(self)->size();");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}Add({holder}* self, {cValue} value)"))
+            {
+                cppWriter.WriteLine("if (self == nullptr) return false;");
+                cppWriter.WriteLine($"return reinterpret_cast<{cppType}*>(self)->insert({ConvertCToCpp(value, "value")}).second;");
+            }
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}TryGetAt(const {holder}* self, size_t index, {cValue}* out_value)"))
+            {
+                cppWriter.WriteLine($"if (self == nullptr || index >= reinterpret_cast<const {cppType}*>(self)->size()) return false;");
+                cppWriter.WriteLine($"auto iterator = reinterpret_cast<const {cppType}*>(self)->begin();");
+                cppWriter.WriteLine("std::advance(iterator, index);");
+                cppWriter.WriteLine($"if (out_value != nullptr) *out_value = {ConvertCppToC(value, "*iterator")};");
+                cppWriter.WriteLine("return true;");
+            }
+        }
+
+        private void WriteVariantSupport(CppType type, string holder, string cppType, ICodeWriter headerWriter, ICodeWriter cppWriter)
+        {
+            IReadOnlyList<CppType> alternatives = config.GetTemplateTypeArguments(type);
+            headerWriter.WriteLine($"{config.NamePrefix}API(size_t) {holder}Index(const {holder}* self);");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(size_t) {holder}Index(const {holder}* self)"))
+                cppWriter.WriteLine($"return self == nullptr ? static_cast<size_t>(-1) : reinterpret_cast<const {cppType}*>(self)->index();");
+            for (int index = 0; index < alternatives.Count; index++)
+            {
+                CppType alternative = alternatives[index];
+                string cType = config.GetCType(alternative);
+                headerWriter.WriteLine($"{config.NamePrefix}API({holder}*) {holder}Create{index}({cType} value);");
+                headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}TryGet{index}(const {holder}* self, {cType}* out_value);");
+                using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL({holder}*) {holder}Create{index}({cType} value)"))
+                    cppWriter.WriteLine($"return reinterpret_cast<{holder}*>(new {cppType}(std::in_place_index<{index}>, {ConvertCToCpp(alternative, "value")}));");
+                using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}TryGet{index}(const {holder}* self, {cType}* out_value)"))
+                {
+                    cppWriter.WriteLine("if (self == nullptr) return false;");
+                    cppWriter.WriteLine($"auto* value = std::get_if<{index}>(reinterpret_cast<const {cppType}*>(self));");
+                    cppWriter.WriteLine("if (value == nullptr) return false;");
+                    cppWriter.WriteLine($"if (out_value != nullptr) *out_value = {ConvertCppToC(alternative, "*value")};");
+                    cppWriter.WriteLine("return true;");
+                }
+            }
+        }
+
+        private void WriteExpectedSupport(CppType type, string holder, string cppType, ICodeWriter headerWriter, ICodeWriter cppWriter)
+        {
+            IReadOnlyList<CppType> arguments = config.GetTemplateTypeArguments(type);
+            CppType value = arguments[0];
+            CppType error = arguments[1];
+            string cValue = config.GetCType(value);
+            string cError = config.GetCType(error);
+            headerWriter.WriteLine($"{config.NamePrefix}API({holder}*) {holder}CreateValue({cValue} value);");
+            headerWriter.WriteLine($"{config.NamePrefix}API({holder}*) {holder}CreateError({cError} error);");
+            headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}HasValue(const {holder}* self);");
+            headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}TryGetValue(const {holder}* self, {cValue}* out_value);");
+            headerWriter.WriteLine($"{config.NamePrefix}API(bool) {holder}TryGetError(const {holder}* self, {cError}* out_error);");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL({holder}*) {holder}CreateValue({cValue} value)"))
+                cppWriter.WriteLine($"return reinterpret_cast<{holder}*>(new {cppType}({ConvertCToCpp(value, "value")}));");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL({holder}*) {holder}CreateError({cError} error)"))
+                cppWriter.WriteLine($"return reinterpret_cast<{holder}*>(new {cppType}(std::unexpected({ConvertCToCpp(error, "error")})));");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}HasValue(const {holder}* self)"))
+                cppWriter.WriteLine($"return self != nullptr && reinterpret_cast<const {cppType}*>(self)->has_value();");
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}TryGetValue(const {holder}* self, {cValue}* out_value)"))
+            {
+                cppWriter.WriteLine($"if (self == nullptr || !reinterpret_cast<const {cppType}*>(self)->has_value()) return false;");
+                cppWriter.WriteLine($"if (out_value != nullptr) *out_value = {ConvertCppToC(value, "reinterpret_cast<const " + cppType + "*>(self)->value()")};");
+                cppWriter.WriteLine("return true;");
+            }
+            using (cppWriter.PushBlock($"{config.NamePrefix}API_INTERNAL(bool) {holder}TryGetError(const {holder}* self, {cError}* out_error)"))
+            {
+                cppWriter.WriteLine($"if (self == nullptr || reinterpret_cast<const {cppType}*>(self)->has_value()) return false;");
+                cppWriter.WriteLine($"if (out_error != nullptr) *out_error = {ConvertCppToC(error, "reinterpret_cast<const " + cppType + "*>(self)->error()")};");
+                cppWriter.WriteLine("return true;");
+            }
+        }
+
+        private bool IsOpaqueValueType(CppType type) => config.IsMapType(type) || config.IsSetType(type) ||
+            config.IsVariantType(type) || config.IsExpectedType(type);
+
+        private bool IsContiguousCollection(CppType type) => config.IsSpanType(type) ||
+            config.IsVectorType(type) || config.IsArrayType(type);
+
+        private string ConvertCToCpp(CppType type, string expression)
+        {
+            CppType current = type;
+            while (current is CppQualifiedType qualified)
+                current = qualified.ElementType;
+            while (current is CppTypedef typedef)
+                current = typedef.ElementType;
+            return current switch
+            {
+                CppEnum cppEnum => $"static_cast<{cppEnum.FullName}>({expression})",
+                CppPointerType => $"reinterpret_cast<{GetOriginalCppTypeName(type)}>({expression})",
+                _ => expression
+            };
+        }
+
+        private string ConvertCppToC(CppType type, string expression) =>
+            GetCppReturnExpression(type, config.GetCType(type), expression);
+
         private void WriteClasses(IEnumerable<CppClass> classes, ICodeWriter headerWriter, ICodeWriter cppWriter)
         {
             List<CppClass> sourceClasses = classes.Where(IsSupportedClass).ToList();
@@ -296,7 +499,7 @@ public class ClassGenerationStep : GenerationStep
 
         private bool IsSupportedClass(CppClass cppClass)
         {
-            return !config.IsUtf8StringType(cppClass) && !config.IsSpanType(cppClass) && !config.IsVectorType(cppClass) && !config.IsUniquePtrType(cppClass) && !config.IsSharedPtrType(cppClass) && !config.IsOptionalType(cppClass) &&
+            return config.ResolveTypeAdapter(cppClass, BGCS.Cpp2C.Adapters.CppTypeAdapterUse.Field) == null &&
                 (cppClass.ClassKind is CppClassKind.Class or CppClassKind.Struct) &&
                 cppClass.TemplateKind != CppTemplateKind.TemplateClass && cppClass.SourceFile != null && cppClass.IsDefinition;
         }
@@ -540,7 +743,7 @@ public class ClassGenerationStep : GenerationStep
                 int suffix = 1;
                 while (!definedFunctions.Add(name))
                     name = baseName + suffix++;
-                bool returnsCollection = config.IsSpanType(function.ReturnType) || config.IsVectorType(function.ReturnType);
+                bool returnsCollection = IsContiguousCollection(function.ReturnType);
                 bool returnsOptional = config.IsOptionalType(function.ReturnType);
                 string cReturnType = returnsOptional ? "bool" : config.GetCType(function.ReturnType);
                 string cSignature = GetCParameterSignature(function.Parameters);
@@ -569,7 +772,7 @@ public class ClassGenerationStep : GenerationStep
                             writer.WriteLine(invocation + ";");
                         else if (returnsCollection)
                         {
-                            if (config.IsVectorType(function.ReturnType))
+                            if (config.IsVectorType(function.ReturnType) || config.IsArrayType(function.ReturnType))
                             {
                                 writer.WriteLine($"thread_local {GetCppValueTypeName(function.ReturnType)} return_value;");
                                 writer.WriteLine($"return_value = {invocation};");
@@ -592,6 +795,11 @@ public class ClassGenerationStep : GenerationStep
                                 writer.WriteLine($"if (out_value != nullptr) *out_value = reinterpret_cast<{config.GetCType(optionalElement!)}*>(new {GetCppValueTypeName(optionalElement!)}(*optional_result));");
                             writer.WriteLine("return true;");
                         }
+                        else if (IsOpaqueValueType(function.ReturnType))
+                        {
+                            string holder = config.GetOpaqueValueHolderName(function.ReturnType);
+                            writer.WriteLine($"return reinterpret_cast<{holder}*>(new {GetCppValueTypeName(function.ReturnType)}({invocation}));");
+                        }
                         else if (config.IsSharedPtrType(function.ReturnType))
                         {
                             writer.WriteLine($"return reinterpret_cast<{config.GetSharedPtrHolderName(function.ReturnType)}*>(new {GetCppValueTypeName(function.ReturnType)}({invocation}));");
@@ -600,12 +808,24 @@ public class ClassGenerationStep : GenerationStep
                         {
                             writer.WriteLine($"return {invocation}.release();");
                         }
+                        else if (config.IsPathType(function.ReturnType))
+                        {
+                            writer.WriteLine("thread_local std::string return_value;");
+                            writer.WriteLine($"auto path_value = {invocation};");
+                            writer.WriteLine("auto utf8_value = path_value.u8string();");
+                            writer.WriteLine("return_value.assign(reinterpret_cast<const char*>(utf8_value.data()), utf8_value.size());");
+                            writer.WriteLine("return return_value.c_str();");
+                        }
                         else if (config.IsUtf8StringType(function.ReturnType))
                         {
                             writer.WriteLine($"thread_local {GetUtf8StringValueTypeName(function.ReturnType)} return_value;");
                             writer.WriteLine($"return_value = {invocation};");
                             writer.WriteLine("return return_value.c_str();");
                         }
+                        else if (config.IsChronoDurationType(function.ReturnType))
+                            writer.WriteLine($"return static_cast<int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>({invocation}).count());");
+                        else if (config.IsChronoTimePointType(function.ReturnType))
+                            writer.WriteLine($"return static_cast<int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(({invocation}).time_since_epoch()).count());");
                         else if (function.ReturnType is CppReferenceType)
                             writer.WriteLine($"return {GetCppReferenceReturnExpression(function.ReturnType, cReturnType, invocation)};");
                         else
@@ -686,7 +906,7 @@ public class ClassGenerationStep : GenerationStep
         {
             string type = cppClass == null ? config.GetCType(parameter.Type) : GetSpecializedCType(cppClass, parameter.Type);
             yield return $"{type} {parameter.Name}";
-            if (config.IsSpanType(parameter.Type) || config.IsVectorType(parameter.Type))
+            if (IsContiguousCollection(parameter.Type))
                 yield return $"size_t {parameter.Name}_count";
             else if (config.IsOptionalType(parameter.Type))
                 yield return $"bool {parameter.Name}_has_value";
@@ -723,7 +943,7 @@ public class ClassGenerationStep : GenerationStep
                 }
             }
 
-            if (config.IsSpanType(f.ReturnType) || config.IsVectorType(f.ReturnType))
+            if (IsContiguousCollection(f.ReturnType))
             {
                 if (sb.Length > 0)
                     sb.Append(", ");
@@ -757,31 +977,9 @@ public class ClassGenerationStep : GenerationStep
             return sb.ToString();
         }
 
-        private static string GetCppValueTypeName(CppType type)
-        {
-            CppType valueType = type;
-            while (valueType is CppQualifiedType or CppReferenceType)
-                valueType = ((CppTypeWithElementType)valueType).ElementType;
-            return valueType switch
-            {
-                CppClass cppClass => cppClass.FullName,
-                CppTypedef typedef when !string.IsNullOrEmpty(typedef.FullParentName) => typedef.FullParentName + "::" + typedef.Name,
-                _ => valueType.GetDisplayName()
-            };
-        }
+        private string GetCppValueTypeName(CppType type) => config.GetCppValueTypeSpelling(type);
 
-        private static string GetUtf8StringValueTypeName(CppType type)
-        {
-            CppType valueType = type;
-            while (valueType is CppQualifiedType or CppReferenceType)
-                valueType = ((CppTypeWithElementType)valueType).ElementType;
-            return valueType switch
-            {
-                CppClass cppClass => cppClass.FullName,
-                CppTypedef typedef when !string.IsNullOrEmpty(typedef.FullParentName) => typedef.FullParentName + "::" + typedef.Name,
-                _ => valueType.GetDisplayName()
-            };
-        }
+        private string GetUtf8StringValueTypeName(CppType type) => config.GetCppValueTypeSpelling(type);
 
         private static string GetCppReferenceReturnExpression(CppType type, string cReturnType, string invocation)
         {
@@ -867,6 +1065,15 @@ public class ClassGenerationStep : GenerationStep
                         : $"*reinterpret_cast<{GetCppValueTypeName(elementType!)}*>({param.Name})";
                     sb.Append($"{param.Name}_has_value ? {optionalType}({value}) : std::nullopt");
                 }
+                else if (config.IsArrayType(param.Type))
+                {
+                    if (!config.TryGetTemplateElementType(param.Type, out CppType? elementType))
+                        throw new NotSupportedException($"Unable to resolve array parameter '{param.Type}'.");
+                    long elementCount = config.GetArrayElementCount(param.Type);
+                    string elementName = GetCppValueTypeName(elementType!);
+                    string arrayType = GetCppValueTypeName(param.Type);
+                    sb.Append($"([&]() {{ if ({param.Name}_count != {elementCount} || ({elementCount} != 0 && {param.Name} == nullptr)) throw std::invalid_argument(\"Invalid fixed array extent\"); {arrayType} converted{{}}; std::copy_n(reinterpret_cast<const {elementName}*>({param.Name}), {elementCount}, converted.begin()); return converted; }}())");
+                }
                 else if (config.IsVectorType(param.Type))
                 {
                     if (!config.TryGetTemplateElementType(param.Type, out CppType? elementType))
@@ -893,6 +1100,24 @@ public class ClassGenerationStep : GenerationStep
                     if (!config.TryGetTemplateElementType(param.Type, out CppType? elementType))
                         throw new NotSupportedException($"Unable to resolve unique_ptr parameter '{param.Type}'.");
                     sb.Append($"{GetCppValueTypeName(param.Type)}(reinterpret_cast<{GetCppValueTypeName(elementType!)}*>({param.Name}))");
+                }
+                else if (IsOpaqueValueType(param.Type))
+                {
+                    sb.Append($"*reinterpret_cast<{GetCppValueTypeName(param.Type)}*>({param.Name})");
+                }
+                else if (config.IsPathType(param.Type))
+                {
+                    sb.Append($"({param.Name} == nullptr ? std::filesystem::path() : std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>({param.Name}))))");
+                }
+                else if (config.IsChronoDurationType(param.Type))
+                {
+                    string typeName = GetCppValueTypeName(param.Type);
+                    sb.Append($"std::chrono::duration_cast<{typeName}>(std::chrono::nanoseconds({param.Name}))");
+                }
+                else if (config.IsChronoTimePointType(param.Type))
+                {
+                    string typeName = GetCppValueTypeName(param.Type);
+                    sb.Append($"{typeName}(std::chrono::duration_cast<{typeName}::duration>(std::chrono::nanoseconds({param.Name})))");
                 }
                 else if (config.IsUtf8StringType(param.Type))
                 {
@@ -946,7 +1171,7 @@ public class ClassGenerationStep : GenerationStep
             var name = mapping[(c, f)];
             string cSignature = GetCFunctionSignature(c, f);
             string signature = GetCppFunctionSignatureTypeless(f);
-            bool returnsCollection = config.IsSpanType(f.ReturnType) || config.IsVectorType(f.ReturnType);
+            bool returnsCollection = IsContiguousCollection(f.ReturnType);
             string cReturnType = config.IsOptionalType(f.ReturnType) ? "bool" : GetSpecializedCType(c, f.ReturnType);
             bool isStatic = (f.StorageQualifier & CppStorageQualifier.Static) != 0;
 
@@ -969,7 +1194,7 @@ public class ClassGenerationStep : GenerationStep
                     }
                     else if (returnsCollection)
                     {
-                        if (config.IsVectorType(f.ReturnType))
+                        if (config.IsVectorType(f.ReturnType) || config.IsArrayType(f.ReturnType))
                         {
                             guardedWriter.WriteLine($"thread_local {GetCppValueTypeName(f.ReturnType)} return_value;");
                             guardedWriter.WriteLine($"return_value = {invocation};");
@@ -992,6 +1217,11 @@ public class ClassGenerationStep : GenerationStep
                             guardedWriter.WriteLine($"if (out_value != nullptr) *out_value = reinterpret_cast<{config.GetCType(optionalElement!)}*>(new {GetCppValueTypeName(optionalElement!)}(*optional_result));");
                         guardedWriter.WriteLine("return true;");
                     }
+                    else if (IsOpaqueValueType(f.ReturnType))
+                    {
+                        string holder = config.GetOpaqueValueHolderName(f.ReturnType);
+                        guardedWriter.WriteLine($"return reinterpret_cast<{holder}*>(new {GetCppValueTypeName(f.ReturnType)}({invocation}));");
+                    }
                     else if (config.IsSharedPtrType(f.ReturnType))
                     {
                         guardedWriter.WriteLine($"return reinterpret_cast<{config.GetSharedPtrHolderName(f.ReturnType)}*>(new {GetCppValueTypeName(f.ReturnType)}({invocation}));");
@@ -1000,12 +1230,24 @@ public class ClassGenerationStep : GenerationStep
                     {
                         guardedWriter.WriteLine($"return {invocation}.release();");
                     }
+                    else if (config.IsPathType(f.ReturnType))
+                    {
+                        guardedWriter.WriteLine("thread_local std::string return_value;");
+                        guardedWriter.WriteLine($"auto path_value = {invocation};");
+                        guardedWriter.WriteLine("auto utf8_value = path_value.u8string();");
+                        guardedWriter.WriteLine("return_value.assign(reinterpret_cast<const char*>(utf8_value.data()), utf8_value.size());");
+                        guardedWriter.WriteLine("return return_value.c_str();");
+                    }
                     else if (config.IsUtf8StringType(f.ReturnType))
                     {
                         guardedWriter.WriteLine($"thread_local {GetUtf8StringValueTypeName(f.ReturnType)} return_value;");
                         guardedWriter.WriteLine($"return_value = {invocation};");
                         guardedWriter.WriteLine("return return_value.c_str();");
                     }
+                    else if (config.IsChronoDurationType(f.ReturnType))
+                        guardedWriter.WriteLine($"return static_cast<int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>({invocation}).count());");
+                    else if (config.IsChronoTimePointType(f.ReturnType))
+                        guardedWriter.WriteLine($"return static_cast<int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(({invocation}).time_since_epoch()).count());");
                     else if (f.ReturnType is CppReferenceType)
                     {
                         guardedWriter.WriteLine($"return {GetCppReferenceReturnExpression(f.ReturnType, cReturnType, invocation)};");

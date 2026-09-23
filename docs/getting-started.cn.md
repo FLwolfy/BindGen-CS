@@ -147,9 +147,12 @@ generator.Generate("include/library.hpp", "GeneratedBridge");
 ```bash
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json --dry-run --json
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json --compiler clang++ --output artifacts/libnative.dylib
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root artifacts/native-package
 ```
 
 `native-build` 不调用 command shell，可选择 `auto`、direct Clang/GNU、clang-cl、CMake、Meson 或 MSBuild。所有 provider 使用同一份 manifest 中的 library search path、link library、linker argument、target triple 和 sysroot（在对应 backend 支持范围内）；构建成功后默认将生成声明与二进制 export table 核对。
+
+`--package-root` 把通过 export verification 的桌面 binary 放入 `runtimes/<rid>/native/`，并在 `bgcs.native-assets.json` 写入 target 与 SHA-256。Windows/Linux/macOS x64/arm64 当前会映射到 NuGet RID；Android/iOS/FreeBSD 是正式支持目标，但其 target-specific 包布局尚待实现与验收，因此当前该 helper 会给出明确诊断。Pack 完成后可运行 `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>` 生成发布证据。
 
 不要假定任意 template/STL type 都能自动 lowering。显式实例和已支持 adapter 见[能力矩阵](capabilities.cn.md)；拒绝原因见[诊断指南](diagnostics.cn.md)。
 

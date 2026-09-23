@@ -32,10 +32,32 @@ public sealed class StrictSafetyAnalyzer
                 BindingParameter parameter = function.Parameters[i];
                 MarshallingMapping? parameterMapping = null;
                 mapping?.Parameters.TryGetValue(parameter.NativeName, out parameterMapping);
-                if (parameter.Marshalling.Strategy == MarshallingStrategy.Callback && parameterMapping == null)
-                    Add(module, BindingDiagnosticCodes.CallbackLifetime, function,
-                        $"callback parameter '{parameter.NativeName}' retention/unregister lifetime is not declared",
-                        $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}");
+                if (parameter.Marshalling.Strategy == MarshallingStrategy.Callback)
+                {
+                    if (parameter.Marshalling.CallbackLifetime == BindingCallbackLifetime.Unspecified)
+                        Add(module, BindingDiagnosticCodes.CallbackLifetime, function,
+                            $"callback parameter '{parameter.NativeName}' retention lifetime is not declared",
+                            $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.CallbackLifetime");
+                    if (parameter.Marshalling.CallbackThreading == BindingCallbackThreading.Unspecified)
+                        Add(module, BindingDiagnosticCodes.CallbackThreading, function,
+                            $"callback parameter '{parameter.NativeName}' invocation threading is not declared",
+                            $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.CallbackThreading");
+                    if (parameter.Marshalling.CallbackLifetime == BindingCallbackLifetime.RetainedUntilUnregister &&
+                        string.IsNullOrWhiteSpace(parameter.Marshalling.UnregisterFunction))
+                        Add(module, BindingDiagnosticCodes.CallbackLifetime, function,
+                            $"retained callback parameter '{parameter.NativeName}' has no synchronous unregister function",
+                            $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.UnregisterFunction");
+                    if (parameter.Marshalling.CallbackLifetime == BindingCallbackLifetime.RetainedUntilCompletion &&
+                        parameter.Marshalling.AsyncCompletion == BindingAsyncCompletion.None)
+                        Add(module, BindingDiagnosticCodes.AsyncLifetime, function,
+                            $"asynchronously retained callback parameter '{parameter.NativeName}' has no completion mechanism",
+                            $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.AsyncCompletion");
+                    if (parameter.Marshalling.AsyncCompletion != BindingAsyncCompletion.None &&
+                        string.IsNullOrWhiteSpace(parameter.Marshalling.CompletionFunction))
+                        Add(module, BindingDiagnosticCodes.AsyncLifetime, function,
+                            $"asynchronous callback parameter '{parameter.NativeName}' has no terminal completion function",
+                            $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.CompletionFunction");
+                }
                 if (LooksLikeBuffer(parameter) && parameter.Marshalling.LengthParameter == null &&
                     parameter.Marshalling.CapacityParameter == null && parameterMapping == null)
                     Add(module, BindingDiagnosticCodes.BufferLength, function,
@@ -46,8 +68,32 @@ public sealed class StrictSafetyAnalyzer
                     Add(module, BindingDiagnosticCodes.Allocator, function,
                         $"output string parameter '{parameter.NativeName}' has no cleanup allocator",
                         $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}.CleanupFunction");
+                ValidateOwnedAllocator(module, function, parameter.NativeName, parameter.Marshalling,
+                    $"MarshallingMappings.{function.NativeName}.Parameters.{parameter.NativeName}");
             }
+            ValidateOwnedAllocator(module, function, "return value", function.ReturnMarshalling,
+                $"MarshallingMappings.{function.NativeName}.Return");
         }
+    }
+
+    private void ValidateOwnedAllocator(BindingModule module, BindingFunction function, string valueName,
+        MarshallingPlan plan, string configuration)
+    {
+        if (plan.Ownership != BindingOwnership.Owned && !plan.RequiresCleanup)
+            return;
+        if (plan.AllocatorKind == BindingAllocatorKind.Unspecified)
+            Add(module, BindingDiagnosticCodes.Allocator, function,
+                $"owned {valueName} has no allocator domain",
+                configuration + ".AllocatorKind");
+        if (plan.AllocatorKind is BindingAllocatorKind.NativeFunction or BindingAllocatorKind.Custom &&
+            string.IsNullOrWhiteSpace(plan.AllocatorFunction))
+            Add(module, BindingDiagnosticCodes.Allocator, function,
+                $"owned {valueName} has no allocator function identity",
+                configuration + ".AllocatorFunction");
+        if (string.IsNullOrWhiteSpace(plan.CleanupFunction))
+            Add(module, BindingDiagnosticCodes.Allocator, function,
+                $"owned {valueName} has no cleanup function",
+                configuration + ".CleanupFunction");
     }
 
     private static bool LooksLikeBuffer(BindingParameter parameter)

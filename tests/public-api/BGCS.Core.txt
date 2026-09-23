@@ -1,0 +1,779 @@
+enum BGCS.BoolType
+  field BGCS.BoolType Bool32
+  field BGCS.BoolType Bool8
+  field BGCS.BoolType Byte
+  field BGCS.BoolType Int32
+  field System.Int32 value__
+class BGCS.CodeWriter
+  ctor(System.String fileName, System.String template, BGCS.HeaderInjectionDelegate headerInjector)
+  property System.String FileName { get }
+  property System.Int32 IndentLevel { get }
+  property System.Int64 Length { get }
+  property System.Int32 Lines { get }
+  property System.String NewLine { get }
+  method System.IDisposable PushBlock(System.String marker)
+  method System.Void BeginBlock(System.String content)
+  method System.Void Dispose()
+  method System.Void EndBlock()
+  method System.Void EndBlock(System.String marker)
+  method System.Void Indent(System.Int32 count)
+  method System.Void Unindent(System.Int32 count)
+  method System.Void Write(System.Char chr)
+  method System.Void Write(System.String string)
+  method System.Void WriteLine()
+  method System.Void WriteLine(System.String string)
+  method System.Void WriteLines(System.Collections.Generic.IEnumerable<System.String> lines)
+  method System.Void WriteLines(System.String string)
+struct BGCS.CodeWriter+CodeBlock
+  ctor(BGCS.CodeWriter writer, System.String content)
+  method System.Void Dispose()
+class BGCS.Core.CSharp.CsDelegate
+  ctor(System.String cppName, System.String name, BGCS.Core.CSharp.CsType returnType, System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> parameters)
+  ctor(System.String cppName, System.String name, BGCS.Core.CSharp.CsType returnType, System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> parameters, System.Collections.Generic.List<System.String> attributes, System.String comment)
+  property System.Collections.Generic.List<System.String> Attributes { get; set }
+  property System.String Comment { get; set }
+  property System.String CppName { get; set }
+  property System.String Identifier { get }
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> Parameters { get; set }
+  property BGCS.Core.CSharp.CsType ReturnType { get; set }
+  method BGCS.Core.CSharp.CsDelegate Clone()
+class BGCS.Core.CSharp.CsFunction
+  ctor(System.String name, System.String comment)
+  ctor(System.String name, System.String comment, System.Collections.Generic.List<BGCS.Core.CSharp.CsFunctionOverload> overloads)
+  property System.String Comment { get; set }
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsFunctionOverload> Overloads { get; set }
+  method BGCS.Core.CSharp.CsFunction Clone()
+  method System.String ToString()
+enum BGCS.Core.CSharp.CsFunctionKind
+  field BGCS.Core.CSharp.CsFunctionKind Constructor
+  field BGCS.Core.CSharp.CsFunctionKind Default
+  field BGCS.Core.CSharp.CsFunctionKind Destructor
+  field BGCS.Core.CSharp.CsFunctionKind Extension
+  field BGCS.Core.CSharp.CsFunctionKind Member
+  field BGCS.Core.CSharp.CsFunctionKind Operator
+  field System.Int32 value__
+class BGCS.Core.CSharp.CsFunctionOverload
+  ctor(System.String exportedName, System.String name, System.String comment, System.Collections.Generic.Dictionary<System.String,System.String> defaultValues, System.String structName, BGCS.Core.CSharp.CsFunctionKind kind, BGCS.Core.CSharp.CsType returnType, System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> parameters, System.Collections.Generic.List<BGCS.Core.CSharp.CsFunctionVariation> variations, System.Collections.Generic.List<System.String> modifiers, System.Collections.Generic.List<System.String> attributes)
+  ctor(System.String exportedName, System.String name, System.String comment, System.String structName, BGCS.Core.CSharp.CsFunctionKind kind, BGCS.Core.CSharp.CsType returnType)
+  property System.Collections.Generic.List<System.String> Attributes { get; set }
+  property System.String Comment { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> DefaultValues { get }
+  property System.String ExportedName { get; set }
+  property BGCS.Core.CSharp.CsFunctionKind Kind { get; set }
+  property System.Collections.Generic.List<System.String> Modifiers { get; set }
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> Parameters { get; set }
+  property BGCS.Core.CSharp.CsType ReturnType { get; set }
+  property System.String StructName { get; set }
+  property System.Collections.Generic.HashSet<BGCS.Core.CSharp.ValueVariation> ValueVariations { get; set }
+  property BGCS.Core.Collections.ConcurrentList<BGCS.Core.CSharp.CsFunctionVariation> Variations { get; set }
+  method BGCS.Core.CSharp.CsFunctionOverload Clone()
+  method BGCS.Core.CSharp.CsFunctionVariation CreateVariationWith()
+  method System.Boolean HasParameter(BGCS.Core.CSharp.CsParameterInfo cppParameter)
+  method System.Boolean HasVariation(BGCS.Core.CSharp.CsFunctionVariation variation)
+  method System.Boolean HasVariation(BGCS.Core.CSharp.ValueVariation variation)
+  method System.Boolean TryAddVariation(BGCS.Core.CSharp.CsFunctionVariation variation)
+  method System.Boolean TryAddVariation(BGCS.Core.CSharp.ValueVariation valueVariation, BGCS.Core.CSharp.CsFunctionVariation& variation)
+  method System.Boolean TryUpdateVariation(BGCS.Core.CSharp.CsFunctionVariation oldVariation, BGCS.Core.CSharp.CsFunctionVariation newVariation)
+  method System.String BuildSignature()
+  method System.String BuildSignatureNameless()
+  method System.String BuildSignatureNamelessForCOM(System.String comObject, BGCS.IGeneratorConfig settings)
+  method System.String ToString()
+class BGCS.Core.CSharp.CsFunctionVariation
+  ctor(System.String identifier, System.String exportedName, System.String name, System.String structName, BGCS.Core.CSharp.CsFunctionKind kind, BGCS.Core.CSharp.CsType returnType)
+  ctor(System.String identifier, System.String exportedName, System.String name, System.String structName, BGCS.Core.CSharp.CsFunctionKind kind, BGCS.Core.CSharp.CsType returnType, System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> parameters, System.Collections.Generic.List<BGCS.Core.CSharp.CsGenericParameterInfo> genericParameters, System.Collections.Generic.List<System.String> modifiers, System.Collections.Generic.List<System.String> attributes)
+  property System.Collections.Generic.List<System.String> Attributes { get; set }
+  property System.String ExportedName { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsGenericParameterInfo> GenericParameters { get; set }
+  property System.String Identifier { get; set }
+  property System.Boolean IsGeneric { get }
+  property BGCS.Core.CSharp.CsFunctionKind Kind { get; set }
+  property System.Collections.Generic.List<System.String> Modifiers { get; set }
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> Parameters { get; set }
+  property BGCS.Core.CSharp.CsType ReturnType { get; set }
+  property System.String StructName { get; set }
+  method BGCS.Core.CSharp.CsFunctionVariation Clone()
+  method BGCS.Core.CSharp.CsFunctionVariation ShallowClone()
+  method BGCS.Core.CSharp.CsParameterInfo GetParameter(System.String name)
+  method System.Boolean HasParameter(BGCS.Core.CSharp.CsParameterInfo cppParameter)
+  method System.Boolean TryGetParameter(System.String name, BGCS.Core.CSharp.CsParameterInfo& parameter)
+  method System.String BuildConstructorSignature(System.Boolean useAttributes, System.Boolean useNames, System.Boolean useDefaults)
+  method System.String BuildConstructorSignatureIdentifier()
+  method System.String BuildExtensionSignature(System.String type, System.String name, System.Boolean useAttributes, System.Boolean useNames)
+  method System.String BuildFullConstructorSignature(System.Boolean generateMetadata)
+  method System.String BuildFullExtensionSignature(System.String type, System.String name)
+  method System.String BuildFullSignature()
+  method System.String BuildFunctionHeader(BGCS.Core.CSharp.CsType csReturnType, BGCS.Core.CSharp.WriteFunctionFlags flags, System.Boolean generateMetadata)
+  method System.String BuildFunctionHeader(System.String alias, BGCS.Core.CSharp.CsType csReturnType, BGCS.Core.CSharp.WriteFunctionFlags flags, System.Boolean generateMetadata)
+  method System.String BuildFunctionHeaderId(BGCS.Core.CSharp.WriteFunctionFlags flags)
+  method System.String BuildFunctionHeaderId(System.String alias, BGCS.Core.CSharp.WriteFunctionFlags flags)
+  method System.String BuildFunctionOverload(BGCS.Core.CSharp.WriteFunctionFlags flags)
+  method System.String BuildGenericConstraint()
+  method System.String BuildGenericSignature()
+  method System.String BuildSignature(System.Boolean useAttributes, System.Boolean useNames)
+  method System.String ToString()
+class BGCS.Core.CSharp.CsGenericParameterInfo
+  ctor(System.String name, System.String constrain)
+  property System.String Constrain { get; set }
+  property System.String Name { get; set }
+  method BGCS.Core.CSharp.CsGenericParameterInfo Clone()
+class BGCS.Core.CSharp.CsParameterInfo
+  ctor(System.String name, BGCS.CppAst.Model.Types.CppType cppType, BGCS.Core.CSharp.CsType type, BGCS.Core.CSharp.Direction direction)
+  ctor(System.String name, BGCS.CppAst.Model.Types.CppType cppType, BGCS.Core.CSharp.CsType type, BGCS.Core.CSharp.Direction direction, System.String defaultValue, System.String fieldName)
+  ctor(System.String name, BGCS.CppAst.Model.Types.CppType cppType, BGCS.Core.CSharp.CsType type, System.Collections.Generic.List<System.String> modifiers, System.Collections.Generic.List<System.String> attributes, BGCS.Core.CSharp.Direction direction)
+  ctor(System.String name, BGCS.CppAst.Model.Types.CppType cppType, BGCS.Core.CSharp.CsType type, System.Collections.Generic.List<System.String> modifiers, System.Collections.Generic.List<System.String> attributes, BGCS.Core.CSharp.Direction direction, System.String defaultValue, System.String fieldName)
+  property System.Collections.Generic.List<System.String> Attributes { get; set }
+  property System.String CleanName { get }
+  property BGCS.CppAst.Model.Types.CppType CppType { get; set }
+  property System.String DefaultValue { get; set }
+  property BGCS.Core.CSharp.Direction Direction { get; set }
+  property System.String FieldName { get; set }
+  property BGCS.Core.CSharp.ParameterFlags Flags { get }
+  property System.Collections.Generic.List<System.String> Modifiers { get; set }
+  property System.String Name { get; set }
+  property BGCS.Core.CSharp.CsType Type { get; set }
+  method BGCS.Core.CSharp.CsParameterInfo Clone()
+  method System.Boolean Conflicts(BGCS.Core.CSharp.CsParameterInfo other)
+  method System.String ToString()
+enum BGCS.Core.CSharp.CsPrimitiveType
+  field BGCS.Core.CSharp.CsPrimitiveType Bool
+  field BGCS.Core.CSharp.CsPrimitiveType Byte
+  field BGCS.Core.CSharp.CsPrimitiveType Char
+  field BGCS.Core.CSharp.CsPrimitiveType Double
+  field BGCS.Core.CSharp.CsPrimitiveType Float
+  field BGCS.Core.CSharp.CsPrimitiveType Int
+  field BGCS.Core.CSharp.CsPrimitiveType Long
+  field BGCS.Core.CSharp.CsPrimitiveType SByte
+  field BGCS.Core.CSharp.CsPrimitiveType Short
+  field BGCS.Core.CSharp.CsPrimitiveType UInt
+  field BGCS.Core.CSharp.CsPrimitiveType ULong
+  field BGCS.Core.CSharp.CsPrimitiveType UShort
+  field BGCS.Core.CSharp.CsPrimitiveType Unknown
+  field BGCS.Core.CSharp.CsPrimitiveType Void
+  field System.Int32 value__
+enum BGCS.Core.CSharp.CsStringType
+  field BGCS.Core.CSharp.CsStringType None
+  field BGCS.Core.CSharp.CsStringType StringBSTR
+  field BGCS.Core.CSharp.CsStringType StringUTF16
+  field BGCS.Core.CSharp.CsStringType StringUTF8
+  field System.Int32 value__
+class BGCS.Core.CSharp.CsType
+  ctor(System.String name, BGCS.Core.CSharp.CsPrimitiveType primitiveType)
+  ctor(System.String name, BGCS.CppAst.Model.Types.CppPrimitiveKind primitiveType)
+  ctor(System.String name, System.Boolean isEnum, BGCS.CppAst.Model.Types.CppPrimitiveKind primitiveType)
+  ctor(System.String name, System.Boolean isPointer, System.Boolean isRef, System.Boolean isString, System.Boolean isPrimitive, System.Boolean isVoid, System.Boolean isArray, BGCS.Core.CSharp.CsPrimitiveType primitiveType)
+  ctor(System.String name, System.String cleanName, System.Boolean isPointer, System.Boolean isOut, System.Boolean isRef, System.Boolean isSpan, System.Boolean isString, System.Boolean isPrimitive, System.Boolean isVoid, System.Boolean isBool, System.Boolean isArray, System.Boolean isEnum, BGCS.Core.CSharp.CsStringType stringType, BGCS.Core.CSharp.CsPrimitiveType primitiveType)
+  property System.String CleanName { get; set }
+  property System.Boolean IsArray { get; set }
+  property System.Boolean IsBool { get; set }
+  property System.Boolean IsEnum { get; set }
+  property System.Boolean IsIn { get; set }
+  property System.Boolean IsOut { get; set }
+  property System.Boolean IsPointer { get; set }
+  property System.Boolean IsPrimitive { get; set }
+  property System.Boolean IsRef { get; set }
+  property System.Boolean IsRefOrIn { get }
+  property System.Boolean IsSpan { get; set }
+  property System.Boolean IsString { get; set }
+  property System.Boolean IsVoid { get; set }
+  property System.String Name { get; set }
+  property BGCS.Core.CSharp.CsPrimitiveType PrimitiveType { get; set }
+  property BGCS.Core.CSharp.CsStringType StringType { get; set }
+  method BGCS.Core.CSharp.CsPrimitiveType Map(BGCS.CppAst.Model.Types.CppPrimitiveKind kind)
+  method BGCS.Core.CSharp.CsType Clone()
+  method System.Boolean Conflicts(BGCS.Core.CSharp.CsType other)
+  method System.Boolean IsKnownPrimitive(System.String name)
+  method System.Int32 GetConflictHashCode()
+  method System.ReadOnlySpan<System.Char> GetNormalizedName()
+  method System.String Classify()
+  method System.String ToString()
+enum BGCS.Core.CSharp.Direction
+  field BGCS.Core.CSharp.Direction In
+  field BGCS.Core.CSharp.Direction InOut
+  field BGCS.Core.CSharp.Direction Out
+  field System.Int32 value__
+class BGCS.Core.CSharp.FunctionAlias
+  ctor(System.String exportedName, System.String exportedAliasName, System.String friendlyName, System.String comment)
+  property System.String Comment { get; set }
+  property System.String ExportedAliasName { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+interface BGCS.Core.CSharp.ICsFunction
+  property System.String ExportedName { get; set }
+  property BGCS.Core.CSharp.CsFunctionKind Kind { get; set }
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsParameterInfo> Parameters { get; set }
+  property BGCS.Core.CSharp.CsType ReturnType { get; set }
+  property System.String StructName { get; set }
+  method System.Boolean HasParameter(BGCS.Core.CSharp.CsParameterInfo cppParameter)
+  method System.String ToString()
+enum BGCS.Core.CSharp.ParameterFlags
+  field BGCS.Core.CSharp.ParameterFlags Array
+  field BGCS.Core.CSharp.ParameterFlags Bool
+  field BGCS.Core.CSharp.ParameterFlags Default
+  field BGCS.Core.CSharp.ParameterFlags In
+  field BGCS.Core.CSharp.ParameterFlags None
+  field BGCS.Core.CSharp.ParameterFlags Out
+  field BGCS.Core.CSharp.ParameterFlags Pointer
+  field BGCS.Core.CSharp.ParameterFlags Ref
+  field BGCS.Core.CSharp.ParameterFlags Span
+  field BGCS.Core.CSharp.ParameterFlags String
+  field System.Int32 value__
+struct BGCS.Core.CSharp.ValueVariation
+  ctor(System.String name, System.Collections.Generic.IList<BGCS.Core.CSharp.CsParameterInfo> parameters)
+  property System.String Name { get }
+  property System.Collections.Generic.IList<BGCS.Core.CSharp.CsParameterInfo> Parameters { get }
+  method System.Boolean Equals(BGCS.Core.CSharp.ValueVariation other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+enum BGCS.Core.CSharp.WriteFunctionFlags
+  field BGCS.Core.CSharp.WriteFunctionFlags Extension
+  field BGCS.Core.CSharp.WriteFunctionFlags None
+  field BGCS.Core.CSharp.WriteFunctionFlags UseHandle
+  field BGCS.Core.CSharp.WriteFunctionFlags UseThis
+  field System.Int32 value__
+class BGCS.Core.Caching.IncrementalCacheKey
+  ctor(System.String Value, System.Int32 InputFileCount)
+  property System.Int32 InputFileCount { get; set }
+  property System.String Value { get; set }
+  method BGCS.Core.Caching.IncrementalCacheKey <Clone>$()
+  method System.Boolean Equals(BGCS.Core.Caching.IncrementalCacheKey other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Value, System.Int32& InputFileCount)
+class BGCS.Core.Caching.IncrementalGenerationCache
+  ctor(System.String root)
+  method BGCS.Core.Caching.IncrementalCacheKey CreateKey(System.String generatorFingerprint, System.Collections.Generic.IEnumerable<System.String> inputFiles)
+  method System.Boolean TryRestore(BGCS.Core.Caching.IncrementalCacheKey key, System.String outputPath, System.String& metadata)
+  method System.Collections.Generic.IReadOnlyList<System.String> DiscoverInputs(System.Collections.Generic.IEnumerable<System.String> explicitFiles, System.Collections.Generic.IEnumerable<System.String> includeDirectories, System.Collections.Generic.IEnumerable<System.String> excludedDirectories)
+  method System.Void Store(BGCS.Core.Caching.IncrementalCacheKey key, System.String outputPath, System.String metadata)
+class BGCS.Core.CharCaseInsensitiveEqualityComparer
+  field BGCS.Core.CharCaseInsensitiveEqualityComparer Default
+  ctor()
+  method System.Boolean Equals(System.Char x, System.Char y)
+  method System.Int32 GetHashCode(System.Char obj)
+class BGCS.Core.Collections.CollectionHelper
+  method T Get(System.Collections.Generic.List<T> list, System.Int32 index)
+  method System.Void AddRange(System.Collections.Generic.Dictionary<TKey,TValue> destination, System.Collections.Generic.Dictionary<TKey,TValue> values)
+  method System.Void AddRange(System.Collections.Generic.HashSet<T> destination, System.Collections.Generic.IEnumerable<T> values)
+class BGCS.Core.Collections.CollectionNormalizer
+  method System.Void Normalize(T obj)
+class BGCS.Core.Collections.ConcurrentList`1
+  ctor()
+  ctor(System.Int32 capacity)
+  ctor(System.Collections.Generic.IEnumerable<T> values)
+  property System.Int32 Count { get }
+  property System.Boolean IsReadOnly { get }
+  property T Item { get; set }
+  property System.Object SyncObject { get }
+  method System.Boolean Contains(T item)
+  method System.Boolean Remove(T item)
+  method System.Int32 IndexOf(T item)
+  method System.Collections.Generic.IEnumerator<T> GetEnumerator()
+  method System.Void Add(T item)
+  method System.Void Clear()
+  method System.Void CopyTo(T[] array, System.Int32 arrayIndex)
+  method System.Void Insert(System.Int32 index, T item)
+  method System.Void RemoveAt(System.Int32 index)
+class BGCS.Core.Collections.TernarySearchTreeDictionary`1
+  ctor()
+  ctor(System.Collections.Generic.IComparer<System.String> comparer)
+  ctor(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.String,T>> values)
+  ctor(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.String,T>> values, System.Collections.Generic.IComparer<System.String> comparer)
+  property System.Collections.Generic.IComparer<System.String> Comparer { get }
+  property System.Int32 Count { get }
+  property T Item { get; set }
+  property System.Collections.Generic.ICollection<System.String> Keys { get }
+  property System.Collections.Generic.ICollection<T> Values { get }
+  method System.Boolean ContainsKey(System.String key)
+  method System.Boolean Remove(System.String key)
+  method System.Boolean TryGetValue(System.String key, T& value)
+  method System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.String,T>> StartingWith(System.String key)
+  method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String,T>> GetEnumerator()
+  method System.Void Add(System.Collections.Generic.KeyValuePair<System.String,T> item)
+  method System.Void Add(System.String key, T value)
+  method System.Void AddRange(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.String,T>> values)
+  method System.Void Clear()
+class BGCS.Core.CppClassExtensions
+  method System.Boolean HasVirtualMembers(BGCS.CppAst.Model.Declarations.CppClass cls)
+class BGCS.Core.Extensibility.BindingPluginContract
+  field System.Int32 CurrentVersion
+class BGCS.Core.Extensibility.BindingPluginLoader
+  method System.Collections.Generic.IReadOnlyList<BGCS.Core.Extensibility.IBindingPlugin> Load(System.String assemblyPath, BGCS.Core.Extensibility.BindingPluginRegistry registry)
+class BGCS.Core.Extensibility.BindingPluginRegistry
+  ctor()
+  property System.Int32 ContractVersion { get }
+  property System.Int32 Count { get }
+  property System.Boolean HasPlugins { get }
+  method System.Collections.Generic.IReadOnlyList<BGCS.Core.Extensibility.BindingPluginService<TService>> GetServices()
+  method System.String GetCacheFingerprint()
+  method System.Void Register(System.String id, TService service, System.Int32 priority)
+class BGCS.Core.Extensibility.BindingPluginService`1
+  ctor(System.String Id, System.Int32 Priority, TService Service)
+  property System.String Id { get; set }
+  property System.Int32 Priority { get; set }
+  property TService Service { get; set }
+  method BGCS.Core.Extensibility.BindingPluginService<TService> <Clone>$()
+  method System.Boolean Equals(BGCS.Core.Extensibility.BindingPluginService<TService> other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Id, System.Int32& Priority, TService& Service)
+interface BGCS.Core.Extensibility.IBindingPlugin
+  property System.Int32 ContractVersion { get }
+  property System.String Id { get }
+  property System.String Version { get }
+  method System.Void Configure(BGCS.Core.Extensibility.IBindingPluginHost host)
+interface BGCS.Core.Extensibility.IBindingPluginHost
+  property System.Int32 ContractVersion { get }
+  method System.Void Register(System.String id, TService service, System.Int32 priority)
+interface BGCS.Core.Extensibility.ICacheFingerprintProvider
+  method System.String GetCacheFingerprint()
+class BGCS.Core.Extensions
+  method System.Collections.Generic.Dictionary<TKey,TValue> Clone(System.Collections.Generic.Dictionary<TKey,TValue> dictionary)
+  method System.Collections.Generic.List<T> CloneValues(System.Collections.Generic.IList<T> list)
+  method System.Collections.Generic.List<T> Clone(System.Collections.Generic.List<T> list)
+  method System.Void Reverse(System.Text.StringBuilder sb)
+class BGCS.Core.FileNameHelper
+  ctor()
+  method System.String SanitizeFileName(System.String fileName)
+class BGCS.Core.FileSet
+  ctor(System.Collections.Frozen.FrozenSet<System.String> set)
+  ctor(System.Collections.Generic.IEnumerable<System.String> set)
+  property System.Int32 Count { get }
+  property System.Boolean IsReadOnly { get }
+  property System.Boolean IsSynchronized { get }
+  property System.Object SyncRoot { get }
+  method System.Boolean Add(System.String item)
+  method System.Boolean Contains(System.String path)
+  method System.Boolean IsProperSubsetOf(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Boolean IsProperSupersetOf(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Boolean IsSubsetOf(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Boolean IsSupersetOf(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Boolean Overlaps(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Boolean Remove(System.String item)
+  method System.Boolean SetEquals(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Collections.IEnumerator GetEnumerator()
+  method System.Void Clear()
+  method System.Void CopyTo(System.Array array, System.Int32 index)
+  method System.Void CopyTo(System.String[] array, System.Int32 arrayIndex)
+  method System.Void ExceptWith(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Void IntersectWith(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Void SymmetricExceptWith(System.Collections.Generic.IEnumerable<System.String> other)
+  method System.Void UnionWith(System.Collections.Generic.IEnumerable<System.String> other)
+interface BGCS.Core.ICloneable`1
+  method T Clone()
+interface BGCS.Core.ICodeWriter
+  property System.Int32 IndentLevel { get }
+  method System.IDisposable PushBlock(System.String marker)
+  method System.Void BeginBlock(System.String content)
+  method System.Void Dispose()
+  method System.Void EndBlock(System.String marker)
+  method System.Void Indent(System.Int32 count)
+  method System.Void Unindent(System.Int32 count)
+  method System.Void Write(System.Char chr)
+  method System.Void Write(System.String string)
+  method System.Void WriteLine()
+  method System.Void WriteLine(System.String string)
+  method System.Void WriteLines(System.Collections.Generic.IEnumerable<System.String> lines)
+  method System.Void WriteLines(System.String string)
+interface BGCS.Core.IHasIdentifier
+  property System.String Identifier { get }
+class BGCS.Core.IO.OutputDirectoryTransaction
+  ctor(System.String destinationPath)
+  property System.String StagingPath { get }
+  method System.Void Commit()
+  method System.Void Dispose()
+class BGCS.Core.IdentifierComparer`1
+  field BGCS.Core.IdentifierComparer<T> Default
+  ctor()
+  method System.Boolean Equals(T x, T y)
+  method System.Int32 GetHashCode(T obj)
+class BGCS.Core.LogEventHandler
+  ctor(System.Object object, System.IntPtr method)
+  method System.IAsyncResult BeginInvoke(BGCS.Core.Logging.LogSeverity severity, System.String message, System.AsyncCallback callback, System.Object object)
+  method System.Void EndInvoke(System.IAsyncResult result)
+  method System.Void Invoke(BGCS.Core.Logging.LogSeverity severity, System.String message)
+class BGCS.Core.LoggerBase
+  ctor()
+  property BGCS.Core.Logging.LogSeverity LogLevel { get; set }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Core.Logging.LogMessage> Messages { get }
+  event BGCS.Core.LogEventHandler LogEvent
+  method System.Void DisplayMessages()
+  method System.Void Log(BGCS.Core.Logging.LogSeverity severtiy, System.String message)
+  method System.Void LogCritical(System.String message)
+  method System.Void LogDebug(System.String message)
+  method System.Void LogError(System.String message)
+  method System.Void LogInfo(System.String message)
+  method System.Void LogToConsole()
+  method System.Void LogTrace(System.String message)
+  method System.Void LogWarn(System.String message)
+struct BGCS.Core.Logging.LogMessage
+  field System.String Message
+  field BGCS.Core.Logging.LogSeverity Severtiy
+  ctor(BGCS.Core.Logging.LogSeverity severtiy, System.String message)
+  method System.String ToString()
+enum BGCS.Core.Logging.LogSeverity
+  field BGCS.Core.Logging.LogSeverity Critical
+  field BGCS.Core.Logging.LogSeverity Debug
+  field BGCS.Core.Logging.LogSeverity Error
+  field BGCS.Core.Logging.LogSeverity Information
+  field BGCS.Core.Logging.LogSeverity Trace
+  field BGCS.Core.Logging.LogSeverity Warning
+  field System.Int32 value__
+class BGCS.Core.Mapping.ArrayMapping
+  ctor(BGCS.CppAst.Model.Types.CppPrimitiveKind primitive, System.Int32 size, System.String name)
+  property System.String Name { get; set }
+  property BGCS.CppAst.Model.Types.CppPrimitiveKind Primitive { get; set }
+  property System.Int32 Size { get; set }
+class BGCS.Core.Mapping.ConstantMapping
+  ctor(System.String exportedName, System.String friendlyName, System.String comment, System.String type, System.String value)
+  property System.String Comment { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+  property System.String Type { get; set }
+  property System.String Value { get; set }
+class BGCS.Core.Mapping.DelegateMapping
+  ctor(System.String name, System.String returnType, System.String signature)
+  property System.String Name { get; set }
+  property System.String ReturnType { get; set }
+  property System.String Signature { get; set }
+class BGCS.Core.Mapping.EnumItemMapping
+  ctor(System.String exportedName, System.String friendlyName, System.String comment, System.String value)
+  property System.String Comment { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+  property System.String Value { get; set }
+class BGCS.Core.Mapping.EnumMapping
+  ctor(System.String exportedName, System.String friendlyName, System.String comment)
+  ctor(System.String exportedName, System.String friendlyName, System.String comment, System.Collections.Generic.List<BGCS.Core.Mapping.EnumItemMapping> itemMappings)
+  property System.String Comment { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.EnumItemMapping> ItemMappings { get; set }
+  method BGCS.Core.Mapping.EnumItemMapping GetItemMapping(System.String valueName)
+  method System.Boolean TryGetItemMapping(System.String valueName, BGCS.Core.Mapping.EnumItemMapping& mapping)
+class BGCS.Core.Mapping.FunctionAliasMapping
+  ctor(System.String exportedName, System.String exportedAliasName, System.String friendlyName, System.String comment)
+  property System.String Comment { get; set }
+  property System.String ExportedAliasName { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+class BGCS.Core.Mapping.FunctionMapping
+  ctor(System.String exportedName, System.String friendlyName, System.String comment, System.Collections.Generic.Dictionary<System.String,System.String> defaults, System.Collections.Generic.List<System.Collections.Generic.Dictionary<System.String,System.String>> customVariations, System.Collections.Generic.List<BGCS.Core.Mapping.ParameterMapping> parameters)
+  property System.String Comment { get; set }
+  property System.String ContainerName { get; set }
+  property System.Collections.Generic.List<System.Collections.Generic.Dictionary<System.String,System.String>> CustomVariations { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> Defaults { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.ParameterMapping> Parameters { get; set }
+  method System.Void CreateDefaultMappingParameters(BGCS.CppAst.Model.Declarations.CppFunction function)
+class BGCS.Core.Mapping.HandleMapping
+  ctor(System.String exportedName, System.String friendlyName, System.String comment)
+  property System.String Comment { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+class BGCS.Core.Mapping.ParameterMapping
+  ctor(System.String exportedName, System.String friendlyName, System.Boolean useOut)
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+  property System.Boolean UseOut { get; set }
+class BGCS.Core.Mapping.StructValidityMapping
+  ctor(System.String fieldName, System.String invalidValue, System.String propertyName)
+  property System.String FieldName { get; set }
+  property System.String InvalidValue { get; set }
+  property System.String PropertyName { get; set }
+class BGCS.Core.Mapping.TypeFieldMapping
+  ctor(System.String exportedName, System.String displayName, System.String comment)
+  property System.String Comment { get; set }
+  property System.String DisplayName { get; set }
+  property System.String ExportedName { get; set }
+class BGCS.Core.Mapping.TypeMapping
+  ctor(System.String exportedName, System.String friendlyName, System.String comment)
+  property System.String Comment { get; set }
+  property System.String ExportedName { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.TypeFieldMapping> FieldMappings { get; set }
+  property System.String FriendlyName { get; set }
+  property BGCS.Core.Mapping.StructValidityMapping Validity { get; set }
+  method BGCS.Core.Mapping.TypeFieldMapping GetFieldMapping(System.String valueName)
+  method System.Boolean TryGetFieldMapping(System.String valueName, BGCS.Core.Mapping.TypeFieldMapping& mapping)
+class BGCS.Core.NamespaceHelper
+  method System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Declarations.CppNamespace> EnumerateNamespaces(BGCS.CppAst.Model.Metadata.CppCompilation compilation)
+  method System.String GetFullNamespace(BGCS.CppAst.Model.Declarations.CppNamespace ns, System.String sep)
+class BGCS.Core.PathHelper
+  method System.String FindBase()
+  method System.String GetPath(System.String path)
+class BGCS.Core.TrieSet`1
+  ctor()
+  ctor(System.Collections.Generic.IEqualityComparer<T> comparer)
+  property System.Int32 Count { get }
+  method System.Boolean Contains(System.Collections.Generic.IEnumerable<T> key)
+  method System.Boolean Remove(System.Collections.Generic.IEnumerable<T> key)
+  method System.Boolean TryGetNode(System.Collections.Generic.IEnumerable<T> key, BGCS.Core.TrieSet<T>& node)
+  method System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> GetByPrefix(System.Collections.Generic.IEnumerable<T> prefix)
+  method System.Collections.Generic.IEnumerator<System.Collections.Generic.IEnumerable<T>> GetEnumerator()
+  method System.ReadOnlySpan<T> FindLargestMatch(System.ReadOnlySpan<T> match)
+  method System.ReadOnlySpan<T> FindSmallestMatch(System.ReadOnlySpan<T> match)
+  method BGCS.Core.TrieSet<T> AddItem(BGCS.Core.TrieSet<T> node, T key)
+  method BGCS.Core.TrieSet<T> GetNode(System.Collections.Generic.IEnumerable<T> key)
+  method System.Void Add(System.Collections.Generic.IEnumerable<T> value)
+  method System.Void AddRange(System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> values)
+  method System.Void Clear()
+  method System.Void CopyTo(System.Collections.Generic.IEnumerable<T>[] array, System.Int32 arrayIndex)
+  method System.Void Remove(BGCS.Core.TrieSet<T> node)
+  method System.Void Remove(BGCS.Core.TrieSet<T> node, T key)
+  method System.Void RemoveNode(BGCS.Core.TrieSet<T> node)
+class BGCS.Core.TrieSet`1+TrieNode
+  field System.Collections.Generic.Dictionary<T,BGCS.Core.TrieSet<T>> Children
+  field System.Boolean IsTerminal
+  field T Key
+  field BGCS.Core.TrieSet<T> Parent
+  field System.Collections.Generic.IEnumerable<T> Value
+  ctor(T key, System.Collections.Generic.IEqualityComparer<T> comparer)
+  ctor(T key, BGCS.Core.TrieSet<T> parent, System.Collections.Generic.IEqualityComparer<T> comparer)
+class BGCS.Core.TrieStringSet
+  ctor()
+  ctor(System.Collections.Generic.IEqualityComparer<System.Char> comparer)
+  property System.Int32 Count { get }
+  method System.Boolean Contains(System.String key)
+  method System.Boolean Remove(System.String key)
+  method System.Boolean TryGetNode(System.String key, BGCS.Core.TrieStringSet+TrieSetNode& node)
+  method System.Collections.Generic.IEnumerator<System.String> GetEnumerator()
+  method System.ReadOnlySpan<System.Char> FindLargestMatch(System.ReadOnlySpan<System.Char> match)
+  method System.ReadOnlySpan<System.Char> FindSmallestMatch(System.ReadOnlySpan<System.Char> match)
+  method BGCS.Core.TrieStringSet+TrieSetNode AddItem(BGCS.Core.TrieStringSet+TrieSetNode node, System.Char key)
+  method BGCS.Core.TrieStringSet+TrieSetNode GetNode(System.String key)
+  method System.Void Add(System.String key)
+  method System.Void AddRange(System.Collections.Generic.IEnumerable<System.String> keys)
+  method System.Void Clear()
+  method System.Void CopyTo(System.String[] array, System.Int32 arrayIndex)
+  method System.Void Remove(BGCS.Core.TrieStringSet+TrieSetNode node)
+  method System.Void Remove(BGCS.Core.TrieStringSet+TrieSetNode node, System.Char key)
+  method System.Void RemoveNode(BGCS.Core.TrieStringSet+TrieSetNode node)
+class BGCS.Core.TrieStringSet+TrieSetNode
+  field System.Collections.Generic.Dictionary<System.Char,BGCS.Core.TrieStringSet+TrieSetNode> Children
+  field System.Boolean IsTerminal
+  field System.Char Key
+  field BGCS.Core.TrieStringSet+TrieSetNode Parent
+  ctor(System.Char key, System.Collections.Generic.IEqualityComparer<System.Char> comparer)
+  ctor(System.Char key, BGCS.Core.TrieStringSet+TrieSetNode parent, System.Collections.Generic.IEqualityComparer<System.Char> comparer)
+class BGCS.Core.WordList
+  field BGCS.Core.WordList EN_EN
+  ctor()
+  ctor(System.String countryCode)
+  method BGCS.Core.WordList ReadFrom(System.String path)
+  method BGCS.Core.WordList ReadFromTxt(System.String path)
+  method System.ReadOnlySpan<System.Char> FindMostMatching(System.ReadOnlySpan<System.Char> text)
+  method System.String[] SplitWords(System.String text)
+  method System.Void CreateFromTxt(System.String source, System.String destination)
+  method System.Void Read(System.String path)
+  method System.Void ReadTxt(System.IO.Stream stream)
+  method System.Void ReadTxt(System.String path)
+  method System.Void Write(System.String path)
+  method System.Void WriteTxt(System.String path)
+class BGCS.Core.WordListCollection
+  ctor()
+class BGCS.CsCodeWriter
+  ctor(System.String fileName, System.String namespace, System.Collections.Generic.IEnumerable<System.String> usings, BGCS.HeaderInjectionDelegate headerInjector, System.Collections.Generic.IEnumerable<System.String> globalUsings)
+  property System.String FileName { get }
+  property System.Int32 IndentLevel { get }
+  property System.Int64 Length { get }
+  property System.Int32 Lines { get }
+  property System.String NewLine { get }
+  method System.IDisposable PushBlock(System.String marker)
+  method System.Void BeginBlock(System.String content)
+  method System.Void Dispose()
+  method System.Void EndBlock(System.String marker)
+  method System.Void Indent(System.Int32 count)
+  method System.Void Unindent(System.Int32 count)
+  method System.Void Write(System.Char chr)
+  method System.Void Write(System.String string)
+  method System.Void WriteLine()
+  method System.Void WriteLine(System.String string)
+  method System.Void WriteLines(System.Collections.Generic.IEnumerable<System.String> lines)
+  method System.Void WriteLines(System.String text)
+struct BGCS.CsCodeWriter+CodeBlock
+  ctor(BGCS.CsCodeWriter writer, System.String content)
+  method System.Void Dispose()
+class BGCS.CsSplitCodeWriter
+  ctor(System.String fileName, System.String namespace, System.Collections.Generic.IList<System.String> usings, BGCS.HeaderInjectionDelegate headerInjector, System.Int32 baseIndentLevel)
+  property System.String FileName { get }
+  property System.Int32 IndentLevel { get }
+  property System.String[] Namespaces { get }
+  property System.Int32 SplitCount { get }
+  property System.Int32 SplitThreshold { get; set }
+  method System.IDisposable PushBlock(System.String marker)
+  method System.Void BeginBlock(System.String content)
+  method System.Void Dispose()
+  method System.Void EndBlock(System.String marker)
+  method System.Void Indent(System.Int32 count)
+  method System.Void TrySplit()
+  method System.Void Unindent(System.Int32 count)
+  method System.Void Write(System.Char chr)
+  method System.Void Write(System.String string)
+  method System.Void WriteLine()
+  method System.Void WriteLine(System.String string)
+  method System.Void WriteLines(System.Collections.Generic.IEnumerable<System.String> lines)
+  method System.Void WriteLines(System.String text)
+class BGCS.DummyCodeWriter
+  ctor()
+  property System.Int32 IndentLevel { get }
+  method System.IDisposable PushBlock(System.String marker)
+  method System.Void BeginBlock(System.String content)
+  method System.Void Dispose()
+  method System.Void EndBlock(System.String marker)
+  method System.Void Indent(System.Int32 count)
+  method System.Void Unindent(System.Int32 count)
+  method System.Void Write(System.Char chr)
+  method System.Void Write(System.String string)
+  method System.Void WriteLine()
+  method System.Void WriteLine(System.String string)
+  method System.Void WriteLines(System.Collections.Generic.IEnumerable<System.String> lines)
+  method System.Void WriteLines(System.String string)
+struct BGCS.EnumPrefix
+  field System.String[] Parts
+  ctor(System.String[] prefixes)
+class BGCS.HeaderInjectionDelegate
+  ctor(System.Object object, System.IntPtr method)
+  method System.IAsyncResult BeginInvoke(BGCS.Core.ICodeWriter writer, System.Text.StringBuilder headerBuilder, System.AsyncCallback callback, System.Object object)
+  method System.Void EndInvoke(System.IAsyncResult result)
+  method System.Void Invoke(BGCS.Core.ICodeWriter writer, System.Text.StringBuilder headerBuilder)
+interface BGCS.IGeneratorConfig
+  property System.Collections.Generic.HashSet<System.String> AllowedConstants { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedDelegates { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedEnums { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedFunctions { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedTypedefs { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedTypes { get; set }
+  property System.String ApiName { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.ArrayMapping> ArrayMappings { get; set }
+  property BGCS.BoolType BoolType { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.TypeMapping> ClassMappings { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.ConstantMapping> ConstantMappings { get; set }
+  property BGCS.Core.Logging.LogSeverity CppLogLevel { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.DelegateMapping> DelegateMappings { get; set }
+  property System.Boolean DelegatesAsVoidPointer { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.EnumMapping> EnumMappings { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.FunctionMapping> FunctionMappings { get; set }
+  property System.Collections.Generic.List<System.String> FunctionPrefixes { get; set }
+  property System.Boolean GenerateConstants { get; set }
+  property System.Boolean GenerateDelegates { get; set }
+  property System.Boolean GenerateEnums { get; set }
+  property System.Boolean GenerateExtensions { get; set }
+  property System.Boolean GenerateFunctions { get; set }
+  property System.Boolean GenerateHandles { get; set }
+  property System.Boolean GenerateSizeOfStructs { get; set }
+  property System.Boolean GenerateTypes { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.HandleMapping> HandleMappings { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredConstants { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredDelegates { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredEnums { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredFunctions { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredParts { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredTypedefs { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredTypes { get; set }
+  property System.Collections.Generic.HashSet<System.String> Keywords { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownConstantNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<System.String>> KnownConstructors { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownDefaultValueNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownEnumPrefixes { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownEnumValueNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownExtensionNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownExtensionPrefixes { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<System.String>> KnownMemberFunctions { get; set }
+  property System.String LibName { get; set }
+  property BGCS.Core.Logging.LogSeverity LogLevel { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> NameMappings { get; set }
+  property System.String Namespace { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> TypeMappings { get; set }
+  property System.Collections.Generic.List<System.String> Usings { get; set }
+  method BGCS.Core.Mapping.DelegateMapping GetDelegateMapping(System.String delegateName)
+  method BGCS.Core.Mapping.EnumMapping GetEnumMapping(System.String enumName)
+  method BGCS.Core.Mapping.FunctionMapping GetFunctionMapping(System.String functionName)
+  method BGCS.Core.Mapping.TypeMapping GetTypeMapping(System.String typeName)
+  method BGCS.EnumPrefix GetEnumNamePrefix(System.String typeName)
+  method System.Boolean TryGetArrayMapping(BGCS.CppAst.Model.Types.CppArrayType arrayType, System.String& mapping)
+  method System.Boolean TryGetDefaultValue(System.String functionName, BGCS.CppAst.Model.Declarations.CppParameter parameter, System.Boolean sanitize, System.String& defaultValue)
+  method System.Boolean TryGetDelegateMapping(System.String delegateName, BGCS.Core.Mapping.DelegateMapping& mapping)
+  method System.Boolean TryGetEnumMapping(System.String enumName, BGCS.Core.Mapping.EnumMapping& mapping)
+  method System.Boolean TryGetFunctionMapping(System.String functionName, BGCS.Core.Mapping.FunctionMapping& mapping)
+  method System.Boolean TryGetTypeMapping(System.String typeName, BGCS.Core.Mapping.TypeMapping& mapping)
+  method System.String GetBoolType()
+  method System.String GetConstantName(System.String value)
+  method System.String GetCsCleanName(System.String name)
+  method System.String GetCsFunctionName(System.String function)
+  method System.String GetCsSubTypeName(BGCS.CppAst.Model.Declarations.CppClass parentClass, System.String parentCsName, BGCS.CppAst.Model.Declarations.CppClass subClass, System.Int32 idxSubClass)
+  method System.String GetCsTypeName(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetCsWrappedPointerTypeName(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetCsWrapperTypeName(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetEnumName(System.String value, BGCS.EnumPrefix enumPrefix)
+  method System.String GetExtensionName(System.String value, System.String extensionPrefix)
+  method System.String GetExtensionNamePrefix(System.String typeName)
+  method System.String GetFieldName(System.String name)
+  method System.String GetNamelessParameterSignature(System.Collections.Generic.IList<BGCS.CppAst.Model.Declarations.CppParameter> parameters, System.Boolean canUseOut, System.Boolean delegateType)
+  method System.String GetParameterName(System.Int32 paramIdx, System.String name)
+  method System.String GetParameterSignature(System.Collections.Generic.IList<BGCS.CppAst.Model.Declarations.CppParameter> parameters, System.Boolean canUseOut, System.Boolean attributes, System.Boolean names, System.Boolean delegateType)
+  method System.String NormalizeParameterName(System.String name)
+  method System.String NormalizeValue(System.String value, System.Boolean sanitize)
+  method System.Void Save(System.String path)
+enum BGCS.NumberType
+  field BGCS.NumberType AnyFloat
+  field BGCS.NumberType AnyInt
+  field BGCS.NumberType Decimal
+  field BGCS.NumberType Double
+  field BGCS.NumberType Float
+  field BGCS.NumberType Int
+  field BGCS.NumberType Long
+  field BGCS.NumberType None
+  field BGCS.NumberType UInt
+  field BGCS.NumberType ULong
+  field System.Byte value__
+class BGCS.TextExtensions
+  method System.Boolean TryTrimEndFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.Char trim, System.ReadOnlySpan<System.Char>& result)
+  method System.Boolean TryTrimEndFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.ReadOnlySpan<System.Char> trim, System.ReadOnlySpan<System.Char>& result)
+  method System.Boolean TryTrimStartFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.Char trim, System.ReadOnlySpan<System.Char>& result)
+  method System.Boolean TryTrimStartFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.ReadOnlySpan<System.Char> trim, System.ReadOnlySpan<System.Char>& result)
+  method System.ReadOnlySpan<System.Char> TrimEndFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.Char trim)
+  method System.ReadOnlySpan<System.Char> TrimEndFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.ReadOnlySpan<System.Char> trim)
+  method System.ReadOnlySpan<System.Char> TrimStartFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.Char trim)
+  method System.ReadOnlySpan<System.Char> TrimStartFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.ReadOnlySpan<System.Char> trim)
+class BGCS.Utils.MurmurHash3
+  method System.UInt32 Hash32(System.ReadOnlySpan<System.Byte> data, System.UInt32 seed)
+struct Generator.Caching.CacheFileEntry
+  field Generator.Caching.Hash256 Hash
+  field Generator.Caching.CacheFileName Name
+  field System.UInt32 Next
+  field System.UInt32 Parent
+struct Generator.Caching.CacheFileHeader
+  field System.UInt32 Crc32
+  field System.Byte[] Magic
+  field Generator.Caching.CacheFileVersion Version
+struct Generator.Caching.CacheFileName
+  field System.Int32 MaxFileNameSize
+  ctor(System.String str)
+  method System.Boolean Equals(Generator.Caching.CacheFileName other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean Equals(System.String other)
+  method System.Int32 GetHashCode()
+  method System.Span<System.Byte> AsSpan()
+  method System.String ToString()
+enum Generator.Caching.CacheFileVersion
+  field Generator.Caching.CacheFileVersion Version1
+  field System.UInt32 value__
+class Generator.Caching.GenCacheFile
+  ctor()
+struct Generator.Caching.Hash256
+  field System.UInt64 Value0
+  field System.UInt64 Value1
+  field System.UInt64 Value2
+  field System.UInt64 Value3
+  method System.Boolean Equals(Generator.Caching.Hash256 other)
+  method System.Boolean Equals(System.Object obj)
+  method Generator.Caching.Hash256 HashData(System.IO.Stream stream)
+  method System.Int32 GetHashCode()
+  method System.Span<System.Byte> AsSpan()

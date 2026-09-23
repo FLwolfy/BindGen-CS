@@ -1,0 +1,291 @@
+enum BGCS.Language.AnalyserResult
+  field BGCS.Language.AnalyserResult Error
+  field BGCS.Language.AnalyserResult Success
+  field BGCS.Language.AnalyserResult Unrecognised
+  field System.Int32 value__
+class BGCS.Language.CSharp.Analyzers.ClassAnalyzer
+  ctor()
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context)
+class BGCS.Language.CSharp.Analyzers.ClassMemberAnalyzer
+  ctor()
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context)
+class BGCS.Language.CSharp.Analyzers.FieldAnalyser
+  ctor()
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context, System.Collections.Generic.IReadOnlyList<BGCS.Language.KeywordType> modifiers)
+class BGCS.Language.CSharp.Analyzers.MethodAnalyser
+  ctor()
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context, System.Collections.Generic.IReadOnlyList<BGCS.Language.KeywordType> modifiers)
+class BGCS.Language.CSharp.Analyzers.NamespaceAnalyzer
+  ctor()
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context)
+class BGCS.Language.CSharp.Analyzers.UsingAnalyser
+  ctor()
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context)
+class BGCS.Language.CSharp.CSharpParser
+  ctor()
+  ctor(BGCS.Language.ParserOptions options)
+class BGCS.Language.CSharp.Nodes.ClassNode
+  ctor(System.String name, BGCS.Language.KeywordType[] modifiers)
+  ctor(System.String name, BGCS.Language.KeywordType[] modifiers, System.Collections.Generic.List<BGCS.Language.SyntaxNode> children)
+  property BGCS.Language.KeywordType[] Modifiers { get }
+  property System.String Name { get }
+  method System.String ToString()
+class BGCS.Language.CSharp.Nodes.ExpressionNode
+  ctor()
+  method System.String ToString()
+class BGCS.Language.CSharp.Nodes.FieldNode
+  ctor(System.String type, System.String name, BGCS.Language.KeywordType[] modifiers, System.String expression)
+  property System.String Expression { get; set }
+  property BGCS.Language.KeywordType[] Modifiers { get }
+  property System.String Name { get; set }
+  property System.String Type { get; set }
+  method System.String ToString()
+class BGCS.Language.CSharp.Nodes.MethodNode
+  ctor(System.String name, BGCS.Language.KeywordType[] modifiers, System.String[] parameters, System.String returnType)
+  property BGCS.Language.KeywordType[] Modifiers { get }
+  property System.String Name { get }
+  property System.String[] Parameters { get }
+  property System.String ReturnType { get }
+  method System.String ToString()
+class BGCS.Language.CSharp.Nodes.NamespaceNode
+  ctor(System.String namespace)
+  ctor(System.String namespace, System.Collections.Generic.List<BGCS.Language.SyntaxNode> children)
+  property System.String Namespace { get }
+  method System.String ToString()
+class BGCS.Language.CSharp.Nodes.UsingNode
+  ctor(System.String using)
+  property System.String Using { get }
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.CastNode
+  ctor(System.String name)
+  property System.String Name { get }
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.ExpressionAnalyser
+  ctor()
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context)
+class BGCS.Language.Cpp.Analysers.ExpressionNode
+  ctor()
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.FunctionCallNode
+  ctor(System.String name)
+  property System.String Name { get }
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.GroupNode
+  ctor()
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.OperatorNode
+  ctor(System.String name)
+  property System.String Name { get }
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.TypeNode
+  ctor(System.String name)
+  property System.String Name { get }
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.ValueNode
+  ctor(System.String value, BGCS.Language.LiteralType type, BGCS.NumberType numberType)
+  property BGCS.NumberType NumberType { get }
+  property BGCS.Language.LiteralType Type { get }
+  property System.String Value { get }
+  method System.String ToString()
+class BGCS.Language.Cpp.Analysers.VariableNode
+  ctor(System.String name)
+  property System.String Name { get }
+  method System.String ToString()
+class BGCS.Language.Cpp.CppMacroParser
+  field BGCS.Language.Cpp.CppMacroParser Default
+  ctor()
+  ctor(BGCS.Language.ParserOptions options)
+class BGCS.Language.Cpp.CppParser
+  ctor()
+  ctor(BGCS.Language.ParserOptions options)
+class BGCS.Language.DiagnosticBag
+  ctor()
+  property System.Boolean HasErrors { get }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Language.DiagnosticMessage> Messages { get }
+  method System.String ToString()
+  method System.Void CopyTo(BGCS.Language.DiagnosticBag dest)
+  method System.Void Error(System.String message, System.Nullable<BGCS.Language.SourceLocation> location)
+  method System.Void Info(System.String message, System.Nullable<BGCS.Language.SourceLocation> location)
+  method System.Void Log(BGCS.Language.DiagnosticMessage message)
+  method System.Void Warning(System.String message, System.Nullable<BGCS.Language.SourceLocation> location)
+struct BGCS.Language.DiagnosticMessage
+  field BGCS.Language.SourceLocation Location
+  field System.String Text
+  field BGCS.Language.LogMessageType Type
+  ctor(BGCS.Language.LogMessageType type, System.String text, BGCS.Language.SourceLocation location)
+  method System.String ToString()
+interface BGCS.Language.IMemberSyntaxAnalyzer
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context, System.Collections.Generic.IReadOnlyList<BGCS.Language.KeywordType> modifiers)
+interface BGCS.Language.ISyntaxAnalyzer
+  method BGCS.Language.AnalyserResult Analyze(BGCS.Language.ParserContext context)
+enum BGCS.Language.KeywordType
+  field BGCS.Language.KeywordType Class
+  field BGCS.Language.KeywordType Const
+  field BGCS.Language.KeywordType Else
+  field BGCS.Language.KeywordType False
+  field BGCS.Language.KeywordType For
+  field BGCS.Language.KeywordType Foreach
+  field BGCS.Language.KeywordType If
+  field BGCS.Language.KeywordType Internal
+  field BGCS.Language.KeywordType Namespace
+  field BGCS.Language.KeywordType Private
+  field BGCS.Language.KeywordType Protected
+  field BGCS.Language.KeywordType Public
+  field BGCS.Language.KeywordType Readonly
+  field BGCS.Language.KeywordType Return
+  field BGCS.Language.KeywordType Static
+  field BGCS.Language.KeywordType Struct
+  field BGCS.Language.KeywordType True
+  field BGCS.Language.KeywordType Unknown
+  field BGCS.Language.KeywordType Unsafe
+  field BGCS.Language.KeywordType Using
+  field BGCS.Language.KeywordType Var
+  field BGCS.Language.KeywordType Void
+  field BGCS.Language.KeywordType While
+  field System.UInt16 value__
+class BGCS.Language.Lexer
+  ctor()
+  method BGCS.Language.LexerResult Tokenize(System.String input, System.String filename)
+  method System.Boolean IsKeyword(System.ReadOnlySpan<System.Char> span, BGCS.Language.KeywordType& keywordType)
+  method System.Boolean IsKeyword(System.ReadOnlySpan<System.Char> input, System.Int32 index, System.Int32& length)
+  method System.Boolean IsNewLine(System.ReadOnlySpan<System.Char> input, System.Int32 index)
+  method System.Boolean IsNewLineOrEof(System.ReadOnlySpan<System.Char> input, System.Int32 index, System.Int32& length)
+  method System.Boolean IsNumber(System.ReadOnlySpan<System.Char> input, BGCS.NumberType& type, BGCS.Language.NumberParseOptions options)
+  method System.Boolean IsOperator(System.ReadOnlySpan<System.Char> input, System.Int32 index, System.Int32& length)
+  method System.Boolean IsPunctuation(System.ReadOnlySpan<System.Char> input, System.Int32 index, System.Int32& length)
+  method System.Boolean IsWhiteSpaceOrNewLine(System.ReadOnlySpan<System.Char> input, System.Int32 index, System.Int32& length, System.Boolean& isNewLine)
+  method System.Void Trim(System.ReadOnlySpan<System.Char> input, System.Int32& start, System.Int32& length)
+class BGCS.Language.LexerResult
+  ctor(BGCS.Language.DiagnosticBag diagnostics, System.Collections.Generic.List<BGCS.Language.Token> tokens)
+  property BGCS.Language.DiagnosticBag Diagnostics { get }
+  property System.Collections.Generic.List<BGCS.Language.Token> Tokens { get }
+enum BGCS.Language.LiteralType
+  field BGCS.Language.LiteralType Char
+  field BGCS.Language.LiteralType Number
+  field BGCS.Language.LiteralType String
+  field BGCS.Language.LiteralType Unknown
+  field System.Byte value__
+enum BGCS.Language.LogMessageType
+  field BGCS.Language.LogMessageType Error
+  field BGCS.Language.LogMessageType Information
+  field BGCS.Language.LogMessageType Warning
+  field System.Int32 value__
+enum BGCS.Language.NumberParseOptions
+  field BGCS.Language.NumberParseOptions AllowAll
+  field BGCS.Language.NumberParseOptions AllowBinary
+  field BGCS.Language.NumberParseOptions AllowDecimal
+  field BGCS.Language.NumberParseOptions AllowExponent
+  field BGCS.Language.NumberParseOptions AllowHex
+  field BGCS.Language.NumberParseOptions AllowNegative
+  field BGCS.Language.NumberParseOptions AllowPositive
+  field BGCS.Language.NumberParseOptions AllowSuffix
+  field BGCS.Language.NumberParseOptions None
+  field System.Int32 value__
+class BGCS.Language.ParserBase
+  ctor(BGCS.Language.ParserOptions options)
+  method BGCS.Language.ParserResult Parse(System.String input, System.String filename)
+  method System.Void AddAnalyser(BGCS.Language.ISyntaxAnalyzer analyzer)
+class BGCS.Language.ParserContext
+  field BGCS.Language.DiagnosticBag diagnostics
+  ctor(BGCS.Language.RootNode root, BGCS.Language.ParserOptions options, System.Collections.Generic.IList<BGCS.Language.ISyntaxAnalyzer> analyzers, System.Collections.Generic.IList<BGCS.Language.Token> tokens, BGCS.Language.DiagnosticBag diagnostics)
+  property BGCS.Language.SyntaxNode Current { get }
+  property BGCS.Language.Token CurrentToken { get }
+  property System.Int32 CurrentTokenIndex { get }
+  property BGCS.Language.DiagnosticBag Diagnostics { get }
+  property System.Boolean HasError { get }
+  property System.Boolean IsEnd { get }
+  property BGCS.Language.Token Item { get }
+  property BGCS.Language.SyntaxNode Last { get }
+  property BGCS.Language.SyntaxNode Root { get }
+  property System.Collections.Generic.Stack<BGCS.Language.SyntaxNode> ScopeStack { get }
+  property System.Int32 TokenCount { get }
+  method BGCS.Language.AnalyserResult AnalyseFileScoped(BGCS.Language.SyntaxNode scope)
+  method BGCS.Language.AnalyserResult AnalyseScoped(BGCS.Language.SyntaxNode scope)
+  method BGCS.Language.AnalyserResult AnalyzeCurrent()
+  method BGCS.Language.SyntaxNode PushScope(BGCS.Language.SyntaxNode node)
+  method BGCS.Language.Token Seek(System.Int32 offset)
+  method System.Boolean CurrentCompare(System.Func<BGCS.Language.Token,System.Boolean> compare)
+  method System.Boolean InBounds(System.Int32 index)
+  method System.Boolean PopScope(System.Nullable<BGCS.Language.SourceLocation> location)
+  method System.Boolean SeekCompare(System.Int32 offset, System.Func<BGCS.Language.Token,System.Boolean> compare)
+  method System.Boolean SeekInBounds(System.Int32 offset)
+  method System.Boolean TryMoveNext(BGCS.Language.Token& current)
+  method System.Void AppendNode(BGCS.Language.SyntaxNode node)
+  method System.Void MoveBack()
+  method System.Void MoveNext()
+  method System.Void MoveTo(System.Int32 index)
+  method System.Void Offset(System.Int32 offset)
+class BGCS.Language.ParserOptions
+  field BGCS.Language.ParserOptions Default
+  ctor()
+  property System.Boolean ParseComments { get; set }
+class BGCS.Language.ParserResult
+  ctor(BGCS.Language.SyntaxTree tree, BGCS.Language.DiagnosticBag diagnostics)
+  property BGCS.Language.DiagnosticBag Diagnostics { get }
+  property BGCS.Language.SyntaxTree SyntaxTree { get }
+class BGCS.Language.Preprocessor
+  ctor()
+  method System.Boolean IsNewLineOrEof(System.ReadOnlySpan<System.Char> input, System.Int32 index, System.Int32& length)
+  method System.String Process(System.String text, System.String filename)
+class BGCS.Language.RootNode
+  ctor()
+  ctor(System.Collections.Generic.List<BGCS.Language.SyntaxNode> children)
+  method System.String ToString()
+struct BGCS.Language.SourceLocation
+  field System.Int32 Column
+  field System.String File
+  field System.Int32 Line
+  field System.Int32 Offset
+  ctor(System.String file, System.Int32 offset, System.Int32 line, System.Int32 column)
+  method System.String ToString()
+class BGCS.Language.SyntaxNode
+  ctor()
+  ctor(System.Collections.Generic.List<BGCS.Language.SyntaxNode> children)
+  property System.Collections.Generic.IReadOnlyList<BGCS.Language.SyntaxNode> Children { get }
+  method BGCS.Language.SyntaxNode GetChild(System.Int32 index)
+  method System.Void AddChild(BGCS.Language.SyntaxNode node)
+  method System.Void BuildDebugTree(System.Text.StringBuilder sb, System.Int32& level)
+  method System.Void Contains(BGCS.Language.SyntaxNode node)
+  method System.Void RemoveChild(BGCS.Language.SyntaxNode node)
+  method System.Void RemoveChildAt(System.Int32 index)
+class BGCS.Language.SyntaxTree
+  ctor(BGCS.Language.RootNode root)
+  property System.Collections.Generic.IReadOnlyList<BGCS.Language.SyntaxNode> Nodes { get }
+  method System.String BuildDebugTree()
+struct BGCS.Language.Token
+  field BGCS.Language.KeywordType KeywordType
+  field System.Int32 Length
+  field BGCS.Language.LiteralType LiteralType
+  field BGCS.Language.SourceLocation Location
+  field BGCS.NumberType NumberType
+  field System.String Source
+  field System.Int32 Start
+  field BGCS.Language.TokenType Type
+  ctor(BGCS.Language.TokenType type, System.Int32 start, System.Int32 length, System.String source)
+  ctor(BGCS.Language.TokenType type, System.Int32 start, System.Int32 length, System.String source, BGCS.Language.SourceLocation location)
+  ctor(System.Int32 start, System.Int32 length, System.String source, BGCS.Language.SourceLocation location, BGCS.Language.KeywordType keywordType)
+  ctor(System.Int32 start, System.Int32 length, System.String source, BGCS.Language.SourceLocation location, BGCS.Language.LiteralType literalType)
+  ctor(System.Int32 start, System.Int32 length, System.String source, BGCS.Language.SourceLocation location, BGCS.NumberType numberType)
+  property System.Boolean IsComment { get }
+  property System.Boolean IsIdentifier { get }
+  property System.Boolean IsKeyword { get }
+  property System.Boolean IsLiteral { get }
+  property System.Boolean IsOperator { get }
+  property System.Boolean IsPunctuation { get }
+  property System.ReadOnlySpan<System.Char> Span { get }
+  method System.Boolean Equals(BGCS.Language.Token other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean IsChar(System.Char other)
+  method System.Boolean IsString(System.String other)
+  method System.Int32 GetHashCode()
+  method System.String AsString()
+  method System.String ToString()
+enum BGCS.Language.TokenType
+  field BGCS.Language.TokenType Comment
+  field BGCS.Language.TokenType Identifier
+  field BGCS.Language.TokenType Keyword
+  field BGCS.Language.TokenType Literal
+  field BGCS.Language.TokenType Operator
+  field BGCS.Language.TokenType Punctuation
+  field BGCS.Language.TokenType Unknown
+  field System.Byte value__

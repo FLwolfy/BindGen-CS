@@ -1,0 +1,491 @@
+class BGCS.Cpp2C.Adapters.CppAdapterContract
+  field System.Int32 CurrentVersion
+class BGCS.Cpp2C.Adapters.CppAdapterRegistry
+  ctor()
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Adapters.ICppCallableAdapter> CallableAdapters { get }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Adapters.ICppTypeAdapter> TypeAdapters { get }
+  method System.Void Register(BGCS.Cpp2C.Adapters.ICppCallableAdapter adapter)
+  method System.Void Register(BGCS.Cpp2C.Adapters.ICppTypeAdapter adapter)
+class BGCS.Cpp2C.Adapters.CppCallableAdapterContext
+  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration, BGCS.CppAst.Model.Declarations.CppClass DeclaringType, System.String DefaultExportName)
+  property BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration { get; set }
+  property BGCS.CppAst.Model.Declarations.CppClass DeclaringType { get; set }
+  property System.String DefaultExportName { get; set }
+  method BGCS.Cpp2C.Adapters.CppCallableAdapterContext <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppCallableAdapterContext other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.Cpp2C.Cpp2CGeneratorConfig& Configuration, BGCS.CppAst.Model.Declarations.CppClass& DeclaringType, System.String& DefaultExportName)
+class BGCS.Cpp2C.Adapters.CppCallableAdapterPlan
+  ctor(System.String AdapterName, System.String ExportName, System.Boolean Exclude)
+  property System.String AdapterName { get; set }
+  property System.Boolean Exclude { get; set }
+  property System.String ExportName { get; set }
+  method BGCS.Cpp2C.Adapters.CppCallableAdapterPlan <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppCallableAdapterPlan other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& AdapterName, System.String& ExportName, System.Boolean& Exclude)
+class BGCS.Cpp2C.Adapters.CppTypeAdapterContext
+  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration, BGCS.Cpp2C.Adapters.CppTypeAdapterUse Use)
+  property BGCS.Cpp2C.Cpp2CGeneratorConfig Configuration { get; set }
+  property BGCS.Cpp2C.Adapters.CppTypeAdapterUse Use { get; set }
+  method BGCS.Cpp2C.Adapters.CppTypeAdapterContext <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppTypeAdapterContext other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.Cpp2C.Cpp2CGeneratorConfig& Configuration, BGCS.Cpp2C.Adapters.CppTypeAdapterUse& Use)
+enum BGCS.Cpp2C.Adapters.CppTypeAdapterKind
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Array
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind ChronoDuration
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind ChronoTimePoint
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Custom
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Expected
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Map
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Optional
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Path
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Set
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind SharedOwner
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Span
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind UniqueOwner
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Utf8String
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Variant
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterKind Vector
+  field System.Int32 value__
+class BGCS.Cpp2C.Adapters.CppTypeAdapterPlan
+  ctor(System.String AdapterName, BGCS.Cpp2C.Adapters.CppTypeAdapterKind Kind, System.String CAbiType, BGCS.Intermediate.MarshallingStrategy Marshalling, BGCS.Intermediate.BindingOwnership Ownership, System.Boolean RequiresCleanup, System.String CleanupFunction)
+  property System.String AdapterName { get; set }
+  property System.String CAbiType { get; set }
+  property System.String CleanupFunction { get; set }
+  property BGCS.Cpp2C.Adapters.CppTypeAdapterKind Kind { get; set }
+  property BGCS.Intermediate.MarshallingStrategy Marshalling { get; set }
+  property BGCS.Intermediate.BindingOwnership Ownership { get; set }
+  property System.Boolean RequiresCleanup { get; set }
+  method BGCS.Cpp2C.Adapters.CppTypeAdapterPlan <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Adapters.CppTypeAdapterPlan other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& AdapterName, BGCS.Cpp2C.Adapters.CppTypeAdapterKind& Kind, System.String& CAbiType, BGCS.Intermediate.MarshallingStrategy& Marshalling, BGCS.Intermediate.BindingOwnership& Ownership, System.Boolean& RequiresCleanup, System.String& CleanupFunction)
+enum BGCS.Cpp2C.Adapters.CppTypeAdapterUse
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterUse Field
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterUse Parameter
+  field BGCS.Cpp2C.Adapters.CppTypeAdapterUse Return
+  field System.Int32 value__
+interface BGCS.Cpp2C.Adapters.ICppCallableAdapter
+  property System.String Name { get }
+  property System.Int32 Priority { get }
+  method BGCS.Cpp2C.Adapters.CppCallableAdapterPlan CreatePlan(BGCS.CppAst.Model.Declarations.CppFunction function, BGCS.Cpp2C.Adapters.CppCallableAdapterContext context)
+  method System.Boolean CanAdapt(BGCS.CppAst.Model.Declarations.CppFunction function, BGCS.Cpp2C.Adapters.CppCallableAdapterContext context)
+interface BGCS.Cpp2C.Adapters.ICppTypeAdapter
+  property System.String Name { get }
+  property System.Int32 Priority { get }
+  method BGCS.Cpp2C.Adapters.CppTypeAdapterPlan CreatePlan(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Adapters.CppTypeAdapterContext context)
+  method System.Boolean CanAdapt(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Adapters.CppTypeAdapterContext context)
+class BGCS.Cpp2C.BaseConfig
+  ctor()
+  property System.Collections.Generic.HashSet<System.String> IgnoredProperties { get; set }
+  property System.String Url { get; set }
+class BGCS.Cpp2C.BaseGenerator
+  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig settings)
+  property System.Collections.Generic.IReadOnlyList<BGCS.Core.Logging.LogMessage> Messages { get }
+  method System.Void DisplayMessages()
+  method System.Void Log(BGCS.Core.Logging.LogSeverity severtiy, System.String message)
+  method System.Void LogCritical(System.String message)
+  method System.Void LogDebug(System.String message)
+  method System.Void LogError(System.String message)
+  method System.Void LogInfo(System.String message)
+  method System.Void LogTrace(System.String message)
+  method System.Void LogWarn(System.String message)
+class BGCS.Cpp2C.Build.CMakeNativeBuildProvider
+  ctor(System.String cmakePath, System.String compilerPath)
+  property System.String Name { get }
+  method BGCS.Cpp2C.Build.NativeBuildPipeline CreatePipeline(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+class BGCS.Cpp2C.Build.ClangClNativeBuildProvider
+  ctor(System.String compilerPath)
+  property System.String Name { get }
+  method BGCS.Cpp2C.Build.NativeBuildPipeline CreatePipeline(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+class BGCS.Cpp2C.Build.ClangNativeBuildProvider
+  ctor(System.String compilerPath)
+  property System.String Name { get }
+  method BGCS.Cpp2C.Build.NativeBuildPipeline CreatePipeline(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+  method BGCS.Cpp2C.Build.NativeBuildPlan CreatePlan(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+class BGCS.Cpp2C.Build.CppBridgeBuildManifest
+  ctor(System.Int32 ManifestVersion, System.String TargetIdentifier, System.String TargetTriple, System.String TargetSysRoot, System.String CompilerPath, System.String LanguageStandard, System.String LibraryName, System.Collections.Generic.IReadOnlyList<System.String> SourceFiles, System.Collections.Generic.IReadOnlyList<System.String> PublicHeaderFiles, System.Collections.Generic.IReadOnlyList<System.String> OriginalHeaderFiles, System.Collections.Generic.IReadOnlyList<System.String> IncludeDirectories, System.Collections.Generic.IReadOnlyList<System.String> SystemIncludeDirectories, System.Collections.Generic.IReadOnlyList<System.String> Defines, System.Collections.Generic.IReadOnlyList<System.String> CompilerArguments, System.Collections.Generic.IReadOnlyList<System.String> LibrarySearchDirectories, System.Collections.Generic.IReadOnlyList<System.String> LinkLibraries, System.Collections.Generic.IReadOnlyList<System.String> LinkerArguments)
+  property System.Collections.Generic.IReadOnlyList<System.String> CompilerArguments { get; set }
+  property System.String CompilerPath { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> Defines { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> IncludeDirectories { get; set }
+  property System.String LanguageStandard { get; set }
+  property System.String LibraryName { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> LibrarySearchDirectories { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> LinkLibraries { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> LinkerArguments { get; set }
+  property System.Int32 ManifestVersion { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> OriginalHeaderFiles { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> PublicHeaderFiles { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> SourceFiles { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> SystemIncludeDirectories { get; set }
+  property System.String TargetIdentifier { get; set }
+  property System.String TargetSysRoot { get; set }
+  property System.String TargetTriple { get; set }
+  method BGCS.Cpp2C.Build.CppBridgeBuildManifest <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.CppBridgeBuildManifest other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.Int32& ManifestVersion, System.String& TargetIdentifier, System.String& TargetTriple, System.String& TargetSysRoot, System.String& CompilerPath, System.String& LanguageStandard, System.String& LibraryName, System.Collections.Generic.IReadOnlyList<System.String>& SourceFiles, System.Collections.Generic.IReadOnlyList<System.String>& PublicHeaderFiles, System.Collections.Generic.IReadOnlyList<System.String>& OriginalHeaderFiles, System.Collections.Generic.IReadOnlyList<System.String>& IncludeDirectories, System.Collections.Generic.IReadOnlyList<System.String>& SystemIncludeDirectories, System.Collections.Generic.IReadOnlyList<System.String>& Defines, System.Collections.Generic.IReadOnlyList<System.String>& CompilerArguments, System.Collections.Generic.IReadOnlyList<System.String>& LibrarySearchDirectories, System.Collections.Generic.IReadOnlyList<System.String>& LinkLibraries, System.Collections.Generic.IReadOnlyList<System.String>& LinkerArguments)
+class BGCS.Cpp2C.Build.CppBridgeBuildManifestEmitter
+  field System.Int32 CurrentManifestVersion
+  method System.String Emit(BGCS.Cpp2C.Cpp2CGeneratorConfig config, System.Collections.Generic.IReadOnlyList<System.String> originalHeaders, System.String outputPath)
+class BGCS.Cpp2C.Build.CppBridgeBuildManifestSerializer
+  method BGCS.Cpp2C.Build.CppBridgeBuildManifest Load(System.String path)
+interface BGCS.Cpp2C.Build.INativeBuildPipelineProvider
+  property System.String Name { get }
+  method BGCS.Cpp2C.Build.NativeBuildPipeline CreatePipeline(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+interface BGCS.Cpp2C.Build.INativeBuildProvider
+  property System.String Name { get }
+  method BGCS.Cpp2C.Build.NativeBuildPlan CreatePlan(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+class BGCS.Cpp2C.Build.MSBuildNativeBuildProvider
+  ctor(System.String msbuildPath)
+  property System.String Name { get }
+  method BGCS.Cpp2C.Build.NativeBuildPipeline CreatePipeline(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+class BGCS.Cpp2C.Build.MesonNativeBuildProvider
+  ctor(System.String mesonPath, System.String compilerPath)
+  property System.String Name { get }
+  method BGCS.Cpp2C.Build.NativeBuildPipeline CreatePipeline(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String outputPath)
+class BGCS.Cpp2C.Build.NativeAssetEntry
+  ctor(System.String RuntimeIdentifier, System.String TargetIdentifier, System.String Path, System.String Sha256)
+  property System.String Path { get; set }
+  property System.String RuntimeIdentifier { get; set }
+  property System.String Sha256 { get; set }
+  property System.String TargetIdentifier { get; set }
+  method BGCS.Cpp2C.Build.NativeAssetEntry <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeAssetEntry other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& RuntimeIdentifier, System.String& TargetIdentifier, System.String& Path, System.String& Sha256)
+class BGCS.Cpp2C.Build.NativeAssetIndex
+  ctor(System.Int32 LayoutVersion, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeAssetEntry> Assets)
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeAssetEntry> Assets { get; set }
+  property System.Int32 LayoutVersion { get; set }
+  method BGCS.Cpp2C.Build.NativeAssetIndex <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeAssetIndex other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.Int32& LayoutVersion, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeAssetEntry>& Assets)
+class BGCS.Cpp2C.Build.NativeAssetLayout
+  field System.Int32 CurrentLayoutVersion
+  field System.String ManifestFileName
+  method BGCS.Cpp2C.Build.NativeAssetLayoutResult Stage(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String nativeBinary, System.String packageRoot)
+  method System.String GetRuntimeIdentifier(System.String targetIdentifier)
+class BGCS.Cpp2C.Build.NativeAssetLayoutResult
+  ctor(System.String RuntimeIdentifier, System.String AssetPath, System.String ManifestPath, System.String Sha256)
+  property System.String AssetPath { get; set }
+  property System.String ManifestPath { get; set }
+  property System.String RuntimeIdentifier { get; set }
+  property System.String Sha256 { get; set }
+  method BGCS.Cpp2C.Build.NativeAssetLayoutResult <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeAssetLayoutResult other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& RuntimeIdentifier, System.String& AssetPath, System.String& ManifestPath, System.String& Sha256)
+class BGCS.Cpp2C.Build.NativeBuildExecutor
+  method BGCS.Cpp2C.Build.NativeBuildPipelineResult Execute(BGCS.Cpp2C.Build.NativeBuildPipeline pipeline, System.TimeSpan timeout)
+  method BGCS.Cpp2C.Build.NativeBuildResult Execute(BGCS.Cpp2C.Build.NativeBuildPlan plan, System.TimeSpan timeout)
+class BGCS.Cpp2C.Build.NativeBuildInputFile
+  ctor(System.String Path, System.String Content)
+  property System.String Content { get; set }
+  property System.String Path { get; set }
+  method BGCS.Cpp2C.Build.NativeBuildInputFile <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeBuildInputFile other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Path, System.String& Content)
+class BGCS.Cpp2C.Build.NativeBuildPipeline
+  ctor(System.String Provider, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildInputFile> InputFiles, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildStep> Steps, System.String OutputFile)
+  property System.Collections.Generic.IReadOnlyList<System.String> Arguments { get }
+  property System.String Executable { get }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildInputFile> InputFiles { get; set }
+  property System.String OutputFile { get; set }
+  property System.String Provider { get; set }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildStep> Steps { get; set }
+  property System.String WorkingDirectory { get }
+  method BGCS.Cpp2C.Build.NativeBuildPipeline <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeBuildPipeline other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Provider, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildInputFile>& InputFiles, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildStep>& Steps, System.String& OutputFile)
+class BGCS.Cpp2C.Build.NativeBuildPipelineResult
+  ctor(System.String Provider, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildStepResult> Steps, System.Boolean TimedOut, System.String OutputFile)
+  property System.String OutputFile { get; set }
+  property System.String Provider { get; set }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildStepResult> Steps { get; set }
+  property System.Boolean Success { get }
+  property System.Boolean TimedOut { get; set }
+  method BGCS.Cpp2C.Build.NativeBuildPipelineResult <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeBuildPipelineResult other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Provider, System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.Build.NativeBuildStepResult>& Steps, System.Boolean& TimedOut, System.String& OutputFile)
+class BGCS.Cpp2C.Build.NativeBuildPlan
+  ctor(System.String Provider, System.String Executable, System.Collections.Generic.IReadOnlyList<System.String> Arguments, System.String WorkingDirectory, System.String OutputFile)
+  property System.Collections.Generic.IReadOnlyList<System.String> Arguments { get; set }
+  property System.String Executable { get; set }
+  property System.String OutputFile { get; set }
+  property System.String Provider { get; set }
+  property System.String WorkingDirectory { get; set }
+  method BGCS.Cpp2C.Build.NativeBuildPlan <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeBuildPlan other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Provider, System.String& Executable, System.Collections.Generic.IReadOnlyList<System.String>& Arguments, System.String& WorkingDirectory, System.String& OutputFile)
+class BGCS.Cpp2C.Build.NativeBuildResult
+  ctor(System.Int32 ExitCode, System.String StandardOutput, System.String StandardError, System.Boolean TimedOut, System.String OutputFile)
+  property System.Int32 ExitCode { get; set }
+  property System.String OutputFile { get; set }
+  property System.String StandardError { get; set }
+  property System.String StandardOutput { get; set }
+  property System.Boolean Success { get }
+  property System.Boolean TimedOut { get; set }
+  method BGCS.Cpp2C.Build.NativeBuildResult <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeBuildResult other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.Int32& ExitCode, System.String& StandardOutput, System.String& StandardError, System.Boolean& TimedOut, System.String& OutputFile)
+class BGCS.Cpp2C.Build.NativeBuildStep
+  ctor(System.String Name, System.String Executable, System.Collections.Generic.IReadOnlyList<System.String> Arguments, System.String WorkingDirectory)
+  property System.Collections.Generic.IReadOnlyList<System.String> Arguments { get; set }
+  property System.String Executable { get; set }
+  property System.String Name { get; set }
+  property System.String WorkingDirectory { get; set }
+  method BGCS.Cpp2C.Build.NativeBuildStep <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeBuildStep other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Name, System.String& Executable, System.Collections.Generic.IReadOnlyList<System.String>& Arguments, System.String& WorkingDirectory)
+class BGCS.Cpp2C.Build.NativeBuildStepResult
+  ctor(System.String Name, System.Int32 ExitCode, System.String StandardOutput, System.String StandardError, System.Boolean TimedOut)
+  property System.Int32 ExitCode { get; set }
+  property System.String Name { get; set }
+  property System.String StandardError { get; set }
+  property System.String StandardOutput { get; set }
+  property System.Boolean TimedOut { get; set }
+  method BGCS.Cpp2C.Build.NativeBuildStepResult <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeBuildStepResult other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Name, System.Int32& ExitCode, System.String& StandardOutput, System.String& StandardError, System.Boolean& TimedOut)
+class BGCS.Cpp2C.Build.NativeBuildToolDiscovery
+  method System.String FindClangCl(System.String explicitPath)
+  method System.String FindDumpBin(System.String explicitPath)
+  method System.String FindExecutable(System.String executable, System.String explicitPath)
+  method System.String FindMSBuild(System.String explicitPath)
+class BGCS.Cpp2C.Build.NativeExportInspectionResult
+  ctor(System.String Tool, System.Collections.Generic.IReadOnlyList<System.String> Expected, System.Collections.Generic.IReadOnlyList<System.String> Actual, System.Collections.Generic.IReadOnlyList<System.String> Missing)
+  property System.Collections.Generic.IReadOnlyList<System.String> Actual { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> Expected { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> Missing { get; set }
+  property System.Boolean Success { get }
+  property System.String Tool { get; set }
+  method BGCS.Cpp2C.Build.NativeExportInspectionResult <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Build.NativeExportInspectionResult other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Tool, System.Collections.Generic.IReadOnlyList<System.String>& Expected, System.Collections.Generic.IReadOnlyList<System.String>& Actual, System.Collections.Generic.IReadOnlyList<System.String>& Missing)
+class BGCS.Cpp2C.Build.NativeExportInspector
+  method BGCS.Cpp2C.Build.NativeExportInspectionResult Inspect(BGCS.Cpp2C.Build.CppBridgeBuildManifest manifest, System.String manifestPath, System.String libraryPath, System.String toolPath)
+  method System.Collections.Generic.IReadOnlyList<System.String> ReadExpectedSymbols(System.Collections.Generic.IEnumerable<System.String> headerPaths)
+class BGCS.Cpp2C.ConfigComposer
+  ctor()
+  method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config)
+  method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config, System.String baseDirectory)
+class BGCS.Cpp2C.Configuration.Cpp2CConfigValidator
+  method System.Void Validate(BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+class BGCS.Cpp2C.Cpp2CCodeGenerator
+  ctor(BGCS.Cpp2C.Cpp2CGeneratorConfig settings)
+  property System.Collections.Generic.IReadOnlyList<BGCS.Cpp2C.GenerationStep> GenerationSteps { get }
+  property BGCS.Intermediate.BindingGenerationResult LastResult { get }
+  method BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata GetMetadata()
+  method T GetGenerationStep()
+  method System.Void AddGenerationStep(BGCS.Cpp2C.GenerationStep step)
+  method System.Void AddGenerationStep()
+  method System.Void CopyFrom(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Generate(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.Collections.Generic.List<System.String> headerFiles, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Void Generate(System.Collections.Generic.List<System.String> headerFiles, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Void Generate(System.String headerFile, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Void GenerateConfigured(System.String outputPath)
+  method System.Void LoadMetadata(System.String path)
+  method System.Void OverwriteGenerationStep(BGCS.Cpp2C.GenerationStep newStep)
+  method System.Void Reset()
+  method System.Void SaveMetadata(System.String path)
+class BGCS.Cpp2C.Cpp2CGeneratorConfig
+  field System.Int32 CurrentConfigVersion
+  field BGCS.Cpp2C.Cpp2CGeneratorConfig Default
+  field Newtonsoft.Json.JsonSerializer MergeSerializer
+  field Newtonsoft.Json.JsonSerializerSettings MergeSerializerSettings
+  field Newtonsoft.Json.JsonSerializer Serializer
+  field Newtonsoft.Json.JsonSerializerSettings SerializerSettings
+  ctor()
+  property BGCS.Cpp2C.Adapters.CppAdapterRegistry Adapters { get }
+  property System.Collections.Generic.List<System.String> AdditionalArguments { get; set }
+  property System.Collections.Generic.List<System.String> AllowedHeaders { get; set }
+  property System.Collections.Generic.List<System.String> ArrayTypes { get; set }
+  property BGCS.Cpp2C.BaseConfig BaseConfig { get; set }
+  property System.String BuildManifestFileName { get; set }
+  property System.String CSharpApiName { get; set }
+  property System.String CSharpNamespace { get; set }
+  property System.String CSharpOutputPath { get; set }
+  property System.String CacheDirectory { get; set }
+  property System.Collections.Generic.List<System.String> ChronoDurationTypes { get; set }
+  property System.Collections.Generic.List<System.String> ChronoTimePointTypes { get; set }
+  property System.String CompilerPath { get; set }
+  property System.String ConfigDirectory { get }
+  property System.Int32 ConfigVersion { get; set }
+  property BGCS.Core.Logging.LogSeverity CppLogLevel { get; set }
+  property System.Collections.Generic.List<System.String> Defines { get; set }
+  property System.Boolean EnableIncrementalCache { get; set }
+  property System.Collections.Generic.List<System.String> EntryFiles { get; set }
+  property System.String ErrorSymbolPrefix { get }
+  property System.Collections.Generic.List<System.String> ExpectedTypes { get; set }
+  property System.Collections.Generic.List<System.String> FunctionTemplateInstantiations { get; set }
+  property System.Boolean GenerateBuildManifest { get; set }
+  property System.Boolean GenerateCSharpBindings { get; set }
+  property System.Collections.Generic.List<System.String> IncludeFolders { get; set }
+  property System.String LanguageStandard { get; set }
+  property System.Collections.Generic.List<System.String> LibrarySearchFolders { get; set }
+  property System.Collections.Generic.List<System.String> LinkLibraries { get; set }
+  property System.Collections.Generic.List<System.String> LinkerArguments { get; set }
+  property BGCS.Core.Logging.LogSeverity LogLevel { get; set }
+  property System.Collections.Generic.List<System.String> MapTypes { get; set }
+  property System.String NamePrefix { get; set }
+  property System.String NativeLibraryName { get; set }
+  property System.Collections.Generic.List<System.String> OptionalTypes { get; set }
+  property System.String OutputPath { get; set }
+  property System.Boolean ParseComments { get; set }
+  property System.Boolean ParseMacros { get; set }
+  property System.Boolean ParseSystemIncludes { get; set }
+  property System.Collections.Generic.List<System.String> PathTypes { get; set }
+  property System.Collections.Generic.List<System.String> PluginAssemblies { get; set }
+  property BGCS.Core.Extensibility.BindingPluginRegistry Plugins { get }
+  property BGCS.CppAst.Targeting.CppTarget ResolvedTarget { get }
+  property System.Collections.Generic.List<System.String> SetTypes { get; set }
+  property System.Collections.Generic.List<System.String> SharedPtrTypes { get; set }
+  property System.Collections.Generic.List<System.String> SpanTypes { get; set }
+  property System.Collections.Generic.List<System.String> SystemIncludeFolders { get; set }
+  property BGCS.CppAst.Targeting.CppTargetAbi TargetAbi { get; set }
+  property BGCS.CppAst.Targeting.CppTargetArchitecture TargetArchitecture { get; set }
+  property BGCS.CppAst.Targeting.CppTargetPlatform TargetPlatform { get; set }
+  property System.String TargetSysRoot { get; set }
+  property System.String TargetTriple { get; set }
+  property System.Collections.Generic.List<System.String> TemplateInstantiations { get; set }
+  property System.Collections.Generic.List<System.String> UniquePtrTypes { get; set }
+  property System.Collections.Generic.List<System.String> Utf8StringTypes { get; set }
+  property System.Collections.Generic.List<System.String> VariantTypes { get; set }
+  property System.Collections.Generic.List<System.String> VectorTypes { get; set }
+  property System.Collections.Generic.List<System.String> VirtualCallbackInterfaces { get; set }
+  method BGCS.Cpp2C.Adapters.CppCallableAdapterPlan ResolveCallableAdapter(BGCS.CppAst.Model.Declarations.CppClass declaringType, BGCS.CppAst.Model.Declarations.CppFunction function, System.String defaultExportName)
+  method BGCS.Cpp2C.Adapters.CppTypeAdapterPlan ResolveTypeAdapter(BGCS.CppAst.Model.Types.CppType type, BGCS.Cpp2C.Adapters.CppTypeAdapterUse use)
+  method BGCS.Cpp2C.Cpp2CGeneratorConfig Load(System.String file, BGCS.Cpp2C.IConfigComposer composer)
+  method System.Boolean IsArrayType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsBlittableBridgeType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsCallableExcluded(BGCS.CppAst.Model.Declarations.CppClass declaringType, BGCS.CppAst.Model.Declarations.CppFunction function, System.String defaultExportName)
+  method System.Boolean IsChronoDurationType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsChronoTimePointType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsExpectedType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsFunctionPointerType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsMapType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsOptionalType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsPathType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsSetType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsSharedPtrType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsSpanType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsUniquePtrType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsUtf8StringType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsVariantType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsVectorType(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean TryGetTemplateElementType(BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Types.CppType& elementType)
+  method System.Int64 GetArrayElementCount(BGCS.CppAst.Model.Types.CppType type)
+  method System.Collections.Generic.IReadOnlyList<BGCS.CppAst.Model.Types.CppType> GetTemplateTypeArguments(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetCFunctionName(BGCS.CppAst.Model.Declarations.CppClass declaringType, BGCS.CppAst.Model.Declarations.CppFunction function, System.String defaultExportName)
+  method System.String GetCFunctionName(BGCS.CppAst.Model.Declarations.CppFunction cppFunction)
+  method System.String GetCType(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetCTypeName(BGCS.CppAst.Model.Declarations.CppClass c)
+  method System.String GetCTypeName(BGCS.CppAst.Model.Declarations.CppEnum cppEnum)
+  method System.String GetOpaqueValueHolderName(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetSharedPtrHolderName(BGCS.CppAst.Model.Types.CppType type)
+  method System.Void Save(System.String path)
+class BGCS.Cpp2C.Emission.CBridgeEmitter
+  ctor()
+  property System.String Name { get }
+  method System.Collections.Generic.IReadOnlyList<System.String> Emit(BGCS.Intermediate.BindingModule module, BGCS.Emission.EmissionContext context)
+class BGCS.Cpp2C.GenerationStep
+  ctor(BGCS.Cpp2C.Cpp2CCodeGenerator generator, BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+  property System.Boolean Enabled { get; set }
+  property System.String Name { get }
+  method T GetGenerationStep()
+  method System.Void Configure(BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+  method System.Void CopyFromMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void CopyToMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Generate(BGCS.Core.FileSet files, BGCS.Cpp2C.ParseResult result, System.String outputPath, BGCS.Cpp2C.Cpp2CGeneratorConfig config, BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Reset()
+class BGCS.Cpp2C.GenerationSteps.ClassGenerationStep
+  ctor(BGCS.Cpp2C.Cpp2CCodeGenerator generator, BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+  property System.String Name { get }
+  method System.Void Configure(BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+  method System.Void CopyFromMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void CopyToMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Generate(BGCS.Core.FileSet files, BGCS.Cpp2C.ParseResult result, System.String outputPath, BGCS.Cpp2C.Cpp2CGeneratorConfig config, BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Reset()
+class BGCS.Cpp2C.GenerationSteps.EnumGenerationStep
+  ctor(BGCS.Cpp2C.Cpp2CCodeGenerator generator, BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+  property System.String Name { get }
+  method System.Void Configure(BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+  method System.Void CopyFromMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void CopyToMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Generate(BGCS.Core.FileSet files, BGCS.Cpp2C.ParseResult result, System.String outputPath, BGCS.Cpp2C.Cpp2CGeneratorConfig config, BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Reset()
+interface BGCS.Cpp2C.IConfigComposer
+  method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config)
+  method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config, System.String baseDirectory)
+interface BGCS.Cpp2C.IGenerationStep
+  property System.Boolean Enabled { get; set }
+  property System.String Name { get }
+  method T GetGenerationStep()
+  method System.Void Configure(BGCS.Cpp2C.Cpp2CGeneratorConfig config)
+  method System.Void CopyFromMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void CopyToMetadata(BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Generate(BGCS.Core.FileSet files, BGCS.Cpp2C.ParseResult result, System.String outputPath, BGCS.Cpp2C.Cpp2CGeneratorConfig config, BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
+  method System.Void Reset()
+struct BGCS.Cpp2C.IncludeBuilder
+  ctor()
+  method BGCS.Cpp2C.IncludeBuilder Create()
+  method BGCS.Cpp2C.IncludeBuilder& AddInclude(System.String include)
+  method BGCS.Cpp2C.IncludeBuilder& AddSystemInclude(System.String include)
+  method System.String Build()
+class BGCS.Cpp2C.Metadata.CFunction
+  ctor(System.String exportedName, System.String friendlyName, System.String comment)
+  property System.String Comment { get; set }
+  property System.String ExportedName { get; set }
+  property System.String FriendlyName { get; set }
+class BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata
+  ctor()
+  property System.Collections.Generic.List<BGCS.Cpp2C.Metadata.CFunction> Functions { get }
+class BGCS.Cpp2C.ParseResult
+  ctor(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.Collections.Generic.IReadOnlyList<System.String> entryFiles)
+  property BGCS.CppAst.Model.Metadata.CppCompilation Compilation { get; set }
+  property System.Collections.Generic.IReadOnlyList<System.String> EntryFiles { get }

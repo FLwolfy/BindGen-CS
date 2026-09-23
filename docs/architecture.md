@@ -2,7 +2,7 @@
 
 [简体中文](architecture.cn.md) | [Documentation index](README.md) | [Capability matrix](capabilities.md)
 
-This document distinguishes the current implementation from the target architecture. They do not completely overlap: shared Binding IR, analysis, and emitter contracts exist, while primary C# generation still emits through compatibility `GenerationStep` implementations. Directory names are not a substitute for the actual data flow.
+The primary C# generator uses shared Binding IR exclusively. Pre-release compatibility emitters and old configuration migration were removed; architecture claims follow the actual data flow.
 
 ## Current data flow
 
@@ -18,10 +18,7 @@ CLI / CsCodeGenerator / BindingGenerator
           ├─ DeclarationGraph
           ├─ BindingModuleAnalyzer → BindingModule
           ├─ StrictSafetyAnalyzer
-          ├─ CSharpEmissionBackend
-          │    ├─ Compatibility → AstGenerationStepEmitter
-          │    │                    └─ GenerationStep implementations
-          │    └─ IntermediateRepresentation → CSharpEmitter(BindingModule)
+          ├─ CSharpEmitter(BindingModule)
           ├─ post-patch / SingleFile / optional Runtime
           └─ GeneratedOutputTransaction.commit
 ```
@@ -29,8 +26,8 @@ CLI / CsCodeGenerator / BindingGenerator
 Important facts:
 
 - `BindingModule` is a real analysis result used by structured results, safety diagnostics, and the new emitter API.
-- `CSharpEmitter` is IR-only. Configured generation can select it explicitly through `CSharpEmissionBackend.IntermediateRepresentation`; `Compatibility` remains the default and calls the separately named `AstGenerationStepEmitter`.
-- The IR-native path carries constants, aliases, delegates, opaque handles, enum underlying types, anonymous/nested records, bitfields, and DllImport/LibraryImport/function-table metadata. It now generates and warning-free compiles the raw ABI for miniaudio, SDL3, cimgui, cimguizmo, and bgfx. Friendly overload parity and every legacy public-API semantic are not complete, so the default-path migration is still open.
+- `CSharpEmitter` is IR-only and is the sole configured C# output path.
+- The IR-native path carries constants, aliases, delegates, opaque handles, enum underlying types, anonymous/nested records, bitfields, all import modes, and public raw/string/span/ref/out friendly overloads.
 - The IR-native C# emitter validates lossless capability before writing and returns structured `BGCSCS001` diagnostics from configured generation for semantics it cannot preserve. It never falls back silently and failed emission leaves last-good output intact. Opaque storage whose fields are unavailable may be used through pointers, but by-value calls fail because size/alignment alone cannot prove platform ABI classification.
 - C++ bridging has its own analyzer and `CBridgeEmitter.EmitAst` path and also returns a `BindingModule`; it shares contracts with C# without every emission path being IR-only.
 - C++ bridge output includes an optional versioned build manifest. `INativeBuildPipelineProvider` converts it into shell-independent steps. Built-ins cover Clang/GNU, clang-cl, CMake, Meson, and MSBuild; binary export inspection uses `nm` or `dumpbin`.
@@ -46,7 +43,7 @@ Configuration → Parsing → Analysis → immutable BindingModule
                             Transactional Output
 ```
 
-In the target state, emitters do not traverse mutable Clang AST state or depend on legacy generator metadata. The current codebase has the contracts and part of the emitter implementation, but migration is not complete.
+The C# target state is implemented: its emitter does not traverse mutable Clang AST state. C++ bridge generation still has an explicit AST-specific lowering boundary for constructs not yet represented by shared IR.
 
 ## Dependency rules
 
@@ -69,7 +66,7 @@ BGCS.Intermediate depends on no other BGCS assembly
 
 ### Facade
 
-`CsCodeGenerator` preserves the compatibility API; `BGCS.Facade.BindingGenerator` returns `BindingGenerationResult`. The facade owns arguments and use-case entry points and should not accumulate more AST traversal or output composition.
+`CsCodeGenerator` is the embeddable generator API; `BGCS.Facade.BindingGenerator` returns `BindingGenerationResult`. The facade owns arguments and use-case entry points and should not accumulate AST traversal or output composition.
 
 ### Configuration
 
@@ -104,11 +101,11 @@ Analyzers do not create final output files.
 
 `BGCS.Intermediate` is a dependency-free contract package containing `BindingModule`, types/functions/fields/parameters, `MarshallingPlan`, diagnostics, `IBindingEmitter`, and `EmissionContext`.
 
-It is both a usable analysis result and the target model for legacy-emission migration. The existence of IR must not be confused with every emitter already being fully IR-native.
+It is both a usable analysis result and the only input to C# emission. The C++ bridge retains a separate, explicit AST-specific lowering boundary.
 
 ### Emission
 
-- `CSharpEmitter`: IR-only `Emit` plus lossless-capability validation. `AstGenerationStepEmitter` owns the remaining compatibility path so parser-specific types cannot leak back into `CSharpEmitter`.
+- `CSharpEmitter`: the sole configured C# emitter, with IR-native `Emit`, friendly lowering, and lossless-capability validation.
 - `RuntimeEmitter`: emits standalone runtime contracts from a module.
 - `SingleFileComposer`: deterministic syntax-tree composition through Roslyn.
 - `CBridgeEmitter`: emits C++ to C wrappers and currently still consumes AST-specific generation data.
@@ -133,15 +130,9 @@ Configured C and C++ generation use an immutable SHA-256 output cache. The key i
 
 `GeneratedOutputTransaction` / `OutputDirectoryTransaction` generate into staging directories. Final output is replaced only after generation and patching succeed, preserving last-good bindings on failure.
 
-## Migration completion criteria
+## Completion criteria
 
-Primary C# generation is fully IR-native only when all of the following are true:
-
-1. `BindingGenerationPipeline` calls `CSharpEmitter.Emit(BindingModule, ...)` as the default path.
-2. Legacy `GenerationStep` implementations no longer determine public output semantics.
-3. Metadata/patch capabilities become IR transforms or are explicitly constrained to source post-processing.
-4. Real-library source/public-API snapshots and native tests remain unchanged.
-5. Removing `AstGenerationStepEmitter` does not change generated output.
+The C# path is complete when `BindingGenerationPipeline` calls `CSharpEmitter.Emit(BindingModule, ...)`, metadata/patch behavior is either an IR transform or explicit source post-processing, and feature-specific source/API/compile tests plus the complete real-library matrix pass. No compatibility emitter participates in configured output.
 
 The equivalent C++ bridge criterion is that the C Bridge emitter consumes a complete IR and the AST is confined to analysis.
 

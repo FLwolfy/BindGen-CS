@@ -8,7 +8,8 @@ using SharedEmissionContext = BGCS.Emission.EmissionContext;
 using SharedEmitter = BGCS.Emission.IBindingEmitter;
 
 /// <summary>
-/// Emits C ABI declarations from shared binding IR and adapts legacy AST generation passes during migration.
+/// Emits C ABI declarations from shared binding IR. The AST bridge pipeline uses <see cref="EmitAst"/>
+/// only for C++ constructs that are not yet representable in the shared C-facing IR.
 /// </summary>
 public sealed class CBridgeEmitter : SharedEmitter
 {

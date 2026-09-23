@@ -9,9 +9,9 @@ internal static class CsCodeGeneratorConfigValidator
     {
         ArgumentNullException.ThrowIfNull(config);
         List<string> errors = [];
-        if (config.ConfigVersion < 1 || config.ConfigVersion > CsCodeGeneratorConfig.CurrentConfigVersion)
+        if (config.ConfigVersion != CsCodeGeneratorConfig.CurrentConfigVersion)
         {
-            errors.Add($"ConfigVersion {config.ConfigVersion} is unsupported. This BindGen-CS version accepts configuration versions 1 through {CsCodeGeneratorConfig.CurrentConfigVersion}.");
+            errors.Add($"ConfigVersion {config.ConfigVersion} is unsupported. This pre-release BindGen-CS build accepts only configuration version {CsCodeGeneratorConfig.CurrentConfigVersion}; no legacy migration is provided before the first stable release.");
         }
         if (!SyntaxFacts.IsValidIdentifier(config.ApiName))
         {
@@ -36,6 +36,10 @@ internal static class CsCodeGeneratorConfigValidator
         else if (config.PluginAssemblies.Any(string.IsNullOrWhiteSpace))
         {
             errors.Add("PluginAssemblies cannot contain an empty path.");
+        }
+        if (config.CSharpEmissionBackend != CSharpEmissionBackend.IntermediateRepresentation)
+        {
+            errors.Add($"CSharpEmissionBackend '{config.CSharpEmissionBackend}' is unsupported. The pre-release product is IR-native only.");
         }
         if (config.MergeGeneratedFilesToSingleFile || config.CSharpEmissionBackend == CSharpEmissionBackend.IntermediateRepresentation)
         {

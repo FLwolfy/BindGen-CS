@@ -212,6 +212,30 @@
         /// </summary>
         public List<string> OptionalTypes { get; set; } = ["std::optional"];
 
+        /// <summary>Fixed-size contiguous containers lowered to pointer/count pairs.</summary>
+        public List<string> ArrayTypes { get; set; } = ["std::array"];
+
+        /// <summary>Ordered or unordered key/value containers lowered through owned opaque value holders.</summary>
+        public List<string> MapTypes { get; set; } = ["std::map", "std::unordered_map"];
+
+        /// <summary>Ordered or unordered unique-value containers lowered through owned opaque value holders.</summary>
+        public List<string> SetTypes { get; set; } = ["std::set", "std::unordered_set"];
+
+        /// <summary>Discriminated unions lowered through typed opaque holders with index/access helpers.</summary>
+        public List<string> VariantTypes { get; set; } = ["std::variant"];
+
+        /// <summary>Value/error results lowered through typed opaque holders with state/access helpers.</summary>
+        public List<string> ExpectedTypes { get; set; } = ["std::expected"];
+
+        /// <summary>Filesystem path values lowered to normalized UTF-8 at the bridge boundary.</summary>
+        public List<string> PathTypes { get; set; } = ["std::filesystem::path"];
+
+        /// <summary>Chrono durations lowered to signed nanoseconds.</summary>
+        public List<string> ChronoDurationTypes { get; set; } = ["std::chrono::duration"];
+
+        /// <summary>Chrono time points lowered to signed nanoseconds since their clock epoch.</summary>
+        public List<string> ChronoTimePointTypes { get; set; } = ["std::chrono::time_point"];
+
         /// <summary>
         /// Fully qualified abstract C++ interfaces that receive managed callback proxy factories.
         /// </summary>

@@ -8,9 +8,7 @@ using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Metadata;
 using BGCS.Emission;
-using BGCS.GenerationSteps;
 using BGCS.Intermediate;
-using BGCS.Metadata;
 using BGCS.Output;
 using BGCS.PreProcessSteps;
 
@@ -47,10 +45,6 @@ public sealed class BindingGenerationPipeline
         using GeneratedOutputTransaction transaction = new(outputPath);
         string stagingPath = transaction.StagingPath;
 
-        foreach (CsCodeGeneratorMetadata pending in generator.PendingMetadata)
-            foreach (GenerationStep step in generator.GenerationSteps)
-                step.CopyFromMetadata(pending);
-
         generator.LogInfo("Configuring Pre-Processing Steps...");
         foreach (PreProcessStep step in generator.PreProcessSteps)
             step.Configure(config);
@@ -72,35 +66,28 @@ public sealed class BindingGenerationPipeline
             ]));
             return false;
         }
-        if (config.CSharpEmissionBackend == CSharpEmissionBackend.IntermediateRepresentation)
+        if (!explicitEmptyOutputFilter)
         {
-            if (!explicitEmptyOutputFilter)
+            CSharpEmitter emitter = new();
+            IReadOnlyList<BindingDiagnostic> emissionDiagnostics = emitter.Validate(safetyModule);
+            if (emissionDiagnostics.Count > 0)
             {
-                CSharpEmitter emitter = new();
-                IReadOnlyList<BindingDiagnostic> emissionDiagnostics = emitter.Validate(safetyModule);
-                if (emissionDiagnostics.Count > 0)
-                {
-                    foreach (BindingDiagnostic diagnostic in emissionDiagnostics)
-                        safetyModule.StructuredDiagnostics.Add(diagnostic);
-                    generator.SetLastResult(new(safetyModule, false, [],
-                    [
-                        .. generator.Messages.Select(diagnostic => new BindingDiagnostic(
-                            (BindingDiagnosticSeverity)(int)diagnostic.Severtiy, diagnostic.Message)),
-                        .. safetyModule.StructuredDiagnostics
-                    ]));
-                    return false;
-                }
-                string irFileName = config.MergeGeneratedFilesToSingleFile
-                    ? ".bgcs-ir.cs"
-                    : SingleFileOutputNameResolver.Resolve(config);
-                emitter.Emit(safetyModule,
-                    new(stagingPath, true, irFileName, ResolveRuntimeNamespace()));
+                foreach (BindingDiagnostic diagnostic in emissionDiagnostics)
+                    safetyModule.StructuredDiagnostics.Add(diagnostic);
+                generator.SetLastResult(new(safetyModule, false, [],
+                [
+                    .. generator.Messages.Select(diagnostic => new BindingDiagnostic(
+                        (BindingDiagnosticSeverity)(int)diagnostic.Severtiy, diagnostic.Message)),
+                    .. safetyModule.StructuredDiagnostics
+                ]));
+                return false;
             }
-        }
-        else
-        {
-            AstGenerationStepEmitter.Emit(generator, files, result, stagingPath, config,
-                generator.PipelineMetadata, explicitEmptyOutputFilter);
+            string irFileName = config.MergeGeneratedFilesToSingleFile
+                ? ".bgcs-ir.cs"
+                : SingleFileOutputNameResolver.Resolve(config);
+            emitter.Emit(safetyModule,
+                new(stagingPath, config.MergeGeneratedFilesToSingleFile, irFileName,
+                    ResolveRuntimeNamespace(), config.OneFilePerType));
         }
         foreach (var pluginEmitter in config.Plugins.GetServices<IBindingEmitter>())
             pluginEmitter.Service.Emit(safetyModule, new(stagingPath, config.MergeGeneratedFilesToSingleFile,

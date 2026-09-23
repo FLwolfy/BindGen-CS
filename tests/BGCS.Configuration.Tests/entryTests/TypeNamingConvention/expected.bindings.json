@@ -1,7 +1,7 @@
 {
   "Contains": [
-    "public partial struct SampleType",
-    "internal static extern SampleType MakeSampleNative(int value);",
-    "public static SampleType MakeSample(int value)"
+    "public partial struct sampleType",
+    "internal static extern sampleType MakeSampleNative(int value);",
+    "public static sampleType MakeSample(int value)"
   ]
 }

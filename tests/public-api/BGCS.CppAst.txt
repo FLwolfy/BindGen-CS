@@ -1,0 +1,1168 @@
+class BGCS.CppAst.AttributeUtils.CustomAttributeTool
+  field System.String kMetaClassLeaderWord
+  field System.String kMetaEnumLeaderWord
+  field System.String kMetaFieldLeaderWord
+  field System.String kMetaFunctionLeaderWord
+  field System.String kMetaLeaderWord
+  method BGCS.CppAst.AttributeUtils.MetaAttribute ParseMetaStringFor(System.String meta, System.String& errorMessage)
+  method BGCS.CppAst.AttributeUtils.MetaAttribute ParseMetaStringFor(System.String meta, System.String needLeaderWord, System.String& errorMessage)
+  method System.Boolean IsRstudioAttribute(System.String meta)
+class BGCS.CppAst.AttributeUtils.MetaAttribute
+  field System.Collections.Generic.Dictionary<System.String,System.Object> ArgumentMap
+  field System.String FeatureName
+  ctor()
+  method System.Boolean QueryKeyIsTrue(System.String key)
+  method System.Boolean QueryKeysAreTrue(System.Collections.Generic.List<System.String> keys)
+  method System.String ToString()
+class BGCS.CppAst.AttributeUtils.MetaAttributeMap
+  ctor()
+  property System.Boolean IsNull { get }
+  method System.Boolean QueryArgumentAsBool(System.String argName, System.Boolean defaultVal)
+  method System.Int32 QueryArgumentAsInteger(System.String argName, System.Int32 defaultVal)
+  method System.Object QueryArgument(System.String argName)
+  method System.String QueryArgumentAsString(System.String argName, System.String defaultVal)
+  method System.Void Append(BGCS.CppAst.AttributeUtils.MetaAttribute metaAttr)
+class BGCS.CppAst.AttributeUtils.NamedParameterGrammar
+  field BGCS.CppAst.AttributeUtils.NamedParameterGrammar Instance
+  method Irony.Parsing.KeyTerm Keyword(System.String keyword)
+  method Irony.Parsing.KeyTerm Operator(System.String op)
+  method System.Void RegisterOperators(System.Int32 precedence, Irony.Parsing.Associativity associativity, System.String[] opSymbols)
+  method System.Void RegisterOperators(System.Int32 precedence, System.String[] opSymbols)
+class BGCS.CppAst.AttributeUtils.NamedParameterParser
+  ctor()
+  method System.Boolean ParseNamedParameters(System.String content, System.Collections.Generic.Dictionary<System.String,System.Object> outNamedParameterDic, System.String& errorMessage)
+class BGCS.CppAst.AttributeUtils.NamedParameterParser+TerminalNames
+  field System.String Args
+  field System.String Assignment
+  field System.String Boolean
+  field System.String Class
+  field System.String ClassName
+  field System.String Comma
+  field System.String Equal
+  field System.String Expression
+  field System.String Identifier
+  field System.String LeftBracket
+  field System.String LoopPair
+  field System.String NameSpace
+  field System.String NamedArguments
+  field System.String Number
+  field System.String RightBracket
+  field System.String String
+  field System.String Template
+  field System.String TemplateElem
+class BGCS.CppAst.Collections.CppContainerListExtensions
+  method TElement FindElementByName(BGCS.CppAst.Collections.CppContainerList<TElement> list, System.ReadOnlySpan<System.Char> name)
+class BGCS.CppAst.Collections.CppContainerList`1
+  ctor(BGCS.CppAst.Model.Interfaces.ICppContainer container)
+  property BGCS.CppAst.Model.Interfaces.ICppContainer Container { get }
+  property System.Int32 Count { get }
+  property System.Boolean IsReadOnly { get }
+  property TElement Item { get; set }
+  method System.Boolean Contains(TElement item)
+  method System.Boolean Remove(TElement item)
+  method System.Int32 IndexOf(TElement item)
+  method System.Collections.Generic.IEnumerator<TElement> GetEnumerator()
+  method TElement Find(TUserdata userdata, System.Func<TElement,TUserdata,System.Boolean> selector)
+  method System.Void Add(TElement item)
+  method System.Void AddRange(System.Collections.Generic.IEnumerable<TElement> collection)
+  method System.Void Clear()
+  method System.Void CopyTo(TElement[] array, System.Int32 arrayIndex)
+  method System.Void Insert(System.Int32 index, TElement item)
+  method System.Void RemoveAt(System.Int32 index)
+class BGCS.CppAst.Collections.CppGlobalDeclarationContainer
+  field System.String NamespaceSeparator
+  ctor(ClangSharp.Interop.CXCursor cursor)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppClass> Classes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppEnum> Enums { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppField> Fields { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppFunction> Functions { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.CppInclusionDirective> InclusionDirectives { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.CppMacro> Macros { get }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppNamespace> Namespaces { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppProperty> Properties { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppTypedef> Typedefs { get }
+  method BGCS.CppAst.Model.CppElement FindByFullName(System.ReadOnlySpan<System.Char> name)
+  method BGCS.CppAst.Model.CppElement FindByName(BGCS.CppAst.Model.Interfaces.ICppContainer container, System.ReadOnlySpan<System.Char> name)
+  method BGCS.CppAst.Model.CppElement FindByName(System.ReadOnlySpan<System.Char> name)
+  method System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.CppElement> FindListByName(BGCS.CppAst.Model.Interfaces.ICppContainer container, System.ReadOnlySpan<System.Char> name)
+  method TCppElement FindByFullName(System.ReadOnlySpan<System.Char> name)
+  method TCppElement FindByName(BGCS.CppAst.Model.Interfaces.ICppContainer container, System.ReadOnlySpan<System.Char> name)
+  method TCppElement FindByName(System.ReadOnlySpan<System.Char> name)
+  method System.Void ClearCacheByName()
+class BGCS.CppAst.Diagnostics.CppDiagnosticBag
+  ctor()
+  property System.Boolean HasErrors { get }
+  property System.Collections.Generic.IReadOnlyList<BGCS.CppAst.Diagnostics.CppDiagnosticMessage> Messages { get }
+  method System.String ToString()
+  method System.Void Clear()
+  method System.Void CopyTo(BGCS.CppAst.Diagnostics.CppDiagnosticBag dest)
+  method System.Void Error(System.String message, System.Nullable<BGCS.CppAst.Model.Metadata.CppSourceLocation> location)
+  method System.Void Info(System.String message, System.Nullable<BGCS.CppAst.Model.Metadata.CppSourceLocation> location)
+  method System.Void Log(BGCS.CppAst.Diagnostics.CppDiagnosticMessage message)
+  method System.Void Warning(System.String message, System.Nullable<BGCS.CppAst.Model.Metadata.CppSourceLocation> location)
+class BGCS.CppAst.Diagnostics.CppDiagnosticMessage
+  field BGCS.CppAst.Model.Metadata.CppSourceLocation Location
+  field System.String Text
+  field BGCS.CppAst.Diagnostics.CppLogMessageType Type
+  ctor(BGCS.CppAst.Diagnostics.CppLogMessageType type, System.String text, BGCS.CppAst.Model.Metadata.CppSourceLocation location)
+  method System.String ToString()
+enum BGCS.CppAst.Diagnostics.CppLogMessageType
+  field BGCS.CppAst.Diagnostics.CppLogMessageType Error
+  field BGCS.CppAst.Diagnostics.CppLogMessageType Info
+  field BGCS.CppAst.Diagnostics.CppLogMessageType Warning
+  field System.Int32 value__
+class BGCS.CppAst.Extensions.CppExtensions
+  method System.Boolean IsIdentifierOrKeyword(BGCS.CppAst.Model.Expressions.CppTokenKind kind)
+  method System.Boolean IsPublicExport(BGCS.CppAst.Model.Attributes.CppAttribute attribute)
+  method System.Boolean IsPublicExport(BGCS.CppAst.Model.Declarations.CppClass cppClass)
+  method System.Boolean IsPublicExport(BGCS.CppAst.Model.Declarations.CppFunction function)
+  method System.String GetDisplayName(BGCS.CppAst.Model.Types.CppType type)
+enum BGCS.CppAst.Model.Attributes.AttributeKind
+  field BGCS.CppAst.Model.Attributes.AttributeKind AnnotateAttribute
+  field BGCS.CppAst.Model.Attributes.AttributeKind CommentAttribute
+  field BGCS.CppAst.Model.Attributes.AttributeKind CxxSystemAttribute
+  field BGCS.CppAst.Model.Attributes.AttributeKind ObjectiveCAttribute
+  field BGCS.CppAst.Model.Attributes.AttributeKind TokenAttribute
+  field System.Int32 value__
+class BGCS.CppAst.Model.Attributes.CppAttribute
+  ctor(ClangSharp.Interop.CXComment comment, System.String name, BGCS.CppAst.Model.Attributes.AttributeKind kind)
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name, BGCS.CppAst.Model.Attributes.AttributeKind kind)
+  property System.String Arguments { get; set }
+  property ClangSharp.Interop.CXComment Comment { get; set }
+  property System.Boolean IsVariadic { get; set }
+  property BGCS.CppAst.Model.Attributes.AttributeKind Kind { get }
+  property System.String Name { get; set }
+  property System.String Scope { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.CppElement
+  field BGCS.CppAst.Model.Metadata.CppSourceSpan Span
+  property ClangSharp.Interop.CXCursor Cursor { get; set }
+  property System.String FullParentName { get }
+  property BGCS.CppAst.Model.Interfaces.ICppContainer Parent { get }
+  property System.String SourceFile { get }
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.Void AssignSourceSpan(ClangSharp.Interop.CXCursor& cursor)
+  method System.Void ConvertToMetaAttributes()
+class BGCS.CppAst.Model.CppInclusionDirective
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String fileName)
+  property System.String FileName { get; set }
+  method System.String ToString()
+enum BGCS.CppAst.Model.CppLinkageKind
+  field BGCS.CppAst.Model.CppLinkageKind External
+  field BGCS.CppAst.Model.CppLinkageKind Internal
+  field BGCS.CppAst.Model.CppLinkageKind Invalid
+  field BGCS.CppAst.Model.CppLinkageKind NoLinkage
+  field BGCS.CppAst.Model.CppLinkageKind UniqueExternal
+  field System.Int32 value__
+class BGCS.CppAst.Model.CppMacro
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<System.String> Parameters { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Expressions.CppToken> Tokens { get }
+  property System.String Value { get; set }
+  method System.String ToString()
+  method System.Void UpdateValueFromTokens()
+class BGCS.CppAst.Model.CppValue
+  ctor(ClangSharp.Interop.CXCursor cursor, System.Object value)
+  property System.Object Value { get; set }
+  method System.String ToString()
+enum BGCS.CppAst.Model.CppVisibility
+  field BGCS.CppAst.Model.CppVisibility Default
+  field BGCS.CppAst.Model.CppVisibility Private
+  field BGCS.CppAst.Model.CppVisibility Protected
+  field BGCS.CppAst.Model.CppVisibility Public
+  field System.Int32 value__
+class BGCS.CppAst.Model.Declarations.CppClass
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  property System.Int32 AlignOf { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Types.CppBaseType> BaseTypes { get }
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property BGCS.CppAst.Model.Declarations.CppClassKind ClassKind { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppClass> Classes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppFunction> Constructors { get; set }
+  property BGCS.CppAst.Model.Declarations.CppClass Definition { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppFunction> Destructors { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppEnum> Enums { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppField> Fields { get }
+  property System.String FullName { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppFunction> Functions { get }
+  property System.Boolean IsAbstract { get; set }
+  property System.Boolean IsAnonymous { get; set }
+  property System.Boolean IsCompleteDefinition { get; set }
+  property System.Boolean IsDefined { get }
+  property System.Boolean IsDefinition { get; set }
+  property System.Boolean IsEmbeded { get }
+  property System.Boolean IsPODType { get; set }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Declarations.CppClass> ObjCCategories { get }
+  property System.String ObjCCategoryName { get; set }
+  property BGCS.CppAst.Model.Declarations.CppClass ObjCCategoryTargetClass { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Declarations.CppClass> ObjCImplementedProtocols { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppProperty> Properties { get }
+  property System.Int32 SizeOf { get; set }
+  property BGCS.CppAst.Model.Declarations.CppClass SpecializedTemplate { get; set }
+  property BGCS.CppAst.Model.Templates.CppTemplateKind TemplateKind { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Types.CppType> TemplateParameters { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Templates.CppTemplateArgument> TemplateSpecializedArguments { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppTypedef> Typedefs { get }
+  property BGCS.CppAst.Model.CppVisibility Visibility { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+enum BGCS.CppAst.Model.Declarations.CppClassKind
+  field BGCS.CppAst.Model.Declarations.CppClassKind Class
+  field BGCS.CppAst.Model.Declarations.CppClassKind ObjCInterface
+  field BGCS.CppAst.Model.Declarations.CppClassKind ObjCInterfaceCategory
+  field BGCS.CppAst.Model.Declarations.CppClassKind ObjCProtocol
+  field BGCS.CppAst.Model.Declarations.CppClassKind Struct
+  field BGCS.CppAst.Model.Declarations.CppClassKind Union
+  field System.Int32 value__
+class BGCS.CppAst.Model.Declarations.CppDeclaration
+  property BGCS.CppAst.Model.Metadata.CppComment Comment { get; set }
+class BGCS.CppAst.Model.Declarations.CppEnum
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property System.String FullName { get }
+  property BGCS.CppAst.Model.Types.CppType IntegerType { get; set }
+  property System.Boolean IsAnonymous { get; set }
+  property System.Boolean IsScoped { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppEnumItem> Items { get }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property System.Int32 SizeOf { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Model.CppVisibility Visibility { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Declarations.CppEnumItem
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name, System.Int64 value)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property System.Int64 Value { get; set }
+  property BGCS.CppAst.Model.Expressions.CppExpression ValueExpression { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.Declarations.CppField
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType type, System.String name)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property System.Int32 BitFieldWidth { get; set }
+  property System.Int64 BitOffset { get; set }
+  property BGCS.CppAst.Model.Expressions.CppExpression InitExpression { get; set }
+  property BGCS.CppAst.Model.CppValue InitValue { get; set }
+  property System.Boolean IsAnonymous { get; set }
+  property System.Boolean IsBitField { get; set }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property System.Int64 Offset { get }
+  property BGCS.CppAst.Model.Types.CppStorageQualifier StorageQualifier { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Model.Types.CppType Type { get; set }
+  property BGCS.CppAst.Model.CppVisibility Visibility { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.Declarations.CppFunction
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property BGCS.CppAst.Model.Types.CppCallingConvention CallingConvention { get; set }
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property System.Int32 DefaultParamCount { get }
+  property BGCS.CppAst.Model.Declarations.CppFunctionFlags Flags { get; set }
+  property System.Boolean IsConst { get }
+  property System.Boolean IsConstructor { get; set }
+  property System.Boolean IsCxxClassMethod { get }
+  property System.Boolean IsDestructor { get; set }
+  property System.Boolean IsExternC { get; set }
+  property System.Boolean IsFunctionTemplate { get }
+  property System.Boolean IsPureVirtual { get }
+  property System.Boolean IsStatic { get }
+  property System.Boolean IsVirtual { get }
+  property BGCS.CppAst.Model.CppLinkageKind LinkageKind { get; set }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppParameter> Parameters { get }
+  property BGCS.CppAst.Model.Types.CppType ReturnType { get; set }
+  property BGCS.CppAst.Model.Types.CppStorageQualifier StorageQualifier { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Types.CppType> TemplateParameters { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Model.CppVisibility Visibility { get; set }
+  method System.String ToString()
+enum BGCS.CppAst.Model.Declarations.CppFunctionFlags
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags ClassMethod
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Const
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Constructor
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Defaulted
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Deleted
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Destructor
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags FunctionTemplate
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Inline
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Method
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags None
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Pure
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Variadic
+  field BGCS.CppAst.Model.Declarations.CppFunctionFlags Virtual
+  field System.Int32 value__
+class BGCS.CppAst.Model.Declarations.CppFunctionType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType returnType)
+class BGCS.CppAst.Model.Declarations.CppFunctionTypeBase
+  property BGCS.CppAst.Model.Types.CppCallingConvention CallingConvention { get; set }
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppParameter> Parameters { get }
+  property BGCS.CppAst.Model.Types.CppType ReturnType { get; set }
+  property System.Int32 SizeOf { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Declarations.CppNamespace
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppClass> Classes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppEnum> Enums { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppField> Fields { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppFunction> Functions { get }
+  property System.Boolean IsInlineNamespace { get; set }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppNamespace> Namespaces { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppProperty> Properties { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppTypedef> Typedefs { get }
+  method System.String ToString()
+class BGCS.CppAst.Model.Declarations.CppParameter
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType type, System.String name)
+  property BGCS.CppAst.Model.Expressions.CppExpression InitExpression { get; set }
+  property BGCS.CppAst.Model.CppValue InitValue { get; set }
+  property System.String Name { get; set }
+  property BGCS.CppAst.Model.Types.CppType Type { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.Declarations.CppProperty
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType type, System.String name)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property BGCS.CppAst.Model.Declarations.CppFunction Getter { get; set }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property BGCS.CppAst.Model.Declarations.CppFunction Setter { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Model.Types.CppType Type { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.Declarations.CppTypeDeclaration
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property BGCS.CppAst.Model.Metadata.CppComment Comment { get; set }
+class BGCS.CppAst.Model.Declarations.CppTypedef
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name, BGCS.CppAst.Model.Types.CppType type)
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property BGCS.CppAst.Model.Types.CppType ElementType { get }
+  property System.String FullName { get }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.String Name { get; set }
+  property System.Int32 SizeOf { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+  property BGCS.CppAst.Model.CppVisibility Visibility { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Expressions.CppBinaryExpression
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Expressions.CppExpressionKind kind)
+  property System.String Operator { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.Expressions.CppExpression
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Expressions.CppExpression> Arguments { get; set }
+  property BGCS.CppAst.Model.Expressions.CppExpressionKind Kind { get }
+  method System.Void AddArgument(BGCS.CppAst.Model.Expressions.CppExpression arg)
+enum BGCS.CppAst.Model.Expressions.CppExpressionKind
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind AddrLabel
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ArraySubscript
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind BinaryOperator
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Block
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CStyleCast
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXBoolLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXConstCast
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXDelete
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXDynamicCast
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXFunctionalCast
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXNew
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXNullPtrLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXReinterpretCast
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXStaticCast
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXThis
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXThrow
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CXXTypeid
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Call
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CharacterLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CompoundAssignOperator
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind CompoundLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ConditionalOperator
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind DeclRef
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind FixedPointLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind FloatingLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind GNUNull
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind GenericSelection
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ImaginaryLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind InitList
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind IntegerLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Lambda
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind MemberRef
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind OMPArrayShapingExpr
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCAvailabilityCheck
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCBoolLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCBridgedCast
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCEncode
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCMessage
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCProtocol
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCSelector
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCSelf
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind ObjCStringLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind PackExpansion
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Paren
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind SizeOfPack
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Stmt
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind StringLiteral
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Unary
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind UnaryOperator
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Unexposed
+  field BGCS.CppAst.Model.Expressions.CppExpressionKind Unknown
+  field System.Int32 value__
+class BGCS.CppAst.Model.Expressions.CppInitListExpression
+  ctor(ClangSharp.Interop.CXCursor cursor)
+  method System.String ToString()
+class BGCS.CppAst.Model.Expressions.CppLiteralExpression
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Expressions.CppExpressionKind kind, System.String value)
+  property System.String Value { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.Expressions.CppParenExpression
+  ctor(ClangSharp.Interop.CXCursor cursor)
+  method System.String ToString()
+class BGCS.CppAst.Model.Expressions.CppRawExpression
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Expressions.CppExpressionKind kind)
+  property System.String Text { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Expressions.CppToken> Tokens { get }
+  method System.String ToString()
+  method System.Void AppendTokens(ClangSharp.Interop.CXCursor cursor)
+  method System.Void UpdateTextFromTokens()
+class BGCS.CppAst.Model.Expressions.CppToken
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Expressions.CppTokenKind kind, System.String text)
+  property BGCS.CppAst.Model.Expressions.CppTokenKind Kind { get; set }
+  property System.String Text { get; set }
+  method System.String ToString()
+  method System.String TokensToString(System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Expressions.CppToken> tokens)
+enum BGCS.CppAst.Model.Expressions.CppTokenKind
+  field BGCS.CppAst.Model.Expressions.CppTokenKind Comment
+  field BGCS.CppAst.Model.Expressions.CppTokenKind Identifier
+  field BGCS.CppAst.Model.Expressions.CppTokenKind Keyword
+  field BGCS.CppAst.Model.Expressions.CppTokenKind Literal
+  field BGCS.CppAst.Model.Expressions.CppTokenKind Punctuation
+  field System.Int32 value__
+class BGCS.CppAst.Model.Expressions.CppUnaryExpression
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Expressions.CppExpressionKind kind)
+  property System.String Operator { get; set }
+  method System.String ToString()
+interface BGCS.CppAst.Model.Interfaces.ICppAttributeContainer
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> Attributes { get }
+  property BGCS.CppAst.AttributeUtils.MetaAttributeMap MetaAttributes { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Attributes.CppAttribute> TokenAttributes { get }
+interface BGCS.CppAst.Model.Interfaces.ICppContainer
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+interface BGCS.CppAst.Model.Interfaces.ICppDeclaration
+  property BGCS.CppAst.Model.Metadata.CppComment Comment { get; set }
+interface BGCS.CppAst.Model.Interfaces.ICppDeclarationContainer
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppClass> Classes { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppEnum> Enums { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppField> Fields { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppFunction> Functions { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppProperty> Properties { get }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppTypedef> Typedefs { get }
+class BGCS.CppAst.Model.Interfaces.ICppDeclarationContainerExtensions
+  method BGCS.CppAst.Model.CppElement FindByName(T container, System.ReadOnlySpan<System.Char> name)
+interface BGCS.CppAst.Model.Interfaces.ICppElement
+  property ClangSharp.Interop.CXCursor Cursor { get }
+interface BGCS.CppAst.Model.Interfaces.ICppGlobalDeclarationContainer
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Declarations.CppNamespace> Namespaces { get }
+interface BGCS.CppAst.Model.Interfaces.ICppMember
+  property System.String Name { get; set }
+interface BGCS.CppAst.Model.Interfaces.ICppMemberWithVisibility
+  property BGCS.CppAst.Model.CppVisibility Visibility { get; set }
+interface BGCS.CppAst.Model.Interfaces.ICppTemplateOwner
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Types.CppType> TemplateParameters { get }
+class BGCS.CppAst.Model.Metadata.CppComment
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Metadata.CppComment> Children { get; set }
+  property ClangSharp.Interop.CXComment Comment { get; set }
+  property BGCS.CppAst.Model.Metadata.CppCommentKind Kind { get }
+  method System.String ChildrenToString()
+  method System.String ToString()
+  method System.Void TryToParseAttributes(BGCS.CppAst.Model.Interfaces.ICppAttributeContainer attrContainer)
+class BGCS.CppAst.Model.Metadata.CppCommentBlockCommand
+  ctor(ClangSharp.Interop.CXComment comment)
+class BGCS.CppAst.Model.Metadata.CppCommentCommand
+  property System.Collections.Generic.List<System.String> Arguments { get }
+  property System.String CommandName { get; set }
+class BGCS.CppAst.Model.Metadata.CppCommentFull
+  ctor(ClangSharp.Interop.CXComment comment)
+  method System.String ToString()
+class BGCS.CppAst.Model.Metadata.CppCommentHtmlEndTag
+  ctor(ClangSharp.Interop.CXComment comment)
+class BGCS.CppAst.Model.Metadata.CppCommentHtmlStartTag
+  ctor(ClangSharp.Interop.CXComment comment)
+  property System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<System.String,System.String>> Attributes { get }
+  property System.Boolean IsSelfClosing { get; set }
+class BGCS.CppAst.Model.Metadata.CppCommentHtmlTag
+  property System.String TagName { get; set }
+class BGCS.CppAst.Model.Metadata.CppCommentInlineCommand
+  ctor(ClangSharp.Interop.CXComment comment)
+  property BGCS.CppAst.Model.Metadata.CppCommentInlineCommandRenderKind RenderKind { get; set }
+enum BGCS.CppAst.Model.Metadata.CppCommentInlineCommandRenderKind
+  field BGCS.CppAst.Model.Metadata.CppCommentInlineCommandRenderKind Bold
+  field BGCS.CppAst.Model.Metadata.CppCommentInlineCommandRenderKind Emphasized
+  field BGCS.CppAst.Model.Metadata.CppCommentInlineCommandRenderKind Monospaced
+  field BGCS.CppAst.Model.Metadata.CppCommentInlineCommandRenderKind Normal
+  field System.Int32 value__
+enum BGCS.CppAst.Model.Metadata.CppCommentKind
+  field BGCS.CppAst.Model.Metadata.CppCommentKind BlockCommand
+  field BGCS.CppAst.Model.Metadata.CppCommentKind Full
+  field BGCS.CppAst.Model.Metadata.CppCommentKind HtmlEndTag
+  field BGCS.CppAst.Model.Metadata.CppCommentKind HtmlStartTag
+  field BGCS.CppAst.Model.Metadata.CppCommentKind InlineCommand
+  field BGCS.CppAst.Model.Metadata.CppCommentKind Null
+  field BGCS.CppAst.Model.Metadata.CppCommentKind Paragraph
+  field BGCS.CppAst.Model.Metadata.CppCommentKind ParamCommand
+  field BGCS.CppAst.Model.Metadata.CppCommentKind TemplateParamCommand
+  field BGCS.CppAst.Model.Metadata.CppCommentKind Text
+  field BGCS.CppAst.Model.Metadata.CppCommentKind VerbatimBlockCommand
+  field BGCS.CppAst.Model.Metadata.CppCommentKind VerbatimBlockLine
+  field BGCS.CppAst.Model.Metadata.CppCommentKind VerbatimLine
+  field System.Int32 value__
+class BGCS.CppAst.Model.Metadata.CppCommentParagraph
+  ctor(ClangSharp.Interop.CXComment comment)
+class BGCS.CppAst.Model.Metadata.CppCommentParamCommand
+  ctor(ClangSharp.Interop.CXComment comment)
+  property BGCS.CppAst.Model.Metadata.CppCommentParamDirection Direction { get; set }
+  property System.Boolean IsDirectionExplicit { get; set }
+  property System.Boolean IsParamIndexValid { get; set }
+  property System.Int32 ParamIndex { get; set }
+  property System.String ParamName { get; set }
+enum BGCS.CppAst.Model.Metadata.CppCommentParamDirection
+  field BGCS.CppAst.Model.Metadata.CppCommentParamDirection In
+  field BGCS.CppAst.Model.Metadata.CppCommentParamDirection InOut
+  field BGCS.CppAst.Model.Metadata.CppCommentParamDirection Out
+  field System.Int32 value__
+class BGCS.CppAst.Model.Metadata.CppCommentTemplateParamCommand
+  ctor(ClangSharp.Interop.CXComment comment)
+  property System.Int32 Depth { get; set }
+  property System.Int32 Index { get; set }
+  property System.Boolean IsPositionValid { get; set }
+  property System.String ParamName { get; set }
+class BGCS.CppAst.Model.Metadata.CppCommentText
+  ctor(ClangSharp.Interop.CXComment comment)
+class BGCS.CppAst.Model.Metadata.CppCommentTextBase
+  property System.String Text { get; set }
+class BGCS.CppAst.Model.Metadata.CppCommentVerbatimBlockCommand
+  ctor(ClangSharp.Interop.CXComment comment)
+class BGCS.CppAst.Model.Metadata.CppCommentVerbatimBlockLine
+  ctor(ClangSharp.Interop.CXComment comment)
+class BGCS.CppAst.Model.Metadata.CppCommentVerbatimLine
+  ctor(ClangSharp.Interop.CXComment comment)
+class BGCS.CppAst.Model.Metadata.CppCompilation
+  ctor(ClangSharp.Interop.CXTranslationUnit translationUnit)
+  property BGCS.CppAst.Diagnostics.CppDiagnosticBag Diagnostics { get }
+  property System.Boolean HasErrors { get }
+  property System.String InputText { get; set }
+  property BGCS.CppAst.Collections.CppGlobalDeclarationContainer System { get }
+  property ClangSharp.Interop.CXTranslationUnit TranslationUnit { get }
+  method System.Void Dispose()
+struct BGCS.CppAst.Model.Metadata.CppSourceLocation
+  field System.Int32 Column
+  field System.String File
+  field System.Int32 Line
+  field System.Int32 Offset
+  ctor(System.String file, System.Int32 offset, System.Int32 line, System.Int32 column)
+  method System.String ToString()
+struct BGCS.CppAst.Model.Metadata.CppSourceSpan
+  field BGCS.CppAst.Model.Metadata.CppSourceLocation End
+  field BGCS.CppAst.Model.Metadata.CppSourceLocation Start
+  ctor(BGCS.CppAst.Model.Metadata.CppSourceLocation start, BGCS.CppAst.Model.Metadata.CppSourceLocation end)
+  method System.String ToString()
+class BGCS.CppAst.Model.Templates.CppTemplateArgument
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType sourceParam, BGCS.CppAst.Model.Types.CppType typeArg, System.Boolean isSpecializedArgument)
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType sourceParam, System.Int64 intArg)
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType sourceParam, System.String unknownStr)
+  ctor(ClangSharp.Interop.CX_TemplateArgument templateArgument, BGCS.CppAst.Model.Types.CppType sourceParam, BGCS.CppAst.Model.Types.CppType typeArg, System.Boolean isSpecializedArgument)
+  ctor(ClangSharp.Interop.CX_TemplateArgument templateArgument, BGCS.CppAst.Model.Types.CppType sourceParam, System.Int64 intArg)
+  ctor(ClangSharp.Interop.CX_TemplateArgument templateArgument, BGCS.CppAst.Model.Types.CppType sourceParam, System.String unknownStr)
+  property System.Int64 ArgAsInteger { get }
+  property BGCS.CppAst.Model.Types.CppType ArgAsType { get }
+  property System.String ArgAsUnknown { get }
+  property BGCS.CppAst.Model.Templates.CppTemplateArgumentKind ArgKind { get }
+  property System.String ArgString { get }
+  property System.Boolean IsSpecializedArgument { get }
+  property System.Int32 SizeOf { get; set }
+  property BGCS.CppAst.Model.Types.CppType SourceParam { get }
+  property ClangSharp.Interop.CX_TemplateArgument TemplateArgument { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+enum BGCS.CppAst.Model.Templates.CppTemplateArgumentKind
+  field BGCS.CppAst.Model.Templates.CppTemplateArgumentKind AsInteger
+  field BGCS.CppAst.Model.Templates.CppTemplateArgumentKind AsType
+  field BGCS.CppAst.Model.Templates.CppTemplateArgumentKind Unknown
+  field System.Int32 value__
+enum BGCS.CppAst.Model.Templates.CppTemplateKind
+  field BGCS.CppAst.Model.Templates.CppTemplateKind NormalClass
+  field BGCS.CppAst.Model.Templates.CppTemplateKind ObjCGenericClass
+  field BGCS.CppAst.Model.Templates.CppTemplateKind PartialTemplateClass
+  field BGCS.CppAst.Model.Templates.CppTemplateKind TemplateClass
+  field BGCS.CppAst.Model.Templates.CppTemplateKind TemplateSpecializedClass
+  field System.Int32 value__
+class BGCS.CppAst.Model.Templates.CppTemplateParameterNonType
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name, BGCS.CppAst.Model.Types.CppType templateNonType)
+  ctor(ClangSharp.Interop.CX_TemplateArgument templateArgument, System.String name, BGCS.CppAst.Model.Types.CppType templateNonType)
+  property System.String Name { get }
+  property BGCS.CppAst.Model.Types.CppType NoneTemplateType { get }
+  property System.Int32 SizeOf { get; set }
+  property ClangSharp.Interop.CX_TemplateArgument TemplateArgument { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Templates.CppTemplateParameterType
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  ctor(ClangSharp.Interop.CX_TemplateArgument templateArgument, System.String name)
+  property System.String Name { get }
+  property System.Int32 SizeOf { get; set }
+  property ClangSharp.Interop.CX_TemplateArgument TemplateArgument { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Types.CppArrayType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType elementType, System.Int32 size)
+  property System.Int32 Size { get }
+  property System.Int32 SizeOf { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Types.CppBaseType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType baseType)
+  property System.Boolean IsVirtual { get; set }
+  property BGCS.CppAst.Model.Types.CppType Type { get }
+  property BGCS.CppAst.Model.CppVisibility Visibility { get; set }
+  method System.String ToString()
+class BGCS.CppAst.Model.Types.CppBlockFunctionType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType returnType)
+enum BGCS.CppAst.Model.Types.CppCallingConvention
+  field BGCS.CppAst.Model.Types.CppCallingConvention AAPCS
+  field BGCS.CppAst.Model.Types.CppCallingConvention AAPCS_VFP
+  field BGCS.CppAst.Model.Types.CppCallingConvention AArch64VectorCall
+  field BGCS.CppAst.Model.Types.CppCallingConvention C
+  field BGCS.CppAst.Model.Types.CppCallingConvention Default
+  field BGCS.CppAst.Model.Types.CppCallingConvention IntelOclBicc
+  field BGCS.CppAst.Model.Types.CppCallingConvention Invalid
+  field BGCS.CppAst.Model.Types.CppCallingConvention PreserveAll
+  field BGCS.CppAst.Model.Types.CppCallingConvention PreserveMost
+  field BGCS.CppAst.Model.Types.CppCallingConvention Swift
+  field BGCS.CppAst.Model.Types.CppCallingConvention Unexposed
+  field BGCS.CppAst.Model.Types.CppCallingConvention Win64
+  field BGCS.CppAst.Model.Types.CppCallingConvention X86FastCall
+  field BGCS.CppAst.Model.Types.CppCallingConvention X86Pascal
+  field BGCS.CppAst.Model.Types.CppCallingConvention X86RegCall
+  field BGCS.CppAst.Model.Types.CppCallingConvention X86StdCall
+  field BGCS.CppAst.Model.Types.CppCallingConvention X86ThisCall
+  field BGCS.CppAst.Model.Types.CppCallingConvention X86VectorCall
+  field BGCS.CppAst.Model.Types.CppCallingConvention X86_64SysV
+  field System.Int32 value__
+class BGCS.CppAst.Model.Types.CppGenericType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType baseType)
+  property BGCS.CppAst.Model.Types.CppType BaseType { get; set }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Types.CppType> GenericArguments { get }
+  property System.Int32 SizeOf { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Types.CppPointerType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType elementType)
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+enum BGCS.CppAst.Model.Types.CppPrimitiveKind
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind BFloat16
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Bool
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Char
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Double
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Float
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Float16
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Int
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Int128
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Long
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind LongDouble
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind LongLong
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind ObjCClass
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind ObjCId
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind ObjCObject
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind ObjCSel
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Short
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind UInt128
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind UnsignedChar
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind UnsignedInt
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind UnsignedLong
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind UnsignedLongLong
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind UnsignedShort
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind Void
+  field BGCS.CppAst.Model.Types.CppPrimitiveKind WChar
+  field System.Int32 value__
+class BGCS.CppAst.Model.Types.CppPrimitiveType
+  field BGCS.CppAst.Model.Types.CppPrimitiveType BFloat16
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Bool
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Char
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Double
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Float
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Float16
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Int
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Int128
+  field System.Collections.Frozen.FrozenDictionary<ClangSharp.Interop.CXTypeKind,BGCS.CppAst.Model.Types.CppPrimitiveType> KindToPrimitive
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Long
+  field BGCS.CppAst.Model.Types.CppPrimitiveType LongDouble
+  field BGCS.CppAst.Model.Types.CppPrimitiveType LongLong
+  field BGCS.CppAst.Model.Types.CppPrimitiveType ObjCClass
+  field BGCS.CppAst.Model.Types.CppPrimitiveType ObjCId
+  field BGCS.CppAst.Model.Types.CppPrimitiveType ObjCObject
+  field BGCS.CppAst.Model.Types.CppPrimitiveType ObjCSel
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Short
+  field BGCS.CppAst.Model.Types.CppPrimitiveType UInt128
+  field BGCS.CppAst.Model.Types.CppPrimitiveType UnsignedChar
+  field BGCS.CppAst.Model.Types.CppPrimitiveType UnsignedInt
+  field BGCS.CppAst.Model.Types.CppPrimitiveType UnsignedLong
+  field BGCS.CppAst.Model.Types.CppPrimitiveType UnsignedLongLong
+  field BGCS.CppAst.Model.Types.CppPrimitiveType UnsignedShort
+  field BGCS.CppAst.Model.Types.CppPrimitiveType Void
+  field BGCS.CppAst.Model.Types.CppPrimitiveType WChar
+  property BGCS.CppAst.Model.Types.CppPrimitiveKind Kind { get }
+  property System.Int32 SizeOf { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Types.CppQualifiedType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppTypeQualifier qualifier, BGCS.CppAst.Model.Types.CppType elementType)
+  property BGCS.CppAst.Model.Types.CppTypeQualifier Qualifier { get }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Model.Types.CppReferenceType
+  ctor(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType elementType)
+  property System.Int32 SizeOf { get; set }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+enum BGCS.CppAst.Model.Types.CppStorageQualifier
+  field BGCS.CppAst.Model.Types.CppStorageQualifier Extern
+  field BGCS.CppAst.Model.Types.CppStorageQualifier None
+  field BGCS.CppAst.Model.Types.CppStorageQualifier Static
+  field System.Int32 value__
+class BGCS.CppAst.Model.Types.CppType
+  property System.String FullName { get }
+  property System.Int32 SizeOf { get; set }
+  property BGCS.CppAst.Model.Types.CppTypeKind TypeKind { get }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+enum BGCS.CppAst.Model.Types.CppTypeKind
+  field BGCS.CppAst.Model.Types.CppTypeKind Array
+  field BGCS.CppAst.Model.Types.CppTypeKind Enum
+  field BGCS.CppAst.Model.Types.CppTypeKind Function
+  field BGCS.CppAst.Model.Types.CppTypeKind GenericType
+  field BGCS.CppAst.Model.Types.CppTypeKind ObjCBlockFunction
+  field BGCS.CppAst.Model.Types.CppTypeKind ObjCInterfaceWithCategory
+  field BGCS.CppAst.Model.Types.CppTypeKind Pointer
+  field BGCS.CppAst.Model.Types.CppTypeKind Primitive
+  field BGCS.CppAst.Model.Types.CppTypeKind Qualified
+  field BGCS.CppAst.Model.Types.CppTypeKind Reference
+  field BGCS.CppAst.Model.Types.CppTypeKind StructOrClass
+  field BGCS.CppAst.Model.Types.CppTypeKind TemplateArgumentType
+  field BGCS.CppAst.Model.Types.CppTypeKind TemplateParameterNonType
+  field BGCS.CppAst.Model.Types.CppTypeKind TemplateParameterType
+  field BGCS.CppAst.Model.Types.CppTypeKind Typedef
+  field BGCS.CppAst.Model.Types.CppTypeKind Unexposed
+  field System.Int32 value__
+enum BGCS.CppAst.Model.Types.CppTypeQualifier
+  field BGCS.CppAst.Model.Types.CppTypeQualifier Const
+  field BGCS.CppAst.Model.Types.CppTypeQualifier Volatile
+  field System.Int32 value__
+class BGCS.CppAst.Model.Types.CppTypeWithElementType
+  property BGCS.CppAst.Model.Types.CppType ElementType { get }
+  property System.Int32 SizeOf { get; set }
+class BGCS.CppAst.Model.Types.CppUnexposedType
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  property System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Interfaces.ICppDeclaration> Children { get }
+  property System.String Name { get }
+  property System.Int32 SizeOf { get; set }
+  property BGCS.CppAst.Collections.CppContainerList<BGCS.CppAst.Model.Types.CppType> TemplateParameters { get }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
+class BGCS.CppAst.Parsing.BumpAllocator
+  field System.Int32 Alignment
+  field System.Int32 BlockSize
+  field BGCS.CppAst.Parsing.BumpAllocator Shared
+  ctor()
+  method System.Byte* Alloc(System.UIntPtr size)
+  method System.Void Dispose()
+  method System.Void Reset()
+struct BGCS.CppAst.Parsing.BumpAllocator+Block
+  field BGCS.CppAst.Parsing.BumpAllocator+Block* next
+  ctor()
+  method System.Byte* Alloc(BGCS.CppAst.Parsing.BumpAllocator+Block* self, System.UIntPtr size)
+  method System.Void Reset()
+struct BGCS.CppAst.Parsing.CString
+  ctor(System.Byte* data, System.Int32 length)
+  property System.Byte* CStr { get }
+  property System.Int32 Length { get }
+  method System.Boolean Equals(BGCS.CppAst.Parsing.CString other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.Span<System.Byte> AsSpan()
+class BGCS.CppAst.Parsing.CXCursorBlockVisitor
+  ctor(System.Object object, System.IntPtr method)
+  method ClangSharp.Interop.CXChildVisitResult EndInvoke(System.IAsyncResult result)
+  method ClangSharp.Interop.CXChildVisitResult Invoke(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent)
+  method System.IAsyncResult BeginInvoke(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, System.AsyncCallback callback, System.Object object)
+class BGCS.CppAst.Parsing.CommentExtensions
+  method BGCS.CppAst.Model.Metadata.CppComment GetComment(ClangSharp.Interop.CXCursor& cursor)
+  method BGCS.CppAst.Model.Metadata.CppComment ToComment(ClangSharp.Interop.CXComment& cxComment)
+class BGCS.CppAst.Parsing.CompilationLoggerBase
+  property BGCS.CppAst.Model.Metadata.CppCompilation RootCompilation { get }
+  method System.Void Unhandled(ClangSharp.Interop.CXCursor cursor)
+  method System.Void WarningUnhandled(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent)
+  method System.Void WarningUnhandled(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, ClangSharp.Interop.CXType type)
+class BGCS.CppAst.Parsing.CppContainerContext
+  ctor(BGCS.CppAst.Model.Interfaces.ICppContainer container, BGCS.CppAst.Model.CppVisibility visibility)
+  ctor(BGCS.CppAst.Model.Interfaces.ICppContainer container, BGCS.CppAst.Parsing.CppContainerContextType type, BGCS.CppAst.Model.CppVisibility visibility)
+  property BGCS.CppAst.Model.Interfaces.ICppContainer Container { get }
+  property BGCS.CppAst.Model.CppVisibility CurrentVisibility { get; set }
+  property BGCS.CppAst.Model.Interfaces.ICppDeclarationContainer DeclarationContainer { get }
+  property BGCS.CppAst.Model.Interfaces.ICppGlobalDeclarationContainer GlobalDeclarationContainer { get }
+  property System.Boolean IsChildrenVisited { get; set }
+  property BGCS.CppAst.Parsing.CppContainerContextType Type { get }
+enum BGCS.CppAst.Parsing.CppContainerContextType
+  field BGCS.CppAst.Parsing.CppContainerContextType System
+  field BGCS.CppAst.Parsing.CppContainerContextType Unspecified
+  field BGCS.CppAst.Parsing.CppContainerContextType User
+  field System.Int32 value__
+class BGCS.CppAst.Parsing.CppModelBuilder
+  ctor(ClangSharp.Interop.CXTranslationUnit translationUnit)
+  property System.Boolean AutoSquashTypedef { get; set }
+  property System.Collections.Generic.Dictionary<BGCS.CppAst.Parsing.CursorKey,BGCS.CppAst.Parsing.CppContainerContext> Containers { get }
+  property BGCS.CppAst.Parsing.CppContainerContext CurrentRootContainer { get }
+  property System.Boolean ParseCommentAttributeEnabled { get; set }
+  property System.Boolean ParseCommentsEnabled { get; set }
+  property System.Boolean ParseSystemIncludes { get; set }
+  property System.Boolean ParseTokenAttributeEnabled { get; set }
+  property BGCS.CppAst.Parsing.CppParserKind ParserKind { get; set }
+  property BGCS.CppAst.Model.Metadata.CppCompilation RootCompilation { get }
+  property BGCS.CppAst.Parsing.TypedefResolver TypedefResolver { get }
+  method BGCS.CppAst.Model.Declarations.CppClass VisitClassDecl(ClangSharp.Interop.CXCursor cursor)
+  method BGCS.CppAst.Model.Expressions.CppExpression VisitExpression(ClangSharp.Interop.CXCursor cursor)
+  method BGCS.CppAst.Model.Expressions.CppExpressionKind ToExpressionKind(ClangSharp.Interop.CXCursorKind kind)
+  method BGCS.CppAst.Model.Types.CppType GetCppType(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXType type, ClangSharp.Interop.CXCursor parent)
+  method BGCS.CppAst.Model.Types.CppType TryToCreateTemplateParameters(ClangSharp.Interop.CXCursor cursor)
+  method ClangSharp.Interop.CXChildVisitResult VisitMember(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, System.Void* data)
+  method ClangSharp.Interop.CXChildVisitResult VisitTranslationUnit(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, System.Void* data)
+  method System.Void ParseAttributes(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Interfaces.ICppAttributeContainer attrContainer, System.Boolean needOnlineSeek)
+  method System.Void ParseTypedefAttribute(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Types.CppType underlyingTypeDefType)
+  method System.Void VisitInitValue(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Expressions.CppExpression& expression, BGCS.CppAst.Model.CppValue& value)
+class BGCS.CppAst.Parsing.CppModelContext
+  ctor(BGCS.CppAst.Parsing.CppModelBuilder builder, ClangSharp.Interop.CXTranslationUnit translationUnit)
+  property BGCS.CppAst.Parsing.CppModelBuilder Builder { get }
+  property System.Collections.Generic.Dictionary<BGCS.CppAst.Parsing.CursorKey,BGCS.CppAst.Parsing.CppContainerContext> Containers { get }
+  property BGCS.CppAst.Model.Declarations.CppClass CurrentClassBeingVisited { get; set }
+  property BGCS.CppAst.Parsing.CppContainerContext CurrentRootContainer { get; set }
+  property BGCS.CppAst.Parsing.CursorKey CurrentTypedefKey { get; set }
+  property BGCS.CppAst.Collections.CppGlobalDeclarationContainer GlobalDeclarationContainer { get }
+  property System.Collections.Generic.Dictionary<BGCS.CppAst.Model.Templates.CppTemplateParameterType,System.Collections.Generic.HashSet<BGCS.CppAst.Parsing.CursorKey>> MapTemplateParameterTypeToTypedefKeys { get }
+  property System.Collections.Generic.Dictionary<BGCS.CppAst.Parsing.CursorKey,BGCS.CppAst.Model.Templates.CppTemplateParameterType> ObjCTemplateParameterTypes { get }
+  property BGCS.CppAst.Model.Metadata.CppCompilation RootCompilation { get }
+  property BGCS.CppAst.Parsing.CppContainerContext SystemRootContainerContext { get }
+  property BGCS.CppAst.Parsing.TypedefResolver TypedefResolver { get }
+  property BGCS.CppAst.Parsing.CppContainerContext UserRootContainerContext { get }
+  method BGCS.CppAst.Model.Templates.CppTemplateParameterType TryToCreateTemplateParametersObjC(ClangSharp.Interop.CXCursor cursor)
+  method BGCS.CppAst.Parsing.CppContainerContext GetOrCreateDeclContainer(ClangSharp.Interop.CXCursor cursor)
+  method BGCS.CppAst.Parsing.CursorKey GetCursorKey(ClangSharp.Interop.CXCursor cursor)
+  method TCppElement GetOrCreateDeclContainer(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Parsing.CppContainerContext& context)
+class BGCS.CppAst.Parsing.CppParser
+  field System.String CppAstRootFileName
+  method BGCS.CppAst.Model.Metadata.CppCompilation Parse(System.String cppText, BGCS.CppAst.Parsing.CppParserOptions options, System.String cppFilename)
+  method BGCS.CppAst.Model.Metadata.CppCompilation ParseFile(System.String cppFilename, BGCS.CppAst.Parsing.CppParserOptions options)
+  method BGCS.CppAst.Model.Metadata.CppCompilation ParseFiles(System.Collections.Generic.List<System.String> cppFilenameList, BGCS.CppAst.Parsing.CppParserOptions options)
+enum BGCS.CppAst.Parsing.CppParserKind
+  field BGCS.CppAst.Parsing.CppParserKind C
+  field BGCS.CppAst.Parsing.CppParserKind Cpp
+  field BGCS.CppAst.Parsing.CppParserKind None
+  field BGCS.CppAst.Parsing.CppParserKind ObjC
+  field System.Int32 value__
+class BGCS.CppAst.Parsing.CppParserOptions
+  ctor()
+  property System.Collections.Generic.List<System.String> AdditionalArguments { get }
+  property System.Boolean AutoSquashTypedef { get; set }
+  property System.Collections.Generic.List<System.String> Defines { get }
+  property System.Collections.Generic.List<System.String> IncludeFolders { get }
+  property System.Boolean ParseCommentAttribute { get; set }
+  property System.Boolean ParseComments { get; set }
+  property System.Boolean ParseMacros { get; set }
+  property System.Boolean ParseSystemIncludes { get; set }
+  property System.Boolean ParseTokenAttributes { get; set }
+  property BGCS.CppAst.Parsing.CppParserKind ParserKind { get; set }
+  property System.String PostHeaderText { get; set }
+  property System.String PreHeaderText { get; set }
+  property System.Collections.Generic.List<System.String> SystemIncludeFolders { get }
+  property System.String TargetAbi { get; set }
+  property BGCS.CppAst.Parsing.CppTargetCpu TargetCpu { get; set }
+  property System.String TargetCpuSub { get; set }
+  property System.String TargetSystem { get; set }
+  property System.String TargetTriple { get; set }
+  property System.String TargetVendor { get; set }
+  method BGCS.CppAst.Parsing.CppParserOptions Clone()
+  method BGCS.CppAst.Parsing.CppParserOptions ConfigureForTarget(BGCS.CppAst.Targeting.CppTarget target, System.String sysRoot, System.String compilerPath, System.Boolean discoverHostToolchain)
+  method BGCS.CppAst.Parsing.CppParserOptions ConfigureForWindowsMsvc(BGCS.CppAst.Parsing.CppTargetCpu targetCpu, BGCS.CppAst.Parsing.CppVisualStudioVersion vsVersion)
+  method BGCS.CppAst.Parsing.CppParserOptions EnableMacros()
+enum BGCS.CppAst.Parsing.CppTargetCpu
+  field BGCS.CppAst.Parsing.CppTargetCpu ARM
+  field BGCS.CppAst.Parsing.CppTargetCpu ARM64
+  field BGCS.CppAst.Parsing.CppTargetCpu X86
+  field BGCS.CppAst.Parsing.CppTargetCpu X86_64
+  field System.Int32 value__
+enum BGCS.CppAst.Parsing.CppVisualStudioVersion
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2005
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2008
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2010
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2012
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2013
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2015
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2017_15_0
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2017_15_3
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2017_15_5
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2017_15_6
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2017_15_7
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2017_15_8
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2017_15_9
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2019
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS2022
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VS6
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VSNET2002
+  field BGCS.CppAst.Parsing.CppVisualStudioVersion VSNET2003
+  field System.Int32 value__
+struct BGCS.CppAst.Parsing.CursorKey
+  field ClangSharp.Interop.CXCursor cursor
+  field BGCS.CppAst.Parsing.CString name
+  field BGCS.CppAst.Parsing.ResolverScope scope
+  ctor(BGCS.CppAst.Parsing.CppContainerContext context, ClangSharp.Interop.CXCursor cursor)
+  method System.Boolean Equals(BGCS.CppAst.Parsing.CursorKey other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+class BGCS.CppAst.Parsing.CursorVisitorRegistry`2
+  ctor()
+  method T GetVisitor()
+  method T Register()
+  method TVisitor GetVisitorByKind(ClangSharp.Interop.CXCursorKind kind)
+  method System.Void Override(TVisitor visitor)
+  method System.Void Register(T visitor)
+  method System.Void Unregister()
+class BGCS.CppAst.Parsing.CursorVisitor`1
+  property BGCS.CppAst.Parsing.CppModelBuilder Builder { get }
+  property BGCS.CppAst.Parsing.CppContainerContext Container { get }
+  property BGCS.CppAst.Parsing.CppModelContext Context { get }
+  property BGCS.CppAst.Parsing.CppContainerContext CurrentRootContainer { get }
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+  property BGCS.CppAst.Model.Metadata.CppCompilation RootCompilation { get }
+  property BGCS.CppAst.Parsing.TypedefResolver TypedefResolver { get }
+  property ClangSharp.Interop.CXChildVisitResult VisitResult { get }
+  method TResult Visit(BGCS.CppAst.Parsing.CppModelContext context, ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent)
+struct BGCS.CppAst.Parsing.DGCHandle`1
+  ctor(T obj)
+  ctor(System.Void* ptr)
+  property T Value { get }
+  method T ObjFrom(System.Void* ptr)
+  method System.Void Dispose()
+class BGCS.CppAst.Parsing.DeclContainerVisitor
+class BGCS.CppAst.Parsing.DeclContainerVisitorRegistry
+  ctor()
+  property BGCS.CppAst.Parsing.DeclContainerVisitor FallbackVisitor { get; set }
+  method BGCS.CppAst.Parsing.DeclContainerVisitor GetVisitor(ClangSharp.Interop.CXCursorKind kind)
+  method BGCS.CppAst.Parsing.DeclContainerVisitor Register()
+  method T GetVisitor()
+  method System.Void Override(BGCS.CppAst.Parsing.DeclContainerVisitor visitor)
+  method System.Void Register(T visitor)
+  method System.Void Unregister()
+class BGCS.CppAst.Parsing.Extensions
+  method BGCS.CppAst.Model.CppLinkageKind GetLinkageKind(ClangSharp.Interop.CXCursor cursor)
+  method BGCS.CppAst.Model.CppLinkageKind ToLinkageKind(ClangSharp.Interop.CXLinkageKind link)
+  method BGCS.CppAst.Model.CppVisibility GetVisibility(ClangSharp.Interop.CXCursor& cursor)
+  method BGCS.CppAst.Model.CppVisibility ToVisibility(ClangSharp.Interop.CX_CXXAccessSpecifier accessSpecifier)
+  method BGCS.CppAst.Model.Metadata.CppSourceLocation GetSourceLocation(ClangSharp.Interop.CXCursor& cursor)
+  method BGCS.CppAst.Model.Metadata.CppSourceLocation GetSourceLocation(ClangSharp.Interop.CXDiagnostic& diagnostic)
+  method BGCS.CppAst.Model.Metadata.CppSourceLocation ToSourceLocation(ClangSharp.Interop.CXSourceLocation& start)
+  method BGCS.CppAst.Model.Metadata.CppSourceSpan GetSourceRange(ClangSharp.Interop.CXCursor& cursor)
+  method BGCS.CppAst.Model.Metadata.CppSourceSpan ToSourceRange(ClangSharp.Interop.CXSourceRange& range)
+  method BGCS.CppAst.Model.Types.CppCallingConvention GetCallingConvention(ClangSharp.Interop.CXType type)
+  method BGCS.CppAst.Model.Types.CppStorageQualifier GetStorageQualifier(ClangSharp.Interop.CXCursor& cursor)
+  method System.Boolean IsAnonymousTypeUsed(BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Types.CppType anonymousType)
+  method System.Boolean IsAnonymousTypeUsed(BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Types.CppType anonymousType, System.Collections.Generic.HashSet<BGCS.CppAst.Model.Types.CppType> visited)
+  method System.Boolean IsCursorDefinition(ClangSharp.Interop.CXCursor& cursor, BGCS.CppAst.Model.CppElement element)
+  method System.Boolean IsExpression(ClangSharp.Interop.CXCursor& cursor)
+  method System.Boolean IsExternC(ClangSharp.Interop.CXCursor& cursor, ClangSharp.Interop.CXCursor& parent)
+  method System.Boolean IsExternCLinkageSpec(ClangSharp.Interop.CXCursor& cursor)
+  method System.String AsText(ClangSharp.Interop.CXCursor& cursor)
+  method System.String GetCursorAsTextBetweenOffset(ClangSharp.Interop.CXCursor& cursor, System.Int32 startOffset, System.Int32 endOffset)
+class BGCS.CppAst.Parsing.MemberVisitor
+class BGCS.CppAst.Parsing.MemberVisitorRegistry
+  method BGCS.CppAst.Parsing.MemberVisitor GetVisitor(ClangSharp.Interop.CXCursorKind kind)
+  method BGCS.CppAst.Parsing.MemberVisitor Register()
+  method T GetVisitor()
+  method System.Void Override(BGCS.CppAst.Parsing.MemberVisitor visitor)
+  method System.Void Register(T visitor)
+  method System.Void Unregister()
+enum BGCS.CppAst.Parsing.ResolverScope
+  field BGCS.CppAst.Parsing.ResolverScope All
+  field BGCS.CppAst.Parsing.ResolverScope None
+  field BGCS.CppAst.Parsing.ResolverScope System
+  field BGCS.CppAst.Parsing.ResolverScope User
+  field System.Int32 value__
+class BGCS.CppAst.Parsing.TypedefResolver
+  ctor()
+  method System.Boolean TryResolve(BGCS.CppAst.Parsing.CursorKey key, BGCS.CppAst.Model.Types.CppType& type, BGCS.CppAst.Parsing.ResolverScope scope)
+  method System.Void RegisterTypedef(BGCS.CppAst.Parsing.CursorKey key, BGCS.CppAst.Model.Types.CppType type)
+class BGCS.CppAst.Parsing.Visitors.ClassStructDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+  method System.Void AddTemplateParameters(ClangSharp.Interop.CXCursor cursor, BGCS.CppAst.Model.Declarations.CppClass cppClass)
+class BGCS.CppAst.Parsing.Visitors.EnumDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.CXXAccessSpecifierVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.CXXBaseSpecifierVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.ClassStructUnionObjCVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.EnumConstantVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.EnumDeclMemberVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.FieldVariableVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.FirstRefVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.FlagEnumVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.FunctionDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.InclusionDirectiveVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.LinkageSpecVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.MacroDefinitionVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.NamespaceMemberVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.ObjCClassProtocolRefVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.ObjCPropertyDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.TypeAliasDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.TypeRefVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.TypedefDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.UnexposedDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.MemberVisitors.UsingDirectiveVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.NamespaceDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Parsing.Visitors.TranslationUnitDeclVisitor
+  ctor()
+  property System.Collections.Generic.IEnumerable<ClangSharp.Interop.CXCursorKind> Kinds { get }
+class BGCS.CppAst.Targeting.CppTarget
+  ctor(BGCS.CppAst.Targeting.CppTargetPlatform Platform, BGCS.CppAst.Targeting.CppTargetArchitecture Architecture, BGCS.CppAst.Targeting.CppTargetAbi Abi, BGCS.CppAst.Parsing.CppTargetCpu Cpu, System.String Triple, System.String Identifier)
+  property BGCS.CppAst.Targeting.CppTargetAbi Abi { get; set }
+  property BGCS.CppAst.Targeting.CppTargetArchitecture Architecture { get; set }
+  property BGCS.CppAst.Parsing.CppTargetCpu Cpu { get; set }
+  property System.String Identifier { get; set }
+  property BGCS.CppAst.Targeting.CppTargetPlatform Platform { get; set }
+  property System.String Triple { get; set }
+  method BGCS.CppAst.Targeting.CppTarget <Clone>$()
+  method BGCS.CppAst.Targeting.CppTarget Resolve(BGCS.CppAst.Targeting.CppTargetPlatform platform, BGCS.CppAst.Targeting.CppTargetArchitecture architecture, BGCS.CppAst.Targeting.CppTargetAbi abi, System.String tripleOverride)
+  method System.Boolean Equals(BGCS.CppAst.Targeting.CppTarget other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.CppAst.Targeting.CppTargetPlatform& Platform, BGCS.CppAst.Targeting.CppTargetArchitecture& Architecture, BGCS.CppAst.Targeting.CppTargetAbi& Abi, BGCS.CppAst.Parsing.CppTargetCpu& Cpu, System.String& Triple, System.String& Identifier)
+enum BGCS.CppAst.Targeting.CppTargetAbi
+  field BGCS.CppAst.Targeting.CppTargetAbi Android
+  field BGCS.CppAst.Targeting.CppTargetAbi Darwin
+  field BGCS.CppAst.Targeting.CppTargetAbi Default
+  field BGCS.CppAst.Targeting.CppTargetAbi Gnu
+  field BGCS.CppAst.Targeting.CppTargetAbi Msvc
+  field BGCS.CppAst.Targeting.CppTargetAbi Musl
+  field System.Int32 value__
+enum BGCS.CppAst.Targeting.CppTargetArchitecture
+  field BGCS.CppAst.Targeting.CppTargetArchitecture Arm
+  field BGCS.CppAst.Targeting.CppTargetArchitecture Arm64
+  field BGCS.CppAst.Targeting.CppTargetArchitecture Host
+  field BGCS.CppAst.Targeting.CppTargetArchitecture X64
+  field BGCS.CppAst.Targeting.CppTargetArchitecture X86
+  field System.Int32 value__
+enum BGCS.CppAst.Targeting.CppTargetPlatform
+  field BGCS.CppAst.Targeting.CppTargetPlatform Android
+  field BGCS.CppAst.Targeting.CppTargetPlatform FreeBSD
+  field BGCS.CppAst.Targeting.CppTargetPlatform Host
+  field BGCS.CppAst.Targeting.CppTargetPlatform IOS
+  field BGCS.CppAst.Targeting.CppTargetPlatform Linux
+  field BGCS.CppAst.Targeting.CppTargetPlatform MacOS
+  field BGCS.CppAst.Targeting.CppTargetPlatform Windows
+  field System.Int32 value__
+class BGCS.CppAst.Targeting.CppToolchainDiscovery
+  method System.Collections.Generic.IReadOnlyList<System.String> DiscoverSystemIncludeFolders(BGCS.CppAst.Parsing.CppParserKind parserKind, System.String compilerPath)
+  method System.String FindCompiler(BGCS.CppAst.Parsing.CppParserKind parserKind, System.String explicitPath)
+  method System.String FindMacOsSdkRoot()
+  method System.String GetCompilerFingerprint(BGCS.CppAst.Parsing.CppParserKind parserKind, System.String compilerPath)
+class BGCS.CppAst.Utilities.AttributeTokenizer
+  ctor(ClangSharp.Interop.CXCursor cursor)
+  ctor(ClangSharp.Interop.CXTranslationUnit tu, ClangSharp.Interop.CXSourceRange range)
+  method ClangSharp.Interop.CXSourceRange GetRange(ClangSharp.Interop.CXCursor cursor)
+class BGCS.CppAst.Utilities.MurmurHash3
+  method System.UInt32 Hash32(System.ReadOnlySpan<System.Byte> data, System.UInt32 seed)
+class BGCS.CppAst.Utilities.TokenIterator
+  ctor(BGCS.CppAst.Utilities.Tokenizer tokens)
+  property System.Boolean CanPeek { get }
+  property ClangSharp.Interop.CXCursor Cursor { get }
+  method BGCS.CppAst.Model.Expressions.CppToken Peek()
+  method BGCS.CppAst.Model.Expressions.CppToken PreviousToken()
+  method System.Boolean Find(System.String[] expectedTokens)
+  method System.Boolean Next()
+  method System.Boolean Next(BGCS.CppAst.Model.Expressions.CppToken& token)
+  method System.Boolean Skip(System.String expectedText)
+  method System.Boolean Skip(System.String[] expectedTokens)
+  method System.String PeekText()
+class BGCS.CppAst.Utilities.Tokenizer
+  ctor(ClangSharp.Interop.CXCursor cursor)
+  ctor(ClangSharp.Interop.CXTranslationUnit tu, ClangSharp.Interop.CXSourceRange range)
+  property System.Int32 Count { get }
+  property ClangSharp.Interop.CXCursor Cursor { get }
+  property BGCS.CppAst.Model.Expressions.CppToken Item { get }
+  method ClangSharp.Interop.CXSourceRange GetRange(ClangSharp.Interop.CXCursor cursor)
+  method System.String GetString(System.Int32 i)
+  method System.String GetStringForLength(System.Int32 length)
+  method System.String TokensToString()
+class BGCS.CppAst.Utilities.TokenizerDebuggerType
+  ctor(BGCS.CppAst.Utilities.Tokenizer tokenizer)
+  property System.Object[] Items { get }

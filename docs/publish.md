@@ -27,7 +27,7 @@ This command packs the complete dependency closure, restores the three public pa
 
 The release workflow is `.github/workflows/publish-bgcs-runtime-nuget.yml`.
 
-It runs restore, build, all tests, package-closure validation, and only then pushes packages and symbol packages. Publishing is triggered by either:
+It runs restore, build, all tests, package-closure validation, generates `artifacts/supply-chain/sbom.spdx.json` and `provenance.slsa.json`, uploads that evidence, and only then pushes packages and symbol packages. Every package and symbol package is covered by SHA-256. Publishing is triggered by either:
 
 - a unified `v*` tag, such as `v1.2.3`; or
 - the manual workflow with a release version.

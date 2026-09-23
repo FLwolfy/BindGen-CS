@@ -39,15 +39,23 @@ score() {
 }
 
 small_c="$(score solution-build managed-tests native-c-abi)"
-large_c="$(score managed-tests real-libraries ir-native-real-libraries innoengine-bindings)"
+large_c="$(score managed-tests real-libraries ir-native-real-libraries)"
 complex_c="$(score native-c-abi strict-safety managed-tests)"
 cpp_bridge="$(score native-cpp-bridge managed-tests)"
-modern_cpp="$(score modern-cpp native-cpp-bridge real-cpp-libraries strict-safety)"
-api_quality="$(score real-libraries managed-tests innoengine-bindings)"
-usability="$(score demo nuget-tool strict-safety)"
+modern_cpp="$(score modern-cpp native-cpp-bridge real-cpp-libraries strict-safety advanced-cpp-semantics callback-async-lifetime)"
+api_quality="$(score real-libraries managed-tests api-compatibility)"
+usability="$(score demo nuget-tool native-package strict-safety)"
 architecture="$(score solution-build managed-tests performance)"
 internal="$(score solution-build managed-tests strict-safety ir-native-real-libraries performance)"
-release="$(score solution-build managed-tests real-libraries innoengine-bindings nuget-tool performance)"
+release="$(score solution-build managed-tests real-libraries api-compatibility nuget-tool native-package supply-chain performance)"
+
+platform_specific_json=""
+platform_specific_markdown=""
+if [[ "${target}" == "windows-x64-msvc" ]]; then
+  score windows-native-providers > /dev/null
+  platform_specific_json=', "windowsNativeProviders": ["clang-cl build/export/invocation", "MSBuild build/export/invocation"]'
+  platform_specific_markdown='- Windows native providers: clang-cl and MSBuild build/export/runtime invocation passed.'
+fi
 
 cat > "${OUTPUT_DIR}/report.json" <<EOF
 {
@@ -59,18 +67,18 @@ cat > "${OUTPUT_DIR}/report.json" <<EOF
   "scoreRange": { "minimum": 9.0, "maximum": 9.0 },
   "categories": [
     { "name": "small-c-api", "score": ${small_c}, "gates": ["solution-build", "managed-tests", "native-c-abi"] },
-    { "name": "medium-large-c-api", "score": ${large_c}, "gates": ["managed-tests", "real-libraries", "ir-native-real-libraries", "innoengine-bindings"] },
+    { "name": "medium-large-c-api", "score": ${large_c}, "gates": ["managed-tests", "real-libraries", "ir-native-real-libraries"] },
     { "name": "complex-c-abi", "score": ${complex_c}, "gates": ["native-c-abi", "strict-safety", "managed-tests"] },
     { "name": "cpp-class-bridge", "score": ${cpp_bridge}, "gates": ["native-cpp-bridge", "managed-tests"] },
-    { "name": "modern-cpp", "score": ${modern_cpp}, "gates": ["modern-cpp", "native-cpp-bridge", "real-cpp-libraries", "strict-safety"] },
-    { "name": "generated-api-quality", "score": ${api_quality}, "gates": ["real-libraries", "managed-tests", "innoengine-bindings"] },
-    { "name": "beginner-usability", "score": ${usability}, "gates": ["demo", "nuget-tool", "strict-safety"] },
+    { "name": "modern-cpp", "score": ${modern_cpp}, "gates": ["modern-cpp", "native-cpp-bridge", "real-cpp-libraries", "strict-safety", "advanced-cpp-semantics", "callback-async-lifetime"] },
+    { "name": "generated-api-quality", "score": ${api_quality}, "gates": ["real-libraries", "managed-tests", "api-compatibility"] },
+    { "name": "beginner-usability", "score": ${usability}, "gates": ["demo", "nuget-tool", "native-package", "strict-safety"] },
     { "name": "outer-architecture", "score": ${architecture}, "gates": ["solution-build", "managed-tests", "performance"] },
     { "name": "inner-architecture", "score": ${internal}, "gates": ["solution-build", "managed-tests", "strict-safety", "ir-native-real-libraries", "performance"] },
-    { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "innoengine-bindings", "nuget-tool", "performance"] }
+    { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "api-compatibility", "nuget-tool", "native-package", "supply-chain", "performance"] }
   ],
   "realLibraries": {
-    "compatibilityGeneratedCompiledAndSnapshotted": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
+    "rawAbiGeneratedCompiledAndSnapshotted": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
     "irNativeGeneratedAndWarningFreeCompiled": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
     "sourceSnapshots": "tests/real-libraries/api-snapshots.${snapshot_platform}.sha256",
     "publicApiSnapshots": "tests/real-libraries/public-api-snapshots.${snapshot_platform}.sha256"
@@ -79,11 +87,9 @@ cat > "${OUTPUT_DIR}/report.json" <<EOF
     "generatedBridgeCompiledAndRebound": ["bimg"],
     "snapshots": "tests/real-libraries/cpp-api-snapshots.${snapshot_platform}.sha256"
   },
-  "innoEngine": {
-    "workspace": "native/bindings/workspace.json",
-    "generatedProjects": ["cimgui", "cimguizmo", "miniaudio", "SDL3", "bgfx"],
-    "verification": ["deterministic workspace diff", "no hand-authored native imports", "native dependency builds", "full solution build", "all native binding test projects"]
-  },
+  "releaseGovernance": {
+    "verification": ["reviewed public API baseline", "deterministic NuGet contents", "desktop RID native consumer invocation", "NuGet vulnerability audit", "dependency license policy"]
+  }${platform_specific_json},
   "safetyContract": "Supported ABI and standard-library types are automatically lowered through verified adapters. Missing ownership, allocator, length, callback lifetime, or template-instantiation semantics produce structured diagnostics requesting the minimum explicit configuration.",
   "limitations": [
     "This report verifies only the declared ${target} target; every additional target requires its own report and snapshots.",
@@ -101,6 +107,7 @@ cat > "${OUTPUT_DIR}/report.md" <<EOF
 - Generated at: \`${generated_at_utc}\`
 - Source: \`${source_revision}\` (working tree dirty: \`${source_dirty}\`)
 - Score policy: every mandatory gate must pass; a complete category scores 9.0/10.0.
+${platform_specific_markdown}
 
 | Category | Score |
 | --- | ---: |
@@ -115,7 +122,7 @@ cat > "${OUTPUT_DIR}/report.md" <<EOF
 | Internal architecture | ${internal} |
 | NuGet/testing/release | ${release} |
 
-The report was emitted only after managed/native tests, compatibility plus warning-free IR-native generation for five real C libraries, real C++ bridge generation, deterministic source and public-API snapshots, the InnoEngine workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests passed.
+The report was emitted only after managed/native tests, warning-free IR-native generation for five real C libraries, real C++ bridge generation, advanced standard-library/lifetime semantics, deterministic source and public-API gates, NuGet/tool/native-RID consumer tests, dependency policy, and performance budgets passed. InnoEngine migration is deliberately outside this BGCS maintenance-candidate report and begins only after all required desktop reports exist.
 EOF
 
 # Keep the stable latest-report paths for existing automation while retaining

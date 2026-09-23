@@ -12,6 +12,34 @@ namespace BGCS.Tests;
 public class CsCodeGeneratorConfigTests
 {
     [Fact]
+    public void Constructor_DefaultsToIrNativeBackend()
+    {
+        CsCodeGeneratorConfig config = new();
+
+        Assert.Equal(CsCodeGeneratorConfig.CurrentConfigVersion, config.ConfigVersion);
+        Assert.Equal(CSharpEmissionBackend.IntermediateRepresentation, config.CSharpEmissionBackend);
+    }
+
+    [Fact]
+    public void ConfigLoader_RejectsNonCurrentVersionWithoutLegacyMigration()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-v1-backend-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string path = Path.Combine(temp, "bindings.json");
+        File.WriteAllText(path,
+            "{\"ConfigVersion\":2,\"Namespace\":\"Test.Generated\",\"ApiName\":\"TestApi\",\"LibName\":\"test\",\"EntryFiles\":[]}");
+        try
+        {
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => new ConfigLoader().Load(path));
+            Assert.Contains("no legacy migration", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void Constructor_CollectionsShouldBeInitialized()
     {
         CsCodeGeneratorConfig cfg = new();

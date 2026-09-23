@@ -37,7 +37,10 @@ public sealed record BindingTypeReference(string NativeName, string ManagedName,
 /// <param name="ArrayDimensions">Fixed array dimensions from outermost to innermost.</param>
 public sealed record BindingField(string NativeName, string ManagedName, BindingTypeReference Type, long Offset,
     long BitOffset, int BitWidth, IReadOnlyList<int> ArrayDimensions, bool IsBitField = false,
-    bool IsSignedBitField = false);
+    bool IsSignedBitField = false)
+{
+    public string? Comment { get; init; }
+}
 
 /// <summary>
 /// Describes one named enumeration value.
@@ -45,7 +48,14 @@ public sealed record BindingField(string NativeName, string ManagedName, Binding
 /// <param name="NativeName">Native enumerator name.</param>
 /// <param name="ManagedName">Managed enumerator name.</param>
 /// <param name="Value">Normalized integral expression.</param>
-public sealed record BindingEnumMember(string NativeName, string ManagedName, string Value);
+public sealed record BindingEnumMember(string NativeName, string ManagedName, string Value)
+{
+    public string? Comment { get; init; }
+    public IList<string> Attributes { get; init; } = new List<string>();
+}
+
+/// <summary>Describes a sentinel-backed validity property on a native value type.</summary>
+public sealed record BindingValidity(string FieldName, string InvalidValue, string PropertyName);
 
 /// <summary>
 /// Represents an ABI-analyzed native type independent of a concrete output language.
@@ -69,6 +79,10 @@ public sealed class BindingType
     public BindingTypeKind Kind { get; }
     public int Size { get; }
     public int Alignment { get; }
+    public string? Comment { get; init; }
+    public IList<string> Attributes { get; init; } = new List<string>();
+    public bool IsCustomDefinition { get; init; }
+    public BindingValidity? Validity { get; set; }
     /// <summary>
     /// Gets whether this type preserves only native size and alignment because its field definition was unavailable.
     /// Such storage is safe behind pointers but cannot be passed by value without target-specific ABI classification.

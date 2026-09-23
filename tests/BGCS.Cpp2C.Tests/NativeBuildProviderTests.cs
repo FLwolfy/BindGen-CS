@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using BGCS.Cpp2C.Build;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
@@ -10,6 +11,15 @@ namespace BGCS.Cpp2C.Tests;
 
 public sealed class NativeBuildProviderTests
 {
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate nint CreateDemo();
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int AddValue(nint instance, int value);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void DestroyDemo(nint instance);
+
     [Fact]
     public void CMakeProvider_BuildsAndVerifiesGeneratedBridgeOnUnixHost()
     {
@@ -119,6 +129,30 @@ public sealed class NativeBuildProviderTests
     }
 
     [Fact]
+    [Trait("Category", "WindowsNativeProvider")]
+    public void ClangClProvider_BuildsExportsAndInvokesGeneratedDllOnWindowsX64()
+    {
+        if (!RequireWindowsX64Evidence())
+            return;
+
+        string compiler = NativeBuildToolDiscovery.FindClangCl()
+            ?? throw new InvalidOperationException("clang-cl was not found. The Windows acceptance runner must install LLVM and initialize the MSVC environment.");
+        ExecuteWindowsProvider(new ClangClNativeBuildProvider(compiler));
+    }
+
+    [Fact]
+    [Trait("Category", "WindowsNativeProvider")]
+    public void MSBuildProvider_BuildsExportsAndInvokesGeneratedDllOnWindowsX64()
+    {
+        if (!RequireWindowsX64Evidence())
+            return;
+
+        string msbuild = NativeBuildToolDiscovery.FindMSBuild()
+            ?? throw new InvalidOperationException("MSBuild was not found. The Windows acceptance runner must install Visual Studio C++ build tools.");
+        ExecuteWindowsProvider(new MSBuildNativeBuildProvider(msbuild));
+    }
+
+    [Fact]
     public void ExportInspector_ReadsOnlyDeclaredApiSymbols()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-export-header-" + Guid.NewGuid().ToString("N"));
@@ -154,4 +188,80 @@ public sealed class NativeBuildProviderTests
         [],
         [],
         []);
+
+    private static bool RequireWindowsX64Evidence()
+    {
+        bool required = string.Equals(
+            Environment.GetEnvironmentVariable("BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS"),
+            "1",
+            StringComparison.Ordinal);
+        bool supportedHost = OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64;
+        if (required && !supportedHost)
+            throw new PlatformNotSupportedException("The required Windows native-provider gate must run on a Windows x64 process.");
+        return supportedHost;
+    }
+
+    private static void ExecuteWindowsProvider(INativeBuildPipelineProvider provider)
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-windows-provider-" + provider.Name + "-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "sample.hpp");
+        string output = Path.Combine(temp, "GeneratedBridge");
+        File.WriteAllText(header, "class ProviderDemo { public: int Add(int value) { return value + 9; } };\n");
+        try
+        {
+            Cpp2CGeneratorConfig config = new()
+            {
+                NativeLibraryName = "provider_" + provider.Name.Replace("-", "_", StringComparison.Ordinal),
+                TargetPlatform = CppTargetPlatform.Windows,
+                TargetArchitecture = CppTargetArchitecture.X64,
+                TargetAbi = CppTargetAbi.Msvc
+            };
+            Cpp2CCodeGenerator generator = new(config);
+            generator.Generate(header, output);
+            Assert.True(generator.LastResult?.Success,
+                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+
+            string manifestPath = Path.Combine(output, "bridge.manifest.json");
+            CppBridgeBuildManifest manifest = CppBridgeBuildManifestSerializer.Load(manifestPath);
+            NativeBuildPipelineResult result = NativeBuildExecutor.Execute(
+                provider.CreatePipeline(manifest, manifestPath),
+                TimeSpan.FromMinutes(3));
+
+            Assert.True(result.Success, string.Join(Environment.NewLine,
+                result.Steps.Select(step => step.StandardOutput + Environment.NewLine + step.StandardError)));
+            Assert.True(File.Exists(result.OutputFile));
+            NativeExportInspectionResult exports = NativeExportInspector.Inspect(manifest, manifestPath, result.OutputFile);
+            Assert.True(exports.Success, "Missing exports: " + string.Join(", ", exports.Missing));
+
+            nint library = NativeLibrary.Load(result.OutputFile);
+            try
+            {
+                CreateDemo create = Load<CreateDemo>(library, "ProviderDemoCreate");
+                AddValue add = Load<AddValue>(library, "ProviderDemo_Add");
+                DestroyDemo destroy = Load<DestroyDemo>(library, "ProviderDemoDestroy");
+                nint instance = create();
+                Assert.NotEqual(0, instance);
+                try
+                {
+                    Assert.Equal(14, add(instance, 5));
+                }
+                finally
+                {
+                    destroy(instance);
+                }
+            }
+            finally
+            {
+                NativeLibrary.Free(library);
+            }
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    private static T Load<T>(nint library, string symbol) where T : Delegate =>
+        Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, symbol));
 }

@@ -147,9 +147,12 @@ Inspect without executing, override the compiler, or select an explicit artifact
 ```bash
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json --dry-run --json
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json --compiler clang++ --output artifacts/libnative.dylib
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root artifacts/native-package
 ```
 
 `native-build` never invokes a command shell. Select `auto`, direct Clang/GNU, clang-cl, CMake, Meson, or MSBuild; every provider consumes the same manifest library search paths, link libraries, linker arguments, target triple, and sysroot where the backend supports them. Successful builds verify generated declarations against the binary export table by default.
+
+`--package-root` stages a verified desktop binary under `runtimes/<rid>/native/` and updates `bgcs.native-assets.json` with target and SHA-256. Windows, Linux, and macOS x64/arm64 currently map to NuGet RIDs. Android, iOS, and FreeBSD are formal support targets, but their target-specific package layouts still require implementation and acceptance, so this helper currently emits an explicit diagnostic for them. After packing, generate release evidence with `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>`.
 
 Do not assume arbitrary template/STL types can be lowered automatically. See [Capabilities](capabilities.md) for explicit instances and supported adapters, and [Diagnostics](diagnostics.md) for rejection guidance.
 

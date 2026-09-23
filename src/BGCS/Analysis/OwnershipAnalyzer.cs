@@ -26,7 +26,7 @@ public sealed class OwnershipAnalyzer
                 ? BindingStringEncoding.Utf16
                 : BindingStringEncoding.Utf8;
             inferred = new(MarshallingStrategy.String, BindingOwnership.Borrowed, encoding,
-                RequiresCleanup: direction != Direction.In, NullTerminated: true);
+                RequiresCleanup: false, NullTerminated: true);
         }
         else if (type.IsDelegate(out _))
             inferred = new(MarshallingStrategy.Callback, BindingOwnership.Borrowed);
@@ -49,7 +49,14 @@ public sealed class OwnershipAnalyzer
             WrittenCountParameter = mapping.WrittenCountParameter ?? inferred.WrittenCountParameter,
             RequiresCleanup = mapping.RequiresCleanup ?? inferred.RequiresCleanup,
             CleanupFunction = mapping.CleanupFunction ?? inferred.CleanupFunction,
-            NullTerminated = mapping.NullTerminated ?? inferred.NullTerminated
+            NullTerminated = mapping.NullTerminated ?? inferred.NullTerminated,
+            AllocatorKind = mapping.AllocatorKind ?? inferred.AllocatorKind,
+            AllocatorFunction = mapping.AllocatorFunction ?? inferred.AllocatorFunction,
+            CallbackLifetime = mapping.CallbackLifetime ?? inferred.CallbackLifetime,
+            CallbackThreading = mapping.CallbackThreading ?? inferred.CallbackThreading,
+            UnregisterFunction = mapping.UnregisterFunction ?? inferred.UnregisterFunction,
+            AsyncCompletion = mapping.AsyncCompletion ?? inferred.AsyncCompletion,
+            CompletionFunction = mapping.CompletionFunction ?? inferred.CompletionFunction
         };
     }
 }

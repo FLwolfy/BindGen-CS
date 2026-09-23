@@ -41,7 +41,7 @@ Paths in `bindgen.json` are resolved relative to the configuration file. Success
 - `DllImport`, `LibraryImport`, and function-table/native-context import modes;
 - extension points for generation steps, function rules, parameter writers, patches, and IR emitters.
 
-The primary configuration-driven C# output currently preserves the mature compatibility generation steps behind the isolated internal `AstGenerationStepEmitter`; `CSharpEmitter` itself is IR-only, but replacing that compatibility path without snapshot loss is not yet complete.
+The primary configuration-driven C# output uses the IR-only `CSharpEmitter`. The pre-release compatibility emitter and old configuration migration path have been removed.
 
 ## Start here
 

@@ -15,12 +15,10 @@ public class CsCodeGeneratorPipelineTests
 
         generator.InvokeConfigureCore();
         int firstPreCount = generator.PreProcessSteps.Count;
-        int firstStepCount = generator.GenerationSteps.Count;
 
         generator.InvokeConfigureCore();
 
         Assert.Equal(firstPreCount, generator.PreProcessSteps.Count);
-        Assert.Equal(firstStepCount, generator.GenerationSteps.Count);
     }
 
     [Fact]

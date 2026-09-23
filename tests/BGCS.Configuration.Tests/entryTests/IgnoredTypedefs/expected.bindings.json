@@ -1,7 +1,7 @@
 {
   "Contains": [
     "using KeepTypedef = int;",
-    "internal static extern KeepTypedef AddKeepNative(KeepTypedef value);"
+    "internal static extern int AddKeepNative(int value);"
   ],
   "NotContains": [
     "using MyTypedef = int;"

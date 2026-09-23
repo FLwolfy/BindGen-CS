@@ -19,7 +19,7 @@ bindgen-cs schema bindgen.schema.json
 bindgen-cs schema bridge.schema.json --kind cpp
 ```
 
-Schemas are derived from the installed C or C++ configuration type, include nested public object shapes, enum names, and core semantic descriptions, and reject unknown root properties by default. Use `--allow-unknown-properties` only while migrating legacy configuration. Detailed marshalling semantics remain in this guide and the tests.
+Schemas are derived from the installed C or C++ configuration type, include nested public object shapes, enum names, and core semantic descriptions, and reject unknown root properties by default. Use `--allow-unknown-properties` only when a controlled outer tool owns additional metadata; it does not enable old schema migration. Detailed marshalling semantics remain in this guide and the tests.
 
 ## Make four decisions first
 
@@ -48,7 +48,7 @@ Schemas are derived from the installed C or C++ configuration type, include nest
 
 This configuration follows the host ABI. Reproducible release configurations should use an explicit target preset or set platform/architecture/ABI directly; the configured target must match the final native binary.
 
-`ConfigVersion` identifies the JSON contract. `init` writes the current version; an absent value is treated as version 1 for existing configurations, while a value newer than the installed generator fails before parsing or output replacement.
+`ConfigVersion` identifies the JSON contract. `init` writes the current version; this pre-release build accepts only that version and provides no old-schema migration.
 
 ## Input and parser settings
 
@@ -81,12 +81,7 @@ Model support is not the same as completed host acceptance. See the [target evid
 
 ## C# emission backend
 
-`CSharpEmissionBackend` selects the source path that owns the final C# output:
-
-- `Compatibility` (default) preserves the established full public surface, friendly overloads, and snapshot compatibility.
-- `IntermediateRepresentation` emits one C# source directly from the canonical `BindingModule`. It covers constants, enums, aliases, opaque handles, delegates, anonymous/nested structs and unions, fixed arrays, bitfields, and all three import modes. Its raw ABI surface is compile-gated against five real libraries. Semantics it cannot yet preserve—such as variadic functions, non-free C ABI callables, unexposed/function-pointer types, or opaque storage passed by value—fail with `BGCSCS001` before transaction commit.
-
-The IR backend never falls back silently and a failed run preserves last-good output. It is currently an explicit opt-in for migration, extension development, and raw-ABI auditing; do not bulk-switch established production configurations until friendly APIs and all real-library snapshots are equivalent.
+`CSharpEmissionBackend` is a future extension point and currently accepts only `IntermediateRepresentation`. Canonical `BindingModule` emits raw ABI plus public string/span/ref/out friendly overloads, covering constants, enums, aliases, opaque handles, delegates, anonymous/nested records, fixed arrays, bitfields, and all import modes. Unsupported semantics fail with `BGCSCS001` before transaction commit. There is no fallback emitter, and a failed run preserves last-good output.
 
 ## Output and Runtime
 

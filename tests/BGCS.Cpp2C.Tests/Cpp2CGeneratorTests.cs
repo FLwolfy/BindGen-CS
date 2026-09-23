@@ -60,6 +60,26 @@ public class Cpp2CGeneratorTests
     }
 
     [Fact]
+    public void Config_LegacyConfigVersion_ShouldFailBeforeGeneration()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-legacy-version-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string path = Path.Combine(temp, "bridge.json");
+        File.WriteAllText(path, "{\"ConfigVersion\":0,\"EntryFiles\":[]}");
+        try
+        {
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CGeneratorConfig.Load(path));
+
+            Assert.Contains("ConfigVersion 0", exception.Message, StringComparison.Ordinal);
+            Assert.Contains("no legacy migration", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void Config_GetCType_ShouldPreservePointerReferenceAndQualificationShape()
     {
         Cpp2CGeneratorConfig config = new();
@@ -580,7 +600,7 @@ public class Cpp2CGeneratorTests
         Directory.CreateDirectory(output);
         string sentinel = Path.Combine(output, "last-good.txt");
         File.WriteAllText(sentinel, "last-good");
-        File.WriteAllText(header, "#include <variant>\nstd::variant<int,float> GetValue();");
+        File.WriteAllText(header, "#include <tuple>\nstd::tuple<int,float> GetValue();");
         try
         {
             Cpp2CCodeGenerator generator = new(new Cpp2CGeneratorConfig());

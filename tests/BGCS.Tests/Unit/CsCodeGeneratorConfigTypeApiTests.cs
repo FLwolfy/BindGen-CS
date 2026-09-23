@@ -114,6 +114,7 @@ public class CsCodeGeneratorConfigTypeApiTests
     [InlineData("lock", "lock0")]
     [InlineData("event", "evnt")]
     [InlineData("string", "str")]
+    [InlineData("params", "@params")]
     [InlineData("", "unknown0")]
     public void GetParameterName_ShouldApplyReservedNameRules(string input, string expected)
     {
@@ -269,7 +270,7 @@ public class CsCodeGeneratorConfigTypeApiTests
     }
 
     [Fact]
-    public void ParameterSignatureHelpers_ShouldHandleCompatibilityAndBoolMapping()
+    public void ParameterSignatureHelpers_ShouldPreservePointersAndBoolMapping()
     {
         CsCodeGeneratorConfig cfg = new() { BoolType = BoolType.Bool8 };
         List<CppParameter> parameters =
@@ -279,13 +280,13 @@ public class CsCodeGeneratorConfigTypeApiTests
         ];
 
         string signature = cfg.GetParameterSignature(parameters, canUseOut: false);
-        string namelessCompat = cfg.GetNamelessParameterSignature(parameters, canUseOut: false, compatibility: true);
-        string marshallingCompat = cfg.WriteFunctionMarshalling(parameters, compatibility: true);
+        string nameless = cfg.GetNamelessParameterSignature(parameters, canUseOut: false);
+        string marshalling = cfg.WriteFunctionMarshalling(parameters);
 
         Assert.Contains("Bool8 enabled", signature);
         Assert.Contains("int* values", signature);
-        Assert.Equal("Bool8, nint", namelessCompat);
-        Assert.Equal("enabled, (nint)values", marshallingCompat);
+        Assert.Equal("Bool8, int*", nameless);
+        Assert.Equal("enabled, values", marshalling);
     }
 
     [Fact]

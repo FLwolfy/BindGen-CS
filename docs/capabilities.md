@@ -17,13 +17,13 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 
 | Capability | Status | Evidence or boundary |
 | --- | --- | --- |
-| Functions, enums, constants, typedefs | Host acceptance | Five real C APIs through compatibility snapshots and warning-free IR-native compilation, plus InnoEngine bindings |
+| Functions, enums, constants, typedefs | Host acceptance | Five real C APIs through deterministic snapshots and warning-free IR-native compilation |
 | Structs, unions, packing, fixed arrays, bitfields | Host acceptance / automated test | Layout and native invocation gates |
 | Opaque handles, pointer typedefs, forward declarations | Host acceptance / automated test | SDL3, bgfx, cimgui, and compilation matrix |
 | Callbacks, function pointers, callback registry | Host acceptance / automated test | C ABI callback and Runtime tests |
 | C variadics | Configuration support | Fixed variants must use promoted argument types; currently limited to `DllImport` |
 | Target-dependent `char`, `long`, `wchar_t`, `long double`, `va_list` | Host acceptance / automated test | MSVC/GNU/Darwin mappings; Darwin and GNU Arm64 reports, including the AAPCS64 `va_list` carrier |
-| `DllImport`, `LibraryImport`, FunctionTable | Automated test / production integration | InnoEngine uses configured import modes and native contexts |
+| `DllImport`, `LibraryImport`, FunctionTable | Automated test | Generated compile/runtime coverage for configured import modes and native contexts |
 
 ## Friendly APIs and safety
 
@@ -47,6 +47,9 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 | `std::string` | Automated test | Verified UTF-8 borrowed/return adapter scope |
 | `std::vector`, `std::span` | Automated test | Pointer/count views; ownership still comes from configuration |
 | `std::optional<T>` | Automated test | Both blittable presence/value and non-blittable owned-handle protocols have native compile tests |
+| `std::array`, `std::map`, `std::set` | Native invocation test | Fixed extent and owned-holder protocols compile and execute |
+| `std::variant`, `std::expected` | Native invocation test | Alternative/value/error holders compile, invoke, and destroy |
+| `std::filesystem::path`, `std::chrono` | Native invocation test | UTF-8 path and nanosecond duration/time-point conversion execute natively |
 | `std::unique_ptr`, `std::shared_ptr` | Automated test | Supported ownership-transfer/retention paths |
 | Pure-virtual managed callback proxy | Automated test | Interfaces must be listed in `VirtualCallbackInterfaces` |
 | Arbitrary STL/container/template metaprogramming | Explicit rejection | Unknown specializations emit `BGCSCPP001` instead of pretending to be blittable |
@@ -57,9 +60,9 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 | --- | --- | --- |
 | `init → doctor → validate → generate → build` | Host acceptance | Covered by tool-install and clean-consumer smoke tests |
 | Transactional output | Automated test | Failure preserves the last-good output |
-| Deterministic `diff` | Host acceptance | Real-library and InnoEngine workspace gates |
-| Multi-project workspaces | Production integration | Five InnoEngine binding projects |
-| C++ native build manifest/providers | Native invocation + plan tests | Direct Clang/GNU compile/export verification on macOS and Linux; CMake host execution; clang-cl, Meson, and MSBuild deterministic multi-step plans; default export inspection |
+| Deterministic `diff` | Host acceptance | Real-library and isolated output gates |
+| Multi-project workspaces | Automated test | Workspace validation/generation/diff; InnoEngine adoption is deferred |
+| C++ native build manifest/providers | Native invocation + plan tests | Direct Clang/GNU and CMake host execution; Windows clang-cl/MSBuild tests build, inspect, and invoke DLLs on the owning runner; Meson plan coverage |
 | Incremental generation | Automated + performance test | SHA-256 input/config/compiler/plugin/adapter fingerprint, atomic immutable entries, concurrent publication, deleted-output restoration, 10k declaration cold/warm budgets |
 | Plugin/adapter contracts | External-assembly E2E + API-shape test | Version 1 isolated loader, atomic deterministic typed services, configured C# plugin cache, configured `ICppTypeAdapter` / `ICppCallableAdapter` generation and cache |
 | BaseConfig and presets | Automated test | Explicit config-directory context, cycle detection, override precedence, no process-CWD mutation |
@@ -70,13 +73,18 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 
 ## Target evidence
 
-| Target | Current evidence |
-| --- | --- |
-| macOS arm64 Darwin | Complete 9.0 acceptance: real C/C++, InnoEngine, native runtime, NuGet |
-| Linux arm64 GNU | Complete 9.0 acceptance: real C/C++, InnoEngine, native runtime, NuGet; all five bgfx offline tools are native AArch64 artifacts |
-| Windows x64 MSVC | ABI mapping, target-specific snapshots, cross-platform managed CI; no complete target report generated by this repository yet |
-| Linux x64 GNU | Target model and cross-platform managed CI; the arm64 report is not evidence for x64 |
-| Android, iOS, FreeBSD | Target/triple/ABI model; each requires its own sysroot/toolchain and acceptance report |
+Status: completely verified ✅; formal support target with implementation or host acceptance pending ⚠️.
+
+| Target | Status | Current evidence |
+| --- | :---: | --- |
+| macOS arm64 Darwin | ✅ | Complete current-source report passed; all ten mandatory categories score 9.0/10 |
+| Windows x64 MSVC/clang-cl | ⚠️ | Dedicated runner and real clang-cl/MSBuild tests configured; complete report pending |
+| Linux x64 GNU/Clang | ⚠️ | Dedicated runner configured; complete report pending |
+| macOS x64 Darwin | ⚠️ | Dedicated Intel runner configured; complete report pending |
+| Windows/Linux arm64 | ⚠️ | Target and desktop RID model exist; complete provider/runtime/package reports remain |
+| Android | ⚠️ | Formal support target; target model exists, while NDK/sysroot, package layout, and device/emulator reports remain |
+| iOS | ⚠️ | Formal support target; target model exists, while Xcode SDK, framework layout, and device/simulator reports remain |
+| FreeBSD | ⚠️ | Formal support target; target model exists, while toolchain, package layout, and an independent report remain |
 
 ## Maturity assessment
 
@@ -86,15 +94,14 @@ It cannot honestly claim automatic coverage of every C++ program or production v
 
 - Windows and x64 hosts do not yet have equivalent target-specific acceptance artifacts;
 - the configuration model is powerful but still broad and flat for large libraries;
-- non-host execution evidence is still required for clang-cl/MSBuild; multi-RID packaging is not complete;
-- `std::variant`, arbitrary containers, complex allocators, and types beyond the verified optional protocols still require custom lowering.
+- non-host execution evidence is still required for clang-cl/MSBuild; multi-RID desktop packaging is implemented but Windows runtime execution remains unverified;
+- arbitrary metaprogramming, custom allocators, and types beyond the declared adapter protocols still require explicit lowering.
 
 The accurate position is: **excellent within the accepted C ABI and explicitly supported C++ subset; not yet a zero-configuration universal translator for arbitrary C++ on every platform.**
 
 ## Highest-value next steps
 
-1. Produce equivalent real-library, native-invocation, InnoEngine, and package reports on Windows x64/arm64, Linux x64, and macOS x64.
-2. Complete the IR-native C# emission migration and remove the legacy default path.
-3. Add packaged-tool end-to-end tests, configuration versioning, and complete semantic schema descriptions.
-4. Execute every provider on its owning target and add multi-RID artifact layout.
-5. Expand tested STL lowering while continuing to reject types without ownership or allocator evidence.
+1. Produce equivalent real-library, native-invocation, and package reports on Windows x64, Linux x64, and macOS x64.
+2. Execute every provider on its owning target and retain the multi-RID consumer evidence.
+3. After those reports pass, perform the separate InnoEngine clean-regeneration migration.
+4. Continue semantic/schema and adapter coverage while rejecting types without ownership or allocator evidence.

@@ -62,12 +62,18 @@ public sealed class NativeBuildCommandTests
         directory.Write("sample.cpp", "extern \"C\" int bgcs_sample(void) { return 42; }\n");
         directory.WriteJson("bridge.manifest.json", manifest);
 
-        CommandResult result = Run(directory, "bridge.manifest.json", "--compiler", compiler, "--json");
+        string packageRoot = System.IO.Path.Combine(directory.Path, "package");
+        CommandResult result = Run(directory, "bridge.manifest.json", "--compiler", compiler, "--json",
+            "--package-root", packageRoot);
 
         Assert.Equal(0, result.ExitCode);
         using JsonDocument buildResult = JsonDocument.Parse(result.Output);
         Assert.True(buildResult.RootElement.GetProperty("Success").GetBoolean());
         Assert.True(File.Exists(buildResult.RootElement.GetProperty("OutputFile").GetString()));
+        JsonElement packagedAsset = buildResult.RootElement.GetProperty("PackagedAsset");
+        Assert.Equal(NativeAssetLayout.GetRuntimeIdentifier(target.Identifier),
+            packagedAsset.GetProperty("RuntimeIdentifier").GetString());
+        Assert.True(File.Exists(packagedAsset.GetProperty("AssetPath").GetString()));
     }
 
     private static CppBridgeBuildManifest CreateManifest() => new(

@@ -20,15 +20,15 @@
 | 方面 | 目标 | 强制 gate |
 | --- | ---: | --- |
 | 普通小型 C API | 9.0 | 生成编译率 100%、ABI 调用、生成源码零手改 |
-| 中大型 C API | 9.0 | SDL3、miniaudio、cimgui、cimguizmo、bgfx compatibility snapshot、IR-native 零警告编译及 InnoEngine workspace diff |
+| 中大型 C API | 9.0 | SDL3、miniaudio、cimgui、cimguizmo、bgfx 确定性 snapshot 与 IR-native 零警告编译 |
 | 复杂 C ABI 正确性 | 9.0 | 宿主原生 invocation 与 target-specific ABI/layout/调用约定矩阵 |
 | 普通 C++ class bridge | 9.0 | lifecycle/method 原生编译、链接和运行 |
 | 复杂现代 C++ | 9.0 | 选定模板、STL、智能指针、virtual callback |
 | 生成 API 美观程度 | 9.0 | 源码/public API 快照、analyzer、生成目录外零 native import |
 | 小白易用性 | 9.0 | 从 header 到验证输出最多五条命令 |
 | 外层架构 | 9.0 | Intermediate/Runtime dependency-boundary tests 与完整 solution build |
-| 内部架构 | 9.0 | 共享 IR、analyzer/IR-emitter tests，以及兼容迁移状态的明确记录 |
-| NuGet/测试/发布工程化 | 9.0 | 干净包、symbols、确定性输出、宿主原生与 managed 矩阵 |
+| 内部架构 | 9.0 | 共享 IR、analyzer/IR-emitter tests，且没有预发布 fallback emitter |
+| NuGet/测试/发布工程化 | 9.0 | clean packages/symbols、API/dependency policy、确定性输出、native-RID consumer、host-native 与 managed matrix |
 
 ## 真实库性能预算
 
@@ -70,7 +70,8 @@ C++ Bridge 必须编译、链接并执行以下测试：
 - multiple inheritance 与生成的 pointer adjustment；
 - exception 捕获和 managed error 传播；
 - 显式 class/function template instance；
-- string、vector、span、blittable/non-blittable optional、unique/shared pointer adapter；
+- string、vector、span、array、map、set、optional、variant、expected、path、chrono、unique/shared pointer adapter；
+- allocator/deallocator pairing、retained callback unregister/drain race 与 async completion lifetime；
 - 配置的 abstract callback interface 的 managed implementation；
 - native bridge compile，以及 synthetic lifecycle/method runtime invocation。
 
@@ -109,7 +110,7 @@ bindgen-cs build
 - IR-native C# 不支持的语义会在写输出前以稳定 `BGCSCS001` 失败。
 - 五个真实 C 库全部通过 IR-native backend 重生成并以 warning-as-error 编译；不完整 opaque storage 的按值传递会明确拒绝而不是猜测。
 
-主配置路径仍调用隔离的 `AstGenerationStepEmitter` 和 `GenerationStep`；`CSharpEmitter` 已不再包含或公开 legacy 路径。因此架构 9.0 表示当前声明的 boundary/build/test gate 通过，不表示默认路径 IR migration 已结束。完成标准见[架构说明](architecture.cn.md#迁移完成条件)。
+主配置路径从 canonical IR 调用 `CSharpEmitter`，覆盖 raw 与 string/span/ref/out friendly surface。不存在预发布 compatibility emitter 或旧 schema migration path。
 
 ## 包和发布证据
 
@@ -118,9 +119,11 @@ bindgen-cs build
 - 消费者使用隔离 package cache；已经由 solution restore 锁定的第三方包只从本机 global-packages fallback 读取，发布 smoke 不依赖 nuget.org 在线可用性。
 - Tool 安装到空 tool path，并完成 init/generate/build smoke。
 - 同一 commit 两次 clean pack 在排除 NuGet signature metadata 后内容等价。
+- clean consumer 会从 `runtimes/<rid>/native/` 选择并调用当前 host binary。
+- reviewed API baseline、dependency license、known-vulnerability query、SPDX/SLSA payload 与 OIDC attestation 共同 gate release。
 - symbol package 和 repository metadata 完整。
 - mandatory gate 全部通过前不得发布。
 
 ## 当前状态
 
-macOS arm64 Darwin 与 Linux arm64 GNU 范围的全部测量分类均分别达到 9.0。`scripts/run-full-test-matrix.sh` 只有在 managed tests、native C/C++ runtime gate、五个真实 C 库的 compatibility snapshot 与 IR-native 零警告编译、bimg C++ Bridge、InnoEngine 五项目 workspace/native dependency/build/native-test gate 以及 NuGet/Tool smoke 全部通过后，才写入最新的 `artifacts/acceptance/report.json`、`report.md`，并在 `artifacts/acceptance/reports/<target>/` 保留 target-specific 副本。Windows 和其他 ABI 必须分别生成报告；任何报告都不能被当作其他 target 的证明。
+`scripts/run-full-test-matrix.sh` 只有在上述 BGCS gates 全部通过后，才写入 `artifacts/acceptance/report.json`、`report.md` 与 target-specific 副本。维护候选必须具备 Windows x64 MSVC、Linux x64 GNU、macOS x64 Darwin 三份报告；Windows 还必须真实执行 clang-cl/MSBuild DLL build/export/invocation。三份同版本报告在 runner 完成前均保持 pending。InnoEngine clean regeneration 属于后续阶段，不计入当前 BGCS report。

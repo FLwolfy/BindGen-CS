@@ -4,7 +4,33 @@
 
 BindGen-CS is a production-oriented, cross-platform C/C++ to C# binding toolchain. It generates C# interop for C ABIs and can turn C++ classes, explicit template instances, and selected STL types into an ABI-stable C bridge with matching C# bindings.
 
-> **Verified status:** the complete `macos-arm64-darwin` and `linux-arm64-gnu` acceptance matrices pass independently, with all ten categories scoring 9.0/10.0 on each target. Windows, x64 hosts, Android, iOS, and FreeBSD are represented in the target/ABI model, but design support is never presented as host verification without a target-specific acceptance report. BindGen-CS diagnoses semantics it cannot prove instead of guessing C++ ABI, ownership, or allocator behavior.
+> **Verified status:** the current source has a complete passing `macos-arm64-darwin` report with all ten acceptance categories at 9.0/10. Every other platform listed below is a formal BindGen-CS support target, but remains ⚠️ until its implementation, packaging, and current-version host evidence are complete; evidence from one platform never substitutes for another. BindGen-CS diagnoses semantics it cannot prove instead of guessing C++ ABI, ownership, or allocator behavior.
+
+## Support status
+
+Legend: completely verified ✅　implementation or host acceptance pending ⚠️. Every listed platform is a support target; promotion to ✅ requires implementation, packaging, tests, and a current-version host report.
+
+| Capability / target | Status | Boundary and evidence |
+| --- | :---: | --- |
+| Default IR-native C# raw + string/span/ref/out friendly surface | ✅ | The only C# emission path; pre-release legacy backends and config migration were removed |
+| Multi-RID native package layout | ✅ | `runtimes/<rid>/native/` for win/linux/osx x64/arm64 plus clean consumer invocation |
+| SBOM, provenance, API/license/vulnerability gates | ✅ | SPDX/SLSA payloads and GitHub OIDC attestation workflow; see the [pre-release policy](docs/compatibility-policy.md) |
+| `map/set/array/variant/expected/path/chrono` adapters | ✅ | Compiled and invoked native bridge tests; unsupported specializations fail closed |
+| Complex inheritance/specialization and lifetime contracts | ✅ | Native pointer-adjustment/template tests plus allocator/callback/async models and race tests |
+
+## Platform support and acceptance
+
+| Platform / architecture | Status | Current evidence and promotion requirement |
+| --- | :---: | --- |
+| macOS arm64 | ✅ | Complete `macos-arm64-darwin` report passed; all ten mandatory categories score 9.0/10 |
+| Windows x64 | ⚠️ | Runner and clang-cl/MSBuild/DLL tests are configured; same-version complete host report and NuGet native consumer result are pending |
+| Linux x64 | ⚠️ | Runner is configured; same-version complete host report and NuGet native consumer result are pending |
+| macOS x64 | ⚠️ | Intel runner is configured; same-version complete host report and NuGet native consumer result are pending |
+| Windows arm64 | ⚠️ | Target and desktop RID model exist; provider, native invocation, and complete report remain to be verified |
+| Linux arm64 | ⚠️ | Target and desktop RID model exist; a current-version independent complete report is required |
+| Android (arm/arm64/x64) | ⚠️ | Formal support target; target model exists, while NDK/sysroot, package layout, and device/emulator runtime acceptance remain |
+| iOS (device/simulator) | ⚠️ | Formal support target; target model exists, while Xcode SDK, framework/XCFramework layout, and device/simulator acceptance remain |
+| FreeBSD (x64/arm64) | ⚠️ | Formal support target; toolchain, package layout, and independent runtime report remain |
 
 ## Choose a workflow
 
@@ -58,12 +84,12 @@ Treat the output directory as reproducible build output. Customize naming, types
 ```bash
 bindgen-cs init include/library.hpp
 bindgen-cs bridge bridge.json
-bindgen-cs native-build GeneratedBridge/bridge.manifest.json
+bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root package
 ```
 
-This emits a C ABI wrapper; the default `init` configuration also generates C# bindings from the bridge header. `bridge.manifest.json` records generated/original sources, include directories, definitions, compiler/linker arguments, language standard, libraries, and resolved target. `native-build --provider auto|clang|clang-cl|cmake|meson|msbuild` consumes it as a shell-independent one- or multi-step pipeline. Successful builds verify every generated `API(...)` declaration against the actual `nm`/`dumpbin` export table by default; use `--no-verify-exports` only when another release gate owns that check.
+This emits a C ABI wrapper; the default `init` configuration also generates C# bindings from the bridge header. `bridge.manifest.json` records generated/original sources, include directories, definitions, compiler/linker arguments, language standard, libraries, and resolved target. `native-build --provider auto|clang|clang-cl|cmake|meson|msbuild` consumes it as a shell-independent one- or multi-step pipeline. Successful builds verify every generated `API(...)` declaration against the actual `nm`/`dumpbin` export table by default. `--package-root` then stages the binary under standard multi-RID `runtimes/<rid>/native/` layout with a SHA-256 asset index. Use `--no-verify-exports` only when another release gate owns that check.
 
-Verified C++ coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, explicit template instances, `std::string`, `std::vector`, `std::span`, blittable and non-blittable `std::optional`, `std::unique_ptr`, `std::shared_ptr`, and configured pure-virtual callback proxies. This is not an arbitrary C++ semantics translator; unknown specializations fail explicitly.
+Verified C++ coverage includes construction/destruction, instance and static methods, overloads, namespace functions, exception boundaries, multiple-inheritance pointer adjustment, full/partial template specializations, explicit template instances, `std::string`, `vector`, `span`, `array`, `map`, `set`, `optional`, `variant`, `expected`, `filesystem::path`, `chrono` duration/time-point, smart pointers, and configured pure-virtual callback proxies. This is not an arbitrary C++ semantics translator; unknown specializations fail explicitly.
 
 ## CLI
 
@@ -81,6 +107,7 @@ Verified C++ coverage includes construction/destruction, instance and static met
 | `explain` | List or explain stable diagnostic codes in text or JSON |
 | `bridge` | Generate a configuration-driven C++ to C bridge |
 | `native-build` | Compile a bridge manifest into a target shared library, or inspect the plan with `--dry-run` |
+| `supply-chain` | Generate SPDX 2.3 SBOM and SLSA v1 provenance for package/native artifacts |
 
 See [Getting started](docs/getting-started.md) for complete examples and the [Configuration guide](docs/configuration-guide.md) for configuration decisions.
 
@@ -90,7 +117,7 @@ See [Getting started](docs/getting-started.md) for complete examples and the [Co
 - `DllImport`, `LibraryImport`, and explicit function-table/native-context import modes.
 - Structs, unions, packing, bitfields, fixed arrays, typedefs, opaque handles, callbacks, and target-dependent primitives.
 - `MarshallingMappings` for string encoding, ownership, cleanup, pointer/count, capacity/written-count, and caller allocation.
-- The pipeline produces a shared Binding IR for safety analysis. `CSharpEmissionBackend=IntermediateRepresentation` provides an explicit fail-closed path for constants, delegates, aliases, handles, anonymous/nested records, bitfields, and all import modes. Its raw ABI output is generated and compiled with warnings as errors for all five real C libraries; opaque storage with no field definition is rejected when passed by value. The default compatibility surface remains isolated until friendly overloads and every public-API snapshot semantic are equivalent. Output replacement is transactional.
+- The canonical `BindingModule` is the only C# emission input and drives both raw ABI and public string/span/ref/out friendly overloads. Unrepresentable semantics fail before commit, and output replacement remains transactional.
 - BaseConfig composition, presets, single-file output, workspaces, deterministic diff, and target-specific snapshots.
 - Content-addressed incremental output caching with exact input, compiler/toolchain, config, plugin, and adapter fingerprints; atomic publication/restoration, target isolation, and concurrent-writer tests. Stateful custom extensions conservatively disable cache restoration unless their behavior has a stable fingerprint.
 - Versioned third-party plugin contracts, isolated dependency resolution, atomic deterministic service registration, and locked v1 API-shape tests; C++ type/callable adapters can be supplied without core branches.
@@ -106,18 +133,9 @@ BindGen-CS separates native declarations into three groups:
 
 That boundary is a correctness feature, not silent feature inflation. See the [diagnostics guide](docs/diagnostics.md).
 
-## InnoEngine production proof
+## InnoEngine sequencing
 
-The sibling InnoEngine integration is not a toy-header demo. Its complete gate:
-
-- deterministically regenerates cimgui, cimguizmo, miniaudio, SDL3, and bgfx from configuration;
-- stores generated C# under `Generated/<target>/` and compiles exactly the current target, preventing cross-ABI output reuse;
-- rejects hand-authored native imports outside `Generated/`;
-- builds every required native dependency from pinned source;
-- builds the complete InnoEngine solution with warnings as errors;
-- runs every native binding test project.
-
-The real-library matrix generates, compiles, and snapshots the compatibility output for miniaudio, SDL3, cimgui, cimguizmo, and bgfx C99; it independently regenerates all five through the IR-native backend and compiles those consumers with warnings as errors. The bimg C++ bridge has its own native/rebound/snapshot gate.
+InnoEngine migration is intentionally paused while BGCS is stabilized. Its pinned third-party headers are used only as a read-only real-library corpus for miniaudio, SDL3, cimgui, cimguizmo, bgfx, and bimg. BGCS does not rewrite InnoEngine bindings in this phase. Clean InnoEngine regeneration, handwritten-import removal, native dependency builds, and engine tests begin only after the three required desktop-x64 reports pass.
 
 ## Architecture and embedding
 
@@ -131,7 +149,7 @@ Configuration → Parsing → Analysis → Binding IR
                          Transactional Output
 ```
 
-Compatibility entry point:
+Stable entry point:
 
 ```csharp
 using BGCS;
@@ -144,7 +162,7 @@ if (!generator.GenerateConfigured())
 }
 ```
 
-Use `BGCS.Facade.BindingGenerator` when you need the structured IR. See [Architecture](docs/architecture.md) for the distinction between current C# compatibility emission and the IR-native target path, plus layer ownership and migration criteria.
+Use `BGCS.Facade.BindingGenerator` when you need the structured IR. See [Architecture](docs/architecture.md) for the IR-native path and layer ownership.
 
 ## Acceptance
 
@@ -152,7 +170,7 @@ Use `BGCS.Facade.BindingGenerator` when you need the structured IR. See [Archite
 ./scripts/run-full-test-matrix.sh
 ```
 
-Reports are produced only after managed tests, native ABI/runtime gates, real C/C++ libraries, deterministic snapshots, the InnoEngine workspace/native-build/test gate, NuGet/tool smoke tests, and the 10,000-declaration cold/warm performance budget all pass:
+Reports are produced only after managed tests, native ABI/runtime gates, advanced C++/lifetime semantics, real C/C++ libraries, API and deterministic snapshots, clean NuGet/tool/native-RID consumers, license/vulnerability policy, and the 10,000-declaration cold/warm performance budget all pass:
 
 - `artifacts/acceptance/report.json`
 - `artifacts/acceptance/report.md`

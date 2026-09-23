@@ -14,6 +14,9 @@ CONSUMER_DIR="${ROOT_DIR}/artifacts/nuget-consumer"
 CONSUMER_PACKAGE_CACHE="${ROOT_DIR}/artifacts/nuget-consumer-packages"
 TOOL_DIR="${ROOT_DIR}/artifacts/nuget-tool"
 TOOL_SMOKE_DIR="${ROOT_DIR}/artifacts/nuget-tool-smoke"
+NATIVE_PACKAGE_STAGE="${ROOT_DIR}/artifacts/native-package-layout"
+NATIVE_PACKAGE_PROJECT="${ROOT_DIR}/artifacts/native-package-project"
+NATIVE_PACKAGE_CONSUMER="${ROOT_DIR}/artifacts/native-package-consumer"
 GLOBAL_PACKAGE_CACHE="${NUGET_PACKAGES:-}"
 
 if [[ -z "${GLOBAL_PACKAGE_CACHE}" ]]; then
@@ -25,8 +28,10 @@ if [[ ! -d "${GLOBAL_PACKAGE_CACHE}" ]]; then
   exit 1
 fi
 
-rm -rf "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}"
-mkdir -p "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}"
+rm -rf "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}" \
+  "${NATIVE_PACKAGE_STAGE}" "${NATIVE_PACKAGE_PROJECT}" "${NATIVE_PACKAGE_CONSUMER}"
+mkdir -p "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}" \
+  "${NATIVE_PACKAGE_STAGE}" "${NATIVE_PACKAGE_PROJECT}" "${NATIVE_PACKAGE_CONSUMER}"
 
 projects=(
   "src/BGCS.Intermediate/BGCS.Intermediate.csproj"
@@ -40,8 +45,8 @@ projects=(
 )
 
 for project in "${projects[@]}"; do
-  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
-  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${SECOND_PACKAGE_DIR}" -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
+  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -m:1 /nodeReuse:false -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
+  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${SECOND_PACKAGE_DIR}" -m:1 /nodeReuse:false -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
 done
 
 if ! command -v unzip > /dev/null 2>&1; then
@@ -95,6 +100,7 @@ cat > "${CONSUMER_DIR}/PackageConsumer.csproj" <<EOF
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BGCS" Version="${VERSION}" />
@@ -130,13 +136,14 @@ typedef struct NativePoint { int x; int y; } NativePoint;
 int native_add(int left, int right);
 EOF
 cat > "${TOOL_SMOKE_DIR}/sample.hpp" <<'EOF'
-class Demo { public: int Add(int value); };
+class Demo { public: int Add(int value) { return value + 17; } };
 EOF
 cat > "${TOOL_SMOKE_DIR}/bridge.json" <<'EOF'
 {
   "EntryFiles": ["sample.hpp"],
   "AllowedHeaders": ["sample.hpp"],
-  "OutputPath": "GeneratedBridge"
+  "OutputPath": "GeneratedBridge",
+  "NativeLibraryName": "bgcs_package_probe"
 }
 EOF
 pushd "${TOOL_SMOKE_DIR}" > /dev/null
@@ -157,4 +164,75 @@ if [[ ! -f "GeneratedBridge/include/Classes.h" ]]; then
   echo "bindgen-cs bridge did not produce GeneratedBridge/include/Classes.h"
   exit 1
 fi
+"${TOOL_DIR}/bindgen-cs" native-build GeneratedBridge/bridge.manifest.json \
+  --package-root "${NATIVE_PACKAGE_STAGE}"
 popd > /dev/null
+
+cat > "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <PackageId>BGCS.NativeAsset.Probe</PackageId>
+    <Version>${VERSION}</Version>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="${NATIVE_PACKAGE_STAGE}/runtimes/**/*" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="${NATIVE_PACKAGE_STAGE}/bgcs.native-assets.json" Pack="true" PackagePath="bgcs.native-assets.json" />
+  </ItemGroup>
+</Project>
+EOF
+"${DOTNET_CMD}" restore "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" --ignore-failed-sources
+"${DOTNET_CMD}" pack "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" \
+  --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -m:1 /nodeReuse:false
+
+cat > "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BGCS.NativeAsset.Probe" Version="${VERSION}" />
+  </ItemGroup>
+</Project>
+EOF
+cat > "${NATIVE_PACKAGE_CONSUMER}/Program.cs" <<'EOF'
+using System.Runtime.InteropServices;
+
+nint instance = NativeProbe.Create();
+if (instance == 0)
+    throw new InvalidOperationException("Native runtime asset returned a null instance.");
+try
+{
+    int result = NativeProbe.Add(instance, 5);
+    if (result != 22)
+        throw new InvalidOperationException($"Native runtime asset returned {result}; expected 22.");
+    Console.WriteLine($"multi-RID native package invocation passed: {result}");
+}
+finally
+{
+    NativeProbe.Destroy(instance);
+}
+
+internal static partial class NativeProbe
+{
+    [LibraryImport("bgcs_package_probe", EntryPoint = "DemoCreate")]
+    internal static partial nint Create();
+
+    [LibraryImport("bgcs_package_probe", EntryPoint = "Demo_Add")]
+    internal static partial int Add(nint instance, int value);
+
+    [LibraryImport("bgcs_package_probe", EntryPoint = "DemoDestroy")]
+    internal static partial void Destroy(nint instance);
+}
+EOF
+"${DOTNET_CMD}" restore "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" \
+  --packages "${CONSUMER_PACKAGE_CACHE}" --source "${PACKAGE_DIR}" --ignore-failed-sources
+"${DOTNET_CMD}" run --project "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" \
+  --configuration "${CONFIGURATION}" --no-restore
+printf '[nuget] Current desktop RID native asset was selected and invoked from a clean package consumer.\n'

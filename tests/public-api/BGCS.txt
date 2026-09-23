@@ -1,0 +1,812 @@
+class BGCS.Analysis.AbiLayoutAnalyzer
+  ctor(BGCS.CsCodeGeneratorConfig config, BGCS.Analysis.TypeAnalyzer typeAnalyzer)
+  method BGCS.Intermediate.BindingType Analyze(BGCS.CppAst.Model.Declarations.CppClass cppClass)
+class BGCS.Analysis.BindingModuleAnalyzer
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  method BGCS.Intermediate.BindingModule Analyze(BGCS.Analysis.DeclarationGraph graph, System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.CppMacro> macros)
+class BGCS.Analysis.DeclarationGraph
+  ctor()
+  property System.Collections.Generic.IReadOnlyCollection<BGCS.Analysis.DeclarationGraphNode> Nodes { get }
+  method BGCS.Analysis.DeclarationGraph Create(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.Func<BGCS.CppAst.Model.Interfaces.ICppDeclaration,System.Boolean> predicate)
+  method System.Boolean TryGetNode(BGCS.CppAst.Model.Interfaces.ICppDeclaration declaration, BGCS.Analysis.DeclarationGraphNode& node)
+  method System.Collections.Generic.IReadOnlyList<BGCS.Analysis.DeclarationGraphNode> TopologicalOrder()
+class BGCS.Analysis.DeclarationGraphNode
+  property BGCS.CppAst.Model.Interfaces.ICppDeclaration Declaration { get }
+  property System.Collections.Generic.ISet<BGCS.Analysis.DeclarationGraphNode> Dependencies { get }
+class BGCS.Analysis.OverloadPlanner
+  ctor()
+  method System.Void Plan(BGCS.Intermediate.BindingFunction function)
+class BGCS.Analysis.OwnershipAnalyzer
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  method BGCS.Intermediate.MarshallingPlan Analyze(BGCS.CppAst.Model.Types.CppType type, BGCS.Core.CSharp.Direction direction, BGCS.MarshallingMapping mapping)
+class BGCS.Analysis.StrictSafetyAnalyzer
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  method System.Void Analyze(BGCS.Intermediate.BindingModule module)
+class BGCS.Analysis.TypeAnalyzer
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  method BGCS.Intermediate.BindingTypeReference Analyze(BGCS.CppAst.Model.Types.CppType type)
+class BGCS.Application.BindingGenerationPipeline
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  method BGCS.Intermediate.BindingGenerationResult CreateResult(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.Collections.Generic.IEnumerable<System.String> allowedHeaders, System.Boolean success, System.String outputPath, System.Collections.Generic.IReadOnlyList<BGCS.Core.Logging.LogMessage> diagnostics)
+  method BGCS.Intermediate.BindingModule Analyze(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.Collections.Generic.IEnumerable<System.String> allowedHeaders)
+class BGCS.BaseConfig
+  ctor()
+  property System.Collections.Generic.HashSet<System.String> IgnoredProperties { get; set }
+  property System.String Url { get; set }
+class BGCS.BaseGenerator
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  property BGCS.CsCodeGeneratorConfig Settings { get }
+  event BGCS.GenEventHandler<BGCS.CsCodeGenerator,BGCS.CsCodeGeneratorConfig> PostConfigure
+class BGCS.BatchGenerator
+  ctor()
+  method BGCS.BatchGenerator AddGlobalPostPatch(BGCS.Patching.IPostPatch patch)
+  method BGCS.BatchGenerator AddGlobalPrePatch(BGCS.Patching.IPrePatch patch)
+  method BGCS.BatchGenerator AddPostPatch(BGCS.Patching.IPostPatch patch)
+  method BGCS.BatchGenerator AddPrePatch(BGCS.Patching.IPrePatch patch)
+  method BGCS.BatchGenerator AlterConfig(System.Action<BGCS.CsCodeGeneratorConfig> action)
+  method BGCS.BatchGenerator AlterGenerator(System.Action<BGCS.CsCodeGenerator> action)
+  method BGCS.BatchGenerator Create()
+  method BGCS.BatchGenerator Generate(BGCS.CppAst.Parsing.CppParserOptions parserOptions, System.Collections.Generic.List<System.String> sources, System.String output, System.Collections.Generic.List<System.String> allowedHeaders)
+  method BGCS.BatchGenerator Generate(BGCS.CppAst.Parsing.CppParserOptions parserOptions, System.String source, System.String output, System.Collections.Generic.List<System.String> allowedHeaders)
+  method BGCS.BatchGenerator Generate(System.Collections.Generic.List<System.String> sources, System.String output, System.Collections.Generic.List<System.String> allowedHeaders)
+  method BGCS.BatchGenerator Generate(System.String source, System.String output, System.Collections.Generic.List<System.String> allowedHeaders)
+  method BGCS.BatchGenerator GetConfig(BGCS.CsCodeGeneratorConfig& config)
+  method BGCS.BatchGenerator GetMetadata(BGCS.Metadata.CsCodeGeneratorMetadata& metadata)
+  method BGCS.BatchGenerator MergeConfig(BGCS.CsCodeGeneratorConfig baseConfig, BGCS.MergeOptions options)
+  method BGCS.BatchGenerator Setup(System.String configPath)
+  method BGCS.BatchGenerator Start()
+  method BGCS.BatchGenerator WithArgs(System.String[] args)
+  method System.Void Finish()
+class BGCS.CLIGeneratorOptions
+  ctor()
+  property System.String OutputDirectory { get; set }
+  property System.String Targets { get; set }
+enum BGCS.CSharpEmissionBackend
+  field BGCS.CSharpEmissionBackend IntermediateRepresentation
+  field System.Int32 value__
+class BGCS.ConfigComposer
+  ctor()
+  method System.Void Compose(BGCS.CsCodeGeneratorConfig& config)
+class BGCS.Configuration.ConfigLoader
+  ctor(BGCS.IConfigComposer composer, BGCS.Configuration.PresetResolver presets)
+  method BGCS.CsCodeGeneratorConfig Load(System.String path)
+class BGCS.Configuration.ConfigValidator
+  ctor()
+  method System.Void Validate(BGCS.CsCodeGeneratorConfig config)
+class BGCS.Configuration.PresetResolver
+  ctor()
+  property BGCS.Configuration.PresetResolver Default { get }
+  property System.Collections.Generic.IReadOnlyCollection<System.String> Names { get }
+  method System.Void Apply(BGCS.CsCodeGeneratorConfig config)
+  method System.Void Register(System.String name, System.Action<BGCS.CsCodeGeneratorConfig> apply)
+class BGCS.Conversion.CppTypeConverter
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  method System.String Convert(BGCS.CppAst.Model.Types.CppType type, BGCS.Conversion.CsTypeStyle style)
+  method System.Void AddAnonymousMapping(BGCS.CppAst.Model.Types.CppType anon, System.String name)
+  method System.Void Initialize(BGCS.ParseResult result)
+enum BGCS.Conversion.CsTypeStyle
+  field BGCS.Conversion.CsTypeStyle Raw
+  field BGCS.Conversion.CsTypeStyle Ref
+  field BGCS.Conversion.CsTypeStyle Wrapped
+  field System.Int32 value__
+class BGCS.CsCodeGenerator
+  ctor(BGCS.CsCodeGeneratorConfig config)
+  property BGCS.CLIGeneratorOptions CLIOptions { get; set }
+  property BGCS.Intermediate.BindingGenerationResult LastResult { get }
+  property BGCS.Patching.PatchEngine PatchEngine { get }
+  property System.Collections.Generic.List<BGCS.PreProcessStep> PreProcessSteps { get }
+  method BGCS.CsCodeGenerator Create(System.String configPath)
+  method BGCS.Intermediate.BindingGenerationResult AnalyzeConfigured()
+  method BGCS.Metadata.CsCodeGeneratorMetadata GetMetadata()
+  method System.Boolean Generate(BGCS.CppAst.Parsing.CppParserOptions parserOptions, System.Collections.Generic.List<System.String> headerFiles, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Boolean Generate(BGCS.CppAst.Parsing.CppParserOptions parserOptions, System.String headerFile, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Boolean Generate(System.Collections.Generic.List<System.String> headerFiles, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Boolean Generate(System.String headerFile, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Boolean GenerateConfigured(System.String outputPath)
+  method System.Boolean GenerateCore(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.Collections.Generic.List<System.String> headerFiles, System.String outputPath, System.Collections.Generic.List<System.String> allowedHeaders)
+  method System.Void Reset()
+  method System.Void SaveMetadata(System.String path)
+class BGCS.CsCodeGeneratorConfig
+  field System.Int32 CurrentConfigVersion
+  field Newtonsoft.Json.JsonSerializer MergeSerializer
+  field Newtonsoft.Json.JsonSerializerSettings MergeSerializerSettings
+  field Newtonsoft.Json.JsonSerializer Serializer
+  field Newtonsoft.Json.JsonSerializerSettings SerializerSettings
+  ctor()
+  property System.Collections.Generic.List<System.String> AdditionalArguments { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedConstants { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedDelegates { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedEnums { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedExtensions { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedFunctions { get; set }
+  property System.Collections.Generic.List<System.String> AllowedHeaders { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedTypedefs { get; set }
+  property System.Collections.Generic.HashSet<System.String> AllowedTypes { get; set }
+  property System.String ApiName { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.ArrayMapping> ArrayMappings { get; set }
+  property System.Boolean AutoSquashTypedef { get; set }
+  property System.Boolean AutoWrapCallbacks { get; set }
+  property BGCS.BaseConfig BaseConfig { get; set }
+  property BGCS.BoolType BoolType { get; set }
+  property BGCS.CSharpEmissionBackend CSharpEmissionBackend { get; set }
+  property System.String CacheDirectory { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.TypeMapping> ClassMappings { get; set }
+  property System.String CompilerPath { get; set }
+  property System.Int32 ConfigVersion { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.ConstantMapping> ConstantMappings { get; set }
+  property BGCS.NamingConvention ConstantNamingConvention { get; set }
+  property BGCS.Core.Logging.LogSeverity CppLogLevel { get; set }
+  property BGCS.CustomEnumItemMapperDelegate CustomEnumItemMapper { get; set }
+  property System.Collections.Generic.List<BGCS.Metadata.CsEnumMetadata> CustomEnums { get; set }
+  property BGCS.CsCodeGeneratorConfig Default { get }
+  property System.Collections.Generic.List<System.String> Defines { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.DelegateMapping> DelegateMappings { get; set }
+  property BGCS.NamingConvention DelegateNamingConvention { get; set }
+  property System.Boolean DelegatesAsVoidPointer { get; set }
+  property System.Boolean EmitLibraryNameConstant { get; set }
+  property System.Boolean EnableExperimentalOptions { get; set }
+  property System.Boolean EnableIncrementalCache { get; set }
+  property System.Collections.Generic.List<System.String> EntryFiles { get; set }
+  property BGCS.NamingConvention EnumItemNamingConvention { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.EnumMapping> EnumMappings { get; set }
+  property BGCS.NamingConvention EnumNamingConvention { get; set }
+  property BGCS.NamingConvention ExtensionNamingConvention { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<BGCS.Core.Mapping.FunctionAliasMapping>> FunctionAliasMappings { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.FunctionMapping> FunctionMappings { get; set }
+  property BGCS.NamingConvention FunctionNamingConvention { get; set }
+  property System.Collections.Generic.List<System.String> FunctionPrefixes { get; set }
+  property System.Collections.Generic.List<BGCS.Metadata.CsFunctionTableEntry> FunctionTableEntries { get; set }
+  property System.Boolean GenerateAdditionalOverloads { get; set }
+  property System.Boolean GenerateConstants { get; set }
+  property System.Boolean GenerateConstructorsForStructs { get; set }
+  property System.Boolean GenerateDelegates { get; set }
+  property System.Boolean GenerateEnums { get; set }
+  property System.Boolean GenerateExtensions { get; set }
+  property System.Boolean GenerateFunctions { get; set }
+  property System.Boolean GenerateHandles { get; set }
+  property System.Boolean GenerateMetadata { get; set }
+  property System.Boolean GeneratePlaceholderComments { get; set }
+  property System.Boolean GenerateRuntimeSource { get; set }
+  property System.Boolean GenerateSizeOfStructs { get; set }
+  property System.Boolean GenerateTypes { get; set }
+  property System.String GetLibraryExtensionFunctionName { get; set }
+  property System.String GetLibraryNameFunctionName { get; set }
+  property System.Collections.Generic.List<BGCS.Core.Mapping.HandleMapping> HandleMappings { get; set }
+  property BGCS.NamingConvention HandleNamingConvention { get; set }
+  property BGCS.HeaderInjectionDelegate HeaderInjector { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredConstants { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredDelegates { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredEnums { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredExtensions { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredFunctions { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredParts { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredTypedefs { get; set }
+  property System.Collections.Generic.HashSet<System.String> IgnoredTypes { get; set }
+  property BGCS.ImportType ImportType { get; set }
+  property System.Collections.Generic.List<System.String> IncludeFolders { get; set }
+  property System.Boolean IncludeTransitivelyReferencedHeaders { get; set }
+  property System.Collections.Generic.HashSet<System.String> Keywords { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownConstantNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<System.String>> KnownConstructors { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownDefaultValueNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownEnumPrefixes { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownEnumValueNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownExtensionNames { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> KnownExtensionPrefixes { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<System.String>> KnownMemberFunctions { get; set }
+  property System.String LibName { get; set }
+  property BGCS.Core.Logging.LogSeverity LogLevel { get; set }
+  property System.Collections.Generic.Dictionary<System.String,BGCS.FunctionMarshallingMapping> MarshallingMappings { get; set }
+  property BGCS.NamingConvention MemberNamingConvention { get; set }
+  property System.Boolean MergeGeneratedFilesToSingleFile { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> NameMappings { get; set }
+  property System.String Namespace { get; set }
+  property System.Boolean NestGeneratedTypesInApi { get; set }
+  property System.Boolean OneFilePerType { get; set }
+  property System.String OutputPath { get; set }
+  property BGCS.NamingConvention ParameterNamingConvention { get; set }
+  property System.Boolean ParseComments { get; set }
+  property System.Boolean ParseMacros { get; set }
+  property System.Boolean ParseSystemIncludes { get; set }
+  property BGCS.CppAst.Parsing.CppParserKind ParserKind { get; set }
+  property System.Collections.Generic.List<System.String> PluginAssemblies { get; set }
+  property BGCS.Core.Extensibility.BindingPluginRegistry Plugins { get }
+  property System.String Preset { get; set }
+  property BGCS.CppAst.Targeting.CppTarget ResolvedTarget { get }
+  property System.String RuntimeNamespace { get; set }
+  property System.String SingleFileOutputName { get; set }
+  property System.Boolean StrictSafety { get; set }
+  property BGCS.StrictSafetySeverity StrictSafetySeverity { get; set }
+  property System.Collections.Generic.List<System.String> SystemIncludeFolders { get; set }
+  property BGCS.CppAst.Targeting.CppTargetAbi TargetAbi { get; set }
+  property BGCS.CppAst.Targeting.CppTargetArchitecture TargetArchitecture { get; set }
+  property BGCS.CppAst.Targeting.CppTargetPlatform TargetPlatform { get; set }
+  property System.String TargetSysRoot { get; set }
+  property System.String TargetTriple { get; set }
+  property BGCS.Conversion.CppTypeConverter TypeConverter { get }
+  property System.Collections.Generic.Dictionary<System.String,System.String> TypeMappings { get; set }
+  property BGCS.NamingConvention TypeNamingConvention { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> TypedefToEnumMappings { get; set }
+  property System.Boolean UseCustomContext { get; set }
+  property System.Boolean UseFunctionTable { get }
+  property System.Boolean UseLibraryImport { get }
+  property System.Collections.Generic.List<System.String> Usings { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<BGCS.VariadicFunctionVariant>> VariadicFunctionVariants { get; set }
+  property System.Collections.Generic.HashSet<System.String> VaryingTypes { get; set }
+  property System.Boolean WrapPointersAsHandle { get; set }
+  method BGCS.Core.Mapping.DelegateMapping GetDelegateMapping(System.String delegateName)
+  method BGCS.Core.Mapping.EnumMapping GetEnumMapping(System.String enumName)
+  method BGCS.Core.Mapping.FunctionAliasMapping GetFunctionAliasMapping(System.String name, System.String aliasName)
+  method BGCS.Core.Mapping.FunctionMapping GetFunctionMapping(System.String functionName)
+  method BGCS.Core.Mapping.HandleMapping GetHandleMapping(System.String typeName)
+  method BGCS.Core.Mapping.TypeMapping GetTypeMapping(System.String typeName)
+  method BGCS.CsCodeGeneratorConfig Load(System.String file, BGCS.IConfigComposer composer)
+  method BGCS.EnumPrefix GetEnumNamePrefix(System.String typeName)
+  method BGCS.EnumPrefix GetEnumNamePrefixEx(System.String typeName)
+  method System.Boolean TryGetArrayMapping(BGCS.CppAst.Model.Types.CppArrayType arrayType, System.String& mapping)
+  method System.Boolean TryGetDefaultValue(System.String functionName, BGCS.CppAst.Model.Declarations.CppParameter parameter, System.Boolean sanitize, System.String& defaultValue)
+  method System.Boolean TryGetDelegateMapping(System.String delegateName, BGCS.Core.Mapping.DelegateMapping& mapping)
+  method System.Boolean TryGetEnumMapping(System.String enumName, BGCS.Core.Mapping.EnumMapping& mapping)
+  method System.Boolean TryGetFunctionAliasMapping(System.String name, System.String aliasName, BGCS.Core.Mapping.FunctionAliasMapping& mapping)
+  method System.Boolean TryGetFunctionMapping(System.String functionName, BGCS.Core.Mapping.FunctionMapping& mapping)
+  method System.Boolean TryGetHandleMapping(System.String typeName, BGCS.Core.Mapping.HandleMapping& mapping)
+  method System.Boolean TryGetTypeMapping(System.String typeName, BGCS.Core.Mapping.TypeMapping& mapping)
+  method System.Boolean WriteCsSummary(BGCS.CppAst.Model.Metadata.CppComment comment, BGCS.Core.ICodeWriter writer)
+  method System.Boolean WriteCsSummary(System.String comment, BGCS.Core.ICodeWriter writer)
+  method System.Boolean WriteCsSummary(System.String comment, System.String& com)
+  method System.Int32 IndexOfAnonymousField(BGCS.CppAst.Model.Declarations.CppClass parent, BGCS.CppAst.Model.Declarations.CppClass union)
+  method System.Collections.Generic.List<BGCS.Core.Mapping.FunctionAliasMapping> AddFunctionAliasMapping(BGCS.Core.Mapping.FunctionAliasMapping alias)
+  method System.String GetBoolType()
+  method System.String GetBoolType(System.Boolean ptr)
+  method System.String GetConstantName(System.String value)
+  method System.String GetCsCleanName(System.String name)
+  method System.String GetCsCleanNameWithConvention(System.String name, BGCS.NamingConvention convention, System.Boolean removeTailingT)
+  method System.String GetCsFunctionName(System.String function)
+  method System.String GetCsReturnType(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetCsSubTypeName(BGCS.CppAst.Model.Declarations.CppClass parentClass, System.String parentCsName, BGCS.CppAst.Model.Declarations.CppClass subClass, System.Int32 idxSubClass)
+  method System.String GetCsTypeName(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetCsWrappedPointerTypeName(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetCsWrapperTypeName(BGCS.CppAst.Model.Types.CppType type)
+  method System.String GetDelegateName(System.String name)
+  method System.String GetDelegatePointerType(BGCS.CppAst.Model.Declarations.CppFunctionType functionType, System.Boolean withConvention)
+  method System.String GetEnumName(System.String value, BGCS.EnumPrefix enumPrefix)
+  method System.String GetEnumNameEx(System.String value, BGCS.EnumPrefix enumPrefix)
+  method System.String GetExtensionName(System.String value, System.String extensionPrefix)
+  method System.String GetExtensionNamePrefix(System.String typeName)
+  method System.String GetFieldName(System.String name)
+  method System.String GetFieldName(System.String name, System.String mappedName)
+  method System.String GetNamelessParameterSignature(System.Collections.Generic.IList<BGCS.CppAst.Model.Declarations.CppParameter> parameters, System.Boolean canUseOut, System.Boolean delegateType)
+  method System.String GetParameterName(System.Int32 paramIdx, System.String name)
+  method System.String GetParameterSignature(System.Collections.Generic.IList<BGCS.CppAst.Model.Declarations.CppParameter> parameters, System.Boolean canUseOut, System.Boolean attributes, System.Boolean names, System.Boolean delegateType)
+  method System.String GetParameterSignatureNames(System.Collections.Generic.IList<BGCS.CppAst.Model.Declarations.CppParameter> parameters)
+  method System.String MakeDelegatePointer(BGCS.CppAst.Model.Declarations.CppFunctionType functionType, System.Boolean withConvention)
+  method System.String NormalizeParameterName(System.String name)
+  method System.String NormalizeValue(System.String value, System.Boolean sanitize)
+  method System.String WriteCsSummary(BGCS.CppAst.Model.Metadata.CppComment cppComment)
+  method System.String WriteCsSummary(System.String comment)
+  method System.String WriteFunctionMarshalling(System.Collections.Generic.IList<BGCS.CppAst.Model.Declarations.CppParameter> parameters)
+  method System.Void Merge(BGCS.CsCodeGeneratorConfig baseConfig, BGCS.MergeOptions mergeOptions)
+  method System.Void Save(System.String path)
+  method System.Void WriteCsSummary(BGCS.CppAst.Model.Metadata.CppComment cppComment, System.String& comment)
+class BGCS.CsSubClass
+  ctor(BGCS.CppAst.Model.Types.CppType type, System.String name, System.String cppFieldName, System.String fieldName)
+  property System.String CppFieldName { get; set }
+  property BGCS.CppAst.Model.Types.CppType CppType { get; set }
+  property System.String FieldName { get; set }
+  property System.String Name { get; set }
+  property BGCS.Core.CSharp.CsType Type { get; set }
+class BGCS.CustomEnumItemMapperDelegate
+  ctor(System.Object object, System.IntPtr method)
+  method System.IAsyncResult BeginInvoke(BGCS.CppAst.Model.Declarations.CppEnum cppEnum, BGCS.CppAst.Model.Declarations.CppEnumItem cppEnumItem, BGCS.Metadata.CsEnumMetadata csEnum, BGCS.Metadata.CsEnumItemMetadata csEnumItem, System.AsyncCallback callback, System.Object object)
+  method System.Void EndInvoke(System.IAsyncResult result)
+  method System.Void Invoke(BGCS.CppAst.Model.Declarations.CppEnum cppEnum, BGCS.CppAst.Model.Declarations.CppEnumItem cppEnumItem, BGCS.Metadata.CsEnumMetadata csEnum, BGCS.Metadata.CsEnumItemMetadata csEnumItem)
+class BGCS.Emission.CSharpEmitter
+  ctor()
+  property System.String Name { get }
+  method System.Collections.Generic.IReadOnlyList<BGCS.Intermediate.BindingDiagnostic> Validate(BGCS.Intermediate.BindingModule module)
+  method System.Collections.Generic.IReadOnlyList<System.String> Emit(BGCS.Intermediate.BindingModule module, BGCS.Emission.EmissionContext context)
+class BGCS.Emission.RuntimeEmitter
+  ctor()
+  property System.String Name { get }
+  method System.Collections.Generic.IReadOnlyList<System.String> Emit(BGCS.Intermediate.BindingModule module, BGCS.Emission.EmissionContext context)
+class BGCS.Emission.SingleFileComposer
+  ctor()
+  method System.String Compose(System.Collections.Generic.IEnumerable<System.String> sourceFiles, System.String outputFile, System.String targetNamespace)
+  method System.String ComposeSources(System.Collections.Generic.IEnumerable<System.ValueTuple<System.String,System.String>> sources, System.String outputFile, System.String targetNamespace)
+class BGCS.Extensions
+  method BGCS.Core.CSharp.Direction GetDirection(BGCS.CppAst.Model.Types.CppType type, System.Boolean isPointer)
+  method BGCS.CppAst.Model.CppMacro FindMacro(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.String name)
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalRoot(BGCS.CppAst.Model.Types.CppType cppType, System.Boolean followTypedefs)
+  method System.Boolean CanBeUsedAsOutput(BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Declarations.CppTypeDeclaration& elementTypeDeclaration)
+  method System.Boolean IsCOMObject(BGCS.CppAst.Model.Declarations.CppClass cppClass)
+  method System.Boolean IsClass(BGCS.CppAst.Model.Types.CppType cppType, BGCS.CppAst.Model.Declarations.CppClass& cppClass)
+  method System.Boolean IsDelegate(BGCS.CppAst.Model.Types.CppPointerType cppPointer)
+  method System.Boolean IsDelegate(BGCS.CppAst.Model.Types.CppPointerType cppPointer, BGCS.CppAst.Model.Declarations.CppFunctionType& cppFunction)
+  method System.Boolean IsDelegate(BGCS.CppAst.Model.Types.CppType cppType)
+  method System.Boolean IsDelegate(BGCS.CppAst.Model.Types.CppType cppType, BGCS.CppAst.Model.Declarations.CppFunctionType& cppFunction)
+  method System.Boolean IsEnum(BGCS.CppAst.Model.Types.CppType cppType)
+  method System.Boolean IsEnum(BGCS.CppAst.Model.Types.CppType cppType, BGCS.CppAst.Model.Declarations.CppEnum& cppEnum)
+  method System.Boolean IsOpaqueHandle(BGCS.CppAst.Model.Declarations.CppTypedef typedef)
+  method System.Boolean TryCast(TFrom from, TTo& to)
+  method System.Boolean TryFindMacro(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.String name, BGCS.CppAst.Model.CppMacro& macro)
+  method System.Runtime.InteropServices.CallingConvention GetCallingConvention(BGCS.CppAst.Model.Types.CppCallingConvention convention)
+  method System.String FormatLocationAttribute(BGCS.CppAst.Model.CppElement element)
+  method System.String GetCallingConventionDelegate(BGCS.CppAst.Model.Types.CppCallingConvention convention)
+  method System.String GetCallingConventionLibrary(BGCS.CppAst.Model.Types.CppCallingConvention convention)
+  method System.String ToCamelCase(System.String str)
+  method System.String[] SplitByCase(System.String s)
+class BGCS.Facade.BindingGenerator
+  method BGCS.Intermediate.BindingGenerationResult Generate(System.String configPath, System.String outputPath)
+class BGCS.FormatHelper
+  method BGCS.CppAst.Model.Types.CppPrimitiveKind GetPrimitiveKind(BGCS.CppAst.Model.Types.CppType cppType, System.Boolean isPointer)
+  method System.Boolean IsCaps(System.String str)
+  method System.Boolean IsConstantExpression(System.String expression)
+  method System.Boolean IsPointer(BGCS.CppAst.Model.Types.CppType type)
+  method System.Boolean IsPointer(BGCS.CppAst.Model.Types.CppType type, System.Int32& depth)
+  method System.Boolean IsPointer(BGCS.CppAst.Model.Types.CppType type, System.Int32& depth, BGCS.CppAst.Model.Types.CppType& pointerType)
+  method System.Boolean IsPointerAlias(BGCS.CppAst.Model.Types.CppType cppType)
+  method System.Boolean IsPointerOf(BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Types.CppType pointer)
+  method System.Boolean IsPointerOf(BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Types.CppType pointer, System.Int32& depth)
+  method System.Boolean IsPrimitive(BGCS.CppAst.Model.Types.CppType cppType, BGCS.CppAst.Model.Types.CppPrimitiveType& primitive)
+  method System.Boolean IsString(BGCS.CppAst.Model.Types.CppType cppType, BGCS.CsCodeGeneratorConfig config, BGCS.CppAst.Model.Types.CppPrimitiveKind& stringKind, System.Boolean isPointer)
+  method System.Boolean IsString(System.String name)
+  method System.Boolean IsTemplateParameter(BGCS.CppAst.Model.Types.CppType type, BGCS.CppAst.Model.Declarations.CppFunction function)
+  method System.Boolean IsType(BGCS.CppAst.Model.Types.CppType a, BGCS.CppAst.Model.Types.CppType b)
+  method System.Boolean IsUsedAsPointer(BGCS.CppAst.Model.Declarations.CppClass cppClass, BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.Collections.Generic.List<System.Int32>& depths)
+  method System.Boolean IsVoid(BGCS.CppAst.Model.Types.CppType cppType)
+  method System.String GetTemplateParameterCsName(BGCS.CppAst.Model.Types.CppType type, System.String genericName)
+  method System.String NormalizeConstantValue(System.String value)
+  method System.String NormalizeEnumValue(System.String value)
+class BGCS.FunctionMarshallingMapping
+  ctor()
+  property System.Collections.Generic.Dictionary<System.String,BGCS.MarshallingMapping> Parameters { get; set }
+  property BGCS.MarshallingMapping Return { get; set }
+class BGCS.FunctionTableBuilder
+  ctor()
+  ctor(System.Int32 funcTableableStart)
+  property System.Collections.Generic.List<BGCS.Metadata.CsFunctionTableEntry> Entries { get }
+  method System.Int32 Add(System.String name)
+  method System.String Finish(System.Int32& count)
+  method System.Void Append(System.Collections.Generic.List<BGCS.Metadata.CsFunctionTableEntry> functionTableEntries)
+class BGCS.GenContext
+  ctor(BGCS.ParseResult result, System.String filePath, BGCS.Core.ICodeWriter codeWriter)
+  property BGCS.CppAst.Model.Metadata.CppCompilation Compilation { get; set }
+  property System.String FilePath { get; set }
+  property BGCS.ParseResult ParseResult { get; set }
+  property BGCS.Core.ICodeWriter Writer { get; set }
+class BGCS.GenEventHandler`2
+  ctor(System.Object object, System.IntPtr method)
+  method System.IAsyncResult BeginInvoke(TSender sender, TArgs args, System.AsyncCallback callback, System.Object object)
+  method System.Void EndInvoke(System.IAsyncResult result)
+  method System.Void Invoke(TSender sender, TArgs args)
+class BGCS.GeneratorBuilder
+  ctor()
+  method BGCS.GeneratorBuilder AlterConfig(System.Action<BGCS.CsCodeGeneratorConfig> action)
+  method BGCS.GeneratorBuilder AlterGenerator(System.Action<BGCS.CsCodeGenerator> action)
+  method BGCS.GeneratorBuilder Create()
+  method BGCS.GeneratorBuilder Create(BGCS.CsCodeGeneratorConfig config)
+  method BGCS.GeneratorBuilder Create(System.String configPath)
+  method BGCS.GeneratorBuilder Generate(System.Collections.Generic.List<System.String> sources, System.String output, System.Collections.Generic.List<System.String> allowedHeaders)
+  method BGCS.GeneratorBuilder Generate(System.String source, System.String output, System.Collections.Generic.List<System.String> allowedHeaders)
+  method BGCS.GeneratorBuilder GetConfig(BGCS.CsCodeGeneratorConfig& config)
+  method BGCS.GeneratorBuilder GetMetadata(BGCS.Metadata.CsCodeGeneratorMetadata& metadata)
+  method BGCS.GeneratorBuilder MergeConfig(BGCS.CsCodeGeneratorConfig baseConfig, BGCS.MergeOptions options)
+  method BGCS.GeneratorBuilder OnPostConfigure(BGCS.GenEventHandler<BGCS.CsCodeGenerator,BGCS.CsCodeGeneratorConfig> onPostConfigure)
+  method BGCS.GeneratorBuilder Setup(BGCS.CsCodeGeneratorConfig config)
+  method BGCS.GeneratorBuilder Setup(System.String configPath)
+  method BGCS.GeneratorBuilder WithArgs(System.String[] args)
+  method BGCS.GeneratorBuilder WithFunctionTableEntires(BGCS.Metadata.CsCodeGeneratorMetadata metadata)
+  method BGCS.GeneratorBuilder WithFunctionTableEntires(System.Collections.Generic.List<BGCS.Metadata.CsFunctionTableEntry> entries)
+  method BGCS.GeneratorBuilder WithGlobalPostPatch(BGCS.Patching.IPostPatch patch)
+  method BGCS.GeneratorBuilder WithGlobalPrePatch(BGCS.Patching.IPrePatch patch)
+  method BGCS.GeneratorBuilder WithMacros(BGCS.GeneratorBuilder+MacroBuilderCallback action)
+  method BGCS.GeneratorBuilder WithMacros(System.String prefix, BGCS.GeneratorBuilder+MacroBuilderCallback action)
+  method BGCS.GeneratorBuilder WithPostPatch(BGCS.Patching.IPostPatch patch)
+  method BGCS.GeneratorBuilder WithPrePatch(BGCS.Patching.IPrePatch patch)
+class BGCS.GeneratorBuilder+MacroBuilderCallback
+  ctor(System.Object object, System.IntPtr method)
+  method System.IAsyncResult BeginInvoke(BGCS.MacroBuilder builder, System.AsyncCallback callback, System.Object object)
+  method System.Void EndInvoke(System.IAsyncResult result)
+  method System.Void Invoke(BGCS.MacroBuilder builder)
+interface BGCS.IConfigComposer
+  method System.Void Compose(BGCS.CsCodeGeneratorConfig& config)
+enum BGCS.ImportType
+  field BGCS.ImportType DllImport
+  field BGCS.ImportType FunctionTable
+  field BGCS.ImportType LibraryImport
+  field System.Int32 value__
+struct BGCS.MacroBuilder
+  ctor(System.Collections.Generic.List<System.String> defines, System.String prefix)
+  ctor(System.String prefix)
+  method BGCS.MacroBuilder AddMacro(System.String value)
+  method BGCS.MacroBuilder WithPrefix(System.String prefix)
+  method BGCS.MacroBuilder+Selector<T> WithSelector(T current, BGCS.MacroBuilder+SelectorFormat<T> format)
+  method BGCS.MacroBuilder+Selector<T> WithSelector(T current, BGCS.MacroBuilder+SelectorFormat<T> format, System.Func<T,T,System.Boolean> selector)
+class BGCS.MacroBuilder+SelectorFormat`1
+  ctor(System.Object object, System.IntPtr method)
+  method System.IAsyncResult BeginInvoke(T option, System.String value, System.Boolean condition, System.AsyncCallback callback, System.Object object)
+  method System.String EndInvoke(System.IAsyncResult result)
+  method System.String Invoke(T option, System.String value, System.Boolean condition)
+struct BGCS.MacroBuilder+Selector`1
+  ctor(BGCS.MacroBuilder builder, T current, BGCS.MacroBuilder+SelectorFormat<T> format, System.Func<T,T,System.Boolean> selector)
+  method BGCS.MacroBuilder+Selector<T> Option(T conditional, System.ReadOnlySpan<System.String> values)
+  method BGCS.MacroBuilder+Selector<T> Option(T conditional, System.String value)
+class BGCS.MarshalHelper
+  method System.Void WriteFreeString(BGCS.Core.ICodeWriter writer, System.Int32 i)
+  method System.Void WriteFreeUnmanagedStringArray(BGCS.Core.ICodeWriter writer, System.String name, System.Int32 i)
+  method System.Void WriteFreeUnmanagedStringArray(BGCS.Core.ICodeWriter writer, System.String name, System.String varName)
+  method System.Void WriteStringArrayConvertToUnmanaged(BGCS.Core.ICodeWriter writer, BGCS.Core.CSharp.CsType type, System.String name, System.Int32 i)
+  method System.Void WriteStringArrayConvertToUnmanaged(BGCS.Core.ICodeWriter writer, BGCS.Core.CSharp.CsType type, System.String name, System.String varName)
+  method System.Void WriteStringArrayConvertToUnmanaged(BGCS.Core.ICodeWriter writer, BGCS.CppAst.Model.Types.CppType type, System.String name, System.Int32 i)
+  method System.Void WriteStringArrayConvertToUnmanaged(BGCS.Core.ICodeWriter writer, BGCS.CppAst.Model.Types.CppType type, System.String name, System.String varName)
+  method System.Void WriteStringConvertToManaged(BGCS.Core.ICodeWriter writer, BGCS.Core.CSharp.CsType type, System.String variable, System.String pointer, System.String convertCondition)
+  method System.Void WriteStringConvertToManaged(BGCS.Core.ICodeWriter writer, BGCS.CppAst.Model.Types.CppType type, System.String variable, System.String pointer)
+  method System.Void WriteStringConvertToManaged(System.Text.StringBuilder sb, BGCS.Core.CSharp.CsType type)
+  method System.Void WriteStringConvertToManaged(System.Text.StringBuilder sb, BGCS.CppAst.Model.Types.CppType type)
+  method System.Void WriteStringConvertToUnmanaged(BGCS.Core.ICodeWriter writer, BGCS.Core.CSharp.CsType type, System.String name, System.Int32 i)
+  method System.Void WriteStringConvertToUnmanaged(BGCS.Core.ICodeWriter writer, BGCS.CppAst.Model.Types.CppType type, System.String name, System.Int32 i)
+class BGCS.MarshallingMapping
+  ctor()
+  property System.String AllocatorFunction { get; set }
+  property System.Nullable<BGCS.Intermediate.BindingAllocatorKind> AllocatorKind { get; set }
+  property System.Nullable<BGCS.Intermediate.BindingAsyncCompletion> AsyncCompletion { get; set }
+  property System.Nullable<BGCS.Intermediate.BindingCallbackLifetime> CallbackLifetime { get; set }
+  property System.Nullable<BGCS.Intermediate.BindingCallbackThreading> CallbackThreading { get; set }
+  property System.String CapacityParameter { get; set }
+  property System.String CleanupFunction { get; set }
+  property System.String CompletionFunction { get; set }
+  property System.Nullable<BGCS.Intermediate.BindingStringEncoding> Encoding { get; set }
+  property System.String LengthParameter { get; set }
+  property System.Nullable<System.Boolean> NullTerminated { get; set }
+  property System.Nullable<BGCS.Intermediate.BindingOwnership> Ownership { get; set }
+  property System.Nullable<System.Boolean> RequiresCleanup { get; set }
+  property System.Nullable<BGCS.Intermediate.MarshallingStrategy> Strategy { get; set }
+  property System.String UnregisterFunction { get; set }
+  property System.String WrittenCountParameter { get; set }
+enum BGCS.MergeOptions
+  field BGCS.MergeOptions AdditionalArguments
+  field BGCS.MergeOptions All
+  field BGCS.MergeOptions Allowed
+  field BGCS.MergeOptions AllowedConstants
+  field BGCS.MergeOptions AllowedDelegates
+  field BGCS.MergeOptions AllowedEnums
+  field BGCS.MergeOptions AllowedFunctions
+  field BGCS.MergeOptions AllowedTypedefs
+  field BGCS.MergeOptions AllowedTypes
+  field BGCS.MergeOptions ArrayMappings
+  field BGCS.MergeOptions BoolType
+  field BGCS.MergeOptions ClassMappings
+  field BGCS.MergeOptions ConstantMappings
+  field BGCS.MergeOptions ConstantNamingConvention
+  field BGCS.MergeOptions Defines
+  field BGCS.MergeOptions DelegateMappings
+  field BGCS.MergeOptions DelegateNamingConvention
+  field BGCS.MergeOptions DelegatesAsVoidPointer
+  field BGCS.MergeOptions EnableExperimentalOptions
+  field BGCS.MergeOptions EnumItemNamingConvention
+  field BGCS.MergeOptions EnumMappings
+  field BGCS.MergeOptions EnumNamingConvention
+  field BGCS.MergeOptions Experiments
+  field BGCS.MergeOptions ExtensionNamingConvention
+  field BGCS.MergeOptions FunctionMappings
+  field BGCS.MergeOptions FunctionNamingConvention
+  field BGCS.MergeOptions GenerateConstants
+  field BGCS.MergeOptions GenerateConstructorsForStructs
+  field BGCS.MergeOptions GenerateDelegates
+  field BGCS.MergeOptions GenerateEnums
+  field BGCS.MergeOptions GenerateExtensions
+  field BGCS.MergeOptions GenerateFunctions
+  field BGCS.MergeOptions GenerateHandles
+  field BGCS.MergeOptions GenerateMetadata
+  field BGCS.MergeOptions GeneratePlaceholderComments
+  field BGCS.MergeOptions GenerateRuntimeSource
+  field BGCS.MergeOptions GenerateSizeOfStructs
+  field BGCS.MergeOptions GenerateTypes
+  field BGCS.MergeOptions HandleMappings
+  field BGCS.MergeOptions HandleNamingConvention
+  field BGCS.MergeOptions Ignored
+  field BGCS.MergeOptions IgnoredConstants
+  field BGCS.MergeOptions IgnoredDelegates
+  field BGCS.MergeOptions IgnoredEnums
+  field BGCS.MergeOptions IgnoredFunctions
+  field BGCS.MergeOptions IgnoredParts
+  field BGCS.MergeOptions IgnoredTypedefs
+  field BGCS.MergeOptions IgnoredTypes
+  field BGCS.MergeOptions ImportType
+  field BGCS.MergeOptions IncludeFolders
+  field BGCS.MergeOptions Keywords
+  field BGCS.MergeOptions Known
+  field BGCS.MergeOptions KnownConstantNames
+  field BGCS.MergeOptions KnownConstructors
+  field BGCS.MergeOptions KnownDefaultValueNames
+  field BGCS.MergeOptions KnownEnumPrefixes
+  field BGCS.MergeOptions KnownEnumValueNames
+  field BGCS.MergeOptions KnownExtensionNames
+  field BGCS.MergeOptions KnownExtensionPrefixes
+  field BGCS.MergeOptions KnownMemberFunctions
+  field BGCS.MergeOptions Mappings
+  field BGCS.MergeOptions MemberNamingConvention
+  field BGCS.MergeOptions NameMappings
+  field BGCS.MergeOptions NamingConventions
+  field BGCS.MergeOptions None
+  field BGCS.MergeOptions OneFilePerType
+  field BGCS.MergeOptions ParameterNamingConvention
+  field BGCS.MergeOptions SystemIncludeFolders
+  field BGCS.MergeOptions TypeMappings
+  field BGCS.MergeOptions TypeNamingConvention
+  field BGCS.MergeOptions Usings
+  field BGCS.MergeOptions WrapPointersAsHandle
+  field System.UInt64 value__
+class BGCS.Metadata.CsCodeGeneratorMetadata
+  ctor()
+  property System.Collections.Generic.List<System.String> CppDefinedFunctions { get; set }
+  property System.Collections.Generic.List<System.String> DefinedCOMExtensionTypes { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.HashSet<BGCS.Core.CSharp.CsFunctionVariation>> DefinedCOMExtensions { get; set }
+  property System.Collections.Generic.List<BGCS.Metadata.CsConstantMetadata> DefinedConstants { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsDelegate> DefinedDelegates { get; set }
+  property System.Collections.Generic.List<BGCS.Metadata.CsEnumMetadata> DefinedEnums { get; set }
+  property System.Collections.Generic.List<System.String> DefinedExtensionTypes { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsFunction> DefinedExtensions { get; set }
+  property System.Collections.Generic.List<BGCS.Core.CSharp.CsFunction> DefinedFunctions { get; set }
+  property System.Collections.Generic.List<System.String> DefinedTypedefs { get; set }
+  property System.Collections.Generic.List<System.String> DefinedTypes { get; set }
+  property System.Collections.Generic.Dictionary<System.String,BGCS.Metadata.GeneratorMetadataEntry> Entries { get }
+  property BGCS.Metadata.CsFunctionTableMetadata FunctionTable { get; set }
+  property BGCS.Metadata.GeneratorMetadataEntry Item { get; set }
+  property BGCS.CsCodeGeneratorConfig Settings { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.String> WrappedPointers { get; set }
+  method BGCS.Metadata.CsCodeGeneratorMetadata Clone(System.Boolean shallow)
+  method BGCS.Metadata.CsCodeGeneratorMetadata Load(System.String path)
+  method System.Boolean ContainsKey(System.String key)
+  method System.Boolean TryGetEntry(System.String key, BGCS.Metadata.GeneratorMetadataEntry& entry)
+  method System.Boolean TryGetEntry(System.String key, T& entry)
+  method T GetEntry(System.String key)
+  method T GetOrCreate(System.String key)
+  method System.Void Merge(BGCS.Metadata.CsCodeGeneratorMetadata from, BGCS.Metadata.MergeOptions& options)
+  method System.Void Save(System.String path)
+class BGCS.Metadata.CsConstantMetadata
+  ctor(System.String cppName, System.String cppValue, BGCS.Metadata.CsConstantType type)
+  ctor(System.String cppName, System.String cppValue, System.String name, System.String value, BGCS.Metadata.CsConstantType type, System.String comment)
+  property System.String Comment { get; set }
+  property System.String CppName { get; set }
+  property System.String CppValue { get; set }
+  property System.String CustomType { get; set }
+  property System.String EscapedCppValue { get }
+  property System.String Identifier { get }
+  property System.String Name { get; set }
+  property BGCS.Metadata.CsConstantType Type { get; set }
+  property System.String Value { get; set }
+  method BGCS.Metadata.CsConstantMetadata Clone()
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+enum BGCS.Metadata.CsConstantType
+  field BGCS.Metadata.CsConstantType Custom
+  field BGCS.Metadata.CsConstantType Decimal
+  field BGCS.Metadata.CsConstantType Double
+  field BGCS.Metadata.CsConstantType Float
+  field BGCS.Metadata.CsConstantType Int
+  field BGCS.Metadata.CsConstantType Long
+  field BGCS.Metadata.CsConstantType Reference
+  field BGCS.Metadata.CsConstantType String
+  field BGCS.Metadata.CsConstantType UInt
+  field BGCS.Metadata.CsConstantType ULong
+  field BGCS.Metadata.CsConstantType Unknown
+  field System.Int32 value__
+class BGCS.Metadata.CsEnumItemMetadata
+  ctor(System.String cppName, System.String cppValue)
+  ctor(System.String cppName, System.String cppValue, System.String name, System.String value, System.Collections.Generic.List<System.String> attributes, System.String comment)
+  property System.Collections.Generic.List<System.String> Attributes { get; set }
+  property System.String Comment { get; set }
+  property System.String CppName { get; set }
+  property System.String CppValue { get; set }
+  property System.String Identifier { get }
+  property System.String Name { get; set }
+  property System.String Value { get; set }
+  method BGCS.Metadata.CsEnumItemMetadata Clone()
+  method System.Int32 GetHashCode()
+class BGCS.Metadata.CsEnumMetadata
+  ctor(System.String cppName, System.String name, System.Collections.Generic.List<System.String> attributes, System.String comment)
+  ctor(System.String cppName, System.String name, System.Collections.Generic.List<System.String> attributes, System.String comment, System.Collections.Generic.List<BGCS.Metadata.CsEnumItemMetadata> items)
+  ctor(System.String cppName, System.String name, System.Collections.Generic.List<System.String> attributes, System.String comment, System.String baseType, System.Collections.Generic.List<BGCS.Metadata.CsEnumItemMetadata> items)
+  property System.Collections.Generic.List<System.String> Attributes { get; set }
+  property System.String BaseType { get; set }
+  property System.String Comment { get; set }
+  property System.String CppName { get; set }
+  property System.String Identifier { get }
+  property System.Collections.Generic.List<BGCS.Metadata.CsEnumItemMetadata> Items { get; set }
+  property System.String Name { get; set }
+  method BGCS.Metadata.CsEnumMetadata Clone()
+  method System.Int32 GetHashCode()
+class BGCS.Metadata.CsFunctionTableEntry
+  ctor(System.Int32 index, System.String entryPoint)
+  property System.String EntryPoint { get; set }
+  property System.Int32 Index { get; set }
+  method BGCS.Metadata.CsFunctionTableEntry Clone()
+class BGCS.Metadata.CsFunctionTableMetadata
+  ctor()
+  ctor(System.Collections.Generic.List<BGCS.Metadata.CsFunctionTableEntry> entries)
+  property System.Collections.Generic.List<BGCS.Metadata.CsFunctionTableEntry> Entries { get; set }
+  method BGCS.Metadata.GeneratorMetadataEntry Clone()
+  method System.Void Merge(BGCS.Metadata.CsFunctionTableMetadata from)
+  method System.Void Merge(BGCS.Metadata.GeneratorMetadataEntry from, BGCS.Metadata.MergeOptions& options)
+class BGCS.Metadata.CsHandleMetadata
+  ctor(System.String name, BGCS.CppAst.Model.Declarations.CppTypedef cppType, System.String comment, System.Boolean isDispatchable)
+  property System.String Comment { get; set }
+  property BGCS.CppAst.Model.Declarations.CppTypedef CppType { get; set }
+  property System.Boolean IsDispatchable { get; set }
+  property System.String Name { get; set }
+class BGCS.Metadata.CsPropertyMetadata
+  ctor(BGCS.CppAst.Model.Types.CppType cppType, BGCS.Core.CSharp.CsType type, System.String name, System.String getter, System.String setter, System.String comment, System.Collections.Generic.List<System.String> attributes)
+  property System.Collections.Generic.List<System.String> Attributes { get; set }
+  property System.String Comment { get; set }
+  property BGCS.CppAst.Model.Types.CppType CppType { get; set }
+  property System.String Getter { get; set }
+  property System.String Name { get; set }
+  property System.String Setter { get; set }
+  property BGCS.Core.CSharp.CsType Type { get; set }
+class BGCS.Metadata.GeneratorMetadataEntry
+  method BGCS.Metadata.GeneratorMetadataEntry Clone()
+  method System.Void Merge(BGCS.Metadata.GeneratorMetadataEntry from, BGCS.Metadata.MergeOptions& options)
+class BGCS.Metadata.GeneratorMetadataEntry`1
+  method System.Void Merge(BGCS.Metadata.GeneratorMetadataEntry from, BGCS.Metadata.MergeOptions& options)
+  method System.Void Merge(T from, BGCS.Metadata.MergeOptions& options)
+struct BGCS.Metadata.MergeOptions
+  field System.Boolean MergeFunctionTable
+class BGCS.Metadata.MetadataDictionaryEntry`2
+  ctor()
+  ctor(System.Collections.Generic.Dictionary<TKey,TValue> other)
+  property System.Int32 Count { get }
+  property System.Collections.Generic.Dictionary<TKey,TValue> Dictionary { get }
+  property System.Boolean IsReadOnly { get }
+  property TValue Item { get; set }
+  property System.Collections.Generic.ICollection<TKey> Keys { get }
+  property System.Collections.Generic.ICollection<TValue> Values { get }
+  method BGCS.Metadata.GeneratorMetadataEntry Clone()
+  method System.Boolean Contains(System.Collections.Generic.KeyValuePair<TKey,TValue> item)
+  method System.Boolean ContainsKey(TKey key)
+  method System.Boolean Remove(System.Collections.Generic.KeyValuePair<TKey,TValue> item)
+  method System.Boolean Remove(TKey key)
+  method System.Boolean TryGetValue(TKey key, TValue& value)
+  method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<TKey,TValue>> GetEnumerator()
+  method System.Void Add(System.Collections.Generic.KeyValuePair<TKey,TValue> item)
+  method System.Void Add(TKey key, TValue value)
+  method System.Void Clear()
+  method System.Void CopyFrom(System.Collections.Generic.Dictionary<TKey,TValue> other)
+  method System.Void CopyTo(System.Collections.Generic.Dictionary<TKey,TValue> other)
+  method System.Void CopyTo(System.Collections.Generic.KeyValuePair<TKey,TValue>[] array, System.Int32 arrayIndex)
+  method System.Void Merge(BGCS.Metadata.GeneratorMetadataEntry from, BGCS.Metadata.MergeOptions& options)
+class BGCS.Metadata.MetadataListEntry`1
+  ctor()
+  ctor(System.Collections.Generic.IEnumerable<T> values)
+  property System.Int32 Count { get }
+  property System.Boolean IsReadOnly { get }
+  property T Item { get; set }
+  property System.Collections.Generic.List<T> Values { get }
+  method BGCS.Metadata.GeneratorMetadataEntry Clone()
+  method System.Boolean Contains(T item)
+  method System.Boolean Remove(T item)
+  method System.Int32 IndexOf(T item)
+  method System.Collections.Generic.IEnumerator<T> GetEnumerator()
+  method System.Void Add(T item)
+  method System.Void Clear()
+  method System.Void CopyTo(System.Collections.Generic.HashSet<T> other)
+  method System.Void CopyTo(System.Collections.Generic.List<T> other)
+  method System.Void CopyTo(T[] array, System.Int32 arrayIndex)
+  method System.Void Insert(System.Int32 index, T item)
+  method System.Void Merge(BGCS.Metadata.GeneratorMetadataEntry from, BGCS.Metadata.MergeOptions& options)
+  method System.Void RemoveAt(System.Int32 index)
+enum BGCS.NamingConvention
+  field BGCS.NamingConvention CamelCase
+  field BGCS.NamingConvention LowerFlatCase
+  field BGCS.NamingConvention PascalCase
+  field BGCS.NamingConvention ScreamingSnakeCase
+  field BGCS.NamingConvention SnakeCase
+  field BGCS.NamingConvention Unknown
+  field BGCS.NamingConvention UpperFlatCase
+  field System.Int32 value__
+class BGCS.NamingHelper
+  method BGCS.NamingConvention AnalyzeNamingConvention(System.String input)
+  method System.String Capitalize(System.String input)
+  method System.String ConvertTo(System.String input, BGCS.NamingConvention targetConvention)
+  method System.String[] GetParts(System.String input, BGCS.NamingConvention convention)
+class BGCS.NumberHelper
+  method BGCS.Metadata.CsConstantType GetConstantType(BGCS.NumberType type)
+  method System.Boolean IsNumeric(System.String name)
+  method System.Boolean IsNumeric(System.String name, BGCS.NumberParseOptions options)
+  method System.Boolean IsNumeric(System.String name, BGCS.NumberType& numberType, BGCS.NumberParseOptions options)
+  method System.Boolean NumberStringCompareLess(System.ReadOnlySpan<System.Char> value, System.String max)
+  method System.Boolean NumberStringCompareLessEquals(System.ReadOnlySpan<System.Char> value, System.String max)
+  method System.String GetCSharpType(BGCS.Metadata.CsConstantType number)
+  method System.String GetNumberType(BGCS.NumberType number)
+enum BGCS.NumberParseOptions
+  field BGCS.NumberParseOptions All
+  field BGCS.NumberParseOptions AllowBrackets
+  field BGCS.NumberParseOptions AllowExponent
+  field BGCS.NumberParseOptions AllowHex
+  field BGCS.NumberParseOptions AllowMinus
+  field BGCS.NumberParseOptions AllowSuffix
+  field BGCS.NumberParseOptions None
+  field System.Int32 value__
+class BGCS.ParseResult
+  ctor(BGCS.CppAst.Model.Metadata.CppCompilation compilation)
+  property BGCS.CppAst.Model.Metadata.CppCompilation Compilation { get; set }
+  property System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<BGCS.Core.CSharp.FunctionAlias>> FunctionAliases { get; set }
+  method System.Collections.Generic.IEnumerable<BGCS.Core.CSharp.FunctionAlias> EnumerateFunctionAliases(System.String name)
+  method System.Collections.Generic.List<BGCS.Core.CSharp.FunctionAlias> AddFunctionAlias(BGCS.Core.CSharp.FunctionAlias alias)
+class BGCS.Patching.ConstantsToEnumPatch
+  ctor(System.String macroPrefix, System.String csEnumName, System.String baseType, System.Collections.Generic.HashSet<System.String> ignored, System.Collections.Generic.HashSet<System.String> extra)
+interface BGCS.Patching.IPatch
+interface BGCS.Patching.IPostPatch
+  method System.Void Apply(BGCS.Patching.PatchContext context, BGCS.Metadata.CsCodeGeneratorMetadata metadata, System.Collections.Generic.List<System.String> files)
+interface BGCS.Patching.IPrePatch
+  method System.Void Apply(BGCS.Patching.PatchContext context, BGCS.CsCodeGeneratorConfig settings, System.Collections.Generic.List<System.String> files, BGCS.ParseResult compilation)
+class BGCS.Patching.NamingPatch
+  ctor(System.String[] prefixes, BGCS.Patching.NamingPatchOptions options, BGCS.Patching.NamingPatchMode mode)
+enum BGCS.Patching.NamingPatchMode
+  field BGCS.Patching.NamingPatchMode All
+  field BGCS.Patching.NamingPatchMode Enums
+  field BGCS.Patching.NamingPatchMode Functions
+  field BGCS.Patching.NamingPatchMode Handles
+  field BGCS.Patching.NamingPatchMode None
+  field BGCS.Patching.NamingPatchMode Structs
+  field System.Int32 value__
+enum BGCS.Patching.NamingPatchOptions
+  field BGCS.Patching.NamingPatchOptions CaseInsensitive
+  field BGCS.Patching.NamingPatchOptions MultiplePrefixes
+  field BGCS.Patching.NamingPatchOptions None
+  field BGCS.Patching.NamingPatchOptions OverwriteNames
+  field System.Int32 value__
+class BGCS.Patching.PatchContext
+  ctor(System.String stage)
+  property System.String Stage { get }
+  method System.String GetFullPath(System.String path)
+  method System.String ReadFile(System.String path)
+  method System.Void CopyFromInput(System.String root, System.Collections.Generic.List<System.String> input)
+  method System.Void CopyFromStage(BGCS.Patching.PatchContext context)
+  method System.Void CopyToOutput(System.String root)
+  method System.Void WriteFile(System.String path, System.String content)
+class BGCS.Patching.PatchEngine
+  ctor()
+  ctor(System.String baseStagePath)
+  method System.Void ApplyPostPatches(BGCS.Metadata.CsCodeGeneratorMetadata metadata, System.String outputDir, System.Collections.Generic.List<System.String> files)
+  method System.Void ApplyPrePatches(BGCS.CsCodeGeneratorConfig settings, System.String outputDir, System.Collections.Generic.List<System.String> files, BGCS.ParseResult result)
+  method System.Void RegisterPostPatch(BGCS.Patching.IPostPatch patch)
+  method System.Void RegisterPrePatch(BGCS.Patching.IPrePatch patch)
+class BGCS.Patching.PostPatch
+  method System.Void AddRegexPatch(BGCS.Patching.RegexPatch patch)
+  method System.Void Apply(BGCS.Patching.PatchContext context, BGCS.Metadata.CsCodeGeneratorMetadata metadata, System.Collections.Generic.List<System.String> files)
+class BGCS.Patching.PrePatch
+  method System.Void AddRegexPatch(BGCS.Patching.RegexPatch patch)
+  method System.Void Apply(BGCS.Patching.PatchContext context, BGCS.CsCodeGeneratorConfig settings, System.Collections.Generic.List<System.String> files, BGCS.ParseResult result)
+class BGCS.Patching.RegexPatch
+  ctor(System.String pattern, System.String targetFile)
+  ctor(System.String pattern, System.Text.RegularExpressions.RegexOptions options, System.String targetFile)
+  ctor(System.Text.RegularExpressions.Regex regex, System.String targetFile)
+  method System.Void PostPatch(System.String file, System.String& text)
+  method System.Void PrePatch(BGCS.CsCodeGeneratorConfig settings, BGCS.ParseResult result, System.String file, System.String& text)
+class BGCS.PreProcessStep
+  ctor(BGCS.CsCodeGenerator generator, BGCS.CsCodeGeneratorConfig config)
+  method System.Void Configure(BGCS.CsCodeGeneratorConfig config)
+  method System.Void PreProcess(BGCS.Core.FileSet files, BGCS.CppAst.Model.Metadata.CppCompilation compilation, BGCS.CsCodeGeneratorConfig config, BGCS.Metadata.CsCodeGeneratorMetadata metadata, BGCS.ParseResult result)
+class BGCS.PreProcessSteps.ConstantPreProcessStep
+  ctor(BGCS.CsCodeGenerator generator, BGCS.CsCodeGeneratorConfig config)
+  method System.Void Configure(BGCS.CsCodeGeneratorConfig config)
+  method System.Void PreProcess(BGCS.Core.FileSet files, BGCS.CppAst.Model.Metadata.CppCompilation compilation, BGCS.CsCodeGeneratorConfig config, BGCS.Metadata.CsCodeGeneratorMetadata metadata, BGCS.ParseResult result)
+class BGCS.ReferenceResolver
+  ctor()
+  method System.Void Prefilter(BGCS.Core.FileSet set, BGCS.CppAst.Model.Metadata.CppCompilation compilation, BGCS.CsCodeGeneratorConfig config)
+  method System.Void Resolve(BGCS.CppAst.Model.Types.CppType cppType, BGCS.CppAst.Model.Metadata.CppCompilation input, BGCS.CppAst.Model.Metadata.CppCompilation output)
+enum BGCS.StrictSafetySeverity
+  field BGCS.StrictSafetySeverity Error
+  field BGCS.StrictSafetySeverity SuppressFriendly
+  field BGCS.StrictSafetySeverity Warning
+  field System.Int32 value__
+class BGCS.TextHelper
+  method System.String ToLiteral(System.String value, System.Boolean quote)
+class BGCS.UnexposedTypeException
+  ctor(BGCS.CppAst.Model.Types.CppUnexposedType unexposedType)
+class BGCS.VariadicFunctionVariant
+  ctor()
+  property System.Collections.Generic.List<System.String> ParameterNames { get; set }
+  property System.Collections.Generic.List<System.String> ParameterTypes { get; set }
+  property System.String Suffix { get; set }

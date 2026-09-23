@@ -6,8 +6,9 @@
 
 1. [快速开始](getting-started.cn.md)：从 header 到可编译的 bindings。
 2. [能力与边界](capabilities.cn.md)：先确认目标 ABI/C++ 特性是否在支持范围内。
-3. [配置指南](configuration-guide.cn.md)：选择 preset、target、import mode 和 marshalling policy。
-4. [诊断指南](diagnostics.cn.md)：处理 parser、ownership、buffer、callback 和 C++ lowering 问题。
+3. [兼容与废弃政策](compatibility-policy.cn.md)：配置版本、公开 API、废弃周期与供应链证据。
+4. [配置指南](configuration-guide.cn.md)：选择 preset、target、import mode 和 marshalling policy。
+5. [诊断指南](diagnostics.cn.md)：处理 parser、ownership、buffer、callback 和 C++ lowering 问题。
 
 ## 按任务查找
 
@@ -26,7 +27,7 @@
 
 ## 设计与质量
 
-- [架构说明](architecture.cn.md)：分层、依赖规则和兼容层迁移状态。
+- [架构说明](architecture.cn.md)：分层、依赖规则和 IR-native 数据流。
 - [验收规范](acceptance.cn.md)：9.0 gate、性能预算和 target 隔离。
 - [能力与边界](capabilities.cn.md)：实现、证据和未覆盖范围的对照表。
 - [超级通用执行路线图](roadmap.cn.md)：分阶段任务、不可妥协规则和 9.0 完成条件。
@@ -34,6 +35,6 @@
 
 ## 当前成熟度
 
-CLI/workspace、安全输出事务、SingleFile、target/toolchain model、共享 IR、安全分析、明确的 emitter 边界、NuGet 闭包、真实库快照、选定 STL/smart-pointer lowering、managed virtual callback proxy、ownership diagnostics 和 InnoEngine 五项目自动生成 gate 均已可用。
+CLI/workspace、安全输出事务、SingleFile、target/toolchain model、共享 IR、安全分析、NuGet 闭包、真实库快照、声明范围内的 STL/smart-pointer lowering、lifetime diagnostics 与发布治理 gate 均已可用。InnoEngine 迁移会在三份 desktop-x64 BGCS 报告通过后再开始。
 
-完整验收目前证明 `macos-arm64-darwin` 与 `linux-arm64-gnu`；其他 target 必须生成自己的验收报告。旧 AST generation steps 仍作为兼容实现存在，因此不要把清晰的目标分层误读成所有 legacy 路径已经移除。
+当前源码已经产出完整通过的 `macos-arm64-darwin` 报告，十个分类全部达到 9.0/10；Windows x64、Linux x64、macOS x64 仍需同版本完整报告。C# 输出只使用 IR-native emitter，不存在预发布 compatibility fallback。

@@ -84,11 +84,11 @@
 
         FunctionMapping? GetFunctionMapping(string functionName);
 
-        string GetNamelessParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool delegateType = false, bool compatibility = false);
+        string GetNamelessParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool delegateType = false);
 
         string GetParameterName(int paramIdx, string name);
 
-        string GetParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool attributes = true, bool names = true, bool delegateType = false, bool compatibility = false);
+        string GetParameterSignature(IList<CppParameter> parameters, bool canUseOut, bool attributes = true, bool names = true, bool delegateType = false);
 
         string GetConstantName(string value);
 

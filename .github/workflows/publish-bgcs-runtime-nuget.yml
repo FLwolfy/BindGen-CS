@@ -12,10 +12,69 @@ on:
         type: string
 
 jobs:
+  release-candidate:
+    name: Release candidate (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux-x64-gnu
+            require-windows-providers: "0"
+          - os: windows-2022
+            target: windows-x64-msvc
+            require-windows-providers: "1"
+          - os: macos-15-intel
+            target: macos-x64-darwin
+            require-windows-providers: "0"
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout BindGen-CS
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned third-party real-library corpus
+        uses: actions/checkout@v4
+        with:
+          repository: FLwolfy/InnoEngine
+          path: .third-party-corpus
+          submodules: recursive
+
+      - name: Initialize MSVC and Windows SDK
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Run complete BGCS acceptance
+        shell: bash
+        run: bash ./scripts/run-full-test-matrix.sh
+        env:
+          CONFIGURATION: Release
+          INNOENGINE_ROOT: ${{ github.workspace }}/.third-party-corpus
+          BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
+
+      - name: Upload release-candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-${{ matrix.target }}
+          path: artifacts/acceptance
+
   validate-pack-and-publish:
+    needs: release-candidate
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
 
     steps:
       - name: Checkout
@@ -50,11 +109,50 @@ jobs:
       - name: Test
         run: dotnet test BindGen-CS.sln --configuration Release --no-build
 
+      - name: Public API compatibility gate
+        run: ./scripts/test-public-api-compatibility.sh
+
+      - name: Dependency license and vulnerability gate
+        run: ./scripts/test-supply-chain-policy.sh
+
       - name: Pack and test package closure
         run: ./scripts/test-nuget-packages.sh
         env:
           CONFIGURATION: Release
           PACKAGE_TEST_VERSION: ${{ steps.release.outputs.version }}
+
+      - name: Generate SPDX SBOM and SLSA provenance
+        run: >-
+          dotnet run --project src/BGCS.Tool/BGCS.Tool.csproj --configuration Release --no-build --
+          supply-chain artifacts/nuget --output artifacts/supply-chain
+          --revision "${GITHUB_SHA}"
+          --timestamp "$(git show -s --format=%cI "${GITHUB_SHA}")"
+
+      - name: Sign build provenance with GitHub OIDC
+        id: provenance-attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+
+      - name: Sign SPDX SBOM association with GitHub OIDC
+        id: sbom-attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          sbom-path: artifacts/supply-chain/sbom.spdx.json
+
+      - name: Upload release supply-chain evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindgen-cs-supply-chain-${{ steps.release.outputs.version }}
+          path: |
+            artifacts/supply-chain
+            ${{ steps.provenance-attestation.outputs.bundle-path }}
+            ${{ steps.sbom-attestation.outputs.bundle-path }}
 
       - name: Push packages and symbols
         shell: bash

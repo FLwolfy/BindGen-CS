@@ -3,6 +3,7 @@ namespace BGCS.Analysis;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Types;
+using BGCS.Core.Mapping;
 using BGCS.Intermediate;
 
 /// <summary>
@@ -22,15 +23,16 @@ public sealed class AbiLayoutAnalyzer
     public BindingType Analyze(CppClass cppClass)
     {
         ArgumentNullException.ThrowIfNull(cppClass);
-        return Analyze(cppClass, config.GetCsCleanName(cppClass.Name));
+        return Analyze(cppClass, config.GetManagedTypeName(cppClass.Name));
     }
 
     private BindingType Analyze(CppClass cppClass, string managedName)
     {
-        BindingTypeKind kind = cppClass.ClassKind switch
+        BindingTypeKind kind = !cppClass.IsDefinition
+            ? BindingTypeKind.OpaqueHandle
+            : cppClass.ClassKind switch
         {
             CppClassKind.Union => BindingTypeKind.Union,
-            CppClassKind.Class when !cppClass.IsDefinition => BindingTypeKind.OpaqueHandle,
             _ => BindingTypeKind.Structure
         };
         BindingType bindingType = new(cppClass.FullName, managedName, kind,
@@ -48,16 +50,31 @@ public sealed class AbiLayoutAnalyzer
             CppField field = cppClass.Fields[fieldIndex];
             IReadOnlyList<int> dimensions = GetArrayDimensions(field.Type);
             BindingTypeReference type = typeAnalyzer.Analyze(GetInnermostElement(field.Type));
+            TypeFieldMapping? fieldMapping = config.GetTypeMapping(cppClass.Name)?.GetFieldMapping(field.Name);
             string managedFieldName = string.IsNullOrWhiteSpace(field.Name)
                 ? $"AnonymousField{fieldIndex}"
-                : config.GetFieldName(field.Name);
+                : config.GetFieldName(field.Name, fieldMapping?.DisplayName);
             BindingField bindingField = new(field.Name, managedFieldName, type, field.Offset,
                 field.BitOffset, field.IsBitField ? field.BitFieldWidth : 0, dimensions, field.IsBitField,
-                field.IsBitField && IsSignedBitfield(field.Type));
+                field.IsBitField && IsSignedBitfield(field.Type))
+            {
+                Comment = fieldMapping?.Comment
+            };
             bindingType.Fields.Add(bindingField);
             if (cppClass.ClassKind != CppClassKind.Union && cppClass.SizeOf > 0 && dimensions.All(size => size > 0) &&
                 field.Offset + Math.Max(0, field.Type.SizeOf) > cppClass.SizeOf)
                 throw new InvalidOperationException($"Field '{cppClass.FullName}::{field.Name}' exceeds the {cppClass.SizeOf}-byte native layout.");
+        }
+        StructValidityMapping? validity = config.GetTypeMapping(cppClass.Name)?.Validity;
+        if (validity != null)
+        {
+            BindingField? field = bindingType.Fields.FirstOrDefault(candidate =>
+                string.Equals(candidate.NativeName, validity.FieldName, StringComparison.Ordinal));
+            if (field == null)
+                throw new InvalidOperationException(
+                    $"Validity mapping for '{cppClass.FullName}' references missing field '{validity.FieldName}'.");
+            bindingType.Validity = new(field.ManagedName, validity.InvalidValue,
+                config.GetCsCleanName(validity.PropertyName));
         }
         return bindingType;
     }

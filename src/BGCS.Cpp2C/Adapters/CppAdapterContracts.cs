@@ -29,7 +29,15 @@ public enum CppTypeAdapterKind
     SharedOwner,
     Span,
     Vector,
-    Optional
+    Optional,
+    Array,
+    Map,
+    Set,
+    Variant,
+    Expected,
+    Path,
+    ChronoDuration,
+    ChronoTimePoint
 }
 
 /// <summary>Read-only context passed to a type adapter.</summary>
@@ -42,7 +50,8 @@ public sealed record CppTypeAdapterPlan(
     string CAbiType,
     MarshallingStrategy Marshalling,
     BindingOwnership Ownership,
-    bool RequiresCleanup = false);
+    bool RequiresCleanup = false,
+    string? CleanupFunction = null);
 
 /// <summary>
 /// Extends bridge type recognition without modifying the generator. Adapters must be deterministic and thread-safe.

@@ -1,266 +1,143 @@
-# BindGen-CS API Reference (BGCS)
+# BindGen-CS API reference
 
-This document focuses on BGCS generator APIs and extension points: the compatibility pipeline, shared IR, metadata, patching, and function generation. For runtime-only APIs, see the `BGCS.Runtime` package README.
+This document describes the current pre-release API. BindGen-CS has one C# generation architecture: parsing and analysis produce canonical Binding IR, and the IR-native emitter produces raw ABI declarations plus verified friendly overloads. Pre-release legacy generation APIs are intentionally absent.
 
-## 1. Pipeline Order
+## 1. Pipeline order
 
-`CsCodeGenerator` is the compatibility facade. Across the facade and `BindingGenerationPipeline`, configured generation runs in this order:
+`CsCodeGenerator.GenerateConfigured()` executes:
 
-1. validate the composed configuration;
-2. parse headers before entering the pipeline and report Clang diagnostics;
+1. resolve and validate the composed configuration;
+2. parse the configured entry headers for the resolved target;
 3. resolve the allowed-header closure;
-4. run preprocess steps and pre-patches;
-5. build shared `BindingModule` analysis data;
-6. select `CSharpEmissionBackend`: call the internal `AstGenerationStepEmitter` for compatibility output, or validate and call the IR-native `CSharpEmitter` directly;
-7. apply post-patches;
-8. rewrite Runtime imports and remove empty generated declarations;
-9. compose optional SingleFile output through Roslyn;
-10. emit optional standalone Runtime source;
-11. atomically commit output and publish `BindingGenerationResult`.
+4. run preprocessing and registered pre-patches;
+5. analyze declarations into `BindingModule`;
+6. validate safety and emitter coverage;
+7. emit C# from canonical IR;
+8. apply registered source post-patches;
+9. compose optional single-file output and optional standalone Runtime source;
+10. atomically replace the output and publish `BindingGenerationResult`.
 
-Post-patches run before SingleFile composition and Runtime emission. A failed stage does not replace last-good output. CLI `build` performs its warning-as-error consumer compilation after this pipeline succeeds.
+Failures before the final commit preserve the last-good output. `bindgen-cs build` additionally compiles the generated source in a clean warnings-as-errors consumer.
 
-## 2. Core Types
+## 2. Primary generation APIs
 
-## 2.1 `CsCodeGeneratorConfig`
+### `CsCodeGeneratorConfig`
 
-Main behavior switchboard:
+The main configuration contract includes:
 
-- output: `OutputPath`, `MergeGeneratedFilesToSingleFile`, `SingleFileOutputName` (defaults to `Bindings.cs`)
-- emission: `CSharpEmissionBackend` (`Compatibility` / fail-closed `IntermediateRepresentation`)
-- runtime: `GenerateRuntimeSource`, `RuntimeNamespace`
-- import mode: `ImportType` (`DllImport` / `LibraryImport` / `FunctionTable`)
-- generation toggles: `GenerateConstants/Enums/Functions/Types/Handles/Delegates/Extensions`
-- filtering: `Allowed*`, `Ignored*`
-- mappings/naming: `*Mappings`, `Known*`
+- inputs and outputs: `EntryFiles`, `IncludeFolders`, `OutputPath`, `MergeGeneratedFilesToSingleFile`, `SingleFileOutputName`;
+- target: platform, architecture, ABI, target triple, sysroot, compiler and parser mode;
+- import: `DllImport`, `LibraryImport`, or explicit function-table/native-context mode;
+- filtering and naming: allowed/ignored declarations and mapping collections;
+- safety: `MarshallingMappings`, ownership, allocator/cleanup, callback and async lifetime contracts;
+- runtime: `GenerateRuntimeSource` and `RuntimeNamespace`;
+- C# emission: `CSharpEmissionBackend.IntermediateRepresentation`, currently the only accepted value.
 
-Serialization/merge:
+Use `ConfigLoader`, `ConfigValidator`, and `PresetResolver` for composed configuration. The current pre-release accepts exactly `ConfigVersion = 1`; it has no implicit old-schema migration.
 
-- `Load(path)`, `Save(path)`
-- `Merge(baseConfig, MergeOptions)`
+### `CsCodeGenerator`
 
-## 2.2 `CsCodeGenerator`
+- `CsCodeGenerator.Create(configPath)` loads a file-backed generator.
+- `GenerateConfigured(outputPath?)` is the normal embedded entry point.
+- `AnalyzeConfigured()` returns parser, Binding IR, and safety diagnostics without replacing output.
+- `Generate(...)` overloads support programmatic header lists and parser options.
+- `LastResult` exposes the last structured result.
+- `PatchEngine` registers pre- and post-patches.
+- `GetMetadata()` / `SaveMetadata(path)` expose the current run's metadata for inspection and tooling; metadata is not a compatibility replay format.
+- `Reset()` clears current run state.
 
-Main execution API:
+`GeneratorBuilder` provides fluent configuration and patch registration. `BatchGenerator` orchestrates explicit multi-generation flows. Neither API carries a legacy emitter or metadata replay path.
 
-- `GenerateConfigured(...)` for one-command config-driven generation with config-relative paths
-- `AnalyzeConfigured()` for parse/IR validation without output replacement
-- `LastResult` for `BindingModule`, diagnostics, success state, and emitted files
-- `Generate(...)` overloads for single/multi header and custom parser options
-- step composition: `GetGenerationStep<T>()`, `AddGenerationStep(...)`, `OverwriteGenerationStep(...)`
-- hooks: `PatchEngine`, `FunctionGenerator`
-- metadata handoff: `CopyFrom(CsCodeGeneratorMetadata)`
+## 3. Shared Binding IR
 
-## 2.3 `GeneratorBuilder` and `BatchGenerator`
+`BGCS.Intermediate` is the dependency-free contract package:
 
-- `GeneratorBuilder`: fluent setup, global/local patch registration, post-config callbacks
-- `BatchGenerator`: batch orchestration with explicit `Generate(...)` and `Finish()`
+- `BindingModule`, `BindingType`, `BindingField`, `BindingEnumMember`;
+- `BindingFunction`, `BindingParameter`, `BindingTypeReference`;
+- `MarshallingPlan` and the ownership/encoding/lifetime enums;
+- `BindingDiagnostic`, `BindingDiagnosticCatalog`, and `BindingEmissionException`;
+- `BindingGenerationResult`, `IBindingEmitter`, and `EmissionContext`.
 
-## 3. Shared IR and C++ Bridge Results
+`BGCS.Facade.BindingGenerator.Generate(...)` returns a structured result. `CSharpEmitter` consumes `BindingModule` directly and fails with `BGCSCS001` before output creation when it cannot preserve a declaration. Alternate emitters and analyzers should depend on `BGCS.Intermediate` instead of old source-generation internals.
 
-`BGCS.Intermediate` is a zero-BGCS-dependency contract assembly containing:
+## 4. C++ bridge and native build
 
-- `BindingModule`: one analyzed native module and target ABI;
-- `BindingType` / `BindingField` / `BindingEnumMember`;
-- `BindingFunction` / `BindingParameter`;
-- `MarshallingPlan`: strategy, ownership, encoding, length/capacity relationships, and cleanup;
-- `BindingDiagnostic`, `BindingDiagnosticCatalog`, `BindingEmissionException`, and `BindingGenerationResult`;
-- `IBindingEmitter` and `EmissionContext`.
+`Cpp2CCodeGenerator` creates a C ABI bridge for the explicitly supported C++ subset and exposes `LastResult`. Its bridge-specific generation-step API remains active because it lowers C++ AST semantics into C declarations; it is separate from the removed legacy C# generator.
 
-`BGCS.Facade.BindingGenerator.Generate(...)` returns a `BindingGenerationResult`. `Cpp2CCodeGenerator.LastResult` exposes the same result contract after C++ bridge generation. `BGCS.Emission.CSharpEmitter` and `BGCS.Cpp2C.Emission.CBridgeEmitter` both implement `IBindingEmitter`.
+`CppBridgeBuildManifest` records sources, includes, definitions, standard, linker inputs, target and output. Native build APIs include:
 
-The IR-native C# emitter is independently usable and is also available through `CSharpEmissionBackend.IntermediateRepresentation`. It is not yet the default full-fidelity configured emitter: `Compatibility` still selects the internal `AstGenerationStepEmitter`, and primary bridge generation uses `CBridgeEmitter.EmitAst`. `CSharpEmitter.Validate(...)` reports unsupported IR semantics; configured IR emission returns an unsuccessful structured result before committing output, while direct `Emit(...)` throws `BindingEmissionException` before creating output. See [Architecture](architecture.md) before implementing an emitter or assuming legacy metadata is absent.
+- `INativeBuildProvider` and providers for Clang/GNU, clang-cl, CMake, Meson, and MSBuild;
+- `NativeBuildPlan` and `NativeBuildExecutor`;
+- export verification through `nm` or `dumpbin`;
+- `NativeAssetLayout` for `runtimes/<rid>/native/` packaging.
 
-`Cpp2CCodeGenerator` can also emit a versioned `CppBridgeBuildManifest`. `ClangNativeBuildProvider` turns that manifest into a shell-independent `NativeBuildPlan`, and `NativeBuildExecutor` runs the plan with timeout and captured diagnostics. These APIs are generic bridge-build infrastructure; they do not contain per-library build rules.
+Unknown C++ specializations fail with a stable diagnostic rather than being treated as blittable.
 
-## 4. Metadata APIs (`BGCS.Metadata`)
+## 5. Metadata and patching
 
-## 4.1 `CsCodeGeneratorMetadata`
+`CsCodeGeneratorMetadata` contains outputs used by the current run, including function-table entries and data made available to post-patches. Its collection entry types support clone and merge for tooling, but do not promise compatibility across unpublished pre-release versions.
 
-Holds generator state and cross-step outputs:
+Patching interfaces are:
 
-- constants/enums/functions/delegates/types/typedefs
-- wrapped pointers
-- function table (`CsFunctionTableMetadata`)
+- `IPrePatch.Apply(PatchContext, CsCodeGeneratorConfig, List<string>, ParseResult)`;
+- `IPostPatch.Apply(PatchContext, CsCodeGeneratorMetadata, List<string>)`.
 
-Main methods:
+Use `PatchContext.ReadFile` and `PatchContext.WriteFile` against staged relative paths. Post-patches execute before optional single-file composition and Runtime emission.
 
-- `GetOrCreate<T>(key)`
-- `TryGetEntry<T>(...)`
-- `Merge(from, options)`
-- `Clone(shallow = false)`
-- `Save(path)`, `Load(path)`
+`PreProcessStep` remains the bounded parsed-input preprocessing hook. Cross-emitter semantic additions belong in IR analysis, marshalling plans, or an `IBindingEmitter`, not in a second C# generation path.
 
-## 4.2 Metadata Entry Types
+## 6. Runtime lifetime APIs
 
-- `GeneratorMetadataEntry`: base type (`Clone`, `Merge`)
-- `MetadataListEntry<T>`: list-style entry
-- `MetadataDictionaryEntry<TKey, TValue>`: dictionary-style entry
-- `CsFunctionTableMetadata`: validates index/entrypoint consistency during merge
+- `NativeCallback<T>` owns a shared callback lease.
+- `NativeCallbackRegistry<TKey,TDelegate>` manages keyed callback leases.
+- `NativeCallbackRegistration<TDelegate>` models native register/unregister and coordinates concurrent disposal, retry, and retained lifetime.
+- `NativeAsyncOperation<TResult>` retains completion state and turns completion/cleanup failures into a terminal task result.
+- `NativeCallbackExceptionBoundary` captures managed exceptions crossing callback boundaries.
+- `NativeAotCallback` provides static `UnmanagedCallersOnly` thunks.
 
-## 5. Patching APIs (`BGCS.Patching`)
+Allocator/deallocator pairs, unregister behavior, callback threading, and asynchronous completion are explicit contracts. Missing high-risk semantics produce safety diagnostics.
 
-Interfaces:
-
-- `IPrePatch.Apply(PatchContext, CsCodeGeneratorConfig, List<string>, ParseResult)`
-- `IPostPatch.Apply(PatchContext, CsCodeGeneratorMetadata, List<string>)`
-
-`PatchContext` provides staged file operations:
-
-- `ReadFile(relativePath)`
-- `WriteFile(relativePath, content)`
-
-Guideline: resolve target files from `files` list and use relative paths; avoid hardcoded output paths.
-
-## 6. Function Generation APIs (`BGCS.FunctionGeneration`)
-
-## 6.1 `FunctionGenerator`
-
-Default composition:
-
-- rules: `Ref`, `Span`, `String`, `Array`
-- steps: `DefaultValue`, `ReturnVariation`, `StringReturn`
-
-Customization:
-
-- `AddRule`, `RemoveRule`, `OverwriteRule<T>`
-- `AddStep`, `RemoveStep`, `OverwriteStep<T>`
-
-## 6.2 Rules, Steps, and Parameter Writers
-
-- `FunctionGenRule`: transforms each `CppParameter` into C# parameter forms
-- `FunctionGenStep`: post-processes generated variations
-- `IParameterWriter`: final marshalling code writer with priority-based ordering
-
-## 7. Step Extension APIs
-
-- `PreProcessStep`: `Configure`, `PreProcess`
-- `GenerationStep`: `Configure`, `Generate`, `CopyToMetadata`, `CopyFromMetadata`, `Reset`
-
-These are compatibility extension points for the current full-fidelity generator. New cross-emitter analysis should prefer immutable Binding IR; use legacy steps only when the required output capability has not yet migrated.
-
-## 8. Runtime Strategy
-
-`NativeCallback<T>` owns one shared, copy-safe callback lease. `NativeCallbackRegistry<TKey,TDelegate>` manages keyed registrations; replaced/unregistered leases remain retired until native unregister synchronization completes and `ReleaseRetired()` is called, preventing concurrent callback use-after-free. `NativeCallbackExceptionBoundary` converts managed exceptions to fallback results and stores the exception per thread. `NativeAotCallback` exposes static `UnmanagedCallersOnly` thunks without delegates or GCHandles. Delegate-based callbacks must use concrete delegate declarations with an explicit unmanaged calling convention.
-
-
-- Generated bindings use `using {RuntimeNamespace};`
-- `RuntimeNamespace` empty/whitespace defaults to `BGCS.Runtime`
-- `GenerateRuntimeSource=true` emits standalone `Runtime.cs`
-- `GenerateRuntimeSource=false` emits no runtime source
-- Generated runtime source is wrapped with `#if !BGCS_RUNTIME_EXTERNAL` guard
-
-## 9. Test Mapping
-
-- patch behavior: `tests/BGCS.Patching.Tests/*`
-- generation pipeline + compile/runtime semantics: `tests/BGCS.Generation.Tests/*`
-- core unit/parser interop: `tests/BGCS.Tests/*`
-- CLI/config/build-manifest behavior: `tests/BGCS.Tool.Tests/*`
-- full matrix entrypoint: `docs/testing.md`
-
-## 10. End-to-End Examples
-
-## 10.1 Minimal BGCS Generation
+## 7. Minimal embedded generation
 
 ```csharp
 using BGCS;
 
-var cfg = new CsCodeGeneratorConfig
+CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
+if (!generator.GenerateConfigured())
 {
+    foreach (var diagnostic in generator.Messages)
+        Console.Error.WriteLine(diagnostic);
+}
+```
+
+Programmatic configuration:
+
+```csharp
+using BGCS;
+
+var config = new CsCodeGeneratorConfig
+{
+    ConfigVersion = CsCodeGeneratorConfig.CurrentConfigVersion,
     ApiName = "MyApi",
     Namespace = "My.Generated",
     LibName = "mylib",
-    ImportType = ImportType.DllImport,
+    ImportType = ImportType.LibraryImport,
     GenerateExtensions = false
 };
 
-var gen = new CsCodeGenerator(cfg);
-bool ok = gen.Generate("headers/api.h", "Output");
+var generator = new CsCodeGenerator(config);
+bool success = generator.Generate("include/native.h", "Generated");
 ```
 
-## 10.2 Single-File Bindings + Optional `Runtime.cs`
+## 8. Verification map
 
-```csharp
-using BGCS;
+- configuration, parser and type mapping: `tests/BGCS.Tests`;
+- IR-native output and consumer compilation: `tests/BGCS.Generation.Tests`;
+- C++ bridge and native invocation: `tests/BGCS.Cpp2C.Tests`;
+- Runtime ownership/lifetime/race behavior: `tests/BGCS.Runtime.Tests`;
+- CLI, schemas and manifests: `tests/BGCS.Tool.Tests`;
+- patch staging: `tests/BGCS.Patching.Tests`;
+- public API gate: `scripts/test-public-api-compatibility.sh`;
+- complete host acceptance: `scripts/run-full-test-matrix.sh`.
 
-var cfg = new CsCodeGeneratorConfig
-{
-    ApiName = "MyApi",
-    Namespace = "My.Generated",
-    LibName = "mylib",
-    ImportType = ImportType.FunctionTable,
-    MergeGeneratedFilesToSingleFile = true,
-    SingleFileOutputName = "MyApi.Bindings.cs",
-    RuntimeNamespace = "My.Runtime", // optional, default BGCS.Runtime
-    GenerateRuntimeSource = true // false => no Runtime.cs emitted
-};
-
-var gen = new CsCodeGenerator(cfg);
-gen.Generate("headers/api.h", "Output");
-```
-
-## 10.3 Register Pre/Post Patches
-
-```csharp
-using BGCS;
-using BGCS.Metadata;
-using BGCS.Patching;
-
-var cfg = CsCodeGeneratorConfig.Load("config.json");
-var gen = new CsCodeGenerator(cfg);
-
-gen.PatchEngine.RegisterPrePatch(new MyPrePatch());
-gen.PatchEngine.RegisterPostPatch(new MyPostPatch());
-
-gen.Generate("headers/api.h", "Output");
-
-sealed class MyPrePatch : IPrePatch
-{
-    public void Apply(PatchContext context, CsCodeGeneratorConfig settings, List<string> files, ParseResult compilation)
-    {
-        // Example: mutate pre-generation staged files/config
-    }
-}
-
-sealed class MyPostPatch : IPostPatch
-{
-    public void Apply(PatchContext context, CsCodeGeneratorMetadata metadata, List<string> files)
-    {
-        // Example: mutate generated staged files
-    }
-}
-```
-
-## 10.4 Metadata Reuse Across Runs
-
-```csharp
-using BGCS;
-using BGCS.Metadata;
-
-var cfg = CsCodeGeneratorConfig.Load("config.json");
-
-var genA = new CsCodeGenerator(cfg);
-genA.Generate("headers/a.h", "OutputA");
-CsCodeGeneratorMetadata meta = genA.GetMetadata().Clone();
-
-var genB = new CsCodeGenerator(cfg);
-genB.CopyFrom(meta); // carry previous definitions to avoid duplicates
-genB.Generate("headers/b.h", "OutputB");
-```
-
-## 10.5 Custom Function Generation Strategy
-
-```csharp
-using BGCS;
-using BGCS.FunctionGeneration;
-
-var cfg = CsCodeGeneratorConfig.Load("config.json");
-var gen = new CsCodeGenerator(cfg);
-
-var funcGen = FunctionGenerator.CreateDefault(cfg);
-funcGen.OverwriteRule<FunctionGenRuleString>(new FunctionGenRuleString());
-funcGen.OverwriteStep<DefaultValueGenStep>(new DefaultValueGenStep());
-gen.FunctionGenerator = funcGen;
-
-gen.Generate("headers/api.h", "Output");
-```
+See [Testing](testing.md), [Acceptance](acceptance.md), and [Compatibility policy](compatibility-policy.md) for release gates and the post-1.0 lifecycle.

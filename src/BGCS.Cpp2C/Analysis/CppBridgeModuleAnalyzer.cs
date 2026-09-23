@@ -43,7 +43,8 @@ internal sealed class CppBridgeModuleAnalyzer
         foreach (CppEnum cppEnum in container.Enums)
             module.Types.Add(new(cppEnum.FullName, config.GetCTypeName(cppEnum), BindingTypeKind.Enumeration,
                 cppEnum.IntegerType?.SizeOf ?? sizeof(int), cppEnum.IntegerType?.SizeOf ?? sizeof(int)));
-        foreach (CppClass cppClass in container.Classes.Where(cppClass => cppClass.SourceFile != null && cppClass.TemplateKind != CppTemplateKind.TemplateClass && !config.IsUtf8StringType(cppClass) && !config.IsSpanType(cppClass) && !config.IsVectorType(cppClass) && !config.IsUniquePtrType(cppClass) && !config.IsSharedPtrType(cppClass) && !config.IsOptionalType(cppClass)))
+        foreach (CppClass cppClass in container.Classes.Where(cppClass => cppClass.SourceFile != null &&
+            cppClass.TemplateKind != CppTemplateKind.TemplateClass && !IsAdapterType(cppClass)))
         {
             IReadOnlyList<CppFunction> functions = cppClass.Functions.Count > 0
                 ? cppClass.Functions.ToList()
@@ -166,17 +167,23 @@ internal sealed class CppBridgeModuleAnalyzer
             parameterName == null ? CppTypeAdapterUse.Return : CppTypeAdapterUse.Parameter);
         if (adapter != null)
         {
-            string? length = adapter.Kind is CppTypeAdapterKind.Span or CppTypeAdapterKind.Vector
+            string? length = adapter.Kind is CppTypeAdapterKind.Span or CppTypeAdapterKind.Vector or CppTypeAdapterKind.Array
                 ? parameterName == null ? "out_count" : parameterName + "_count"
                 : null;
             return new(adapter.Marshalling, adapter.Ownership,
-                adapter.Kind == CppTypeAdapterKind.Utf8String ? BindingStringEncoding.Utf8 : BindingStringEncoding.None,
-                NullTerminated: adapter.Kind == CppTypeAdapterKind.Utf8String,
+                adapter.Kind is CppTypeAdapterKind.Utf8String or CppTypeAdapterKind.Path
+                    ? BindingStringEncoding.Utf8
+                    : BindingStringEncoding.None,
                 LengthParameter: length,
-                RequiresCleanup: adapter.RequiresCleanup);
+                RequiresCleanup: adapter.RequiresCleanup,
+                CleanupFunction: adapter.CleanupFunction,
+                NullTerminated: adapter.Kind is CppTypeAdapterKind.Utf8String or CppTypeAdapterKind.Path,
+                AllocatorKind: adapter.RequiresCleanup ? BindingAllocatorKind.NativeFunction : BindingAllocatorKind.Unspecified);
         }
         return new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed);
     }
+
+    private bool IsAdapterType(CppType type) => config.ResolveTypeAdapter(type, CppTypeAdapterUse.Field) != null;
 
     private BindingTypeReference AnalyzeType(CppClass? declaringType, CppType type)
     {

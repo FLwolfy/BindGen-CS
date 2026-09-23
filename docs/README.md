@@ -6,8 +6,9 @@
 
 1. [Getting started](getting-started.md): go from a header to compilable bindings.
 2. [Capabilities and boundaries](capabilities.md): verify that the target ABI/C++ feature is in scope.
-3. [Configuration guide](configuration-guide.md): choose presets, targets, import modes, and marshalling policies.
-4. [Diagnostics guide](diagnostics.md): resolve parser, ownership, buffer, callback, and C++ lowering issues.
+3. [Compatibility and deprecation policy](compatibility-policy.md): configuration versions, public contracts, deprecation windows, and supply-chain evidence.
+4. [Configuration guide](configuration-guide.md): choose presets, targets, import modes, and marshalling policies.
+5. [Diagnostics guide](diagnostics.md): resolve parser, ownership, buffer, callback, and C++ lowering issues.
 
 ## Find documentation by task
 
@@ -26,7 +27,7 @@
 
 ## Design and quality
 
-- [Architecture](architecture.md): layers, dependency rules, and compatibility migration status.
+- [Architecture](architecture.md): layers, dependency rules, and the IR-native data flow.
 - [Acceptance specification](acceptance.md): 9.0 gates, budgets, and target isolation.
 - [Capabilities and boundaries](capabilities.md): implementation, evidence, and unsupported-scope matrix.
 - [Universal execution roadmap](roadmap.md): phased work, non-negotiable rules, and 9.0 exit criteria.
@@ -34,6 +35,6 @@
 
 ## Current maturity
 
-The CLI/workspace workflow, transactional output, single-file generation, target/toolchain model, shared IR, safety analysis, explicit emitter boundaries, package closure, real-library snapshots, selected STL/smart-pointer lowering, managed virtual callback proxies, ownership diagnostics, and InnoEngine's five-project generation gate are available now.
+The CLI/workspace workflow, transactional output, single-file generation, target/toolchain model, shared IR, safety analysis, package closure, real-library snapshots, declared STL/smart-pointer lowering, lifetime diagnostics, and release-governance gates are available now. InnoEngine migration is deliberately deferred until the three desktop-x64 BGCS reports pass.
 
-Complete acceptance currently proves `macos-arm64-darwin` and `linux-arm64-gnu`; every other target needs its own report. Legacy AST generation steps still exist as compatibility implementation, so the clean target architecture should not be read as a claim that every legacy path has already been removed.
+The current source has a complete passing `macos-arm64-darwin` report with all ten categories at 9.0/10; Windows x64, Linux x64, and macOS x64 still require their same-version complete reports. C# output uses only the IR-native emitter, with no pre-release compatibility fallback.

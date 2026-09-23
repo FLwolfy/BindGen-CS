@@ -1,7 +1,7 @@
 ﻿namespace BGCS
 {
     /// <summary>
-    /// Represents compatibility command-line options accepted by generator builders.
+    /// Represents command-line options accepted by generator builders.
     /// </summary>
     public class CLIGeneratorOptions
     {

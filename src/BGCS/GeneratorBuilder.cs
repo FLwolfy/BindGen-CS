@@ -288,8 +288,9 @@
         /// <summary>
         /// Generates code from the specified source files.
         /// </summary>
-        /// (Optional) A list of allowed header files. <b>Note:</b> This parameter is not yet supported by BGCS.Legacy builds and will be ignored.
-        /// </param>
+        /// <param name="sources">Header files to parse.</param>
+        /// <param name="output">Generated output directory.</param>
+        /// <param name="allowedHeaders">Optional declaration-header whitelist.</param>
         /// <returns>The current <see cref="GeneratorBuilder"/> instance.</returns>
         public GeneratorBuilder Generate(List<string> sources, string output, List<string>? allowedHeaders = null)
         {
@@ -300,8 +301,9 @@
         /// <summary>
         /// Generates code from the specified source file.
         /// </summary>
-        /// (Optional) A list of allowed header files. <b>Note:</b> This parameter is not yet supported by BGCS.Legacy builds and will be ignored.
-        /// </param>
+        /// <param name="source">Header file to parse.</param>
+        /// <param name="output">Generated output directory.</param>
+        /// <param name="allowedHeaders">Optional declaration-header whitelist.</param>
         /// <returns>The current <see cref="GeneratorBuilder"/> instance.</returns>
         public GeneratorBuilder Generate(string source, string output, List<string>? allowedHeaders = null)
         {
@@ -377,17 +379,6 @@
         public GeneratorBuilder MergeConfig(CsCodeGeneratorConfig baseConfig, MergeOptions options)
         {
             config.Merge(baseConfig, options);
-            return this;
-        }
-
-        /// <summary>
-        /// Performs the operation implemented by <c>CopyFromMetadata</c>.
-        /// </summary>
-        /// <returns>Result produced by <c>CopyFromMetadata</c>.</returns>
-        public GeneratorBuilder CopyFromMetadata(CsCodeGeneratorMetadata? metadata)
-        {
-            if (metadata == null) return this;
-            generator.CopyFrom(metadata);
             return this;
         }
 

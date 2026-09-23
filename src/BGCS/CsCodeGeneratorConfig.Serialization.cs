@@ -61,7 +61,8 @@
             CsCodeGeneratorConfig result;
             if (fileExists)
             {
-                result = JsonConvert.DeserializeObject<CsCodeGeneratorConfig>(File.ReadAllText(fullFilePath)) ?? new();
+                string json = File.ReadAllText(fullFilePath);
+                result = JsonConvert.DeserializeObject<CsCodeGeneratorConfig>(json) ?? new();
             }
             else
             {

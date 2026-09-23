@@ -17,15 +17,15 @@ Both reports record their UTC generation time, Git revision, and working-tree di
 | Category | Target | Mandatory gates |
 | --- | ---: | --- |
 | Small C APIs | 9.0 | 100% generated compilation; ABI invocation; no source edits |
-| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx compatibility snapshots plus warning-free IR-native compilation and InnoEngine workspace diff |
+| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx deterministic snapshots plus warning-free IR-native compilation |
 | Complex C ABI correctness | 9.0 | Host-native invocation and target-specific ABI/layout/calling-convention matrix |
 | Ordinary C++ class bridge | 9.0 | Native compile/link/run for lifecycle and methods |
 | Modern C++ | 9.0 | Selected templates/STL/smart pointers/virtual callbacks |
 | Generated API quality | 9.0 | Source/public-API snapshots; analyzers; no native imports outside generated output |
 | Beginner usability | 9.0 | Five-command maximum from header to validated output |
 | External architecture | 9.0 | Intermediate/Runtime dependency-boundary tests and complete solution build |
-| Internal architecture | 9.0 | Shared IR, analyzer/IR-emitter tests, and explicitly documented compatibility migration state |
-| NuGet/testing/release | 9.0 | Clean packages, symbols, deterministic output, host-native and managed matrices |
+| Internal architecture | 9.0 | Shared IR, analyzer/IR-emitter tests, and no pre-release fallback emitter |
+| NuGet/testing/release | 9.0 | Clean packages/symbols, API and dependency policy, deterministic output, native-RID consumer, host-native and managed matrices |
 
 ## Real-library budgets
 
@@ -67,7 +67,8 @@ The bridge suite must compile, link, and execute tests for:
 - multiple inheritance with generated pointer adjustments;
 - exception capture and managed error propagation;
 - explicit class/function template instantiations;
-- configured adapters for string, vector, span, blittable/non-blittable optional, and unique/shared pointers;
+- configured adapters for string, vector, span, array, map, set, optional, variant, expected, path, chrono, and unique/shared pointers;
+- allocator/deallocator pairing, retained callback unregister/drain races, and async completion lifetime;
 - managed implementations of configured abstract callback interfaces;
 - native bridge compilation plus synthetic lifecycle/method runtime invocation.
 
@@ -106,7 +107,7 @@ Current automated architecture tests directly enforce:
 - unsupported IR-native C# semantics fail before output with stable `BGCSCS001` diagnostics.
 - all five real C libraries regenerate through the IR-native backend and compile with warnings as errors; incomplete opaque storage passed by value is rejected instead of guessed.
 
-The primary configured path still calls the isolated `AstGenerationStepEmitter` and `GenerationStep`; `CSharpEmitter` no longer exposes or contains a legacy path. Architecture 9.0 therefore means that the declared boundary/build/test gates pass; it does not mean default-path IR migration is complete. See [Architecture](architecture.md#migration-completion-criteria) for completion criteria.
+Primary configured generation calls `CSharpEmitter` from canonical IR and covers raw plus string/span/ref/out friendly surfaces. No pre-release compatibility emitter or old-schema migration path exists.
 
 ## Package and release evidence
 
@@ -115,9 +116,11 @@ The primary configured path still calls the isolated `AstGenerationStepEmitter` 
 - The consumer uses an isolated package cache; third-party packages already locked by solution restore are read only from the machine's global-packages fallback, so the release smoke does not depend on live nuget.org availability.
 - The tool installs into an empty tool path and completes init/generate/build smoke tests.
 - Two clean packs from the same commit produce equivalent package content after excluding NuGet signature metadata.
+- A clean consumer selects and invokes the current host binary from `runtimes/<rid>/native/`.
+- Reviewed API baselines, dependency licenses, known-vulnerability queries, SPDX/SLSA payloads, and OIDC attestations gate release.
 - Symbol packages and repository metadata are present.
 - No release push runs before all mandatory gates pass.
 
 ## Current status
 
-The macOS arm64 Darwin and Linux arm64 GNU scopes each pass every measured category at 9.0. `scripts/run-full-test-matrix.sh` writes the latest `artifacts/acceptance/report.json` and `report.md`, plus retained target copies under `artifacts/acceptance/reports/<target>/`, only after managed tests, native C/C++ runtime gates, compatibility snapshots and warning-free IR-native compilation for five real C libraries, the bimg C++ bridge, the InnoEngine five-project workspace/native-dependency/build/native-test gate, and NuGet/tool smoke tests pass. Windows and other target ABIs require separate target-specific reports; no report is treated as proof for a different target.
+`scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json`, `report.md`, and target-retained copies only after every BGCS gate above passes. The required maintenance-candidate desktop reports are Windows x64 MSVC, Linux x64 GNU, and macOS x64 Darwin; Windows additionally requires real clang-cl and MSBuild DLL build/export/invocation. These same-version reports remain pending until their runners complete. InnoEngine regeneration is deliberately a later phase and is not part of this BGCS report.

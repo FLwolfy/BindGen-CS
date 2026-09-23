@@ -19,7 +19,7 @@ bindgen-cs schema bindgen.schema.json
 bindgen-cs schema bridge.schema.json --kind cpp
 ```
 
-Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 public object shape、enum 名称和核心语义说明，并默认拒绝未知 root property。只有迁移 legacy 配置时才使用 `--allow-unknown-properties`。详细 marshalling 语义仍以本指南和测试为准。
+Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 public object shape、enum 名称和核心语义说明，并默认拒绝未知 root property。只有受控外层工具需要附加 metadata 时才使用 `--allow-unknown-properties`；它不会启用旧 schema 迁移。详细 marshalling 语义仍以本指南和测试为准。
 
 ## 先做四个选择
 
@@ -48,7 +48,7 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 
 这个配置跟随宿主 ABI。可重现的发布配置应使用明确 target preset，或显式填写 platform/architecture/ABI；配置 target 必须与最终 native binary 一致。
 
-`ConfigVersion` 标识 JSON contract。`init` 会写入当前版本；已有配置缺省时按 version 1 处理，高于当前工具支持范围的版本会在解析或替换输出前失败。
+`ConfigVersion` 标识 JSON contract。`init` 会写入当前版本；当前预发布版本只接受这一版本，不提供旧 schema migration。
 
 ## 输入和 Parser
 
@@ -81,12 +81,7 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 
 ## C# emission backend
 
-`CSharpEmissionBackend` 控制正式 C# 源码由哪条路径输出：
-
-- `Compatibility`（默认）：保留现有完整 public surface、friendly overload 和快照兼容性。
-- `IntermediateRepresentation`：直接从 canonical `BindingModule` 输出单个 C# 文件。它支持 constant、enum、alias、opaque handle、delegate、匿名/嵌套 struct/union、fixed array、bitfield，以及三种 import mode；raw ABI surface 已进入五个真实库的编译 gate。遇到 variadic、非 free C ABI callable、unexposed/function-pointer type 或 opaque storage 按值传递等尚不能无损表达的语义时，以 `BGCSCS001` 在事务提交前失败。
-
-IR backend 不会隐式退回兼容 emitter，也不会在失败时覆盖上一次正确输出。它目前是用于迁移、扩展开发和 raw ABI 审计的显式 opt-in；在 friendly API 与全部真实库快照等价前，不应批量替换现有生产配置。
+`CSharpEmissionBackend` 是未来扩展点，当前只接受 `IntermediateRepresentation`。Canonical `BindingModule` 直接输出 raw ABI 与 public string/span/ref/out friendly overload，覆盖 constant、enum、alias、opaque handle、delegate、匿名/嵌套 record、fixed array、bitfield 和全部 import mode。不支持的语义以 `BGCSCS001` 在 commit 前失败；不存在 fallback emitter，失败也不会覆盖 last-good output。
 
 ## Output 与 Runtime
 

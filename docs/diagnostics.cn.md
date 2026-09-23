@@ -39,7 +39,7 @@ bindgen-cs explain --json
 | `BGCS-SAFETY-CALLBACK` | callback retention/unregister lifetime 未声明 | 为 callback 参数增加 marshalling mapping，并由消费层持有或注销 callback |
 | `BGCS-SAFETY-LENGTH` | buffer pointer 没有可证明的 length/capacity 关系 | 设置 `LengthParameter`、`CapacityParameter` 和可选 `WrittenCountParameter` |
 | `BGCS-SAFETY-ALLOCATOR` | output string 没有 cleanup allocator | 设置 `CleanupFunction`、ownership、encoding 和 cleanup requirement |
-| `BGCSCS001` | IR-native C# emitter 无法在不丢语义的前提下表达某个声明 | 保留 compatibility emitter，或实现通用且有测试的 IR lowering；emission 会在写文件前失败 |
+| `BGCSCS001` | IR-native C# emitter 无法在不丢语义的前提下表达某个声明 | 实现通用且有测试的 IR lowering，或显式排除该声明；emission 会在写文件前失败 |
 | `BGCSCPP-INSTANTIATION` | 发现 primary template，但没有请求 concrete instance | 把真正需要的完整 specialization 加入 `TemplateInstantiations` 或 `FunctionTemplateInstantiations` |
 | `BGCSCPP001` | C++ declaration 无法使用已知 adapter 安全 lowering | 配置对应 STL type list、显式 template instance，或实现带 ownership/allocator 语义的 custom generation step |
 

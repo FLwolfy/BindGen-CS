@@ -3,9 +3,8 @@
     "using BaseInt = int;",
     "using AliasInt = int;",
     "EntryPoint = \"alias_add\"",
-    "AliasAddNative(AliasInt value)"
+    "AliasAddNative(int value)"
   ],
   "NotContains": [
-    "AliasAddNative(int value)"
   ]
 }

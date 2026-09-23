@@ -72,6 +72,7 @@ internal static partial class InitCommand
         IncludeFolders = new[] { includeFolder },
         OutputPath = "Generated",
         ImportType = "DllImport",
+        CSharpEmissionBackend = "IntermediateRepresentation",
         MergeGeneratedFilesToSingleFile = true
     };
 

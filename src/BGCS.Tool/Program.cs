@@ -37,6 +37,7 @@ internal static class Program
                 "explain" => ExplainCommand.Run(args[1..], Console.Out, Console.Error),
                 "bridge" => Bridge(args[1..]),
                 "native-build" => NativeBuildCommand.Run(args[1..], Environment.CurrentDirectory, Console.Out, Console.Error),
+                "supply-chain" => SupplyChainCommand.Run(args[1..], Environment.CurrentDirectory, Console.Out, Console.Error),
                 "version" or "--version" => PrintVersion(),
                 _ when args[0].EndsWith(".json", StringComparison.OrdinalIgnoreCase) => Generate(args),
                 _ => Fail($"Unknown command '{args[0]}'.")
@@ -376,7 +377,8 @@ internal static class Program
         Console.WriteLine("  bindgen-cs schema [output.json] [--kind c|cpp] [--allow-unknown-properties]");
         Console.WriteLine("  bindgen-cs explain [diagnostic-code] [--json]");
         Console.WriteLine("  bindgen-cs bridge [config.json] [--output directory]");
-        Console.WriteLine("  bindgen-cs native-build [bridge.manifest.json] [--provider auto|clang|clang-cl|cmake|meson|msbuild]");
+        Console.WriteLine("  bindgen-cs native-build [bridge.manifest.json] [--provider auto|clang|clang-cl|cmake|meson|msbuild] [--package-root <dir>]");
+        Console.WriteLine("  bindgen-cs supply-chain [artifact-directory] [--output <dir>] [--revision <commit>]");
         Console.WriteLine("      [--output library] [--compiler path] [--build-tool path] [--export-tool path]");
         Console.WriteLine("      [--no-verify-exports] [--timeout seconds] [--dry-run] [--json]");
         Console.WriteLine("  bindgen-cs <config.json> [--output directory]");

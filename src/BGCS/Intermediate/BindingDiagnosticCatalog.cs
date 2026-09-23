@@ -7,6 +7,8 @@ public static class BindingDiagnosticCodes
 {
     public const string Ownership = "BGCS-SAFETY-OWNERSHIP";
     public const string CallbackLifetime = "BGCS-SAFETY-CALLBACK";
+    public const string CallbackThreading = "BGCS-SAFETY-CALLBACK-THREAD";
+    public const string AsyncLifetime = "BGCS-SAFETY-ASYNC";
     public const string BufferLength = "BGCS-SAFETY-LENGTH";
     public const string Allocator = "BGCS-SAFETY-ALLOCATOR";
     public const string CSharpUnsupported = "BGCSCS001";
@@ -41,6 +43,16 @@ public static class BindingDiagnosticCatalog
             "A callback crosses the ABI boundary without a declared retention, unregister, or user-data lifetime contract.",
             "Add a parameter marshalling mapping and keep the delegate alive for the complete native retention period; expose unregister/dispose behavior when required."),
         new(
+            BindingDiagnosticCodes.CallbackThreading,
+            "Callback threading is unknown",
+            "Native code may invoke a callback, but the allowed invocation thread or serialization guarantee is not declared.",
+            "Set CallbackThreading to CallerThread, AnyThread, or SerializedNativeThread and marshal application state explicitly."),
+        new(
+            BindingDiagnosticCodes.AsyncLifetime,
+            "Asynchronous completion lifetime is unknown",
+            "Native work retains a callback or pointer beyond the initiating call without a declared terminal completion mechanism.",
+            "Declare AsyncCompletion and CompletionFunction, or keep the operation on the raw ABI surface with an application-owned lifetime token."),
+        new(
             BindingDiagnosticCodes.BufferLength,
             "Buffer length relationship is unknown",
             "A pointer appears to represent a buffer but no length, capacity, or written-count relationship can be proven.",
@@ -54,7 +66,7 @@ public static class BindingDiagnosticCatalog
             BindingDiagnosticCodes.CSharpUnsupported,
             "C# emitter cannot preserve the declaration",
             "The IR-native C# emitter encountered a declaration whose ABI semantics it cannot emit without loss, such as a bitfield, variadic function, non-free callable, or unexposed type.",
-            "Keep the compatibility emitter for this module or extend the shared IR and C# emitter with a general, tested lowering. The emitter fails before writing output instead of silently dropping semantics."),
+            "Extend the shared IR and C# emitter with a general, tested lowering or keep the declaration on the audited raw ABI surface. The emitter fails before writing output instead of silently dropping semantics."),
         new(
             BindingDiagnosticCodes.CppInstantiation,
             "C++ template requires an explicit instance",

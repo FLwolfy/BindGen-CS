@@ -18,4 +18,4 @@ public interface IBindingEmitter
 /// <param name="SingleFile">Whether backend files should be composed into one source file.</param>
 /// <param name="SingleFileName">Requested single-file name.</param>
 public sealed record EmissionContext(string OutputPath, bool SingleFile, string SingleFileName,
-    string RuntimeNamespace = "BGCS.Runtime");
+    string RuntimeNamespace = "BGCS.Runtime", bool OneFilePerType = false);

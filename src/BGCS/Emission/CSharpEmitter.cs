@@ -3,6 +3,7 @@ namespace BGCS.Emission;
 using System.Text;
 using BGCS.Core.CSharp;
 using BGCS.Intermediate;
+using Microsoft.CodeAnalysis.CSharp;
 
 /// <summary>
 /// Emits the ABI-level C# surface from shared binding IR.
@@ -18,6 +19,8 @@ public sealed class CSharpEmitter : IBindingEmitter
         IReadOnlyList<BindingDiagnostic> diagnostics = Validate(module);
         if (diagnostics.Count > 0)
             throw new BindingEmissionException(diagnostics);
+        if (!context.SingleFile)
+            return EmitSplit(module, context);
         string outputFile = Path.Combine(context.OutputPath, context.SingleFileName);
         Directory.CreateDirectory(context.OutputPath);
         StringBuilder writer = new();
@@ -28,24 +31,137 @@ public sealed class CSharpEmitter : IBindingEmitter
         writer.AppendLine("using System.Runtime.CompilerServices;");
         writer.AppendLine("using System.Runtime.InteropServices;");
         writer.Append("using ").Append(context.RuntimeNamespace).AppendLine(";");
+        foreach (string @using in module.Usings.Distinct(StringComparer.Ordinal))
+        {
+            string normalized = @using.Trim();
+            if (normalized.StartsWith("using ", StringComparison.Ordinal))
+                normalized = normalized[6..];
+            normalized = normalized.TrimEnd(';');
+            if (normalized.Length > 0 && !string.Equals(normalized, context.RuntimeNamespace, StringComparison.Ordinal))
+                writer.Append("using ").Append(normalized).AppendLine(";");
+        }
         writer.AppendLine();
+        EmitAliases(writer, module);
         writer.Append("namespace ").AppendLine(module.Namespace);
         writer.AppendLine("{");
-        EmitAliases(writer, module);
         HashSet<string> emittedTypes = new(StringComparer.Ordinal);
         foreach (BindingType type in module.Types.Where(type => type.Kind != BindingTypeKind.Alias))
         {
             if (!emittedTypes.Add(type.ManagedName))
                 continue;
-            EmitType(writer, type);
+            EmitTypeDocument(writer, type, module);
         }
-        EmitDelegates(writer, module);
+        EmitDelegatesDocument(writer, module);
         EmitConstants(writer, module);
+        EmitPointerHandlesDocument(writer, module);
         EmitFunctions(writer, module);
         EmitFunctionTable(writer, module);
         writer.AppendLine("}");
         File.WriteAllText(outputFile, writer.ToString());
         return [outputFile];
+    }
+
+    private static IReadOnlyList<string> EmitSplit(BindingModule module, EmissionContext context)
+    {
+        Directory.CreateDirectory(context.OutputPath);
+        List<string> outputs = [];
+        if (!context.OneFilePerType)
+        {
+            string path = Path.Combine(context.OutputPath, module.Name + ".Generated.cs");
+            WriteDocument(path, module, context, writer =>
+            {
+                HashSet<string> emittedTypes = new(StringComparer.Ordinal);
+                foreach (BindingType type in module.Types.Where(type => type.Kind != BindingTypeKind.Alias))
+                {
+                    if (emittedTypes.Add(type.ManagedName))
+                        EmitTypeDocument(writer, type, module);
+                }
+                EmitDelegatesDocument(writer, module);
+                EmitConstants(writer, module);
+                EmitPointerHandlesDocument(writer, module);
+                EmitFunctions(writer, module);
+                EmitFunctionTable(writer, module);
+            });
+            outputs.Add(path);
+            return outputs;
+        }
+
+        string typesDirectory = Path.Combine(context.OutputPath, "Types");
+        Directory.CreateDirectory(typesDirectory);
+        HashSet<string> emitted = new(StringComparer.Ordinal);
+        foreach (BindingType type in module.Types.Where(type => type.Kind != BindingTypeKind.Alias))
+        {
+            if (!emitted.Add(type.ManagedName))
+                continue;
+            string path = Path.Combine(typesDirectory, SanitizeFileComponent(type.ManagedName) + ".g.cs");
+            WriteDocument(path, module, context, writer =>
+            {
+                EmitTypeDocument(writer, type, module);
+            });
+            outputs.Add(path);
+        }
+        if (module.Delegates.Count > 0)
+        {
+            string path = Path.Combine(context.OutputPath, "Delegates.g.cs");
+            WriteDocument(path, module, context, writer =>
+            {
+                EmitDelegatesDocument(writer, module);
+            });
+            outputs.Add(path);
+        }
+        if (module.Constants.Count > 0)
+        {
+            string path = Path.Combine(context.OutputPath, "Constants.g.cs");
+            WriteDocument(path, module, context, writer => EmitConstants(writer, module));
+            outputs.Add(path);
+        }
+        if (module.Functions.Count > 0)
+        {
+            string path = Path.Combine(context.OutputPath, module.Name + ".Functions.g.cs");
+            WriteDocument(path, module, context, writer =>
+            {
+                EmitPointerHandlesDocument(writer, module);
+                EmitFunctions(writer, module);
+                EmitFunctionTable(writer, module);
+            });
+            outputs.Add(path);
+        }
+        return outputs;
+    }
+
+    private static void WriteDocument(string path, BindingModule module, EmissionContext context,
+        Action<StringBuilder> emitBody)
+    {
+        StringBuilder writer = new();
+        writer.AppendLine("// <auto-generated/>");
+        writer.AppendLine("#nullable enable");
+        writer.AppendLine("using System;");
+        writer.AppendLine("using System.Diagnostics;");
+        writer.AppendLine("using System.Runtime.CompilerServices;");
+        writer.AppendLine("using System.Runtime.InteropServices;");
+        writer.Append("using ").Append(context.RuntimeNamespace).AppendLine(";");
+        foreach (string @using in module.Usings.Distinct(StringComparer.Ordinal))
+        {
+            string normalized = @using.Trim();
+            if (normalized.StartsWith("using ", StringComparison.Ordinal))
+                normalized = normalized[6..];
+            normalized = normalized.TrimEnd(';');
+            if (normalized.Length > 0 && !string.Equals(normalized, context.RuntimeNamespace, StringComparison.Ordinal))
+                writer.Append("using ").Append(normalized).AppendLine(";");
+        }
+        writer.AppendLine();
+        writer.Append("namespace ").AppendLine(module.Namespace);
+        writer.AppendLine("{");
+        emitBody(writer);
+        writer.AppendLine("}");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, writer.ToString());
+    }
+
+    private static string SanitizeFileComponent(string value)
+    {
+        char[] invalid = Path.GetInvalidFileNameChars();
+        return new string(value.Select(character => invalid.Contains(character) ? '_' : character).ToArray());
     }
 
     /// <summary>
@@ -107,6 +223,18 @@ public sealed class CSharpEmitter : IBindingEmitter
             {
                 ValidateOpaqueByValue(diagnostics, opaqueStorageTypes, aliases, parameter.Type,
                     $"parameter '{parameter.NativeName}' of function '{function.NativeName}'");
+            }
+            if (function.ReturnMarshalling.RequiresCleanup)
+            {
+                BindingFunction? cleanup = string.IsNullOrWhiteSpace(function.ReturnMarshalling.CleanupFunction)
+                    ? null
+                    : module.Functions.FirstOrDefault(candidate => string.Equals(candidate.NativeName,
+                        function.ReturnMarshalling.CleanupFunction, StringComparison.Ordinal));
+                if (cleanup == null || cleanup.Parameters.Count != 1)
+                {
+                    AddUnsupported(diagnostics,
+                        $"Function '{function.NativeName}' requires return cleanup, but cleanup function '{function.ReturnMarshalling.CleanupFunction ?? "<missing>"}' is not a one-parameter callable in the module.");
+                }
             }
             if (module.ImportMode == BindingImportMode.FunctionTable && function.FunctionTableIndex == null)
             {
@@ -187,16 +315,62 @@ public sealed class CSharpEmitter : IBindingEmitter
             if (!CsType.IsKnownPrimitive(target) && concreteTypes.Contains(target))
                 target = $"global::{module.Namespace}.{target}";
             if (!string.Equals(type.ManagedName, target, StringComparison.Ordinal))
-                writer.Append("    using ").Append(type.ManagedName).Append(" = ").Append(target).AppendLine(";");
+                writer.Append("using ").Append(type.ManagedName).Append(" = ").Append(target).AppendLine(";");
         }
         if (module.Types.Any(type => type.Kind == BindingTypeKind.Alias && type.UnderlyingType != null))
             writer.AppendLine();
+    }
+
+    private static void EmitTypeDocument(StringBuilder writer, BindingType type, BindingModule module)
+    {
+        if (!module.NestGeneratedTypesInApi)
+        {
+            EmitType(writer, type, module);
+            return;
+        }
+        EmitNestedInApi(writer, module, nested => EmitType(nested, type, module));
+    }
+
+    private static void EmitDelegatesDocument(StringBuilder writer, BindingModule module)
+    {
+        if (module.Delegates.Count == 0)
+            return;
+        if (!module.NestGeneratedTypesInApi)
+        {
+            EmitDelegates(writer, module);
+            return;
+        }
+        EmitNestedInApi(writer, module, nested => EmitDelegates(nested, module));
+    }
+
+    private static void EmitPointerHandlesDocument(StringBuilder writer, BindingModule module)
+    {
+        if (!module.WrapPointersAsHandle || GetPointerHandleSpecs(module).Count == 0)
+            return;
+        if (!module.NestGeneratedTypesInApi)
+        {
+            EmitPointerHandles(writer, module);
+            return;
+        }
+        EmitNestedInApi(writer, module, nested => EmitPointerHandles(nested, module));
+    }
+
+    private static void EmitNestedInApi(StringBuilder writer, BindingModule module, Action<StringBuilder> emit)
+    {
+        writer.Append("    public unsafe partial class ").AppendLine(module.Name);
+        writer.AppendLine("    {");
+        StringBuilder nested = new();
+        emit(nested);
+        AppendIndented(writer, nested, "    ");
+        writer.AppendLine("    }");
+        writer.AppendLine();
     }
 
     private static void EmitDelegates(StringBuilder writer, BindingModule module)
     {
         foreach (BindingDelegate bindingDelegate in module.Delegates)
         {
+            EmitPlaceholderComment(writer, module, 1);
             writer.Append("    [UnmanagedFunctionPointer(CallingConvention.")
                 .Append(GetCallingConvention(bindingDelegate.CallingConvention)).AppendLine(")] ");
             writer.Append("    public unsafe delegate ").Append(bindingDelegate.ReturnType.ManagedName).Append(' ')
@@ -211,7 +385,7 @@ public sealed class CSharpEmitter : IBindingEmitter
     {
         if (module.Constants.Count == 0)
             return;
-        writer.Append("    public static unsafe partial class ").AppendLine(module.Name);
+        writer.Append("    public unsafe partial class ").AppendLine(module.Name);
         writer.AppendLine("    {");
         foreach (BindingConstant constant in module.Constants)
             writer.Append("        public const ").Append(constant.ManagedType).Append(' ')
@@ -228,8 +402,13 @@ public sealed class CSharpEmitter : IBindingEmitter
             BindingDiagnosticCodes.CSharpUnsupported));
     }
 
-    private static void EmitType(StringBuilder writer, BindingType type)
+    private static void EmitType(StringBuilder writer, BindingType type, BindingModule? module = null)
     {
+        EmitComment(writer, type.Comment, 1);
+        foreach (string attribute in type.Attributes)
+            writer.Append("    ").AppendLine(attribute);
+        if (module != null)
+            EmitPlaceholderComment(writer, module, 1, type.Comment);
         switch (type.Kind)
         {
             case BindingTypeKind.Enumeration:
@@ -237,7 +416,13 @@ public sealed class CSharpEmitter : IBindingEmitter
                 writer.Append("    public enum ").Append(type.ManagedName).Append(" : ").AppendLine(underlying);
                 writer.AppendLine("    {");
                 foreach (BindingEnumMember item in type.EnumMembers)
-                    writer.Append("        ").Append(item.ManagedName).Append(" = ").Append(item.Value).AppendLine(",");
+                {
+                    EmitComment(writer, item.Comment, 2);
+                    foreach (string attribute in item.Attributes)
+                        writer.Append("        ").AppendLine(attribute);
+                    string value = type.IsCustomDefinition ? item.Value : $"unchecked({item.Value})";
+                    writer.Append("        ").Append(item.ManagedName).Append(" = ").Append(value).AppendLine(",");
+                }
                 writer.AppendLine("    }");
                 writer.AppendLine();
                 break;
@@ -252,12 +437,12 @@ public sealed class CSharpEmitter : IBindingEmitter
                 if (opaqueStorage && type.Size > 0 && type.Alignment is 1 or 2 or 4 or 8)
                     writer.Append(", Pack = ").Append(type.Alignment);
                 writer.AppendLine(")] ");
-                writer.Append("    public unsafe partial struct ").AppendLine(type.ManagedName);
+                writer.Append("    public partial struct ").AppendLine(type.ManagedName);
                 writer.AppendLine("    {");
                 foreach (BindingType nestedType in type.NestedTypes)
                 {
                     StringBuilder nestedWriter = new();
-                    EmitType(nestedWriter, nestedType);
+                    EmitType(nestedWriter, nestedType, module);
                     AppendIndented(writer, nestedWriter, "    ");
                 }
                 if (type.NestedTypes.Count == 0 && type.Fields.Count == 0)
@@ -281,6 +466,15 @@ public sealed class CSharpEmitter : IBindingEmitter
                         continue;
                     fieldIndex = EmitBitfieldGroup(writer, type.Fields, fieldIndex, bitfieldIndex++);
                 }
+                if (type.Validity != null)
+                {
+                    writer.Append("        public readonly bool ").Append(type.Validity.PropertyName).Append(" => ")
+                        .Append(type.Validity.FieldName).Append(" != ").Append(type.Validity.InvalidValue).AppendLine(";");
+                }
+                if (module?.GenerateSizeOfStructs == true)
+                    writer.Append("        public static readonly int SizeInBytes = ").Append(type.Size).AppendLine(";");
+                if (module?.GenerateConstructorsForStructs == true && type.Kind == BindingTypeKind.Structure && type.Fields.Count > 0)
+                    EmitStructConstructor(writer, type);
                 writer.AppendLine("    }");
                 writer.AppendLine();
                 break;
@@ -319,6 +513,91 @@ public sealed class CSharpEmitter : IBindingEmitter
                 writer.Append(indent);
             writer.AppendLine(line);
         }
+    }
+
+    private static void EmitComment(StringBuilder writer, string? comment, int indent)
+    {
+        if (string.IsNullOrWhiteSpace(comment))
+            return;
+        string padding = new(' ', indent * 4);
+        if (comment.TrimStart().StartsWith("//", StringComparison.Ordinal))
+        {
+            foreach (string line in comment.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+                writer.Append(padding).AppendLine(line);
+            return;
+        }
+        writer.Append(padding).AppendLine("/// <summary>");
+        writer.Append(padding).Append("/// ").AppendLine(comment);
+        writer.Append(padding).AppendLine("/// </summary>");
+    }
+
+    private static void EmitPlaceholderComment(StringBuilder writer, BindingModule module, int indent,
+        string? existingComment = null)
+    {
+        if (module.GeneratePlaceholderComments && string.IsNullOrWhiteSpace(existingComment))
+            EmitComment(writer, "To be documented.", indent);
+    }
+
+    private static void EmitStructConstructor(StringBuilder writer, BindingType type)
+    {
+        BindingField[] fields = type.Fields
+            .Where(field => field.ArrayDimensions.All(dimension => dimension > 0))
+            .ToArray();
+        if (fields.Length == 0)
+            return;
+        writer.Append("        public unsafe ").Append(type.ManagedName).Append('(');
+        for (int index = 0; index < fields.Length; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingField field = fields[index];
+            bool array = field.ArrayDimensions.Count > 0;
+            writer.Append(field.Type.ManagedName);
+            if (array)
+                writer.Append('*');
+            writer.Append(' ').Append(GetConstructorParameterName(field, index)).Append(" = default");
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        for (int index = 0; index < fields.Length; index++)
+        {
+            BindingField field = fields[index];
+            string parameterName = GetConstructorParameterName(field, index);
+            int count = field.ArrayDimensions.Count == 0 ? 1 : field.ArrayDimensions.Aggregate(1,
+                (value, dimension) => dimension <= 0 ? 0 : checked(value * dimension));
+            if (field.ArrayDimensions.Count == 0)
+            {
+                writer.Append("            ").Append(field.ManagedName).Append(" = ").Append(parameterName).AppendLine(";");
+                continue;
+            }
+            writer.Append("            if (").Append(parameterName).AppendLine(" != null)");
+            writer.AppendLine("            {");
+            for (int element = 0; element < count; element++)
+            {
+                writer.Append("                ").Append(field.ManagedName);
+                if (count > 1)
+                    writer.Append('_').Append(element);
+                writer.Append(" = ");
+                string storageType = GetArrayStorageType(field);
+                if (string.Equals(storageType, "nint", StringComparison.Ordinal) &&
+                    field.Type.ManagedName.Contains('*', StringComparison.Ordinal))
+                    writer.Append("(nint)");
+                writer.Append(parameterName).Append('[').Append(element).AppendLine("];");
+            }
+            writer.AppendLine("            }");
+        }
+        writer.AppendLine("        }");
+    }
+
+    private static string GetConstructorParameterName(BindingField field, int index)
+    {
+        string name = string.IsNullOrWhiteSpace(field.NativeName) ? $"value{index}" : field.NativeName.Trim('_');
+        if (name.Length == 0)
+            return $"value{index}";
+        string parameterName = char.ToLowerInvariant(name[0]) + name[1..];
+        return SyntaxFacts.GetKeywordKind(parameterName) == SyntaxKind.None
+            ? parameterName
+            : "@" + parameterName;
     }
 
     private static string GetAlignmentStorageType(int alignment)
@@ -364,7 +643,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         return lastIndex;
     }
 
-    private static void EmitField(StringBuilder writer, BindingField field, bool union)
+    private static void EmitField(StringBuilder writer, BindingField field, bool explicitLayout)
     {
         int count = field.ArrayDimensions.Count == 0 ? 1 : field.ArrayDimensions.Aggregate(1, (value, dimension) => dimension <= 0 ? 0 : checked(value * dimension));
         if (count == 0)
@@ -374,37 +653,68 @@ public sealed class CSharpEmitter : IBindingEmitter
         }
         for (int i = 0; i < count; i++)
         {
-            if (union)
+            if (explicitLayout)
                 writer.Append("        [FieldOffset(").Append(field.Offset + i * field.Type.Size).AppendLine(")] ");
-            writer.Append("        public ").Append(field.Type.ManagedName).Append(' ').Append(field.ManagedName);
+            string storageType = GetArrayStorageType(field);
+            writer.Append("        public ");
+            if (storageType.Contains('*', StringComparison.Ordinal))
+                writer.Append("unsafe ");
+            writer.Append(storageType).Append(' ').Append(field.ManagedName);
             if (count > 1)
                 writer.Append('_').Append(i);
             writer.AppendLine(";");
         }
+        if (count > 1)
+        {
+            writer.Append("        public ");
+            if (field.Type.ManagedName.Contains('*', StringComparison.Ordinal))
+                writer.Append("unsafe ");
+            writer.Append("Span<").Append(GetSpanElementType(field.Type.ManagedName)).Append("> ")
+                .Append(field.ManagedName);
+            writer.Append(" => MemoryMarshal.CreateSpan(ref ").Append(field.ManagedName).Append("_0, ")
+                .Append(count).AppendLine(");");
+        }
     }
+
+    private static string GetArrayStorageType(BindingField field) =>
+        field.ArrayDimensions.Count > 0 && field.Type.ManagedName.Contains('*', StringComparison.Ordinal)
+            ? GetSpanElementType(field.Type.ManagedName)
+            : field.Type.ManagedName;
 
     private static void EmitFunctions(StringBuilder writer, BindingModule module)
     {
         if (module.Functions.Count == 0)
             return;
-        writer.Append("    public static unsafe partial class ").AppendLine(module.Name);
+        writer.Append("    public unsafe partial class ").AppendLine(module.Name);
         writer.AppendLine("    {");
+        if (module.EmitLibraryNameConstant && module.ImportMode is BindingImportMode.DllImport or BindingImportMode.LibraryImport)
+        {
+            writer.Append("        internal const string LibName = \"").Append(EscapeString(module.LibraryName)).AppendLine("\";");
+            writer.AppendLine();
+        }
         foreach (BindingFunction function in module.Functions.Where(function => function.Kind == BindingFunctionKind.Free))
         {
+            EmitPlaceholderComment(writer, module, 2);
+            if (module.GenerateMetadata)
+            {
+                writer.Append("        [NativeName(NativeNameType.Func, \"").Append(EscapeString(function.NativeName)).AppendLine("\")]");
+                writer.Append("        [return: NativeName(NativeNameType.Type, \"").Append(EscapeString(function.ReturnType.NativeName)).AppendLine("\")]");
+            }
             switch (module.ImportMode)
             {
                 case BindingImportMode.DllImport:
-                    writer.Append("        [DllImport(\"").Append(module.LibraryName).Append("\", EntryPoint = \"")
-                        .Append(function.NativeName).Append("\", CallingConvention = CallingConvention.")
-                        .Append(GetCallingConvention(function.CallingConvention)).AppendLine(")] ");
-                    EmitExternFunction(writer, function, "internal static extern");
+                    writer.Append("        [DllImport(").Append(module.EmitLibraryNameConstant ? "LibName" : $"\"{EscapeString(module.LibraryName)}\"")
+                        .Append(", CallingConvention = CallingConvention.").Append(GetCallingConvention(function.CallingConvention))
+                        .Append(", EntryPoint = \"").Append(function.NativeName).AppendLine("\")]");
+                    EmitExternFunction(writer, module, function, "internal static extern");
                     break;
                 case BindingImportMode.LibraryImport:
-                    writer.Append("        [LibraryImport(\"").Append(module.LibraryName).Append("\", EntryPoint = \"")
+                    writer.Append("        [LibraryImport(").Append(module.EmitLibraryNameConstant ? "LibName" : $"\"{EscapeString(module.LibraryName)}\"")
+                        .Append(", EntryPoint = \"")
                         .Append(function.NativeName).AppendLine("\")] ");
                     writer.Append("        [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConv")
                         .Append(GetUnmanagedCallingConvention(function.CallingConvention)).AppendLine(") })] ");
-                    EmitExternFunction(writer, function, "internal static partial");
+                    EmitExternFunction(writer, module, function, "internal static partial");
                     break;
                 case BindingImportMode.FunctionTable:
                     EmitFunctionTableCall(writer, function);
@@ -412,15 +722,884 @@ public sealed class CSharpEmitter : IBindingEmitter
                 default:
                     throw new ArgumentOutOfRangeException(nameof(module.ImportMode), module.ImportMode, null);
             }
+            writer.AppendLine();
         }
         writer.AppendLine("    }");
+        writer.AppendLine();
+        foreach (IGrouping<string, BindingFunction> group in module.Functions
+                     .Where(function => function.Kind == BindingFunctionKind.Free &&
+                         function.ManagedKind != BindingManagedFunctionKind.Instance)
+                     .GroupBy(function => string.IsNullOrWhiteSpace(function.ManagedContainer)
+                         ? module.Name
+                         : function.ManagedContainer!, StringComparer.Ordinal))
+        {
+            writer.Append("    public ");
+            if (string.Equals(group.Key, "Extensions", StringComparison.Ordinal))
+                writer.Append("static ");
+            writer.Append("unsafe partial class ").AppendLine(group.Key);
+            writer.AppendLine("    {");
+            string nativeOwner = string.Equals(group.Key, module.Name, StringComparison.Ordinal)
+                ? string.Empty
+                : module.Name + ".";
+            foreach (BindingFunction function in group)
+            {
+                EmitManagedFunctions(writer, module, function, nativeOwner);
+                writer.AppendLine();
+            }
+            writer.AppendLine("    }");
+            writer.AppendLine();
+        }
+        foreach (IGrouping<string, BindingFunction> group in module.Functions
+                     .Where(function => function.Kind == BindingFunctionKind.Free &&
+                         function.ManagedKind == BindingManagedFunctionKind.Instance &&
+                         !string.IsNullOrWhiteSpace(function.ManagedReceiverType))
+                     .GroupBy(function => function.ManagedReceiverType!, StringComparer.Ordinal))
+        {
+            writer.Append("    public unsafe partial struct ").AppendLine(group.Key);
+            writer.AppendLine("    {");
+            foreach (BindingFunction function in group)
+            {
+                EmitInstanceManagedFunction(writer, module, function);
+                writer.AppendLine();
+            }
+            writer.AppendLine("    }");
+            writer.AppendLine();
+        }
     }
 
-    private static void EmitExternFunction(StringBuilder writer, BindingFunction function, string modifiers)
+    private static void EmitManagedFunctions(StringBuilder writer, BindingModule module, BindingFunction function,
+        string nativeOwner)
+    {
+        FriendlyFunctionPlan friendly = CreateFriendlyPlan(function);
+        if (module.WrapPointersAsHandle && TryGetPointerHandleParameter(module, function, out _, out _))
+        {
+            EmitPointerHandleManagedFunctions(writer, module, function, nativeOwner);
+            EmitDefaultValueOverload(writer, module, function, nativeOwner);
+            return;
+        }
+        bool sameSignatureWithDifferentReturn = (friendly.ReturnsString || friendly.ReturnsBool) && !friendly.HasParameterTransform;
+        if (!sameSignatureWithDifferentReturn)
+            EmitRawManagedFunction(writer, function, nativeOwner);
+        if (friendly.HasTransform)
+            EmitFriendlyManagedFunction(writer, module, function, friendly, nativeOwner);
+        EmitDefaultValueOverload(writer, module, function, nativeOwner);
+        EmitCallbackManagedFunction(writer, module, function, nativeOwner);
+        EmitAdditionalPointerOverloads(writer, module, function, nativeOwner);
+    }
+
+    private static void EmitRawManagedFunction(StringBuilder writer, BindingFunction function, string nativeOwner)
+    {
+        writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        EmitManagedParameters(writer, function, includeReceiverModifier: true);
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        writer.Append("            ");
+        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+            writer.Append(function.ReturnType.ManagedName).Append(" ret = ");
+        writer.Append(nativeOwner).Append(GetRawManagedName(function)).Append("Native(");
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            writer.Append(function.Parameters[index].ManagedName);
+        }
+        writer.AppendLine(");");
+        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+            writer.AppendLine("            return ret;");
+        writer.AppendLine("        }");
+    }
+
+    private static void EmitManagedParameters(StringBuilder writer, BindingFunction function,
+        bool includeReceiverModifier)
+    {
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            if (includeReceiverModifier && function.ManagedKind == BindingManagedFunctionKind.Extension &&
+                function.ManagedReceiverIndex == index)
+                writer.Append("this ");
+            writer.Append(parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+        }
+    }
+
+    private static void EmitDefaultValueOverload(StringBuilder writer, BindingModule module,
+        BindingFunction function, string nativeOwner)
+    {
+        if (function.ManagedKind != BindingManagedFunctionKind.Static)
+            return;
+        int firstDefault = -1;
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (function.Parameters[index].DefaultValue != null)
+            {
+                firstDefault = index;
+                break;
+            }
+        }
+        if (firstDefault < 0 || function.Parameters.Skip(firstDefault).Any(parameter => parameter.DefaultValue == null))
+            return;
+        writer.AppendLine();
+        EmitPlaceholderComment(writer, module, 2);
+        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        for (int index = 0; index < firstDefault; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            writer.Append(parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        writer.Append("            ");
+        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+            writer.Append(function.ReturnType.ManagedName).Append(" ret = ");
+        writer.Append(nativeOwner).Append(GetRawManagedName(function)).Append("Native(");
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            writer.Append(index < firstDefault
+                ? parameter.ManagedName
+                : $"({parameter.Type.ManagedName})({parameter.DefaultValue})");
+        }
+        writer.AppendLine(");");
+        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+            writer.AppendLine("            return ret;");
+        writer.AppendLine("        }");
+    }
+
+    private static void EmitInstanceManagedFunction(StringBuilder writer, BindingModule module,
+        BindingFunction function)
+    {
+        int receiverIndex = function.ManagedReceiverIndex.GetValueOrDefault();
+        EmitPlaceholderComment(writer, module, 2);
+        writer.Append("        public unsafe ").Append(function.ReturnType.ManagedName).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        bool first = true;
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index == receiverIndex)
+                continue;
+            if (!first)
+                writer.Append(", ");
+            first = false;
+            BindingParameter parameter = function.Parameters[index];
+            writer.Append(parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        writer.Append("            fixed (").Append(function.ManagedReceiverType).AppendLine("* pThis = &this)");
+        writer.AppendLine("            {");
+        writer.Append("                ");
+        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+            writer.Append("return ");
+        writer.Append(module.Name).Append('.').Append(GetRawManagedName(function)).Append("Native(");
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            writer.Append(index == receiverIndex ? "pThis" : function.Parameters[index].ManagedName);
+        }
+        writer.AppendLine(");");
+        writer.AppendLine("            }");
+        writer.AppendLine("        }");
+    }
+
+    private static void EmitPointerHandles(StringBuilder writer, BindingModule module)
+    {
+        if (!module.WrapPointersAsHandle)
+            return;
+        IReadOnlyList<PointerHandleSpec> specs = GetPointerHandleSpecs(module);
+        foreach (PointerHandleSpec spec in specs)
+        {
+            writer.AppendLine("    [DebuggerDisplay(\"{DebuggerDisplay,nq}\")] ");
+            writer.Append("    public unsafe struct ").Append(spec.WrapperName).Append(" : IEquatable<")
+                .Append(spec.WrapperName).AppendLine(">");
+            writer.AppendLine("    {");
+            writer.Append("        public ").Append(spec.WrapperName).Append('(').Append(spec.PointerType)
+                .AppendLine(" handle) { Handle = handle; }");
+            writer.Append("        public ").Append(spec.PointerType).AppendLine(" Handle;");
+            writer.AppendLine("        public bool IsNull => Handle == null;");
+            writer.Append("        public static ").Append(spec.WrapperName).Append(" Null => new ")
+                .Append(spec.WrapperName).AppendLine("(null);");
+            writer.Append("        public ").Append(spec.PointerType[..^1]).AppendLine(" this[int index]");
+            writer.AppendLine("        {");
+            writer.AppendLine("            get => Handle[index];");
+            writer.AppendLine("            set => Handle[index] = value;");
+            writer.AppendLine("        }");
+            writer.Append("        public static implicit operator ").Append(spec.WrapperName).Append('(')
+                .Append(spec.PointerType).Append(" handle) => new ").Append(spec.WrapperName).AppendLine("(handle);");
+            writer.Append("        public static implicit operator ").Append(spec.PointerType).Append('(')
+                .Append(spec.WrapperName).AppendLine(" handle) => handle.Handle;");
+            writer.Append("        public static bool operator ==(").Append(spec.WrapperName).Append(" left, ")
+                .Append(spec.WrapperName).AppendLine(" right) => left.Handle == right.Handle;");
+            writer.Append("        public static bool operator !=(").Append(spec.WrapperName).Append(" left, ")
+                .Append(spec.WrapperName).AppendLine(" right) => left.Handle != right.Handle;");
+            writer.Append("        public bool Equals(").Append(spec.WrapperName)
+                .AppendLine(" other) => Handle == other.Handle;");
+            writer.Append("        public override bool Equals(object? obj) => obj is ").Append(spec.WrapperName)
+                .AppendLine(" other && Equals(other);");
+            writer.AppendLine("        public override int GetHashCode() => ((nuint)Handle).GetHashCode();");
+            writer.Append("        private string DebuggerDisplay => string.Format(\"").Append(spec.WrapperName)
+                .AppendLine(" [0x{0}]\", ((nuint)Handle).ToString(\"X\"));");
+            if (spec.Depth == 1)
+                EmitPointerHandleProperties(writer, spec, specs);
+            writer.AppendLine("    }");
+            writer.AppendLine();
+        }
+    }
+
+    private static void EmitPointerHandleProperties(StringBuilder writer, PointerHandleSpec spec,
+        IReadOnlyList<PointerHandleSpec> specs)
+    {
+        foreach (BindingField field in spec.Type.Fields)
+        {
+            string fieldManagedType = spec.Type.NestedTypes.Any(nested =>
+                string.Equals(nested.ManagedName, field.Type.ManagedName, StringComparison.Ordinal))
+                ? spec.Type.ManagedName + "." + field.Type.ManagedName
+                : field.Type.ManagedName;
+            int count = field.ArrayDimensions.Count == 0 ? 1 : field.ArrayDimensions.Aggregate(1,
+                (value, dimension) => dimension <= 0 ? 0 : checked(value * dimension));
+            if (field.ArrayDimensions.Count > 0)
+            {
+                string spanType = GetSpanElementType(fieldManagedType);
+                if (count == 0)
+                {
+                    writer.Append("        public Span<").Append(spanType).Append("> ")
+                        .Append(field.ManagedName).Append("(int length) => new((void*)((byte*)Handle + ")
+                        .Append(field.Offset).AppendLine("), length);");
+                }
+                else
+                {
+                    writer.Append("        public Span<").Append(spanType).Append("> ")
+                        .Append(field.ManagedName).Append(" => new((void*)&Handle->")
+                        .Append(field.ManagedName).Append("_0, ").Append(count).AppendLine(");");
+                }
+                continue;
+            }
+            if (field.IsBitField)
+            {
+                writer.Append("        public ").Append(fieldManagedType).Append(' ').Append(field.ManagedName)
+                    .Append(" { get => Handle->").Append(field.ManagedName).Append("; set => Handle->")
+                    .Append(field.ManagedName).AppendLine(" = value; }");
+                continue;
+            }
+            PointerHandleSpec? wrappedField = specs.FirstOrDefault(candidate =>
+                string.Equals(candidate.PointerType, field.Type.ManagedName, StringComparison.Ordinal));
+            if (wrappedField != null)
+            {
+                writer.Append("        public ref ").Append(wrappedField.WrapperName).Append(' ')
+                    .Append(field.ManagedName).Append(" => ref Unsafe.AsRef<").Append(wrappedField.WrapperName)
+                    .Append(">(&Handle->").Append(field.ManagedName).AppendLine(");");
+            }
+            else if (fieldManagedType.Contains('*', StringComparison.Ordinal))
+            {
+                writer.Append("        public ").Append(fieldManagedType).Append(' ').Append(field.ManagedName)
+                    .Append(" { get => Handle->").Append(field.ManagedName).Append("; set => Handle->")
+                    .Append(field.ManagedName).AppendLine(" = value; }");
+            }
+            else
+            {
+                writer.Append("        public ref ").Append(fieldManagedType).Append(' ').Append(field.ManagedName)
+                    .Append(" => ref Unsafe.AsRef<").Append(fieldManagedType).Append(">(&Handle->")
+                    .Append(field.ManagedName).AppendLine(");");
+            }
+        }
+    }
+
+    private static string GetSpanElementType(string managedType)
+    {
+        if (!managedType.Contains('*', StringComparison.Ordinal))
+            return managedType;
+        string element = managedType.TrimEnd('*').TrimEnd();
+        return managedType.Count(character => character == '*') == 1 &&
+            !string.Equals(element, "void", StringComparison.Ordinal)
+            ? $"Pointer<{element}>"
+            : "nint";
+    }
+
+    private static IReadOnlyList<PointerHandleSpec> GetPointerHandleSpecs(BindingModule module)
+    {
+        Dictionary<string, BindingType> wrappableTypes = EnumerateTypes(module.Types)
+            .Where(type => type.Kind is BindingTypeKind.Structure or BindingTypeKind.Union && !type.IsOpaqueStorage)
+            .GroupBy(type => type.ManagedName, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        Dictionary<string, PointerHandleSpec> specs = new(StringComparer.Ordinal);
+
+        void Add(BindingTypeReference reference)
+        {
+            string managedName = reference.ManagedName.Trim();
+            int depth = managedName.Reverse().TakeWhile(character => character == '*').Count();
+            if (depth == 0)
+                return;
+            string baseType = managedName[..^depth].TrimEnd();
+            if (!wrappableTypes.TryGetValue(baseType, out BindingType? type))
+                return;
+            string pointerType = baseType + new string('*', depth);
+            specs.TryAdd(pointerType, new(type, depth, baseType + string.Concat(Enumerable.Repeat("Ptr", depth)),
+                pointerType));
+        }
+
+        foreach (BindingFunction function in module.Functions)
+        {
+            Add(function.ReturnType);
+            foreach (BindingParameter parameter in function.Parameters)
+                Add(parameter.Type);
+        }
+        foreach (BindingType type in EnumerateTypes(module.Types))
+        {
+            foreach (BindingField field in type.Fields)
+                Add(field.Type);
+        }
+        return specs.Values.OrderBy(spec => spec.WrapperName, StringComparer.Ordinal).ToArray();
+    }
+
+    private static bool TryGetPointerHandleParameter(BindingModule module, BindingFunction function,
+        out BindingParameter? pointerParameter, out string? elementType)
+    {
+        IReadOnlyList<PointerHandleSpec> specs = GetPointerHandleSpecs(module);
+        foreach (BindingParameter parameter in function.Parameters)
+        {
+            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
+                string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
+            if (spec == null)
+                continue;
+            pointerParameter = parameter;
+            elementType = spec.Type.ManagedName;
+            return true;
+        }
+        pointerParameter = null;
+        elementType = null;
+        return false;
+    }
+
+    private static void EmitPointerHandleManagedFunctions(StringBuilder writer, BindingModule module,
+        BindingFunction function, string nativeOwner)
+    {
+        IReadOnlyList<PointerHandleSpec> specs = GetPointerHandleSpecs(module);
+        writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
+                string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
+            if (function.ManagedKind == BindingManagedFunctionKind.Extension && function.ManagedReceiverIndex == index)
+                writer.Append("this ");
+            writer.Append(spec?.WrapperName ?? parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        EmitNativeInvocation(writer, function, nativeOwner, 3, parameter =>
+        {
+            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
+                string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
+            return spec == null ? parameter.ManagedName : parameter.ManagedName + ".Handle";
+        });
+        writer.AppendLine("        }");
+
+        if (function.Parameters.Any(parameter => specs.Any(spec => spec.Depth != 1 &&
+            string.Equals(spec.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal))))
+            return;
+        writer.AppendLine();
+        writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            PointerHandleSpec? spec = specs.FirstOrDefault(candidate =>
+                string.Equals(candidate.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal));
+            if (spec != null)
+                writer.Append("ref ").Append(spec.Type.ManagedName);
+            else
+                writer.Append(parameter.Type.ManagedName);
+            writer.Append(' ').Append(parameter.ManagedName);
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        List<BindingParameter> fixedParameters = function.Parameters.Where(parameter => specs.Any(spec =>
+            string.Equals(spec.PointerType, parameter.Type.ManagedName, StringComparison.Ordinal))).ToList();
+        int indent = 3;
+        foreach (BindingParameter parameter in fixedParameters)
+        {
+            AppendIndent(writer, indent);
+            writer.Append("fixed (").Append(parameter.Type.ManagedName).Append(' ').Append(GetTemporaryName(parameter))
+                .Append(" = &").Append(parameter.ManagedName).AppendLine(")");
+            AppendIndent(writer, indent);
+            writer.AppendLine("{");
+            indent++;
+        }
+        EmitNativeInvocation(writer, function, nativeOwner, indent, parameter =>
+            fixedParameters.Contains(parameter) ? GetTemporaryName(parameter) : parameter.ManagedName);
+        for (int index = fixedParameters.Count - 1; index >= 0; index--)
+        {
+            indent--;
+            AppendIndent(writer, indent);
+            writer.AppendLine("}");
+        }
+        writer.AppendLine("        }");
+    }
+
+    private static void EmitCallbackManagedFunction(StringBuilder writer, BindingModule module,
+        BindingFunction function, string nativeOwner)
+    {
+        List<(BindingParameter Parameter, BindingDelegate Delegate, int Index)> callbacks = [];
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            BindingParameter parameter = function.Parameters[index];
+            if (parameter.Marshalling.Strategy != MarshallingStrategy.Callback ||
+                string.Equals(parameter.Type.ManagedName, "void*", StringComparison.Ordinal))
+                continue;
+            BindingDelegate? bindingDelegate = module.Delegates.FirstOrDefault(candidate =>
+                string.Equals(candidate.NativeName, parameter.Type.NativeName, StringComparison.Ordinal));
+            if (bindingDelegate != null)
+                callbacks.Add((parameter, bindingDelegate, index));
+        }
+        if (callbacks.Count == 0)
+            return;
+
+        writer.AppendLine();
+        if (module.AutoWrapCallbacks)
+        {
+            foreach ((BindingParameter parameter, BindingDelegate bindingDelegate, int index) in callbacks)
+            {
+                string slot = BuildCallbackSlotName(function, parameter, index);
+                writer.Append("        private static NativeCallback<").Append(bindingDelegate.ManagedName)
+                    .Append("> __autoWrappedCallback_").Append(slot).AppendLine(";");
+                writer.Append("        private static ").Append(bindingDelegate.ManagedName).Append("? __AutoWrapCallback_")
+                    .Append(slot).Append('(').Append(bindingDelegate.ManagedName).AppendLine("? callback)");
+                writer.AppendLine("        {");
+                writer.Append("            if (__autoWrappedCallback_").Append(slot)
+                    .AppendLine(".IsAllocated) __autoWrappedCallback_" + slot + ".Dispose();");
+                writer.AppendLine("            if (callback is null)");
+                writer.AppendLine("            {");
+                writer.Append("                __autoWrappedCallback_").Append(slot).AppendLine(" = default;");
+                writer.AppendLine("                return null;");
+                writer.AppendLine("            }");
+                writer.Append("            __autoWrappedCallback_").Append(slot).Append(" = new NativeCallback<")
+                    .Append(bindingDelegate.ManagedName).AppendLine(">(callback);");
+                writer.Append("            return __autoWrappedCallback_").Append(slot).AppendLine(".Callback;");
+                writer.AppendLine("        }");
+            }
+            writer.AppendLine();
+        }
+
+        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            (BindingParameter Parameter, BindingDelegate Delegate, int Index)? callback = callbacks
+                .Cast<(BindingParameter, BindingDelegate, int)?>()
+                .FirstOrDefault(candidate => candidate?.Item3 == index);
+            if (callback is { } match)
+            {
+                string name = module.AutoWrapCallbacks && callbacks.Count == 1 ? "callback" : parameter.ManagedName;
+                writer.Append(match.Delegate.ManagedName);
+                if (module.AutoWrapCallbacks)
+                    writer.Append('?');
+                writer.Append(' ').Append(name);
+            }
+            else
+            {
+                writer.Append(parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+            }
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        EmitNativeInvocation(writer, function, nativeOwner, 3, parameter =>
+        {
+            (BindingParameter Parameter, BindingDelegate Delegate, int Index)? callback = callbacks
+                .Cast<(BindingParameter, BindingDelegate, int)?>()
+                .FirstOrDefault(candidate => ReferenceEquals(candidate?.Item1, parameter));
+            if (callback is not { } match)
+                return parameter.ManagedName;
+            string argumentName = module.AutoWrapCallbacks && callbacks.Count == 1 ? "callback" : parameter.ManagedName;
+            string delegateExpression = module.AutoWrapCallbacks
+                ? $"__AutoWrapCallback_{BuildCallbackSlotName(function, parameter, match.Index)}({argumentName})"
+                : argumentName;
+            return $"({parameter.Type.ManagedName})Utils.GetFunctionPointerForDelegate({delegateExpression})";
+        });
+        writer.AppendLine("        }");
+    }
+
+    private static string BuildCallbackSlotName(BindingFunction function, BindingParameter parameter, int index) =>
+        SanitizeIdentifier(function.ManagedName) + "_" + SanitizeIdentifier(parameter.ManagedName) + "_" + index;
+
+    private static string SanitizeIdentifier(string value)
+    {
+        StringBuilder result = new(value.Length);
+        foreach (char character in value)
+            result.Append(char.IsLetterOrDigit(character) || character == '_' ? character : '_');
+        return result.ToString();
+    }
+
+    private static void EmitAdditionalPointerOverloads(StringBuilder writer, BindingModule module,
+        BindingFunction function, string nativeOwner)
+    {
+        if (!module.GenerateAdditionalOverloads || function.ManagedKind != BindingManagedFunctionKind.Static)
+            return;
+        for (int pointerIndex = 0; pointerIndex < function.Parameters.Count; pointerIndex++)
+        {
+            BindingParameter pointer = function.Parameters[pointerIndex];
+            string? elementType = GetPointerElementType(pointer.Type);
+            if (pointer.Type.PointerDepth != 1 || pointer.Direction != BindingDirection.In ||
+                elementType is not ("byte" or "sbyte") || !string.IsNullOrWhiteSpace(pointer.Marshalling.LengthParameter))
+                continue;
+            writer.AppendLine();
+            EmitSinglePointerOverload(writer, function, nativeOwner, pointerIndex,
+                $"ReadOnlySpan<{elementType}>", false);
+            if (!module.VaryingTypes.Contains("nint", StringComparer.Ordinal))
+            {
+                writer.AppendLine();
+                EmitSinglePointerOverload(writer, function, nativeOwner, pointerIndex, "in " + elementType, true);
+            }
+        }
+    }
+
+    private static void EmitSinglePointerOverload(StringBuilder writer, BindingFunction function,
+        string nativeOwner, int pointerIndex, string publicType, bool byReference)
+    {
+        writer.Append("        public static ").Append(function.ReturnType.ManagedName).Append(' ')
+            .Append(function.ManagedName).Append('(');
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            writer.Append(index == pointerIndex ? publicType : parameter.Type.ManagedName).Append(' ')
+                .Append(parameter.ManagedName);
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        BindingParameter pointer = function.Parameters[pointerIndex];
+        writer.Append("            fixed (").Append(pointer.Type.ManagedName).Append(' ')
+            .Append(GetTemporaryName(pointer)).Append(" = ");
+        if (byReference)
+            writer.Append('&');
+        writer.Append(pointer.ManagedName).AppendLine(")");
+        writer.AppendLine("            {");
+        EmitNativeInvocation(writer, function, nativeOwner, 4, parameter =>
+            ReferenceEquals(parameter, pointer) ? GetTemporaryName(pointer) : parameter.ManagedName);
+        writer.AppendLine("            }");
+        writer.AppendLine("        }");
+    }
+
+    private static void EmitNativeInvocation(StringBuilder writer, BindingFunction function, string nativeOwner,
+        int indent, Func<BindingParameter, string> getArgument)
+    {
+        AppendIndent(writer, indent);
+        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+            writer.Append(function.ReturnType.ManagedName).Append(" ret = ");
+        writer.Append(nativeOwner).Append(GetRawManagedName(function)).Append("Native(");
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            writer.Append(getArgument(function.Parameters[index]));
+        }
+        writer.AppendLine(");");
+        if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+        {
+            AppendIndent(writer, indent);
+            writer.AppendLine("return ret;");
+        }
+    }
+
+    private sealed record PointerHandleSpec(BindingType Type, int Depth, string WrapperName, string PointerType);
+
+    private static bool IsNativeBool(BindingTypeReference type) =>
+        string.Equals(type.NativeName.Trim(), "bool", StringComparison.Ordinal) ||
+        string.Equals(type.ManagedName, "Bool8", StringComparison.Ordinal) ||
+        string.Equals(type.ManagedName, "Bool32", StringComparison.Ordinal);
+
+    private static string GetRawManagedName(BindingFunction function) =>
+        string.IsNullOrWhiteSpace(function.RawManagedName) ? function.ManagedName : function.RawManagedName;
+
+    private static FriendlyFunctionPlan CreateFriendlyPlan(BindingFunction function)
+    {
+        Dictionary<string, int> lengthUseCounts = function.Parameters
+            .Where(parameter => parameter.Marshalling.Strategy is MarshallingStrategy.Pointer or MarshallingStrategy.Span)
+            .Select(parameter => parameter.Marshalling.LengthParameter)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .GroupBy(name => name!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        HashSet<string> hiddenLengths = new(StringComparer.Ordinal);
+        List<FriendlyParameterPlan> parameters = [];
+        foreach (BindingParameter parameter in function.Parameters)
+        {
+            FriendlyParameterKind kind = FriendlyParameterKind.Raw;
+            string managedType = parameter.Type.ManagedName;
+            string? nativeElementType = GetPointerElementType(parameter.Type);
+            string? elementType = nativeElementType != null && nativeElementType.EndsWith('*')
+                ? "nint"
+                : nativeElementType;
+            string? length = parameter.Marshalling.LengthParameter;
+            if (parameter.Marshalling.Strategy == MarshallingStrategy.String &&
+                parameter.Direction == BindingDirection.In &&
+                parameter.Marshalling.StringEncoding is BindingStringEncoding.Utf8 or BindingStringEncoding.Utf16)
+            {
+                kind = FriendlyParameterKind.String;
+                managedType = "string";
+            }
+            else if (IsNativeBool(parameter.Type))
+            {
+                kind = FriendlyParameterKind.Bool;
+                managedType = "bool";
+            }
+            else if (elementType != null && !string.Equals(elementType, "void", StringComparison.Ordinal) &&
+                parameter.Marshalling.Strategy is MarshallingStrategy.Pointer or MarshallingStrategy.Span &&
+                !string.IsNullOrWhiteSpace(length) && lengthUseCounts.ContainsKey(length))
+            {
+                kind = FriendlyParameterKind.Span;
+                managedType = parameter.Direction == BindingDirection.In
+                    ? $"ReadOnlySpan<{elementType}>"
+                    : $"Span<{elementType}>";
+                hiddenLengths.Add(length);
+            }
+            else if (elementType != null && !string.Equals(elementType, "void", StringComparison.Ordinal) &&
+                parameter.Type.PointerDepth == 1 && parameter.Marshalling.Strategy == MarshallingStrategy.Pointer &&
+                parameter.Direction is BindingDirection.Out or BindingDirection.InOut)
+            {
+                kind = parameter.Direction == BindingDirection.Out
+                    ? FriendlyParameterKind.Out
+                    : FriendlyParameterKind.Ref;
+                managedType = elementType;
+            }
+            parameters.Add(new(parameter, kind, managedType, elementType));
+        }
+        foreach (BindingParameter parameter in function.Parameters)
+        {
+            if (hiddenLengths.Contains(parameter.NativeName) || hiddenLengths.Contains(parameter.ManagedName))
+                parameters.RemoveAll(plan => ReferenceEquals(plan.Parameter, parameter));
+        }
+        bool returnsString = function.ReturnMarshalling.Strategy == MarshallingStrategy.String &&
+            function.ReturnMarshalling.StringEncoding is BindingStringEncoding.Utf8 or BindingStringEncoding.Utf16 &&
+            function.ReturnType.PointerDepth > 0;
+        bool returnsBool = IsNativeBool(function.ReturnType);
+        return new(parameters, hiddenLengths, returnsString, returnsBool);
+    }
+
+    private static void EmitFriendlyManagedFunction(StringBuilder writer, BindingModule module,
+        BindingFunction function, FriendlyFunctionPlan plan, string nativeOwner)
+    {
+        writer.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        writer.Append("        public static ").Append(plan.ReturnsString ? "string?" : plan.ReturnsBool ? "bool" : function.ReturnType.ManagedName)
+            .Append(' ').Append(function.ManagedName).Append('(');
+        for (int index = 0; index < plan.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            FriendlyParameterPlan parameter = plan.Parameters[index];
+            if (function.ManagedKind == BindingManagedFunctionKind.Extension &&
+                function.ManagedReceiverIndex == function.Parameters.IndexOf(parameter.Parameter))
+                writer.Append("this ");
+            if (parameter.Kind == FriendlyParameterKind.Out)
+                writer.Append("out ");
+            else if (parameter.Kind == FriendlyParameterKind.Ref)
+                writer.Append("ref ");
+            writer.Append(parameter.ManagedType).Append(' ').Append(parameter.Parameter.ManagedName);
+        }
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+
+        List<FriendlyParameterPlan> strings = plan.Parameters.Where(parameter => parameter.Kind == FriendlyParameterKind.String).ToList();
+        foreach (FriendlyParameterPlan parameter in strings)
+            writer.Append("            nint ").Append(GetTemporaryName(parameter.Parameter)).AppendLine(" = 0;");
+        foreach (FriendlyParameterPlan parameter in plan.Parameters.Where(parameter => parameter.Kind == FriendlyParameterKind.Out))
+            writer.Append("            ").Append(parameter.Parameter.ManagedName).AppendLine(" = default;");
+        if (strings.Count > 0)
+        {
+            writer.AppendLine("            try");
+            writer.AppendLine("            {");
+            foreach (FriendlyParameterPlan parameter in strings)
+            {
+                string allocator = parameter.Parameter.Marshalling.StringEncoding == BindingStringEncoding.Utf16
+                    ? "StringToCoTaskMemUni"
+                    : "StringToCoTaskMemUTF8";
+                writer.Append("                ").Append(GetTemporaryName(parameter.Parameter)).Append(" = ")
+                    .Append(parameter.Parameter.ManagedName).Append(" is null ? 0 : Marshal.").Append(allocator)
+                    .Append('(').Append(parameter.Parameter.ManagedName).AppendLine(");");
+            }
+        }
+
+        int baseIndent = strings.Count > 0 ? 4 : 3;
+        List<FriendlyParameterPlan> fixedParameters = plan.Parameters
+            .Where(parameter => parameter.Kind is FriendlyParameterKind.Span or FriendlyParameterKind.Ref or FriendlyParameterKind.Out)
+            .ToList();
+        foreach (FriendlyParameterPlan parameter in fixedParameters)
+        {
+            AppendIndent(writer, baseIndent);
+            writer.Append("fixed (").Append(parameter.ElementType).Append("* ")
+                .Append(GetTemporaryName(parameter.Parameter)).Append(" = ");
+            if (parameter.Kind == FriendlyParameterKind.Span)
+                writer.Append(parameter.Parameter.ManagedName);
+            else
+                writer.Append('&').Append(parameter.Parameter.ManagedName);
+            writer.AppendLine(")");
+            AppendIndent(writer, baseIndent);
+            writer.AppendLine("{");
+            baseIndent++;
+        }
+
+        AppendIndent(writer, baseIndent);
+        if (plan.ReturnsString)
+            writer.Append("var nativeResult = ");
+        else if (plan.ReturnsBool)
+            writer.Append(function.ReturnType.ManagedName).Append(" ret = ");
+        else if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
+            writer.Append("return ");
+        writer.Append(nativeOwner).Append(GetRawManagedName(function)).Append("Native(");
+        bool firstArgument = true;
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            BindingParameter nativeParameter = function.Parameters[index];
+            FriendlyParameterPlan? parameter = plan.Parameters.FirstOrDefault(candidate =>
+                ReferenceEquals(candidate.Parameter, nativeParameter));
+            if (!firstArgument)
+                writer.Append(", ");
+            firstArgument = false;
+            if (parameter != null)
+            {
+                writer.Append(parameter.Kind switch
+                {
+                    FriendlyParameterKind.String => $"({nativeParameter.Type.ManagedName}){GetTemporaryName(nativeParameter)}",
+                    FriendlyParameterKind.Span or FriendlyParameterKind.Ref or FriendlyParameterKind.Out =>
+                        $"({nativeParameter.Type.ManagedName}){GetTemporaryName(nativeParameter)}",
+                    FriendlyParameterKind.Bool =>
+                        $"{nativeParameter.ManagedName} ? ({nativeParameter.Type.ManagedName})1 : ({nativeParameter.Type.ManagedName})0",
+                    _ => nativeParameter.ManagedName
+                });
+                continue;
+            }
+            FriendlyParameterPlan? owner = plan.Parameters.FirstOrDefault(candidate =>
+                candidate.Kind == FriendlyParameterKind.Span &&
+                (string.Equals(candidate.Parameter.Marshalling.LengthParameter, nativeParameter.ManagedName, StringComparison.Ordinal) ||
+                 string.Equals(candidate.Parameter.Marshalling.LengthParameter, nativeParameter.NativeName, StringComparison.Ordinal)));
+            writer.Append(owner == null
+                ? nativeParameter.ManagedName
+                : $"({nativeParameter.Type.ManagedName}){owner.Parameter.ManagedName}.Length");
+        }
+        writer.AppendLine(");");
+        if (plan.ReturnsString)
+        {
+            string converter = function.ReturnMarshalling.StringEncoding == BindingStringEncoding.Utf16
+                ? "PtrToStringUni"
+                : "PtrToStringUTF8";
+            BindingFunction? cleanup = string.IsNullOrWhiteSpace(function.ReturnMarshalling.CleanupFunction)
+                ? null
+                : module.Functions.FirstOrDefault(candidate => string.Equals(candidate.NativeName,
+                    function.ReturnMarshalling.CleanupFunction, StringComparison.Ordinal));
+            if (cleanup == null)
+            {
+                AppendIndent(writer, baseIndent);
+                writer.Append("return (nint)nativeResult == 0 ? null : Marshal.").Append(converter)
+                    .AppendLine("((nint)nativeResult);");
+            }
+            else
+            {
+                AppendIndent(writer, baseIndent);
+                writer.AppendLine("try");
+                AppendIndent(writer, baseIndent);
+                writer.AppendLine("{");
+                AppendIndent(writer, baseIndent + 1);
+                writer.Append("return (nint)nativeResult == 0 ? null : Marshal.").Append(converter)
+                    .AppendLine("((nint)nativeResult);");
+                AppendIndent(writer, baseIndent);
+                writer.AppendLine("}");
+                AppendIndent(writer, baseIndent);
+                writer.AppendLine("finally");
+                AppendIndent(writer, baseIndent);
+                writer.AppendLine("{");
+                AppendIndent(writer, baseIndent + 1);
+                string cleanupOwner = string.Equals(cleanup.ManagedContainer, function.ManagedContainer,
+                    StringComparison.Ordinal) ? nativeOwner : module.Name + ".";
+                writer.Append(cleanupOwner).Append(GetRawManagedName(cleanup)).Append("Native((")
+                    .Append(cleanup.Parameters[0].Type.ManagedName).AppendLine(")nativeResult);");
+                AppendIndent(writer, baseIndent);
+                writer.AppendLine("}");
+            }
+        }
+        else if (plan.ReturnsBool)
+        {
+            AppendIndent(writer, baseIndent);
+            writer.AppendLine("return ret != 0;");
+        }
+
+        for (int index = fixedParameters.Count - 1; index >= 0; index--)
+        {
+            baseIndent--;
+            AppendIndent(writer, baseIndent);
+            writer.AppendLine("}");
+        }
+        if (strings.Count > 0)
+        {
+            writer.AppendLine("            }");
+            writer.AppendLine("            finally");
+            writer.AppendLine("            {");
+            foreach (FriendlyParameterPlan parameter in strings)
+            {
+                string temporaryName = GetTemporaryName(parameter.Parameter);
+                writer.Append("                if (").Append(temporaryName).Append(" != 0) Marshal.FreeCoTaskMem(")
+                    .Append(temporaryName).AppendLine(");");
+            }
+            writer.AppendLine("            }");
+        }
+        writer.AppendLine("        }");
+    }
+
+    private static string? GetPointerElementType(BindingTypeReference type)
+    {
+        if (type.PointerDepth <= 0 || !type.ManagedName.EndsWith('*'))
+            return null;
+        return type.ManagedName[..^1].TrimEnd();
+    }
+
+    private static string GetTemporaryName(BindingParameter parameter) =>
+        "p_" + parameter.ManagedName.TrimStart('@');
+
+    private static void AppendIndent(StringBuilder writer, int levels) => writer.Append(' ', levels * 4);
+
+    private enum FriendlyParameterKind
+    {
+        Raw,
+        String,
+        Span,
+        Ref,
+        Out,
+        Bool
+    }
+
+    private sealed record FriendlyParameterPlan(BindingParameter Parameter, FriendlyParameterKind Kind,
+        string ManagedType, string? ElementType);
+
+    private sealed record FriendlyFunctionPlan(IReadOnlyList<FriendlyParameterPlan> Parameters,
+        IReadOnlySet<string> HiddenLengths, bool ReturnsString, bool ReturnsBool)
+    {
+        public bool HasParameterTransform => Parameters.Any(parameter => parameter.Kind != FriendlyParameterKind.Raw) ||
+            HiddenLengths.Count > 0;
+        public bool HasTransform => HasParameterTransform || ReturnsString || ReturnsBool;
+    }
+
+    private static void EmitExternFunction(StringBuilder writer, BindingModule module, BindingFunction function, string modifiers)
     {
         writer.Append("        ").Append(modifiers).Append(' ').Append(function.ReturnType.ManagedName).Append(' ')
-            .Append(function.ManagedName).Append("Native(");
-        EmitParameters(writer, function.Parameters);
+            .Append(GetRawManagedName(function)).Append("Native(");
+        EmitParameters(writer, function.Parameters, module.GenerateMetadata);
         writer.AppendLine(");");
     }
 
@@ -428,7 +1607,7 @@ public sealed class CSharpEmitter : IBindingEmitter
     {
         int tableIndex = function.FunctionTableIndex.GetValueOrDefault();
         writer.Append("        internal static ").Append(function.ReturnType.ManagedName).Append(' ')
-            .Append(function.ManagedName).Append("Native(");
+            .Append(GetRawManagedName(function)).Append("Native(");
         EmitParameters(writer, function.Parameters);
         writer.AppendLine(")");
         writer.AppendLine("        {");
@@ -455,7 +1634,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         if (module.ImportMode != BindingImportMode.FunctionTable || module.FunctionTableEntries.Count == 0)
             return;
         int tableSize = module.FunctionTableEntries.Max(entry => entry.Index) + 1;
-        writer.Append("    public static unsafe partial class ").AppendLine(module.Name);
+        writer.Append("    public unsafe partial class ").AppendLine(module.Name);
         writer.AppendLine("    {");
         writer.AppendLine("        internal static FunctionTable funcTable;");
         writer.AppendLine();
@@ -498,16 +1677,21 @@ public sealed class CSharpEmitter : IBindingEmitter
     private static string EscapeString(string value) => value.Replace("\\", "\\\\", StringComparison.Ordinal)
         .Replace("\"", "\\\"", StringComparison.Ordinal);
 
-    private static void EmitParameters(StringBuilder writer, IList<BindingParameter> parameters)
+    private static void EmitParameters(StringBuilder writer, IList<BindingParameter> parameters, bool metadata = false)
     {
         for (int i = 0; i < parameters.Count; i++)
-            EmitParameter(writer, parameters[i], i > 0);
+            EmitParameter(writer, parameters[i], i > 0, metadata);
     }
 
-    private static void EmitParameter(StringBuilder writer, BindingParameter parameter, bool prefixComma)
+    private static void EmitParameter(StringBuilder writer, BindingParameter parameter, bool prefixComma, bool metadata = false)
     {
         if (prefixComma)
             writer.Append(", ");
+        if (metadata)
+        {
+            writer.Append("[NativeName(NativeNameType.Param, \"").Append(EscapeString(parameter.NativeName)).Append("\")] ")
+                .Append("[NativeName(NativeNameType.Type, \"").Append(EscapeString(parameter.Type.NativeName)).Append("\")] ");
+        }
         writer.Append(parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
     }
 

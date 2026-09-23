@@ -6,24 +6,26 @@ Assessment date: 2026-09-23.
 
 ## Verdict
 
-BindGen-CS is already a **production-grade C/C++ to C# toolchain within its declared scope**, not merely a header-to-`DllImport` script. The complete `macos-arm64-darwin` and `linux-arm64-gnu` matrices independently score 9.0/10.0 in all ten acceptance categories. InnoEngine's five native-binding projects regenerate into target-isolated directories from configuration and pass native-dependency builds, the managed solution build, native binding tests, and the handwritten-import audit on both hosts.
+BindGen-CS is a **strong maintenance-candidate C/C++ to C# toolchain within its declared semantic scope**, not a thin header-to-`DllImport` script. Its sole C# path is IR-native; advanced desktop C++ adapters, lifetime contracts, real native invocation, deterministic packaging, API/dependency gates, and signed-release automation are implemented.
 
-It is not yet honest to describe the product as a zero-configuration translator for arbitrary C++ on every platform. Target-scoped 9.0 acceptance and global platform/language maturity are different measures. The latter is still limited by the default C# path not being fully IR-native and by the lack of equivalent current-version reports from Windows and the remaining x64 targets.
+The current `macos-arm64-darwin` report passes all ten mandatory categories at 9.0/10.
+
+It is not yet honest to call the current revision fully maintained or universally production-supported. Windows x64, Linux x64, and macOS x64 must each publish the same-version complete report; Windows must additionally prove clang-cl and MSBuild runtime invocation. InnoEngine migration intentionally starts only after those reports pass.
 
 ## Quantified assessment
 
 | Dimension | Current assessment | Evidence and remaining deduction |
 | --- | ---: | --- |
-| Supported C ABI correctness | 9.0/10 | Real libraries, layout, compilation, invocation, snapshots, and strict diagnostics pass on macOS and Linux Arm64 |
-| Supported C++ Bridge subset | 9.0/10 | Class lifecycle, inheritance adjustment, explicit templates, selected STL, smart pointers, and callback proxies are tested; unknown semantics fail closed |
+| Supported C ABI correctness | 9.0/10 code quality | Real libraries, layout, compilation, invocation, snapshots, and strict diagnostics; desktop-x64 report evidence remains pending |
+| Supported C++ Bridge subset | 9.0/10 code quality | Class lifecycle, inheritance adjustment, specializations, requested STL adapters, smart pointers, and callbacks are tested; unknown semantics fail closed |
 | Usability | 9.0/10 | `init → doctor → validate → generate → build`, workspace, schema, explain, config-relative paths, and transactional output |
 | Extensibility | 9.1/10 | v1 plugin contract, type/callable adapter SPI, deterministic priority, dependency isolation, atomic registration, and cache fingerprints |
 | Performance and determinism | 9.0/10 | 10,000-declaration cold/warm budgets, content-addressed cache, concurrent publication, output restoration, and stable hashes |
-| InnoEngine automation | 9.0/10 | Five-project diff, all native dependencies, solution build, six native test projects, and handwritten-import audit |
-| Architecture completion | 8.8/10 | The fail-closed IR backend warning-free compiles all five real C libraries and models anonymous/nested/opaque storage safely; the default friendly surface still uses the isolated compatibility emitter |
-| Global cross-platform evidence | 8.5/10 | Independent macOS Arm64 and Linux Arm64 reports pass; Windows and x64 host reports remain |
-| Arbitrary C++ coverage | 7.5/10 | The controlled subset is strong; arbitrary metaprogramming and allocator/container combinations are intentionally not guessed |
-| Release supply chain | 8.6/10 | Deterministic NuGet, clean consumers, and tool workflows pass; SBOM, provenance, and a formal compatibility window remain |
+| InnoEngine automation | Deferred | Deliberately excluded until BGCS desktop-x64 maintenance gates pass |
+| Architecture completion | 9.0/10 | IR-native raw/friendly emission is the sole path; pre-release fallback and old config migration are removed |
+| Global cross-platform evidence | Not accepted yet | Windows x64, Linux x64, and macOS x64 same-version reports remain mandatory |
+| Arbitrary C++ coverage | Explicitly bounded | The controlled subset is strong; arbitrary metaprogramming and undeclared allocator/container semantics are rejected |
+| Release supply chain | 9.0/10 automation | Deterministic NuGet, native-RID consumer, SPDX/SLSA, API/license/vulnerability gates, and OIDC signing |
 
 These values are not averaged into a substitute release score. The [acceptance specification](acceptance.md) still requires every category for every declared target to reach 9.0 independently.
 
@@ -31,26 +33,25 @@ These values are not averaged into a substitute release score. The [acceptance s
 
 | Workstream | Status | Existing acceptance | Required before closure |
 | --- | --- | --- | --- |
-| Fully IR-native default C# path | In progress; raw ABI milestone complete | Configured IR backend, constants/delegates/aliases/anonymous records/bitfields/handles/all import modes, opaque-by-value rejection, last-good rollback, and warning-free compilation of miniaudio/SDL3/cimgui/cimguizmo/bgfx | Reach friendly-overload and remaining public-API parity; make it default and remove `AstGenerationStepEmitter` only after source/API snapshots have zero regressions |
+| Fully IR-native C# path | Complete | Raw ABI, string/span/ref/out friendly surface, fail-closed rollback, schema/init tests; old emitter deleted | Continue expanding real-library API snapshots |
 | Formal C++ type/callable adapter SPI | v1 complete | External-assembly E2E, API shape, deterministic order, conflict rejection, built-ins in the same registry, all callable kinds | Future adapters may extend but must preserve the v1 contract |
-| Native build providers and export inspection | Core complete | Direct Clang/GNU compile/export verification on macOS/Linux, CMake host execution, deterministic clang-cl/Meson/MSBuild plan tests | Execute clang-cl/MSBuild runtime gates on Windows and add multi-RID artifact layout |
-| Linux acceptance equal to macOS | Complete for Arm64 | Independent 9.0 reports, GNU/Darwin snapshots, target-isolated InnoEngine bindings, native dependencies, and runtime tests | Windows and x64 expansion remain separate platform milestones; dry-run or cross compilation cannot count as runtime pass |
-| Incremental cache, large-project budget, stable plugin contracts | v1 complete | Compiler/plugin/adapter/input fingerprints, atomic immutable cache, concurrency tests, 10k cold/warm gate, external-plugin E2E | Workspace DAG, shared parser cache, memory trends, and an obsolete window are vNext extensions rather than blockers to v1 |
+| Native build providers and export inspection | Desktop artifact orchestration complete | Provider/export gates plus NuGet `runtimes/<rid>/native` and SHA-256 index | Execute clang-cl/MSBuild runtime gates on Windows |
+| Desktop-x64 acceptance | Automated, evidence pending | Dedicated GNU/MSVC/Darwin x64 runners and target-isolated reports | All three jobs must pass on the same revision; dry-run or cross compilation cannot count |
+| Incremental cache, large-project budget, stable plugin contracts | v1 complete | Fingerprints, atomic immutable cache, concurrency/10k/plugin E2E, and formal obsolete window | Workspace DAG, shared parser cache, and memory trends are vNext extensions |
 
 ## Why it is already strong
 
 - Correctness comes first: missing ownership, allocator, callback-lifetime, or C++-lowering evidence produces stable diagnostics instead of plausible but wrong ABI code.
-- The engineering loop covers generation, compilation, native invocation, API snapshots, package consumers, and a real engine integration.
-- InnoEngine requirements are expressed through reusable configuration, mappings, adapters, providers, and gates—not native-library-name branches.
+- The engineering loop covers generation, compilation, native invocation, API snapshots, deterministic packages, clean native consumers, and supply-chain policy.
+- No requested high-risk feature uses a native-library-name branch; semantics are expressed through reusable configuration, mappings, adapters, providers, and gates.
 - Third-party plugins and C++ adapters use versioned contracts; binary content, versions, and state participate in cache keys.
 - Target, ABI, triple, sysroot, compiler, generated output, snapshots, and reports are isolated, preventing one host pass from masquerading as evidence for another ABI.
 
 ## Hard gates for the “super-universal” claim
 
-1. Complete canonical-IR parity for the default C# surface and remove default AST compatibility emission.
-2. Run the same complete matrix on Windows x64/arm64, Linux x64, and macOS x64, then expand to Android, iOS, and FreeBSD.
-3. Broaden native-tested C ABI combinations and adapters such as `map/set/array/variant/expected/path/chrono`, without guessing allocator or lifetime semantics.
-4. Finish multi-RID native asset layout, workspace DAG/parallelism, the formal plugin obsolete window, SBOM, and provenance.
-5. Retain a target-specific, current-version acceptance artifact for every production-support claim.
+1. Run the same complete matrix on Windows x64, Linux x64, macOS x64, then Windows Arm64; execute clang-cl/MSBuild providers on Windows.
+2. Retain an independent current-version artifact for every production target; Android/iOS/FreeBSD are formal support targets and remain ⚠️ until implementation and acceptance are complete.
+3. After desktop-x64 acceptance, execute clean InnoEngine regeneration and remove handwritten bindings.
+4. Treat workspace DAG/shared parser caches as later performance evolution, not a blocker for the declared single-workspace feature set.
 
-The precise product statement is therefore: **BindGen-CS is already excellent, powerful, and usable for real large projects on macOS Arm64 and Linux Arm64 within its explicitly supported C/C++ subset. It is becoming a super-universal tool, but the unrestricted claim must wait for the IR migration, Windows/x64 evidence, and broader explicitly modeled C++ semantics.**
+The precise product statement is therefore: **BindGen-CS is already architecturally strong, powerful, and easy to operate inside its explicit C/C++ contract, but it becomes a maintenance release only after the three desktop-x64 reports and then the separate InnoEngine migration.**

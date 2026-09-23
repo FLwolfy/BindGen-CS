@@ -45,13 +45,16 @@ public class GeneratedCodeCompilationMatrixTests
 
                 for (int i = 0; i < scenario.ExpectedTypeNames.Count; i++)
                 {
-                    Assert.NotNull(asm.GetType($"{scenario.Namespace}.{scenario.ExpectedTypeNames[i]}"));
+                    string expectedType = $"{scenario.Namespace}.{scenario.ExpectedTypeNames[i]}";
+                    Assert.True(asm.GetType(expectedType) != null,
+                        $"Scenario '{scenario.Name}' did not emit expected type '{expectedType}'.");
                 }
 
                 for (int i = 0; i < scenario.ExpectedMethodNames.Count; i++)
                 {
                     MethodInfo? method = FindMethodByName(asm, scenario.ExpectedMethodNames[i]);
-                    Assert.NotNull(method);
+                    Assert.True(method != null,
+                        $"Scenario '{scenario.Name}' did not emit expected method '{scenario.ExpectedMethodNames[i]}'.");
                 }
 
                 scenario.VerifyAssembly?.Invoke(asm, run);
@@ -219,6 +222,48 @@ public class GeneratedCodeCompilationMatrixTests
             },
             new()
             {
+                Name = "C_Reserved_Field_Constructor_Parameter",
+                Header = """
+                    typedef struct BgcsLockState
+                    {
+                        int lock;
+                        int event;
+                    } BgcsLockState;
+                    int bgcs_open(const char* params);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsLockState"]
+            },
+            new()
+            {
+                Name = "C_Pointer_Array_Friendly_Surface",
+                Header = """
+                    typedef struct BgcsItem { int value; } BgcsItem;
+                    typedef struct BgcsPointerArray
+                    {
+                        BgcsItem* items[2];
+                        void* opaque[2];
+                    } BgcsPointerArray;
+                    void bgcs_get_raw(void** values, unsigned int value_count);
+                    void bgcs_get_items(BgcsItem** values, unsigned int value_count);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsItem", "BgcsPointerArray"],
+                ExpectedMethodNames = ["BgcsGetRaw", "BgcsGetItems"],
+                VerifyAssembly = (assembly, _) =>
+                {
+                    MethodInfo raw = Assert.Single(assembly.GetTypes().SelectMany(type => type.GetMethods()),
+                        method => method.Name == "BgcsGetRaw" && method.GetParameters().Length == 1);
+                    MethodInfo items = Assert.Single(assembly.GetTypes().SelectMany(type => type.GetMethods()),
+                        method => method.Name == "BgcsGetItems" && method.GetParameters().Length == 1);
+                    Assert.Equal(typeof(Span<nint>), raw.GetParameters()[0].ParameterType);
+                    Assert.Equal(typeof(Span<nint>), items.GetParameters()[0].ParameterType);
+                    Type pointerArray = assembly.GetType("Compile.Generated.BgcsPointerArray")!;
+                    Assert.Equal(typeof(Span<nint>), pointerArray.GetProperty("Opaque")?.PropertyType);
+                }
+            },
+            new()
+            {
                 Name = "C_Enum_Macro_Callback",
                 Header = """
                     #define BGCS_CONST_A 42
@@ -235,6 +280,30 @@ public class GeneratedCodeCompilationMatrixTests
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsMode", "BgcsCallback"],
                 ExpectedMethodNames = ["BgcsSetModeNative", "BgcsSetCallbackNative"]
+            },
+            new()
+            {
+                Name = "C_Auto_Wrapped_Callback",
+                Header = """
+                    typedef void (*BgcsCallback)(int value);
+                    void bgcs_set_callback(BgcsCallback callback);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["BgcsCallback"],
+                ExpectedMethodNames = ["BgcsSetCallbackNative", "BgcsSetCallback"],
+                Configure = cfg => cfg.AutoWrapCallbacks = true
+            },
+            new()
+            {
+                Name = "C_Callback_Name_Must_Not_Match_Handle_Substring",
+                Header = """
+                    typedef void (*Frame)(int value);
+                    typedef struct BgcsFrameHandle { unsigned short index; } BgcsFrameHandle;
+                    void bgcs_use_frame(BgcsFrameHandle frame);
+                    """,
+                ImportType = ImportType.DllImport,
+                ExpectedTypeNames = ["Frame", "BgcsFrameHandle"],
+                ExpectedMethodNames = ["BgcsUseFrame"]
             },
             new()
             {

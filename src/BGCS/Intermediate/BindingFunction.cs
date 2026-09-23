@@ -31,7 +31,18 @@ public enum BindingFunctionKind
 /// <param name="Direction">Interop data direction.</param>
 /// <param name="Marshalling">Conversion and ownership plan.</param>
 public sealed record BindingParameter(string NativeName, string ManagedName, BindingTypeReference Type,
-    BindingDirection Direction, MarshallingPlan Marshalling);
+    BindingDirection Direction, MarshallingPlan Marshalling)
+{
+    public string? DefaultValue { get; init; }
+}
+
+/// <summary>Identifies the public managed presentation of a native free function.</summary>
+public enum BindingManagedFunctionKind
+{
+    Static,
+    Extension,
+    Instance
+}
 
 /// <summary>
 /// Represents one callable in the binding intermediate representation.
@@ -50,12 +61,18 @@ public sealed class BindingFunction
 
     public string NativeName { get; }
     public string ManagedName { get; }
+    public string RawManagedName { get; init; } = string.Empty;
     public BindingFunctionKind Kind { get; }
     public BindingTypeReference ReturnType { get; }
     public MarshallingPlan ReturnMarshalling { get; }
     public string CallingConvention { get; init; } = "Cdecl";
     public bool IsVariadic { get; init; }
     public string? DeclaringType { get; init; }
+    /// <summary>Managed static class that owns public wrappers. Native entry points remain on the module API class.</summary>
+    public string? ManagedContainer { get; init; }
+    public BindingManagedFunctionKind ManagedKind { get; init; }
+    public string? ManagedReceiverType { get; init; }
+    public int? ManagedReceiverIndex { get; init; }
     public int? FunctionTableIndex { get; set; }
     public IList<BindingParameter> Parameters { get; } = new List<BindingParameter>();
 }

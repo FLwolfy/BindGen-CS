@@ -42,7 +42,6 @@ internal sealed class ConfigDocumentLoader
 
         HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase) { fullPath };
         JObject document = LoadDocument(File.ReadAllText(fullPath), Path.GetDirectoryName(fullPath) ?? Environment.CurrentDirectory, visited);
-
         CsCodeGeneratorConfig baseline = CsCodeGeneratorConfig.Default;
         baseline.Preset = document.Value<string>(nameof(CsCodeGeneratorConfig.Preset)) ?? string.Empty;
         presets.Apply(baseline);

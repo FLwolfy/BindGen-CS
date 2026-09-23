@@ -19,7 +19,8 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindgen.json");
         JsonElement root = config.RootElement;
-        Assert.Equal(1, root.GetProperty("ConfigVersion").GetInt32());
+        Assert.Equal(CsCodeGeneratorConfig.CurrentConfigVersion, root.GetProperty("ConfigVersion").GetInt32());
+        Assert.Equal("IntermediateRepresentation", root.GetProperty("CSharpEmissionBackend").GetString());
         Assert.Equal("host-c,c-library", root.GetProperty("Preset").GetString());
         Assert.Equal("include/native.h", root.GetProperty("EntryFiles")[0].GetString());
         Assert.Equal("include", root.GetProperty("IncludeFolders")[0].GetString());
@@ -37,7 +38,7 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindings/bridge.json");
         JsonElement root = config.RootElement;
-        Assert.Equal(1, root.GetProperty("ConfigVersion").GetInt32());
+        Assert.Equal(BGCS.Cpp2C.Cpp2CGeneratorConfig.CurrentConfigVersion, root.GetProperty("ConfigVersion").GetInt32());
         Assert.Equal("../include/library.hpp", root.GetProperty("EntryFiles")[0].GetString());
         Assert.Equal("../include", root.GetProperty("IncludeFolders")[0].GetString());
         Assert.True(root.GetProperty("GenerateCSharpBindings").GetBoolean());

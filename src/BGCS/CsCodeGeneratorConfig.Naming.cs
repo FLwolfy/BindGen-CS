@@ -120,4 +120,31 @@ namespace BGCS
 
             return newName;
         }
+
+        internal string GetManagedTypeName(string nativeName)
+        {
+            if (TryGetTypeMapping(nativeName, out var mapping) && !string.IsNullOrWhiteSpace(mapping.FriendlyName))
+                return mapping.FriendlyName;
+            if (TypeNamingConvention == NamingConvention.PascalCase)
+                return GetCsCleanName(nativeName);
+            return GetCsCleanNameWithConvention(nativeName, TypeNamingConvention);
+        }
+
+        internal string GetManagedHandleName(string nativeName)
+        {
+            if (TryGetHandleMapping(nativeName, out var mapping) && !string.IsNullOrWhiteSpace(mapping.FriendlyName))
+                return mapping.FriendlyName;
+            if (HandleNamingConvention == NamingConvention.PascalCase)
+                return GetCsCleanName(nativeName);
+            return GetCsCleanNameWithConvention(nativeName, HandleNamingConvention);
+        }
+
+        internal string GetManagedEnumName(string nativeName)
+        {
+            if (TryGetEnumMapping(nativeName, out var mapping) && !string.IsNullOrWhiteSpace(mapping.FriendlyName))
+                return mapping.FriendlyName;
+            if (EnumNamingConvention == NamingConvention.PascalCase)
+                return GetCsCleanName(nativeName);
+            return GetCsCleanNameWithConvention(nativeName, EnumNamingConvention);
+        }
     }

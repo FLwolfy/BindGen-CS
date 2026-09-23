@@ -12,10 +12,12 @@ The test system separates fast managed feedback from target-specific release evi
 | Level | Command | Use it for |
 | --- | --- | --- |
 | Fast managed loop | `dotnet test BindGen-CS.sln -c Release` | Parser, configuration, analysis, emission, Runtime, and bridge regressions |
-| Real C libraries | `./scripts/test-real-libraries.sh` | Compatibility snapshots plus warning-free IR-native generation/compilation |
+| Real C libraries | `./scripts/test-real-libraries.sh` | Deterministic snapshots plus warning-free IR-native generation/compilation |
 | Real C++ bridge | `./scripts/test-real-cpp-libraries.sh` | Bridge generation, native compiler validation, C# rebound, snapshots |
-| InnoEngine integration | `./scripts/test-innoengine-bindings.sh` | Workspace diff, import audit, native builds, full solution, native tests |
-| NuGet/tool | `./scripts/test-nuget-packages.sh` | Deterministic pack, clean restore, tool install and commands |
+| InnoEngine integration | `./scripts/test-innoengine-bindings.sh` | Deferred until BGCS desktop-x64 acceptance; not part of the current full matrix |
+| NuGet/tool/native asset | `./scripts/test-nuget-packages.sh` | Deterministic pack, clean restore, tool install, RID asset load and native invocation |
+| API compatibility | `./scripts/test-public-api-compatibility.sh` | Reviewed pre-release assembly baselines |
+| Dependency policy | `./scripts/test-supply-chain-policy.sh` | NuGet advisory query and license inventory/deny policy |
 | Performance | `./scripts/test-performance-budget.sh` | 10,000 declarations, cold generation and warm cache budgets |
 | Release acceptance | `./scripts/run-full-test-matrix.sh` | Every mandatory gate and machine-readable report |
 
@@ -29,9 +31,9 @@ Run the standalone commands from the table when iterating on one layer. Run the 
 
 The restore gates intentionally evaluate the MSBuild project graph on one node. This keeps `obj/project.assets.json` deterministic when the same checkout is mounted by different operating systems or architectures; compilation and native-library builds retain their normal parallelism.
 
-The real-library matrix discovers a sibling InnoEngine checkout or uses `INNOENGINE_ROOT`. For miniaudio, SDL3, cimgui, cimguizmo, and bgfx it first regenerates and compiles the compatibility SingleFile surface, enforces host-independent generation budgets, and checks target-specific deterministic source plus reflection public-API snapshots. It then derives an IR configuration through `BaseConfig`, regenerates every library through `CSharpEmissionBackend=IntermediateRepresentation`, and builds each isolated consumer with `TreatWarningsAsErrors=true`. The full matrix requires these headers; the standalone script may set `REQUIRE_REAL_LIBRARIES=1` to make absence fatal. The real C++ matrix additionally generates a bimg C bridge, validates it with the discovered C++ driver, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies target-specific bridge/source/public-API snapshots.
+The real-library matrix discovers a sibling read-only third-party corpus or uses `INNOENGINE_ROOT`. For miniaudio, SDL3, cimgui, cimguizmo, and bgfx it regenerates the sole IR-native surface, enforces generation budgets, and checks target-specific deterministic source plus reflection public-API snapshots. The full matrix requires these headers; the standalone script may set `REQUIRE_REAL_LIBRARIES=1` to make absence fatal. The real C++ matrix additionally generates a bimg C bridge, validates it with the discovered C++ driver, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies target-specific bridge/source/public-API snapshots.
 
-The InnoEngine workspace gate then verifies that all five checked-in binding outputs are reproducible from `native/bindings/workspace.json`, rejects hand-authored native imports outside `Generated/`, builds every required native dependency from its pinned source, builds the full engine solution, and runs every project under `tests/native`.
+The real-library scripts read only pinned upstream headers; they do not regenerate or modify InnoEngine. The separate InnoEngine workspace gate is intentionally excluded until all required BGCS desktop-x64 reports pass.
 
 The full script runs all major BGCS capabilities in ordered layers:
 
@@ -42,9 +44,10 @@ The full script runs all major BGCS capabilities in ordered layers:
 5. `BGCS.Cpp2C` generation, deterministic build manifests, native build-provider plans, C++ syntax validation, DLL linking, and runtime invocation
 6. CLI behavior (`init`, JSON Schema, diagnostic catalog, and native-build plans)
 7. End-to-end demo generation (`runtime-generated` + `runtime-notgenerated`)
-8. NuGet dependency-closure restore, consumer compilation, execution, and `bindgen-cs` tool installation
+8. NuGet dependency-closure restore, deterministic pack, tool installation, and native-RID consumer invocation
+9. Public API baseline plus dependency license/vulnerability policy
 
-On success it writes the latest `artifacts/acceptance/report.json` and `report.md`, and retains target-specific copies under `artifacts/acceptance/reports/<target>/`. Report generation fails if any mandatory gate marker is missing. Complete reports currently exist for `macos-arm64-darwin` and `linux-arm64-gnu`; neither is evidence for another ABI. See [Acceptance](acceptance.md) for the scoring contract.
+On success it writes `artifacts/acceptance/report.json` and `report.md`, and retains target-specific copies under `artifacts/acceptance/reports/<target>/`. Report generation fails if any mandatory marker is missing. Windows x64, Linux x64, and macOS x64 reports must be generated from the same revision before maintenance status. See [Acceptance](acceptance.md) for the scoring contract.
 
 Demo artifacts are emitted under:
 
@@ -79,10 +82,11 @@ Demo semantics:
 - C++ to C bridge generation semantics and metadata flow
 - deterministic, portable bridge build manifests and manifest validation
 - shell-independent Clang/GNU build plans and actual host shared-library compilation
-- configured STL adapters for string, vector, span, optional, unique_ptr, and shared_ptr
+- configured STL adapters for string, vector, span, array, map, set, optional, variant, expected, path, chrono, unique_ptr, and shared_ptr
 - managed virtual callback proxy generation
 - multiple-inheritance cast adjustment
 - clang++ bridge DLL linking and Create/Invoke/Destroy/error-channel runtime calls
+- retained callback unregister/dispose races and async exactly-once cleanup
 
 `tests/BGCS.Tool.Tests` covers:
 
@@ -93,7 +97,7 @@ Demo semantics:
 
 ## CI usage
 
-The repository workflow runs the managed solution and declares complete acceptance jobs for Windows x64, Linux x64, and macOS arm64. A target is accepted only after its job emits its own report; a configured job or managed-only pass is not a target acceptance report.
+The repository workflow runs the managed solution and complete acceptance jobs for Windows x64, Linux x64, and Intel macOS x64. A target is accepted only after its job emits its own report; a configured job or managed-only pass is not a target acceptance report.
 
 CI can invoke:
 

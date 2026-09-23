@@ -2,7 +2,7 @@
 
 [Wiki](README.cn.md) | [English](architecture.md) | [能力矩阵](capabilities.cn.md)
 
-本文同时描述当前实现和目标架构。二者没有完全重合：共享 Binding IR、analysis 和 emitter contract 已存在，但主 C# 生成仍通过兼容 `GenerationStep` 路径输出。架构质量不能用目录名代替数据流事实。
+主 C# 生成只使用共享 Binding IR。预发布 compatibility emitter 与旧配置迁移已经删除；架构结论以真实数据流为准。
 
 ## 当前真实数据流
 
@@ -18,10 +18,7 @@ CLI / CsCodeGenerator / BindingGenerator
           ├─ DeclarationGraph
           ├─ BindingModuleAnalyzer → BindingModule
           ├─ StrictSafetyAnalyzer
-          ├─ CSharpEmissionBackend
-          │    ├─ Compatibility → AstGenerationStepEmitter
-          │    │                    └─ GenerationStep implementations
-          │    └─ IntermediateRepresentation → CSharpEmitter(BindingModule)
+          ├─ CSharpEmitter(BindingModule)
           ├─ post-patch / SingleFile / optional Runtime
           └─ GeneratedOutputTransaction.commit
 ```
@@ -29,8 +26,8 @@ CLI / CsCodeGenerator / BindingGenerator
 关键事实：
 
 - `BindingModule` 是真实分析结果，用于 structured result、安全诊断和新 emitter API。
-- `CSharpEmitter` 已经只消费 IR。配置生成现在可以通过 `CSharpEmissionBackend.IntermediateRepresentation` 显式选择它；默认 `Compatibility` 仍调用独立命名的 `AstGenerationStepEmitter`。
-- IR-native 路径已经承载 constant、alias、delegate、opaque handle、enum underlying type、匿名/嵌套 record、bitfield，以及 DllImport/LibraryImport/function-table metadata；miniaudio、SDL3、cimgui、cimguizmo、bgfx 的 raw ABI 均已生成并以零警告编译。Friendly overload 等价和全部 legacy public-API 语义尚未完成，因此默认路径迁移仍未关闭。
+- `CSharpEmitter` 只消费 IR，并且是唯一 configured C# 输出路径。
+- IR-native 路径承载 constant、alias、delegate、opaque handle、enum underlying type、匿名/嵌套 record、bitfield、全部 import mode，以及 public raw/string/span/ref/out friendly overload。
 - IR-native C# emitter 会在写文件前验证能否无损表达全部语义；配置生成对暂不支持的语义返回结构化 `BGCSCS001`，绝不隐式回退，失败时保留 last-good output。缺少字段定义的 opaque storage 可以通过 pointer 使用，但按值调用会被拒绝，因为仅凭 size/alignment 无法证明 target ABI classification。
 - C++ Bridge 有独立 analyzer 和 `CBridgeEmitter.EmitAst` 路径，最终也返回 `BindingModule`；它与 C# 共享 contract，但并非所有 emission 都只消费 IR。
 - C++ Bridge 可生成带版本的 build manifest；`INativeBuildPipelineProvider` 将其转换为不依赖 shell 的多步骤计划。内置 direct Clang/GNU、clang-cl、CMake、Meson、MSBuild provider，并通过 `nm` / `dumpbin` 检查实际 export。
@@ -46,7 +43,7 @@ Configuration → Parsing → Analysis → immutable BindingModule
                             Transactional Output
 ```
 
-目标态中 emitter 不再遍历可变 Clang AST，也不依赖 legacy generator metadata。当前实现已经具备 contract 和一部分 emitter，但迁移尚未全部完成。
+C# 目标态已经实现：emitter 不遍历可变 Clang AST。C++ Bridge 对尚未进入共享 IR 的结构保留显式 AST lowering 边界。
 
 ## 依赖规则
 
@@ -69,7 +66,7 @@ BGCS.Intermediate 不依赖其他 BGCS assembly
 
 ### Facade
 
-`CsCodeGenerator` 保留兼容 API；`BGCS.Facade.BindingGenerator` 返回 `BindingGenerationResult`。Facade 负责参数和用例入口，不应继续增加 AST 遍历或 output composition。
+`CsCodeGenerator` 是可嵌入 generator API；`BGCS.Facade.BindingGenerator` 返回 `BindingGenerationResult`。Facade 负责参数和用例入口，不应增加 AST 遍历或 output composition。
 
 ### Configuration
 
@@ -104,11 +101,11 @@ Analyzer 不创建正式输出文件。
 
 `BGCS.Intermediate` 是零依赖 contract 包，包含 `BindingModule`、type/function/field/parameter、`MarshallingPlan`、diagnostics、`IBindingEmitter` 和 `EmissionContext`。
 
-它目前既是可用的分析结果，也是 legacy emission 迁移的目标模型；不要把“IR 已存在”等同于“所有 emitter 已完全 IR-native”。
+它既是可用的分析结果，也是 C# emission 的唯一输入。C++ Bridge 保留独立且明确的 AST-specific lowering 边界。
 
 ### Emission
 
-- `CSharpEmitter`：只包含 IR-native `Emit` 与 lossless capability validation；剩余兼容路径由 `AstGenerationStepEmitter` 隔离。
+- `CSharpEmitter`：唯一 configured C# emitter，包含 IR-native `Emit`、friendly lowering 与 lossless capability validation。
 - `RuntimeEmitter`：从 module 生成 standalone runtime contract。
 - `SingleFileComposer`：通过 Roslyn syntax tree 做确定性合并。
 - `CBridgeEmitter`：生成 C++ → C wrapper；当前仍需要 AST-specific generation data。
@@ -133,15 +130,9 @@ C 与 C++ 配置生成使用 immutable SHA-256 output cache。Key 包含 generat
 
 `GeneratedOutputTransaction` / `OutputDirectoryTransaction` 在 staging 目录生成。只有 generation 与 patch 全部成功后才替换正式目录，因此失败保留 last-good bindings。
 
-## 迁移完成条件
+## 完成条件
 
-主 C# 路径只有满足以下条件，才能被称为完全 IR-native：
-
-1. `BindingGenerationPipeline` 调用 `CSharpEmitter.Emit(BindingModule, ...)` 作为默认路径；
-2. legacy `GenerationStep` 不再决定公开输出语义；
-3. metadata/patch 能力要么转成 IR transform，要么明确限定为 source post-processing；
-4. real-library source/public-API snapshots 与 native tests 保持一致；
-5. 删除 `AstGenerationStepEmitter` 不会改变生成结果。
+C# 路径完成条件是：`BindingGenerationPipeline` 调用 `CSharpEmitter.Emit(BindingModule, ...)`；metadata/patch 行为要么是 IR transform，要么是明确 source post-processing；新增功能的 source/API/compile tests 与完整真实库矩阵全部通过。configured output 中不存在 compatibility emitter。
 
 C++ Bridge 的对应完成条件是：C Bridge emitter 只消费完整 IR，AST 只存在于 analysis 阶段。
 

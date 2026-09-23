@@ -15,6 +15,36 @@
     /// </summary>
     public partial class Cpp2CGeneratorConfig
     {
+        private readonly Dictionary<CppType, string> sourceTypeSpellings = new(ReferenceEqualityComparer.Instance);
+
+        internal void RegisterSourceTypeSpelling(CppType type, string spelling)
+        {
+            if (!string.IsNullOrWhiteSpace(spelling))
+                sourceTypeSpellings[type] = spelling.Trim();
+        }
+
+        internal string GetCppValueTypeSpelling(CppType type)
+        {
+            if (sourceTypeSpellings.TryGetValue(type, out string? spelling))
+            {
+                string normalized = NormalizeValueTypeSpelling(spelling);
+                CppType registeredType = UnwrapReferenceAndQualification(type);
+                if (registeredType is CppTypedef registeredAlias &&
+                    !string.IsNullOrEmpty(registeredAlias.FullParentName) &&
+                    string.Equals(normalized, registeredAlias.Name, StringComparison.Ordinal))
+                    return registeredAlias.FullParentName + "::" + registeredAlias.Name;
+                return normalized;
+            }
+            CppType current = UnwrapReferenceAndQualification(type);
+            while (current is CppTypedef typedef)
+            {
+                if (!string.IsNullOrEmpty(typedef.FullParentName))
+                    return typedef.FullParentName + "::" + typedef.Name;
+                current = UnwrapReferenceAndQualification(typedef.ElementType);
+            }
+            return current is CppClass cppClass ? cppClass.FullName : current.GetDisplayName();
+        }
+
         /// <summary>
         /// Performs the operation implemented by <c>GetCType</c>.
         /// </summary>
@@ -229,6 +259,210 @@
                 : current.GetDisplayName().Replace(" ", string.Empty, StringComparison.Ordinal);
             return OptionalTypes.Any(candidate => compactName.StartsWith(
                 candidate.Replace(" ", string.Empty, StringComparison.Ordinal) + "<", StringComparison.Ordinal));
+        }
+
+        /// <summary>Determines whether a type is a configured fixed-size array specialization.</summary>
+        public bool IsArrayType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Array) || IsArrayTypeCore(type);
+        internal bool IsArrayTypeCore(CppType type) => IsConfiguredType(type, ArrayTypes, requireTemplate: true);
+
+        /// <summary>Determines whether a type is a configured map specialization.</summary>
+        public bool IsMapType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Map) || IsMapTypeCore(type);
+        internal bool IsMapTypeCore(CppType type) => IsConfiguredType(type, MapTypes, requireTemplate: true);
+
+        /// <summary>Determines whether a type is a configured set specialization.</summary>
+        public bool IsSetType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Set) || IsSetTypeCore(type);
+        internal bool IsSetTypeCore(CppType type) => IsConfiguredType(type, SetTypes, requireTemplate: true);
+
+        /// <summary>Determines whether a type is a configured variant specialization.</summary>
+        public bool IsVariantType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Variant) || IsVariantTypeCore(type);
+        internal bool IsVariantTypeCore(CppType type) => IsConfiguredType(type, VariantTypes, requireTemplate: true);
+
+        /// <summary>Determines whether a type is a configured expected specialization.</summary>
+        public bool IsExpectedType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Expected) || IsExpectedTypeCore(type);
+        internal bool IsExpectedTypeCore(CppType type) => IsConfiguredType(type, ExpectedTypes, requireTemplate: true);
+
+        /// <summary>Determines whether a type is a configured filesystem path.</summary>
+        public bool IsPathType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.Path) || IsPathTypeCore(type);
+        internal bool IsPathTypeCore(CppType type) => IsConfiguredType(type, PathTypes, requireTemplate: false);
+
+        /// <summary>Determines whether a type is a configured chrono duration.</summary>
+        public bool IsChronoDurationType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.ChronoDuration) || IsChronoDurationTypeCore(type);
+        internal bool IsChronoDurationTypeCore(CppType type) => IsConfiguredType(type, ChronoDurationTypes, requireTemplate: true);
+
+        /// <summary>Determines whether a type is a configured chrono time point.</summary>
+        public bool IsChronoTimePointType(CppType type) => ResolveCustomKind(type, CppTypeAdapterKind.ChronoTimePoint) || IsChronoTimePointTypeCore(type);
+        internal bool IsChronoTimePointTypeCore(CppType type) => IsConfiguredType(type, ChronoTimePointTypes, requireTemplate: true);
+
+        /// <summary>Returns all type-valued arguments of a specialized template in declaration order.</summary>
+        public IReadOnlyList<CppType> GetTemplateTypeArguments(CppType type)
+        {
+            CppType current = UnwrapReferenceAndQualification(type);
+            while (current is CppTypedef typedef)
+                current = UnwrapReferenceAndQualification(typedef.ElementType);
+            CppType[] modeled = current is CppClass cppClass
+                ? cppClass.TemplateSpecializedArguments.Where(argument => argument.ArgAsType != null)
+                    .Select(argument => argument.ArgAsType!).ToArray()
+                : [];
+            if (modeled.Length > 0 && modeled.All(argument => argument is not CppTemplateArgument))
+                return modeled;
+            if (!sourceTypeSpellings.TryGetValue(type, out string? spelling))
+                return modeled;
+            return SplitTemplateArguments(NormalizeValueTypeSpelling(spelling))
+                .Select(TryCreatePrimitiveType)
+                .Where(argument => argument != null)
+                .Cast<CppType>()
+                .ToArray();
+        }
+
+        /// <summary>Gets the fixed element count of a configured <c>std::array</c> specialization.</summary>
+        public long GetArrayElementCount(CppType type)
+        {
+            CppType current = UnwrapReferenceAndQualification(type);
+            if (current is CppClass cppClass)
+            {
+                CppTemplateArgument? count = cppClass.TemplateSpecializedArguments
+                    .FirstOrDefault(argument => argument.ArgKind == CppTemplateArgumentKind.AsInteger);
+                if (count != null && count.ArgAsInteger >= 0)
+                    return count.ArgAsInteger;
+            }
+            if (sourceTypeSpellings.TryGetValue(type, out string? spelling))
+            {
+                string[] arguments = SplitTemplateArguments(NormalizeValueTypeSpelling(spelling));
+                if (arguments.Length > 1 && long.TryParse(arguments[1], out long parsed) && parsed >= 0)
+                    return parsed;
+            }
+            throw new NotSupportedException($"Unable to resolve fixed array extent for '{type}'.");
+        }
+
+        /// <summary>Returns the stable C holder identifier for a non-contiguous C++ value specialization.</summary>
+        public string GetOpaqueValueHolderName(CppType type)
+        {
+            CppType current = UnwrapReferenceAndQualification(type);
+            string displayName = sourceTypeSpellings.TryGetValue(type, out string? spelling)
+                ? NormalizeValueTypeSpelling(spelling)
+                : current is CppClass cppClass ? cppClass.FullName : current.GetDisplayName();
+            return NamePrefix + "Value_" + SanitizeCIdentifier(displayName);
+        }
+
+        internal void ValidateOpaqueAdapterArguments(CppType type, CppTypeAdapterKind kind)
+        {
+            IReadOnlyList<CppType> arguments = GetTemplateTypeArguments(type);
+            int required = kind is CppTypeAdapterKind.Map or CppTypeAdapterKind.Expected ? 2 : 1;
+            if (arguments.Count < required)
+                throw new NotSupportedException($"Adapter '{kind}' cannot resolve the required template arguments for '{type}'.");
+            int count = kind switch
+            {
+                CppTypeAdapterKind.Map or CppTypeAdapterKind.Expected => 2,
+                CppTypeAdapterKind.Set => 1,
+                _ => arguments.Count
+            };
+            for (int index = 0; index < count; index++)
+            {
+                if (arguments[index] is CppPrimitiveType { Kind: CppPrimitiveKind.Void } ||
+                    !IsBlittableBridgeType(arguments[index]))
+                    throw new NotSupportedException($"Adapter '{kind}' requires ABI-value template arguments; argument {index} of '{type}' is '{arguments[index]}'. Register a custom adapter with an explicit ownership protocol.");
+            }
+        }
+
+        private bool IsConfiguredType(CppType type, IEnumerable<string> configuredNames, bool requireTemplate)
+        {
+            if (sourceTypeSpellings.TryGetValue(type, out string? sourceSpelling) &&
+                MatchesConfiguredName(NormalizeValueTypeSpelling(sourceSpelling), configuredNames, requireTemplate))
+                return true;
+            CppType current = UnwrapReferenceAndQualification(type);
+            while (true)
+            {
+                string name = current switch
+                {
+                    CppClass cppClass => cppClass.FullName,
+                    CppTypedef typedef when !string.IsNullOrEmpty(typedef.FullParentName) => typedef.FullParentName + "::" + typedef.Name,
+                    _ => current.GetDisplayName()
+                };
+                if (MatchesConfiguredName(name, configuredNames, requireTemplate))
+                    return true;
+                if (current is not CppTypedef alias)
+                    return false;
+                current = UnwrapReferenceAndQualification(alias.ElementType);
+            }
+        }
+
+        private static bool MatchesConfiguredName(string name, IEnumerable<string> configuredNames, bool requireTemplate)
+        {
+            string compactName = name.Replace(" ", string.Empty, StringComparison.Ordinal);
+            return configuredNames.Any(candidate =>
+            {
+                string configured = candidate.Replace(" ", string.Empty, StringComparison.Ordinal);
+                return requireTemplate
+                    ? compactName.StartsWith(configured + "<", StringComparison.Ordinal)
+                    : string.Equals(compactName, configured, StringComparison.Ordinal) ||
+                        compactName.StartsWith(configured + "<", StringComparison.Ordinal);
+            });
+        }
+
+        private static string NormalizeValueTypeSpelling(string spelling)
+        {
+            string result = spelling.Trim();
+            while (result.StartsWith("const ", StringComparison.Ordinal) || result.StartsWith("volatile ", StringComparison.Ordinal))
+                result = result[(result.IndexOf(' ') + 1)..].TrimStart();
+            while (result.EndsWith('&') || result.EndsWith(' '))
+                result = result[..^1].TrimEnd();
+            return result;
+        }
+
+        private static string[] SplitTemplateArguments(string spelling)
+        {
+            int open = spelling.IndexOf('<');
+            int close = spelling.LastIndexOf('>');
+            if (open < 0 || close <= open)
+                return [];
+            string body = spelling[(open + 1)..close];
+            List<string> arguments = [];
+            int depth = 0;
+            int start = 0;
+            for (int index = 0; index < body.Length; index++)
+            {
+                if (body[index] == '<') depth++;
+                else if (body[index] == '>') depth--;
+                else if (body[index] == ',' && depth == 0)
+                {
+                    arguments.Add(body[start..index].Trim());
+                    start = index + 1;
+                }
+            }
+            arguments.Add(body[start..].Trim());
+            return arguments.ToArray();
+        }
+
+        private static CppType? TryCreatePrimitiveType(string spelling)
+        {
+            string type = spelling.Replace("const", string.Empty, StringComparison.Ordinal).Trim();
+            int pointerDepth = 0;
+            while (type.EndsWith('*'))
+            {
+                pointerDepth++;
+                type = type[..^1].TrimEnd();
+            }
+            CppType? result = type switch
+            {
+                "bool" => CppPrimitiveType.Bool,
+                "char" or "signed char" => CppPrimitiveType.Char,
+                "unsigned char" => CppPrimitiveType.UnsignedChar,
+                "short" or "short int" => CppPrimitiveType.Short,
+                "unsigned short" or "unsigned short int" => CppPrimitiveType.UnsignedShort,
+                "int" or "signed int" => CppPrimitiveType.Int,
+                "unsigned" or "unsigned int" => CppPrimitiveType.UnsignedInt,
+                "long" or "long int" => CppPrimitiveType.Long,
+                "unsigned long" or "unsigned long int" => CppPrimitiveType.UnsignedLong,
+                "long long" or "long long int" => CppPrimitiveType.LongLong,
+                "unsigned long long" or "unsigned long long int" => CppPrimitiveType.UnsignedLongLong,
+                "float" => CppPrimitiveType.Float,
+                "double" => CppPrimitiveType.Double,
+                "long double" => CppPrimitiveType.LongDouble,
+                _ => null
+            };
+            while (result != null && pointerDepth-- > 0)
+                result = new CppPointerType(default, result);
+            return result;
         }
 
         private bool ResolveCustomKind(CppType type, CppTypeAdapterKind kind) =>

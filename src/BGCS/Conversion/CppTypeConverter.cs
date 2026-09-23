@@ -342,17 +342,15 @@
             {
                 return new() { BaseType = name };
             }
-            if (!config.AutoSquashTypedef && !isDelegate)
-            {
-                return new() { BaseType = GetMapping(typedef) };
-            }
             lock (syncObj)
             {
                 if (!typedefCache.TryGetValue(typedef, out var result))
                 {
                     if (typedef.IsOpaqueHandle())
                     {
-                        result = new() { BaseType = typedef.Name };
+                        result = config.GenerateHandles
+                            ? new() { BaseType = config.GetManagedHandleName(typedef.Name) }
+                            : AnalyzeType(typedef.ElementType);
                         typedefCache.Add(typedef, result);
                         return result;
                     }
@@ -393,7 +391,12 @@
                 return typeMapping.FriendlyName;
             }
 
-            return config.GetCsCleanName(member.Name);
+            return member switch
+            {
+                CppEnum => config.GetManagedEnumName(member.Name),
+                CppTypedef typedef when typedef.IsOpaqueHandle() => config.GetManagedHandleName(member.Name),
+                _ => config.GetManagedTypeName(member.Name)
+            };
         }
 
         private string ConvertPrimitiveType(CppPrimitiveType primitiveType)

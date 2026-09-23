@@ -440,8 +440,8 @@ namespace BGCS
         /// preserve instead of falling back implicitly.
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
-        [DefaultValue(CSharpEmissionBackend.Compatibility)]
-        public CSharpEmissionBackend CSharpEmissionBackend { get; set; } = CSharpEmissionBackend.Compatibility;
+        [DefaultValue(CSharpEmissionBackend.IntermediateRepresentation)]
+        public CSharpEmissionBackend CSharpEmissionBackend { get; set; } = CSharpEmissionBackend.IntermediateRepresentation;
 
         /// <summary>
         /// File name used for merged C# bindings in the output root. (Default: <c>Bindings.cs</c>)

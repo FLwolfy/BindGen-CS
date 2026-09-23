@@ -33,6 +33,27 @@ public sealed class MarshallingMapping
 
     /// <summary>Gets or sets whether a string or sequence uses a terminating zero element.</summary>
     public bool? NullTerminated { get; set; }
+
+    /// <summary>Gets or sets the allocator domain responsible for owned native storage.</summary>
+    public BindingAllocatorKind? AllocatorKind { get; set; }
+
+    /// <summary>Gets or sets the native allocation function paired with cleanup.</summary>
+    public string? AllocatorFunction { get; set; }
+
+    /// <summary>Gets or sets how long native code may retain a callback.</summary>
+    public BindingCallbackLifetime? CallbackLifetime { get; set; }
+
+    /// <summary>Gets or sets the native callback threading contract.</summary>
+    public BindingCallbackThreading? CallbackThreading { get; set; }
+
+    /// <summary>Gets or sets the function that synchronously unregisters a retained callback.</summary>
+    public string? UnregisterFunction { get; set; }
+
+    /// <summary>Gets or sets the native asynchronous completion mechanism.</summary>
+    public BindingAsyncCompletion? AsyncCompletion { get; set; }
+
+    /// <summary>Gets or sets the completion, polling, wait, or cancellation function.</summary>
+    public string? CompletionFunction { get; set; }
 }
 
 /// <summary>

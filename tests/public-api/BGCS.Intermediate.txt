@@ -1,0 +1,352 @@
+class BGCS.Emission.EmissionContext
+  ctor(System.String OutputPath, System.Boolean SingleFile, System.String SingleFileName, System.String RuntimeNamespace, System.Boolean OneFilePerType)
+  property System.Boolean OneFilePerType { get; set }
+  property System.String OutputPath { get; set }
+  property System.String RuntimeNamespace { get; set }
+  property System.Boolean SingleFile { get; set }
+  property System.String SingleFileName { get; set }
+  method BGCS.Emission.EmissionContext <Clone>$()
+  method System.Boolean Equals(BGCS.Emission.EmissionContext other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& OutputPath, System.Boolean& SingleFile, System.String& SingleFileName, System.String& RuntimeNamespace, System.Boolean& OneFilePerType)
+interface BGCS.Emission.IBindingEmitter
+  property System.String Name { get }
+  method System.Collections.Generic.IReadOnlyList<System.String> Emit(BGCS.Intermediate.BindingModule module, BGCS.Emission.EmissionContext context)
+enum BGCS.Intermediate.BindingAllocatorKind
+  field BGCS.Intermediate.BindingAllocatorKind CRuntime
+  field BGCS.Intermediate.BindingAllocatorKind Caller
+  field BGCS.Intermediate.BindingAllocatorKind CoTaskMem
+  field BGCS.Intermediate.BindingAllocatorKind Custom
+  field BGCS.Intermediate.BindingAllocatorKind NativeFunction
+  field BGCS.Intermediate.BindingAllocatorKind Unspecified
+  field System.Int32 value__
+enum BGCS.Intermediate.BindingAsyncCompletion
+  field BGCS.Intermediate.BindingAsyncCompletion Callback
+  field BGCS.Intermediate.BindingAsyncCompletion Custom
+  field BGCS.Intermediate.BindingAsyncCompletion None
+  field BGCS.Intermediate.BindingAsyncCompletion Polling
+  field BGCS.Intermediate.BindingAsyncCompletion WaitHandle
+  field System.Int32 value__
+enum BGCS.Intermediate.BindingCallbackLifetime
+  field BGCS.Intermediate.BindingCallbackLifetime CallOnly
+  field BGCS.Intermediate.BindingCallbackLifetime Manual
+  field BGCS.Intermediate.BindingCallbackLifetime RetainedUntilCompletion
+  field BGCS.Intermediate.BindingCallbackLifetime RetainedUntilUnregister
+  field BGCS.Intermediate.BindingCallbackLifetime Unspecified
+  field System.Int32 value__
+enum BGCS.Intermediate.BindingCallbackThreading
+  field BGCS.Intermediate.BindingCallbackThreading AnyThread
+  field BGCS.Intermediate.BindingCallbackThreading CallerThread
+  field BGCS.Intermediate.BindingCallbackThreading SerializedNativeThread
+  field BGCS.Intermediate.BindingCallbackThreading Unspecified
+  field System.Int32 value__
+class BGCS.Intermediate.BindingConstant
+  ctor(System.String NativeName, System.String ManagedName, System.String ManagedType, System.String Value, BGCS.Intermediate.BindingConstantKind Kind)
+  property BGCS.Intermediate.BindingConstantKind Kind { get; set }
+  property System.String ManagedName { get; set }
+  property System.String ManagedType { get; set }
+  property System.String NativeName { get; set }
+  property System.String Value { get; set }
+  method BGCS.Intermediate.BindingConstant <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingConstant other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& NativeName, System.String& ManagedName, System.String& ManagedType, System.String& Value, BGCS.Intermediate.BindingConstantKind& Kind)
+enum BGCS.Intermediate.BindingConstantKind
+  field BGCS.Intermediate.BindingConstantKind Custom
+  field BGCS.Intermediate.BindingConstantKind Decimal
+  field BGCS.Intermediate.BindingConstantKind FloatingPoint
+  field BGCS.Intermediate.BindingConstantKind Integer
+  field BGCS.Intermediate.BindingConstantKind LongInteger
+  field BGCS.Intermediate.BindingConstantKind Reference
+  field BGCS.Intermediate.BindingConstantKind String
+  field BGCS.Intermediate.BindingConstantKind UnsignedInteger
+  field BGCS.Intermediate.BindingConstantKind UnsignedLongInteger
+  field System.Int32 value__
+class BGCS.Intermediate.BindingDelegate
+  ctor(System.String nativeName, System.String managedName, BGCS.Intermediate.BindingTypeReference returnType, BGCS.Intermediate.MarshallingPlan returnMarshalling)
+  property System.String CallingConvention { get; set }
+  property System.String ManagedName { get }
+  property System.String NativeName { get }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingParameter> Parameters { get }
+  property BGCS.Intermediate.MarshallingPlan ReturnMarshalling { get }
+  property BGCS.Intermediate.BindingTypeReference ReturnType { get }
+class BGCS.Intermediate.BindingDiagnostic
+  ctor(BGCS.Intermediate.BindingDiagnosticSeverity Severity, System.String Message, System.String Code)
+  property System.String Code { get; set }
+  property System.String Message { get; set }
+  property BGCS.Intermediate.BindingDiagnosticSeverity Severity { get; set }
+  method BGCS.Intermediate.BindingDiagnostic <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingDiagnostic other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.Intermediate.BindingDiagnosticSeverity& Severity, System.String& Message, System.String& Code)
+class BGCS.Intermediate.BindingDiagnosticCatalog
+  property System.Collections.Generic.IReadOnlyList<BGCS.Intermediate.BindingDiagnosticDescriptor> All { get }
+  method System.Boolean TryGet(System.String code, BGCS.Intermediate.BindingDiagnosticDescriptor& descriptor)
+class BGCS.Intermediate.BindingDiagnosticCodes
+  field System.String Allocator
+  field System.String AsyncLifetime
+  field System.String BufferLength
+  field System.String CSharpUnsupported
+  field System.String CallbackLifetime
+  field System.String CallbackThreading
+  field System.String CppInstantiation
+  field System.String CppUnsupported
+  field System.String Ownership
+class BGCS.Intermediate.BindingDiagnosticDescriptor
+  ctor(System.String Code, System.String Title, System.String Cause, System.String Resolution)
+  property System.String Cause { get; set }
+  property System.String Code { get; set }
+  property System.String Resolution { get; set }
+  property System.String Title { get; set }
+  method BGCS.Intermediate.BindingDiagnosticDescriptor <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingDiagnosticDescriptor other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Code, System.String& Title, System.String& Cause, System.String& Resolution)
+enum BGCS.Intermediate.BindingDiagnosticSeverity
+  field BGCS.Intermediate.BindingDiagnosticSeverity Critical
+  field BGCS.Intermediate.BindingDiagnosticSeverity Debug
+  field BGCS.Intermediate.BindingDiagnosticSeverity Error
+  field BGCS.Intermediate.BindingDiagnosticSeverity Information
+  field BGCS.Intermediate.BindingDiagnosticSeverity Trace
+  field BGCS.Intermediate.BindingDiagnosticSeverity Warning
+  field System.Int32 value__
+enum BGCS.Intermediate.BindingDirection
+  field BGCS.Intermediate.BindingDirection In
+  field BGCS.Intermediate.BindingDirection InOut
+  field BGCS.Intermediate.BindingDirection Out
+  field System.Int32 value__
+class BGCS.Intermediate.BindingEmissionException
+  ctor(System.Collections.Generic.IReadOnlyList<BGCS.Intermediate.BindingDiagnostic> diagnostics)
+  property System.Collections.Generic.IReadOnlyList<BGCS.Intermediate.BindingDiagnostic> Diagnostics { get }
+class BGCS.Intermediate.BindingEnumMember
+  ctor(System.String NativeName, System.String ManagedName, System.String Value)
+  property System.Collections.Generic.IList<System.String> Attributes { get; set }
+  property System.String Comment { get; set }
+  property System.String ManagedName { get; set }
+  property System.String NativeName { get; set }
+  property System.String Value { get; set }
+  method BGCS.Intermediate.BindingEnumMember <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingEnumMember other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& NativeName, System.String& ManagedName, System.String& Value)
+class BGCS.Intermediate.BindingField
+  ctor(System.String NativeName, System.String ManagedName, BGCS.Intermediate.BindingTypeReference Type, System.Int64 Offset, System.Int64 BitOffset, System.Int32 BitWidth, System.Collections.Generic.IReadOnlyList<System.Int32> ArrayDimensions, System.Boolean IsBitField, System.Boolean IsSignedBitField)
+  property System.Collections.Generic.IReadOnlyList<System.Int32> ArrayDimensions { get; set }
+  property System.Int64 BitOffset { get; set }
+  property System.Int32 BitWidth { get; set }
+  property System.String Comment { get; set }
+  property System.Boolean IsBitField { get; set }
+  property System.Boolean IsSignedBitField { get; set }
+  property System.String ManagedName { get; set }
+  property System.String NativeName { get; set }
+  property System.Int64 Offset { get; set }
+  property BGCS.Intermediate.BindingTypeReference Type { get; set }
+  method BGCS.Intermediate.BindingField <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingField other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& NativeName, System.String& ManagedName, BGCS.Intermediate.BindingTypeReference& Type, System.Int64& Offset, System.Int64& BitOffset, System.Int32& BitWidth, System.Collections.Generic.IReadOnlyList<System.Int32>& ArrayDimensions, System.Boolean& IsBitField, System.Boolean& IsSignedBitField)
+class BGCS.Intermediate.BindingFunction
+  ctor(System.String nativeName, System.String managedName, BGCS.Intermediate.BindingFunctionKind kind, BGCS.Intermediate.BindingTypeReference returnType, BGCS.Intermediate.MarshallingPlan returnMarshalling)
+  property System.String CallingConvention { get; set }
+  property System.String DeclaringType { get; set }
+  property System.Nullable<System.Int32> FunctionTableIndex { get; set }
+  property System.Boolean IsVariadic { get; set }
+  property BGCS.Intermediate.BindingFunctionKind Kind { get }
+  property System.String ManagedContainer { get; set }
+  property BGCS.Intermediate.BindingManagedFunctionKind ManagedKind { get; set }
+  property System.String ManagedName { get }
+  property System.Nullable<System.Int32> ManagedReceiverIndex { get; set }
+  property System.String ManagedReceiverType { get; set }
+  property System.String NativeName { get }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingParameter> Parameters { get }
+  property System.String RawManagedName { get; set }
+  property BGCS.Intermediate.MarshallingPlan ReturnMarshalling { get }
+  property BGCS.Intermediate.BindingTypeReference ReturnType { get }
+enum BGCS.Intermediate.BindingFunctionKind
+  field BGCS.Intermediate.BindingFunctionKind Constructor
+  field BGCS.Intermediate.BindingFunctionKind Destructor
+  field BGCS.Intermediate.BindingFunctionKind Free
+  field BGCS.Intermediate.BindingFunctionKind Instance
+  field BGCS.Intermediate.BindingFunctionKind Static
+  field System.Int32 value__
+class BGCS.Intermediate.BindingFunctionTableEntry
+  ctor(System.Int32 Index, System.String EntryPoint)
+  property System.String EntryPoint { get; set }
+  property System.Int32 Index { get; set }
+  method BGCS.Intermediate.BindingFunctionTableEntry <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingFunctionTableEntry other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.Int32& Index, System.String& EntryPoint)
+class BGCS.Intermediate.BindingGenerationResult
+  ctor(BGCS.Intermediate.BindingModule module, System.Boolean success, System.Collections.Generic.IReadOnlyList<System.String> outputFiles, System.Collections.Generic.IReadOnlyList<BGCS.Intermediate.BindingDiagnostic> diagnostics, System.Boolean cacheHit, System.String cacheKey)
+  property System.Boolean CacheHit { get }
+  property System.String CacheKey { get }
+  property System.Collections.Generic.IReadOnlyList<BGCS.Intermediate.BindingDiagnostic> Diagnostics { get }
+  property BGCS.Intermediate.BindingModule Module { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> OutputFiles { get }
+  property System.Boolean Success { get }
+enum BGCS.Intermediate.BindingImportMode
+  field BGCS.Intermediate.BindingImportMode DllImport
+  field BGCS.Intermediate.BindingImportMode FunctionTable
+  field BGCS.Intermediate.BindingImportMode LibraryImport
+  field System.Int32 value__
+enum BGCS.Intermediate.BindingManagedFunctionKind
+  field BGCS.Intermediate.BindingManagedFunctionKind Extension
+  field BGCS.Intermediate.BindingManagedFunctionKind Instance
+  field BGCS.Intermediate.BindingManagedFunctionKind Static
+  field System.Int32 value__
+class BGCS.Intermediate.BindingModule
+  ctor(System.String name, System.String namespace, System.String libraryName, System.String targetAbi)
+  property System.Boolean AutoWrapCallbacks { get; set }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingConstant> Constants { get }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingDelegate> Delegates { get }
+  property System.Collections.Generic.IList<System.String> Diagnostics { get }
+  property System.Boolean EmitLibraryNameConstant { get; set }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingFunctionTableEntry> FunctionTableEntries { get }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingFunction> Functions { get }
+  property System.Boolean GenerateAdditionalOverloads { get; set }
+  property System.Boolean GenerateConstructorsForStructs { get; set }
+  property System.Boolean GenerateMetadata { get; set }
+  property System.Boolean GeneratePlaceholderComments { get; set }
+  property System.Boolean GenerateSizeOfStructs { get; set }
+  property System.String GetLibraryExtensionFunctionName { get; set }
+  property System.String GetLibraryNameFunctionName { get; set }
+  property BGCS.Intermediate.BindingImportMode ImportMode { get; set }
+  property System.String LibraryName { get }
+  property System.String Name { get }
+  property System.String Namespace { get }
+  property System.Boolean NestGeneratedTypesInApi { get; set }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingDiagnostic> StructuredDiagnostics { get }
+  property System.String TargetAbi { get }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingType> Types { get }
+  property System.Boolean UseCustomContext { get; set }
+  property System.Collections.Generic.IList<System.String> Usings { get }
+  property System.Collections.Generic.IList<System.String> VaryingTypes { get }
+  property System.Boolean WrapPointersAsHandle { get; set }
+enum BGCS.Intermediate.BindingOwnership
+  field BGCS.Intermediate.BindingOwnership Borrowed
+  field BGCS.Intermediate.BindingOwnership CallerAllocated
+  field BGCS.Intermediate.BindingOwnership Owned
+  field BGCS.Intermediate.BindingOwnership Shared
+  field BGCS.Intermediate.BindingOwnership Transferred
+  field BGCS.Intermediate.BindingOwnership Unknown
+  field System.Int32 value__
+class BGCS.Intermediate.BindingParameter
+  ctor(System.String NativeName, System.String ManagedName, BGCS.Intermediate.BindingTypeReference Type, BGCS.Intermediate.BindingDirection Direction, BGCS.Intermediate.MarshallingPlan Marshalling)
+  property System.String DefaultValue { get; set }
+  property BGCS.Intermediate.BindingDirection Direction { get; set }
+  property System.String ManagedName { get; set }
+  property BGCS.Intermediate.MarshallingPlan Marshalling { get; set }
+  property System.String NativeName { get; set }
+  property BGCS.Intermediate.BindingTypeReference Type { get; set }
+  method BGCS.Intermediate.BindingParameter <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingParameter other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& NativeName, System.String& ManagedName, BGCS.Intermediate.BindingTypeReference& Type, BGCS.Intermediate.BindingDirection& Direction, BGCS.Intermediate.MarshallingPlan& Marshalling)
+enum BGCS.Intermediate.BindingStringEncoding
+  field BGCS.Intermediate.BindingStringEncoding Ansi
+  field BGCS.Intermediate.BindingStringEncoding None
+  field BGCS.Intermediate.BindingStringEncoding Utf16
+  field BGCS.Intermediate.BindingStringEncoding Utf32
+  field BGCS.Intermediate.BindingStringEncoding Utf8
+  field System.Int32 value__
+class BGCS.Intermediate.BindingType
+  ctor(System.String nativeName, System.String managedName, BGCS.Intermediate.BindingTypeKind kind, System.Int32 size, System.Int32 alignment)
+  property System.Int32 Alignment { get }
+  property System.Collections.Generic.IList<System.String> Attributes { get; set }
+  property System.String Comment { get; set }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingEnumMember> EnumMembers { get }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingField> Fields { get }
+  property System.Boolean IsCustomDefinition { get; set }
+  property System.Boolean IsOpaqueStorage { get; set }
+  property BGCS.Intermediate.BindingTypeKind Kind { get }
+  property System.String ManagedName { get }
+  property System.String NativeName { get }
+  property System.Collections.Generic.IList<BGCS.Intermediate.BindingType> NestedTypes { get }
+  property System.Int32 Size { get }
+  property BGCS.Intermediate.BindingTypeReference UnderlyingType { get; set }
+  property BGCS.Intermediate.BindingValidity Validity { get; set }
+enum BGCS.Intermediate.BindingTypeKind
+  field BGCS.Intermediate.BindingTypeKind Alias
+  field BGCS.Intermediate.BindingTypeKind Enumeration
+  field BGCS.Intermediate.BindingTypeKind FunctionPointer
+  field BGCS.Intermediate.BindingTypeKind OpaqueHandle
+  field BGCS.Intermediate.BindingTypeKind Primitive
+  field BGCS.Intermediate.BindingTypeKind Structure
+  field BGCS.Intermediate.BindingTypeKind Unexposed
+  field BGCS.Intermediate.BindingTypeKind Union
+  field System.Int32 value__
+class BGCS.Intermediate.BindingTypeReference
+  ctor(System.String NativeName, System.String ManagedName, System.Int32 PointerDepth, System.Boolean IsConst, System.Int32 Size)
+  property System.Boolean IsConst { get; set }
+  property System.String ManagedName { get; set }
+  property System.String NativeName { get; set }
+  property System.Int32 PointerDepth { get; set }
+  property System.Int32 Size { get; set }
+  method BGCS.Intermediate.BindingTypeReference <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingTypeReference other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& NativeName, System.String& ManagedName, System.Int32& PointerDepth, System.Boolean& IsConst, System.Int32& Size)
+class BGCS.Intermediate.BindingValidity
+  ctor(System.String FieldName, System.String InvalidValue, System.String PropertyName)
+  property System.String FieldName { get; set }
+  property System.String InvalidValue { get; set }
+  property System.String PropertyName { get; set }
+  method BGCS.Intermediate.BindingValidity <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.BindingValidity other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& FieldName, System.String& InvalidValue, System.String& PropertyName)
+class BGCS.Intermediate.MarshallingPlan
+  ctor(BGCS.Intermediate.MarshallingStrategy Strategy, BGCS.Intermediate.BindingOwnership Ownership, BGCS.Intermediate.BindingStringEncoding StringEncoding, System.String LengthParameter, System.String CapacityParameter, System.String WrittenCountParameter, System.Boolean RequiresCleanup, System.String CleanupFunction, System.Boolean NullTerminated, BGCS.Intermediate.BindingAllocatorKind AllocatorKind, System.String AllocatorFunction, BGCS.Intermediate.BindingCallbackLifetime CallbackLifetime, BGCS.Intermediate.BindingCallbackThreading CallbackThreading, System.String UnregisterFunction, BGCS.Intermediate.BindingAsyncCompletion AsyncCompletion, System.String CompletionFunction)
+  property System.String AllocatorFunction { get; set }
+  property BGCS.Intermediate.BindingAllocatorKind AllocatorKind { get; set }
+  property BGCS.Intermediate.BindingAsyncCompletion AsyncCompletion { get; set }
+  property BGCS.Intermediate.BindingCallbackLifetime CallbackLifetime { get; set }
+  property BGCS.Intermediate.BindingCallbackThreading CallbackThreading { get; set }
+  property System.String CapacityParameter { get; set }
+  property System.String CleanupFunction { get; set }
+  property System.String CompletionFunction { get; set }
+  property System.String LengthParameter { get; set }
+  property System.Boolean NullTerminated { get; set }
+  property BGCS.Intermediate.BindingOwnership Ownership { get; set }
+  property System.Boolean RequiresCleanup { get; set }
+  property BGCS.Intermediate.MarshallingStrategy Strategy { get; set }
+  property BGCS.Intermediate.BindingStringEncoding StringEncoding { get; set }
+  property System.String UnregisterFunction { get; set }
+  property System.String WrittenCountParameter { get; set }
+  method BGCS.Intermediate.MarshallingPlan <Clone>$()
+  method System.Boolean Equals(BGCS.Intermediate.MarshallingPlan other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(BGCS.Intermediate.MarshallingStrategy& Strategy, BGCS.Intermediate.BindingOwnership& Ownership, BGCS.Intermediate.BindingStringEncoding& StringEncoding, System.String& LengthParameter, System.String& CapacityParameter, System.String& WrittenCountParameter, System.Boolean& RequiresCleanup, System.String& CleanupFunction, System.Boolean& NullTerminated, BGCS.Intermediate.BindingAllocatorKind& AllocatorKind, System.String& AllocatorFunction, BGCS.Intermediate.BindingCallbackLifetime& CallbackLifetime, BGCS.Intermediate.BindingCallbackThreading& CallbackThreading, System.String& UnregisterFunction, BGCS.Intermediate.BindingAsyncCompletion& AsyncCompletion, System.String& CompletionFunction)
+enum BGCS.Intermediate.MarshallingStrategy
+  field BGCS.Intermediate.MarshallingStrategy Blittable
+  field BGCS.Intermediate.MarshallingStrategy Callback
+  field BGCS.Intermediate.MarshallingStrategy Custom
+  field BGCS.Intermediate.MarshallingStrategy Handle
+  field BGCS.Intermediate.MarshallingStrategy Optional
+  field BGCS.Intermediate.MarshallingStrategy Pointer
+  field BGCS.Intermediate.MarshallingStrategy Span
+  field BGCS.Intermediate.MarshallingStrategy String
+  field System.Int32 value__

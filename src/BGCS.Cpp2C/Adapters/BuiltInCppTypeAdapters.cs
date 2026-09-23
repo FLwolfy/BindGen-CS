@@ -13,7 +13,15 @@ internal static class BuiltInCppTypeAdapters
         new UniqueOwnerAdapter(),
         new SpanAdapter(),
         new VectorAdapter(),
-        new OptionalAdapter()
+        new OptionalAdapter(),
+        new ArrayAdapter(),
+        new MapAdapter(),
+        new SetAdapter(),
+        new VariantAdapter(),
+        new ExpectedAdapter(),
+        new PathAdapter(),
+        new ChronoDurationAdapter(),
+        new ChronoTimePointAdapter()
     ];
 
     private abstract class BuiltInAdapter(string name, CppTypeAdapterKind kind) : ICppTypeAdapter, ICacheFingerprintProvider
@@ -87,5 +95,76 @@ internal static class BuiltInCppTypeAdapters
             return new(Name, Kind, cType, MarshallingStrategy.Optional,
                 cleanup ? BindingOwnership.Owned : BindingOwnership.Borrowed, cleanup);
         }
+    }
+
+    private sealed class ArrayAdapter : BuiltInAdapter
+    {
+        public ArrayAdapter() : base("builtin.array", CppTypeAdapterKind.Array) { }
+        public override bool CanAdapt(CppType type, CppTypeAdapterContext context) => context.Configuration.IsArrayTypeCore(type);
+        public override CppTypeAdapterPlan CreatePlan(CppType type, CppTypeAdapterContext context) =>
+            ElementPointer(type, context, MarshallingStrategy.Span, BindingOwnership.Borrowed);
+    }
+
+    private abstract class OpaqueValueAdapter(string name, CppTypeAdapterKind kind) : BuiltInAdapter(name, kind)
+    {
+        protected abstract bool Matches(CppType type, Cpp2CGeneratorConfig configuration);
+        public override bool CanAdapt(CppType type, CppTypeAdapterContext context) => Matches(type, context.Configuration);
+        public override CppTypeAdapterPlan CreatePlan(CppType type, CppTypeAdapterContext context)
+        {
+            context.Configuration.ValidateOpaqueAdapterArguments(type, Kind);
+            string holder = context.Configuration.GetOpaqueValueHolderName(type);
+            bool owns = context.Use == CppTypeAdapterUse.Return;
+            return new(Name, Kind, holder + "*", MarshallingStrategy.Handle,
+                owns ? BindingOwnership.Owned : BindingOwnership.Borrowed,
+                owns, owns ? holder + "Destroy" : null);
+        }
+    }
+
+    private sealed class MapAdapter : OpaqueValueAdapter
+    {
+        public MapAdapter() : base("builtin.map", CppTypeAdapterKind.Map) { }
+        protected override bool Matches(CppType type, Cpp2CGeneratorConfig configuration) => configuration.IsMapTypeCore(type);
+    }
+
+    private sealed class SetAdapter : OpaqueValueAdapter
+    {
+        public SetAdapter() : base("builtin.set", CppTypeAdapterKind.Set) { }
+        protected override bool Matches(CppType type, Cpp2CGeneratorConfig configuration) => configuration.IsSetTypeCore(type);
+    }
+
+    private sealed class VariantAdapter : OpaqueValueAdapter
+    {
+        public VariantAdapter() : base("builtin.variant", CppTypeAdapterKind.Variant) { }
+        protected override bool Matches(CppType type, Cpp2CGeneratorConfig configuration) => configuration.IsVariantTypeCore(type);
+    }
+
+    private sealed class ExpectedAdapter : OpaqueValueAdapter
+    {
+        public ExpectedAdapter() : base("builtin.expected", CppTypeAdapterKind.Expected) { }
+        protected override bool Matches(CppType type, Cpp2CGeneratorConfig configuration) => configuration.IsExpectedTypeCore(type);
+    }
+
+    private sealed class PathAdapter : BuiltInAdapter
+    {
+        public PathAdapter() : base("builtin.path", CppTypeAdapterKind.Path) { }
+        public override bool CanAdapt(CppType type, CppTypeAdapterContext context) => context.Configuration.IsPathTypeCore(type);
+        public override CppTypeAdapterPlan CreatePlan(CppType type, CppTypeAdapterContext context) =>
+            new(Name, Kind, "const char*", MarshallingStrategy.String, BindingOwnership.Borrowed);
+    }
+
+    private sealed class ChronoDurationAdapter : BuiltInAdapter
+    {
+        public ChronoDurationAdapter() : base("builtin.chrono-duration", CppTypeAdapterKind.ChronoDuration) { }
+        public override bool CanAdapt(CppType type, CppTypeAdapterContext context) => context.Configuration.IsChronoDurationTypeCore(type);
+        public override CppTypeAdapterPlan CreatePlan(CppType type, CppTypeAdapterContext context) =>
+            new(Name, Kind, "int64_t", MarshallingStrategy.Blittable, BindingOwnership.Borrowed);
+    }
+
+    private sealed class ChronoTimePointAdapter : BuiltInAdapter
+    {
+        public ChronoTimePointAdapter() : base("builtin.chrono-time-point", CppTypeAdapterKind.ChronoTimePoint) { }
+        public override bool CanAdapt(CppType type, CppTypeAdapterContext context) => context.Configuration.IsChronoTimePointTypeCore(type);
+        public override CppTypeAdapterPlan CreatePlan(CppType type, CppTypeAdapterContext context) =>
+            new(Name, Kind, "int64_t", MarshallingStrategy.Blittable, BindingOwnership.Borrowed);
     }
 }

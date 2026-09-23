@@ -39,7 +39,7 @@ Use `StrictSafety=false` only when an external process completely audits these s
 | `BGCS-SAFETY-CALLBACK` | Callback retention/unregister lifetime is not declared | Add a parameter marshalling mapping and make the consumer retain or unregister the callback correctly |
 | `BGCS-SAFETY-LENGTH` | A buffer pointer has no proven length/capacity relationship | Set `LengthParameter`, `CapacityParameter`, and optionally `WrittenCountParameter` |
 | `BGCS-SAFETY-ALLOCATOR` | An output string has no cleanup allocator | Set `CleanupFunction`, ownership, encoding, and cleanup requirement |
-| `BGCSCS001` | The IR-native C# emitter cannot preserve a declaration without semantic loss | Keep the compatibility emitter or implement a general, tested IR lowering; emission fails before writing output |
+| `BGCSCS001` | The IR-native C# emitter cannot preserve a declaration without semantic loss | Implement a general, tested IR lowering or explicitly exclude the declaration; emission fails before writing output |
 | `BGCSCPP-INSTANTIATION` | A primary template was found without a requested concrete instance | Add the required full specialization to `TemplateInstantiations` or `FunctionTemplateInstantiations` |
 | `BGCSCPP001` | A C++ declaration cannot be lowered safely through known adapters | Configure the matching STL type list, request a concrete template instance, or implement a custom generation step with ownership/allocator semantics |
 

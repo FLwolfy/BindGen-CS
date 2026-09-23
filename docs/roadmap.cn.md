@@ -32,11 +32,20 @@
 
 ## 执行阶段
 
+当前优先级严格按功能先行、平台后置：
+
+1. 默认 IR-native friendly C# surface（已落地，持续补 API snapshot）；
+2. multi-RID native asset/package layout（已落地）；
+3. SBOM、provenance、预发布 compatibility governance（已落地）；
+4. C/C++ 语义、adapter 与 lifetime contract（声明范围内已落地）；
+5. Windows x64 → Linux x64 → macOS x64 → Windows Arm64 的独立实机报告；
+6. Android/iOS/FreeBSD 是正式支持目标；依次补齐专属 toolchain/sysroot、包布局与实机报告，完成前标记为 ⚠️。
+
 ### Phase 0：可度量基线
 
 状态：已完成。
 
-- 建立十类 acceptance scoring、真实库矩阵、InnoEngine gate 和 package smoke tests。
+- 建立十类 acceptance scoring、真实库矩阵、package/native consumer smoke tests；InnoEngine 迁移属于后续阶段。
 - 文档区分实机验收、自动测试、配置支持和明确拒绝。
 - 每个 target 生成隔离报告，禁止复用另一个 target 的 9.0 分数。
 
@@ -44,7 +53,7 @@
 
 ### Phase 1：零摩擦 CLI 与配置契约
 
-状态：进行中；本轮已完成可移植 `init`、显式语言选择、C/C++ strict schema、配置 contract version 1、带 `explain` 的版本化诊断目录、独立 Tool tests、显式 C++ configuration-directory 解析，以及不修改进程 cwd 的 BaseConfig 循环检测。
+状态：预发布 contract 已完成；包含可移植 `init`、显式语言选择、C/C++ strict schema、单一当前 ConfigVersion（无旧 schema migration）、`explain` 诊断目录、独立 Tool tests、显式 configuration-directory 解析，以及不修改进程 cwd 的 BaseConfig 循环检测。
 
 - `init` 只写配置相对路径，支持 `.h` 的 `auto/c/cpp` 消歧和自定义 config 位置。
 - C 与 C++ schema 分离；root unknown property 默认拒绝，可显式选择兼容模式。
@@ -56,16 +65,15 @@
 
 ### Phase 2：完整 IR-native 架构迁移
 
-状态：进行中，仍是当前最高架构优先级。`CSharpEmitter` 已严格只消费 IR，`EmitLegacy` 已删除，配置生成可通过 `CSharpEmissionBackend.IntermediateRepresentation` 直接使用它。Canonical IR/emission 已覆盖 constant、alias、delegate、enum underlying type、opaque handle/storage、匿名/嵌套 record、bitfield 和三种 import mode，并具备 fail-closed 回滚；五个真实 C 库的 raw ABI 已全部重生成并以零警告编译，opaque storage 按值传递会 fail closed。默认兼容 surface 仍隔离在 `AstGenerationStepEmitter`，直到 friendly overload 与完整 public-API snapshot 等价被证明。
+状态：已完成。`CSharpEmitter` 只消费 IR，并输出 raw ABI 与 string/span/ref/out friendly surface；compatibility emitter 与旧 schema migration 已删除。真实库矩阵和 reviewed API snapshot 持续作为 release gate。
 
 - frontend 只负责解析和 source diagnostics；analysis 产生唯一 canonical `BindingModule`。
 - C#、Runtime、C Bridge、inspection 和 future emitters 只消费 IR + emission context。
-- 把 legacy `GenerationStep` 能力按 type/function/marshalling emitter 迁入 IR-native pipeline。
+- C# public output semantics 只存在于 IR-native type/function/marshalling emitter。
 - 用 public API snapshot 和 generated source equivalence 保证迁移无功能回退。
-- 在源码/public API 等价后移除默认路径中的 `AstGenerationStepEmitter`；legacy API 只保留有时限的 compatibility adapter。
 - 扩充 architecture tests，禁止 emitter 重新读取 AST，禁止 Intermediate 引用 parser/runtime/tool。
 
-完成条件：主 C/C++ 配置生成路径不再调用 legacy emission，真实库和 InnoEngine snapshot 无意外变化。
+完成条件：主 C# 配置生成路径不存在 compatibility emission，真实库与 API snapshot 保持稳定。
 
 ### Phase 3：C ABI 完整化
 
@@ -82,20 +90,20 @@
 
 ### Phase 4：C++ 语义 Bridge 与 Adapter SPI
 
-状态：adapter SPI 已完成，更多 C++ 语义仍需扩展。`ICppTypeAdapter` / `ICppCallableAdapter` 已版本化并具备确定性顺序；内置 string/vector/span/optional/smart-pointer 使用同一个 registry，free/static/instance/constructor/destructor callable 使用同一 naming/exclusion SPI。
+状态：声明的桌面子集已完成。`ICppTypeAdapter` / `ICppCallableAdapter` 具备确定性顺序；内置 string/vector/span/array/map/set/optional/variant/expected/path/chrono/smart-pointer 使用同一个 registry。
 
 - 完整覆盖 ctor/dtor、static/instance、cv/ref qualifier、overload、operator、namespace 和异常边界。
 - inheritance graph、virtual/non-virtual base、pointer adjustment、RTTI 可用性形成显式模型。
-- template 继续坚持 explicit instantiation；增加可诊断的 partial specialization 选择。
-- 在增加通用 adapter 时保持 v1 `ICppTypeAdapter` / `ICppCallableAdapter` compatibility baseline。
-- 扩展 map/set/array/variant/expected/path/chrono 时，每种 adapter 都必须声明 ABI、ownership 和 invalidation。
-- callback proxy 支持 lifetime token、threading policy、exception translation 和 dispose race tests。
+- template 坚持 explicit instantiation；full/partial specialization 选择已有 native compile test。
+- 首个稳定版后通过 reviewed API gate 维护 adapter contract。
+- 每种 adapter 都持续声明 ABI、ownership 与 invalidation。
+- callback proxy 持续维护 lifetime token、threading policy、exception translation 与 dispose race tests。
 
 完成条件：增加一个新容器 adapter 不修改 parser、核心 emitter 或既有 adapter；未知 specialization 稳定失败。
 
 ### Phase 5：Ownership、Marshalling 与 Safety Contract
 
-状态：已存在 safety analyzer 和 mapping，需要形成完整 contract system。
+状态：声明范围内已完成。IR 建模 allocator domain/pair、callback retention/threading/unregister 与 async completion；Runtime 覆盖 unregister/dispose race 和 exactly-once terminal cleanup。
 
 - 统一 borrowed/owned/transferred/shared/pinned/caller-allocated lifetime 模型。
 - allocator/deallocator 配对、arena/context、nullable、encoding、length/capacity/written-count 进入 typed contract。
@@ -107,21 +115,21 @@
 
 ### Phase 6：Native Build 与产物编排
 
-状态：核心 provider 已完成；C++ bridge 会生成确定性的 target-specific manifest，内置 direct Clang/GNU、clang-cl、CMake、Meson、MSBuild 流水线，CLI 成功构建后默认用 `nm` / `dumpbin` 核验导出表。
+状态：核心 provider 与 multi-RID layout 已完成；`native-build --package-root` 在 export verification 后写入 `runtimes/<rid>/native/` 和 SHA-256 index。
 
 - 在现有 bridge manifest 中增加经过验证的 export inspection 和 provider result。
 - Manifest 字段演进时保持 direct、CMake、Meson、clang-cl 与 MSBuild plan 等价；在确有收益时为 CMake/Meson 增加可选 Ninja executor。
-- 支持多 RID/architecture 构建、runtime asset layout、library naming 和 loader validation。
+- 持续扩展多配置构建与 loader validation；桌面 x64/arm64 的 RID mapping 已完成。
 - 扩展 `native-build` 的 export verification 和多配置 provider 选择；原库依赖继续通过配置传入。
 
 完成条件：C++ demo 和真实 bimg bridge 可仅靠 config + 标准 provider 生成 native artifact。
 
 ### Phase 7：跨平台实机矩阵
 
-状态：macOS arm64 与 Linux arm64 已有独立 9.0 报告；Windows 及剩余 x64/arm64 宿主仍需同等级报告。
+状态：实现已完成，同版本 host evidence 待产出。CI 使用 Windows x64、Linux x64 与 Intel macOS runner；未生成报告的 job 不计为通过。
 
 - Tier 1：Windows x64/arm64（MSVC、clang-cl）、Linux x64/arm64（GCC/Clang）、macOS arm64/x64。
-- Tier 2：Android arm64/x64、iOS device/simulator、FreeBSD x64；使用显式 sysroot/toolchain。
+- Tier 2：Android、iOS、FreeBSD。全部属于正式支持目标；需要显式 toolchain/sysroot、target-specific 包布局和独立实机/模拟器报告，完成前保持 ⚠️。
 - 每个 target 运行 managed tests、real libraries、native ABI/runtime、package consumer 和 target snapshots。
 - 对不能执行的 cross target 至少 compile/link + artifact inspection，不能记作 runtime pass。
 
@@ -140,16 +148,18 @@
 
 ### Phase 9：稳定扩展生态
 
-状态：plugin entry point 与确定性 typed service 的 contract version 1 已实现，包括 C++ type/callable adapter 和附加 IR emitter。隔离 dependency resolution、原子注册、assembly/content fingerprint 与 v1 public-shape 锁定均有测试；formal obsolete window 仍待完成。
+状态：预发布 API gate 已完成。首个稳定版前没有 legacy support 或 obsolete window；稳定版后再启动正式 lifecycle。
 
 - 将 IR、diagnostics、adapter、emitter、build provider 分别定义稳定 public contracts。
-- 建立 API compatibility baseline、obsolete window 和 config migration command。
+- 当前维护 reviewed API baseline；obsolete window 与 config migration command 只在首个稳定 contract 后引入。
 - 提供 Roslyn source-generator/MSBuild task 的薄集成，但核心 generation 保持 host-independent。
 - 插件加载具备版本检查、隔离诊断和 deterministic ordering。
 
 完成条件：第三方扩展无需引用内部 parser 实现，minor release 不破坏已发布 contract。
 
 ### Phase 10：InnoEngine 全自动迁移
+
+状态：有意暂停，直到 Windows x64、Linux x64、macOS x64 三份 BGCS 报告全部通过。
 
 - 为每个 native dependency 建立独立 config；共享规则通过 preset/base config/adapter 组合。
 - 禁止 `Generated/` 外手写 `DllImport`、`LibraryImport`、function pointer import 和 native layout mirror。
@@ -160,7 +170,7 @@
 
 ### Phase 11：发布与长期维护
 
-- deterministic NuGet/tool packages、SBOM、provenance、license inventory 和 vulnerability gate。
+- deterministic NuGet/tool packages、SPDX SBOM、SLSA provenance、license inventory、vulnerability gate 与 GitHub OIDC attestation 已完成。
 - versioned schema、configuration migration、release notes、兼容性表和最小复现模板。
 - 每次发布保留全部 target acceptance artifacts 和性能趋势。
 
@@ -169,10 +179,10 @@
 ## 执行顺序
 
 1. 完成 Phase 1，立即降低所有后续测试和采用成本。
-2. Phase 2 与 Phase 3 并行演进，但任何新 ABI 功能先进入 IR，禁止继续扩大 legacy path。
+2. Phase 2 与 Phase 3 并行演进，任何新 ABI 功能先进入 IR。
 3. Phase 4/5 建立 adapter 与 safety contract 后，再扩展新的 STL 类型。
 4. Phase 6 完成后扩展 Phase 7 实机平台矩阵。
-5. 每完成一条通用能力就迁移一组 InnoEngine binding，持续执行 Phase 10，不等最后一次性切换。
+5. Windows x64、Linux x64、macOS x64 三份 BGCS 报告通过后才开始 InnoEngine 迁移。
 6. Phase 8/9/11 贯穿所有阶段并成为 release gate。
 
 ## 每次变更的 Definition of Done

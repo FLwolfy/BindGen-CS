@@ -32,13 +32,18 @@ internal static class NativeBuildCommand
             NativeExportInspectionResult? exports = null;
             if (result.Success && options.VerifyExports)
                 exports = NativeExportInspector.Inspect(manifest, manifestPath, result.OutputFile, options.ExportToolPath);
+            NativeAssetLayoutResult? packagedAsset = null;
+            if (result.Success && exports?.Success != false && options.PackageRoot != null)
+                packagedAsset = NativeAssetLayout.Stage(manifest, result.OutputFile,
+                    Path.GetFullPath(options.PackageRoot, workingDirectory));
             NativeBuildCommandResult commandResult = new(
                 result.Success && exports?.Success != false,
                 result.Provider,
                 result.Steps,
                 result.TimedOut,
                 result.OutputFile,
-                exports);
+                exports,
+                packagedAsset);
             if (options.Json)
             {
                 output.WriteLine(JsonSerializer.Serialize(commandResult, JsonOptions));
@@ -70,6 +75,8 @@ internal static class NativeBuildCommand
                 output.WriteLine($"Native bridge build succeeded: {result.OutputFile}");
                 if (exports != null)
                     output.WriteLine($"Verified {exports.Expected.Count} native exports with {exports.Tool}.");
+                if (packagedAsset != null)
+                    output.WriteLine($"Staged {packagedAsset.RuntimeIdentifier} asset: {packagedAsset.AssetPath}");
             }
             return 0;
         }
@@ -151,6 +158,7 @@ internal static class NativeBuildCommand
         string? compilerPath = null;
         string? buildToolPath = null;
         string? exportToolPath = null;
+        string? packageRoot = null;
         string provider = "auto";
         int timeoutSeconds = 300;
         bool dryRun = false;
@@ -169,6 +177,8 @@ internal static class NativeBuildCommand
                 buildToolPath = ReadValue(args, ref index, argument);
             else if (argument == "--export-tool")
                 exportToolPath = ReadValue(args, ref index, argument);
+            else if (argument == "--package-root")
+                packageRoot = ReadValue(args, ref index, argument);
             else if (argument == "--timeout")
             {
                 string value = ReadValue(args, ref index, argument);
@@ -188,7 +198,7 @@ internal static class NativeBuildCommand
             else
                 throw new ArgumentException("native-build accepts at most one manifest path.");
         }
-        return new(manifestPath, outputPath, compilerPath, buildToolPath, exportToolPath, provider, timeoutSeconds, dryRun, json, verifyExports);
+        return new(manifestPath, outputPath, compilerPath, buildToolPath, exportToolPath, packageRoot, provider, timeoutSeconds, dryRun, json, verifyExports);
     }
 
     private static string ReadValue(string[] args, ref int index, string option)
@@ -213,6 +223,7 @@ internal static class NativeBuildCommand
         string? CompilerPath,
         string? BuildToolPath,
         string? ExportToolPath,
+        string? PackageRoot,
         string Provider,
         int TimeoutSeconds,
         bool DryRun,
@@ -225,5 +236,6 @@ internal static class NativeBuildCommand
         IReadOnlyList<NativeBuildStepResult> Steps,
         bool TimedOut,
         string OutputFile,
-        NativeExportInspectionResult? Exports);
+        NativeExportInspectionResult? Exports,
+        NativeAssetLayoutResult? PackagedAsset);
 }

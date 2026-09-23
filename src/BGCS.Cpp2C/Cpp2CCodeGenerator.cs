@@ -349,7 +349,7 @@
         private static string BuildUnsupportedRemediation(Exception exception)
         {
             return $"C++ bridge generation rejected an unsupported declaration: {exception.Message} " +
-                "Add the required type name to Utf8StringTypes, VectorTypes, SpanTypes, OptionalTypes, UniquePtrTypes, or SharedPtrTypes; " +
+                "Add the required type name to the matching configurable adapter list (string, span/vector/array, map/set, optional/expected/variant, path, chrono, or smart pointer); " +
                 "request a concrete class through TemplateInstantiations; or provide a custom generation step for ownership/allocator semantics.";
         }
 
