@@ -53,10 +53,16 @@ snapshot_sha256() {
   # The ABI reference is provenance, not generated C# API or implementation.
   # Compare all other bytes against the reviewed, pre-annotation baselines.
   if [[ "${path}" == *.cs ]]; then
+    # Git Bash sed defaults to text mode on Windows, which rewrites CRLF bytes
+    # while filtering the annotation. GNU sed -b keeps the snapshot byte-exact.
+    local -a sed_command=(sed)
+    if sed -b -e '' /dev/null > /dev/null 2>&1; then
+      sed_command=(sed -b)
+    fi
     if command -v sha256sum > /dev/null 2>&1; then
-      checksum="$(sed '1,12{/^\/\/ *ABI reference target: /d;}' "${path}" | sha256sum --binary)" || return 1
+      checksum="$("${sed_command[@]}" '1,12{/^\/\/ *ABI reference target: /d;}' "${path}" | sha256sum --binary)" || return 1
     elif command -v shasum > /dev/null 2>&1; then
-      checksum="$(sed '1,12{/^\/\/ *ABI reference target: /d;}' "${path}" | shasum -a 256 --binary)" || return 1
+      checksum="$("${sed_command[@]}" '1,12{/^\/\/ *ABI reference target: /d;}' "${path}" | shasum -a 256 --binary)" || return 1
     else
       printf 'Unable to hash %s: sha256sum or shasum is required.\n' "${path}" >&2
       return 1
