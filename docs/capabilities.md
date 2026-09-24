@@ -61,7 +61,7 @@ This document answers two questions: what BindGen-CS can reliably do today, and 
 | `init → doctor → validate → generate → build` | Host acceptance | Covered by tool-install and clean-consumer smoke tests |
 | Transactional output | Automated test | Failure preserves the last-good output |
 | Deterministic `diff` | Host acceptance | Real-library and isolated output gates |
-| Multi-project workspaces | Host acceptance | Workspace validation/generation/diff; InnoEngine five-project clean regeneration and native/build/test gate pass on macOS Arm64 |
+| Multi-project workspaces | Host acceptance | Workspace validation/generation/diff; consumer-specific integration gates remain outside BGCS |
 | C++ native build manifest/providers | Native invocation + plan tests | Direct Clang/GNU and CMake host execution; Windows clang-cl/MSBuild tests build, inspect, and invoke DLLs on the owning runner; Meson plan coverage |
 | Incremental generation | Automated + performance test | SHA-256 input/config/compiler/plugin/lowering/shim fingerprint, atomic immutable entries, concurrent publication, deleted-output restoration, 10k declaration cold/warm budgets |
 | Final lowering extension contract | Native invocation + external-assembly E2E + API-shape test | Isolated plugin loader, deterministic typed services, declarative recipe, explicit shim, managed/native artifact, safety bypass diagnostic, and stable cache fingerprint |
@@ -103,6 +103,5 @@ The accurate position is: **excellent within the accepted C ABI and explicitly s
 
 1. Produce equivalent real-library, native-invocation, and package reports on Windows x64, Linux x64, and macOS x64.
 2. Execute every provider on its owning target and retain the multi-RID consumer evidence.
-3. Preserve and repeat the passing InnoEngine clean-regeneration/import-audit/native-build/full-solution/native-test gate on each adopted target.
-4. Execute a real OIDC/Sigstore signed release in an authorized GitHub release environment.
-5. Continue built-in semantic/schema coverage while routing project-specific semantics through the final lowering architecture.
+3. Execute a real OIDC/Sigstore signed release in an authorized GitHub release environment.
+4. Continue built-in semantic/schema coverage while routing project-specific semantics through the final lowering architecture.

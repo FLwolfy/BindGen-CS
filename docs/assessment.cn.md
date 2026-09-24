@@ -10,7 +10,7 @@ BindGen-CS 已经是一个**在声明语义范围内很强的维护候选 C/C++ 
 
 当前 `macos-arm64-darwin` 完整报告的十个强制分类均已达到 9.0/10。
 
-但当前 revision 还不能称为“所有桌面平台生产支持”。Windows x64、Linux x64、macOS x64 必须分别生成同版本完整报告；Windows 还必须证明 clang-cl 与 MSBuild runtime invocation。InnoEngine 在 macOS Arm64 上已完成迁移：五个生成项目、确定性 regeneration、零手写 import、全部 native dependency build、完整 solution 与六个 native-binding test project 全部通过。真实 OIDC/Sigstore 签名仍只能由 release runner 提供。
+但当前 revision 还不能称为“所有桌面平台生产支持”。Windows x64、Linux x64、macOS x64 必须分别生成同版本完整报告；Windows 还必须证明 clang-cl 与 MSBuild runtime invocation。真实 OIDC/Sigstore 签名仍只能由 release runner 提供。下游项目自行拥有 binding 配置与集成验收。
 
 ## 量化判断
 
@@ -21,7 +21,6 @@ BindGen-CS 已经是一个**在声明语义范围内很强的维护候选 C/C++ 
 | 易用性 | 9.0/10 | `init → doctor → validate → generate → build`、workspace、schema、explain、配置相对路径和事务输出 |
 | 可扩展性 | 9.3/10 | 最终 lowering contract、声明式 recipe、type/callable/artifact plugin SPI、显式 C shim、安全策略、确定性优先级、隔离与 cache fingerprint |
 | 性能与确定性 | 9.0/10 | 10,000 declarations 冷/热预算、内容寻址缓存、并发发布、删除输出后恢复和稳定 hash |
-| InnoEngine 自动化 | macOS Arm64 9.0/10 | 五个配置拥有的项目；确定性 regeneration、import 审计、native build、完整 solution 与 6/6 native test project 通过 |
 | 架构完成度 | 9.0/10 | IR-native raw/friendly 是唯一路径；预发布 fallback 与旧配置迁移已删除 |
 | 全球跨平台证据 | 尚未验收 | Windows x64、Linux x64、macOS x64 同版本报告仍是硬门槛 |
 | 任意 C++ 语言覆盖 | 明确有边界 | 受控子集很强；任意模板元编程和未声明 allocator/container 语义会被拒绝 |
@@ -51,8 +50,7 @@ BindGen-CS 已经是一个**在声明语义范围内很强的维护候选 C/C++ 
 
 1. 在 Windows x64、Linux x64、macOS x64、随后 Windows Arm64 执行同等级完整矩阵；Windows 还要真实执行 clang-cl/MSBuild provider。
 2. 每个 production target 保留独立当前版本 acceptance artifact；Android/iOS/FreeBSD 是正式支持目标，在实现与验收闭环前标记为 ⚠️。
-3. 在每个采用 target 上持续保持 InnoEngine clean-regeneration/import-audit/native-build/full-solution/native-test gate 通过。
-4. 在授权 release job 中真实执行 OIDC/Sigstore workflow，不以本地未签名 provenance 代替。
-5. workspace DAG/shared parser cache 属于后续性能演进，不阻塞当前声明的单 workspace 能力。
+3. 在授权 release job 中真实执行 OIDC/Sigstore workflow，不以本地未签名 provenance 代替。
+4. workspace DAG/shared parser cache 属于后续性能演进，不阻塞当前声明的单 workspace 能力。
 
-因此最准确的产品结论是：**BindGen-CS 在显式 C/C++ contract 内已经架构清晰、功能强且易用，InnoEngine adoption 也已在 macOS Arm64 通过；通用维护发布状态仍需要三份 desktop-x64 报告与一次真实签名 release run。**
+因此最准确的产品结论是：**BindGen-CS 在显式 C/C++ contract 内已经架构清晰、功能强且易用；通用维护发布状态仍需要三份 desktop-x64 报告与一次真实签名 release run。**

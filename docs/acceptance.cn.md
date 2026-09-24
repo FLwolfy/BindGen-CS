@@ -127,4 +127,4 @@ bindgen-cs build
 
 ## 当前状态
 
-`scripts/run-full-test-matrix.sh` 只有在上述本地 BGCS gates 全部通过后，才写入 `artifacts/acceptance/report.json`、`report.md` 与 target-specific 副本。维护候选必须具备 Windows x64 MSVC、Linux x64 GNU、macOS x64 Darwin 三份报告；Windows 还必须真实执行 clang-cl/MSBuild DLL build/export/invocation。三份同版本报告在 runner 完成前均保持 pending。InnoEngine clean regeneration 与完整 native/build/test gate 已在 macOS Arm64 独立通过，不计入 BGCS 分数。真实 OIDC/Sigstore 签名同样属于 release runner 产物，不是本地证据。
+`scripts/run-full-test-matrix.sh` 只有在上述本地 BGCS gates 全部通过后，才写入 `artifacts/acceptance/report.json`、`report.md` 与 target-specific 副本。维护候选必须具备 Windows x64 MSVC、Linux x64 GNU、macOS x64 Darwin 三份报告；Windows 还必须真实执行 clang-cl/MSBuild DLL build/export/invocation。三份同版本报告在 runner 完成前均保持 pending。具体消费者的配置、生成与集成验收归消费者仓库所有，不计入 BGCS 分数。真实 OIDC/Sigstore 签名同样属于 release runner 产物，不是本地证据。

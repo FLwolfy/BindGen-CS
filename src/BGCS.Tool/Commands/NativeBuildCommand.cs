@@ -94,17 +94,24 @@ internal static class NativeBuildCommand
         {
             if (OperatingSystem.IsWindows() && manifest.TargetIdentifier.StartsWith("windows-", StringComparison.OrdinalIgnoreCase))
             {
-                string? clangClCandidate = options.CompilerPath != null || LooksLikeClangCl(configuredCompiler) ? configuredCompiler : null;
-                provider = options.BuildToolPath != null || NativeBuildToolDiscovery.FindClangCl(clangClCandidate) == null
-                    ? "msbuild"
-                    : "clang-cl";
+                if (options.BuildToolPath != null)
+                    provider = "msbuild";
+                else if (configuredCompiler != null && !LooksLikeClangCl(configuredCompiler))
+                {
+                    if (!LooksLikeGnuDriver(configuredCompiler))
+                        throw new InvalidOperationException(
+                            $"Cannot infer the command-line interface of compiler '{configuredCompiler}'. Select --provider explicitly.");
+                    provider = "clang";
+                }
+                else
+                    provider = NativeBuildToolDiscovery.FindClangCl(configuredCompiler) == null ? "msbuild" : "clang-cl";
             }
             else
             {
                 provider = "clang";
             }
         }
-        string? explicitClangCl = options.CompilerPath != null || LooksLikeClangCl(configuredCompiler) ? configuredCompiler : null;
+        string? explicitClangCl = LooksLikeClangCl(configuredCompiler) ? configuredCompiler : null;
         return provider switch
         {
             "clang" => new ClangNativeBuildProvider(FindCompiler(configuredCompiler)),
@@ -122,6 +129,14 @@ internal static class NativeBuildCommand
 
     private static bool LooksLikeClangCl(string? path) =>
         !string.IsNullOrWhiteSpace(path) && Path.GetFileNameWithoutExtension(path).Equals("clang-cl", StringComparison.OrdinalIgnoreCase);
+
+    private static bool LooksLikeGnuDriver(string path)
+    {
+        string name = Path.GetFileNameWithoutExtension(path);
+        return name.EndsWith("clang++", StringComparison.OrdinalIgnoreCase) ||
+            name.EndsWith("g++", StringComparison.OrdinalIgnoreCase) ||
+            name is "c++" or "clang" or "gcc" or "cc";
+    }
 
     private static string FindCompiler(string? configuredCompiler) =>
         CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp, configuredCompiler)

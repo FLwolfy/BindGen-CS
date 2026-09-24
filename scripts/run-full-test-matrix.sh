@@ -31,8 +31,8 @@ if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
   log "dotnet restore BindGen-CS.sln"
   "${DOTNET_CMD}" restore "${ROOT_DIR}/BindGen-CS.sln" \
     -p:BuildInParallel=false \
-    /m:1 \
-    /nodeReuse:false
+    -m:1 \
+    -nodeReuse:false
 
   log "dotnet build BindGen-CS.sln (${CONFIGURATION})"
   "${DOTNET_CMD}" build "${ROOT_DIR}/BindGen-CS.sln" \
@@ -41,8 +41,8 @@ if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
     --no-incremental \
     -p:TreatWarningsAsErrors=true \
     -p:BuildInParallel=false \
-    /m:1 \
-    /nodeReuse:false
+    -m:1 \
+    -nodeReuse:false
 fi
 touch "${GATE_DIR}/solution-build"
 
@@ -129,7 +129,8 @@ fi
 popd > /dev/null
 touch "${GATE_DIR}/demo"
 
-log "Layer 3: Vendored real-library regeneration and compilation"
+log "Layer 3: Pinned upstream real-library regeneration and compilation"
+bash "${ROOT_DIR}/scripts/setup-real-library-corpus.sh"
 REQUIRE_REAL_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-libraries.sh"
 touch "${GATE_DIR}/real-libraries"
 touch "${GATE_DIR}/ir-native-real-libraries"

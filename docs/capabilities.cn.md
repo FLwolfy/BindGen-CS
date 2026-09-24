@@ -61,7 +61,7 @@
 | `init → doctor → validate → generate → build` | 实机验收 | Tool 安装与干净消费 smoke test 覆盖 |
 | transactional output | 自动测试 | 失败不会破坏 last-good output |
 | deterministic `diff` | 实机验收 | 真实库与隔离输出 gate |
-| multi-project workspace | 实机验收 | workspace validate/generate/diff；InnoEngine 五项目 clean regeneration 与 native/build/test gate 已在 macOS Arm64 通过 |
+| multi-project workspace | 实机验收 | workspace validate/generate/diff；具体消费者的集成验收不属于 BGCS 仓库 |
 | C++ native build manifest/providers | native invocation + plan test | direct Clang/GNU 与 CMake 宿主执行；Windows clang-cl/MSBuild tests 在所属 runner build/export/invoke DLL；Meson plan coverage |
 | 增量生成 | 自动化 + 性能测试 | SHA-256 input/config/compiler/plugin/lowering/shim fingerprint、原子 immutable entry、并发发布、删除 output 后恢复、10k declaration 冷/热预算 |
 | 最终 lowering 扩展 contract | native invocation + 外部 assembly E2E + API-shape 测试 | 隔离 plugin loader、确定性 typed service、声明式 recipe、显式 shim、managed/native artifact、安全 bypass 诊断与稳定 cache fingerprint |
@@ -104,6 +104,5 @@ BindGen-CS 已经是强大的工程化 binding toolkit，而不是简单的 head
 1. 在 Windows x64、Linux x64 与 macOS x64 运行同级真实库、native invocation 和包验收并生成独立报告。
 2. 持续增加 IR-native public-API snapshot；当前不存在预发布 legacy 路径。
 3. 在各自 target 上执行全部 provider，并保留 multi-RID consumer 证据。
-4. 在每个采用 target 上重复并保持 InnoEngine clean-regeneration/import-audit/native-build/full-solution/native-test gate。
-5. 在授权 GitHub release 环境真实执行 OIDC/Sigstore 签名发布。
-6. 持续扩展内置语义/schema，并将项目专用语义统一接入最终 lowering 架构。
+4. 在授权 GitHub release 环境真实执行 OIDC/Sigstore 签名发布。
+5. 持续扩展内置语义/schema，并将项目专用语义统一接入最终 lowering 架构。

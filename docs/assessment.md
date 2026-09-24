@@ -10,7 +10,7 @@ BindGen-CS is a **strong maintenance-candidate C/C++ to C# toolchain within its 
 
 The current `macos-arm64-darwin` report passes all ten mandatory categories at 9.0/10.
 
-It is not yet honest to call the current revision universally production-supported. Windows x64, Linux x64, and macOS x64 must each publish the same-version complete report; Windows must additionally prove clang-cl and MSBuild runtime invocation. InnoEngine migration is complete on macOS Arm64: five generated projects, deterministic regeneration, zero handwritten imports, all native dependency builds, the full solution, and all six native-binding test projects pass. A real OIDC/Sigstore signature is still release-run-only evidence.
+It is not yet honest to call the current revision universally production-supported. Windows x64, Linux x64, and macOS x64 must each publish the same-version complete report; Windows must additionally prove clang-cl and MSBuild runtime invocation. A real OIDC/Sigstore signature is still release-run-only evidence. Downstream projects own their own binding configurations and integration acceptance.
 
 ## Quantified assessment
 
@@ -21,7 +21,6 @@ It is not yet honest to call the current revision universally production-support
 | Usability | 9.0/10 | `init → doctor → validate → generate → build`, workspace, schema, explain, config-relative paths, and transactional output |
 | Extensibility | 9.3/10 | Final lowering contract, declarative recipes, type/callable/artifact plugin SPI, explicit C shims, safety policy, deterministic priority, isolation, and cache fingerprints |
 | Performance and determinism | 9.0/10 | 10,000-declaration cold/warm budgets, content-addressed cache, concurrent publication, output restoration, and stable hashes |
-| InnoEngine automation | 9.0/10 on macOS Arm64 | Five config-owned projects; deterministic regeneration, import audit, native builds, full solution, and 6/6 native test projects pass |
 | Architecture completion | 9.0/10 | IR-native raw/friendly emission is the sole path; pre-release fallback and old config migration are removed |
 | Global cross-platform evidence | Not accepted yet | Windows x64, Linux x64, and macOS x64 same-version reports remain mandatory |
 | Arbitrary C++ coverage | Explicitly bounded | The controlled subset is strong; arbitrary metaprogramming and undeclared allocator/container semantics are rejected |
@@ -51,8 +50,7 @@ These values are not averaged into a substitute release score. The [acceptance s
 
 1. Run the same complete matrix on Windows x64, Linux x64, macOS x64, then Windows Arm64; execute clang-cl/MSBuild providers on Windows.
 2. Retain an independent current-version artifact for every production target; Android/iOS/FreeBSD are formal support targets and remain ⚠️ until implementation and acceptance are complete.
-3. Preserve the passing InnoEngine clean-regeneration/import-audit/native-build/full-solution/native-test gate on every adopted target.
-4. Execute the OIDC/Sigstore workflow in an authorized release job; do not substitute local unsigned provenance.
-5. Treat workspace DAG/shared parser caches as later performance evolution, not a blocker for the declared single-workspace feature set.
+3. Execute the OIDC/Sigstore workflow in an authorized release job; do not substitute local unsigned provenance.
+4. Treat workspace DAG/shared parser caches as later performance evolution, not a blocker for the declared single-workspace feature set.
 
-The precise product statement is therefore: **BindGen-CS is architecturally strong, powerful, and easy to operate inside its explicit C/C++ contract, and its InnoEngine adoption passes on macOS Arm64; universal maintenance-release status still requires the three desktop-x64 reports and an actual signed release run.**
+The precise product statement is therefore: **BindGen-CS is architecturally strong, powerful, and easy to operate inside its explicit C/C++ contract; universal maintenance-release status still requires the three desktop-x64 reports and an actual signed release run.**

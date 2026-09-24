@@ -17,9 +17,9 @@ Every dimension below must score at least 9.0/10.0. An average score cannot hide
 | Portability | Every production target has its own acceptance artifact; model support is not counted as host verification |
 | Architecture | Parser, analysis, IR, emitters, Runtime, CLI, and build providers have one-way dependencies enforced by tests |
 | Extensibility | A type/callable/artifact lowering, emitter, or build provider can be added without unrelated core changes or library-name special cases |
+| Workspace integration | Multi-project validation, generation, diff, and clean consumer builds work without project-specific branches in BGCS |
 | Performance | Cold/warm budgets, cache correctness, deterministic hashes, and concurrency safety are release gates |
 | Release supply chain | Deterministic packages, SBOM/provenance, compatibility policy, and clean consumers pass |
-| InnoEngine | Every native binding is config/generated, handwritten imports are rejected, and the full native/build/test gate passes |
 
 ## Non-negotiable rules
 
@@ -43,7 +43,7 @@ Current priority is feature-first and platform-later:
 
 ### Phase 0 — Measurable baseline
 
-Status: complete for BGCS. Ten acceptance categories, real-library gates, package/native-consumer tests, and evidence-level documentation are in place. The separate InnoEngine macOS Arm64 integration gate also passes.
+Status: complete for BGCS. Ten acceptance categories, real-library gates, package/native-consumer tests, and evidence-level documentation are in place.
 
 Exit: every capability claim links to a test/artifact or an explicit boundary.
 
@@ -149,18 +149,7 @@ Status: pre-release API gate implemented. No legacy support or obsolete window i
 
 Exit: third-party extensions do not reference parser internals and minor releases preserve published contracts.
 
-### Phase 10 — Fully automated InnoEngine migration
-
-Status: complete on macOS Arm64. Five native projects are configuration-owned and target-scoped; clean workspace diff, zero handwritten imports outside `Generated/`, all native dependency builds, full solution build, and all six native-binding test projects pass. Other host targets retain their independent evidence requirement.
-
-- Give every native dependency its own config; compose shared behavior through presets, base configs, and lowerings.
-- Reject handwritten imports and native layout mirrors outside `Generated/`.
-- Make one workspace command validate, generate, diff, build native dependencies, build managed code, and run native tests.
-- Delete old bindings, duplicate runtime code, and temporary patches; every surviving patch must be a tested general transformation.
-
-Exit: deleting all generated directories from a clean checkout and running the pipeline fully rebuilds InnoEngine, with no InnoEngine name/path checks in BindGen core.
-
-### Phase 11 — Release and long-term maintenance
+### Phase 10 — Release and long-term maintenance
 
 - Deterministic packages, SPDX SBOM, SLSA provenance, license inventory, vulnerability gate, and the GitHub OIDC attestation workflow are implemented. Actual signatures are accepted only from an authorized release run.
 - Version schemas, migrate configs, publish compatibility tables, and provide minimal reproduction templates.
@@ -174,8 +163,7 @@ Exit: a tag reproduces the release and consumers can determine config/package/ta
 2. Evolve Phases 2 and 3 together; every new ABI capability enters IR first.
 3. Extend new STL types only through the Phase 4 lowering and Phase 5 safety contracts.
 4. Complete Phase 6 before expanding the Phase 7 platform matrix.
-5. Preserve the completed InnoEngine migration gate and repeat it on each adopted target; do not make its macOS Arm64 result stand in for another host.
-6. Treat Phases 8, 9, and 11 as continuous release gates, including an actual OIDC-signed release execution.
+5. Treat Phases 8, 9, and 10 as continuous release gates, including an actual OIDC-signed release execution.
 
 ## Definition of Done for every change
 

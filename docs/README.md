@@ -38,6 +38,6 @@
 
 ## Current maturity
 
-The CLI/workspace workflow, transactional output, single-file generation, target/toolchain model, shared IR, safety analysis, package closure, real-library snapshots, declared STL/smart-pointer lowering, lifetime diagnostics, and release-governance gates are available now. InnoEngine's five-library generated-binding workspace has completed clean regeneration, full native dependency builds, full solution build, handwritten-import audit, and all native-binding tests on macOS Arm64. The remaining desktop-x64 BGCS reports are independent release evidence.
+The CLI/workspace workflow, transactional output, single-file generation, target/toolchain model, shared IR, safety analysis, package closure, real-library snapshots, declared STL/smart-pointer lowering, lifetime diagnostics, and release-governance gates are available now. Desktop-x64 acceptance reports remain independent release evidence.
 
 The current source has a complete passing `macos-arm64-darwin` report with all ten categories at 9.0/10; Windows x64, Linux x64, and macOS x64 still require their same-version complete reports. C# output uses only the IR-native emitter, with no pre-release compatibility fallback.

@@ -212,6 +212,7 @@ public sealed class CppLoweringExtensionTests
             Assert.Contains("extensions/custom/custom_shim.h", File.ReadAllText(Path.Combine(output, "include", "Classes.h")), StringComparison.Ordinal);
             string manifestPath = Path.Combine(output, config.BuildManifestFileName);
             CppBridgeBuildManifest manifest = CppBridgeBuildManifestSerializer.Load(manifestPath);
+            Assert.Contains(config.NamePrefix + "BUILD_SHARED", manifest.Defines);
             Assert.Contains(manifest.PublicHeaderFiles, path => path.EndsWith("extensions/custom/custom_shim.h", StringComparison.Ordinal));
             Assert.Contains(manifest.SourceFiles, path => path.EndsWith("extensions/custom/custom_shim.cpp", StringComparison.Ordinal));
             Assert.Contains("bgcs_custom_twice", NativeExportInspector.ReadExpectedSymbols(

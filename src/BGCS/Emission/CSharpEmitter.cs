@@ -432,9 +432,9 @@ public sealed class CSharpEmitter : IBindingEmitter
                 bool opaqueStorage = type.NestedTypes.Count == 0 && type.Fields.Count == 0;
                 writer.Append("    [StructLayout(LayoutKind.")
                     .Append(explicitLayout ? "Explicit" : "Sequential");
-                if ((explicitLayout || opaqueStorage) && type.Size > 0)
+                if (type.Size > 0)
                     writer.Append(", Size = ").Append(type.Size);
-                if (opaqueStorage && type.Size > 0 && type.Alignment is 1 or 2 or 4 or 8)
+                if (type.Size > 0 && type.Alignment is 1 or 2 or 4 or 8 or 16)
                     writer.Append(", Pack = ").Append(type.Alignment);
                 writer.AppendLine(")] ");
                 writer.Append("    public partial struct ").AppendLine(type.ManagedName);

@@ -39,18 +39,21 @@ public class ClassGenerationStep : GenerationStep
 
 /* API export/import */
 #if defined(_WIN32) || defined(_WIN64)
+#define {PREFIX}EXPORT_INTERNAL __declspec(dllexport)
 #ifdef {PREFIX}BUILD_SHARED
 #define {PREFIX}EXPORT __declspec(dllexport)
 #else
 #define {PREFIX}EXPORT __declspec(dllimport)
 #endif
 #elif defined(__GNUC__) || defined(__clang__)
+#define {PREFIX}EXPORT_INTERNAL __attribute__((visibility(""default"")))
 #ifdef {PREFIX}BUILD_SHARED
 #define {PREFIX}EXPORT __attribute__((visibility(""default"")))
 #else
 #define {PREFIX}EXPORT
 #endif
 #else
+#define {PREFIX}EXPORT_INTERNAL
 #define {PREFIX}EXPORT
 #endif
 
@@ -63,7 +66,7 @@ public class ClassGenerationStep : GenerationStep
 #endif
 
 #define {PREFIX}API(type) {PREFIX}EXTERN {PREFIX}EXPORT type {PREFIX}CALL
-#define {PREFIX}API_INTERNAL(type) {PREFIX}EXTERN {PREFIX}EXPORT type {PREFIX}CALL
+#define {PREFIX}API_INTERNAL(type) {PREFIX}EXTERN {PREFIX}EXPORT_INTERNAL type {PREFIX}CALL
 
 {PREFIX}API(const char*) {ERROR_PREFIX}GetLastError(void);
 {PREFIX}API(void) {ERROR_PREFIX}ClearLastError(void);
@@ -136,7 +139,7 @@ public class ClassGenerationStep : GenerationStep
             {
                 cppIncludes.AddInclude(Path.GetFileName(sourceFile));
             }
-            string cppPreamble = $"#define {config.NamePrefix}BUILD_SHARED\n" + cppIncludes.Build();
+            string cppPreamble = $"#ifndef {config.NamePrefix}BUILD_SHARED\n#define {config.NamePrefix}BUILD_SHARED 1\n#endif\n" + cppIncludes.Build();
             using var cppWriter = new CodeWriter(filePathCpp, cppPreamble, null);
 
             List<CppClass> allClasses = [.. compilation.Classes];

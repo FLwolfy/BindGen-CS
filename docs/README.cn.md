@@ -38,6 +38,6 @@
 
 ## 当前成熟度
 
-CLI/workspace、安全输出事务、SingleFile、target/toolchain model、共享 IR、安全分析、NuGet 闭包、真实库快照、声明范围内的 STL/smart-pointer lowering、lifetime diagnostics 与发布治理 gate 均已可用。InnoEngine 五库生成 workspace 已在 macOS Arm64 完成 clean regeneration、全部 native dependency 构建、完整 solution 构建、手写 import 审计与全部 native-binding tests；desktop-x64 BGCS 报告仍是独立发布证据。
+CLI/workspace、安全输出事务、SingleFile、target/toolchain model、共享 IR、安全分析、NuGet 闭包、真实库快照、声明范围内的 STL/smart-pointer lowering、lifetime diagnostics 与发布治理 gate 均已可用。desktop-x64 BGCS 报告仍是独立发布证据。
 
 当前源码已经产出完整通过的 `macos-arm64-darwin` 报告，十个分类全部达到 9.0/10；Windows x64、Linux x64、macOS x64 仍需同版本完整报告。C# 输出只使用 IR-native emitter，不存在预发布 compatibility fallback。

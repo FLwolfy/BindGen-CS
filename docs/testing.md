@@ -7,6 +7,8 @@ The test system separates fast managed feedback from target-specific release evi
 - .NET SDK 9.0 (`dotnet --version`)
 - Clang/LibClang available for parser-dependent tests
 
+On macOS Intel, ClangSharp 20.1.2 has no published native runtime package. Run `bash scripts/setup-macos-x64-clang-runtime.sh` on that host and set `BGCS_CLANG_RUNTIME_DIR` to the printed directory before restore/test/pack. The script checks that its LLVM 20 compiler can compile C++23 `std::expected`; the CI workflow performs the same bootstrap. On Linux, the CI matrix selects `g++` for the C++23 bridge tests because the runner's default Clang driver may use a standard library without `std::expected`.
+
 ## Choose the right test level
 
 | Level | Command | Use it for |
@@ -14,7 +16,6 @@ The test system separates fast managed feedback from target-specific release evi
 | Fast managed loop | `dotnet test BindGen-CS.sln -c Release` | Parser, configuration, analysis, emission, Runtime, and bridge regressions |
 | Real C libraries | `./scripts/test-real-libraries.sh` | Deterministic snapshots plus warning-free IR-native generation/compilation |
 | Real C++ bridge | `./scripts/test-real-cpp-libraries.sh` | Bridge generation, native compiler validation, C# rebound, snapshots |
-| InnoEngine integration | `../InnoEngine/scripts/test-native-bindings.sh` | InnoEngine-owned gate: deterministic regeneration, import audit, all native dependencies, full solution, all native tests, and a target-specific report |
 | NuGet/tool/native asset | `./scripts/test-nuget-packages.sh` | Deterministic pack, clean restore, tool install, RID asset load and native invocation |
 | API compatibility | `./scripts/test-public-api-compatibility.sh` | Reviewed pre-release assembly baselines |
 | Dependency policy | `./scripts/test-supply-chain-policy.sh` | NuGet advisory query and license inventory/deny policy |
@@ -31,9 +32,9 @@ Run the standalone commands from the table when iterating on one layer. Run the 
 
 The restore gates intentionally evaluate the MSBuild project graph on one node. This keeps `obj/project.assets.json` deterministic when the same checkout is mounted by different operating systems or architectures; compilation and native-library builds retain their normal parallelism.
 
-The real-library matrix discovers a sibling read-only third-party corpus or uses `INNOENGINE_ROOT`. For miniaudio, SDL3, cimgui, cimguizmo, and bgfx it regenerates the sole IR-native surface, enforces generation budgets, and checks target-specific deterministic source plus reflection public-API snapshots. The full matrix requires these headers; the standalone script may set `REQUIRE_REAL_LIBRARIES=1` to make absence fatal. The real C++ matrix additionally generates a bimg C bridge, validates it with the discovered C++ driver, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies target-specific bridge/source/public-API snapshots.
+The real-library matrix uses pinned upstream repositories fetched by `./scripts/setup-real-library-corpus.sh` into `artifacts/real-library-corpus/`. Set `BGCS_REAL_LIBRARY_ROOT` to an existing corpus at the same revisions if needed. For miniaudio, SDL3, cimgui, cimguizmo, and bgfx it regenerates the sole IR-native surface, enforces generation budgets, and checks target-specific deterministic source plus reflection public-API snapshots. The full matrix prepares and requires these headers; the standalone script may set `REQUIRE_REAL_LIBRARIES=1` to make absence fatal. The real C++ matrix additionally generates a bimg C bridge, validates it with the discovered C++ driver, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies target-specific bridge/source/public-API snapshots.
 
-The real-library scripts read only pinned upstream headers; they do not regenerate or modify InnoEngine. The separate InnoEngine workspace gate deliberately owns all cross-repository writes and passed on macOS Arm64; it remains separate from the BGCS target acceptance report.
+These libraries are test inputs, not product-specific generation logic. Consumer repositories own their own configuration, generation workflow, generated files, and integration tests.
 
 The full script runs all major BGCS capabilities in ordered layers:
 
@@ -98,6 +99,8 @@ Demo semantics:
 ## CI usage
 
 The repository workflow runs the managed solution and complete acceptance jobs for Windows x64, Linux x64, and Intel macOS x64. A target is accepted only after its job emits its own report; a configured job or managed-only pass is not a target acceptance report.
+
+The refactor-era all-red CI causes, fixes, local checks, and remaining runner evidence are recorded in [CI remediation (2026-09-24)](ci-remediation-2026-09-24.md).
 
 CI can invoke:
 

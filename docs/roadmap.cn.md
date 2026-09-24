@@ -17,9 +17,9 @@
 | 跨平台 | 每个宣称生产支持的 target 都有独立 acceptance artifact，不以模型支持代替实机证据 |
 | 架构 | parser、analysis、IR、emitter、runtime、tool/build provider 依赖单向且有自动边界测试 |
 | 可扩展性 | 新 type/callable/artifact lowering、emitter、build provider 不需要修改无关核心层或添加 library-name 特判 |
+| Workspace 集成 | 多项目 validate/generate/diff 与干净消费者构建可用，BGCS 内没有项目专属分支 |
 | 性能与确定性 | 冷/热生成预算、缓存命中、稳定 hash、并发安全均有 gate |
 | 发布与供应链 | deterministic package、SBOM/provenance、兼容策略、干净消费者测试全部通过 |
-| InnoEngine | native bindings 全部由配置和生成流程拥有，禁止手写 import，完整 native/build/test gate 通过 |
 
 ## 不可妥协的设计规则
 
@@ -43,9 +43,9 @@
 
 ### Phase 0：可度量基线
 
-状态：BGCS 已完成；独立的 InnoEngine macOS Arm64 集成 gate 也已通过。
+状态：BGCS 已完成。
 
-- 建立十类 acceptance scoring、真实库矩阵、package/native consumer smoke tests，并保留独立 InnoEngine 集成验收。
+- 建立十类 acceptance scoring、真实库矩阵与 package/native consumer smoke tests。
 - 文档区分实机验收、自动测试、配置支持和明确拒绝。
 - 每个 target 生成隔离报告，禁止复用另一个 target 的 9.0 分数。
 
@@ -157,18 +157,7 @@
 
 完成条件：第三方扩展无需引用内部 parser 实现，minor release 不破坏已发布 contract。
 
-### Phase 10：InnoEngine 全自动迁移
-
-状态：macOS Arm64 已完成。五个 native project 全部由配置拥有并按 target 隔离；clean workspace diff、`Generated/` 外零手写 import、全部 native dependency build、完整 solution build 与六个 native-binding test project 全部通过。其他宿主仍需各自独立证据。
-
-- 为每个 native dependency 建立独立 config；共享规则通过 preset/base config/lowering 组合。
-- 禁止 `Generated/` 外手写 `DllImport`、`LibraryImport`、function pointer import 和 native layout mirror。
-- workspace 一条命令完成 validate/generate/diff/native build/managed build/native tests。
-- 删除旧 binding、重复 runtime 和临时 patch；任何保留 patch 必须是通用、带测试的 transformation。
-
-完成条件：从干净 checkout 删除全部生成目录后，可以完全重建并运行 InnoEngine；BindGen 核心不存在 InnoEngine 名称或路径判断。
-
-### Phase 11：发布与长期维护
+### Phase 10：发布与长期维护
 
 - deterministic NuGet/tool packages、SPDX SBOM、SLSA provenance、license inventory、vulnerability gate 与 GitHub OIDC attestation workflow 已完成；真实签名只接受授权 release run 的产物。
 - versioned schema、configuration migration、release notes、兼容性表和最小复现模板。
@@ -182,8 +171,7 @@
 2. Phase 2 与 Phase 3 并行演进，任何新 ABI 功能先进入 IR。
 3. 新 STL 类型只能通过 Phase 4 lowering 与 Phase 5 safety contract 扩展。
 4. Phase 6 完成后扩展 Phase 7 实机平台矩阵。
-5. 持续保持已完成的 InnoEngine migration gate，并在每个采用 target 上独立重复；macOS Arm64 结果不能替代其他宿主。
-6. Phase 8/9/11 贯穿所有阶段并成为 release gate，其中包括一次真实 OIDC 签名发布执行。
+5. Phase 8/9/10 贯穿所有阶段并成为 release gate，其中包括一次真实 OIDC 签名发布执行。
 
 ## 每次变更的 Definition of Done
 

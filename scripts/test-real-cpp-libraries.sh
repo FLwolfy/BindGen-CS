@@ -5,15 +5,15 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/common.sh"
 DOTNET_CMD="$(resolve_dotnet_host)"
 CXX_CMD="$(resolve_cxx_host)"
-INNOENGINE_ROOT="${INNOENGINE_ROOT:-$(cd "${ROOT_DIR}/.." && pwd)/InnoEngine}"
+CORPUS_ROOT="${BGCS_REAL_LIBRARY_ROOT:-${ROOT_DIR}/artifacts/real-library-corpus}"
 ARTIFACTS_DIR="${ROOT_DIR}/artifacts/real-cpp-libraries"
-BIMG_HEADER="${INNOENGINE_ROOT}/extern/bimg/include/bimg/bimg.h"
-BIMG_INCLUDE="${INNOENGINE_ROOT}/extern/bimg/include"
-BX_INCLUDE="${INNOENGINE_ROOT}/extern/bx/include"
+BIMG_HEADER="${CORPUS_ROOT}/bimg/include/bimg/bimg.h"
+BIMG_INCLUDE="${CORPUS_ROOT}/bimg/include"
+BX_INCLUDE="${CORPUS_ROOT}/bx/include"
 REQUIRE_REAL_CPP_LIBRARIES="${REQUIRE_REAL_CPP_LIBRARIES:-0}"
 if [[ ! -f "${BIMG_HEADER}" ]]; then
   if [[ "${REQUIRE_REAL_CPP_LIBRARIES}" == "1" ]]; then
-    echo "[real-cpp] Required bimg headers were not found under: ${INNOENGINE_ROOT}" >&2
+    echo "[real-cpp] Required bimg headers were not found under: ${CORPUS_ROOT}" >&2
     exit 1
   fi
   echo "[real-cpp] bimg headers unavailable; skipping."
@@ -56,7 +56,7 @@ start_seconds="$(date +%s)"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
 if (( elapsed_seconds > 15 )); then echo "[real-cpp] bimg bridge exceeded 15 seconds: ${elapsed_seconds}s"; exit 1; fi
 "${CXX_CMD}" -std=c++23 -fsyntax-only \
-  -I "${ARTIFACTS_DIR}/bimg/Bridge/include" -I "${INNOENGINE_ROOT}/extern/bimg/include/bimg" \
+  -I "${ARTIFACTS_DIR}/bimg/Bridge/include" -I "${CORPUS_ROOT}/bimg/include/bimg" \
   -I "${BIMG_INCLUDE}" -I "${BX_INCLUDE}" "${ARTIFACTS_DIR}/bimg/Bridge/src/Classes.cpp"
 BRIDGE_HEADER_JSON="${ARTIFACTS_DIR}/bimg/Bridge/include/Classes.h"
 if command -v cygpath > /dev/null 2>&1; then BRIDGE_HEADER_JSON="$(cygpath -m "${BRIDGE_HEADER_JSON}")"; fi

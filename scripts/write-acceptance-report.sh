@@ -124,7 +124,7 @@ ${platform_specific_markdown}
 | Internal architecture | ${internal} |
 | NuGet/testing/release | ${release} |
 
-The report was emitted only after managed/native tests, warning-free IR-native generation for five real C libraries, real C++ bridge generation, advanced standard-library/lifetime semantics, deterministic source and public-API gates, NuGet/tool/native-RID consumer tests, dependency policy, and performance budgets passed. The separate InnoEngine clean-regeneration/native-build/full-solution/native-test gate passes on macOS Arm64 but is not folded into this BGCS score. This local report validates the OIDC/Sigstore workflow; only an authorized GitHub release run can produce the actual signed attestation.
+The report was emitted only after managed/native tests, warning-free IR-native generation for five real C libraries, real C++ bridge generation, advanced standard-library/lifetime semantics, deterministic source and public-API gates, NuGet/tool/native-RID consumer tests, dependency policy, and performance budgets passed. Consumer-specific generation and integration acceptance are owned by consuming repositories and are not folded into this BGCS score. This local report validates the OIDC/Sigstore workflow; only an authorized GitHub release run can produce the actual signed attestation.
 EOF
 
 # Keep the stable latest-report paths for existing automation while retaining

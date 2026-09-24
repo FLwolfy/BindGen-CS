@@ -45,8 +45,8 @@ projects=(
 )
 
 for project in "${projects[@]}"; do
-  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -m:1 /nodeReuse:false -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
-  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${SECOND_PACKAGE_DIR}" -m:1 /nodeReuse:false -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
+  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -m:1 -nodeReuse:false -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
+  "${DOTNET_CMD}" pack "${ROOT_DIR}/${project}" --configuration "${CONFIGURATION}" --no-restore --output "${SECOND_PACKAGE_DIR}" -m:1 -nodeReuse:false -p:ContinuousIntegrationBuild=true -p:UseSharedCompilation=false -p:Version="${VERSION}"
 done
 
 if ! command -v unzip > /dev/null 2>&1; then
@@ -119,6 +119,9 @@ using BGCS.Runtime;
 var config = new CsCodeGeneratorConfig();
 var bridgeConfig = new Cpp2CGeneratorConfig();
 var parserOptions = new CppParserOptions();
+var parsed = CppParser.Parse("int bgcs_package_probe(void);", parserOptions);
+if (parsed.HasErrors)
+    throw new InvalidOperationException("The clean NuGet consumer could not load its native Clang runtime.");
 using var context = new NativeLibraryContext(IntPtr.Zero);
 Console.WriteLine($"{config.ImportType}:{bridgeConfig.NamePrefix}:{parserOptions.ParserKind}:{context.IsExtensionSupported(string.Empty)}");
 EOF
@@ -128,7 +131,12 @@ EOF
   --source "${PACKAGE_DIR}" \
   --ignore-failed-sources \
   -p:RestoreAdditionalProjectFallbackFolders="${GLOBAL_PACKAGE_CACHE}"
-"${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
+if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "x86_64" ]]; then
+  env -u BGCS_CLANG_RUNTIME_DIR -u DYLD_LIBRARY_PATH \
+    "${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
+else
+  "${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
+fi
 "${DOTNET_CMD}" tool install BindGen-CS --version "${VERSION}" --tool-path "${TOOL_DIR}" --add-source "${PACKAGE_DIR}" --ignore-failed-sources
 "${TOOL_DIR}/bindgen-cs" --help
 cat > "${TOOL_SMOKE_DIR}/native.h" <<'EOF'
@@ -185,7 +193,7 @@ cat > "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" <<EOF
 EOF
 "${DOTNET_CMD}" restore "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" --ignore-failed-sources
 "${DOTNET_CMD}" pack "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" \
-  --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -m:1 /nodeReuse:false
+  --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -m:1 -nodeReuse:false
 
 cat > "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">

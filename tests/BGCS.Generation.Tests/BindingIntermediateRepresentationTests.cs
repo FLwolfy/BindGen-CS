@@ -554,6 +554,31 @@ public class BindingIntermediateRepresentationTests
     }
 
     [Fact]
+    public void CSharpEmitter_PackedStructure_ShouldPreserveNativeSizeAndAlignment()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-emitter-packed-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            BindingModule module = new("PackedApi", "BGCS.Tests.Generated", "packed", "host");
+            BindingType type = new("Packed", "Packed", BindingTypeKind.Structure, 5, 1);
+            type.Fields.Add(new BindingField("tag", "Tag", new("char", "byte", 0, false, 1), 0, 0, 0, []));
+            type.Fields.Add(new BindingField("value", "Value", new("int", "int", 0, false, 4), 1, 8, 0, []));
+            module.Types.Add(type);
+
+            string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
+            string source = File.ReadAllText(emitted);
+            Assert.Contains("LayoutKind.Sequential, Size = 5, Pack = 1", source, StringComparison.Ordinal);
+            Assert.DoesNotContain(CSharpSyntaxTree.ParseText(source).GetDiagnostics(),
+                diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void CSharpEmitter_EmptyUnion_ShouldEmitExplicitlyPositionedOpaqueStorage()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-emitter-empty-union-" + Guid.NewGuid().ToString("N"));

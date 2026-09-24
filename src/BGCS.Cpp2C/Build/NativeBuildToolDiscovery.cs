@@ -34,11 +34,17 @@ public static class NativeBuildToolDiscovery
 
     public static string? FindMSBuild(string? explicitPath = null)
     {
-        string? resolved = FindExecutable("msbuild", explicitPath ?? Environment.GetEnvironmentVariable("MSBUILD_EXE_PATH"));
-        if (resolved != null || !OperatingSystem.IsWindows())
-            return resolved;
-        string? visualStudio = FindVisualStudioInstallation();
-        return visualStudio == null ? null : ResolveExecutable(Path.Combine(visualStudio, "MSBuild", "Current", "Bin", "MSBuild.exe"));
+        if (!string.IsNullOrWhiteSpace(explicitPath))
+            return ResolveExecutable(explicitPath);
+        if (OperatingSystem.IsWindows())
+        {
+            string? visualStudio = FindVisualStudioInstallation();
+            string? current = visualStudio == null ? null : ResolveExecutable(
+                Path.Combine(visualStudio, "MSBuild", "Current", "Bin", "MSBuild.exe"));
+            if (current != null)
+                return current;
+        }
+        return FindExecutable("msbuild", Environment.GetEnvironmentVariable("MSBUILD_EXE_PATH"));
     }
 
     public static string? FindDumpBin(string? explicitPath = null)

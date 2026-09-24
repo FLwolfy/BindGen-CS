@@ -98,7 +98,7 @@ Applications should not install these individually unless they directly consume 
 - Verified modern C++ lowerings cover `std::string`, vector/span views, optional, array, map, set, variant, expected, filesystem path, chrono duration/time-point, smart pointers, and configured pure-virtual callback proxies. Arbitrary unknown specializations still require an explicit recipe, plugin, or C shim.
 - Ownership and allocator semantics cannot be inferred reliably from pointer syntax alone.
 - Typed C variadic variants currently require `DllImport` and explicit promoted argument types.
-- Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots. InnoEngine separately owns five generated binding projects and its macOS Arm64 clean-regeneration/native-build/full-solution/native-test gate passes.
+- Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots from an independent pinned upstream test corpus.
 - The complete solution, generated consumers, and package smoke projects compile with warnings treated as errors.
 
 Primary C# output is owned exclusively by IR-native `CSharpEmitter`; no pre-release compatibility emitter remains. `native-build --package-root` produces a multi-RID runtime asset tree, and `supply-chain` emits SPDX/SLSA release evidence.

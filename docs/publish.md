@@ -23,6 +23,8 @@ Consumers normally install only `BGCS`, `BGCS.Cpp2C`, or `BGCS.Runtime`. Command
 
 This command packs the complete dependency closure, restores the three public packages into a clean consumer project, compiles it, and runs it. The full test matrix invokes the same package validation.
 
+On macOS Intel, first run `bash scripts/setup-macos-x64-clang-runtime.sh` and set `BGCS_CLANG_RUNTIME_DIR` to its output directory. The pack includes the relocatable Clang 20 dylibs and their license notices; the clean consumer then clears the override and loads the package's own native assets. The release workflow uploads the accepted Intel runtime from its macOS job and includes it in the final `BGCS.CppAst` package. A release fails if either required Intel dylib is absent from that package.
+
 ## Automated publishing
 
 The release workflow is `.github/workflows/publish-bgcs-runtime-nuget.yml`.

@@ -21,25 +21,21 @@ jobs:
           - os: ubuntu-24.04
             target: linux-x64-gnu
             require-windows-providers: "0"
+            cpp-compiler: g++
           - os: windows-2022
             target: windows-x64-msvc
             require-windows-providers: "1"
+            cpp-compiler: ""
           - os: macos-15-intel
             target: macos-x64-darwin
             require-windows-providers: "0"
+            cpp-compiler: clang++
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     steps:
       - name: Checkout BindGen-CS
         uses: actions/checkout@v4
-
-      - name: Checkout pinned third-party real-library corpus
-        uses: actions/checkout@v4
-        with:
-          repository: FLwolfy/InnoEngine
-          path: .third-party-corpus
-          submodules: recursive
 
       - name: Initialize MSVC and Windows SDK
         if: runner.os == 'Windows'
@@ -52,13 +48,23 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
+      - name: Build missing ClangSharp 20 runtime for macOS Intel
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
+          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
+          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
+
       - name: Run complete BGCS acceptance
         shell: bash
         run: bash ./scripts/run-full-test-matrix.sh
         env:
           CONFIGURATION: Release
-          INNOENGINE_ROOT: ${{ github.workspace }}/.third-party-corpus
           BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
+          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
 
       - name: Upload release-candidate evidence
         if: always()
@@ -66,6 +72,14 @@ jobs:
         with:
           name: release-candidate-${{ matrix.target }}
           path: artifacts/acceptance
+
+      - name: Upload relocatable macOS Intel parser runtime
+        if: matrix.target == 'macos-x64-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: parser-runtime-osx-x64
+          path: artifacts/clang-runtime/osx-x64
+          if-no-files-found: error
 
   validate-pack-and-publish:
     needs: release-candidate
@@ -84,6 +98,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
+
+      - name: Download accepted macOS Intel parser runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: parser-runtime-osx-x64
+          path: artifacts/clang-runtime/osx-x64
 
       - name: Resolve release version
         id: release
@@ -120,6 +140,14 @@ jobs:
         env:
           CONFIGURATION: Release
           PACKAGE_TEST_VERSION: ${{ steps.release.outputs.version }}
+          BGCS_CLANG_RUNTIME_DIR: ${{ github.workspace }}/artifacts/clang-runtime/osx-x64
+
+      - name: Assert Intel runtime is in published parser package
+        shell: bash
+        run: |
+          package="artifacts/nuget/BGCS.CppAst.${{ steps.release.outputs.version }}.nupkg"
+          unzip -Z1 "${package}" | grep -Fx 'runtimes/osx-x64/native/libclang.dylib'
+          unzip -Z1 "${package}" | grep -Fx 'runtimes/osx-x64/native/libClangSharp.dylib'
 
       - name: Generate SPDX SBOM and SLSA provenance
         run: >-

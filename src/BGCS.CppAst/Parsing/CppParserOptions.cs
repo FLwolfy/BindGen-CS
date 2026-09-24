@@ -12,6 +12,9 @@ namespace BGCS.CppAst.Parsing;
 /// </summary>
 public class CppParserOptions
 {
+    private List<string> targetSystemIncludeFolders = [];
+    private List<string> targetAdditionalArguments = [];
+
     /// <summary>
     /// Default constructor.
     /// </summary>
@@ -165,6 +168,8 @@ public class CppParserOptions
         newOptions.SystemIncludeFolders = new List<string>(SystemIncludeFolders);
         newOptions.Defines = new List<string>(Defines);
         newOptions.AdditionalArguments = new List<string>(AdditionalArguments);
+        newOptions.targetSystemIncludeFolders = new List<string>(targetSystemIncludeFolders);
+        newOptions.targetAdditionalArguments = new List<string>(targetAdditionalArguments);
 
         return newOptions;
     }
@@ -175,6 +180,7 @@ public class CppParserOptions
     /// <returns>This instance</returns>
     public CppParserOptions ConfigureForWindowsMsvc(CppTargetCpu targetCpu = CppTargetCpu.X86, CppVisualStudioVersion vsVersion = CppVisualStudioVersion.VS2022)
     {
+        ClearTargetConfiguration();
         // 1920
         var highVersion = (int)vsVersion / 100;  // => 19
         var lowVersion = (int)vsVersion % 100;   // => 20
@@ -224,6 +230,15 @@ public class CppParserOptions
         AdditionalArguments.Add("-fms-extensions");
         AdditionalArguments.Add("-fms-compatibility");
         AdditionalArguments.Add($"-fms-compatibility-version={versionAsString}");
+        if (OperatingSystem.IsWindows())
+        {
+            foreach (string include in (Environment.GetEnvironmentVariable("INCLUDE") ?? string.Empty)
+                .Split(System.IO.Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (System.IO.Directory.Exists(include))
+                    AddTargetSystemInclude(include);
+            }
+        }
         return this;
     }
 
@@ -248,6 +263,7 @@ public class CppParserOptions
         }
         else
         {
+            ClearTargetConfiguration();
             TargetCpu = target.Cpu;
             TargetCpuSub = string.Empty;
             TargetVendor = target.Platform is CppTargetPlatform.MacOS or CppTargetPlatform.IOS ? "apple" : "unknown";
@@ -275,13 +291,13 @@ public class CppParserOptions
         if (!string.IsNullOrWhiteSpace(effectiveSysRoot))
         {
             string fullSysRoot = System.IO.Path.GetFullPath(effectiveSysRoot);
-            AdditionalArguments.Add("-isysroot");
-            AdditionalArguments.Add(fullSysRoot);
+            AddTargetArgument("-isysroot");
+            AddTargetArgument(fullSysRoot);
             if (ParserKind == CppParserKind.Cpp)
             {
                 string libcxx = System.IO.Path.Combine(fullSysRoot, "usr", "include", "c++", "v1");
-                if (System.IO.Directory.Exists(libcxx) && !SystemIncludeFolders.Contains(libcxx))
-                    SystemIncludeFolders.Add(libcxx);
+                if (System.IO.Directory.Exists(libcxx))
+                    AddTargetSystemInclude(libcxx);
             }
         }
 
@@ -290,10 +306,44 @@ public class CppParserOptions
         {
             foreach (string include in CppToolchainDiscovery.DiscoverSystemIncludeFolders(ParserKind, compilerPath))
             {
-                if (!SystemIncludeFolders.Contains(include))
-                    SystemIncludeFolders.Add(include);
+                AddTargetSystemInclude(include);
             }
         }
         return this;
+    }
+
+    private void ClearTargetConfiguration()
+    {
+        foreach (string include in targetSystemIncludeFolders)
+            SystemIncludeFolders.Remove(include);
+        targetSystemIncludeFolders.Clear();
+        foreach (string argument in targetAdditionalArguments)
+        {
+            int index = AdditionalArguments.LastIndexOf(argument);
+            if (index >= 0)
+                AdditionalArguments.RemoveAt(index);
+        }
+        targetAdditionalArguments.Clear();
+        Defines.RemoveAll(define =>
+            define.StartsWith("_MSC_VER=", StringComparison.Ordinal) ||
+            define is "_WIN32=1" or "_WIN64=1" or "_M_IX86=600" or "_M_AMD64=100" or "_M_X64=100" or "_M_ARM=7" or "_M_ARM64=1");
+        AdditionalArguments.RemoveAll(argument =>
+            argument is "-fms-extensions" or "-fms-compatibility" ||
+            argument.StartsWith("-fms-compatibility-version=", StringComparison.Ordinal));
+    }
+
+    private void AddTargetSystemInclude(string include)
+    {
+        if (!SystemIncludeFolders.Contains(include))
+        {
+            SystemIncludeFolders.Add(include);
+            targetSystemIncludeFolders.Add(include);
+        }
+    }
+
+    private void AddTargetArgument(string argument)
+    {
+        AdditionalArguments.Add(argument);
+        targetAdditionalArguments.Add(argument);
     }
 }

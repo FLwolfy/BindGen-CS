@@ -40,6 +40,45 @@ public sealed class CppTargetTests
     }
 
     [Fact]
+    public void ConfigureForTarget_ReplacesArchitectureMacrosWithoutTouchingUserDefines()
+    {
+        CppParserOptions options = new();
+        options.Defines.Add("USER_FEATURE=1");
+        CppTarget x64 = CppTarget.Resolve(CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc);
+        CppTarget x86 = CppTarget.Resolve(CppTargetPlatform.Windows, CppTargetArchitecture.X86, CppTargetAbi.Msvc);
+
+        options.ConfigureForTarget(x64, discoverHostToolchain: false);
+        options.ConfigureForTarget(x86, discoverHostToolchain: false);
+
+        Assert.Contains("USER_FEATURE=1", options.Defines);
+        Assert.Contains("_M_IX86=600", options.Defines);
+        Assert.DoesNotContain("_WIN64=1", options.Defines);
+        Assert.DoesNotContain("_M_X64=100", options.Defines);
+        Assert.Equal(1, options.Defines.Count(value => value == "_WIN32=1"));
+        Assert.Equal(1, options.AdditionalArguments.Count(value => value == "-fms-extensions"));
+    }
+
+    [Fact]
+    public void ConfigureForTarget_DropsPreviousSysrootWhenTargetChanges()
+    {
+        CppParserOptions options = new();
+        string sysroot = System.IO.Path.GetFullPath(System.IO.Path.GetTempPath());
+        options.ConfigureForTarget(
+            CppTarget.Resolve(CppTargetPlatform.MacOS, CppTargetArchitecture.X64, CppTargetAbi.Darwin),
+            sysRoot: sysroot, discoverHostToolchain: false);
+        Assert.Contains("-isysroot", options.AdditionalArguments);
+        Assert.Contains(sysroot, options.AdditionalArguments);
+
+        options.ConfigureForTarget(
+            CppTarget.Resolve(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu),
+            discoverHostToolchain: false);
+
+        Assert.DoesNotContain("-isysroot", options.AdditionalArguments);
+        Assert.DoesNotContain(sysroot, options.AdditionalArguments);
+        Assert.Equal("x86_64-unknown-linux-gnu", options.TargetTriple);
+    }
+
+    [Fact]
     public void ConfigureForTarget_HostCpp_ShouldParseStandardLibrary()
     {
         CppTarget target = CppTarget.Resolve();

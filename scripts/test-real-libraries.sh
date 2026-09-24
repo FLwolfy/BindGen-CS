@@ -4,21 +4,21 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/common.sh"
 DOTNET_CMD="$(resolve_dotnet_host)"
-INNOENGINE_ROOT="${INNOENGINE_ROOT:-$(cd "${ROOT_DIR}/.." && pwd)/InnoEngine}"
+CORPUS_ROOT="${BGCS_REAL_LIBRARY_ROOT:-${ROOT_DIR}/artifacts/real-library-corpus}"
 ARTIFACTS_DIR="${ROOT_DIR}/artifacts/real-libraries"
-MINIAUDIO_HEADER="${INNOENGINE_ROOT}/extern/miniaudio/extras/miniaudio_split/miniaudio.h"
-SDL3_HEADER="${INNOENGINE_ROOT}/extern/SDL/include/SDL3/SDL.h"
-CIMGUI_HEADER="${INNOENGINE_ROOT}/extern/cimgui/cimgui.h"
-CIMGUIZMO_HEADER="${INNOENGINE_ROOT}/extern/cimguizmo/cimguizmo.h"
-BGFX_HEADER="${INNOENGINE_ROOT}/extern/bgfx/include/bgfx/c99/bgfx.h"
+MINIAUDIO_HEADER="${CORPUS_ROOT}/miniaudio/extras/miniaudio_split/miniaudio.h"
+SDL3_HEADER="${CORPUS_ROOT}/SDL/include/SDL3/SDL.h"
+CIMGUI_HEADER="${CORPUS_ROOT}/cimgui/cimgui.h"
+CIMGUIZMO_HEADER="${CORPUS_ROOT}/cimguizmo/cimguizmo.h"
+BGFX_HEADER="${CORPUS_ROOT}/bgfx/include/bgfx/c99/bgfx.h"
 REQUIRE_REAL_LIBRARIES="${REQUIRE_REAL_LIBRARIES:-0}"
 
 if [[ ! -f "${MINIAUDIO_HEADER}" || ! -f "${SDL3_HEADER}" || ! -f "${CIMGUI_HEADER}" || ! -f "${CIMGUIZMO_HEADER}" || ! -f "${BGFX_HEADER}" ]]; then
   if [[ "${REQUIRE_REAL_LIBRARIES}" == "1" ]]; then
-    echo "Required real-library headers were not found under: ${INNOENGINE_ROOT}"
+    echo "Required real-library headers were not found under: ${CORPUS_ROOT}"
     exit 1
   fi
-  echo "[real-libraries] InnoEngine headers not found; skipping optional local matrix."
+  echo "[real-libraries] Independent test corpus not found; run scripts/setup-real-library-corpus.sh."
   exit 0
 fi
 
@@ -44,11 +44,11 @@ SDL3_INCLUDE_JSON="$(dirname "$(dirname "${SDL3_HEADER_JSON}")")"
 CIMGUI_INCLUDE_JSON="$(dirname "${CIMGUI_HEADER_JSON}")"
 CIMGUIZMO_INCLUDE_JSON="$(dirname "${CIMGUIZMO_HEADER_JSON}")"
 BGFX_INCLUDE_JSON="$(dirname "$(dirname "${BGFX_HEADER_JSON}")")"
-BX_INCLUDE_JSON="${INNOENGINE_ROOT}/extern/bx/include"
+BX_INCLUDE_JSON="${CORPUS_ROOT}/bx/include"
 if command -v cygpath > /dev/null 2>&1; then BX_INCLUDE_JSON="$(cygpath -m "${BX_INCLUDE_JSON}")"; fi
 
-"${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release -m:1 /nodeReuse:false
-"${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release -m:1 /nodeReuse:false
+"${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release -m:1 -nodeReuse:false
+"${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release -m:1 -nodeReuse:false
 
 cat > "${ARTIFACTS_DIR}/miniaudio/bindgen.json" <<EOF
 {
@@ -89,7 +89,7 @@ cat > "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
 printf '[real-libraries] miniaudio passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/sdl3/consumer"
@@ -149,7 +149,7 @@ cat > "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
 printf '[real-libraries] SDL3 passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/cimgui/consumer"
@@ -212,7 +212,7 @@ cat > "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
 printf '[real-libraries] cimgui passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/cimguizmo/consumer"
@@ -275,7 +275,7 @@ cat > "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" <<EOF
 </Project>
 EOF
 
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
 printf '[real-libraries] cimguizmo passed in %ss.\n' "${elapsed_seconds}"
 
 mkdir -p "${ARTIFACTS_DIR}/bgfx/consumer"
@@ -315,7 +315,7 @@ cat > "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" <<EOF
   </ItemGroup>
 </Project>
 EOF
-"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
+"${DOTNET_CMD}" build "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
 printf '[real-libraries] bgfx passed in %ss.\n' "${elapsed_seconds}"
 
 verify_ir_backend() {
@@ -361,7 +361,7 @@ EOF
 </Project>
 EOF
 
-  "${DOTNET_CMD}" build "${consumer_dir}/${project_name}.IR.Generated.csproj" --configuration Release -m:1 /nodeReuse:false
+  "${DOTNET_CMD}" build "${consumer_dir}/${project_name}.IR.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
   printf '[real-libraries] %s IR-native ABI generation and warning-free compilation passed in %ss.\n' \
     "${library_name}" "${elapsed_seconds}"
 }

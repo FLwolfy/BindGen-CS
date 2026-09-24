@@ -32,14 +32,15 @@ public sealed class MSBuildNativeBuildProvider : INativeBuildPipelineProvider
         IReadOnlyList<string> arguments =
         [
             projectPath,
-            "/nologo",
-            "/m",
-            "/t:Build",
-            "/p:Configuration=Release",
-            "/p:Platform=" + platform,
-            "/p:OutDir=" + outputDirectory,
-            "/p:TargetName=" + NativeBuildPaths.GetLogicalLibraryName(artifact),
-            "/p:TargetExt=.dll"
+            "-nologo",
+            "-m",
+            "-t:Build",
+            "-p:Configuration=Release",
+            "-p:Platform=" + platform,
+            "-p:PlatformToolset=v143",
+            "-p:OutDir=" + outputDirectory,
+            "-p:TargetName=" + NativeBuildPaths.GetLogicalLibraryName(artifact),
+            "-p:TargetExt=.dll"
         ];
         return new(
             Name,
@@ -62,7 +63,7 @@ public sealed class MSBuildNativeBuildProvider : INativeBuildPipelineProvider
         string linkerArguments = string.Join(' ', manifest.LinkerArguments.Append("%(AdditionalOptions)"));
         StringBuilder text = new();
         text.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-        text.AppendLine("<Project DefaultTargets=\"Build\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">");
+        text.AppendLine("<Project DefaultTargets=\"Build\" ToolsVersion=\"Current\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">");
         text.AppendLine("  <ItemGroup Label=\"ProjectConfigurations\">");
         text.Append("    <ProjectConfiguration Include=\"Release|").Append(Xml(platform)).AppendLine("\">");
         text.AppendLine("      <Configuration>Release</Configuration>");

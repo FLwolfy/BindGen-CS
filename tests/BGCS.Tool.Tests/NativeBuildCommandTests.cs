@@ -43,6 +43,26 @@ public sealed class NativeBuildCommandTests
     }
 
     [Fact]
+    public void Run_WindowsAutoProvider_RespectsExplicitGnuDriver()
+    {
+        using TestDirectory directory = new();
+        CppBridgeBuildManifest manifest = CreateManifest() with
+        {
+            TargetIdentifier = "windows-x64-msvc",
+            TargetTriple = "x86_64-pc-windows-msvc"
+        };
+        directory.WriteJson("bridge.manifest.json", manifest);
+        string compiler = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp)
+            ?? throw new InvalidOperationException("A C++ compiler is required for provider selection.");
+
+        CommandResult result = Run(directory, "bridge.manifest.json", "--compiler", compiler, "--dry-run", "--json");
+
+        Assert.Equal(0, result.ExitCode);
+        using JsonDocument plan = JsonDocument.Parse(result.Output);
+        Assert.Equal("clang-gnu-driver", plan.RootElement.GetProperty("Provider").GetString());
+    }
+
+    [Fact]
     public void Run_JsonBuild_EmitsOneMachineReadableResult()
     {
         using TestDirectory directory = new();

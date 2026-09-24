@@ -64,7 +64,8 @@ public static class CppBridgeBuildManifestEmitter
             originalHeaderFiles,
             includeDirectories,
             systemIncludeDirectories,
-            config.Defines.OrderBy(value => value, StringComparer.Ordinal).ToArray(),
+            config.Defines.Append(config.NamePrefix + "BUILD_SHARED")
+                .Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToArray(),
             config.AdditionalArguments.ToArray(),
             librarySearchDirectories,
             config.LinkLibraries.Select(library => NormalizeLinkLibrary(outputRoot, configRoot, library)).ToArray(),

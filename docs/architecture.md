@@ -62,6 +62,8 @@ BGCS.Intermediate depends on no other BGCS assembly
 
 `Analysis` and `Intermediate` must not reference the CLI. IR contracts should not contain Roslyn syntax, generated source strings, filesystem paths, or mutable Clang cursors.
 
+Consumer applications own their binding configurations, native source, custom shims, generated output, and integration tests in their own repositories. BGCS owns only generic generation/runtime code and its independent, pinned upstream test corpus; no sibling application checkout is required by BGCS CI.
+
 ## Layer responsibilities
 
 ### Facade
@@ -81,7 +83,7 @@ BGCS.Intermediate depends on no other BGCS assembly
 
 ### Target and runtime portability
 
-- `BGCS.CppAst` selects and preloads the RID-specific bundled Clang/ClangSharp runtime for Windows, macOS, and Linux x64/arm64 instead of relying on a host-global `libclang` name.
+- `BGCS.CppAst` selects and preloads RID-specific Clang/ClangSharp runtime assets where upstream packages exist. ClangSharp 20.1.2 does not publish macOS x64 native packages: Intel CI builds the matching native companion and LLVM 20 runtime with `scripts/setup-macos-x64-clang-runtime.sh`, then sets `BGCS_CLANG_RUNTIME_DIR`. Missing assets fail explicitly instead of silently changing parser versions.
 - ABI classification owns target-specific primitive and compiler carrier rules. Linux Arm64 unsigned plain `char` and AAPCS64 `va_list` are modeled explicitly; SysV x64 array-decayed `va_list` remains a separate rule.
 - `BGCS.Runtime.NativeLibrary` delegates module loading and export lookup to the .NET cross-platform loader, avoiding platform soname assumptions such as `libdl.so`.
 - Workspace target subdirectories and target-specific snapshots/reports prevent one host's generated ABI from being compiled or accepted as another host's output.

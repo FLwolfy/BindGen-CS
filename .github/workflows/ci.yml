@@ -19,12 +19,15 @@ jobs:
           - os: ubuntu-24.04
             target: linux-x64-gnu
             require-windows-providers: "0"
+            cpp-compiler: g++
           - os: windows-2022
             target: windows-x64-msvc
             require-windows-providers: "1"
+            cpp-compiler: ""
           - os: macos-15-intel
             target: macos-x64-darwin
             require-windows-providers: "0"
+            cpp-compiler: clang++
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -42,6 +45,16 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
+      - name: Build missing ClangSharp 20 runtime for macOS Intel
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
+          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
+          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
+
       - name: Restore
         run: dotnet restore BindGen-CS.sln
 
@@ -49,16 +62,17 @@ jobs:
         run: dotnet build BindGen-CS.sln --configuration Release --no-restore
 
       - name: Test managed and native runtime matrix
-        run: dotnet test BindGen-CS.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./artifacts/test-results
+        run: dotnet test BindGen-CS.sln --configuration Release --no-build --logger trx
         env:
           BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
+          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.target }}
-          path: artifacts/test-results
+          path: '**/TestResults/*.trx'
 
   acceptance:
     name: BGCS acceptance (${{ matrix.target }})
@@ -69,24 +83,20 @@ jobs:
           - os: ubuntu-24.04
             target: linux-x64-gnu
             require-windows-providers: "0"
+            cpp-compiler: g++
           - os: windows-2022
             target: windows-x64-msvc
             require-windows-providers: "1"
+            cpp-compiler: ""
           - os: macos-15-intel
             target: macos-x64-darwin
             require-windows-providers: "0"
+            cpp-compiler: clang++
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout BindGen-CS
         uses: actions/checkout@v4
-
-      - name: Checkout pinned third-party real-library corpus
-        uses: actions/checkout@v4
-        with:
-          repository: FLwolfy/InnoEngine
-          path: .third-party-corpus
-          submodules: recursive
 
       - name: Initialize MSVC and Windows SDK
         if: runner.os == 'Windows'
@@ -99,13 +109,23 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
+      - name: Build missing ClangSharp 20 runtime for macOS Intel
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
+          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
+          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
+
       - name: Run BGCS maintenance-candidate acceptance matrix
         shell: bash
         run: bash ./scripts/run-full-test-matrix.sh
         env:
           CONFIGURATION: "Release"
-          INNOENGINE_ROOT: ${{ github.workspace }}/.third-party-corpus
           BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
+          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
 
       - name: Upload acceptance evidence
         if: always()

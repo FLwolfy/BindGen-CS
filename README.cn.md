@@ -94,7 +94,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json \
 | macOS arm64 | ✅ | 完整 `macos-arm64-darwin` 报告通过 |
 | Windows x64 | ⚠️ | 等待真实 clang-cl、MSBuild、DLL invocation 和 NuGet consumer 报告 |
 | Linux x64 | ⚠️ | 等待同版本完整实机报告和 NuGet consumer 报告 |
-| macOS x64 | ⚠️ | 等待 Intel host 完整实机报告和 NuGet consumer 报告 |
+| macOS x64 | ⚠️ | ClangSharp 20 未提供上游 Intel native 包；CI 本机构建，仍待完整 Intel 与可移植 NuGet 报告 |
 | Windows arm64 | ⚠️ | target/RID model 已有；provider 和 runtime 验收待完成 |
 | Linux arm64 | ⚠️ | target/RID model 已有；独立完整报告待完成 |
 | Android | ⚠️ | NDK/sysroot、package layout 和设备/模拟器验收待完成 |
@@ -164,10 +164,6 @@ if (!generator.GenerateConfigured())
 ```
 
 需要结构化结果时使用 `BGCS.Facade.BindingGenerator` 和 `BGCS.Intermediate` 中的 Binding IR。
-
-## InnoEngine 集成
-
-InnoEngine 使用五份配置生成 miniaudio、SDL3、cimgui、cimguizmo 和 bgfx bindings。生成逻辑与配置位于 InnoEngine 仓库；BGCS core 没有这些库的名称或路径特判。当前 macOS arm64 的 clean regeneration、native dependency build、solution build 和 native-binding tests 已通过，其他平台仍按上表等待独立验收。
 
 ## 测试与发布
 

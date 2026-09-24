@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Interop;
 
@@ -37,6 +38,28 @@ internal static class ClangNativeRuntime
             RuntimeInformation.RuntimeIdentifier,
             "native",
             fileName);
+
+        string? configuredDirectory = Environment.GetEnvironmentVariable("BGCS_CLANG_RUNTIME_DIR");
+        if (!string.IsNullOrWhiteSpace(configuredDirectory))
+        {
+            configuredDirectory = Path.GetFullPath(configuredDirectory);
+            string clangPath = Path.Combine(configuredDirectory, fileName);
+            string companionPath = Path.Combine(configuredDirectory, OperatingSystem.IsWindows()
+                ? "libClangSharp.dll"
+                : OperatingSystem.IsMacOS() ? "libClangSharp.dylib" : "libClangSharp.so");
+            if (!File.Exists(clangPath) || !File.Exists(companionPath))
+                throw new DllNotFoundException(
+                    $"BGCS_CLANG_RUNTIME_DIR must contain both '{fileName}' and '{Path.GetFileName(companionPath)}': '{configuredDirectory}'.");
+            nint configuredClang = NativeLibrary.Load(clangPath);
+            nint configuredCompanion = NativeLibrary.Load(companionPath);
+            clang.ResolveLibrary += (name, _, _) => name switch
+            {
+                "libclang" => configuredClang,
+                "libClangSharp" => configuredCompanion,
+                _ => 0
+            };
+            return configuredClang;
+        }
 
         if (File.Exists(runtimeAsset) && NativeLibrary.TryLoad(runtimeAsset, out nint handle))
         {

@@ -123,6 +123,7 @@ public sealed class NativeBuildProviderTests
         Assert.Contains("--target=x86_64-linux-gnu", meson.InputFiles.Single(input => input.Path.EndsWith("meson.build", StringComparison.Ordinal)).Content, StringComparison.Ordinal);
         Assert.Contains("/LD", Assert.Single(clangCl.Steps).Arguments);
         Assert.Contains("DynamicLibrary", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
+        Assert.Contains("-p:PlatformToolset=v143", Assert.Single(msbuild.Steps).Arguments);
         Assert.Contains("/DEBUG:NONE", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
         Assert.All(cmake.Steps.Concat(meson.Steps).Concat(clangCl.Steps).Concat(msbuild.Steps),
             step => Assert.DoesNotContain("sh -c", step.Executable + string.Join(' ', step.Arguments), StringComparison.Ordinal));

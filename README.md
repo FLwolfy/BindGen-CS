@@ -94,7 +94,7 @@ Every listed platform is a support target. ⚠️ means the current version does
 | macOS arm64 | ✅ | Complete `macos-arm64-darwin` report passed |
 | Windows x64 | ⚠️ | Real clang-cl, MSBuild, DLL invocation, and NuGet consumer report pending |
 | Linux x64 | ⚠️ | Same-version complete host and NuGet consumer report pending |
-| macOS x64 | ⚠️ | Intel-host complete report and NuGet consumer report pending |
+| macOS x64 | ⚠️ | ClangSharp 20 has no upstream Intel native package; CI builds it locally, with complete Intel and portable NuGet reports pending |
 | Windows arm64 | ⚠️ | Target/RID model exists; provider and runtime acceptance pending |
 | Linux arm64 | ⚠️ | Target/RID model exists; independent complete report pending |
 | Android | ⚠️ | NDK/sysroot, package layout, and device/emulator acceptance pending |
@@ -164,10 +164,6 @@ if (!generator.GenerateConfigured())
 ```
 
 Use `BGCS.Facade.BindingGenerator` and the Binding IR in `BGCS.Intermediate` when structured results are required.
-
-## InnoEngine integration
-
-InnoEngine uses five configurations for miniaudio, SDL3, cimgui, cimguizmo, and bgfx. Generation logic and configuration live in the InnoEngine repository; BGCS core contains no special cases for those libraries. Clean regeneration, native dependency builds, the solution build, and native-binding tests currently pass on macOS arm64. Other platforms remain subject to the independent acceptance table above.
 
 ## Testing and release
 

@@ -62,6 +62,8 @@ BGCS.Intermediate 不依赖其他 BGCS assembly
 
 `Analysis` 和 `Intermediate` 不应引用 CLI。IR contract 不应包含 Roslyn syntax、生成源码字符串、文件系统路径或可变 Clang cursor。
 
+消费者应用应在自己的仓库维护 binding 配置、native 源码、自定义 shim、生成产物和集成测试。BGCS 仓库只负责通用生成器/Runtime 和独立固定版本的上游测试语料；BGCS CI 不需要检出任何相邻应用仓库。
+
 ## 分层职责
 
 ### Facade
@@ -81,7 +83,7 @@ BGCS.Intermediate 不依赖其他 BGCS assembly
 
 ### Target 与 Runtime 可移植性
 
-- `BGCS.CppAst` 会按 RID 选择并预加载 Windows、macOS、Linux x64/arm64 的 Clang/ClangSharp runtime，不依赖宿主全局 `libclang` 名称。
+- `BGCS.CppAst` 优先选择并预加载上游已提供的 RID 专用 Clang/ClangSharp runtime。ClangSharp 20.1.2 没有发布 macOS x64 native 包：Intel CI 通过 `scripts/setup-macos-x64-clang-runtime.sh` 构建同版本 companion 与 LLVM 20 runtime，并设置 `BGCS_CLANG_RUNTIME_DIR`。缺失资产会明确报错，不会暗中降低 parser 版本。
 - ABI classifier 集中处理 target-dependent primitive 和 compiler carrier。Linux Arm64 的 unsigned plain `char` 与 AAPCS64 `va_list` 已显式建模；SysV x64 的 array-decayed `va_list` 保持独立规则。
 - `BGCS.Runtime.NativeLibrary` 使用 .NET 跨平台 loader 处理 module 与 export，避免 `libdl.so` 等平台 soname 假设。
 - Workspace target 子目录与 target-specific snapshot/report 防止一个宿主生成的 ABI 被另一个宿主误编译或误验收。

@@ -25,6 +25,8 @@
 
 该脚本 pack 完整依赖闭包，在 clean consumer 中恢复三个公开包、编译并运行。完整验收矩阵也会执行同一 gate。
 
+macOS Intel 先运行 `bash scripts/setup-macos-x64-clang-runtime.sh`，再把 `BGCS_CLANG_RUNTIME_DIR` 设置为脚本输出目录。打包会纳入可重定位的 Clang 20 dylib 与许可证文件；clean consumer 会清除该覆盖设置，实际从 NuGet 包加载 native 资产。发布工作流从已验收的 Intel job 下载 runtime，并强制检查最终 `BGCS.CppAst` 包中包含两个必需 dylib。
+
 ## 什么会触发发布
 
 发布 workflow 是 `.github/workflows/publish-bgcs-runtime-nuget.yml`，只由以下事件触发：
