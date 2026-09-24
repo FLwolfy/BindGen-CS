@@ -138,15 +138,41 @@ public class CsCodeGeneratorConfigTypeApiTests
     }
 
     [Fact]
-    public void NormalizeValue_ShouldHandleKnownNativePatterns()
+    public void NormalizeValue_ShouldRequireExplicitMappingForProjectConstructors()
     {
         CsCodeGeneratorConfig cfg = new();
 
         Assert.Equal("default", cfg.NormalizeValue("NULL", sanitize: false));
         Assert.Equal("float.MaxValue", cfg.NormalizeValue("FLT_MAX", sanitize: false));
+        Assert.Equal("1.17549435E-38f", cfg.NormalizeValue("FLT_MIN", sanitize: false));
+        Assert.Equal("-1.17549435E-38f", cfg.NormalizeValue("-FLT_MIN", sanitize: false));
         Assert.Equal("1", cfg.NormalizeValue("true", sanitize: false));
-        Assert.Equal("new Vector2(1,2)", cfg.NormalizeValue("ImVec2(1,2)", sanitize: false));
-        Assert.Null(cfg.NormalizeValue("ImVec2(1,2)", sanitize: true));
+        Assert.Equal("ExternalPoint(1,2)", cfg.NormalizeValue("ExternalPoint(1,2)", sanitize: false));
+        cfg.KnownDefaultValueNames["ExternalPoint(1,2)"] = "new Point2(1, 2)";
+        Assert.Equal("new Point2(1, 2)", cfg.NormalizeValue("ExternalPoint(1,2)", sanitize: false));
+    }
+
+    [Fact]
+    public void DefaultConfig_ShouldNotAssumeProjectOrPlatformSdkTypedefs()
+    {
+        CsCodeGeneratorConfig cfg = CsCodeGeneratorConfig.Default;
+
+        Assert.Equal("byte", cfg.TypeMappings["uint8_t"]);
+        Assert.False(cfg.TypeMappings.ContainsKey("Uint8"));
+        Assert.False(cfg.TypeMappings.ContainsKey("BOOL"));
+        Assert.False(cfg.TypeMappings.ContainsKey("HWND"));
+        Assert.Empty(cfg.IgnoredTypes);
+        Assert.Empty(cfg.IgnoredTypedefs);
+        HashSet<string> standardTypes =
+        [
+            "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t",
+            "int32_t", "int64_t", "int64_t*", "unsigned char", "signed char",
+            "char", "size_t", "bool"
+        ];
+        Assert.All(cfg.TypeMappings.Keys, key => Assert.Contains(key, standardTypes));
+
+        cfg.TypeMappings["Uint8"] = "byte";
+        Assert.Equal("byte", cfg.TypeMappings["Uint8"]);
     }
 
     [Fact]

@@ -110,6 +110,8 @@ Use mappings only for facts that cannot be inferred safely:
 
 A mapping must not hide ABI uncertainty. If a non-trivial C++ type crosses a boundary, generate a C bridge instead.
 
+BGCS's default C# mappings contain C/C++ standard type names only. Native-SDK aliases and constructor expressions belong in the consuming project's config, not in BGCS core. For example, use `"TypeMappings": { "Uint8": "byte" }` for a project typedef and `"KnownDefaultValueNames": { "ExternalPoint(1,2)": "new Point2(1, 2)" }` for its default expression. The latter is an exact expression mapping; it does not infer the ABI or layout of `ExternalPoint`.
+
 ## Strict safety diagnostics
 
 `StrictSafety` defaults to `true`. `StrictSafetySeverity` selects `Warning` (diagnose while preserving compatibility), `SuppressFriendly` (keep raw ABI and remove high-risk string/Span/array/delegate overloads), or `Error` (make validate/generate/build fail before commit). Diagnostics use `BGCS-SAFETY-*` codes and include the exact minimum `MarshallingMappings` path. Set `StrictSafety=false` only when an external audit owns those semantics.

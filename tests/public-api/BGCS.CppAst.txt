@@ -625,6 +625,15 @@ class BGCS.CppAst.Model.Templates.CppTemplateParameterNonType
   property ClangSharp.Interop.CX_TemplateArgument TemplateArgument { get; set }
   method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
   method System.String ToString()
+class BGCS.CppAst.Model.Templates.CppTemplateParameterTemplate
+  ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
+  ctor(ClangSharp.Interop.CX_TemplateArgument argument, System.String name, System.Collections.Generic.IEnumerable<BGCS.CppAst.Model.Types.CppType> parameters)
+  property System.String Name { get }
+  property System.Collections.Generic.List<BGCS.CppAst.Model.Types.CppType> Parameters { get }
+  property System.Int32 SizeOf { get; set }
+  property ClangSharp.Interop.CX_TemplateArgument TemplateArgument { get }
+  method BGCS.CppAst.Model.Types.CppType GetCanonicalType()
+  method System.String ToString()
 class BGCS.CppAst.Model.Templates.CppTemplateParameterType
   ctor(ClangSharp.Interop.CXCursor cursor, System.String name)
   ctor(ClangSharp.Interop.CX_TemplateArgument templateArgument, System.String name)
@@ -769,6 +778,7 @@ enum BGCS.CppAst.Model.Types.CppTypeKind
   field BGCS.CppAst.Model.Types.CppTypeKind StructOrClass
   field BGCS.CppAst.Model.Types.CppTypeKind TemplateArgumentType
   field BGCS.CppAst.Model.Types.CppTypeKind TemplateParameterNonType
+  field BGCS.CppAst.Model.Types.CppTypeKind TemplateParameterTemplate
   field BGCS.CppAst.Model.Types.CppTypeKind TemplateParameterType
   field BGCS.CppAst.Model.Types.CppTypeKind Typedef
   field BGCS.CppAst.Model.Types.CppTypeKind Unexposed

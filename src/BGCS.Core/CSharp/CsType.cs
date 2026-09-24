@@ -164,39 +164,13 @@
         /// </summary>
         public static bool IsKnownPrimitive(string name)
         {
-            if (name.StartsWith("void"))
-                return true;
-            if (name.StartsWith("bool"))
-                return true;
-            if (name.StartsWith("byte"))
-                return true;
-            if (name.StartsWith("sbyte"))
-                return true;
-            if (name.StartsWith("char"))
-                return true;
-            if (name.StartsWith("short"))
-                return true;
-            if (name.StartsWith("ushort"))
-                return true;
-            if (name.StartsWith("int"))
-                return true;
-            if (name.StartsWith("uint"))
-                return true;
-            if (name.StartsWith("long"))
-                return true;
-            if (name.StartsWith("ulong"))
-                return true;
-            if (name.StartsWith("float"))
-                return true;
-            if (name.StartsWith("double"))
-                return true;
-            if (name.StartsWith("Vector2"))
-                return true;
-            if (name.StartsWith("Vector3"))
-                return true;
-            if (name.StartsWith("Vector4"))
-                return true;
-            return false;
+            ReadOnlySpan<char> baseName = name.AsSpan().Trim();
+            while (baseName.EndsWith("*", StringComparison.Ordinal))
+                baseName = baseName[..^1].TrimEnd();
+
+            return baseName is "void" or "bool" or "byte" or "sbyte" or "char" or
+                "short" or "ushort" or "int" or "uint" or "long" or "ulong" or
+                "float" or "double" or "nint" or "nuint";
         }
 
         /// <summary>

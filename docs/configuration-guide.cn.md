@@ -110,6 +110,8 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 
 Mapping 不能掩盖 ABI 不确定性。非平凡 C++ 类型跨边界时必须生成 C Bridge。
 
+BGCS 的默认 C# 映射只包含 C/C++ 标准类型名。Native SDK 的别名和构造表达式应写在使用项目的配置中，不能硬编码进 BGCS 核心。例如，项目 typedef 可以配置 `"TypeMappings": { "Uint8": "byte" }`；项目默认参数表达式可以配置 `"KnownDefaultValueNames": { "ExternalPoint(1,2)": "new Point2(1, 2)" }`。后者是精确表达式映射，不会推断 `ExternalPoint` 的 ABI 或布局。
+
 ## 严格安全诊断
 
 `StrictSafety` 默认是 `true`。`StrictSafetySeverity` 可选 `Warning`（诊断但保持兼容）、`SuppressFriendly`（保留 raw ABI，删除高风险 string/Span/array/delegate overload）或 `Error`（validate/generate/build 在 commit 前失败）。诊断使用 `BGCS-SAFETY-*` code，并给出最小 `MarshallingMappings` 路径。只有外部审计明确负责这些语义时才应设为 `false`。

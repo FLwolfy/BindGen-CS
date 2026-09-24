@@ -131,6 +131,11 @@ public class ClassStructDeclVisitor : DeclContainerVisitor
                     case CppTemplateParameterNonType nonType:
                         cppClass.TemplateParameters.Add(new CppTemplateParameterNonType(templateArgument, nonType.Name, nonType.NoneTemplateType));
                         break;
+
+                    case CppTemplateParameterTemplate template:
+                        cppClass.TemplateParameters.Add(new CppTemplateParameterTemplate(templateArgument,
+                            template.Name, template.Parameters));
+                        break;
                 }
             }
 

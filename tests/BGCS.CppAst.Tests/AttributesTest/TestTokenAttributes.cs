@@ -268,6 +268,34 @@ void x() {};", compilation =>
         }
 
         [Fact]
+        public void FunctionAttributes_UseDeclaratorLocationWhenReturnTypeCallsSameName()
+        {
+            ParseAssert(@"
+int factory();
+[[nodiscard]] decltype(factory()) factory(int value) __attribute__((annotate(""tail"")));
+", compilation =>
+            {
+                Assert.False(compilation.HasErrors);
+                CppFunction overload = Assert.Single(compilation.Functions, function => function.Parameters.Count == 1);
+                Assert.Contains(overload.TokenAttributes, attribute => attribute.Name == "nodiscard");
+                Assert.Contains(overload.TokenAttributes, attribute => attribute.Name == "annotate");
+            }, new CppParserOptions { AdditionalArguments = { "-std=c++17" }, ParseTokenAttributes = true });
+        }
+
+        [Fact]
+        public void TypedefAttributes_BeforeCursorExtentAreParsed()
+        {
+            ParseAssert(@"
+[[deprecated]] typedef int LegacyNumber;
+", compilation =>
+            {
+                Assert.False(compilation.HasErrors);
+                CppTypedef alias = Assert.Single(compilation.Typedefs);
+                Assert.Contains(alias.TokenAttributes, attribute => attribute.Name == "deprecated");
+            }, new CppParserOptions { AdditionalArguments = { "-std=c++17" }, ParseTokenAttributes = true });
+        }
+
+        [Fact]
         public void TestCpp11NamespaceAttributes()
         {
             ParseAssert(@"

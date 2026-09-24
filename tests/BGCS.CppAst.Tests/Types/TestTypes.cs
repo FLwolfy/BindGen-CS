@@ -119,6 +119,53 @@ TemplateStruct<int, Struct2> unexposed;
         }
 
         [Fact]
+        public void TemplateTemplateParameter_RetainsNestedSignature()
+        {
+            ParseAssert(@"
+template <template <typename Item> class Container, typename Value>
+struct GenericHolder { Container<Value>* value; };
+template <typename T> struct Box { T value; };
+GenericHolder<Box, int>* holder;
+", compilation =>
+            {
+                Assert.False(compilation.HasErrors);
+                CppClass generic = Assert.Single(compilation.Classes, candidate =>
+                    candidate.Name == "GenericHolder" && candidate.SpecializedTemplate == null);
+                CppTemplateParameterTemplate parameter = Assert.IsType<CppTemplateParameterTemplate>(generic.TemplateParameters[0]);
+                Assert.Equal("Container", parameter.Name);
+                Assert.Equal(CppTypeKind.TemplateParameterTemplate, parameter.TypeKind);
+                Assert.Equal("Item", Assert.IsType<CppTemplateParameterType>(Assert.Single(parameter.Parameters)).Name);
+            });
+        }
+
+        [Fact]
+        public void IncompleteArray_UsesUnboundExtentInsteadOfNegativeStorageSize()
+        {
+            ParseAssert("extern int values[];", compilation =>
+            {
+                Assert.False(compilation.HasErrors);
+                CppArrayType array = Assert.IsType<CppArrayType>(Assert.Single(compilation.Fields).Type);
+                Assert.Equal(0, array.Size);
+                Assert.Equal(0, array.SizeOf);
+            });
+        }
+
+        [Fact]
+        public void DependentArray_DoesNotPretendToHaveAConcreteExtent()
+        {
+            ParseAssert("template <int N> struct Buffer { int values[N]; };", compilation =>
+            {
+                Assert.False(compilation.HasErrors);
+                CppClass buffer = Assert.Single(compilation.Classes);
+                CppArrayType array = Assert.IsType<CppArrayType>(Assert.Single(buffer.Fields).Type);
+                Assert.Equal(0, array.Size);
+                Assert.Equal(0, array.SizeOf);
+                Assert.Contains(compilation.Diagnostics.Messages,
+                    message => message.Text.Contains("Dependent sized arrays", StringComparison.Ordinal));
+            });
+        }
+
+        [Fact]
         public void TestTemplateInheritance()
         {
             ParseAssert(@"

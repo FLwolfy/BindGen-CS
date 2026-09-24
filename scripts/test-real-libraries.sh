@@ -103,6 +103,10 @@ cat > "${ARTIFACTS_DIR}/sdl3/bindgen.json" <<EOF
   "AllowedHeaders": [],
   "IncludeTransitivelyReferencedHeaders": true,
   "IncludeFolders": ["${SDL3_INCLUDE_JSON}"],
+  "TypeMappings": {
+    "Uint8": "byte", "Uint16": "ushort", "Uint32": "uint", "Uint64": "ulong",
+    "Sint8": "sbyte", "Sint16": "short", "Sint32": "int", "Sint64": "long"
+  },
   "IgnoredFunctions": [
     "SDL_sscanf",
     "SDL_snprintf",

@@ -87,15 +87,14 @@ public unsafe partial class CppModelBuilder
             case CXTypeKind.CXType_IncompleteArray:
                 {
                     var elementType = GetCppType(type.ArrayElementType.Declaration, type.ArrayElementType, parent);
-                    return new CppArrayType(cursor, elementType, (int)type.ArraySize);
+                    return new CppArrayType(cursor, elementType, GetArrayExtent(type));
                 }
 
             case CXTypeKind.CXType_DependentSizedArray:
                 {
-                    // TODO: this is not yet supported
                     RootCompilation.Diagnostics.Warning($"Dependent sized arrays `{CXUtil.GetTypeSpelling(type)}` from `{CXUtil.GetCursorSpelling(parent)}` is not supported", parent.GetSourceLocation());
                     var elementType = GetCppType(type.ArrayElementType.Declaration, type.ArrayElementType, parent);
-                    return new CppArrayType(cursor, elementType, (int)type.ArraySize);
+                    return new CppArrayType(cursor, elementType, 0);
                 }
 
             case CXTypeKind.CXType_Unexposed:
@@ -154,6 +153,16 @@ public unsafe partial class CppModelBuilder
                     return new CppUnexposedType(cursor, CXUtil.GetTypeSpelling(type)) { SizeOf = (int)type.SizeOf };
                 }
         }
+    }
+
+    private static int GetArrayExtent(CXType type)
+    {
+        long size = type.ArraySize;
+        if (size < 0)
+            return 0;
+        if (size > int.MaxValue)
+            throw new NotSupportedException($"Array extent {size} for '{CXUtil.GetTypeSpelling(type)}' exceeds the supported range.");
+        return (int)size;
     }
 
     private struct VisitedFunctionTypeContext

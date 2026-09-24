@@ -143,7 +143,7 @@ public class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclarationCo
     }
 
     /// <summary>
-    /// Find a <see cref="CppElement"/> by full name(such as gbf::math::Vector3).
+    /// Find a <see cref="CppElement"/> by a fully qualified name (for example, <c>example::Vector</c>).
     /// </summary>
     /// <param name="name">Name of the element to find</param>
     /// <returns>The CppElement found or null if not found</returns>
@@ -168,7 +168,7 @@ public class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclarationCo
     }
 
     /// <summary>
-    /// Find a <see cref="CppElement"/> by full name(such as gbf::math::Vector3).
+    /// Find a <see cref="CppElement"/> by a fully qualified name (for example, <c>example::Vector</c>).
     /// </summary>
     /// <param name="name">Name of the element to find</param>
     /// <returns>The CppElement found or null if not found</returns>

@@ -670,9 +670,9 @@ namespace BGCS
             if (value == "-FLT_MAX")
                 return "-float.MaxValue";
             if (value == "FLT_MIN")
-                return "float.MinValue";
+                return "1.17549435E-38f";
             if (value == "-FLT_MIN")
-                return "-float.MinValue";
+                return "-1.17549435E-38f";
             if (value == "nullptr")
                 return "default";
             if (value == "false")
@@ -680,21 +680,6 @@ namespace BGCS
             if (value == "true")
                 return "1";
 
-            // TODO: needs refactoring. remove the ImVec!
-            if (value.StartsWith("ImVec") && sanitize)
-                return null;
-            if (value.StartsWith("ImVec2"))
-            {
-                value = value[7..][..(value.Length - 8)];
-                var parts = value.Split(',');
-                return $"new Vector2({NormalizeValue(parts[0], sanitize)},{NormalizeValue(parts[1], sanitize)})";
-            }
-            if (value.StartsWith("ImVec4"))
-            {
-                value = value[7..][..(value.Length - 8)];
-                var parts = value.Split(',');
-                return $"new Vector4({NormalizeValue(parts[0], sanitize)},{NormalizeValue(parts[1], sanitize)},{NormalizeValue(parts[2], sanitize)},{NormalizeValue(parts[3], sanitize)})";
-            }
             return value;
         }
 

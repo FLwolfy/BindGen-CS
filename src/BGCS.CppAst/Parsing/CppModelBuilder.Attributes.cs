@@ -131,7 +131,16 @@ public unsafe partial class CppModelBuilder
         }
 
 #pragma warning disable CS0618 // Explicit compatibility path for token-attribute parsing.
-        attrContainer.TokenAttributes.AddRange(attributes);
+        // The preceding source range and the cursor extent can both contain the same
+        // leading attribute. Keep distinct source occurrences, not duplicate scans.
+        HashSet<(string File, int Start, int End, string Name, AttributeKind Kind)> seen = [];
+        foreach (CppAttribute attribute in attributes)
+        {
+            var key = (attribute.Span.Start.File, attribute.Span.Start.Offset,
+                attribute.Span.End.Offset, attribute.Name, attribute.Kind);
+            if (seen.Add(key))
+                attrContainer.TokenAttributes.Add(attribute);
+        }
 #pragma warning restore CS0618
     }
 

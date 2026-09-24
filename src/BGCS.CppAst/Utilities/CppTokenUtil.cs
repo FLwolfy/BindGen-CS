@@ -10,7 +10,7 @@ using BGCS.CppAst.Extensions;
 using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Expressions;
 using BGCS.CppAst.Model.Metadata;
-using System.Diagnostics;
+using BGCS.CppAst.Parsing;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
@@ -46,43 +46,66 @@ internal static unsafe class CppTokenUtil
 
     public static void ParseFunctionAttributes(CppGlobalDeclarationContainer globalContainer, CXCursor cursor, string functionName, ref List<CppAttribute> attributes)
     {
-        // TODO: This function is not 100% correct when parsing tokens up to the function name
-        // we assume to find the function name immediately followed by a `(`
-        // but some return type parameter could actually interfere with that
-        // Ideally we would need to parse more properly return type and skip parenthesis for example
         AttributeTokenizer tokenizer = new(cursor);
         TokenIterator tokenIt = new(tokenizer);
+        CppSourceLocation nameLocation = cursor.Location.ToSourceLocation();
 
-        // if this is a template then we need to skip that ?
-        if (tokenIt.CanPeek && tokenIt.PeekText() == "template")
-            SkipTemplates(tokenIt);
-
-        // Parse leading attributes
-        while (tokenIt.CanPeek)
+        // Clang identifies the declarator's name. Searching by spelling can instead
+        // select a same-named call inside a decltype/function-pointer return type.
+        while (tokenIt.CanPeek && !IsNameToken(tokenIt.Peek()!, nameLocation))
         {
             if (ParseAttributes(globalContainer, tokenIt, ref attributes))
+                continue;
+            tokenIt.Next();
+        }
+        if (!tokenIt.CanPeek)
+            return;
+
+        bool skipOperatorNameParentheses = functionName.StartsWith("operator()", StringComparison.Ordinal);
+        bool foundParameterList = false;
+        int angleDepth = 0;
+        while (tokenIt.CanPeek)
+        {
+            string? token = tokenIt.PeekText();
+            if (token == "<" && !functionName.StartsWith("operator", StringComparison.Ordinal))
+                angleDepth++;
+            else if ((token == ">" || token == ">>") && angleDepth > 0)
+                angleDepth = Math.Max(0, angleDepth - (token == ">>" ? 2 : 1));
+            else if (token == "(" && angleDepth == 0)
             {
+                tokenIt.Next();
+                if (!skipOperatorNameParentheses)
+                {
+                    foundParameterList = true;
+                    break;
+                }
+                skipOperatorNameParentheses = false;
+                if (!SkipBalancedParentheses(tokenIt))
+                    return;
                 continue;
             }
-            break;
+            tokenIt.Next();
         }
 
-        if (!tokenIt.CanPeek)
-        {
+        if (!foundParameterList)
             return;
-        }
 
-        // Find function name (We only support simple function name declaration)
-        if (!tokenIt.Find(functionName, "("))
-        {
+        if (!SkipBalancedParentheses(tokenIt))
             return;
+
+        while (tokenIt.CanPeek)
+        {
+            if (!ParseAttributes(globalContainer, tokenIt, ref attributes))
+                tokenIt.Next();
         }
+    }
 
-        Debug.Assert(tokenIt.PeekText() == functionName);
-        tokenIt.Next();
-        Debug.Assert(tokenIt.PeekText() == "(");
-        tokenIt.Next();
+    private static bool IsNameToken(CppToken token, CppSourceLocation location) =>
+        string.Equals(token.Span.Start.File, location.File, StringComparison.Ordinal) &&
+        token.Span.Start.Offset <= location.Offset && token.Span.End.Offset > location.Offset;
 
+    private static bool SkipBalancedParentheses(TokenIterator tokenIt)
+    {
         int parentCount = 1;
         while (parentCount > 0 && tokenIt.CanPeek)
         {
@@ -97,35 +120,13 @@ internal static unsafe class CppTokenUtil
             }
             tokenIt.Next();
         }
-
-        if (parentCount != 0)
-        {
-            return;
-        }
-
-        while (tokenIt.CanPeek)
-        {
-            if (ParseAttributes(globalContainer, tokenIt, ref attributes))
-            {
-                continue;
-            }
-            // Skip the token if we can parse it.
-            tokenIt.Next();
-        }
-
-        return;
+        return parentCount == 0;
     }
 
     public static void ParseAttributesInRange(CppGlobalDeclarationContainer globalContainer, CXTranslationUnit tu, CXSourceRange range, ref List<CppAttribute> collectAttributes)
     {
         AttributeTokenizer tokenizer = new(tu, range);
         TokenIterator tokenIt = new(tokenizer);
-        StringBuilder sb = new();
-        while (tokenIt.CanPeek)
-        {
-            sb.Append(tokenIt.PeekText());
-            tokenIt.Next();
-        }
 
         // if this is a template then we need to skip that ?
         if (tokenIt.CanPeek && tokenIt.PeekText() == "template")

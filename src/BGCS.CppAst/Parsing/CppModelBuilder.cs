@@ -82,7 +82,7 @@ public partial class CppModelBuilder : CompilationLoggerBase
     /// <summary>
     /// Executes public operation <c>TryToCreateTemplateParameters</c>.
     /// </summary>
-    public CppType? TryToCreateTemplateParameters(CXCursor cursor)
+    public unsafe CppType? TryToCreateTemplateParameters(CXCursor cursor)
     {
         switch (cursor.Kind)
         {
@@ -104,11 +104,18 @@ public partial class CppModelBuilder : CompilationLoggerBase
                 }
             case CXCursorKind.CXCursor_TemplateTemplateParameter:
                 {
-                    // TODO: add template template parameter support here
-                    RootCompilation.Diagnostics.Warning($"Unhandled template parameter: {cursor.Kind}/{CXUtil.GetCursorSpelling(cursor)}", cursor.GetSourceLocation());
                     var templateParameterName = CXUtil.GetCursorSpelling(cursor);
-                    CppTemplateParameterType templateParameterType = new(cursor, templateParameterName);
-                    return templateParameterType;
+                    CppTemplateParameterTemplate parameter = new(cursor, templateParameterName);
+                    var state = (parameter, this);
+                    cursor.VisitChildren(static (child, _, data) =>
+                    {
+                        var (owner, builder) = Unsafe.AsRef<(CppTemplateParameterTemplate, CppModelBuilder)>(data);
+                        CppType? nested = builder.TryToCreateTemplateParameters(child);
+                        if (nested != null)
+                            owner.Parameters.Add(nested);
+                        return CXChildVisitResult.CXChildVisit_Continue;
+                    }, (CXClientData)Unsafe.AsPointer(ref state));
+                    return parameter;
                 }
         }
 

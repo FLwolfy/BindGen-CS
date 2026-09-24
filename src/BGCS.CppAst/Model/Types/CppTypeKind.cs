@@ -73,4 +73,8 @@ public enum CppTypeKind
     /// An Objective-C interface with a category.
     /// </summary>
     ObjCInterfaceWithCategory,
+    /// <summary>
+    /// A template template parameter (for example <c>template &lt;typename&gt; class Container</c>).
+    /// </summary>
+    TemplateParameterTemplate,
 }
