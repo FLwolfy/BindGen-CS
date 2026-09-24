@@ -47,11 +47,11 @@ resolve_cxx_host() {
 verify_sha256_manifest() {
   local manifest="$1"
   if command -v sha256sum > /dev/null 2>&1; then
-    sha256sum --check "${manifest}"
+    tr -d '\r' < "${manifest}" | sha256sum --check -
     return
   fi
   if command -v shasum > /dev/null 2>&1; then
-    shasum -a 256 --check "${manifest}"
+    tr -d '\r' < "${manifest}" | shasum -a 256 --check -
     return
   fi
   printf 'Unable to verify %s: sha256sum or shasum is required.\n' "${manifest}" >&2
@@ -87,9 +87,9 @@ detect_snapshot_platform() {
   printf '%s-%s\n' "${platform}" "${architecture}"
 }
 
-# A new host must supply a reviewed baseline before it can pass acceptance.
-# Preserve an exact candidate under acceptance artifacts so one failed run
-# gathers the hashes needed for review rather than silently blessing itself.
+# A new or changed host must supply a reviewed baseline before it can pass
+# acceptance. Preserve the exact candidate so a failed run gathers evidence
+# without silently blessing an API change.
 verify_or_capture_snapshot_manifest() {
   local manifest_prefix="$1"
   shift
@@ -100,9 +100,12 @@ verify_or_capture_snapshot_manifest() {
   local platform manifest candidate_dir candidate
   platform="$(detect_snapshot_platform)" || return 1
   manifest="${manifest_prefix}.${platform}.sha256"
+  local unreviewed_reason="No reviewed snapshot manifest"
   if [[ -f "${manifest}" ]]; then
-    verify_sha256_manifest "${manifest}"
-    return
+    if verify_sha256_manifest "${manifest}"; then
+      return 0
+    fi
+    unreviewed_reason="Reviewed snapshot mismatch"
   fi
   candidate_dir="${ROOT_DIR}/artifacts/acceptance/candidate-snapshots"
   mkdir -p "${candidate_dir}" || return 1
@@ -121,6 +124,6 @@ verify_or_capture_snapshot_manifest() {
     printf 'Unable to create snapshot candidate: sha256sum or shasum is required.\n' >&2
     return 1
   fi
-  printf 'No reviewed snapshot manifest for %s. Candidate: %s\n' "${platform}" "${candidate}" >&2
+  printf '%s for %s. Candidate: %s\n' "${unreviewed_reason}" "${platform}" "${candidate}" >&2
   return 3
 }

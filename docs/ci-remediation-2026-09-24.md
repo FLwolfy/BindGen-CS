@@ -50,6 +50,14 @@ The next six-job CI run had two green managed jobs (Linux x64 and macOS Intel) a
 
 The candidate manifests are not accepted baselines. After the next same-revision runner completes, review each generated source, public API, and C++ bridge output in its `snapshot-inputs-<target>` artifact. Add only the corresponding target-specific manifests to `tests/real-libraries/`, rerun CI, and require a full acceptance report. Windows may reveal a later independent failure after the restore blocker is removed; do not mark it accepted before the entire job passes.
 
+## Run #35: commit `52836a1`
+
+All three desktop x64 build/test jobs passed. Linux x64 and macOS Intel acceptance completed their managed, C/C++, API, NuGet consumer, performance, and dependency-policy layers, then exited with status 3 solely because their reviewed real-library manifests were absent. Their uploaded `snapshot-inputs` artifacts contain 14 generated files each; every file was independently rehashed against its runner-produced candidate. The six C source/public-API/C++ manifests in this checkout come from those artifacts, not from Arm64 or cross-compilation. The principal platform-specific public-API difference is miniaudio's Linux ALSA/JACK versus macOS CoreAudio surface.
+
+Windows x64 reached warning-free generation and compilation of all five real C libraries, then `sha256sum --check` treated a CRLF manifest's trailing carriage return as part of each filename. The verifier now accepts LF or CRLF manifest lines and `.gitattributes` requests LF for committed manifests. The Windows runner uploaded all ten C generated/API files. Their current byte hashes differ from the older reviewed Windows baselines even after newline normalization, so the two Windows C manifests were updated from those actual host files. A shell regression tests CRLF verification, changed-baseline candidate capture, and missing-baseline fail-closed behavior.
+
+The Windows C++ bimg snapshot was not reached in run #35. If its existing manifest is stale, the next runner now uploads a mismatch candidate and continues the remaining acceptance layers while still failing. No Windows C++ hash is inferred from another platform; Windows cannot be marked accepted until its own full report passes. No code was pushed from this remediation checkout.
+
 ## Local evidence
 
 - .NET solution build: 0 warnings, 0 errors on macOS Arm64.

@@ -21,6 +21,9 @@ log() {
   printf '[full-test-matrix] %s\n' "$1"
 }
 
+log "Snapshot manifest portability and mismatch regression"
+bash "${ROOT_DIR}/scripts/test-snapshot-manifest.sh"
+
 run_tests() {
   local project="$1"
   log "dotnet test ${project}"
