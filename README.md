@@ -40,7 +40,7 @@ examples/QuickStart/Generated/
 
 `init` creates a runnable configuration beside the example header. `generate` writes the bindings, and `build` compiles them in a temporary consumer project with nullable analysis and warnings as errors. Replace the example header with your own and keep its configuration next to it. After the tool is published, `dotnet tool install --global BindGen-CS` will provide the shorter `bindgen-cs` command used below; until then, replace `bindgen-cs` with `dotnet run --project src/BGCS.Tool --`.
 
-Want one C# bindings file? Set `"MergeGeneratedFilesToSingleFile": true` and optionally `"SingleFileOutputName": "Bindings.cs"` in `bindgen.json`. `init` already enables this for its C-library preset. This controls the number of C# files **per target**; it does not merge different native ABIs into one declaration set. If `GenerateRuntimeSource=true`, `Runtime.cs` remains a separate file.
+Want one C# bindings file? Set `"MergeGeneratedFilesToSingleFile": true` and optionally `"SingleFileOutputName": "Bindings.cs"` in `bindgen.json`. `init` already enables this for its C-library preset. The result is one `Generated/Bindings.cs`, with its ABI reference target noted in the generated header. If `GenerateRuntimeSource=true`, `Runtime.cs` remains a separate file.
 
 For a first integration, run the complete check:
 
@@ -75,7 +75,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json \
 
 Generated directories are reproducible output; do not edit them. Put naming, type, marshalling, ownership, and function-selection rules in configuration. See [Getting started](docs/getting-started.md) for complete project layouts and troubleshooting.
 
-BGCS runs across platforms, but C/C++ headers and ABI details can vary by target (for example enum underlying types, `long`/`wchar_t`, struct layout, calling convention, and platform-gated declarations). A workspace can keep one `Bindings.cs` **for each target** under `Generated/<target-id>/` with `TargetOutputSubdirectories=true`. The consumer selects exactly one matching directory and native binary for its RID. Use one shared generated file only when the native API and ABI are proven identical on every intended target. See [target and output configuration](docs/configuration-guide.md#target-settings).
+The generated C# source has one output path, independent of the machine that runs it; native libraries still need RID-specific distribution. C/C++ headers and ABI details can vary by target (for example enum underlying types, `long`/`wchar_t`, struct layout, calling convention, and platform-gated declarations). The `ABI reference target` comment records the target used to parse the header; it does not certify other platforms. Validate the same binding with native ABI and consumer tests on every intended target. See [target and output configuration](docs/configuration-guide.md#target-settings).
 
 ## Current support status
 
@@ -99,7 +99,7 @@ Every listed platform is a support target. ⚠️ means the current version does
 | macOS arm64 | ✅ | Complete `macos-arm64-darwin` report passed |
 | Windows x64 | ⚠️ | Real clang-cl, MSBuild, DLL invocation, and NuGet consumer report pending |
 | Linux x64 | ⚠️ | Same-version complete host and NuGet consumer report pending |
-| macOS x64 | ⚠️ | ClangSharp 20 has no upstream Intel native package; CI builds it locally, with complete Intel and portable NuGet reports pending |
+| macOS x64 | ⚠️ | ClangSharp 20 has no upstream Intel native package; CI builds it locally, with complete Intel and multi-RID NuGet consumer reports pending |
 | Windows arm64 | ⚠️ | Target/RID model exists; provider and runtime acceptance pending |
 | Linux arm64 | ⚠️ | Target/RID model exists; independent complete report pending |
 | Android | ⚠️ | NDK/sysroot, package layout, and device/emulator acceptance pending |

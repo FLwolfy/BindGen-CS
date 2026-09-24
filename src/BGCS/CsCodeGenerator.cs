@@ -507,7 +507,8 @@ namespace BGCS
                 .ToList();
             if (files.Count == 0)
                 return;
-            new SingleFileComposer().Compose(files, mergedPath, config.Namespace);
+            new SingleFileComposer().Compose(files, mergedPath, config.Namespace,
+                config.ResolvedTarget.Identifier);
             foreach (string file in files)
                 File.Delete(file);
             DeleteEmptyDirectories(generationOutputPath);

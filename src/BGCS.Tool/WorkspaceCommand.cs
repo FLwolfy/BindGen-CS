@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using BGCS.Intermediate;
 using BGCS.Tool.Commands;
 
@@ -10,7 +11,8 @@ internal static class WorkspaceCommand
     {
         AllowTrailingCommas = true,
         PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
 
     public static int Run(string[] args)
@@ -27,8 +29,8 @@ internal static class WorkspaceCommand
         return operation switch
         {
             "validate" => Validate(configPaths),
-            "generate" => Generate(configPaths, manifest),
-            "diff" => Diff(configPaths, manifest),
+            "generate" => Generate(configPaths),
+            "diff" => Diff(configPaths),
             _ => throw new InvalidOperationException($"Unsupported workspace operation '{operation}'.")
         };
     }
@@ -88,7 +90,7 @@ internal static class WorkspaceCommand
         return 0;
     }
 
-    private static int Generate(IReadOnlyList<string> configPaths, BindingWorkspaceManifest manifest)
+    private static int Generate(IReadOnlyList<string> configPaths)
     {
         // Validate every input before replacing any generated directory.
         if (Validate(configPaths) != 0)
@@ -99,7 +101,7 @@ internal static class WorkspaceCommand
             Console.WriteLine($"Generating {configPath}");
             CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
             generator.LogToConsole();
-            if (!generator.GenerateConfigured(ResolveOutputPath(configPath, manifest)))
+            if (!generator.GenerateConfigured())
             {
                 GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
                 return 1;
@@ -109,13 +111,13 @@ internal static class WorkspaceCommand
         return 0;
     }
 
-    private static int Diff(IReadOnlyList<string> configPaths, BindingWorkspaceManifest manifest)
+    private static int Diff(IReadOnlyList<string> configPaths)
     {
         bool hasChanges = false;
         foreach (string configPath in configPaths)
         {
             CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(configPath);
-            string expectedOutput = ResolveOutputPath(configPath, config, manifest);
+            string expectedOutput = Path.GetFullPath(config.OutputPath, Path.GetDirectoryName(configPath)!);
             string temporaryOutput = Path.Combine(Path.GetTempPath(), "bindgen-cs-workspace-diff-" + Guid.NewGuid().ToString("N"));
             try
             {
@@ -146,26 +148,6 @@ internal static class WorkspaceCommand
         return hasChanges ? 1 : 0;
     }
 
-    private static string? ResolveOutputPath(string configPath, BindingWorkspaceManifest manifest)
-    {
-        if (!manifest.TargetOutputSubdirectories)
-            return null;
-        CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(configPath);
-        return ResolveOutputPath(configPath, config, manifest);
-    }
-
-    private static string ResolveOutputPath(
-        string configPath,
-        CsCodeGeneratorConfig config,
-        BindingWorkspaceManifest manifest)
-    {
-        string configDirectory = Path.GetDirectoryName(configPath)!;
-        string output = Path.GetFullPath(config.OutputPath, configDirectory);
-        return manifest.TargetOutputSubdirectories
-            ? Path.Combine(output, config.ResolvedTarget.Identifier)
-            : output;
-    }
-
     private static IReadOnlyDictionary<string, string> ReadDirectory(string directory)
     {
         return Directory.GetFiles(directory, "*", SearchOption.AllDirectories).ToDictionary(
@@ -185,7 +167,7 @@ internal static class WorkspaceCommand
             changes.Add($"Removed: {path}");
         foreach (string path in expected.Keys.Intersect(actual.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(path => path))
         {
-            if (!string.Equals(expected[path], actual[path], StringComparison.Ordinal))
+            if (!GeneratedSourceComparison.Equals(path, expected[path], actual[path]))
                 changes.Add($"Changed: {path}");
         }
         return changes;
@@ -194,7 +176,5 @@ internal static class WorkspaceCommand
     private sealed class BindingWorkspaceManifest
     {
         public List<string> Configs { get; init; } = [];
-
-        public bool TargetOutputSubdirectories { get; init; }
     }
 }

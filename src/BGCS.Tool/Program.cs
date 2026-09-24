@@ -197,7 +197,7 @@ internal static class Program
             foreach (string path in actual.Keys.Except(expected.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(path => path))
                 changes.Add($"Removed: {path}");
             foreach (string path in expected.Keys.Intersect(actual.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(path => path))
-                if (!string.Equals(expected[path], actual[path], StringComparison.Ordinal))
+                if (!GeneratedSourceComparison.Equals(path, expected[path], actual[path]))
                     changes.Add($"Changed: {path}");
             if (changes.Count == 0)
             {

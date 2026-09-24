@@ -7,7 +7,9 @@ DOTNET_CMD="$(resolve_dotnet_host)"
 DOTNET_ROOT_DIR="$(cd "$(dirname "${DOTNET_CMD}")" && pwd)"
 export DOTNET_ROOT="${DOTNET_ROOT_DIR}"
 CONFIGURATION="${CONFIGURATION:-Release}"
-VERSION="${PACKAGE_TEST_VERSION:-0.0.0-local}"
+# A unique local version prevents NuGet fallback folders from reusing an older
+# package with the same test version. Release CI supplies PACKAGE_TEST_VERSION.
+VERSION="${PACKAGE_TEST_VERSION:-0.0.0-local.run$(date -u +%s).$$}"
 PACKAGE_DIR="${ROOT_DIR}/artifacts/nuget"
 SECOND_PACKAGE_DIR="${ROOT_DIR}/artifacts/nuget-repeat"
 CONSUMER_DIR="${ROOT_DIR}/artifacts/nuget-consumer"
@@ -198,8 +200,9 @@ cat > "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" <<EOF
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="${NATIVE_PACKAGE_STAGE}/runtimes/**/*" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
-    <None Include="${NATIVE_PACKAGE_STAGE}/bgcs.native-assets.json" Pack="true" PackagePath="bgcs.native-assets.json" />
+    <!-- Keep paths relative to this project: Git Bash /d/... is not a Windows MSBuild path. -->
+    <None Include="../native-package-layout/runtimes/**/*" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="../native-package-layout/bgcs.native-assets.json" Pack="true" PackagePath="bgcs.native-assets.json" />
   </ItemGroup>
 </Project>
 EOF

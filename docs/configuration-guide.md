@@ -224,7 +224,6 @@ A workspace stores multiple configuration paths for repository-level automation:
 
 ```json
 {
-  "TargetOutputSubdirectories": true,
   "Configs": ["cimgui.json", "sdl3.json", "bgfx.json"]
 }
 ```
@@ -235,6 +234,6 @@ bindgen-cs workspace generate native/bindings/workspace.json
 bindgen-cs workspace diff native/bindings/workspace.json
 ```
 
-With `TargetOutputSubdirectories=true`, `generate` and `diff` resolve each config's normal output as `OutputPath/<target-id>` (for example `Generated/linux-arm64-gnu`). Use it whenever one repository retains bindings for multiple ABIs; consumers must select exactly one target directory. Put `workspace diff` in CI to validate all checked-in bindings without overwriting final output.
+`generate` uses each config's `OutputPath`; `diff` checks that same path without replacing the checked-in output. With single-file output enabled, a workspace does not introduce target-specific source directories.
 
-The generator being cross-platform does not imply one C# declaration set is valid for every ABI. Native headers may expose different declarations or layouts after target-specific preprocessing. `SingleFileOutputName` changes file organization within one target; `TargetOutputSubdirectories` isolates those targets. A truly shared file is appropriate only after each intended target has passed ABI and native-consumer tests with identical generated declarations.
+The generated header records the `ABI reference target` used for native parsing. This is a marker, not a cross-platform certification: native headers may expose different declarations or layouts after target-specific preprocessing. Run ABI and native-consumer tests on every intended target before sharing one binding source.

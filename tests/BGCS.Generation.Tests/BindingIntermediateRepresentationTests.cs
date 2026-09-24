@@ -58,6 +58,7 @@ public class BindingIntermediateRepresentationTests
             BindingFunction function = Assert.Single(module.Functions);
             BindingParameter parameter = Assert.Single(function.Parameters, candidate => candidate.NativeName == "callback");
             string source = string.Join(Environment.NewLine, generator.LastResult.OutputFiles.Select(File.ReadAllText));
+            Assert.Contains("// ABI reference target: windows-x64-msvc", source, StringComparison.Ordinal);
             Assert.True(source.Contains("public static int BgcsCallCallback(BgcsIntCallback callback, int value)", StringComparison.Ordinal),
                 $"Delegates: {string.Join(", ", module.Delegates.Select(value => value.NativeName + "/" + value.ManagedName))}; " +
                 $"Callback type: {parameter.Type.NativeName}/{parameter.Type.ManagedName}; " +

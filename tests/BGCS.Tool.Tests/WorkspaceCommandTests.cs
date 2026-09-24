@@ -1,6 +1,7 @@
 using System;
 using System.IO;
-using BGCS.CppAst.Targeting;
+using System.Linq;
+using System.Text.Json;
 using BGCS.Tool;
 using Xunit;
 
@@ -9,7 +10,19 @@ namespace BGCS.Tool.Tests;
 public sealed class WorkspaceCommandTests
 {
     [Fact]
-    public void Generate_TargetOutputSubdirectories_IsolatesHostAbiAndDiffsThatTarget()
+    public void Validate_RejectsUnknownWorkspaceOptions()
+    {
+        using TestDirectory directory = new();
+        directory.Write("workspace.json", """
+            { "Configs": ["bindgen.json"], "UnknownOption": true }
+            """);
+
+        Assert.Throws<JsonException>(() => WorkspaceCommand.Run(
+            ["validate", directory.Resolve("workspace.json")]));
+    }
+
+    [Fact]
+    public void Generate_UsesConfiguredSingleFilePathAndDiffsThatPath()
     {
         using TestDirectory directory = new();
         directory.Write("native.h", "int native_add(int left, int right);\n");
@@ -28,7 +41,6 @@ public sealed class WorkspaceCommandTests
         directory.Write("workspace.json",
             """
             {
-              "TargetOutputSubdirectories": true,
               "Configs": ["bindgen.json"]
             }
             """);
@@ -36,9 +48,16 @@ public sealed class WorkspaceCommandTests
         string manifest = directory.Resolve("workspace.json");
         Assert.Equal(0, WorkspaceCommand.Run(["generate", manifest]));
 
-        string targetOutput = directory.Resolve(Path.Combine("Generated", CppTarget.Resolve().Identifier));
+        string targetOutput = directory.Resolve("Generated");
         Assert.True(File.Exists(Path.Combine(targetOutput, "Bindings.cs")));
-        Assert.False(File.Exists(directory.Resolve(Path.Combine("Generated", "Bindings.cs"))));
+        Assert.Empty(Directory.GetDirectories(targetOutput));
+        Assert.Equal(0, WorkspaceCommand.Run(["diff", manifest]));
+
+        string bindingsPath = Path.Combine(targetOutput, "Bindings.cs");
+        string source = File.ReadAllText(bindingsPath);
+        string referenceLine = source.Split('\n').Single(line => line.Contains("ABI reference target:", StringComparison.Ordinal));
+        File.WriteAllText(bindingsPath, source.Replace(referenceLine,
+            "// ABI reference target: another-target", StringComparison.Ordinal));
         Assert.Equal(0, WorkspaceCommand.Run(["diff", manifest]));
 
         File.AppendAllText(Path.Combine(targetOutput, "Bindings.cs"), "// drift\n");

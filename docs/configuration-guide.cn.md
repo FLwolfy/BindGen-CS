@@ -224,7 +224,6 @@ Workspace 文件保存多个 config path，适合仓库级自动化：
 
 ```json
 {
-  "TargetOutputSubdirectories": true,
   "Configs": ["cimgui.json", "sdl3.json", "bgfx.json"]
 }
 ```
@@ -235,6 +234,6 @@ bindgen-cs workspace generate native/bindings/workspace.json
 bindgen-cs workspace diff native/bindings/workspace.json
 ```
 
-`TargetOutputSubdirectories=true` 时，`generate` 与 `diff` 会把每份配置的普通输出解析为 `OutputPath/<target-id>`（例如 `Generated/linux-arm64-gnu`）。同一仓库保留多个 ABI 的 bindings 时应开启此项，并由消费项目严格选择一个 target 目录。把 `workspace diff` 放入 CI，可以在不覆盖正式输出的情况下验证全部 checked-in bindings。
+`generate` 使用各配置的 `OutputPath`；`diff` 检查相同路径，不覆盖已签入的产物。启用单文件输出时，workspace 不会引入目标平台子目录。
 
-生成器跨平台不代表一份 C# 声明能适用于所有 ABI。Native header 经 target 条件编译后，声明和布局都可能变化。`SingleFileOutputName` 只控制单个 target 的文件组织；`TargetOutputSubdirectories` 负责隔离不同 target。只有每个目标都通过 ABI 与 native consumer 测试，且生成声明确实一致，才应共用一份文件。
+生成文件头的 `ABI reference target` 记录 native 解析时使用的参考目标，只是标记，不代表跨平台已验收。Native header 经 target 条件编译后，声明和布局仍可能变化。共享一份 binding 源文件前，应在每个目标上执行 ABI 与 native consumer 测试。
