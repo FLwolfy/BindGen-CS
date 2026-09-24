@@ -84,6 +84,7 @@ C++ Bridge 必须编译、链接并执行以下测试：
 - 生成文件绝不手工修改。
 - 库特定行为必须放在 preset、policy 或生成目录外的 patch 中。
 - public API snapshot 必须审阅并编译。
+- C# 源码 snapshot 除文件头的 `ABI reference target` 标记外逐字节比较；该标记只记录解析参考目标，不代表 binding 契约变化。其他空白或正文变化仍须审阅并更新基线。
 - 保留 raw imports；在 ownership 事实充分时，友好 API 使用 span、string、handle、result 和确定性命名。
 - 生成源码必须通过 warning-as-error 编译；文档和 lifetime 信息只在 native 声明或显式配置提供事实时生成。
 

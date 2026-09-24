@@ -22,13 +22,13 @@
         /// <summary>
         /// Executes public operation <c>CsEnumItemMetadata</c>.
         /// </summary>
-        public CsEnumItemMetadata(string cppName, string cppValue, string? name, string? value, List<string> attributes, string? comment)
+        public CsEnumItemMetadata(string cppName, string cppValue, string? name, string? value, List<string>? attributes, string? comment)
         {
             CppName = cppName;
             CppValue = cppValue;
             Name = name;
             Value = value;
-            Attributes = attributes;
+            Attributes = attributes ?? [];
             Comment = comment;
         }
 

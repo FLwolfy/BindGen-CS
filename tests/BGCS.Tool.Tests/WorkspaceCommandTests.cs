@@ -57,7 +57,7 @@ public sealed class WorkspaceCommandTests
         string source = File.ReadAllText(bindingsPath);
         string referenceLine = source.Split('\n').Single(line => line.Contains("ABI reference target:", StringComparison.Ordinal));
         File.WriteAllText(bindingsPath, source.Replace(referenceLine,
-            "// ABI reference target: another-target", StringComparison.Ordinal));
+            "//     ABI reference target: another-target", StringComparison.Ordinal));
         Assert.Equal(0, WorkspaceCommand.Run(["diff", manifest]));
 
         File.AppendAllText(Path.Combine(targetOutput, "Bindings.cs"), "// drift\n");

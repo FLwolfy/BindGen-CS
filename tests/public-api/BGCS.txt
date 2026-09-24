@@ -312,8 +312,8 @@ class BGCS.Emission.RuntimeEmitter
   method System.Collections.Generic.IReadOnlyList<System.String> Emit(BGCS.Intermediate.BindingModule module, BGCS.Emission.EmissionContext context)
 class BGCS.Emission.SingleFileComposer
   ctor()
-  method System.String Compose(System.Collections.Generic.IEnumerable<System.String> sourceFiles, System.String outputFile, System.String targetNamespace)
-  method System.String ComposeSources(System.Collections.Generic.IEnumerable<System.ValueTuple<System.String,System.String>> sources, System.String outputFile, System.String targetNamespace)
+  method System.String Compose(System.Collections.Generic.IEnumerable<System.String> sourceFiles, System.String outputFile, System.String targetNamespace, System.String abiReferenceTarget)
+  method System.String ComposeSources(System.Collections.Generic.IEnumerable<System.ValueTuple<System.String,System.String>> sources, System.String outputFile, System.String targetNamespace, System.String abiReferenceTarget)
 class BGCS.Extensions
   method BGCS.Core.CSharp.Direction GetDirection(BGCS.CppAst.Model.Types.CppType type, System.Boolean isPointer)
   method BGCS.CppAst.Model.CppMacro FindMacro(BGCS.CppAst.Model.Metadata.CppCompilation compilation, System.String name)

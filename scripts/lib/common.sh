@@ -44,18 +44,54 @@ resolve_cxx_host() {
   return 1
 }
 
+snapshot_sha256() {
+  local path="$1" checksum
+  if [[ ! -f "${path}" ]]; then
+    printf 'Snapshot input does not exist: %s\n' "${path}" >&2
+    return 1
+  fi
+  # The ABI reference is provenance, not generated C# API or implementation.
+  # Compare all other bytes against the reviewed, pre-annotation baselines.
+  if [[ "${path}" == *.cs ]]; then
+    if command -v sha256sum > /dev/null 2>&1; then
+      checksum="$(sed '1,12{/^\/\/ *ABI reference target: /d;}' "${path}" | sha256sum --binary)" || return 1
+    elif command -v shasum > /dev/null 2>&1; then
+      checksum="$(sed '1,12{/^\/\/ *ABI reference target: /d;}' "${path}" | shasum -a 256 --binary)" || return 1
+    else
+      printf 'Unable to hash %s: sha256sum or shasum is required.\n' "${path}" >&2
+      return 1
+    fi
+  elif command -v sha256sum > /dev/null 2>&1; then
+    checksum="$(sha256sum --binary "${path}")" || return 1
+  elif command -v shasum > /dev/null 2>&1; then
+    checksum="$(shasum -a 256 --binary "${path}")" || return 1
+  else
+    printf 'Unable to hash %s: sha256sum or shasum is required.\n' "${path}" >&2
+    return 1
+  fi
+  printf '%s\n' "${checksum%% *}"
+}
+
 verify_sha256_manifest() {
-  local manifest="$1"
-  if command -v sha256sum > /dev/null 2>&1; then
-    tr -d '\r' < "${manifest}" | sha256sum --check -
-    return
-  fi
-  if command -v shasum > /dev/null 2>&1; then
-    tr -d '\r' < "${manifest}" | shasum -a 256 --check -
-    return
-  fi
-  printf 'Unable to verify %s: sha256sum or shasum is required.\n' "${manifest}" >&2
-  return 1
+  local manifest="$1" record expected path actual failed=0
+  while IFS= read -r record || [[ -n "${record}" ]]; do
+    record="${record%$'\r'}"
+    [[ -z "${record}" ]] && continue
+    if [[ ! "${record:0:64}" =~ ^[[:xdigit:]]{64}$ || "${record:64:2}" != ' *' ]]; then
+      printf 'Malformed snapshot manifest entry: %s\n' "${record}" >&2
+      return 1
+    fi
+    expected="${record:0:64}"
+    path="${record:66}"
+    actual="$(snapshot_sha256 "${path}")" || return 1
+    if [[ "${actual}" == "${expected}" ]]; then
+      printf '%s: OK\n' "${path}"
+    else
+      printf '%s: FAILED\n' "${path}" >&2
+      failed=1
+    fi
+  done < "${manifest}"
+  return "${failed}"
 }
 
 detect_snapshot_platform() {
@@ -110,20 +146,12 @@ verify_or_capture_snapshot_manifest() {
   candidate_dir="${ROOT_DIR}/artifacts/acceptance/candidate-snapshots"
   mkdir -p "${candidate_dir}" || return 1
   candidate="${candidate_dir}/$(basename "${manifest}")"
-  if command -v sha256sum > /dev/null 2>&1; then
-    if ! sha256sum --binary "$@" > "${candidate}"; then
-      rm -f "${candidate}"
-      return 1
-    fi
-  elif command -v shasum > /dev/null 2>&1; then
-    if ! shasum -a 256 --binary "$@" > "${candidate}"; then
-      rm -f "${candidate}"
-      return 1
-    fi
-  else
-    printf 'Unable to create snapshot candidate: sha256sum or shasum is required.\n' >&2
-    return 1
-  fi
+  : > "${candidate}"
+  local path checksum
+  for path in "$@"; do
+    checksum="$(snapshot_sha256 "${path}")" || { rm -f "${candidate}"; return 1; }
+    printf '%s *%s\n' "${checksum}" "${path}" >> "${candidate}"
+  done
   printf '%s for %s. Candidate: %s\n' "${unreviewed_reason}" "${platform}" "${candidate}" >&2
   return 3
 }

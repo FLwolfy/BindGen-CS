@@ -79,6 +79,7 @@ Unsupported constructs must produce actionable diagnostics and an inspectable re
 - Generated files are never manually edited.
 - Library-specific behavior is represented by presets, policies, or patches stored outside generated output.
 - Public API snapshots are reviewed and compiled.
+- Source snapshots compare generated C# byte-for-byte except for the header's `ABI reference target` line, which identifies parsing provenance rather than the binding contract. Any other whitespace or body change still requires a reviewed baseline update.
 - Raw imports remain available but friendly APIs use spans, strings, handles, results, and deterministic names where ownership facts permit.
 - Generated source compiles with warnings as errors; documentation and lifetime details are emitted only when native declarations or explicit configuration provide those facts.
 

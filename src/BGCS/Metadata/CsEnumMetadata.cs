@@ -12,15 +12,14 @@
         /// <summary>
         /// Initializes a new instance of <see cref="CsEnumMetadata"/>.
         /// </summary>
-        public CsEnumMetadata(string cppName, string name, List<string> attributes, string? comment, string baseType, List<CsEnumItemMetadata> items)
+        public CsEnumMetadata(string cppName, string name, List<string>? attributes, string? comment, string baseType, List<CsEnumItemMetadata>? items)
         {
             CppName = cppName;
             Name = name;
-            Attributes = attributes;
+            Attributes = attributes ?? [];
             Comment = comment;
-            Items = items;
-            BaseType = baseType;
-            Items = items;
+            Items = items ?? [];
+            BaseType = string.IsNullOrWhiteSpace(baseType) ? "int" : baseType;
         }
 
         /// <summary>

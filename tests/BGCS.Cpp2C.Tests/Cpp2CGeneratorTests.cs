@@ -359,6 +359,27 @@ public class Cpp2CGeneratorTests
     }
 
     [Fact]
+    public void Generate_ClassMethod_ShouldPreserveConstPointerParameter()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-const-pointer-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "input.hpp");
+        string output = Path.Combine(temp, "out");
+        File.WriteAllText(header, "class Text { public: void Set(const char* value) {} };\n");
+        try
+        {
+            new Cpp2CCodeGenerator(new Cpp2CGeneratorConfig()).Generate(header, output);
+
+            string classesHeader = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
+            Assert.Contains("const char* value", classesHeader, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void Generate_UniquePtrAdapter_ShouldTransferOpaqueOwnership()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-unique-" + Guid.NewGuid().ToString("N"));

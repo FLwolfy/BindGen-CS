@@ -115,7 +115,7 @@ public class CsGeneratorSmokeTests
             Assert.True(File.Exists(mergedPath));
 
             string merged = File.ReadAllText(mergedPath);
-            Assert.Contains($"// ABI reference target: {CppTarget.Resolve().Identifier}", merged);
+            Assert.Contains($"//     ABI reference target: {CppTarget.Resolve().Identifier}", merged);
             Assert.Contains("TestFnNative", merged);
             Assert.Contains("partial struct MyStruct", merged);
 

@@ -554,7 +554,10 @@ public class ClassGenerationStep : GenerationStep
             {
                 CppPointerType pointer => GetSpecializedCType(cppClass, pointer.ElementType) + "*",
                 CppReferenceType reference => GetSpecializedCType(cppClass, reference.ElementType) + "*",
-                CppQualifiedType qualified => GetSpecializedCType(cppClass, qualified.ElementType),
+                CppQualifiedType qualified =>
+                    (qualified.Qualifier == CppTypeQualifier.Const ? "const " :
+                        qualified.Qualifier == CppTypeQualifier.Volatile ? "volatile " : string.Empty)
+                    + GetSpecializedCType(cppClass, qualified.ElementType),
                 CppArrayType array => GetSpecializedCType(cppClass, array.ElementType) + "*",
                 CppTemplateArgument { ArgAsType: not null } argument => config.GetCType(argument.ArgAsType),
                 _ => config.GetCType(type)

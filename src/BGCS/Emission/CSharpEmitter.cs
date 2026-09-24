@@ -3,6 +3,7 @@ namespace BGCS.Emission;
 using System.Text;
 using BGCS.Core.CSharp;
 using BGCS.Intermediate;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 /// <summary>
@@ -58,7 +59,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         EmitFunctions(writer, module);
         EmitFunctionTable(writer, module);
         writer.AppendLine("}");
-        File.WriteAllText(outputFile, writer.ToString());
+        File.WriteAllText(outputFile, FormatSource(writer.ToString()));
         return [outputFile];
     }
 
@@ -157,7 +158,20 @@ public sealed class CSharpEmitter : IBindingEmitter
         emitBody(writer);
         writer.AppendLine("}");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, writer.ToString());
+        File.WriteAllText(path, FormatSource(writer.ToString()));
+    }
+
+    private static string FormatSource(string source)
+    {
+        SyntaxTree tree = CSharpSyntaxTree.ParseText(source);
+        Diagnostic[] errors = tree.GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        if (errors.Length > 0)
+            throw new InvalidOperationException("Cannot format invalid generated C# source: " +
+                string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
+        return tree.GetCompilationUnitRoot().NormalizeWhitespace("    ", Environment.NewLine)
+            .ToFullString() + Environment.NewLine;
     }
 
     private static string SanitizeFileComponent(string value)
