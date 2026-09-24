@@ -54,6 +54,18 @@ if ! command -v unzip > /dev/null 2>&1; then
   exit 1
 fi
 
+parser_package="${PACKAGE_DIR}/BGCS.CppAst.${VERSION}.nupkg"
+parser_manifest="$(unzip -p "${parser_package}" BGCS.CppAst.nuspec)"
+for rid in win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64; do
+  for native_package in libclang.runtime libClangSharp.runtime; do
+    if ! grep -Fq "id=\"${native_package}.${rid}\"" <<< "${parser_manifest}"; then
+      printf 'Parser package is missing the %s dependency for %s.\n' "${native_package}" "${rid}" >&2
+      exit 1
+    fi
+  done
+done
+printf '[nuget] Parser package declares the complete published desktop native RID dependency closure.\n'
+
 shopt -s nullglob
 first_packages=("${PACKAGE_DIR}"/*.nupkg)
 second_packages=("${SECOND_PACKAGE_DIR}"/*.nupkg)

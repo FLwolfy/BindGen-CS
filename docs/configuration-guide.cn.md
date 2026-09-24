@@ -114,7 +114,7 @@ BGCS 的默认 C# 映射只包含 C/C++ 标准类型名。Native SDK 的别名�
 
 ## 严格安全诊断
 
-`StrictSafety` 默认是 `true`。`StrictSafetySeverity` 可选 `Warning`（诊断但保持兼容）、`SuppressFriendly`（保留 raw ABI，删除高风险 string/Span/array/delegate overload）或 `Error`（validate/generate/build 在 commit 前失败）。诊断使用 `BGCS-SAFETY-*` code，并给出最小 `MarshallingMappings` 路径。只有外部审计明确负责这些语义时才应设为 `false`。
+`StrictSafety` 默认是 `true`，`StrictSafetySeverity` 默认是 `SuppressFriendly`：语义未证明时保留 raw ABI，但移除该函数推断生成的 friendly overload。`Warning` 会明确承担风险并保留这些 overload；`Error` 使 validate/generate/build 在 commit 前失败。诊断使用 `BGCS-SAFETY-*` code，并给出最小 `MarshallingMappings` 路径。只有外部审计明确负责这些语义时才应设为 `false`。
 
 当 `TypeMappings` 把 native record 映射到项目提供的 managed value type 时，必须增加 `ExternalTypeContracts`。`NativeTypes` 与 `ManagedTypes` 是 ordinal selector，支持 `*` 与 `?`，因此一个经审计的 contract 可以覆盖 `NativeVector_*` 到 `NativeVector<*>` 这样的闭合泛型 carrier；每个被选中的 `TypeMappings` pair 都会验证，重叠 contract 会被拒绝。`ByValuePolicy=Reject` 只允许 pointer 使用；`RequireLayoutMatch` 仅在解析出的 native size/alignment 与声明 carrier 一致时允许按值传递；`BypassLayoutValidation` 会在没有该证据时显式继续。通过的按值 carrier 会保留在 Binding IR 中并产生 `BGCS-SAFETY-EXTERNAL-TYPE`，项目必须保留 managed layout 与 native invocation 测试。
 

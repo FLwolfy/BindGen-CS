@@ -27,6 +27,7 @@ Command-line users can install the `BindGen-CS` .NET tool and run `bindgen-cs br
   "CSharpApiName": "NativeApi",
   "NativeLibraryName": "example",
   "CSharpOutputPath": "GeneratedBindings",
+  "CSharpStrictSafetySeverity": "SuppressFriendly",
   "LoweringSafetyPolicy": "VerifiedOnly",
   "TypeLowerings": [],
   "CallableLowerings": [],

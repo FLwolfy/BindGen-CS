@@ -2,7 +2,7 @@
 
 [Wiki](README.md) | [中文](configuration-guide.cn.md) | [Configuration entries with dedicated tests](config.md)
 
-The public JSON model remains flat for source compatibility, while the internal pipeline separates input, target, analysis, marshalling, emission, and output responsibilities. Layer large configurations through BaseConfig and presets instead of copying one monolithic document.
+The current JSON model is flat; the internal pipeline separates input, target, analysis, marshalling, emission, and output responsibilities. Layer large configurations through BaseConfig and presets instead of copying one monolithic document. No earlier pre-release configuration format is loaded.
 
 Use configuration sources in this order of authority:
 
@@ -114,7 +114,7 @@ BGCS's default C# mappings contain C/C++ standard type names only. Native-SDK al
 
 ## Strict safety diagnostics
 
-`StrictSafety` defaults to `true`. `StrictSafetySeverity` selects `Warning` (diagnose while preserving compatibility), `SuppressFriendly` (keep raw ABI and remove high-risk string/Span/array/delegate overloads), or `Error` (make validate/generate/build fail before commit). Diagnostics use `BGCS-SAFETY-*` codes and include the exact minimum `MarshallingMappings` path. Set `StrictSafety=false` only when an external audit owns those semantics.
+`StrictSafety` defaults to `true`, and `StrictSafetySeverity` defaults to `SuppressFriendly`: unresolved semantics keep the raw ABI but remove that function's inferred friendly overloads. `Warning` deliberately keeps those overloads while reporting risk; `Error` makes validate/generate/build fail before commit. Diagnostics use `BGCS-SAFETY-*` codes and include the exact minimum `MarshallingMappings` path. Set `StrictSafety=false` only when an external audit owns those semantics.
 
 When `TypeMappings` redirects a native record to a project-supplied managed value type, add an `ExternalTypeContracts` entry. `NativeTypes` and `ManagedTypes` are ordinal selectors that accept `*` and `?`, so one audited contract can cover closed generic carriers such as `NativeVector_*` to `NativeVector<*>`. Every selected `TypeMappings` pair is validated and overlapping contracts are rejected. `ByValuePolicy=Reject` permits pointer-only use, `RequireLayoutMatch` accepts by-value use only when parsed native size/alignment match the declared carrier, and `BypassLayoutValidation` explicitly continues without that proof. Accepted by-value carriers remain visible in Binding IR and emit `BGCS-SAFETY-EXTERNAL-TYPE`; the project must keep managed-layout and native-invocation tests.
 

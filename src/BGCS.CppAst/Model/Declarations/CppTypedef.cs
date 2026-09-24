@@ -36,7 +36,6 @@ public sealed class CppTypedef : CppTypeDeclaration, ICppMemberWithVisibility, I
     /// </summary>
     public List<CppAttribute> Attributes { get; }
 
-    [Obsolete("TokenAttributes is deprecated. please use system attributes and annotate attributes")]
     /// <summary>
     /// Gets <c>TokenAttributes</c>.
     /// </summary>

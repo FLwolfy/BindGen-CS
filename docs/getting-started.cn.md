@@ -11,14 +11,18 @@
 
 开始前先确认工作流：纯 C ABI 使用 `bindgen.json`；C++ class/template 使用 `bridge.json`。不要直接对没有 C linkage 的 C++ symbol 生成 P/Invoke。
 
-## 安装工具
+## 运行工具
+
+仓库 [README 一分钟示例](../README.cn.md#getting-started) 使用 `dotnet run --project src/BGCS.Tool --` 和已提交的 `examples/QuickStart/native.h`，不依赖公开工具包。下文的 `bindgen-cs` 命令在源码 checkout 中可替换为该命令。
+
+`BindGen-CS` 工具包正式公开发布后，可以安装：
 
 ```bash
 dotnet tool install --global BindGen-CS
 bindgen-cs --help
 ```
 
-升级已安装版本使用 `dotnet tool update --global BindGen-CS`。需要仓库内固定版本时，使用标准 .NET tool manifest 安装 `BindGen-CS`。
+发布后可用 `dotnet tool update --global BindGen-CS` 升级。仓库内固定版本可使用标准 .NET tool manifest。
 
 ## 生成 C Binding
 
@@ -126,7 +130,7 @@ bindgen-cs bridge bridge.json
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
-设置 `GenerateCSharpBindings=true`，并提供 `CSharpNamespace`、`CSharpApiName`、`NativeLibraryName`、`CSharpOutputPath`，即可在这一条命令中同时生成 native C Bridge 和 C# bindings。
+设置 `GenerateCSharpBindings=true`，并提供 `CSharpNamespace`、`CSharpApiName`、`NativeLibraryName`、`CSharpOutputPath`，即可在这一条命令中同时生成 native C Bridge 和 C# bindings。可选 C# 输出默认采用 `CSharpStrictSafetySeverity=SuppressFriendly`：ownership/lifetime 未证明时保留 raw ABI，但抑制推断的 friendly 方法。项目独立审计这些契约后才能显式选择 `Warning`；`Error` 则在补充配置前拒绝生成。
 
 嵌入式 API：
 
@@ -152,7 +156,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root arti
 
 `native-build` 不调用 command shell，可选择 `auto`、direct Clang/GNU、clang-cl、CMake、Meson 或 MSBuild。所有 provider 使用同一份 manifest 中的 library search path、link library、linker argument、target triple 和 sysroot（在对应 backend 支持范围内）；构建成功后默认将生成声明与二进制 export table 核对。
 
-`--package-root` 把通过 export verification 的桌面 binary 放入 `runtimes/<rid>/native/`，并在 `bgcs.native-assets.json` 写入 target 与 SHA-256。Windows/Linux/macOS x64/arm64 当前会映射到 NuGet RID；Android/iOS/FreeBSD 是正式支持目标，但其 target-specific 包布局尚待实现与验收，因此当前该 helper 会给出明确诊断。Pack 完成后可运行 `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>` 生成发布证据。
+`--output` 和 `--package-root` 相对命令运行目录解析；`bridge.manifest.json` *内部*的路径相对 manifest 解析。`--package-root` 只在 binary 文件名、格式和 CPU 架构与 target 匹配后写入 `runtimes/<rid>/native/`，并在 `bgcs.native-assets.json` 记录 target 与 SHA-256。Windows/Linux/macOS x64/arm64 当前映射到 NuGet RID；Android/iOS/FreeBSD 是正式目标，但 package layout 尚未验收，helper 会明确诊断。Pack 完成后可运行 `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>`。
 
 不要假定任意 template/STL type 都能自动 lowering。显式实例和内置 lowering 见[能力矩阵](capabilities.cn.md)，项目扩展见[最终 lowering 架构](lowering.cn.md)，拒绝原因见[诊断指南](diagnostics.cn.md)。
 

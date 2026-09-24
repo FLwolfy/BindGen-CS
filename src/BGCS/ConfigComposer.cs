@@ -26,7 +26,7 @@
     /// <summary>
     /// Defines the public class <c>ConfigComposer</c>.
     /// </summary>
-    public class ConfigComposer : LoggerBase, IConfigComposer, IConfigComposerContext
+    public class ConfigComposer : LoggerBase, IConfigComposer
     {
         private const string FileProtocol = "file://";
         private const string HttpProtocol = "http://";
@@ -40,20 +40,11 @@
         };
 
         /// <summary>
-        /// Executes public operation <c>Compose</c>.
+        /// Composes configuration using an explicit directory for all relative references.
         /// </summary>
-        public void Compose(ref CsCodeGeneratorConfig config)
+        public void Compose(ref CsCodeGeneratorConfig config, string baseDirectory)
         {
-            Compose(ref config, Environment.CurrentDirectory);
-        }
-
-        void IConfigComposerContext.Compose(ref CsCodeGeneratorConfig config, string baseDirectory)
-        {
-            Compose(ref config, baseDirectory);
-        }
-
-        private void Compose(ref CsCodeGeneratorConfig config, string baseDirectory)
-        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(baseDirectory);
             var stack = new Stack<CsCodeGeneratorConfig>();
             var visitedSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var current = config;

@@ -7,7 +7,7 @@ BindGen-CS is a cross-platform C/C++ to C# binding toolchain. It generates C# in
 ## What it does
 
 - Generates `DllImport`, `LibraryImport`, or function-table bindings from C/C++ headers.
-- Emits a raw ABI API plus practical `string`, `Span<T>`, `ref`, and `out` overloads.
+- Emits a raw ABI API plus `string`, `Span<T>`, `ref`, and `out` overloads where the required safety semantics are known.
 - Handles structs, unions, packing, bitfields, fixed arrays, typedefs, opaque handles, callbacks, and target-dependent primitives.
 - Builds C bridges for C++ classes, construction/destruction, methods, overloads, inheritance, template instances, common STL containers, smart pointers, paths, and chrono values.
 - Discovers compilers, target triples, sysroots, and system includes, then writes a reproducible native build manifest.
@@ -15,29 +15,30 @@ BindGen-CS is a cross-platform C/C++ to C# binding toolchain. It generates C# in
 - Manages multiple native libraries through one workspace with deterministic diffs, transactional output, and incremental caching.
 - Extends project-specific semantics through declarative lowerings, independent plugins, or project-owned C shims—without adding library-specific branches to BGCS core.
 
-BGCS does not translate arbitrary C++ source line by line into C#. Its job is to expose callable native capabilities to C# reliably. When ABI, ownership, allocator, or lifetime semantics cannot be proven, generation stops with a diagnostic instead of guessing. A capability that can be wrapped in a stable C ABI can usually be integrated through configuration, a plugin, or a shim.
+BGCS does not translate arbitrary C++ source line by line into C#. Its job is to expose callable native capabilities to C# reliably. For C APIs, unproven ownership, allocator, buffer, or callback semantics produce a diagnostic and suppress inferred friendly overloads by default; the raw ABI remains available. Unsupported C++ lowerings stop bridge generation until a recipe, plugin, or shim supplies the missing semantics.
 
 ## Getting started
 
-You need .NET SDK 9.0. C++ bridges also need a local C/C++ compiler; run `bindgen-cs doctor` to check the host environment.
+You need .NET SDK 9.0. The commands below run directly from a source checkout and do not require a published package. C++ bridges also need a local C/C++ compiler.
 
 ### Generate C# from a C header
 
+From the repository root, copy and run:
+
 ```bash
-dotnet tool install --global BindGen-CS
-bindgen-cs init path/to/native.h
-bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
+dotnet run --project src/BGCS.Tool -- init examples/QuickStart/native.h --config examples/QuickStart/bindgen.json
+dotnet run --project src/BGCS.Tool -- generate examples/QuickStart/bindgen.json
+dotnet run --project src/BGCS.Tool -- build examples/QuickStart/bindgen.json
 ```
 
 The result is:
 
 ```text
-Generated/
+examples/QuickStart/Generated/
 └─ Bindings.cs
 ```
 
-`init` creates a runnable `bindgen.json`. `generate` writes the bindings, and `build` compiles them in a temporary consumer project with nullable analysis and warnings as errors.
+`init` creates a runnable configuration beside the example header. `generate` writes the bindings, and `build` compiles them in a temporary consumer project with nullable analysis and warnings as errors. Replace the example header with your own and keep its configuration next to it. After the tool is published, `dotnet tool install --global BindGen-CS` will provide the shorter `bindgen-cs` command used below; until then, replace `bindgen-cs` with `dotnet run --project src/BGCS.Tool --`.
 
 For a first integration, run the complete check:
 
@@ -146,7 +147,7 @@ The [C++ extension cookbook](docs/cpp-extension-cookbook.md) contains a runnable
 ## Safety behavior
 
 - Clear ABI and lifetime: generate and compile-check.
-- Missing ownership, allocator, buffer length, or callback lifetime: emit a `BGCS-SAFETY-*` diagnostic with the relevant configuration path.
+- Missing ownership, allocator, buffer length, or callback lifetime: emit a `BGCS-SAFETY-*` diagnostic, preserve raw ABI, and suppress unproven friendly overloads by default. Set `StrictSafetySeverity=Error` to reject the whole generation, or supply an explicit `MarshallingMappings` contract to restore the friendly API.
 - No accepted C++ lowering: stop until a recipe, plugin, or shim is supplied.
 - `AllowUnsafe` explicitly transfers risk and keeps an audit diagnostic; it cannot repair an invalid ABI.
 

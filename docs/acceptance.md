@@ -29,7 +29,7 @@ Both reports record their UTC generation time, Git revision, and working-tree di
 
 ## Real-library budgets
 
-Measured on the reported host target after warm NuGet restore:
+Measured on a controlled, reported host target after warm NuGet restore. The functional matrix reports generation times without failing on noisy shared-runner timing. Set `BGCS_ENFORCE_GENERATION_BUDGETS=1` for a dedicated performance run that enforces these budgets; `scripts/test-performance-budget.sh` separately checks cold/warm cache behavior.
 
 | Library | Generate budget | Required result |
 | --- | ---: | --- |

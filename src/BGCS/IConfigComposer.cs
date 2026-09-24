@@ -5,6 +5,6 @@
     /// </summary>
     public interface IConfigComposer
     {
-        void Compose(ref CsCodeGeneratorConfig config);
+        void Compose(ref CsCodeGeneratorConfig config, string baseDirectory);
     }
 }

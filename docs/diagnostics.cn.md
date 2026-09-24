@@ -26,7 +26,7 @@ bindgen-cs explain --json
 | `StrictSafetySeverity` | 行为 |
 | --- | --- |
 | `Warning` | 保留 raw ABI 和当前 friendly API，同时报告风险 |
-| `SuppressFriendly` | 保留 raw ABI，删除无法证明安全的 friendly overload |
+| `SuppressFriendly`（默认） | 保留 raw ABI，删除受影响函数推断生成的 friendly overload |
 | `Error` | 把风险升级为错误，在正式输出 commit 前失败 |
 
 `StrictSafety=false` 只适用于外部流程已经完整审计这些语义的场景。它不会让未知 ownership 变得正确。

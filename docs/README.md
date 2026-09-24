@@ -40,4 +40,4 @@
 
 The CLI/workspace workflow, transactional output, single-file generation, target/toolchain model, shared IR, safety analysis, package closure, real-library snapshots, declared STL/smart-pointer lowering, lifetime diagnostics, and release-governance gates are available now. Desktop-x64 acceptance reports remain independent release evidence.
 
-The current source has a complete passing `macos-arm64-darwin` report with all ten categories at 9.0/10; Windows x64, Linux x64, and macOS x64 still require their same-version complete reports. C# output uses only the IR-native emitter, with no pre-release compatibility fallback.
+macOS arm64 has a local complete acceptance run. The supplied September 24 desktop-x64 CI logs showed failures in all three runners; fixes in this checkout require a new same-revision CI run before those hosts can be marked accepted. The report's 9.0 value is a fixed gate-passed label, not a calibrated quality score. C# output uses only the IR-native emitter; no prior pre-release configuration or emitter is loaded. See [CI diagnosis](ci-remediation-2026-09-24.md).

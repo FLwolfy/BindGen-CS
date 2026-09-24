@@ -75,26 +75,7 @@
             }
 
             composer ??= new ConfigComposer();
-            if (composer is IConfigComposerContext contextualComposer)
-            {
-                contextualComposer.Compose(ref result, configDirectory ?? Environment.CurrentDirectory);
-            }
-            else
-            {
-                string previousCwd = Environment.CurrentDirectory;
-                try
-                {
-                    if (!string.IsNullOrEmpty(configDirectory))
-                    {
-                        Environment.CurrentDirectory = configDirectory;
-                    }
-                    composer.Compose(ref result);
-                }
-                finally
-                {
-                    Environment.CurrentDirectory = previousCwd;
-                }
-            }
+            composer.Compose(ref result, configDirectory ?? Environment.CurrentDirectory);
             result.ConfigDirectory = configDirectory;
             result.LoadConfiguredPlugins();
             return result;

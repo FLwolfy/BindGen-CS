@@ -32,6 +32,8 @@
 
 ## 真实库性能预算
 
+在受控、已记录的 host 上 warm restore 后测量。普通功能矩阵记录生成耗时，但不因共享 runner 的负载或墙钟变化而失败。专用性能测试可设置 `BGCS_ENFORCE_GENERATION_BUDGETS=1` 强制以下上限；`scripts/test-performance-budget.sh` 另行验证冷/热缓存。
+
 在报告声明的宿主 target、NuGet 已 warm restore 的条件下测量：
 
 | 库 | 生成预算 | 强制结果 |

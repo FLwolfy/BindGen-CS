@@ -42,6 +42,7 @@ cat > "${ARTIFACTS_DIR}/bimg/bridge.json" <<EOF
   "IncludeFolders": ["${BIMG_INCLUDE_JSON}", "${BX_INCLUDE_JSON}"],
   "OutputPath": "Bridge",
   "GenerateCSharpBindings": true,
+  "CSharpStrictSafetySeverity": "Warning",
   "CSharpNamespace": "BGCS.RealLibraries.Bimg",
   "CSharpApiName": "Bimg",
   "NativeLibraryName": "bimg_bridge",
@@ -54,7 +55,10 @@ EOF
 start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- bridge "${ARTIFACTS_DIR}/bimg/bridge.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-if (( elapsed_seconds > 15 )); then echo "[real-cpp] bimg bridge exceeded 15 seconds: ${elapsed_seconds}s"; exit 1; fi
+if [[ "${BGCS_ENFORCE_GENERATION_BUDGETS:-0}" == "1" ]] && (( elapsed_seconds > 15 )); then
+  echo "[real-cpp] bimg bridge exceeded 15 seconds: ${elapsed_seconds}s"
+  exit 1
+fi
 "${CXX_CMD}" -std=c++23 -fsyntax-only \
   -I "${ARTIFACTS_DIR}/bimg/Bridge/include" -I "${CORPUS_ROOT}/bimg/include/bimg" \
   -I "${BIMG_INCLUDE}" -I "${BX_INCLUDE}" "${ARTIFACTS_DIR}/bimg/Bridge/src/Classes.cpp"

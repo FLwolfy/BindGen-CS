@@ -88,7 +88,7 @@ With the existing features of `ClangSharp`, such as `visibility attribute`, can 
 
 ---
 ### 3.2 `AttributeKind.TokenAttribute`
-&emsp;&emsp;For the original `attribute` implemented based on `token` parsing, for compatibility with older versions, it has temporarily been moved from the original `Attributes` property to the `TokenAttributes` property. The new `CxxSystemAttribute` and `AnnotateAttribute` are stored in the original `Attributes` property. You can refer to the relevant test cases to understand their specific usage.  
+&emsp;&emsp;`TokenAttributes` is the current opt-in result of source-token parsing (`ParseTokenAttributes=true`). It is separate from semantic `Attributes` because token scans have different provenance and may not be fully resolved by Clang. `CxxSystemAttribute` and `AnnotateAttribute` remain in `Attributes`.
 
 ---
 ### 3.3 `AttributeKind.AnnotateAttribute`
@@ -151,4 +151,4 @@ float x;
 1. CxxSystemAttribute
 2. TokenAttribute
 3. AnnotateAttribute
-We recommend using `CxxSystemAttribute` and `AnnotateAttribute`, which do not require switch control. The existence of `TokenAttribute` is mainly for compatibility with old implementations. The related attributes have been moved into a separate `TokenAttributes` to distinguish from the first two. And `CppParserOptions` corresponding switch is adjusted to `ParseTokenAttributes`. Due to performance and usage limitations, it is not recommended to continue to use it.
+Prefer `CxxSystemAttribute` and `AnnotateAttribute` when Clang exposes the semantic cursor. Enable `ParseTokenAttributes` only for syntax that needs source-token inspection; its separate `TokenAttributes` collection makes that provenance explicit and avoids paying the tokenization cost by default.

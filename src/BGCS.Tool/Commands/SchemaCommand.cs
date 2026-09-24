@@ -54,6 +54,7 @@ internal static class SchemaCommand
         [nameof(Cpp2CGeneratorConfig.PluginAssemblies)] = "Typed lowering plugin assemblies loaded relative to this configuration.",
         [nameof(Cpp2CGeneratorConfig.GenerateCSharpBindings)] = "Generates matching C# bindings from the emitted C bridge header.",
         [nameof(Cpp2CGeneratorConfig.CSharpOutputPath)] = "Output directory for optional matching C# bindings.",
+        [nameof(Cpp2CGeneratorConfig.CSharpStrictSafetySeverity)] = "Safety policy for optional C# bindings: suppress uncertain friendly APIs by default, retain them with Warning, or reject generation with Error.",
         [nameof(Cpp2CGeneratorConfig.NativeLibraryName)] = "Native library name used by optional generated C# imports.",
         [nameof(Cpp2CGeneratorConfig.TargetTriple)] = "Optional compiler target triple override.",
         [nameof(Cpp2CGeneratorConfig.TargetSysRoot)] = "Optional target SDK or sysroot path."

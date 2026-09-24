@@ -30,7 +30,8 @@ public sealed class CMakeNativeBuildProvider : INativeBuildPipelineProvider
         string? selectedCompiler = compilerPath ?? manifest.CompilerPath;
         if (!string.IsNullOrWhiteSpace(selectedCompiler))
             configure.Add("-DCMAKE_CXX_COMPILER=" + NativeBuildPaths.ResolveTool(root, selectedCompiler));
-        if (!string.IsNullOrWhiteSpace(manifest.TargetTriple))
+        if (!string.IsNullOrWhiteSpace(manifest.TargetTriple) &&
+            !string.IsNullOrWhiteSpace(selectedCompiler) && NativeCompilerTargeting.AcceptsClangTarget(selectedCompiler))
             configure.Add("-DCMAKE_CXX_COMPILER_TARGET=" + manifest.TargetTriple);
         if (!string.IsNullOrWhiteSpace(manifest.TargetSysRoot))
             configure.Add("-DCMAKE_SYSROOT=" + NativeBuildPaths.Resolve(root, manifest.TargetSysRoot));

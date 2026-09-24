@@ -1,11 +1,11 @@
-namespace BGCS;
+namespace BGCS.Intermediate;
 
 /// <summary>
-/// Controls whether unresolved native safety semantics are reported as warnings or generation-blocking errors.
+/// Controls how generated C# surfaces handle unresolved native safety semantics.
 /// </summary>
 public enum StrictSafetySeverity
 {
-    /// <summary>Reports unresolved semantics while preserving raw ABI generation.</summary>
+    /// <summary>Reports unresolved semantics while preserving inferred friendly overloads.</summary>
     Warning,
 
     /// <summary>Preserves raw ABI generation but suppresses high-risk friendly overloads.</summary>

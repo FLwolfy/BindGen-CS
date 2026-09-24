@@ -14,6 +14,85 @@ namespace BGCS.Tests;
 public class BindingIntermediateRepresentationTests
 {
     [Fact]
+    public void Generate_DefaultSafety_KeepsRawAbiButSuppressesUnprovenFriendlyReturn()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-default-safety-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "api.h");
+        File.WriteAllText(header, "const char* bgcs_name(void);\n");
+        try
+        {
+            CsCodeGeneratorConfig config = new()
+            {
+                ApiName = "SafeApi",
+                Namespace = "BGCS.Tests.Generated",
+                LibName = "safe",
+                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                ImportType = ImportType.DllImport,
+                SingleFileOutputName = "Bindings.cs"
+            };
+            Assert.Equal(StrictSafetySeverity.SuppressFriendly, config.StrictSafetySeverity);
+            CsCodeGenerator generator = new(config);
+
+            Assert.True(generator.Generate(header, Path.Combine(temp, "out")));
+            BindingFunction function = Assert.Single(generator.LastResult!.Module!.Functions);
+            Assert.True(function.SuppressFriendlySurface);
+            Assert.Contains(generator.LastResult.Diagnostics,
+                diagnostic => diagnostic.Code == BindingDiagnosticCodes.Ownership);
+            string source = string.Join(Environment.NewLine, generator.LastResult.OutputFiles.Select(File.ReadAllText));
+            Assert.Contains("public static byte* BgcsName()", source);
+            Assert.DoesNotContain("public static string? BgcsName()", source);
+            AssertCompiles(source);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void Generate_DefaultSafety_DoesNotReintroduceSuppressedInstanceOrHandleMembers()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-suppressed-member-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "api.h");
+        File.WriteAllText(header,
+            "typedef struct NativeThing { int value; } NativeThing; " +
+            "NativeThing* NativeThing_Clone(NativeThing* self);");
+        try
+        {
+            CsCodeGeneratorConfig config = new()
+            {
+                ApiName = "SafeApi",
+                Namespace = "BGCS.Tests.Generated",
+                LibName = "safe",
+                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                ImportType = ImportType.DllImport,
+                SingleFileOutputName = "Bindings.cs",
+                WrapPointersAsHandle = true,
+                MemberNamingConvention = NamingConvention.Unknown
+            };
+            config.FunctionMappings.Add(new("NativeThing_Clone", "Clone", null, [], []));
+            config.KnownMemberFunctions["NativeThing"] = ["NativeThing_Clone"];
+            CsCodeGenerator generator = new(config);
+
+            Assert.True(generator.Generate(header, Path.Combine(temp, "out")));
+            BindingFunction function = Assert.Single(generator.LastResult!.Module!.Functions);
+            Assert.True(function.SuppressFriendlySurface);
+            string[] sources = generator.LastResult.OutputFiles.Select(File.ReadAllText).ToArray();
+            string source = string.Join(Environment.NewLine, sources);
+            Assert.Contains("public static NativeThing* Clone(NativeThing* self)", source);
+            Assert.DoesNotContain("public NativeThingPtr Clone(", source);
+            Assert.DoesNotContain("public unsafe NativeThing* Clone(", source);
+            AssertCompiles(sources);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
     public void Generate_DefaultIrBackend_ShouldEmitRawAndFriendlyManagedSurface()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-ir-friendly-" + Guid.NewGuid().ToString("N"));
@@ -49,6 +128,10 @@ public class BindingIntermediateRepresentationTests
                         Ownership = BindingOwnership.Borrowed
                     }
                 }
+            };
+            config.MarshallingMappings["bgcs_name"] = new FunctionMarshallingMapping
+            {
+                Return = new MarshallingMapping { Ownership = BindingOwnership.Borrowed }
             };
             config.FunctionMappings.Add(new FunctionMapping("bgcs_add", "BgcsAdd", null, [], [],
             [
@@ -805,7 +888,9 @@ public class BindingIntermediateRepresentationTests
                 GenerateDelegates = false,
                 GenerateExtensions = false,
                 WrapPointersAsHandle = true,
-                MemberNamingConvention = NamingConvention.Unknown
+                MemberNamingConvention = NamingConvention.Unknown,
+                // This fixture tests presentation rather than native lifetime semantics.
+                StrictSafetySeverity = StrictSafetySeverity.Warning
             };
             config.FunctionMappings.Add(new("NativeThing_NativeThing", "NativeThing", null, [], []));
             config.FunctionMappings.Add(new("NativeThing_Reset", "Reset", null, [], []));
@@ -884,6 +969,24 @@ public class BindingIntermediateRepresentationTests
                 SingleFileOutputName = "Bindings.cs",
                 GenerateExtensions = false,
                 WrapPointersAsHandle = true
+            };
+            config.MarshallingMappings["Native_CreateWindow"] = new FunctionMarshallingMapping
+            {
+                Return = new MarshallingMapping
+                {
+                    Ownership = BindingOwnership.Owned,
+                    AllocatorKind = BindingAllocatorKind.NativeFunction,
+                    AllocatorFunction = "Native_CreateWindow",
+                    CleanupFunction = "Native_DestroyWindow"
+                }
+            };
+            config.MarshallingMappings["Native_GetWindows"] = new FunctionMarshallingMapping
+            {
+                Return = new MarshallingMapping { Ownership = BindingOwnership.Borrowed }
+            };
+            config.MarshallingMappings["Native_GetEngine"] = new FunctionMarshallingMapping
+            {
+                Return = new MarshallingMapping { Ownership = BindingOwnership.Borrowed }
             };
             CsCodeGenerator generator = new(config);
 

@@ -26,7 +26,7 @@ bindgen-cs explain --json
 | `StrictSafetySeverity` | Behavior |
 | --- | --- |
 | `Warning` | Keep the raw ABI and current friendly API while reporting risk |
-| `SuppressFriendly` | Keep the raw ABI but remove friendly overloads whose safety cannot be proved |
+| `SuppressFriendly` (default) | Keep the raw ABI but remove inferred friendly overloads for the affected function |
 | `Error` | Promote the risk to an error and fail before committing final output |
 
 Use `StrictSafety=false` only when an external process completely audits these semantics. It does not make unknown ownership correct.

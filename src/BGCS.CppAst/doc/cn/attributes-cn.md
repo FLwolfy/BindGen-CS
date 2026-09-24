@@ -90,7 +90,7 @@ struct __cppast(msgid = 1) TestPBMessage {
 利用 `ClangSharp` 已有的功能, 如 `visibility attribute` 等 `attribute` 可以在此处高效的被处理. 注意这里的 `AnnotateAttr`, `meta attribute`部分我们会介绍它的使用, 它也是我们使用高性能`meta attribute`的关键所在, 我们可以直接在 `libclang` 的 `AST` 上直接访问相关的 `cursor`, 这样就避免了在性能开销过高的 `token` 层级去处理相关的数据了. 
 
 ### 3.2 `AttributeKind.TokenAttribute`
-&emsp;&emsp;原有基于 `token` 解析实现的 `attribute`, 为了老版本的兼容性, 暂时将其由原来的 `Attributes` 属性改为存入 `TokenAttributes` 属性中了, 而新的 `CxxSystemAttribute` 和 `AnnotateAttribute` 则被存入原来的 `Attributes` 属性中, 可以参考相关的测试用例了解具体的使用.  
+&emsp;&emsp;`TokenAttributes` 是当前按需开启的源码 token 解析结果（`ParseTokenAttributes=true`）。它与语义 `Attributes` 分开，是因为 token 扫描的来源不同，Clang 也未必能完全解析它；`CxxSystemAttribute` 和 `AnnotateAttribute` 仍存于 `Attributes`。
 
 ### 3.3 `AttributeKind.AnnotateAttribute`
 &emsp;&emsp;我们需要一种绕开`token` 解析的机制来实现 `meta attribute`, 这里我们巧妙的使用了 `annotate` 属性来完成这一项操作, 从新增的几个内置宏我们可以看出它是如何起作用的:
@@ -149,5 +149,5 @@ float x;
 1. CxxSystemAttribute
 2. TokenAttribute
 3. AnnotateAttribute
-推荐使用不需要开关控制的 `CxxSystemAttribute` 和 `AnnotateAttribute`, `TokenAttribute` 的存在主要为了兼容老的实现, 相关的属性为了跟前两者区分, 已经移入了单独的 `TokenAttributes`, 并且 `CppParserOptions` 对应的开关调整为了 `ParseTokenAttributes`, 因为性能和使用上存在的限制, 不推荐继续使用.
+Clang 有语义 cursor 时优先使用 `CxxSystemAttribute` 和 `AnnotateAttribute`。只有必须检查源码 token 时才打开 `ParseTokenAttributes`；独立的 `TokenAttributes` 集合明确标记数据来源，同时避免默认承担 tokenization 开销。
 

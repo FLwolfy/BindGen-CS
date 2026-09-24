@@ -130,7 +130,6 @@ public unsafe partial class CppModelBuilder
             CppTokenUtil.ParseCursorAttributes(globalDeclarationContainer, cursor, ref attributes);
         }
 
-#pragma warning disable CS0618 // Explicit compatibility path for token-attribute parsing.
         // The preceding source range and the cursor extent can both contain the same
         // leading attribute. Keep distinct source occurrences, not duplicate scans.
         HashSet<(string File, int Start, int End, string Name, AttributeKind Kind)> seen = [];
@@ -141,7 +140,6 @@ public unsafe partial class CppModelBuilder
             if (seen.Add(key))
                 attrContainer.TokenAttributes.Add(attribute);
         }
-#pragma warning restore CS0618
     }
 
     /// <summary>

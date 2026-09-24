@@ -754,6 +754,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         foreach (IGrouping<string, BindingFunction> group in module.Functions
                      .Where(function => function.Kind == BindingFunctionKind.Free &&
                          function.ManagedKind == BindingManagedFunctionKind.Instance &&
+                         !function.SuppressFriendlySurface &&
                          !string.IsNullOrWhiteSpace(function.ManagedReceiverType))
                      .GroupBy(function => function.ManagedReceiverType!, StringComparer.Ordinal))
         {
@@ -772,6 +773,11 @@ public sealed class CSharpEmitter : IBindingEmitter
     private static void EmitManagedFunctions(StringBuilder writer, BindingModule module, BindingFunction function,
         string nativeOwner, HashSet<string> publicSignatures)
     {
+        if (function.SuppressFriendlySurface)
+        {
+            EmitRawManagedFunction(writer, function, nativeOwner);
+            return;
+        }
         FriendlyFunctionPlan friendly = CreateFriendlyPlan(function);
         if (module.WrapPointersAsHandle && HasPointerHandleUsage(module, function))
         {
@@ -938,6 +944,9 @@ public sealed class CSharpEmitter : IBindingEmitter
             foreach (BindingParameter parameter in function.Parameters)
                 raw.Append('|').Append(NormalizeSignatureType(parameter.Type.ManagedName));
             signatures.Add(raw.ToString());
+
+            if (function.SuppressFriendlySurface)
+                continue;
 
             FriendlyFunctionPlan friendly = CreateFriendlyPlan(function);
             if (module.WrapPointersAsHandle && HasPointerHandleUsage(module, function))
@@ -1170,6 +1179,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         var members = module.Functions.Where(candidate =>
                 candidate.Kind == BindingFunctionKind.Free &&
                 candidate.ManagedKind == BindingManagedFunctionKind.Instance &&
+                !candidate.SuppressFriendlySurface &&
                 string.Equals(candidate.ManagedReceiverType, spec.Type.ManagedName, StringComparison.Ordinal))
             .Select(function =>
             {

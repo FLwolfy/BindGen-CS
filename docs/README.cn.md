@@ -40,4 +40,4 @@
 
 CLI/workspace、安全输出事务、SingleFile、target/toolchain model、共享 IR、安全分析、NuGet 闭包、真实库快照、声明范围内的 STL/smart-pointer lowering、lifetime diagnostics 与发布治理 gate 均已可用。desktop-x64 BGCS 报告仍是独立发布证据。
 
-当前源码已经产出完整通过的 `macos-arm64-darwin` 报告，十个分类全部达到 9.0/10；Windows x64、Linux x64、macOS x64 仍需同版本完整报告。C# 输出只使用 IR-native emitter，不存在预发布 compatibility fallback。
+macOS arm64 已有本地完整验收。9 月 24 日用户提供的 desktop-x64 CI 日志显示三个 runner 全部失败；本 checkout 中的修复仍须在同一 revision 的 CI 中重跑，才能把这些平台标为通过。报告中的 9.0 是 gate 通过后的固定标签，不是独立校准的质量分数。C# 输出只使用 IR-native emitter，不加载任何旧的预发布配置或 emitter。见 [CI 故障分析](ci-remediation-2026-09-24.md)。

@@ -17,7 +17,6 @@ public sealed class StrictSafetyAnalyzer
     public void Analyze(BindingModule module)
     {
         ArgumentNullException.ThrowIfNull(module);
-        config.UnsafeFriendlyFunctions.Clear();
         if (!config.StrictSafety)
             return;
         foreach (BindingFunction function in module.Functions)
@@ -111,7 +110,7 @@ public sealed class StrictSafetyAnalyzer
     private void Add(BindingModule module, string code, BindingFunction function, string reason, string configuration)
     {
         if (config.StrictSafetySeverity is StrictSafetySeverity.SuppressFriendly or StrictSafetySeverity.Error)
-            config.UnsafeFriendlyFunctions.Add(function.NativeName);
+            function.SuppressFriendlySurface = true;
         BindingDiagnosticSeverity severity = config.StrictSafetySeverity == StrictSafetySeverity.Error
             ? BindingDiagnosticSeverity.Error
             : BindingDiagnosticSeverity.Warning;

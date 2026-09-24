@@ -190,6 +190,7 @@ class BGCS.Intermediate.BindingFunction
   property System.String RawManagedName { get; set }
   property BGCS.Intermediate.MarshallingPlan ReturnMarshalling { get }
   property BGCS.Intermediate.BindingTypeReference ReturnType { get }
+  property System.Boolean SuppressFriendlySurface { get; set }
 enum BGCS.Intermediate.BindingFunctionKind
   field BGCS.Intermediate.BindingFunctionKind Constructor
   field BGCS.Intermediate.BindingFunctionKind Destructor
@@ -366,4 +367,9 @@ enum BGCS.Intermediate.MarshallingStrategy
   field BGCS.Intermediate.MarshallingStrategy Pointer
   field BGCS.Intermediate.MarshallingStrategy Span
   field BGCS.Intermediate.MarshallingStrategy String
+  field System.Int32 value__
+enum BGCS.Intermediate.StrictSafetySeverity
+  field BGCS.Intermediate.StrictSafetySeverity Error
+  field BGCS.Intermediate.StrictSafetySeverity SuppressFriendly
+  field BGCS.Intermediate.StrictSafetySeverity Warning
   field System.Int32 value__

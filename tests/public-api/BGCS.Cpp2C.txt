@@ -225,7 +225,6 @@ class BGCS.Cpp2C.Build.NativeExportInspector
   method System.Collections.Generic.IReadOnlyList<System.String> ReadExpectedSymbols(System.Collections.Generic.IEnumerable<System.String> headerPaths)
 class BGCS.Cpp2C.ConfigComposer
   ctor()
-  method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config)
   method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config, System.String baseDirectory)
 class BGCS.Cpp2C.Configuration.Cpp2CConfigValidator
   method System.Void Validate(BGCS.Cpp2C.Cpp2CGeneratorConfig config)
@@ -262,6 +261,7 @@ class BGCS.Cpp2C.Cpp2CGeneratorConfig
   property System.String CSharpApiName { get; set }
   property System.String CSharpNamespace { get; set }
   property System.String CSharpOutputPath { get; set }
+  property BGCS.Intermediate.StrictSafetySeverity CSharpStrictSafetySeverity { get; set }
   property System.String CacheDirectory { get; set }
   property System.Collections.Generic.List<BGCS.Cpp2C.Lowering.CppCallableLoweringRecipe> CallableLowerings { get; set }
   property System.Collections.Generic.List<System.String> ChronoDurationTypes { get; set }
@@ -377,7 +377,6 @@ class BGCS.Cpp2C.GenerationSteps.EnumGenerationStep
   method System.Void Generate(BGCS.Core.FileSet files, BGCS.Cpp2C.ParseResult result, System.String outputPath, BGCS.Cpp2C.Cpp2CGeneratorConfig config, BGCS.Cpp2C.Metadata.Cpp2CGeneratorMetadata metadata)
   method System.Void Reset()
 interface BGCS.Cpp2C.IConfigComposer
-  method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config)
   method System.Void Compose(BGCS.Cpp2C.Cpp2CGeneratorConfig& config, System.String baseDirectory)
 interface BGCS.Cpp2C.IGenerationStep
   property System.Boolean Enabled { get; set }

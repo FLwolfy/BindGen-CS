@@ -49,6 +49,9 @@ public sealed class SchemaCommandTests
         Assert.True(root.GetProperty("properties").TryGetProperty("TypeLowerings", out JsonElement typeLowerings));
         Assert.Equal("array", typeLowerings.GetProperty("type").GetString());
         Assert.True(root.GetProperty("properties").TryGetProperty("NativeShims", out _));
+        JsonElement csharpSafety = root.GetProperty("properties").GetProperty("CSharpStrictSafetySeverity");
+        Assert.Contains("SuppressFriendly", csharpSafety.GetProperty("enum").ToString(), StringComparison.Ordinal);
+        Assert.Equal("SuppressFriendly", csharpSafety.GetProperty("default").GetString());
         Assert.Contains("AllowUnsafe", root.GetProperty("properties").GetProperty("LoweringSafetyPolicy").GetProperty("enum").ToString(), StringComparison.Ordinal);
         Assert.Equal("EntryFiles", root.GetProperty("required")[0].GetString());
     }

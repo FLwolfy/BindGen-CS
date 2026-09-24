@@ -7,5 +7,6 @@
   "GenerateExtensions": false,
   "GenerateRuntimeSource": false,
   "DelegatesAsVoidPointer": false,
+  "StrictSafetySeverity": "Warning",
   "AutoWrapCallbacks": false
 }

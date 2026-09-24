@@ -18,7 +18,10 @@ internal static class NativeBuildCommand
             string manifestPath = Path.GetFullPath(options.ManifestPath ?? DefaultManifestPath, workingDirectory);
             CppBridgeBuildManifest manifest = CppBridgeBuildManifestSerializer.Load(manifestPath);
             INativeBuildPipelineProvider provider = CreateProvider(options, manifest, manifestPath);
-            NativeBuildPipeline pipeline = provider.CreatePipeline(manifest, manifestPath, options.OutputPath);
+            string? outputPath = options.OutputPath == null
+                ? null
+                : Path.GetFullPath(options.OutputPath, workingDirectory);
+            NativeBuildPipeline pipeline = provider.CreatePipeline(manifest, manifestPath, outputPath);
             if (options.DryRun)
             {
                 if (options.Json)
@@ -80,7 +83,7 @@ internal static class NativeBuildCommand
             }
             return 0;
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or InvalidDataException or JsonException or Win32Exception or TimeoutException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or InvalidDataException or NotSupportedException or JsonException or Win32Exception or TimeoutException)
         {
             return Fail(error, exception.Message);
         }

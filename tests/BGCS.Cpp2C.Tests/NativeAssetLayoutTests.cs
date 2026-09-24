@@ -36,8 +36,8 @@ public sealed class NativeAssetLayoutTests
         {
             string linux = Path.Combine(binaries, "libsample.so");
             string macos = Path.Combine(binaries, "libsample.dylib");
-            File.WriteAllText(linux, "linux");
-            File.WriteAllText(macos, "macos");
+            File.WriteAllBytes(linux, Elf(62));
+            File.WriteAllBytes(macos, MachO(0x0c));
 
             NativeAssetLayoutResult linuxResult = NativeAssetLayout.Stage(
                 CreateManifest("linux-x64-gnu"), linux, package);
@@ -62,6 +62,82 @@ public sealed class NativeAssetLayoutTests
             if (Directory.Exists(temp))
                 Directory.Delete(temp, true);
         }
+    }
+
+    [Fact]
+    public void Stage_RejectsWrongBinaryArchitectureBeforeWritingPackage()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-wrong-rid-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        try
+        {
+            string library = Path.Combine(temp, "libsample.so");
+            File.WriteAllBytes(library, Elf(62));
+
+            InvalidDataException error = Assert.Throws<InvalidDataException>(() =>
+                NativeAssetLayout.Stage(CreateManifest("linux-arm64-gnu"), library, Path.Combine(temp, "package")));
+
+            Assert.Contains("linux-arm64-gnu", error.Message, StringComparison.Ordinal);
+            Assert.False(Directory.Exists(Path.Combine(temp, "package")));
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public void Stage_AcceptsWindowsPeWithMatchingMachine()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-pe-rid-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        try
+        {
+            byte[] pe = new byte[128];
+            pe[0] = (byte)'M';
+            pe[1] = (byte)'Z';
+            pe[0x3c] = 0x40;
+            pe[0x40] = (byte)'P';
+            pe[0x41] = (byte)'E';
+            pe[0x44] = 0x64;
+            pe[0x45] = 0x86;
+            string library = Path.Combine(temp, "sample.dll");
+            File.WriteAllBytes(library, pe);
+
+            NativeAssetLayoutResult result = NativeAssetLayout.Stage(
+                CreateManifest("windows-x64-msvc"), library, Path.Combine(temp, "package"));
+
+            Assert.Equal("win-x64", result.RuntimeIdentifier);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    private static byte[] Elf(byte machine)
+    {
+        byte[] bytes = new byte[64];
+        bytes[0] = 0x7f;
+        bytes[1] = (byte)'E';
+        bytes[2] = (byte)'L';
+        bytes[3] = (byte)'F';
+        bytes[4] = 2;
+        bytes[5] = 1;
+        bytes[18] = machine;
+        return bytes;
+    }
+
+    private static byte[] MachO(byte cpu)
+    {
+        byte[] bytes = new byte[64];
+        bytes[0] = 0xcf;
+        bytes[1] = 0xfa;
+        bytes[2] = 0xed;
+        bytes[3] = 0xfe;
+        bytes[4] = cpu;
+        bytes[7] = 1;
+        return bytes;
     }
 
     private static CppBridgeBuildManifest CreateManifest(string target) => new(

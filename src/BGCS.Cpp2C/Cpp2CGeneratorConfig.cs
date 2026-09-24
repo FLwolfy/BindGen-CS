@@ -5,6 +5,7 @@
     using BGCS.CppAst.Parsing;
     using BGCS.CppAst.Targeting;
     using BGCS.Cpp2C.Lowering;
+    using BGCS.Intermediate;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
     using System.ComponentModel;
@@ -121,6 +122,10 @@
 
         /// <summary>Gets or sets the optional C# output path relative to the bridge configuration.</summary>
         public string CSharpOutputPath { get; set; } = "GeneratedBindings";
+
+        /// <summary>Safety policy for optional C# bindings emitted from the generated C bridge.</summary>
+        [DefaultValue(StrictSafetySeverity.SuppressFriendly)]
+        public StrictSafetySeverity CSharpStrictSafetySeverity { get; set; } = StrictSafetySeverity.SuppressFriendly;
 
         /// <summary>
         /// The log level of the generator. (Default <see cref="LogSeverity.Warning"/>)

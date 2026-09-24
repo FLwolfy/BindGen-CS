@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BGCS.CppAst.Targeting;
 
 namespace BGCS.CppAst.Parsing;
@@ -293,21 +294,24 @@ public class CppParserOptions
             string fullSysRoot = System.IO.Path.GetFullPath(effectiveSysRoot);
             AddTargetArgument("-isysroot");
             AddTargetArgument(fullSysRoot);
-            if (ParserKind == CppParserKind.Cpp)
-            {
-                string libcxx = System.IO.Path.Combine(fullSysRoot, "usr", "include", "c++", "v1");
-                if (System.IO.Directory.Exists(libcxx))
-                    AddTargetSystemInclude(libcxx);
-            }
         }
 
         CppTarget host = CppTarget.Resolve();
+        IReadOnlyList<string> discoveredIncludes = [];
         if (discoverHostToolchain && target.Platform == host.Platform && target.Architecture == host.Architecture)
         {
-            foreach (string include in CppToolchainDiscovery.DiscoverSystemIncludeFolders(ParserKind, compilerPath))
-            {
+            discoveredIncludes = CppToolchainDiscovery.DiscoverSystemIncludeFolders(ParserKind, compilerPath);
+            foreach (string include in discoveredIncludes)
                 AddTargetSystemInclude(include);
-            }
+        }
+        // The compiler-matched libc++ must win over an SDK fallback. In particular,
+        // Homebrew LLVM's libclang cannot safely parse a mixed Homebrew/Xcode libc++.
+        if (ParserKind == CppParserKind.Cpp && !string.IsNullOrWhiteSpace(effectiveSysRoot) &&
+            !discoveredIncludes.Any(include => include.Replace('\\', '/').EndsWith("/c++/v1", StringComparison.Ordinal)))
+        {
+            string libcxx = System.IO.Path.Combine(System.IO.Path.GetFullPath(effectiveSysRoot), "usr", "include", "c++", "v1");
+            if (System.IO.Directory.Exists(libcxx))
+                AddTargetSystemInclude(libcxx);
         }
         return this;
     }

@@ -39,14 +39,6 @@
         };
 
         /// <summary>
-        /// Executes public operation <c>Compose</c>.
-        /// </summary>
-        public void Compose(ref Cpp2CGeneratorConfig config)
-        {
-            Compose(ref config, Environment.CurrentDirectory);
-        }
-
-        /// <summary>
         /// Composes configuration inheritance while resolving file references from an explicit directory.
         /// </summary>
         public void Compose(ref Cpp2CGeneratorConfig config, string baseDirectory)

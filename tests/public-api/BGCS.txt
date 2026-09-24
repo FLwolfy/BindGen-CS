@@ -66,7 +66,7 @@ enum BGCS.CSharpEmissionBackend
   field System.Int32 value__
 class BGCS.ConfigComposer
   ctor()
-  method System.Void Compose(BGCS.CsCodeGeneratorConfig& config)
+  method System.Void Compose(BGCS.CsCodeGeneratorConfig& config, System.String baseDirectory)
 class BGCS.Configuration.ConfigLoader
   ctor(BGCS.IConfigComposer composer, BGCS.Configuration.PresetResolver presets)
   method BGCS.CsCodeGeneratorConfig Load(System.String path)
@@ -217,7 +217,7 @@ class BGCS.CsCodeGeneratorConfig
   property System.String RuntimeNamespace { get; set }
   property System.String SingleFileOutputName { get; set }
   property System.Boolean StrictSafety { get; set }
-  property BGCS.StrictSafetySeverity StrictSafetySeverity { get; set }
+  property BGCS.Intermediate.StrictSafetySeverity StrictSafetySeverity { get; set }
   property System.Collections.Generic.List<System.String> SystemIncludeFolders { get; set }
   property BGCS.CppAst.Targeting.CppTargetAbi TargetAbi { get; set }
   property BGCS.CppAst.Targeting.CppTargetArchitecture TargetArchitecture { get; set }
@@ -410,7 +410,7 @@ class BGCS.GeneratorBuilder+MacroBuilderCallback
   method System.Void EndInvoke(System.IAsyncResult result)
   method System.Void Invoke(BGCS.MacroBuilder builder)
 interface BGCS.IConfigComposer
-  method System.Void Compose(BGCS.CsCodeGeneratorConfig& config)
+  method System.Void Compose(BGCS.CsCodeGeneratorConfig& config, System.String baseDirectory)
 enum BGCS.ImportType
   field BGCS.ImportType DllImport
   field BGCS.ImportType FunctionTable
@@ -797,11 +797,6 @@ class BGCS.ReferenceResolver
   ctor()
   method System.Void Prefilter(BGCS.Core.FileSet set, BGCS.CppAst.Model.Metadata.CppCompilation compilation, BGCS.CsCodeGeneratorConfig config)
   method System.Void Resolve(BGCS.CppAst.Model.Types.CppType cppType, BGCS.CppAst.Model.Metadata.CppCompilation input, BGCS.CppAst.Model.Metadata.CppCompilation output)
-enum BGCS.StrictSafetySeverity
-  field BGCS.StrictSafetySeverity Error
-  field BGCS.StrictSafetySeverity SuppressFriendly
-  field BGCS.StrictSafetySeverity Warning
-  field System.Int32 value__
 class BGCS.TextHelper
   method System.String ToLiteral(System.String value, System.Boolean quote)
 class BGCS.UnexposedTypeException

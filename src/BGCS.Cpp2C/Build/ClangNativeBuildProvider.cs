@@ -30,7 +30,7 @@ public sealed class ClangNativeBuildProvider : INativeBuildProvider, INativeBuil
         if (!windows)
             arguments.Add("-fPIC");
         arguments.Add("-std=" + manifest.LanguageStandard);
-        if (!string.IsNullOrWhiteSpace(manifest.TargetTriple))
+        if (!string.IsNullOrWhiteSpace(manifest.TargetTriple) && NativeCompilerTargeting.AcceptsClangTarget(compilerPath))
             arguments.Add("--target=" + manifest.TargetTriple);
         if (!string.IsNullOrWhiteSpace(manifest.TargetSysRoot))
         {

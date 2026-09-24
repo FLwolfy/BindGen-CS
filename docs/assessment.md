@@ -2,13 +2,13 @@
 
 [简体中文](assessment.cn.md) | [Capability matrix](capabilities.md) | [Acceptance](acceptance.md) | [Roadmap](roadmap.md)
 
-Assessment date: 2026-09-23.
+Assessment date: 2026-09-24.
 
 ## Verdict
 
 BindGen-CS is a **strong maintenance-candidate C/C++ to C# toolchain within its declared semantic scope**, not a thin header-to-`DllImport` script. Its sole C# path is IR-native; advanced desktop C++ lowerings, lifetime contracts, real native invocation, deterministic packaging, API/dependency gates, and the OIDC signed-release workflow are implemented.
 
-The current `macos-arm64-darwin` report passes all ten mandatory categories at 9.0/10.
+The current local `macos-arm64-darwin` report passes all ten mandatory categories at 9.0/10. The report records a dirty working tree, so a committed same-revision runner matrix is still required before a release claim.
 
 It is not yet honest to call the current revision universally production-supported. Windows x64, Linux x64, and macOS x64 must each publish the same-version complete report; Windows must additionally prove clang-cl and MSBuild runtime invocation. A real OIDC/Sigstore signature is still release-run-only evidence. Downstream projects own their own binding configurations and integration acceptance.
 

@@ -9,7 +9,7 @@ BindGen-CS 尚未发布首个稳定版，因此当前产品明确**不承诺**�
 - 只接受唯一当前 `ConfigVersion`；其他版本稳定失败，不做隐式迁移或 fallback emitter。
 - canonical Binding IR 是唯一 C# emission 来源；已删除的原型/AST 输出路径不会藏在兼容开关后继续运行。
 - public API snapshot 是 code review gate，不表示预发布 API 永远不能改；有意变更必须在同一审查中更新 baseline。
-- ABI 与内存安全优先于保留原型行为。无法证明 ownership、allocator、callback、async、inheritance 或 template 语义时 fail-closed。
+- ABI 与内存安全优先。C binding 的 ownership、allocator、callback 或 async 语义未知时，默认保留 raw ABI 和诊断，但抑制推断的 friendly overload；`StrictSafetySeverity=Error` 会拒绝整次输出。未知 C++ inheritance/template lowering 在没有显式扩展时拒绝生成。
 - 平台支持必须由同一源码 revision 的 target-specific report 证明；plan、cross compile 或其他架构报告都不能替代。
 
 架构仍保留显式配置版本、typed diagnostics、plugin revision 握手和 API diff 自动化，以便稳定版后干净地引入 compatibility。当前只有一套 lowering contract；它不会加载或包装已删除的预发布 adapter SPI。revision 握手只是实现层保护，不是对外的“v1/v2”产品标记。

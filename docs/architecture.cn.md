@@ -126,7 +126,7 @@ Analyzer 不创建正式输出文件。
 
 C 与 C++ 配置生成使用 immutable SHA-256 output cache。Key 包含 generator identity、序列化配置、parser arguments、解析后的 compiler identity/version、plugin/lowering/shim fingerprint，以及发现到的全部 C/C++ 输入精确内容。Entry 原子发布，并通过同一个 output transaction 恢复；无法稳定 fingerprint 的自定义状态会关闭 cache hit。
 
-`BindingPluginContract` version 2 提供显式 assembly entry point 和确定性 typed registration。旧 adapter service 已删除，不存在 compatibility wrapper。C++ plugin 注册 `ICppTypeLowering`、`ICppCallableLowering` 和 `ICppArtifactContributor`；同一 registry 同时承载 built-in、声明式 recipe 与 plugin lowering。Plugin assembly 使用隔离 dependency resolver并原子注册，assembly 内容 hash、plugin version 和 lowering fingerprint 进入 cache key。
+`BindingPluginContract.CurrentVersion` 提供加载时 revision 握手、显式 assembly entry point 和确定性 typed registration；不会加载更早的 plugin contract。C++ plugin 注册 `ICppTypeLowering`、`ICppCallableLowering` 和 `ICppArtifactContributor`；同一 registry 同时承载 built-in、声明式 recipe 与 plugin lowering。Plugin assembly 使用隔离 dependency resolver 并原子注册，assembly 内容 hash、plugin version 和 lowering fingerprint 进入 cache key。
 
 ### Output
 

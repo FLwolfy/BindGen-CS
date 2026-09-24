@@ -5,6 +5,7 @@ namespace BGCS
     using BGCS.Core.Extensibility;
     using BGCS.CppAst.Parsing;
     using BGCS.CppAst.Targeting;
+    using BGCS.Intermediate;
     using BGCS.Metadata;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
@@ -263,11 +264,8 @@ namespace BGCS
         /// <summary>
         /// Gets or sets whether unresolved safety semantics warn or reject generation.
         /// </summary>
-        [DefaultValue(StrictSafetySeverity.Warning)]
-        public StrictSafetySeverity StrictSafetySeverity { get; set; } = StrictSafetySeverity.Warning;
-
-        [JsonIgnore]
-        internal HashSet<string> UnsafeFriendlyFunctions { get; } = new(StringComparer.Ordinal);
+        [DefaultValue(StrictSafetySeverity.SuppressFriendly)]
+        public StrictSafetySeverity StrictSafetySeverity { get; set; } = StrictSafetySeverity.SuppressFriendly;
 
         /// <summary>
         /// Selects C, C++, or Objective-C language parsing. (Default: <see cref="CppParserKind.Cpp"/>)

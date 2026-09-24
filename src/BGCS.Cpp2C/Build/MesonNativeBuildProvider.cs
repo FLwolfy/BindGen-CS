@@ -27,9 +27,9 @@ public sealed class MesonNativeBuildProvider : INativeBuildPipelineProvider
         string projectDirectory = Path.Combine(root, ".bgcs", "meson-project");
         string buildDirectory = Path.Combine(root, ".bgcs", "meson-build");
         string nativeFile = Path.Combine(projectDirectory, "bgcs-native.ini");
-        List<NativeBuildInputFile> inputFiles = [new(Path.Combine(projectDirectory, "meson.build"), CreateProject(manifest, root, artifact))];
-        List<string> setupArguments = ["setup", "--wipe", buildDirectory, projectDirectory, "--buildtype=release"];
         string? selectedCompiler = compilerPath ?? manifest.CompilerPath;
+        List<NativeBuildInputFile> inputFiles = [new(Path.Combine(projectDirectory, "meson.build"), CreateProject(manifest, root, artifact, selectedCompiler))];
+        List<string> setupArguments = ["setup", "--wipe", buildDirectory, projectDirectory, "--buildtype=release"];
         if (!string.IsNullOrWhiteSpace(selectedCompiler))
         {
             inputFiles.Add(new(nativeFile, CreateNativeFile(NativeBuildPaths.ResolveTool(root, selectedCompiler))));
@@ -47,7 +47,7 @@ public sealed class MesonNativeBuildProvider : INativeBuildPipelineProvider
             artifact);
     }
 
-    private static string CreateProject(CppBridgeBuildManifest manifest, string root, string artifact)
+    private static string CreateProject(CppBridgeBuildManifest manifest, string root, string artifact, string? compiler)
     {
         string standard = manifest.LanguageStandard.StartsWith("c++", StringComparison.Ordinal) ? manifest.LanguageStandard : "c++23";
         StringBuilder text = new();
@@ -62,7 +62,8 @@ public sealed class MesonNativeBuildProvider : INativeBuildPipelineProvider
         text.AppendLine("])");
         IEnumerable<string> compilerArguments = manifest.Defines.Select(define => "-D" + define)
             .Concat(manifest.CompilerArguments.Where(argument => !argument.StartsWith("-std=", StringComparison.Ordinal)));
-        if (!string.IsNullOrWhiteSpace(manifest.TargetTriple))
+        if (!string.IsNullOrWhiteSpace(manifest.TargetTriple) &&
+            !string.IsNullOrWhiteSpace(compiler) && NativeCompilerTargeting.AcceptsClangTarget(compiler))
             compilerArguments = compilerArguments.Prepend("--target=" + manifest.TargetTriple);
         if (!string.IsNullOrWhiteSpace(manifest.TargetSysRoot))
             compilerArguments = compilerArguments.Prepend("--sysroot=" + NativeBuildPaths.Resolve(root, manifest.TargetSysRoot));

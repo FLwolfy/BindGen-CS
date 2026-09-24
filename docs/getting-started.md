@@ -11,14 +11,18 @@
 
 Choose the workflow before starting: use `bindgen.json` for a C ABI and `bridge.json` for C++ classes/templates. Do not generate direct P/Invoke declarations for C++ symbols without C linkage.
 
-## Install the tool
+## Run the tool
+
+The repository's copy-paste quick start in [README](../README.md#getting-started) uses `dotnet run --project src/BGCS.Tool --` and the checked-in `examples/QuickStart/native.h`. This works before the first public tool release. In the commands below, replace `bindgen-cs` with that source command when running from the repository root.
+
+Once the `BindGen-CS` tool package is publicly released, install it with:
 
 ```bash
 dotnet tool install --global BindGen-CS
 bindgen-cs --help
 ```
 
-Use `dotnet tool update --global BindGen-CS` to upgrade a global installation. For a repository-local pinned tool, create a standard .NET tool manifest and install `BindGen-CS` into it.
+After publication, use `dotnet tool update --global BindGen-CS` to upgrade a global installation. A repository-local pinned tool can use a standard .NET tool manifest.
 
 ## Generate a C binding
 
@@ -126,7 +130,7 @@ bindgen-cs bridge bridge.json
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
-Set `GenerateCSharpBindings=true` plus `CSharpNamespace`, `CSharpApiName`, `NativeLibraryName`, and `CSharpOutputPath` to emit both the native C bridge and C# bindings in this single command.
+Set `GenerateCSharpBindings=true` plus `CSharpNamespace`, `CSharpApiName`, `NativeLibraryName`, and `CSharpOutputPath` to emit both the native C bridge and C# bindings in this single command. The optional C# output defaults to `CSharpStrictSafetySeverity=SuppressFriendly`: unresolved ownership or lifetime keeps raw ABI but suppresses inferred friendly methods. A project that has independently audited those contracts can explicitly choose `Warning`; `Error` rejects generation until they are configured.
 
 Embedded API:
 
@@ -152,7 +156,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root arti
 
 `native-build` never invokes a command shell. Select `auto`, direct Clang/GNU, clang-cl, CMake, Meson, or MSBuild; every provider consumes the same manifest library search paths, link libraries, linker arguments, target triple, and sysroot where the backend supports them. Successful builds verify generated declarations against the binary export table by default.
 
-`--package-root` stages a verified desktop binary under `runtimes/<rid>/native/` and updates `bgcs.native-assets.json` with target and SHA-256. Windows, Linux, and macOS x64/arm64 currently map to NuGet RIDs. Android, iOS, and FreeBSD are formal support targets, but their target-specific package layouts still require implementation and acceptance, so this helper currently emits an explicit diagnostic for them. After packing, generate release evidence with `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>`.
+`--output` and `--package-root` resolve relative to the command's working directory; file paths *inside* `bridge.manifest.json` resolve relative to the manifest. `--package-root` stages a binary only after its filename, format, and CPU architecture match the target, under `runtimes/<rid>/native/`. Windows, Linux, and macOS x64/arm64 currently map to NuGet RIDs. Android, iOS, and FreeBSD remain formal targets without accepted package layouts; the helper diagnoses them explicitly. After packing, generate release evidence with `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>`.
 
 Do not assume arbitrary template/STL types can be lowered automatically. See [Capabilities](capabilities.md) for explicit instances and built-in lowerings, the [final lowering architecture](lowering.md) for project extensions, and [Diagnostics](diagnostics.md) for rejection guidance.
 

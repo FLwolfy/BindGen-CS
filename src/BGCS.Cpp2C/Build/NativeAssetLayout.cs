@@ -50,6 +50,7 @@ public static class NativeAssetLayout
             throw new InvalidDataException(
                 $"Native binary '{Path.GetFileName(source)}' does not match target/library contract '{expectedFileName}'.");
         }
+        NativeBinaryIdentity.Validate(source, manifest.TargetIdentifier);
 
         string root = Path.GetFullPath(packageRoot);
         string relativePath = Path.Combine("runtimes", rid, "native", expectedFileName).Replace('\\', '/');

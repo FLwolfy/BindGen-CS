@@ -126,7 +126,7 @@ Configuration-driven C++ generation also resolves headers, include directories, 
 
 Configured C and C++ generation use an immutable SHA-256 output cache. The key includes generator identity, serialized configuration, parser arguments, resolved compiler identity/version, plugin/lowering/shim fingerprints, and exact contents of discovered C/C++ inputs. Entries publish atomically, restore through the same output transaction as generation, and are isolated by key. Custom state that cannot be fingerprinted disables cache hits.
 
-`BindingPluginContract` version 2 provides explicit assembly entry points and deterministic typed registrations. The old adapter services were deleted and have no compatibility wrapper. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, and `ICppArtifactContributor`; the same registry carries built-ins, declarative recipes, and plugin lowerings. Plugin assemblies use an isolated dependency resolver and atomic registration, while assembly content hashes, versions, and lowering fingerprints enter the cache key.
+`BindingPluginContract.CurrentVersion` provides a load-time revision handshake, explicit assembly entry points, and deterministic typed registrations. No earlier plugin contract is loaded. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, and `ICppArtifactContributor`; the same registry carries built-ins, declarative recipes, and plugin lowerings. Plugin assemblies use an isolated dependency resolver and atomic registration, while assembly content hashes, versions, and lowering fingerprints enter the cache key.
 
 ### Output
 

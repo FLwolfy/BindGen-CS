@@ -17,6 +17,8 @@ public static class Cpp2CConfigValidator
         }
         if (string.IsNullOrWhiteSpace(config.LanguageStandard))
             errors.Add("LanguageStandard is required.");
+        if (!Enum.IsDefined(config.CSharpStrictSafetySeverity))
+            errors.Add("CSharpStrictSafetySeverity is invalid.");
         if (config.EnableIncrementalCache && string.IsNullOrWhiteSpace(config.CacheDirectory))
             errors.Add("CacheDirectory is required when incremental caching is enabled.");
         if (config.PluginAssemblies == null)

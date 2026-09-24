@@ -6,6 +6,12 @@ source "${ROOT_DIR}/scripts/lib/common.sh"
 DOTNET_CMD="$(resolve_dotnet_host)"
 CONFIGURATION="${CONFIGURATION:-Release}"
 SKIP_RESTORE_BUILD="${SKIP_RESTORE_BUILD:-0}"
+# The MSVC developer shell exports Platform=x64. Solution builds select Any CPU,
+# whereas project-level `dotnet test --no-build` inherits that environment value
+# and otherwise looks for nonexistent bin/x64 test assemblies.
+if [[ "$(detect_snapshot_platform)" == "windows-x64" ]]; then
+  export Platform=AnyCPU
+fi
 GATE_DIR="${ROOT_DIR}/artifacts/acceptance/gates"
 rm -rf "${GATE_DIR}"
 mkdir -p "${GATE_DIR}"

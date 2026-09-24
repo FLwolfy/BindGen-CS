@@ -74,5 +74,7 @@ public sealed class BindingFunction
     public string? ManagedReceiverType { get; init; }
     public int? ManagedReceiverIndex { get; init; }
     public int? FunctionTableIndex { get; set; }
+    /// <summary>Safety analysis rejected inferred friendly overloads; the raw ABI remains available.</summary>
+    public bool SuppressFriendlySurface { get; set; }
     public IList<BindingParameter> Parameters { get; } = new List<BindingParameter>();
 }

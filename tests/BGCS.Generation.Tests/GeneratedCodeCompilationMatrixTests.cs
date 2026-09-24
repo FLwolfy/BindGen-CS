@@ -9,6 +9,7 @@ using System.Runtime.Loader;
 using System.Threading.Tasks;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
+using BGCS.Intermediate;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -137,6 +138,18 @@ public class GeneratedCodeCompilationMatrixTests
                 MergeGeneratedFilesToSingleFile = true,
                 ParserKind = CppParserKind.C
             };
+            config.MarshallingMappings["bgcs_call_callback"] = new FunctionMarshallingMapping
+            {
+                Parameters =
+                {
+                    ["callback"] = new MarshallingMapping
+                    {
+                        Strategy = MarshallingStrategy.Callback,
+                        CallbackLifetime = BindingCallbackLifetime.CallOnly,
+                        CallbackThreading = BindingCallbackThreading.CallerThread
+                    }
+                }
+            };
             Assert.True(new CsCodeGenerator(config).Generate(header, output));
             Assembly assembly = CompileGeneratedSources(output, "BGCS.NativeAbi.Runtime");
             Type abiType = assembly.GetType("BGCS.NativeAbi.Generated.BgcsAbi")!;
@@ -163,10 +176,13 @@ public class GeneratedCodeCompilationMatrixTests
                     method.Name == "BgcsUtf8Length" && method.GetParameters() is [{ ParameterType: var parameterType }] && parameterType == typeof(string));
                 Assert.Equal(6, (int)utf8Length.Invoke(null, ["你好"])!);
                 NativeIntCallback callback = input => input * 3;
-                nint callbackPointer = Marshal.GetFunctionPointerForDelegate(callback);
                 MethodInfo callCallback = Assert.Single(apiType.GetMethods(BindingFlags.Static | BindingFlags.Public), method =>
-                    method.Name == "BgcsCallCallback" && method.GetParameters() is [{ ParameterType: var first }, _] && first == typeof(nint));
-                Assert.Equal(21, (int)callCallback.Invoke(null, [callbackPointer, 7])!);
+                    method.Name == "BgcsCallCallback" && method.GetParameters() is [{ ParameterType: var first }, _] &&
+                    typeof(MulticastDelegate).IsAssignableFrom(first));
+                Type callbackType = callCallback.GetParameters()[0].ParameterType;
+                Delegate generatedCallback = Delegate.CreateDelegate(callbackType, callback.Target, callback.Method);
+                Assert.Equal(21, (int)callCallback.Invoke(null, [generatedCallback, 7])!);
+                GC.KeepAlive(generatedCallback);
                 GC.KeepAlive(callback);
             }
             finally

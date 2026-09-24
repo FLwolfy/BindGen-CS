@@ -60,7 +60,7 @@ public sealed class MSBuildNativeBuildProvider : INativeBuildPipelineProvider
             .Select(path => NativeBuildPaths.Resolve(root, path)).Append("%(AdditionalLibraryDirectories)"));
         string dependencies = string.Join(';', manifest.LinkLibraries.Select(library => NormalizeLibrary(root, library))
             .Append("%(AdditionalDependencies)"));
-        string linkerArguments = string.Join(' ', manifest.LinkerArguments.Append("%(AdditionalOptions)"));
+        string linkerArguments = string.Join(' ', new[] { "/DLL" }.Concat(manifest.LinkerArguments).Append("%(AdditionalOptions)"));
         StringBuilder text = new();
         text.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
         text.AppendLine("<Project DefaultTargets=\"Build\" ToolsVersion=\"Current\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">");
@@ -91,6 +91,7 @@ public sealed class MSBuildNativeBuildProvider : INativeBuildPipelineProvider
         text.AppendLine("      <ExceptionHandling>Sync</ExceptionHandling>");
         text.AppendLine("    </ClCompile>");
         text.AppendLine("    <Link>");
+        text.AppendLine("      <LinkDLL>true</LinkDLL>");
         text.Append("      <AdditionalLibraryDirectories>").Append(Xml(libraryDirectories)).AppendLine("</AdditionalLibraryDirectories>");
         text.Append("      <AdditionalDependencies>").Append(Xml(dependencies)).AppendLine("</AdditionalDependencies>");
         text.Append("      <AdditionalOptions>").Append(Xml(linkerArguments)).AppendLine("</AdditionalOptions>");

@@ -2,13 +2,13 @@
 
 [English](assessment.md) | [能力矩阵](capabilities.cn.md) | [验收规范](acceptance.cn.md) | [路线图](roadmap.cn.md)
 
-审计日期：2026-09-23。
+审计日期：2026-09-24。
 
 ## 结论
 
 BindGen-CS 已经是一个**在声明语义范围内很强的维护候选 C/C++ → C# 工具链**，不是简单的 header-to-`DllImport` 脚本。唯一 C# 路径已经 IR-native；高级桌面 C++ lowering、lifetime contract、真实 native invocation、确定性 packaging、API/dependency gate 与 OIDC 签名发布 workflow 均已实现。
 
-当前 `macos-arm64-darwin` 完整报告的十个强制分类均已达到 9.0/10。
+当前本机 `macos-arm64-darwin` 完整报告的十个强制分类均已达到 9.0/10。报告记录了未提交的工作区改动，因此正式发布结论仍需同一提交的 runner 矩阵。
 
 但当前 revision 还不能称为“所有桌面平台生产支持”。Windows x64、Linux x64、macOS x64 必须分别生成同版本完整报告；Windows 还必须证明 clang-cl 与 MSBuild runtime invocation。真实 OIDC/Sigstore 签名仍只能由 release runner 提供。下游项目自行拥有 binding 配置与集成验收。
 

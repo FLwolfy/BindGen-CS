@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using BGCS.Cpp2C.Build;
 using BGCS.Cpp2C.Configuration;
+using BGCS.Intermediate;
 using Xunit;
 
 namespace BGCS.Cpp2C.Tests;
@@ -106,5 +107,19 @@ public sealed class CppBridgeBuildManifestTests
 
         Assert.Contains("CacheDirectory", exception.Message, StringComparison.Ordinal);
         Assert.Contains("PluginAssemblies", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validator_RejectsInvalidOptionalCSharpSafetyPolicy()
+    {
+        Cpp2CGeneratorConfig config = new()
+        {
+            GenerateCSharpBindings = true,
+            CSharpStrictSafetySeverity = (StrictSafetySeverity)999
+        };
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CConfigValidator.Validate(config));
+
+        Assert.Contains("CSharpStrictSafetySeverity", exception.Message, StringComparison.Ordinal);
     }
 }

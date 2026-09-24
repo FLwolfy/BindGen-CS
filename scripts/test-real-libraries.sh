@@ -13,6 +13,16 @@ CIMGUIZMO_HEADER="${CORPUS_ROOT}/cimguizmo/cimguizmo.h"
 BGFX_HEADER="${CORPUS_ROOT}/bgfx/include/bgfx/c99/bgfx.h"
 REQUIRE_REAL_LIBRARIES="${REQUIRE_REAL_LIBRARIES:-0}"
 
+check_generation_budget() {
+  local library_name="$1"
+  local elapsed_seconds="$2"
+  local budget_seconds="$3"
+  if [[ "${BGCS_ENFORCE_GENERATION_BUDGETS:-0}" == "1" ]] && (( elapsed_seconds > budget_seconds )); then
+    echo "[real-libraries] ${library_name} generation exceeded ${budget_seconds} seconds: ${elapsed_seconds}s"
+    exit 1
+  fi
+}
+
 if [[ ! -f "${MINIAUDIO_HEADER}" || ! -f "${SDL3_HEADER}" || ! -f "${CIMGUI_HEADER}" || ! -f "${CIMGUIZMO_HEADER}" || ! -f "${BGFX_HEADER}" ]]; then
   if [[ "${REQUIRE_REAL_LIBRARIES}" == "1" ]]; then
     echo "Required real-library headers were not found under: ${CORPUS_ROOT}"
@@ -53,6 +63,7 @@ if command -v cygpath > /dev/null 2>&1; then BX_INCLUDE_JSON="$(cygpath -m "${BX
 cat > "${ARTIFACTS_DIR}/miniaudio/bindgen.json" <<EOF
 {
   "Preset": "host-c,c-library",
+  "StrictSafetySeverity": "Warning",
   "Namespace": "BGCS.RealLibraries.MiniAudio",
   "ApiName": "MiniAudio",
   "LibName": "miniaudio",
@@ -69,10 +80,7 @@ start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/miniaudio/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-if (( elapsed_seconds > 60 )); then
-  echo "[real-libraries] miniaudio generation exceeded 60 seconds: ${elapsed_seconds}s"
-  exit 1
-fi
+check_generation_budget miniaudio "${elapsed_seconds}" 60
 
 cat > "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
@@ -96,6 +104,7 @@ mkdir -p "${ARTIFACTS_DIR}/sdl3/consumer"
 cat > "${ARTIFACTS_DIR}/sdl3/bindgen.json" <<EOF
 {
   "Preset": "host-c,c-library,opaque-callbacks",
+  "StrictSafetySeverity": "Warning",
   "Namespace": "BGCS.RealLibraries.SDL3",
   "ApiName": "SDL3",
   "LibName": "SDL3",
@@ -133,10 +142,7 @@ start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/sdl3/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-if (( elapsed_seconds > 45 )); then
-  echo "[real-libraries] SDL3 generation exceeded 45 seconds: ${elapsed_seconds}s"
-  exit 1
-fi
+check_generation_budget SDL3 "${elapsed_seconds}" 45
 
 cat > "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
@@ -160,6 +166,7 @@ mkdir -p "${ARTIFACTS_DIR}/cimgui/consumer"
 cat > "${ARTIFACTS_DIR}/cimgui/bindgen.json" <<EOF
 {
   "Preset": "host-c,c-library,opaque-callbacks",
+  "StrictSafetySeverity": "Warning",
   "Namespace": "BGCS.RealLibraries.CImGui",
   "ApiName": "CImGui",
   "LibName": "cimgui",
@@ -196,10 +203,7 @@ start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/cimgui/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-if (( elapsed_seconds > 30 )); then
-  echo "[real-libraries] cimgui generation exceeded 30 seconds: ${elapsed_seconds}s"
-  exit 1
-fi
+check_generation_budget cimgui "${elapsed_seconds}" 30
 
 cat > "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
@@ -223,6 +227,7 @@ mkdir -p "${ARTIFACTS_DIR}/cimguizmo/consumer"
 cat > "${ARTIFACTS_DIR}/cimguizmo/bindgen.json" <<EOF
 {
   "Preset": "host-c,c-library,opaque-callbacks",
+  "StrictSafetySeverity": "Warning",
   "Namespace": "BGCS.RealLibraries.CImGuizmo",
   "ApiName": "CImGuizmo",
   "LibName": "cimguizmo",
@@ -259,10 +264,7 @@ start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/cimguizmo/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-if (( elapsed_seconds > 15 )); then
-  echo "[real-libraries] cimguizmo generation exceeded 15 seconds: ${elapsed_seconds}s"
-  exit 1
-fi
+check_generation_budget cimguizmo "${elapsed_seconds}" 15
 
 cat > "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
@@ -286,6 +288,7 @@ mkdir -p "${ARTIFACTS_DIR}/bgfx/consumer"
 cat > "${ARTIFACTS_DIR}/bgfx/bindgen.json" <<EOF
 {
   "Preset": "host-c,c-library,opaque-callbacks",
+  "StrictSafetySeverity": "Warning",
   "Namespace": "BGCS.RealLibraries.Bgfx",
   "ApiName": "Bgfx",
   "LibName": "bgfx",
@@ -301,10 +304,7 @@ start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/bgfx/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-if (( elapsed_seconds > 30 )); then
-  echo "[real-libraries] bgfx generation exceeded 30 seconds: ${elapsed_seconds}s"
-  exit 1
-fi
+check_generation_budget bgfx "${elapsed_seconds}" 30
 cat > "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -344,10 +344,7 @@ EOF
   "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
     "${library_dir}/bindgen.ir.json"
   elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-  if (( elapsed_seconds > 120 )); then
-    echo "[real-libraries] ${library_name} IR generation exceeded 120 seconds: ${elapsed_seconds}s"
-    exit 1
-  fi
+  check_generation_budget "${library_name} IR" "${elapsed_seconds}" 120
 
   cat > "${consumer_dir}/${project_name}.IR.Generated.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">

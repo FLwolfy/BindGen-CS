@@ -136,6 +136,7 @@ internal static class Program
                 Namespace = config.CSharpNamespace,
                 ApiName = config.CSharpApiName,
                 LibName = config.NativeLibraryName,
+                StrictSafetySeverity = config.CSharpStrictSafetySeverity,
                 TargetPlatform = config.TargetPlatform,
                 TargetArchitecture = config.TargetArchitecture,
                 TargetAbi = config.TargetAbi,
@@ -155,7 +156,7 @@ internal static class Program
                 MergeGeneratedFilesToSingleFile = true
             };
             csharpConfig.IncludeFolders.Add(bridgeInclude);
-            new global::BGCS.ConfigComposer().Compose(ref csharpConfig);
+            new global::BGCS.ConfigComposer().Compose(ref csharpConfig, baseDirectory);
             BGCS.Configuration.ConfigValidator.Validate(csharpConfig);
             CsCodeGenerator csharpGenerator = new(csharpConfig);
             if (!csharpGenerator.Generate(bridgeHeader, Path.GetFullPath(config.CSharpOutputPath, baseDirectory)))

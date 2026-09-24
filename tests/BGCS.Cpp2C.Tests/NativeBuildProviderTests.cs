@@ -125,8 +125,48 @@ public sealed class NativeBuildProviderTests
         Assert.Contains("DynamicLibrary", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
         Assert.Contains("-p:PlatformToolset=v143", Assert.Single(msbuild.Steps).Arguments);
         Assert.Contains("/DEBUG:NONE", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
+        Assert.Contains("<LinkDLL>true</LinkDLL>", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
+        Assert.Contains("/DLL", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
         Assert.All(cmake.Steps.Concat(meson.Steps).Concat(clangCl.Steps).Concat(msbuild.Steps),
             step => Assert.DoesNotContain("sh -c", step.Executable + string.Join(' ', step.Arguments), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void GnuDriver_UsesItsConfiguredTargetWithoutClangOnlyTargetFlag()
+    {
+        string manifestPath = Path.Combine(Path.GetTempPath(), "bgcs-gnu-driver", "bridge.manifest.json");
+        CppBridgeBuildManifest manifest = CreateManifest("linux-x64-gnu") with
+        {
+            TargetTriple = "x86_64-unknown-linux-gnu"
+        };
+
+        NativeBuildPlan direct = new ClangNativeBuildProvider("g++").CreatePlan(manifest, manifestPath);
+        NativeBuildPipeline cmake = new CMakeNativeBuildProvider("cmake", "g++").CreatePipeline(manifest, manifestPath);
+        NativeBuildPipeline meson = new MesonNativeBuildProvider("meson", "g++").CreatePipeline(manifest, manifestPath);
+
+        Assert.DoesNotContain(direct.Arguments, argument => argument.StartsWith("--target=", StringComparison.Ordinal));
+        Assert.DoesNotContain(cmake.Steps[0].Arguments, argument => argument.StartsWith("-DCMAKE_CXX_COMPILER_TARGET=", StringComparison.Ordinal));
+        Assert.DoesNotContain("--target=", meson.InputFiles.Single(file => file.Path.EndsWith("meson.build", StringComparison.Ordinal)).Content,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnspecifiedCompiler_DoesNotAssumeClangForCMakeOrMeson()
+    {
+        string manifestPath = Path.Combine(Path.GetTempPath(), "bgcs-unspecified-driver", "bridge.manifest.json");
+        CppBridgeBuildManifest manifest = CreateManifest("linux-x64-gnu") with
+        {
+            TargetTriple = "x86_64-unknown-linux-gnu",
+            CompilerPath = null
+        };
+
+        NativeBuildPipeline cmake = new CMakeNativeBuildProvider("cmake").CreatePipeline(manifest, manifestPath);
+        NativeBuildPipeline meson = new MesonNativeBuildProvider("meson").CreatePipeline(manifest, manifestPath);
+
+        Assert.DoesNotContain(cmake.Steps[0].Arguments,
+            argument => argument.StartsWith("-DCMAKE_CXX_COMPILER_TARGET=", StringComparison.Ordinal));
+        Assert.DoesNotContain("--target=", meson.InputFiles.Single(file => file.Path.EndsWith("meson.build", StringComparison.Ordinal)).Content,
+            StringComparison.Ordinal);
     }
 
     [Fact]

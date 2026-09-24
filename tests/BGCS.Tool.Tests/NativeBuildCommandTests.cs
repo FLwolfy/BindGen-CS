@@ -30,6 +30,22 @@ public sealed class NativeBuildCommandTests
     }
 
     [Fact]
+    public void Run_RelativeOutputPath_IsResolvedFromInvocationDirectory()
+    {
+        using TestDirectory directory = new();
+        directory.WriteJson("bridge.manifest.json", CreateManifest());
+        string compiler = Environment.ProcessPath ?? throw new InvalidOperationException("Current process path is unavailable.");
+
+        CommandResult result = Run(directory, "bridge.manifest.json", "--compiler", compiler,
+            "--output", "Consumer/native/sample.so", "--dry-run", "--json");
+
+        Assert.Equal(0, result.ExitCode);
+        using JsonDocument plan = JsonDocument.Parse(result.Output);
+        Assert.Equal(System.IO.Path.Combine(directory.Path, "Consumer", "native", "sample.so"),
+            plan.RootElement.GetProperty("OutputFile").GetString());
+    }
+
+    [Fact]
     public void Run_UnsupportedManifestVersion_FailsBeforeCompilerExecution()
     {
         using TestDirectory directory = new();

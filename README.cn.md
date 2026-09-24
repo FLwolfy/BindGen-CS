@@ -7,7 +7,7 @@ BindGen-CS 是一个跨平台的 C/C++ → C# binding 工具链。它可以直�
 ## 能做什么
 
 - 从 C/C++ header 生成 `DllImport`、`LibraryImport` 或 function-table bindings。
-- 生成 raw ABI API，同时生成常用的 `string`、`Span<T>`、`ref`、`out` 友好重载。
+- 生成 raw ABI API，并在安全语义明确时生成常用的 `string`、`Span<T>`、`ref`、`out` 友好重载。
 - 处理 struct、union、packing、bitfield、fixed array、typedef、opaque handle、callback 和平台相关基础类型。
 - 为 C++ class、构造/析构、成员函数、重载、继承、模板实例、常见 STL container、smart pointer、path 和 chrono 生成 C bridge。
 - 自动发现 compiler、target triple、sysroot 和 system include，并生成可复现的 native build manifest。
@@ -15,29 +15,30 @@ BindGen-CS 是一个跨平台的 C/C++ → C# binding 工具链。它可以直�
 - 用一份 workspace 管理多个 native library；支持确定性 diff、事务性输出和增量缓存。
 - 复杂项目语义可通过声明式 lowering、独立 plugin 或项目自己的 C shim 扩展，不需要修改 BGCS core。
 
-BGCS 的目标不是把任意 C++ 源码逐行翻译成 C#，而是把可调用的 native 能力可靠地暴露给 C#。无法证明 ABI、ownership、allocator 或 lifetime 安全时，BGCS 会给出诊断并停止，不会静默猜测。只要功能可以包装成稳定 C ABI，通常都能通过配置、plugin 或 shim 接入。
+BGCS 的目标不是把任意 C++ 源码逐行翻译成 C#，而是把可调用的 native 能力可靠地暴露给 C#。C API 的 ownership、allocator、buffer 或 callback 语义无法证明时，默认会给出诊断、保留 raw ABI、抑制未经证明的 friendly overload；不支持的 C++ lowering 则停止 bridge 生成，直到配置、plugin 或 shim 补充语义。
 
 ## Getting Started
 
-需要 .NET SDK 9.0。C++ bridge 还需要本机 C/C++ compiler；可以先运行 `bindgen-cs doctor` 检查环境。
+需要 .NET SDK 9.0。以下命令直接在源码 checkout 中运行，不依赖尚未发布的公开工具包。C++ bridge 还需要本机 C/C++ compiler。
 
 ### 从 C header 生成 C#
 
+在仓库根目录复制运行：
+
 ```bash
-dotnet tool install --global BindGen-CS
-bindgen-cs init path/to/native.h
-bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
+dotnet run --project src/BGCS.Tool -- init examples/QuickStart/native.h --config examples/QuickStart/bindgen.json
+dotnet run --project src/BGCS.Tool -- generate examples/QuickStart/bindgen.json
+dotnet run --project src/BGCS.Tool -- build examples/QuickStart/bindgen.json
 ```
 
 完成后会得到：
 
 ```text
-Generated/
+examples/QuickStart/Generated/
 └─ Bindings.cs
 ```
 
-`init` 会创建一份可直接运行的 `bindgen.json`。`generate` 生成 bindings；`build` 在临时 consumer project 中以 nullable 和 warning-as-error 编译检查结果。
+`init` 会在示例 header 旁创建可运行配置。`generate` 生成 bindings；`build` 在临时 consumer project 中以 nullable 和 warning-as-error 编译检查。接入自己的库时替换示例 header，并把配置放在它旁边。工具正式发布后可运行 `dotnet tool install --global BindGen-CS`，使用下文较短的 `bindgen-cs` 命令；在此之前可用 `dotnet run --project src/BGCS.Tool --` 替代。
 
 首次接入一个库时，推荐执行完整检查：
 
@@ -146,7 +147,7 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json \
 ## 安全行为
 
 - ABI 和 lifetime 明确：直接生成并编译验证。
-- 缺少 ownership、allocator、buffer length 或 callback lifetime：给出 `BGCS-SAFETY-*` 诊断和配置位置。
+- 缺少 ownership、allocator、buffer length 或 callback lifetime：默认给出 `BGCS-SAFETY-*` 诊断、保留 raw ABI、抑制未经证明的 friendly overload。可设 `StrictSafetySeverity=Error` 拒绝整次生成，或提供 `MarshallingMappings` 明确契约后恢复 friendly API。
 - C++ 类型没有可接受的 lowering：拒绝生成，直到加入 recipe、plugin 或 shim。
 - `AllowUnsafe` 只表示项目明确接管风险，并保留审计诊断；它不能把错误 ABI 变正确。
 
