@@ -93,7 +93,15 @@ EOF
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
   "${ARTIFACTS_DIR}/bimg/consumer/bin/Release/net9.0/Bimg.Generated.dll" "${ARTIFACTS_DIR}/bimg/public-api.txt"
 pushd "${ROOT_DIR}" > /dev/null
-CPP_SNAPSHOT_MANIFEST="$(resolve_snapshot_manifest "tests/real-libraries/cpp-api-snapshots")"
-verify_sha256_manifest "${CPP_SNAPSHOT_MANIFEST}"
+if verify_or_capture_snapshot_manifest "tests/real-libraries/cpp-api-snapshots" \
+  artifacts/real-cpp-libraries/bimg/Bridge/include/Classes.h \
+  artifacts/real-cpp-libraries/bimg/Bridge/src/Classes.cpp \
+  artifacts/real-cpp-libraries/bimg/GeneratedOneStep/Bindings.cs \
+  artifacts/real-cpp-libraries/bimg/public-api.txt; then
+  snapshot_status=0
+else
+  snapshot_status=$?
+fi
 popd > /dev/null
+if [[ "${snapshot_status}" != "0" ]]; then exit "${snapshot_status}"; fi
 echo "[real-cpp] bimg bridge, C# consumer, and API snapshots passed for $(detect_snapshot_platform) in ${elapsed_seconds}s."

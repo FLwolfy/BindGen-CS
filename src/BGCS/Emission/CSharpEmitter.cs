@@ -1498,7 +1498,9 @@ public sealed class CSharpEmitter : IBindingEmitter
         {
             BindingParameter parameter = function.Parameters[index];
             if (parameter.Marshalling.Strategy != MarshallingStrategy.Callback ||
-                string.Equals(parameter.Type.ManagedName, "void*", StringComparison.Ordinal))
+                (string.Equals(parameter.Type.ManagedName, "void*", StringComparison.Ordinal) &&
+                 (parameter.Marshalling.CallbackLifetime == BindingCallbackLifetime.Unspecified ||
+                  parameter.Marshalling.CallbackThreading == BindingCallbackThreading.Unspecified)))
                 continue;
             BindingDelegate? bindingDelegate = module.Delegates.FirstOrDefault(candidate =>
                 string.Equals(candidate.NativeName, parameter.Type.NativeName, StringComparison.Ordinal));
@@ -1571,7 +1573,8 @@ public sealed class CSharpEmitter : IBindingEmitter
                 ? $"__AutoWrapCallback_{BuildCallbackSlotName(function, parameter, match.Index)}({argumentName})"
                 : argumentName;
             return $"({parameter.Type.ManagedName})Utils.GetFunctionPointerForDelegate({delegateExpression})";
-        });
+        }, keepAlive: callbacks.Select(callback =>
+            module.AutoWrapCallbacks && callbacks.Count == 1 ? "callback" : callback.Parameter.ManagedName).ToArray());
         writer.AppendLine("        }");
     }
 
@@ -1639,7 +1642,7 @@ public sealed class CSharpEmitter : IBindingEmitter
 
     private static void EmitNativeInvocation(StringBuilder writer, BindingFunction function, string nativeOwner,
         int indent, Func<BindingParameter, string> getArgument, string? returnWrapper = null,
-        bool convertBool = false)
+        bool convertBool = false, IReadOnlyList<string>? keepAlive = null)
     {
         AppendIndent(writer, indent);
         if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
@@ -1652,6 +1655,14 @@ public sealed class CSharpEmitter : IBindingEmitter
             writer.Append(getArgument(function.Parameters[index]));
         }
         writer.AppendLine(");");
+        if (keepAlive != null)
+        {
+            foreach (string argument in keepAlive)
+            {
+                AppendIndent(writer, indent);
+                writer.Append("global::System.GC.KeepAlive(").Append(argument).AppendLine(");");
+            }
+        }
         if (!string.Equals(function.ReturnType.ManagedName, "void", StringComparison.Ordinal))
         {
             AppendIndent(writer, indent);

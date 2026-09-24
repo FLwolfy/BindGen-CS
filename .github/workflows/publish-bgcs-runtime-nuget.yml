@@ -73,6 +73,21 @@ jobs:
           name: release-candidate-${{ matrix.target }}
           path: artifacts/acceptance
 
+      - name: Upload unreviewed host snapshot inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-inputs-${{ matrix.target }}
+          if-no-files-found: ignore
+          path: |
+            artifacts/acceptance/candidate-snapshots
+            artifacts/real-libraries/*/Generated/Bindings.cs
+            artifacts/real-libraries/*/public-api.txt
+            artifacts/real-cpp-libraries/bimg/Bridge/include/Classes.h
+            artifacts/real-cpp-libraries/bimg/Bridge/src/Classes.cpp
+            artifacts/real-cpp-libraries/bimg/GeneratedOneStep/Bindings.cs
+            artifacts/real-cpp-libraries/bimg/public-api.txt
+
       - name: Upload relocatable macOS Intel parser runtime
         if: matrix.target == 'macos-x64-darwin'
         uses: actions/upload-artifact@v4

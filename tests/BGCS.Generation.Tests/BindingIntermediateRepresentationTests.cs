@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BGCS.Core.Mapping;
+using BGCS.CppAst.Targeting;
 using BGCS.Emission;
 using BGCS.Intermediate;
 using Microsoft.CodeAnalysis;
@@ -13,6 +14,63 @@ namespace BGCS.Tests;
 
 public class BindingIntermediateRepresentationTests
 {
+    [Fact]
+    public void Generate_WindowsCallbackTypedef_EmitsCallableDelegateOverload()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-win-callback-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "api.h");
+        File.WriteAllText(header,
+            "#define API __declspec(dllimport)\n" +
+            "typedef int (*BgcsIntCallback)(int value);\n" +
+            "API int bgcs_call_callback(BgcsIntCallback callback, int value);\n");
+        try
+        {
+            CsCodeGeneratorConfig config = new()
+            {
+                ApiName = "NativeAbi",
+                Namespace = "BGCS.Tests.Generated",
+                LibName = "native",
+                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                ImportType = ImportType.DllImport,
+                TargetPlatform = CppTargetPlatform.Windows,
+                TargetArchitecture = CppTargetArchitecture.X64,
+                TargetAbi = CppTargetAbi.Msvc,
+                SingleFileOutputName = "Bindings.cs"
+            };
+            config.MarshallingMappings["bgcs_call_callback"] = new FunctionMarshallingMapping
+            {
+                Parameters =
+                {
+                    ["callback"] = new MarshallingMapping
+                    {
+                        Strategy = MarshallingStrategy.Callback,
+                        CallbackLifetime = BindingCallbackLifetime.CallOnly,
+                        CallbackThreading = BindingCallbackThreading.CallerThread
+                    }
+                }
+            };
+            CsCodeGenerator generator = new(config);
+
+            Assert.True(generator.Generate(header, Path.Combine(temp, "out")),
+                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            BindingModule module = generator.LastResult!.Module!;
+            BindingFunction function = Assert.Single(module.Functions);
+            BindingParameter parameter = Assert.Single(function.Parameters, candidate => candidate.NativeName == "callback");
+            string source = string.Join(Environment.NewLine, generator.LastResult.OutputFiles.Select(File.ReadAllText));
+            Assert.True(source.Contains("public static int BgcsCallCallback(BgcsIntCallback callback, int value)", StringComparison.Ordinal),
+                $"Delegates: {string.Join(", ", module.Delegates.Select(value => value.NativeName + "/" + value.ManagedName))}; " +
+                $"Callback type: {parameter.Type.NativeName}/{parameter.Type.ManagedName}; " +
+                $"Methods: {string.Join(" | ", source.Split('\n').Where(line => line.Contains("BgcsCallCallback", StringComparison.Ordinal)))}");
+            Assert.Contains("global::System.GC.KeepAlive(callback);", source, StringComparison.Ordinal);
+            AssertCompiles(generator.LastResult.OutputFiles.Select(File.ReadAllText).ToArray());
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
     [Fact]
     public void Generate_DefaultSafety_KeepsRawAbiButSuppressesUnprovenFriendlyReturn()
     {

@@ -385,9 +385,23 @@ verify_ir_backend "bgfx" "Bgfx"
   "${ARTIFACTS_DIR}/bgfx/consumer/bin/Release/net9.0/Bgfx.Generated.dll" "${ARTIFACTS_DIR}/bgfx/public-api.txt"
 
 pushd "${ROOT_DIR}" > /dev/null
-SOURCE_SNAPSHOT_MANIFEST="$(resolve_snapshot_manifest "tests/real-libraries/api-snapshots")"
-PUBLIC_API_SNAPSHOT_MANIFEST="$(resolve_snapshot_manifest "tests/real-libraries/public-api-snapshots")"
-verify_sha256_manifest "${SOURCE_SNAPSHOT_MANIFEST}"
-verify_sha256_manifest "${PUBLIC_API_SNAPSHOT_MANIFEST}"
+snapshot_status=0
+if verify_or_capture_snapshot_manifest "tests/real-libraries/api-snapshots" \
+  artifacts/real-libraries/{miniaudio,sdl3,cimgui,cimguizmo,bgfx}/Generated/Bindings.cs; then
+  :
+else
+  status=$?
+  if [[ "${status}" != "3" ]]; then exit "${status}"; fi
+  snapshot_status=3
+fi
+if verify_or_capture_snapshot_manifest "tests/real-libraries/public-api-snapshots" \
+  artifacts/real-libraries/{miniaudio,sdl3,cimgui,cimguizmo,bgfx}/public-api.txt; then
+  :
+else
+  status=$?
+  if [[ "${status}" != "3" ]]; then exit "${status}"; fi
+  snapshot_status=3
+fi
 popd > /dev/null
+if [[ "${snapshot_status}" != "0" ]]; then exit "${snapshot_status}"; fi
 echo "[real-libraries] deterministic source and public API snapshots passed for $(detect_snapshot_platform)."

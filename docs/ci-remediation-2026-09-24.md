@@ -11,7 +11,7 @@ The six jobs for commit `f70cbb4` reached build/test execution. The attached log
 | Linux x64 build and acceptance | `g++: unrecognized command-line option '--target=x86_64-unknown-linux-gnu'` | Direct, CMake, and Meson providers now add Clang's target flag only for a Clang-style driver; GNU drivers use their configured toolchain target. |
 | Windows x64 build | MSBuild linked `provider_msbuild.dll` without `/DLL`, then failed with `LNK1561` | Generated VC project explicitly sets `LinkDLL` and `/DLL`; the plan test checks both. |
 | Windows x64 build | Native ABI callback test expected an `nint` public overload that the generator did not promise | The test supplies a call-only callback contract and invokes the generated typed delegate overload across the actual DLL boundary. |
-| Windows x64 acceptance | Project-level `dotnet test --no-build` looked for `bin/x64/Release` while the solution built `bin/Release` | The Bash acceptance driver sets `Platform=AnyCPU` for managed project commands; native MSBuild steps still pass their target platform explicitly. |
+| Windows x64 acceptance | Project-level `dotnet test --no-build` looked for `bin/x64/Release` while the solution built `bin/Release` | An initial workaround set `Platform=AnyCPU`; the later runner exposed that this is not a valid solution platform. The follow-up below supersedes it. |
 | macOS Intel build and acceptance | Homebrew LLVM 20 libclang parsed Xcode libc++ ahead of the compiler-discovered libc++, causing `cwchar` conflicts; later tests saw missing bridge output | Host parser now prefers the selected compiler's standard-library include roots, using the SDK libc++ only as a fallback. LLVM 20 discovery and the affected tests pass on the available macOS arm64 host; an Intel rerun is still required. |
 
 Independent hardening from this audit: default C safety suppression now reaches Binding IR and the emitter, `native-build --output` is relative to the invocation directory, published parser packages declare the complete available desktop RID dependency closure, and native assets are rejected when PE/ELF/Mach-O CPU identity disagrees with their target. The source-only README quick start and shim walkthrough were run locally. A complete local macOS arm64 acceptance run now passes; a fresh hosted x64 matrix is still required before those targets can be called accepted.
@@ -36,6 +36,19 @@ When CMake or Meson is allowed to discover its own compiler, BGCS no longer assu
 | Windows custom shim export | A separate shim translation unit saw `dllimport` instead of `dllexport` | Put the bridge build define in the manifest for every source and make `API_INTERNAL` an implementation-side export |
 
 The Intel runtime bootstrap is in `scripts/setup-macos-x64-clang-runtime.sh`. It checks C++23 `std::expected`, builds the native companion from the exact managed ClangSharp tag, stages dependent dylibs with loader-relative IDs, and includes license notices. The release workflow transfers this asset from its accepted Intel job into the final parser package, asserts the required native files are present, and the clean Intel package consumer clears `BGCS_CLANG_RUNTIME_DIR` before parsing a header. The repository's `global.json` keeps the SDK within .NET 9 across images.
+
+## Follow-up runner logs: commit `8a7a42d`
+
+The next six-job CI run had two green managed jobs (Linux x64 and macOS Intel) and four red jobs. The failures have different causes:
+
+| Job | Observed failure | Correction in this checkout |
+| --- | --- | --- |
+| Windows managed | One of 87 generation tests failed: a declared call-only callback typedef had only the raw `void*` method, not the typed delegate overload required by the native invocation test. | The IR-native emitter now permits the typed overload for an opaque callback typedef only when its lifetime and threading contracts are both explicit. It keeps the delegate alive through native return; a Windows-targeted cross-host generation/compilation regression covers this path. |
+| Windows acceptance | `MSB4126`: the solution has `Release|Any CPU`, not `Release|AnyCPU`. | Remove the MSVC developer shell's ambient `Platform=x64` for this acceptance driver and let solution and project commands choose their own valid defaults. Native provider tests still select x64 explicitly. |
+| Linux x64 acceptance | All managed tests and five real C-library generation/compilation checks passed, then the script stopped because `api-snapshots.linux-x64.sha256` did not exist. | Missing host baselines now produce candidate SHA-256 manifests and upload the generated inputs for human review, while acceptance remains red. The same run continues through the C++ bridge to collect its candidate too. |
+| macOS Intel acceptance | The same missing-baseline stop at `api-snapshots.macos-x64.sha256`, after managed tests and five real C libraries passed. | Same candidate-and-review flow; no Arm64 hash is reused as Intel evidence. |
+
+The candidate manifests are not accepted baselines. After the next same-revision runner completes, review each generated source, public API, and C++ bridge output in its `snapshot-inputs-<target>` artifact. Add only the corresponding target-specific manifests to `tests/real-libraries/`, rerun CI, and require a full acceptance report. Windows may reveal a later independent failure after the restore blocker is removed; do not mark it accepted before the entire job passes.
 
 ## Local evidence
 

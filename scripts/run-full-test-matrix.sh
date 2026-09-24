@@ -6,11 +6,12 @@ source "${ROOT_DIR}/scripts/lib/common.sh"
 DOTNET_CMD="$(resolve_dotnet_host)"
 CONFIGURATION="${CONFIGURATION:-Release}"
 SKIP_RESTORE_BUILD="${SKIP_RESTORE_BUILD:-0}"
-# The MSVC developer shell exports Platform=x64. Solution builds select Any CPU,
-# whereas project-level `dotnet test --no-build` inherits that environment value
-# and otherwise looks for nonexistent bin/x64 test assemblies.
+# The MSVC developer shell exports Platform=x64. Leaving that ambient value in
+# place changes project-level `dotnet test --no-build` output lookup, while
+# setting Platform=AnyCPU breaks solution restore (the solution spells it
+# "Any CPU"). Let each solution/project use its own default instead.
 if [[ "$(detect_snapshot_platform)" == "windows-x64" ]]; then
-  export Platform=AnyCPU
+  unset Platform
 fi
 GATE_DIR="${ROOT_DIR}/artifacts/acceptance/gates"
 rm -rf "${GATE_DIR}"
@@ -137,12 +138,21 @@ touch "${GATE_DIR}/demo"
 
 log "Layer 3: Pinned upstream real-library regeneration and compilation"
 bash "${ROOT_DIR}/scripts/setup-real-library-corpus.sh"
-REQUIRE_REAL_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-libraries.sh"
-touch "${GATE_DIR}/real-libraries"
-touch "${GATE_DIR}/ir-native-real-libraries"
-REQUIRE_REAL_CPP_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"
-touch "${GATE_DIR}/real-cpp-libraries"
-
+snapshot_status=0
+if REQUIRE_REAL_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-libraries.sh"; then
+  touch "${GATE_DIR}/real-libraries" "${GATE_DIR}/ir-native-real-libraries"
+else
+  status=$?
+  if [[ "${status}" != "3" ]]; then exit "${status}"; fi
+  snapshot_status=3
+fi
+if REQUIRE_REAL_CPP_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"; then
+  touch "${GATE_DIR}/real-cpp-libraries"
+else
+  status=$?
+  if [[ "${status}" != "3" ]]; then exit "${status}"; fi
+  snapshot_status=3
+fi
 log "Layer 4: Reviewed public API compatibility baseline"
 bash "${ROOT_DIR}/scripts/test-public-api-compatibility.sh"
 touch "${GATE_DIR}/api-compatibility"
@@ -159,6 +169,11 @@ touch "${GATE_DIR}/performance"
 log "Layer 7: License and vulnerability policy"
 bash "${ROOT_DIR}/scripts/test-supply-chain-policy.sh"
 touch "${GATE_DIR}/supply-chain"
+
+if [[ "${snapshot_status}" != "0" ]]; then
+  log "Unreviewed host snapshot candidates were captured under artifacts/acceptance/candidate-snapshots; acceptance remains failed."
+  exit "${snapshot_status}"
+fi
 
 log "Layer 8: Machine-readable acceptance report"
 bash "${ROOT_DIR}/scripts/write-acceptance-report.sh"

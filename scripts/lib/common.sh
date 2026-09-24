@@ -87,14 +87,40 @@ detect_snapshot_platform() {
   printf '%s-%s\n' "${platform}" "${architecture}"
 }
 
-resolve_snapshot_manifest() {
+# A new host must supply a reviewed baseline before it can pass acceptance.
+# Preserve an exact candidate under acceptance artifacts so one failed run
+# gathers the hashes needed for review rather than silently blessing itself.
+verify_or_capture_snapshot_manifest() {
   local manifest_prefix="$1"
-  local platform manifest
-  platform="$(detect_snapshot_platform)"
-  manifest="${manifest_prefix}.${platform}.sha256"
-  if [[ ! -f "${manifest}" ]]; then
-    printf 'No verified snapshot manifest exists for %s: %s\n' "${platform}" "${manifest}" >&2
+  shift
+  if [[ "$#" -eq 0 ]]; then
+    printf 'Snapshot verification requires at least one generated file.\n' >&2
     return 1
   fi
-  printf '%s\n' "${manifest}"
+  local platform manifest candidate_dir candidate
+  platform="$(detect_snapshot_platform)" || return 1
+  manifest="${manifest_prefix}.${platform}.sha256"
+  if [[ -f "${manifest}" ]]; then
+    verify_sha256_manifest "${manifest}"
+    return
+  fi
+  candidate_dir="${ROOT_DIR}/artifacts/acceptance/candidate-snapshots"
+  mkdir -p "${candidate_dir}" || return 1
+  candidate="${candidate_dir}/$(basename "${manifest}")"
+  if command -v sha256sum > /dev/null 2>&1; then
+    if ! sha256sum --binary "$@" > "${candidate}"; then
+      rm -f "${candidate}"
+      return 1
+    fi
+  elif command -v shasum > /dev/null 2>&1; then
+    if ! shasum -a 256 --binary "$@" > "${candidate}"; then
+      rm -f "${candidate}"
+      return 1
+    fi
+  else
+    printf 'Unable to create snapshot candidate: sha256sum or shasum is required.\n' >&2
+    return 1
+  fi
+  printf 'No reviewed snapshot manifest for %s. Candidate: %s\n' "${platform}" "${candidate}" >&2
+  return 3
 }
