@@ -40,6 +40,8 @@ examples/QuickStart/Generated/
 
 `init` creates a runnable configuration beside the example header. `generate` writes the bindings, and `build` compiles them in a temporary consumer project with nullable analysis and warnings as errors. Replace the example header with your own and keep its configuration next to it. After the tool is published, `dotnet tool install --global BindGen-CS` will provide the shorter `bindgen-cs` command used below; until then, replace `bindgen-cs` with `dotnet run --project src/BGCS.Tool --`.
 
+Want one C# bindings file? Set `"MergeGeneratedFilesToSingleFile": true` and optionally `"SingleFileOutputName": "Bindings.cs"` in `bindgen.json`. `init` already enables this for its C-library preset. This controls the number of C# files **per target**; it does not merge different native ABIs into one declaration set. If `GenerateRuntimeSource=true`, `Runtime.cs` remains a separate file.
+
 For a first integration, run the complete check:
 
 ```bash
@@ -72,6 +74,8 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json \
 ```
 
 Generated directories are reproducible output; do not edit them. Put naming, type, marshalling, ownership, and function-selection rules in configuration. See [Getting started](docs/getting-started.md) for complete project layouts and troubleshooting.
+
+BGCS runs across platforms, but C/C++ headers and ABI details can vary by target (for example enum underlying types, `long`/`wchar_t`, struct layout, calling convention, and platform-gated declarations). A workspace can keep one `Bindings.cs` **for each target** under `Generated/<target-id>/` with `TargetOutputSubdirectories=true`. The consumer selects exactly one matching directory and native binary for its RID. Use one shared generated file only when the native API and ABI are proven identical on every intended target. See [target and output configuration](docs/configuration-guide.md#target-settings).
 
 ## Current support status
 

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/BGCS.Tool/BGCS.Tool.csproj" />
+    <Compile Include="../../scripts/BGCS.ApiSnapshot/SnapshotLoadContext.cs" Link="SnapshotLoadContext.cs" />
   </ItemGroup>
 
 </Project>

@@ -58,6 +58,14 @@ Windows x64 reached warning-free generation and compilation of all five real C l
 
 The Windows C++ bimg snapshot was not reached in run #35. If its existing manifest is stale, the next runner now uploads a mismatch candidate and continues the remaining acceptance layers while still failing. No Windows C++ hash is inferred from another platform; Windows cannot be marked accepted until its own full report passes. No code was pushed from this remediation checkout.
 
+## Run #36: commit `95352b6`
+
+All three build/test jobs and the Linux x64 and macOS Intel acceptance jobs passed. Windows x64 acceptance compiled the five real C libraries and the bimg generated bridge/consumer without warnings, then found that its old bimg source/C#/public-API hashes were stale. The `snapshot-inputs-windows-x64-msvc` artifact (ID `10804358689`) contains the four bimg files and a candidate manifest. Their bytes match that candidate. After normalizing line endings for review, `Classes.cpp` is identical to the Linux and macOS x64 output; the Windows C# surface differs in two enum underlying types and two unused empty placeholder-record layouts. A Clang cross-target probe independently confirmed that an ordinary positive-valued C++ enum is `int` under the MSVC target but `unsigned int` under Darwin, and that an empty C record also has target-dependent layout. Neither empty placeholder type is used by the generated callable bridge. The target-specific Windows manifest was updated from the actual Windows artifact, without substituting another target's hashes.
+
+The next layer then stopped in `BGCS.ApiSnapshot` while reflecting an assembly, requesting unavailable `System.Runtime, Version=10.0.0.0` from the .NET 9 process. Its dependency fallback had searched the NuGet cache by assembly name and chosen the highest installed version, independent of the target assembly's `.deps.json`. The snapshot tool now resolves only the exact package/runtime asset pinned by that dependency manifest, lets framework assemblies come from the running framework, and rejects a mismatched assembly identity. A focused test places a newer fake package next to the pinned one and proves that it is never chosen. This is a test-tool dependency-resolution fix, not a change to generated bindings or a disabled API gate.
+
+Run #36 remediation checks on macOS Arm64: warning-as-error solution build passed; 25 tool tests passed; the seven-assembly public API compatibility gate passed; the targeted single-file generation test passed; and all four Windows bimg candidate hashes matched the uploaded bytes. Windows acceptance must still run the changed resolver and all downstream gates on its own runner.
+
 ## Local evidence
 
 - .NET solution build: 0 warnings, 0 errors on macOS Arm64.
@@ -73,4 +81,4 @@ The Windows C++ bimg snapshot was not reached in run #35. If its existing manife
 
 ## Evidence still required
 
-No code was pushed from this task. A new GitHub Actions run on the same revision is required to verify Windows x64 `clang-cl`/MSBuild/DLL calls, Linux x64 C++23 bridge and package consumer, macOS Intel runtime bootstrap and clean consumer, and the complete acceptance and release-candidate reports. A configured workflow and cross-RID restore are not host acceptance.
+The Linux x64 and macOS Intel run #36 acceptance reports are complete for that commit. The Windows x64 job must rerun after the run #36 fixes and pass its remaining public API, NuGet native consumer, performance, dependency-policy, and report gates before the current revision has a complete three-target desktop matrix. A configured workflow and cross-RID restore are not substitutes for that host report. No code was pushed from this remediation checkout.

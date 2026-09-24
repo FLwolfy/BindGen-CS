@@ -86,9 +86,10 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 ## Output 与 Runtime
 
 - `GenerateConfigured` 以 config 所在目录解析 `OutputPath`。
+- `MergeGeneratedFilesToSingleFile=true` 把每个 target 的 bindings 合并为一个 C# 文件。`OneFilePerType` 是独立选项；若不想在合并前按类型拆分，可设为 `false`。`c-library` preset 已默认设置两者，生成一个 `Bindings.cs`。
 - `SingleFileOutputName` 只能是 `.cs` 文件名，禁止路径。
 - `GenerateRuntimeSource=false` 需要引用 `BGCS.Runtime`。
-- `GenerateRuntimeSource=true` 生成带 guard 的 standalone Runtime。
+- `GenerateRuntimeSource=true` 会另外生成带 guard 的 `Runtime.cs`，即使 bindings 选择了单文件。
 - 输出是事务性的；解析/生成失败不会删除上一次成功结果。
 
 ## 增量缓存与 Plugin
@@ -235,3 +236,5 @@ bindgen-cs workspace diff native/bindings/workspace.json
 ```
 
 `TargetOutputSubdirectories=true` 时，`generate` 与 `diff` 会把每份配置的普通输出解析为 `OutputPath/<target-id>`（例如 `Generated/linux-arm64-gnu`）。同一仓库保留多个 ABI 的 bindings 时应开启此项，并由消费项目严格选择一个 target 目录。把 `workspace diff` 放入 CI，可以在不覆盖正式输出的情况下验证全部 checked-in bindings。
+
+生成器跨平台不代表一份 C# 声明能适用于所有 ABI。Native header 经 target 条件编译后，声明和布局都可能变化。`SingleFileOutputName` 只控制单个 target 的文件组织；`TargetOutputSubdirectories` 负责隔离不同 target。只有每个目标都通过 ABI 与 native consumer 测试，且生成声明确实一致，才应共用一份文件。

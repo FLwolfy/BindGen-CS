@@ -40,6 +40,8 @@ examples/QuickStart/Generated/
 
 `init` 会在示例 header 旁创建可运行配置。`generate` 生成 bindings；`build` 在临时 consumer project 中以 nullable 和 warning-as-error 编译检查。接入自己的库时替换示例 header，并把配置放在它旁边。工具正式发布后可运行 `dotnet tool install --global BindGen-CS`，使用下文较短的 `bindgen-cs` 命令；在此之前可用 `dotnet run --project src/BGCS.Tool --` 替代。
 
+想要单个 C# bindings 文件，在 `bindgen.json` 中设置 `"MergeGeneratedFilesToSingleFile": true`，可用 `"SingleFileOutputName": "Bindings.cs"` 自定义文件名。`init` 的 C-library preset 已默认开启。这里的“单文件”指**每个 target 一份 C# 文件**，不是把不同 native ABI 强行合并。若设置 `GenerateRuntimeSource=true`，还会单独生成 `Runtime.cs`。
+
 首次接入一个库时，推荐执行完整检查：
 
 ```bash
@@ -72,6 +74,8 @@ bindgen-cs native-build GeneratedBridge/bridge.manifest.json \
 ```
 
 生成目录是可重建产物，不要直接修改。命名、类型、marshalling、ownership 和函数选择都应写进配置。完整项目结构和常见问题见[快速开始](docs/getting-started.cn.md)。
+
+BGCS 工具本身跨平台，但 C/C++ header 与 ABI 可能随 target 变化，例如 enum 底层类型、`long`/`wchar_t`、结构体布局、调用约定和条件编译声明。Workspace 设置 `TargetOutputSubdirectories=true` 后，可以在 `Generated/<target-id>/` 下为**每个 target 各保留一个** `Bindings.cs`；消费项目须按 RID 选择对应目录和 native binary。只有证明所有目标平台的 native API 与 ABI 完全一致时，才应共享同一份生成文件。详见[目标与输出配置](docs/configuration-guide.cn.md#target)。
 
 ## 当前支持状态
 

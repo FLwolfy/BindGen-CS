@@ -86,9 +86,10 @@ Model support is not the same as completed host acceptance. See the [target evid
 ## Output and Runtime
 
 - `OutputPath` is resolved relative to the config file by `GenerateConfigured`.
+- `MergeGeneratedFilesToSingleFile=true` combines generated bindings into one C# file per target. `OneFilePerType` is independent; set it to `false` if you also want to avoid per-type files before composition. The `c-library` preset already sets both for one `Bindings.cs`.
 - `SingleFileOutputName` must be a file name ending in `.cs`; paths are rejected.
 - `GenerateRuntimeSource=false` expects a `BGCS.Runtime` reference.
-- `GenerateRuntimeSource=true` emits guarded standalone Runtime source.
+- `GenerateRuntimeSource=true` emits guarded standalone `Runtime.cs` separately, even with single-file bindings.
 - Output is transactional; failed parsing/generation does not delete previous successful output.
 
 ## Incremental cache and plugins
@@ -235,3 +236,5 @@ bindgen-cs workspace diff native/bindings/workspace.json
 ```
 
 With `TargetOutputSubdirectories=true`, `generate` and `diff` resolve each config's normal output as `OutputPath/<target-id>` (for example `Generated/linux-arm64-gnu`). Use it whenever one repository retains bindings for multiple ABIs; consumers must select exactly one target directory. Put `workspace diff` in CI to validate all checked-in bindings without overwriting final output.
+
+The generator being cross-platform does not imply one C# declaration set is valid for every ABI. Native headers may expose different declarations or layouts after target-specific preprocessing. `SingleFileOutputName` changes file organization within one target; `TargetOutputSubdirectories` isolates those targets. A truly shared file is appropriate only after each intended target has passed ABI and native-consumer tests with identical generated declarations.

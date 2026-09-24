@@ -1,6 +1,6 @@
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Text;
+using BGCS.ApiSnapshot;
 
 if (args.Length != 2)
 {
@@ -53,44 +53,4 @@ static string FormatType(Type type)
     int marker = name.IndexOf('`');
     if (marker >= 0) name = name[..marker];
     return name + "<" + string.Join(",", type.GetGenericArguments().Select(FormatType)) + ">";
-}
-
-internal sealed class SnapshotLoadContext : AssemblyLoadContext, IDisposable
-{
-    private readonly AssemblyDependencyResolver resolver;
-    private readonly string packagesRoot;
-
-    public SnapshotLoadContext(string assemblyPath) : base(isCollectible: true)
-    {
-        resolver = new(assemblyPath);
-        packagesRoot = Environment.GetEnvironmentVariable("NUGET_PACKAGES") ??
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
-    }
-
-    protected override Assembly? Load(AssemblyName assemblyName)
-    {
-        string? path = resolver.ResolveAssemblyToPath(assemblyName);
-        bool frameworkAssembly = assemblyName.Name is "System" or "System.Runtime" or "Microsoft.CSharp" or "netstandard" ||
-            assemblyName.Name?.StartsWith("System.", StringComparison.Ordinal) == true;
-        if (path == null && !frameworkAssembly && !string.IsNullOrWhiteSpace(assemblyName.Name))
-        {
-            string package = Path.Combine(packagesRoot, assemblyName.Name.ToLowerInvariant());
-            if (Directory.Exists(package))
-            {
-                path = Directory.GetDirectories(package)
-                    .OrderByDescending(directory => directory, StringComparer.OrdinalIgnoreCase)
-                    .SelectMany(directory => Directory.GetFiles(directory, assemblyName.Name + ".dll", SearchOption.AllDirectories))
-                    .FirstOrDefault(candidate => candidate.Contains(Path.DirectorySeparatorChar + "lib" + Path.DirectorySeparatorChar, StringComparison.Ordinal));
-            }
-        }
-        return path == null ? null : LoadFromAssemblyPath(path);
-    }
-
-    protected override nint LoadUnmanagedDll(string unmanagedDllName)
-    {
-        string? path = resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-        return path == null ? 0 : LoadUnmanagedDllFromPath(path);
-    }
-
-    public void Dispose() => Unload();
 }
