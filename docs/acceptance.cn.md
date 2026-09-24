@@ -32,7 +32,9 @@
 
 ## 真实库性能预算
 
-在受控、已记录的 host 上 warm restore 后测量。普通功能矩阵记录生成耗时，但不因共享 runner 的负载或墙钟变化而失败。专用性能测试可设置 `BGCS_ENFORCE_GENERATION_BUDGETS=1` 强制以下上限；`scripts/test-performance-budget.sh` 另行验证冷/热缓存。
+在受控、已记录的 host 上 warm restore 后测量。真实库功能矩阵记录生成耗时，但不因共享 runner 的负载或墙钟变化而失败；专用真实库性能测试可设置 `BGCS_ENFORCE_GENERATION_BUDGETS=1` 强制以下上限。`scripts/test-performance-budget.sh` 则独立强制下文的 10,000 声明冷/热缓存预算。
+
+10,000 声明的缓存验收始终检查生成方法数、删除输出目录后的逐字节一致性，以及恰好一份不可变缓存记录，并强制按实机校准的时间上限：Linux、Windows 和 macOS ARM64 为冷 60 秒／热 10 秒；GitHub 托管的 macOS Intel 为冷 120 秒／热 30 秒。Intel 上限依据该主机实测的冷 76 秒、热 12 秒制定，不减少样本或跳过检查。受控机器可通过 `BGCS_PERF_COLD_BUDGET_SECONDS` 和 `BGCS_PERF_WARM_BUDGET_SECONDS` 设置更严格上限；报告记录 target、实测时间与所用上限。
 
 在报告声明的宿主 target、NuGet 已 warm restore 的条件下测量：
 

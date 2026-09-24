@@ -6,8 +6,22 @@ source "${ROOT_DIR}/scripts/lib/common.sh"
 DOTNET_CMD="$(resolve_dotnet_host)"
 CONFIGURATION="${CONFIGURATION:-Release}"
 DECLARATION_COUNT="${BGCS_PERF_DECLARATIONS:-10000}"
-COLD_BUDGET_SECONDS="${BGCS_PERF_COLD_BUDGET_SECONDS:-60}"
-WARM_BUDGET_SECONDS="${BGCS_PERF_WARM_BUDGET_SECONDS:-10}"
+PERFORMANCE_TARGET="$(detect_snapshot_platform)"
+# The Intel macOS hosted runner is substantially slower for this libclang-heavy
+# fixture than the other desktop hosts. Keep a hard budget on every target,
+# calibrated to that host rather than treating runner speed as generator failure.
+case "${PERFORMANCE_TARGET}" in
+  macos-x64|macos-x64-darwin)
+    DEFAULT_COLD_BUDGET_SECONDS=120
+    DEFAULT_WARM_BUDGET_SECONDS=30
+    ;;
+  *)
+    DEFAULT_COLD_BUDGET_SECONDS=60
+    DEFAULT_WARM_BUDGET_SECONDS=10
+    ;;
+esac
+COLD_BUDGET_SECONDS="${BGCS_PERF_COLD_BUDGET_SECONDS:-${DEFAULT_COLD_BUDGET_SECONDS}}"
+WARM_BUDGET_SECONDS="${BGCS_PERF_WARM_BUDGET_SECONDS:-${DEFAULT_WARM_BUDGET_SECONDS}}"
 PERF_DIR="${ROOT_DIR}/artifacts/performance"
 
 rm -rf "${PERF_DIR}"
@@ -76,17 +90,18 @@ if (( emitted_count < DECLARATION_COUNT )); then
   exit 1
 fi
 if (( cold_seconds > COLD_BUDGET_SECONDS )); then
-  printf '[performance] Cold generation exceeded budget: %ss > %ss.\n' "${cold_seconds}" "${COLD_BUDGET_SECONDS}" >&2
+  printf '[performance] %s cold generation exceeded budget: %ss > %ss.\n' "${PERFORMANCE_TARGET}" "${cold_seconds}" "${COLD_BUDGET_SECONDS}" >&2
   exit 1
 fi
 if (( warm_seconds > WARM_BUDGET_SECONDS )); then
-  printf '[performance] Warm cache restoration exceeded budget: %ss > %ss.\n' "${warm_seconds}" "${WARM_BUDGET_SECONDS}" >&2
+  printf '[performance] %s warm cache restoration exceeded budget: %ss > %ss.\n' "${PERFORMANCE_TARGET}" "${warm_seconds}" "${WARM_BUDGET_SECONDS}" >&2
   exit 1
 fi
 
 cat > "${PERF_DIR}/report.json" <<EOF
 {
   "status": "passed",
+  "target": "${PERFORMANCE_TARGET}",
   "declarations": ${DECLARATION_COUNT},
   "emittedNativeMethods": ${emitted_count},
   "coldSeconds": ${cold_seconds},
@@ -98,5 +113,5 @@ cat > "${PERF_DIR}/report.json" <<EOF
   "restoredAfterOutputDeletion": true
 }
 EOF
-printf '[performance] %s declarations passed: cold=%ss/%ss, warm=%ss/%ss.\n' \
-  "${DECLARATION_COUNT}" "${cold_seconds}" "${COLD_BUDGET_SECONDS}" "${warm_seconds}" "${WARM_BUDGET_SECONDS}"
+printf '[performance] %s: %s declarations passed: cold=%ss/%ss, warm=%ss/%ss.\n' \
+  "${PERFORMANCE_TARGET}" "${DECLARATION_COUNT}" "${cold_seconds}" "${COLD_BUDGET_SECONDS}" "${warm_seconds}" "${WARM_BUDGET_SECONDS}"
