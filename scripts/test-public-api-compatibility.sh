@@ -10,8 +10,10 @@ CURRENT_DIR="${ROOT_DIR}/artifacts/public-api"
 mkdir -p "${CURRENT_DIR}"
 
 projects=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
+# BGCS.ApiSnapshot is not part of BindGen-CS.sln, so the release job's solution
+# restore does not create its assets file on a fresh runner. Build restores it here.
 "${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" \
-  --configuration "${CONFIGURATION}" --no-restore
+  --configuration "${CONFIGURATION}"
 
 for project in "${projects[@]}"; do
   assembly="${ROOT_DIR}/src/${project}/bin/${CONFIGURATION}/net9.0/${project}.dll"
