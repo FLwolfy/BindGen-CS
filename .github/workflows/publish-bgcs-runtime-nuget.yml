@@ -98,7 +98,9 @@ jobs:
 
   validate-pack-and-publish:
     needs: release-candidate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      BGCS_CPP2C_CXX: g++
     permissions:
       contents: read
       id-token: write

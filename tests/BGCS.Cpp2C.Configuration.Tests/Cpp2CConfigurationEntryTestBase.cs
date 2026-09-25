@@ -28,9 +28,7 @@ public abstract class Cpp2CConfigurationEntryTestBase
         string[] allowedHeaders,
         [CallerFilePath] string callerFilePath = "")
     {
-        string? entryFolder = Path.GetDirectoryName(callerFilePath);
-        if (string.IsNullOrEmpty(entryFolder))
-            throw new DirectoryNotFoundException("Unable to resolve entry test folder from caller path.");
+        string entryFolder = ResolveEntryFolder(callerFilePath);
 
         string configPath = Path.Combine(entryFolder, configFileName);
         if (!File.Exists(configPath))
@@ -111,9 +109,7 @@ public abstract class Cpp2CConfigurationEntryTestBase
         string expectedBindingsFileName = "expected.bindings.json",
         [CallerFilePath] string callerFilePath = "")
     {
-        string? entryFolder = Path.GetDirectoryName(callerFilePath);
-        if (string.IsNullOrEmpty(entryFolder))
-            throw new DirectoryNotFoundException("Unable to resolve entry test folder from caller path.");
+        string entryFolder = ResolveEntryFolder(callerFilePath);
 
         string expectedPath = Path.Combine(entryFolder, expectedFileName);
         if (!File.Exists(expectedPath))
@@ -147,9 +143,7 @@ public abstract class Cpp2CConfigurationEntryTestBase
         string expectedBindingsFileName = "expected.bindings.json",
         [CallerFilePath] string callerFilePath = "")
     {
-        string? entryFolder = Path.GetDirectoryName(callerFilePath);
-        if (string.IsNullOrEmpty(entryFolder))
-            throw new DirectoryNotFoundException("Unable to resolve entry test folder from caller path.");
+        string entryFolder = ResolveEntryFolder(callerFilePath);
 
         string expectedPath = Path.Combine(entryFolder, expectedBindingsFileName);
         if (!File.Exists(expectedPath))
@@ -199,6 +193,21 @@ public abstract class Cpp2CConfigurationEntryTestBase
 
             File.Copy(sourceFile, targetPath, overwrite: true);
         }
+    }
+
+    private static string ResolveEntryFolder(string callerFilePath)
+    {
+        string? callerFolder = Path.GetDirectoryName(callerFilePath);
+        string? entryName = Path.GetFileName(callerFolder);
+        if (string.IsNullOrWhiteSpace(entryName))
+            throw new DirectoryNotFoundException("Unable to resolve entry test folder from caller path.");
+
+        // CallerFilePath is source-mapped to /_/ in CI builds; fixtures are copied beside the test assembly.
+        string entryFolder = Path.Combine(EntryTestsRoot, entryName);
+        if (!Directory.Exists(entryFolder))
+            throw new DirectoryNotFoundException($"Entry test fixture folder not found: {entryFolder}");
+
+        return entryFolder;
     }
 
     private static string[] ResolveHeaderFiles(string tempFolder, string[] headerFiles)
