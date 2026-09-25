@@ -22,8 +22,9 @@ Consumers normally install only `BGCS`, `BGCS.Cpp2C`, or `BGCS.Runtime`. Command
 ```
 
 This command packs the complete dependency closure, restores the three public packages into a clean consumer project, compiles it, and runs it. The full test matrix invokes the same package validation.
+Set `BGCS_PACKAGE_TEST_ARTIFACTS_ROOT` to a dedicated absolute directory to keep test outputs separate from the repository's `artifacts/` directory.
 
-On macOS Intel, first run `bash scripts/setup-macos-x64-clang-runtime.sh` and set `BGCS_CLANG_RUNTIME_DIR` to its output directory. The pack includes the relocatable Clang 20 dylibs and their license notices; the clean consumer then clears the override and loads the package's own native assets. The release workflow uploads the accepted Intel runtime from its macOS job and includes it in the final `BGCS.CppAst` package. A release fails if either required Intel dylib is absent from that package.
+On macOS Intel, first run `bash scripts/setup-macos-x64-clang-runtime.sh`. Set `BGCS_CLANG_RUNTIME_DIR` to its output directory for local parser execution, and set `BGCS_OSX_X64_PACKAGE_RUNTIME_DIR` to the same directory when packing. These are separate: the first overrides native loading on the current host; the second contributes relocatable Clang 20 dylibs and license notices to `BGCS.CppAst`. The clean consumer clears the loading override and uses the package's own native assets. The release workflow uploads the accepted Intel runtime from its macOS job and includes it in the final parser package. A release fails if either required Intel dylib is absent from that package.
 
 ## Automated publishing
 
@@ -33,6 +34,8 @@ It runs restore, build, all tests, package-closure validation, generates `artifa
 
 - a unified `v*` tag, such as `v1.2.3`; or
 - the manual workflow with a release version.
+
+The package-closure test keeps its `BGCS.NativeAsset.Probe` package outside the release artifact directory. The seven library packages each have a `.nupkg` and `.snupkg`; the `BindGen-CS` tool has a `.nupkg` only. The workflow validates that exact set before signing or uploading anything.
 
 A normal branch commit or push does **not** publish packages. It may run ordinary CI, but this release workflow starts only for a matching tag or a manual dispatch.
 

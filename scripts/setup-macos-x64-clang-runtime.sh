@@ -155,3 +155,4 @@ printf 'ClangSharp source: %s\n' "$(git -C "${SOURCE_DIR}" rev-parse HEAD)"
 printf 'LLVM: %s\n' "$("${LLVM_PREFIX}/bin/llvm-config" --version)"
 printf 'Runtime directory: %s\n' "${RUNTIME_DIR}"
 printf 'Set BGCS_CLANG_RUNTIME_DIR to this directory when running BGCS.\n'
+printf 'Set BGCS_OSX_X64_PACKAGE_RUNTIME_DIR to this directory when packing BGCS.CppAst.\n'

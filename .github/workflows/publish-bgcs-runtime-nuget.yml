@@ -55,6 +55,7 @@ jobs:
           runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
           BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
           echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "BGCS_OSX_X64_PACKAGE_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
           echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
           echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
 
@@ -157,7 +158,7 @@ jobs:
         env:
           CONFIGURATION: Release
           PACKAGE_TEST_VERSION: ${{ steps.release.outputs.version }}
-          BGCS_CLANG_RUNTIME_DIR: ${{ github.workspace }}/artifacts/clang-runtime/osx-x64
+          BGCS_OSX_X64_PACKAGE_RUNTIME_DIR: ${{ github.workspace }}/artifacts/clang-runtime/osx-x64
 
       - name: Assert Intel runtime is in published parser package
         shell: bash
@@ -165,6 +166,30 @@ jobs:
           package="artifacts/nuget/BGCS.CppAst.${{ steps.release.outputs.version }}.nupkg"
           unzip -Z1 "${package}" | grep -Fx 'runtimes/osx-x64/native/libclang.dylib'
           unzip -Z1 "${package}" | grep -Fx 'runtimes/osx-x64/native/libClangSharp.dylib'
+
+      - name: Validate release package set before signing or upload
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          shopt -s nullglob
+          require_package() {
+            if [[ ! -f "artifacts/nuget/$1" ]]; then
+              echo "Missing release package: $1" >&2
+              exit 1
+            fi
+          }
+          libraries=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
+          for package in "${libraries[@]}"; do
+            require_package "${package}.${VERSION}.nupkg"
+            require_package "${package}.${VERSION}.snupkg"
+          done
+          require_package "BindGen-CS.${VERSION}.nupkg"
+          packages=(artifacts/nuget/*.nupkg artifacts/nuget/*.snupkg)
+          if (( ${#packages[@]} != ${#libraries[@]} * 2 + 1 )); then
+            echo "Expected 15 release packages, found ${#packages[@]}." >&2
+            exit 1
+          fi
 
       - name: Generate SPDX SBOM and SLSA provenance
         run: >-
@@ -205,8 +230,9 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          packages=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime BindGen-CS)
-          for package in "${packages[@]}"; do
+          libraries=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
+          for package in "${libraries[@]}"; do
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.snupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
           done
+          dotnet nuget push "artifacts/nuget/BindGen-CS.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate

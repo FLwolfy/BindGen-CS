@@ -24,8 +24,9 @@
 ```
 
 该脚本 pack 完整依赖闭包，在 clean consumer 中恢复三个公开包、编译并运行。完整验收矩阵也会执行同一 gate。
+如需隔离测试产物，可将 `BGCS_PACKAGE_TEST_ARTIFACTS_ROOT` 设为专用绝对路径，避免覆盖仓库的 `artifacts/` 目录。
 
-macOS Intel 先运行 `bash scripts/setup-macos-x64-clang-runtime.sh`，再把 `BGCS_CLANG_RUNTIME_DIR` 设置为脚本输出目录。打包会纳入可重定位的 Clang 20 dylib 与许可证文件；clean consumer 会清除该覆盖设置，实际从 NuGet 包加载 native 资产。发布工作流从已验收的 Intel job 下载 runtime，并强制检查最终 `BGCS.CppAst` 包中包含两个必需 dylib。
+macOS Intel 先运行 `bash scripts/setup-macos-x64-clang-runtime.sh`。本机运行 parser 时把 `BGCS_CLANG_RUNTIME_DIR` 设为输出目录；打包时另外把 `BGCS_OSX_X64_PACKAGE_RUNTIME_DIR` 设为同一目录。前者只覆盖当前进程的 native 加载路径，后者只向 `BGCS.CppAst` 包加入可重定位的 Clang 20 dylib 与许可证。clean consumer 会清除运行时覆盖设置，实际从 NuGet 包加载 native 资产。发布工作流从已验收的 Intel job 下载 runtime，并检查最终包中的两个必需 dylib。
 
 ## 什么会触发发布
 
@@ -37,6 +38,8 @@ macOS Intel 先运行 `bash scripts/setup-macos-x64-clang-runtime.sh`，再把 `
 **普通 branch commit/push 不会发布。** 普通 CI 全绿也不等于 release；必须显式 push release tag 或手动触发。
 
 Workflow 会先运行 Linux x64、Windows x64、macOS x64 release-candidate 验收，然后执行 restore、build、全部 tests、public API gate、license/vulnerability gate、clean package consumer、SBOM/provenance 生成和 OIDC attestation，最后才 push NuGet packages。
+
+发布前会核对准确的包集合：七个库各有 `.nupkg` 和 `.snupkg`，`BindGen-CS` 工具只有 `.nupkg`。测试专用的 `BGCS.NativeAsset.Probe` 包不进入发布目录，也不会被签名或上传。
 
 ## OIDC/Sigstore 的作用
 

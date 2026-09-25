@@ -10,16 +10,33 @@ CONFIGURATION="${CONFIGURATION:-Release}"
 # A unique local version prevents NuGet fallback folders from reusing an older
 # package with the same test version. Release CI supplies PACKAGE_TEST_VERSION.
 VERSION="${PACKAGE_TEST_VERSION:-0.0.0-local.run$(date -u +%s).$$}"
-PACKAGE_DIR="${ROOT_DIR}/artifacts/nuget"
-SECOND_PACKAGE_DIR="${ROOT_DIR}/artifacts/nuget-repeat"
-CONSUMER_DIR="${ROOT_DIR}/artifacts/nuget-consumer"
-CONSUMER_PACKAGE_CACHE="${ROOT_DIR}/artifacts/nuget-consumer-packages"
-TOOL_DIR="${ROOT_DIR}/artifacts/nuget-tool"
-TOOL_SMOKE_DIR="${ROOT_DIR}/artifacts/nuget-tool-smoke"
-NATIVE_PACKAGE_STAGE="${ROOT_DIR}/artifacts/native-package-layout"
-NATIVE_PACKAGE_PROJECT="${ROOT_DIR}/artifacts/native-package-project"
-NATIVE_PACKAGE_CONSUMER="${ROOT_DIR}/artifacts/native-package-consumer"
+ARTIFACTS_ROOT="${BGCS_PACKAGE_TEST_ARTIFACTS_ROOT:-${ROOT_DIR}/artifacts}"
+if [[ "${ARTIFACTS_ROOT}" != /* || "${ARTIFACTS_ROOT}" == "/" ||
+      "${ARTIFACTS_ROOT}" == "${ROOT_DIR}" || "${ARTIFACTS_ROOT}" == "${HOME:-}" ]]; then
+  printf 'BGCS_PACKAGE_TEST_ARTIFACTS_ROOT must be a dedicated absolute directory.\n' >&2
+  exit 1
+fi
+PACKAGE_DIR="${ARTIFACTS_ROOT}/nuget"
+SECOND_PACKAGE_DIR="${ARTIFACTS_ROOT}/nuget-repeat"
+CONSUMER_DIR="${ARTIFACTS_ROOT}/nuget-consumer"
+CONSUMER_PACKAGE_CACHE="${ARTIFACTS_ROOT}/nuget-consumer-packages"
+TOOL_DIR="${ARTIFACTS_ROOT}/nuget-tool"
+TOOL_SMOKE_DIR="${ARTIFACTS_ROOT}/nuget-tool-smoke"
+NATIVE_PACKAGE_STAGE="${ARTIFACTS_ROOT}/native-package-layout"
+NATIVE_PACKAGE_PROJECT="${ARTIFACTS_ROOT}/native-package-project"
+NATIVE_PACKAGE_OUTPUT="${ARTIFACTS_ROOT}/native-package-output"
+NATIVE_PACKAGE_CONSUMER="${ARTIFACTS_ROOT}/native-package-consumer"
 GLOBAL_PACKAGE_CACHE="${NUGET_PACKAGES:-}"
+
+if [[ -n "${BGCS_OSX_X64_PACKAGE_RUNTIME_DIR:-}" ]]; then
+  for library in libclang.dylib libClangSharp.dylib; do
+    if [[ ! -f "${BGCS_OSX_X64_PACKAGE_RUNTIME_DIR}/${library}" ]]; then
+      printf 'macOS x64 package runtime is missing %s in %s.\n' \
+        "${library}" "${BGCS_OSX_X64_PACKAGE_RUNTIME_DIR}" >&2
+      exit 1
+    fi
+  done
+fi
 
 if [[ -z "${GLOBAL_PACKAGE_CACHE}" ]]; then
   global_packages_output="$("${DOTNET_CMD}" nuget locals global-packages --list)"
@@ -31,9 +48,9 @@ if [[ ! -d "${GLOBAL_PACKAGE_CACHE}" ]]; then
 fi
 
 rm -rf "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}" \
-  "${NATIVE_PACKAGE_STAGE}" "${NATIVE_PACKAGE_PROJECT}" "${NATIVE_PACKAGE_CONSUMER}"
+  "${NATIVE_PACKAGE_STAGE}" "${NATIVE_PACKAGE_PROJECT}" "${NATIVE_PACKAGE_OUTPUT}" "${NATIVE_PACKAGE_CONSUMER}"
 mkdir -p "${PACKAGE_DIR}" "${SECOND_PACKAGE_DIR}" "${CONSUMER_DIR}" "${CONSUMER_PACKAGE_CACHE}" "${TOOL_DIR}" "${TOOL_SMOKE_DIR}" \
-  "${NATIVE_PACKAGE_STAGE}" "${NATIVE_PACKAGE_PROJECT}" "${NATIVE_PACKAGE_CONSUMER}"
+  "${NATIVE_PACKAGE_STAGE}" "${NATIVE_PACKAGE_PROJECT}" "${NATIVE_PACKAGE_OUTPUT}" "${NATIVE_PACKAGE_CONSUMER}"
 
 projects=(
   "src/BGCS.Intermediate/BGCS.Intermediate.csproj"
@@ -145,12 +162,10 @@ EOF
   --source "${PACKAGE_DIR}" \
   --ignore-failed-sources \
   -p:RestoreAdditionalProjectFallbackFolders="${GLOBAL_PACKAGE_CACHE}"
-if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "x86_64" ]]; then
-  env -u BGCS_CLANG_RUNTIME_DIR -u DYLD_LIBRARY_PATH \
-    "${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
-else
+# A clean consumer must load the native assets selected from its package, not a
+# build-host override (which may point at a different operating system's files).
+env -u BGCS_CLANG_RUNTIME_DIR -u DYLD_LIBRARY_PATH \
   "${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
-fi
 "${DOTNET_CMD}" tool install BindGen-CS --version "${VERSION}" --tool-path "${TOOL_DIR}" --add-source "${PACKAGE_DIR}" --ignore-failed-sources
 "${TOOL_DIR}/bindgen-cs" --help
 cat > "${TOOL_SMOKE_DIR}/native.h" <<'EOF'
@@ -208,7 +223,7 @@ cat > "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" <<EOF
 EOF
 "${DOTNET_CMD}" restore "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" --ignore-failed-sources
 "${DOTNET_CMD}" pack "${NATIVE_PACKAGE_PROJECT}/BGCS.NativeAsset.Probe.csproj" \
-  --configuration "${CONFIGURATION}" --no-restore --output "${PACKAGE_DIR}" -m:1 -nodeReuse:false
+  --configuration "${CONFIGURATION}" --no-restore --output "${NATIVE_PACKAGE_OUTPUT}" -m:1 -nodeReuse:false
 
 cat > "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
@@ -255,7 +270,7 @@ internal static partial class NativeProbe
 }
 EOF
 "${DOTNET_CMD}" restore "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" \
-  --packages "${CONSUMER_PACKAGE_CACHE}" --source "${PACKAGE_DIR}" --ignore-failed-sources
+  --packages "${CONSUMER_PACKAGE_CACHE}" --source "${NATIVE_PACKAGE_OUTPUT}" --ignore-failed-sources
 "${DOTNET_CMD}" run --project "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" \
   --configuration "${CONFIGURATION}" --no-restore
 printf '[nuget] Current desktop RID native asset was selected and invoked from a clean package consumer.\n'

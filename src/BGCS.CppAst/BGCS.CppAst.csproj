@@ -46,10 +46,10 @@
   <!-- Upstream ClangSharp 20.1.2 has no osx-x64 runtime packages. A same-major
        runtime built by scripts/setup-macos-x64-clang-runtime.sh is staged for CI
        and may be included in a package without changing the managed parser API. -->
-  <ItemGroup Condition="'$(BGCS_CLANG_RUNTIME_DIR)' != ''">
-    <None Include="$(BGCS_CLANG_RUNTIME_DIR)/*.dylib" Pack="true"
+  <ItemGroup Condition="'$(BGCS_OSX_X64_PACKAGE_RUNTIME_DIR)' != ''">
+    <None Include="$(BGCS_OSX_X64_PACKAGE_RUNTIME_DIR)/*.dylib" Pack="true"
           PackagePath="runtimes/osx-x64/native/" Visible="false" />
-    <None Include="$(BGCS_CLANG_RUNTIME_DIR)/licenses/*" Pack="true"
+    <None Include="$(BGCS_OSX_X64_PACKAGE_RUNTIME_DIR)/licenses/*" Pack="true"
           PackagePath="licenses/osx-x64/" Visible="false" />
   </ItemGroup>
 

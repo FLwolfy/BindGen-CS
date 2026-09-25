@@ -52,6 +52,7 @@ jobs:
           runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
           BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
           echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "BGCS_OSX_X64_PACKAGE_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
           echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
           echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
 
@@ -116,6 +117,7 @@ jobs:
           runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
           BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
           echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "BGCS_OSX_X64_PACKAGE_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
           echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
           echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
 
