@@ -234,10 +234,18 @@ jobs:
             ${{ steps.provenance-attestation.outputs.bundle-path }}
             ${{ steps.sbom-attestation.outputs.bundle-path }}
 
+      # nuget.org trusted publishing: exchange the job OIDC token for an API
+      # key that expires in one hour, so request it right before the push.
+      - name: Exchange GitHub OIDC token for a nuget.org API key
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push packages and symbols
         shell: bash
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
           libraries=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)

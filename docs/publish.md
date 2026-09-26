@@ -50,7 +50,7 @@ A normal branch commit or push does **not** publish packages. It may run ordinar
 
 `actions/attest` asks the GitHub-hosted release job for a short-lived OIDC identity bound to the repository, workflow, commit, and run. GitHub uses that identity to produce verifiable provenance and SBOM attestations for the package files. No long-lived Sigstore signing key is stored in the repository.
 
-OIDC signs evidence; it does not authorize NuGet upload. The final `dotnet nuget push` step separately requires `NUGET_API_KEY`.
+OIDC also authorizes the upload. `NuGet/login` exchanges the same job identity for a nuget.org API key that expires in one hour (nuget.org trusted publishing), so no long-lived push key is stored in the repository.
 
 The release publishes automatically only when all of these conditions are true:
 
@@ -59,14 +59,19 @@ The release publishes automatically only when all of these conditions are true:
 3. Linux x64, Windows x64, and macOS x64 release-candidate jobs all pass.
 4. Build, tests, public API, license/vulnerability, package-closure, and supply-chain steps pass.
 5. The repository permits `id-token: write` and artifact attestations for this workflow.
-6. `NUGET_API_KEY` exists and can publish every package ID in the release set.
+6. A nuget.org trusted publishing policy matches this repository and workflow file, and `NUGET_USER` is set.
 7. Any branch/tag protection, environment approval, or organization policy has been satisfied.
 
 If any prerequisite or gate fails, the package push step is not reached. A successful ordinary CI run alone is therefore not a release.
 
-## Required secret
+## Publishing credentials
 
-Set the GitHub Actions secret `NUGET_API_KEY`. Its NuGet package scope must allow all thirteen package IDs listed above, including pushing the new `BindGen-CS.<rid>` IDs for the first time; a glob such as `BindGen-CS*` plus `BGCS*` covers the whole set.
+Publishing uses [nuget.org trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) instead of a stored API key.
+
+1. On nuget.org, under your username, add a trusted publishing policy with repository owner `FLwolfy`, repository `BindGen-CS`, workflow file `publish-bgcs-runtime-nuget.yml`, and no environment.
+2. Set the GitHub Actions secret `NUGET_USER` to the nuget.org profile name that owns the packages (not an email address).
+
+The policy owner must be able to push all thirteen package IDs listed above, including the `BindGen-CS.<rid>` IDs that are published for the first time.
 
 ## Release
 

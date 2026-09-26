@@ -39,13 +39,13 @@ macOS Intel 先运行 `bash scripts/setup-macos-x64-clang-runtime.sh`。本机�
 
 Workflow 会先运行 Linux x64、Windows x64、macOS x64 release-candidate 验收，然后执行 restore、build、全部 tests、public API gate、license/vulnerability gate、clean package consumer、SBOM/provenance 生成和 OIDC attestation，最后才 push NuGet packages。
 
-发布前会核对准确的包集合：七个库各有 `.nupkg` 和 `.snupkg`，`BindGen-CS` 工具只有 `.nupkg`。测试专用的 `BGCS.NativeAsset.Probe` 包不进入发布目录，也不会被签名或上传。
+发布前会核对准确的包集合：七个库各有 `.nupkg` 和 `.snupkg`，工具提供 pointer `.nupkg` 与五个 RID `.nupkg`，共二十个文件；RID 包先推，pointer 包后推。测试专用的 `BGCS.NativeAsset.Probe` 包不进入发布目录，也不会被签名或上传。
 
 ## OIDC/Sigstore 的作用
 
 `actions/attest` 从 GitHub-hosted release job 获取一个绑定 repository、workflow、commit 和 run 的短期 OIDC identity，并用它为 package provenance 与 SBOM association 生成可验证 attestation。仓库不保存长期 Sigstore 私钥。
 
-OIDC 只负责签署供应链证据，不负责 NuGet 上传权限。最终 `dotnet nuget push` 仍需要 GitHub Actions secret `NUGET_API_KEY`。
+上传权限同样来自 OIDC：`NuGet/login` 用同一个 job identity 换取有效期一小时的 nuget.org API key（trusted publishing），仓库不保存长期 push key。
 
 自动发布成功必须同时满足：
 
@@ -54,10 +54,17 @@ OIDC 只负责签署供应链证据，不负责 NuGet 上传权限。最终 `dot
 3. Linux x64、Windows x64、macOS x64 release-candidate 全部通过；
 4. build/test/API/license/vulnerability/package/supply-chain gate 全部通过；
 5. 仓库允许该 workflow 使用 `id-token: write` 和 artifact attestation；
-6. `NUGET_API_KEY` 已设置，并有权发布全部八个 package ID；
+6. nuget.org 上存在匹配本仓库与该 workflow 文件的 trusted publishing policy，且 `NUGET_USER` 已设置；
 7. 仓库/组织配置的 tag protection、environment approval 等策略已经满足。
 
-任一条件失败都会阻止执行最终 push。因此，“提交代码后 CI 正确”还不够；“发布 tag + 全部 release gate 通过 + OIDC 权限 + NuGet secret 正确”才会自动发布。
+任一条件失败都会阻止执行最终 push。因此，“提交代码后 CI 正确”还不够；“发布 tag + 全部 release gate 通过 + OIDC 权限 + trusted publishing policy 正确”才会自动发布。
+
+## 发布凭据
+
+发布使用 [nuget.org trusted publishing](https://learn.microsoft.com/zh-cn/nuget/nuget-org/trusted-publishing)，不再保存长期 API key。
+
+1. 在 nuget.org 用户名菜单下的 Trusted Publishing 添加 policy：Repository Owner `FLwolfy`、Repository `BindGen-CS`、Workflow File `publish-bgcs-runtime-nuget.yml`，Environment 留空；
+2. 把 GitHub Actions secret `NUGET_USER` 设为拥有这些包的 nuget.org 用户名（不是邮箱）。
 
 ## 发布命令
 
