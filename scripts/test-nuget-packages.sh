@@ -195,7 +195,21 @@ EOF
 env -u BGCS_CLANG_RUNTIME_DIR -u DYLD_LIBRARY_PATH \
   "${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
 "${DOTNET_CMD}" tool install BindGen-CS --version "${VERSION}" --tool-path "${TOOL_DIR}" --add-source "${PACKAGE_DIR}" --ignore-failed-sources
-"${TOOL_DIR}/bindgen-cs" --help
+# Windows installs bindgen-cs.exe or a .cmd launcher, unix-like hosts an
+# extensionless shim; RID-specific tool packages can pick either form.
+TOOL_EXE=""
+for candidate in bindgen-cs bindgen-cs.exe bindgen-cs.cmd bindgen-cs.bat; do
+  if [[ -f "${TOOL_DIR}/${candidate}" ]]; then
+    TOOL_EXE="${TOOL_DIR}/${candidate}"
+    break
+  fi
+done
+if [[ -z "${TOOL_EXE}" ]]; then
+  printf 'The installed tool shim was not found in %s:\n' "${TOOL_DIR}" >&2
+  ls -A "${TOOL_DIR}" >&2
+  exit 1
+fi
+"${TOOL_EXE}" --help
 cat > "${TOOL_SMOKE_DIR}/native.h" <<'EOF'
 typedef struct NativePoint { int x; int y; } NativePoint;
 int native_add(int left, int right);
@@ -212,15 +226,15 @@ cat > "${TOOL_SMOKE_DIR}/bridge.json" <<'EOF'
 }
 EOF
 pushd "${TOOL_SMOKE_DIR}" > /dev/null
-"${TOOL_DIR}/bindgen-cs" init
-"${TOOL_DIR}/bindgen-cs" doctor
-"${TOOL_DIR}/bindgen-cs" validate
-"${TOOL_DIR}/bindgen-cs" inspect
-"${TOOL_DIR}/bindgen-cs" schema bindgen.schema.json
-"${TOOL_DIR}/bindgen-cs" generate
-"${TOOL_DIR}/bindgen-cs" diff
-"${TOOL_DIR}/bindgen-cs" build
-"${TOOL_DIR}/bindgen-cs" bridge bridge.json
+"${TOOL_EXE}" init
+"${TOOL_EXE}" doctor
+"${TOOL_EXE}" validate
+"${TOOL_EXE}" inspect
+"${TOOL_EXE}" schema bindgen.schema.json
+"${TOOL_EXE}" generate
+"${TOOL_EXE}" diff
+"${TOOL_EXE}" build
+"${TOOL_EXE}" bridge bridge.json
 if [[ ! -f "Generated/Bindings.cs" ]]; then
   echo "bindgen-cs did not produce Generated/Bindings.cs"
   exit 1
@@ -229,7 +243,7 @@ if [[ ! -f "GeneratedBridge/include/Classes.h" ]]; then
   echo "bindgen-cs bridge did not produce GeneratedBridge/include/Classes.h"
   exit 1
 fi
-"${TOOL_DIR}/bindgen-cs" native-build GeneratedBridge/bridge.manifest.json \
+"${TOOL_EXE}" native-build GeneratedBridge/bridge.manifest.json \
   --package-root "${NATIVE_PACKAGE_STAGE}"
 popd > /dev/null
 
