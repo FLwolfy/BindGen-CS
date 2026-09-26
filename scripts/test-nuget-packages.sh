@@ -85,6 +85,34 @@ for rid in win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64; do
 done
 printf '[nuget] Parser package declares the complete published desktop native RID dependency closure.\n'
 
+# nuget.org rejects any single package above 250 MB, so the tool ships as a small
+# pointer package plus one package per runtime identifier.
+TOOL_PACKAGE_RIDS=(win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64)
+NUGET_PACKAGE_SIZE_LIMIT=$((250 * 1024 * 1024))
+tool_packages=("${PACKAGE_DIR}/BindGen-CS.${VERSION}.nupkg")
+for rid in "${TOOL_PACKAGE_RIDS[@]}"; do
+  tool_packages+=("${PACKAGE_DIR}/BindGen-CS.${rid}.${VERSION}.nupkg")
+done
+for tool_package in "${tool_packages[@]}"; do
+  if [[ ! -f "${tool_package}" ]]; then
+    printf 'Tool packaging did not produce %s.\n' "$(basename "${tool_package}")" >&2
+    exit 1
+  fi
+  package_size="$(wc -c < "${tool_package}")"
+  if (( package_size > NUGET_PACKAGE_SIZE_LIMIT )); then
+    printf '%s is %s bytes and exceeds the %s byte nuget.org limit.\n' \
+      "$(basename "${tool_package}")" "${package_size}" "${NUGET_PACKAGE_SIZE_LIMIT}" >&2
+    exit 1
+  fi
+done
+host_rid="$("${DOTNET_CMD}" msbuild "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+  -getProperty:NETCoreSdkPortableRuntimeIdentifier -nologo | tr -d '[:space:]')"
+if [[ ! " ${TOOL_PACKAGE_RIDS[*]} " == *" ${host_rid} "* ]]; then
+  printf 'Host RID %s has no published tool package; the smoke test cannot run.\n' "${host_rid}" >&2
+  exit 1
+fi
+printf '[nuget] Tool pointer package and %s RID packages are published within the size limit.\n' "${#TOOL_PACKAGE_RIDS[@]}"
+
 shopt -s nullglob
 first_packages=("${PACKAGE_DIR}"/*.nupkg)
 second_packages=("${SECOND_PACKAGE_DIR}"/*.nupkg)

@@ -19,7 +19,7 @@ BGCS 的目标不是把任意 C++ 源码逐行翻译成 C#，而是把可调用�
 
 ## Getting Started
 
-需要 .NET SDK 9.0。以下命令直接在源码 checkout 中运行，不依赖尚未发布的公开工具包。C++ bridge 还需要本机 C/C++ compiler。
+需要 .NET SDK 10.0 和 .NET 9 运行时：仓库仍 target `net9.0`，而 SDK 10 负责打包和安装按 RID 拆分的 `bindgen-cs` tool 包。以下命令直接在源码 checkout 中运行，不依赖尚未发布的公开工具包。C++ bridge 还需要本机 C/C++ compiler。
 
 ### 从 C header 生成 C#
 

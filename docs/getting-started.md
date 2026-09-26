@@ -5,7 +5,7 @@
 ## Requirements
 
 - Windows, Linux, or macOS on a supported x86/x64/Arm/Arm64 target.
-- .NET SDK 9.0.
+- .NET SDK 10.0 and the .NET 9 runtime. The assemblies target `net9.0`; the SDK 10 is required because the `bindgen-cs` tool is published as RID-specific tool packages.
 - LibClang is restored through BGCS packages.
 - A C/C++ compiler driver is required for system-header discovery and generated C bridges. BindGen-CS discovers Clang/GNU drivers, the Windows LLVM installation, and the active macOS SDK; `BGCS_CC`, `BGCS_CPP2C_CXX`, `CC`, and `CXX` provide explicit overrides.
 

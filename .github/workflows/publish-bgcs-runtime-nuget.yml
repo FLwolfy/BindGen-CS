@@ -46,7 +46,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          # The SDK 10 packs RID-specific tool packages; net9.0 assemblies need the 9 runtime.
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: Build missing ClangSharp 20 runtime for macOS Intel
         if: runner.os == 'macOS'
@@ -115,7 +118,9 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: Download accepted macOS Intel parser runtime
         uses: actions/download-artifact@v4
@@ -180,14 +185,19 @@ jobs:
             fi
           }
           libraries=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
+          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64)
           for package in "${libraries[@]}"; do
             require_package "${package}.${VERSION}.nupkg"
             require_package "${package}.${VERSION}.snupkg"
           done
           require_package "BindGen-CS.${VERSION}.nupkg"
+          for rid in "${tool_rids[@]}"; do
+            require_package "BindGen-CS.${rid}.${VERSION}.nupkg"
+          done
           packages=(artifacts/nuget/*.nupkg artifacts/nuget/*.snupkg)
-          if (( ${#packages[@]} != ${#libraries[@]} * 2 + 1 )); then
-            echo "Expected 15 release packages, found ${#packages[@]}." >&2
+          expected=$(( ${#libraries[@]} * 2 + 1 + ${#tool_rids[@]} ))
+          if (( ${#packages[@]} != expected )); then
+            echo "Expected ${expected} release packages, found ${#packages[@]}." >&2
             exit 1
           fi
 
@@ -231,8 +241,13 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
         run: |
           libraries=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
+          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64)
           for package in "${libraries[@]}"; do
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.snupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+          done
+          # RID packages first: the pointer package is unusable until they resolve.
+          for rid in "${tool_rids[@]}"; do
+            dotnet nuget push "artifacts/nuget/BindGen-CS.${rid}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
           done
           dotnet nuget push "artifacts/nuget/BindGen-CS.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate

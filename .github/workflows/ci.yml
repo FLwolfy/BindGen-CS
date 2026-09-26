@@ -43,7 +43,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          # The SDK 10 packs RID-specific tool packages; net9.0 assemblies need the 9 runtime.
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: Build missing ClangSharp 20 runtime for macOS Intel
         if: runner.os == 'macOS'
@@ -108,7 +111,9 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: Build missing ClangSharp 20 runtime for macOS Intel
         if: runner.os == 'macOS'

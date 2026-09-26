@@ -11,7 +11,7 @@ These examples demonstrate embedding the packages. New command-line users should
 
 ## Prerequisites
 
-- .NET SDK 9.0;
+- .NET SDK 10.0 and the .NET 9 runtime;
 - a working host C/C++ compiler environment for header discovery;
 - commands run from the selected demo directory so its relative config paths resolve correctly.
 

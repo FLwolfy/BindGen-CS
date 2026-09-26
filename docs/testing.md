@@ -4,7 +4,7 @@ The test system separates fast managed feedback from target-specific release evi
 
 ## Prerequisites
 
-- .NET SDK 9.0 (`dotnet --version`)
+- .NET SDK 10.0 and the .NET 9 runtime (`dotnet --version`, `dotnet --list-runtimes`)
 - Clang/LibClang available for parser-dependent tests
 
 On macOS Intel, ClangSharp 20.1.2 has no published native runtime package. Run `bash scripts/setup-macos-x64-clang-runtime.sh` on that host. Set `BGCS_CLANG_RUNTIME_DIR` to the printed directory for parser tests and `BGCS_OSX_X64_PACKAGE_RUNTIME_DIR` to that directory for packaging. The script checks that its LLVM 20 compiler can compile C++23 `std::expected`; the CI workflow performs the same bootstrap. On Linux, the CI matrix selects `g++` for the C++23 bridge tests because the runner's default Clang driver may use a standard library without `std::expected`.

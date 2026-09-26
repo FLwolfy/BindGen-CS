@@ -8,12 +8,19 @@ All BindGen-CS packages use one version and are published as one validated relea
 - `BGCS.Cpp2C`
 - `BGCS.Runtime`
 - `BGCS.Intermediate`
-- `BindGen-CS` (the `bindgen-cs` .NET tool)
+- `BindGen-CS` (the `bindgen-cs` .NET tool pointer package)
+- `BindGen-CS.win-x64`, `BindGen-CS.win-arm64`, `BindGen-CS.linux-x64`, `BindGen-CS.linux-arm64`, `BindGen-CS.osx-arm64` (RID-specific tool packages)
 - `BGCS.CppAst` (transitive implementation package)
 - `BGCS.Core` (transitive implementation package)
 - `BGCS.Language` (transitive implementation package)
 
 Consumers normally install only `BGCS`, `BGCS.Cpp2C`, or `BGCS.Runtime`. Command-line users install `BindGen-CS` as a .NET tool. NuGet restores implementation packages transitively.
+
+### Why the tool is packed per runtime identifier
+
+The parser depends on a libclang and libClangSharp runtime for every published desktop RID. A single self-contained tool package therefore carries around 300 MB of native assets and is rejected by nuget.org, which refuses any package above 250 MB. `ToolPackageRuntimeIdentifiers` in `src/BGCS.Tool/BGCS.Tool.csproj` splits that into a small `BindGen-CS` pointer package plus one package per RID, each well under the limit. `dotnet tool install --global BindGen-CS` resolves the pointer package and downloads only the current platform's package.
+
+This packaging format is produced and consumed by the .NET 10 SDK, so `global.json` pins SDK `10.0.100`. The assemblies still target `net9.0`; the .NET 9 runtime is what executes them, and CI installs both.
 
 ## Local package validation
 
@@ -35,7 +42,7 @@ It runs restore, build, all tests, package-closure validation, generates `artifa
 - a unified `v*` tag, such as `v1.2.3`; or
 - the manual workflow with a release version.
 
-The package-closure test keeps its `BGCS.NativeAsset.Probe` package outside the release artifact directory. The seven library packages each have a `.nupkg` and `.snupkg`; the `BindGen-CS` tool has a `.nupkg` only. The workflow validates that exact set before signing or uploading anything.
+The package-closure test keeps its `BGCS.NativeAsset.Probe` package outside the release artifact directory. The seven library packages each have a `.nupkg` and `.snupkg`; the tool contributes the pointer `.nupkg` and five RID `.nupkg` files, for twenty release files in total. The workflow validates that exact set, and that no tool package exceeds the nuget.org size limit, before signing or uploading anything. RID packages are pushed before the pointer package, which cannot install until they are available.
 
 A normal branch commit or push does **not** publish packages. It may run ordinary CI, but this release workflow starts only for a matching tag or a manual dispatch.
 
@@ -59,7 +66,7 @@ If any prerequisite or gate fails, the package push step is not reached. A succe
 
 ## Required secret
 
-Set the GitHub Actions secret `NUGET_API_KEY`. Its NuGet package scope must allow all eight package IDs listed above.
+Set the GitHub Actions secret `NUGET_API_KEY`. Its NuGet package scope must allow all thirteen package IDs listed above, including pushing the new `BindGen-CS.<rid>` IDs for the first time; a glob such as `BindGen-CS*` plus `BGCS*` covers the whole set.
 
 ## Release
 

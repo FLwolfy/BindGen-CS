@@ -5,7 +5,7 @@
 ## 环境要求
 
 - 支持的 x86/x64/Arm/Arm64 target 上的 Windows、Linux 或 macOS。
-- .NET SDK 9.0。
+- .NET SDK 10.0 与 .NET 9 运行时。程序集仍 target `net9.0`；`bindgen-cs` 以按 RID 拆分的 tool 包发布，因此安装需要 SDK 10。
 - LibClang 由 BGCS 包恢复。
 - 发现系统头和编译 C Bridge 需要 C/C++ compiler driver。BindGen-CS 会发现 Clang/GNU driver、Windows LLVM 安装和活动 macOS SDK；也可以通过 `BGCS_CC`、`BGCS_CPP2C_CXX`、`CC`、`CXX` 显式覆盖。
 

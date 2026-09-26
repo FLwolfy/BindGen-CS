@@ -6,6 +6,11 @@
     <Nullable>enable</Nullable>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>bindgen-cs</ToolCommandName>
+    <!-- The parser carries a libclang runtime per RID, so a single tool package would
+         exceed the nuget.org 250 MB limit. RID-specific tool packages ship only the
+         native assets of their own platform behind a small pointer package. -->
+    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-arm64</RuntimeIdentifiers>
+    <ToolPackageRuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-arm64</ToolPackageRuntimeIdentifiers>
     <PackageId>BindGen-CS</PackageId>
     <Authors>FLwolfy</Authors>
     <Description>Command-line tool for generating C# bindings from C/C++ headers with BindGen-CS.</Description>

@@ -19,7 +19,7 @@ BGCS does not translate arbitrary C++ source line by line into C#. Its job is to
 
 ## Getting started
 
-You need .NET SDK 9.0. The commands below run directly from a source checkout and do not require a published package. C++ bridges also need a local C/C++ compiler.
+You need .NET SDK 10.0 and the .NET 9 runtime: the repository targets `net9.0`, and the SDK 10 is what packs and installs the RID-specific `bindgen-cs` tool packages. The commands below run directly from a source checkout and do not require a published package. C++ bridges also need a local C/C++ compiler.
 
 ### Generate C# from a C header
 
