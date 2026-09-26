@@ -107,9 +107,11 @@ for tool_package in "${tool_packages[@]}"; do
 done
 host_rid="$("${DOTNET_CMD}" msbuild "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
   -getProperty:NETCoreSdkPortableRuntimeIdentifier -nologo | tr -d '[:space:]')"
+tool_smoke_supported=1
 if [[ ! " ${TOOL_PACKAGE_RIDS[*]} " == *" ${host_rid} "* ]]; then
-  printf 'Host RID %s has no published tool package; the smoke test cannot run.\n' "${host_rid}" >&2
-  exit 1
+  # Upstream ClangSharp 20 ships no osx-x64 parser runtime, so no tool package
+  # targets that host and the installed-tool checks below cannot run there.
+  tool_smoke_supported=0
 fi
 printf '[nuget] Tool pointer package and %s RID packages are published within the size limit.\n' "${#TOOL_PACKAGE_RIDS[@]}"
 
@@ -194,6 +196,10 @@ EOF
 # build-host override (which may point at a different operating system's files).
 env -u BGCS_CLANG_RUNTIME_DIR -u DYLD_LIBRARY_PATH \
   "${DOTNET_CMD}" run --project "${CONSUMER_DIR}/PackageConsumer.csproj" --configuration "${CONFIGURATION}" --no-restore
+if (( tool_smoke_supported == 0 )); then
+  printf '[nuget] Host RID %s has no tool package; skipped the installed-tool and native-package checks.\n' "${host_rid}"
+  exit 0
+fi
 "${DOTNET_CMD}" tool install BindGen-CS --version "${VERSION}" --tool-path "${TOOL_DIR}" --add-source "${PACKAGE_DIR}" --ignore-failed-sources
 # Windows installs bindgen-cs.exe or a .cmd launcher, unix-like hosts an
 # extensionless shim; RID-specific tool packages can pick either form.
