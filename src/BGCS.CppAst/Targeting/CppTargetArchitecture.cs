@@ -28,5 +28,10 @@ public enum CppTargetArchitecture
     /// <summary>
     /// 64-bit ARM.
     /// </summary>
-    Arm64
+    Arm64,
+
+    /// <summary>
+    /// 32-bit WebAssembly linear-memory architecture.
+    /// </summary>
+    Wasm32
 }

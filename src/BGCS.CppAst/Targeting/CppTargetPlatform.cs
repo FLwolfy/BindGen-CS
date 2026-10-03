@@ -38,5 +38,10 @@ public enum CppTargetPlatform
     /// <summary>
     /// FreeBSD.
     /// </summary>
-    FreeBSD
+    FreeBSD,
+
+    /// <summary>
+    /// Emscripten-hosted WebAssembly.
+    /// </summary>
+    Emscripten
 }

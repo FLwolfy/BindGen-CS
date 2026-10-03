@@ -57,7 +57,7 @@ public sealed class CSharpEmitter : IBindingEmitter
         EmitConstants(writer, module);
         EmitPointerHandlesDocument(writer, module);
         EmitFunctions(writer, module);
-        EmitFunctionTable(writer, module);
+        EmitFunctionTable(writer, module, context.RuntimeNamespace);
         writer.AppendLine("}");
         File.WriteAllText(outputFile, FormatSource(writer.ToString()));
         return [outputFile];
@@ -82,7 +82,7 @@ public sealed class CSharpEmitter : IBindingEmitter
                 EmitConstants(writer, module);
                 EmitPointerHandlesDocument(writer, module);
                 EmitFunctions(writer, module);
-                EmitFunctionTable(writer, module);
+                EmitFunctionTable(writer, module, context.RuntimeNamespace);
             });
             outputs.Add(path);
             return outputs;
@@ -124,7 +124,7 @@ public sealed class CSharpEmitter : IBindingEmitter
             {
                 EmitPointerHandlesDocument(writer, module);
                 EmitFunctions(writer, module);
-                EmitFunctionTable(writer, module);
+                EmitFunctionTable(writer, module, context.RuntimeNamespace);
             });
             outputs.Add(path);
         }
@@ -733,7 +733,7 @@ public sealed class CSharpEmitter : IBindingEmitter
                     EmitExternFunction(writer, module, function, "internal static partial");
                     break;
                 case BindingImportMode.FunctionTable:
-                    EmitFunctionTableCall(writer, function);
+                    EmitFunctionTableCall(writer, module, function);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(module.ImportMode), module.ImportMode, null);
@@ -2016,20 +2016,98 @@ public sealed class CSharpEmitter : IBindingEmitter
         plan.ReturnsBool ? "bool" :
         plan.ReturnTypeOverride ?? function.ReturnType.ManagedName;
 
-    private static void EmitExternFunction(StringBuilder writer, BindingModule module, BindingFunction function, string modifiers)
-    {
-        writer.Append("        ").Append(modifiers).Append(' ').Append(function.ReturnType.ManagedName).Append(' ')
-            .Append(GetRawManagedName(function)).Append("Native(");
-        EmitParameters(writer, function.Parameters, module.GenerateMetadata);
+    private static void EmitExternFunction(
+        StringBuilder writer,
+        BindingModule module,
+        BindingFunction function,
+        string modifiers
+    ) {
+        bool hasHandleCarrier = IsOpaqueHandle(module, function.ReturnType) ||
+            function.Parameters.Any(parameter => IsOpaqueHandle(module, parameter.Type));
+        if (!hasHandleCarrier)
+        {
+            writer.Append("        ").Append(modifiers).Append(' ').Append(function.ReturnType.ManagedName).Append(' ')
+                .Append(GetRawManagedName(function)).Append("Native(");
+            EmitParameters(writer, function.Parameters, module.GenerateMetadata);
+            writer.AppendLine(");");
+            return;
+        }
+
+        string returnType = IsOpaqueHandle(module, function.ReturnType) ? "nint" : function.ReturnType.ManagedName;
+        writer.Append("        ").Append(modifiers).Append(' ').Append(returnType).Append(' ')
+            .Append(GetRawManagedName(function)).Append("Interop(");
+        EmitNativeParameters(writer, module, function.Parameters);
         writer.AppendLine(");");
+        EmitHandleAdapter(writer, module, function);
     }
 
-    private static void EmitFunctionTableCall(StringBuilder writer, BindingFunction function)
-    {
-        int tableIndex = function.FunctionTableIndex.GetValueOrDefault();
+    private static void EmitHandleAdapter(
+        StringBuilder writer,
+        BindingModule module,
+        BindingFunction function
+    ) {
         writer.Append("        internal static ").Append(function.ReturnType.ManagedName).Append(' ')
             .Append(GetRawManagedName(function)).Append("Native(");
         EmitParameters(writer, function.Parameters);
+        writer.AppendLine(")");
+        writer.AppendLine("        {");
+        writer.Append("            ");
+        if (function.ReturnType.ManagedName != "void")
+            writer.Append("return ");
+        if (IsOpaqueHandle(module, function.ReturnType))
+            writer.Append("new ").Append(function.ReturnType.ManagedName).Append('(');
+        writer.Append(GetRawManagedName(function)).Append("Interop(");
+        for (int index = 0; index < function.Parameters.Count; index++)
+        {
+            if (index > 0)
+                writer.Append(", ");
+            BindingParameter parameter = function.Parameters[index];
+            writer.Append(parameter.ManagedName);
+            if (IsOpaqueHandle(module, parameter.Type))
+                writer.Append(".Handle");
+        }
+        writer.Append(')');
+        if (IsOpaqueHandle(module, function.ReturnType))
+            writer.Append(')');
+        writer.AppendLine(";");
+        writer.AppendLine("        }");
+    }
+
+    private static bool IsOpaqueHandle(
+        BindingModule module,
+        BindingTypeReference type
+    )
+        => module.Types.Any(candidate => candidate.Kind == BindingTypeKind.OpaqueHandle &&
+            candidate.ManagedName == type.ManagedName);
+
+    private static string GetNativeCarrierType(
+        BindingModule module,
+        BindingTypeReference type
+    ) => IsOpaqueHandle(module, type) ? "nint" : type.ManagedName;
+
+    private static void EmitNativeParameters(
+        StringBuilder writer,
+        BindingModule module,
+        IList<BindingParameter> parameters
+    ) {
+        for (int index = 0; index < parameters.Count; index++)
+        {
+            BindingParameter parameter = parameters[index];
+            EmitParameter(writer, parameter, index > 0, module.GenerateMetadata, GetNativeCarrierType(module, parameter.Type));
+        }
+    }
+
+    private static void EmitFunctionTableCall(
+        StringBuilder writer,
+        BindingModule module,
+        BindingFunction function
+    ) {
+        int tableIndex = function.FunctionTableIndex.GetValueOrDefault();
+        bool hasHandleCarrier = IsOpaqueHandle(module, function.ReturnType) ||
+            function.Parameters.Any(parameter => IsOpaqueHandle(module, parameter.Type));
+        writer.Append("        internal static ").Append(GetNativeCarrierType(module, function.ReturnType)).Append(' ')
+            .Append(GetRawManagedName(function)).Append(hasHandleCarrier ? "Interop(" : "Native(");
+        EmitNativeParameters(writer, module, function.Parameters);
         writer.AppendLine(")");
         writer.AppendLine("        {");
         writer.Append("            ");
@@ -2037,8 +2115,8 @@ public sealed class CSharpEmitter : IBindingEmitter
             writer.Append("return ");
         writer.Append("((delegate* unmanaged[").Append(GetUnmanagedCallingConvention(function.CallingConvention)).Append("]<");
         foreach (BindingParameter parameter in function.Parameters)
-            writer.Append(parameter.Type.ManagedName).Append(", ");
-        writer.Append(function.ReturnType.ManagedName).Append(">)funcTable[").Append(tableIndex)
+            writer.Append(GetNativeCarrierType(module, parameter.Type)).Append(", ");
+        writer.Append(GetNativeCarrierType(module, function.ReturnType)).Append(">)funcTable[").Append(tableIndex)
             .Append("])(");
         for (int index = 0; index < function.Parameters.Count; index++)
         {
@@ -2048,22 +2126,29 @@ public sealed class CSharpEmitter : IBindingEmitter
         }
         writer.AppendLine(");");
         writer.AppendLine("        }");
+        if (hasHandleCarrier)
+            EmitHandleAdapter(writer, module, function);
     }
 
-    private static void EmitFunctionTable(StringBuilder writer, BindingModule module)
-    {
+    private static void EmitFunctionTable(
+        StringBuilder writer,
+        BindingModule module,
+        string runtimeNamespace
+    ) {
         if (module.ImportMode != BindingImportMode.FunctionTable || module.FunctionTableEntries.Count == 0)
             return;
         int tableSize = module.FunctionTableEntries.Max(entry => entry.Index) + 1;
         writer.Append("    public unsafe partial class ").AppendLine(module.Name);
         writer.AppendLine("    {");
-        writer.AppendLine("        internal static FunctionTable funcTable = null!;");
+        string runtimePrefix = "global::" + runtimeNamespace + ".";
+        writer.Append("        internal static ").Append(runtimePrefix).AppendLine("FunctionTable funcTable = null!;");
         writer.AppendLine();
         if (module.UseCustomContext)
         {
-            writer.AppendLine("        public static void InitApi(INativeContext context)");
+            writer.Append("        public static void InitApi(").Append(runtimePrefix).AppendLine("INativeContext context)");
             writer.AppendLine("        {");
-            writer.Append("            funcTable = new FunctionTable(context, ").Append(tableSize).AppendLine(");");
+            writer.Append("            funcTable = new ").Append(runtimePrefix).Append("FunctionTable(context, ")
+                .Append(tableSize).AppendLine(");");
             EmitFunctionTableLoads(writer, module);
             writer.AppendLine("        }");
         }
@@ -2077,7 +2162,8 @@ public sealed class CSharpEmitter : IBindingEmitter
             }
             writer.AppendLine("        public static void InitApi()");
             writer.AppendLine("        {");
-            writer.Append("            funcTable = new FunctionTable(LibraryLoader.LoadLibrary(")
+            writer.Append("            funcTable = new ").Append(runtimePrefix).Append("FunctionTable(")
+                .Append(runtimePrefix).Append("LibraryLoader.LoadLibrary(")
                 .Append(module.GetLibraryNameFunctionName).Append(", ")
                 .Append(module.GetLibraryExtensionFunctionName ?? "null").Append("), ").Append(tableSize).AppendLine(");");
             EmitFunctionTableLoads(writer, module);
@@ -2104,8 +2190,13 @@ public sealed class CSharpEmitter : IBindingEmitter
             EmitParameter(writer, parameters[i], i > 0, metadata);
     }
 
-    private static void EmitParameter(StringBuilder writer, BindingParameter parameter, bool prefixComma, bool metadata = false)
-    {
+    private static void EmitParameter(
+        StringBuilder writer,
+        BindingParameter parameter,
+        bool prefixComma,
+        bool metadata = false,
+        string? managedType = null
+    ) {
         if (prefixComma)
             writer.Append(", ");
         if (metadata)
@@ -2113,7 +2204,7 @@ public sealed class CSharpEmitter : IBindingEmitter
             writer.Append("[NativeName(NativeNameType.Param, \"").Append(EscapeString(parameter.NativeName)).Append("\")] ")
                 .Append("[NativeName(NativeNameType.Type, \"").Append(EscapeString(parameter.Type.NativeName)).Append("\")] ");
         }
-        writer.Append(parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
+        writer.Append(managedType ?? parameter.Type.ManagedName).Append(' ').Append(parameter.ManagedName);
     }
 
     private static string GetCallingConvention(string value)

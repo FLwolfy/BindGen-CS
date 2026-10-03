@@ -14,6 +14,7 @@ On macOS Intel, ClangSharp 20.1.2 has no published native runtime package. Run `
 | Level | Command | Use it for |
 | --- | --- | --- |
 | Fast managed loop | `dotnet test BindGen-CS.sln -c Release` | Parser, configuration, analysis, emission, Runtime, and bridge regressions |
+| Independent Wasm invocation | `python scripts/test-wasm-bindings.py` | Generate all three import modes, link BGCS-owned native C, and execute it in a browser |
 | Real C libraries | `./scripts/test-real-libraries.sh` | Deterministic snapshots plus warning-free IR-native generation/compilation |
 | Real C++ bridge | `./scripts/test-real-cpp-libraries.sh` | Bridge generation, native compiler validation, C# rebound, snapshots |
 | NuGet/tool/native asset | `./scripts/test-nuget-packages.sh` | Deterministic pack, clean restore, tool install, RID asset load and native invocation |
@@ -61,6 +62,63 @@ Demo semantics:
 
 - `runtime-generated`: single-file bindings + standalone `Runtime.cs` (`GenerateRuntimeSource=true`)
 - `runtime-notgenerated`: single-file bindings only (`GenerateRuntimeSource=false`)
+
+## Independent WebAssembly invocation
+
+This test is owned entirely by BGCS. `tests/wasm/Native` supplies a small C API;
+the runner generates bindings, builds a standalone .NET browser consumer, links the C
+implementation through `NativeFileReference`, and invokes it in a headless Chromium browser.
+No consumer repository, game engine, generated bindings committed elsewhere, or application
+runtime is required.
+
+Prerequisites:
+
+- Python 3.10 or newer.
+- .NET 9 SDK with its `wasm-tools` workload. Install the workload outside this checkout's
+  SDK 10 selection, or explicitly select SDK 9 before `dotnet workload install wasm-tools`.
+- Chrome, Chromium, or Edge. The browser runs with an isolated test profile.
+- A working BGCS parser runtime for the authoring host. macOS Intel needs the bootstrap above.
+
+```bash
+python scripts/test-wasm-bindings.py
+# For installations outside PATH:
+python scripts/test-wasm-bindings.py --dotnet /path/to/dotnet --browser /path/to/chromium
+```
+
+The runner scopes SDK 9 to its generated consumer directory and queries the installed workload
+for compiler and sysroot paths. Repository packaging keeps its existing SDK 10 selection.
+`WasmBuildNative` links the C code; this fixture does not enable managed AOT compilation.
+The generated `LibName` is `api`, matching the fixture's native input module. A different
+consumer must use the module names required by its own linker/runtime; static linking does
+not imply that the special name `__Internal` is supported everywhere. See the
+[.NET native dependency workflow](https://learn.microsoft.com/en-us/aspnet/core/blazor/webassembly-native-dependencies?view=aspnetcore-9.0).
+
+| Check, repeated for each import mode | Required result |
+| --- | --- |
+| Scalar parameters and return value | Exact signed arithmetic result |
+| Record round trip | Matching size/offset, 32-bit pointer and `size_t`, preserved context pointer |
+| Input/output buffers | Exact values and output count |
+| Insufficient capacity | Failure with no writes and zero output count |
+| Opaque handle | Typed create/invoke/destroy, tracked native ownership |
+| Native-to-managed callback | Exact handle, arguments, state pointer, result, and invocation count |
+| Null callback | Explicit failure without a callback |
+| Release and null handles | Zero live native allocations; null release is safe |
+
+`DllImport`, `LibraryImport`, and custom-context `FunctionTable` each execute these eight
+checks. Missing-symbol resolution and exactly-once function-table context disposal add two
+checks, for **26 total**. Function-table resolution is fixture-owned through the public
+`INativeContext`; BGCS Runtime does not acquire a browser-specific symbol registry.
+
+Each run retains its configuration, generated sources, native input, build logs, and
+`report.json` under `artifacts/wasm-acceptance/<run-id>/`. Missing prerequisites, generation
+or link failures, timeout, wrong pointer size, native exceptions, and incomplete check lists
+fail the run. There is no dependency-driven skip or success fallback.
+
+The CI `wasm-invocation` job repeats this test on Windows, Linux, and Intel macOS independently
+of the desktop release matrix. Configured jobs are not evidence of completed runs. The
+[local acceptance report](wasm-acceptance-2026-10-03.md) records the actual Windows/Edge result.
+This fixture establishes its C ABI invocation scope; C++/STL Wasm semantics, managed AOT,
+other browser engines, mobile devices, and distribution packaging require separate acceptance.
 
 ## Feature Coverage Mapping
 

@@ -245,12 +245,12 @@ namespace BGCS
 
             for (int i = 0; i < includeFolders.Count; i++)
             {
-                options.IncludeFolders.Add(Path.GetFullPath(includeFolders[i], baseDirectory));
+                options.IncludeFolders.Add(Path.GetFullPath(Environment.ExpandEnvironmentVariables(includeFolders[i]), baseDirectory));
             }
 
             for (int i = 0; i < systemIncludeFolders.Count; i++)
             {
-                options.SystemIncludeFolders.Add(Path.GetFullPath(systemIncludeFolders[i], baseDirectory));
+                options.SystemIncludeFolders.Add(Path.GetFullPath(Environment.ExpandEnvironmentVariables(systemIncludeFolders[i]), baseDirectory));
             }
 
             for (int i = 0; i < defines.Count; i++)
@@ -264,10 +264,14 @@ namespace BGCS
             return options;
         }
 
-        private static string? ResolveConfiguredPath(string? value, string baseDirectory, bool allowCommandName)
-        {
+        private static string? ResolveConfiguredPath(
+            string? value,
+            string baseDirectory,
+            bool allowCommandName
+        ) {
             if (string.IsNullOrWhiteSpace(value))
                 return null;
+            value = Environment.ExpandEnvironmentVariables(value);
             if (allowCommandName && !Path.IsPathRooted(value) && !value.Contains('/') && !value.Contains('\\'))
                 return value;
             return Path.GetFullPath(value, baseDirectory);
@@ -323,7 +327,9 @@ namespace BGCS
         internal List<string> ResolveAllowedHeaders(CppCompilation compilation, IReadOnlyList<string> headerFiles)
         {
             string baseDirectory = config.ConfigDirectory ?? Environment.CurrentDirectory;
-            string[] includeFolders = config.IncludeFolders.Select(path => Path.GetFullPath(path, baseDirectory)).ToArray();
+            string[] includeFolders = config.IncludeFolders
+                .Select(path => Path.GetFullPath(Environment.ExpandEnvironmentVariables(path), baseDirectory))
+                .ToArray();
             return config.IncludeTransitivelyReferencedHeaders
                 ? ResolveTransitiveUserHeaders(compilation, headerFiles, includeFolders)
                 : [.. headerFiles];

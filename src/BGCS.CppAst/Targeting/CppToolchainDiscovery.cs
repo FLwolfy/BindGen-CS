@@ -39,7 +39,7 @@ public static class CppToolchainDiscovery
     /// </summary>
     /// <param name="parserKind">Language whose include paths are requested.</param>
     /// <param name="compilerPath">Optional compiler path or executable name.</param>
-    /// <returns>Existing include directories in compiler search order.</returns>
+    /// <returns>Existing SDK and standard library directories in compiler search order, excluding Clang builtin headers owned by the parser.</returns>
     public static IReadOnlyList<string> DiscoverSystemIncludeFolders(CppParserKind parserKind, string? compilerPath = null)
     {
         string? compiler = FindCompiler(parserKind, compilerPath);
@@ -63,8 +63,22 @@ public static class CppToolchainDiscovery
     /// Returns a stable compiler-driver identity for incremental generation keys.
     /// The identity includes the resolved path, binary metadata, and complete <c>--version</c> output.
     /// </summary>
-    public static string GetCompilerFingerprint(CppParserKind parserKind, string? compilerPath = null)
-    {
+    /// <param name="parserKind">
+    /// The language used when selecting the compiler driver.
+    /// </param>
+    /// <param name="compilerPath">
+    /// An optional explicit compiler path or executable name.
+    /// </param>
+    /// <returns>
+    /// The resolved driver identity, or a not-found marker. An unsuccessful version query is recorded as unavailable.
+    /// </returns>
+    /// <remarks>
+    /// Compiler queries drain both output streams. A timed-out query is terminated and observed before returning.
+    /// </remarks>
+    public static string GetCompilerFingerprint(
+        CppParserKind parserKind,
+        string? compilerPath = null
+    ) {
         string? compiler = FindCompiler(parserKind, compilerPath);
         if (compiler == null)
             return "compiler:not-found";
@@ -74,7 +88,8 @@ public static class CppToolchainDiscovery
                 return cached;
         }
 
-        string version = RunForOutput(compiler, ["--version"]) ?? "version:unavailable";
+        var captured = RunForOutput(compiler, ["--version"]);
+        string version = captured is { } result ? result.output + result.error : "version:unavailable";
         FileInfo binary = new(compiler);
         string fingerprint = string.Join("\n",
             "compiler:" + compiler.Replace('\\', '/'),
@@ -104,31 +119,20 @@ public static class CppToolchainDiscovery
         return Directory.Exists(commandLineToolsSdk) ? commandLineToolsSdk : null;
     }
 
-    private static IReadOnlyList<string> DiscoverSystemIncludeFoldersCore(string compiler, string language)
-    {
+    private static IReadOnlyList<string> DiscoverSystemIncludeFoldersCore(
+        string compiler,
+        string language
+    ) {
         try
         {
-            ProcessStartInfo start = new(compiler)
-            {
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            foreach (string argument in new[] { "-E", "-x", language, "-", "-v" })
-                start.ArgumentList.Add(argument);
-            using Process process = Process.Start(start)!;
-            process.StandardInput.Close();
-            Task<string> standardError = process.StandardError.ReadToEndAsync();
-            Task<string> standardOutput = process.StandardOutput.ReadToEndAsync();
-            if (!process.WaitForExit(10_000))
-            {
-                process.Kill(entireProcessTree: true);
+            string? resourceRoot = RunForSingleLine(compiler, ["-print-resource-dir"]);
+            string? resourceInclude = string.IsNullOrWhiteSpace(resourceRoot)
+                ? null : Path.GetFullPath(Path.Combine(resourceRoot, "include"));
+            StringComparer pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            var captured = RunForOutput(compiler, ["-E", "-x", language, "-", "-v"], 10_000);
+            if (captured is not { } result)
                 return [];
-            }
-            string output = standardError.GetAwaiter().GetResult();
-            _ = standardOutput.GetAwaiter().GetResult();
+            string output = result.error;
             bool capture = false;
             List<string> paths = [];
             foreach (string rawLine in output.Split('\n'))
@@ -146,8 +150,11 @@ public static class CppToolchainDiscovery
                 const string frameworkSuffix = " (framework directory)";
                 if (line.EndsWith(frameworkSuffix, StringComparison.Ordinal))
                     line = line[..^frameworkSuffix.Length].TrimEnd();
-                if (Directory.Exists(line) && !paths.Contains(line, StringComparer.Ordinal))
-                    paths.Add(Path.GetFullPath(line));
+                if (!Directory.Exists(line))
+                    continue;
+                string fullPath = Path.GetFullPath(line);
+                if (!pathComparer.Equals(fullPath, resourceInclude) && !paths.Contains(fullPath, pathComparer))
+                    paths.Add(fullPath);
             }
             return paths;
         }
@@ -207,39 +214,25 @@ public static class CppToolchainDiscovery
         return null;
     }
 
-    private static string? RunForSingleLine(string executable, IReadOnlyList<string> arguments)
-    {
-        if (!File.Exists(executable))
-            return null;
-        try
-        {
-            ProcessStartInfo start = new(executable)
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            foreach (string argument in arguments)
-                start.ArgumentList.Add(argument);
-            using Process process = Process.Start(start)!;
-            string output = process.StandardOutput.ReadToEnd();
-            if (!process.WaitForExit(5_000) || process.ExitCode != 0)
-                return null;
-            return output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
-        }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
-        {
-            return null;
-        }
+    private static string? RunForSingleLine(
+        string executable,
+        IReadOnlyList<string> arguments
+    ) {
+        var captured = RunForOutput(executable, arguments);
+        return captured?.output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
     }
 
-    private static string? RunForOutput(string executable, IReadOnlyList<string> arguments)
-    {
+    private static (string output, string error)? RunForOutput(
+        string executable,
+        IReadOnlyList<string> arguments,
+        int timeoutMilliseconds = 5_000
+    ) {
         try
         {
             ProcessStartInfo start = new(executable)
             {
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -250,14 +243,13 @@ public static class CppToolchainDiscovery
             using Process process = Process.Start(start)!;
             Task<string> standardOutput = process.StandardOutput.ReadToEndAsync();
             Task<string> standardError = process.StandardError.ReadToEndAsync();
-            if (!process.WaitForExit(5_000))
-            {
+            process.StandardInput.Close();
+            bool completed = process.WaitForExit(timeoutMilliseconds);
+            if (!completed)
                 process.Kill(entireProcessTree: true);
-                return null;
-            }
-            string output = standardOutput.GetAwaiter().GetResult();
-            string error = standardError.GetAwaiter().GetResult();
-            return process.ExitCode == 0 ? output + error : null;
+            process.WaitForExit();
+            string[] captured = Task.WhenAll(standardOutput, standardError).GetAwaiter().GetResult();
+            return completed && process.ExitCode == 0 ? (captured[0], captured[1]) : null;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {

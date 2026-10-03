@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Xml.Linq;
 using BGCS.Core.Mapping;
 using BGCS.CppAst.Targeting;
 using BGCS.Emission;
@@ -14,6 +17,40 @@ namespace BGCS.Tests;
 
 public class BindingIntermediateRepresentationTests
 {
+    [Fact]
+    public void Generate_CallbackWithIncompleteRecordAlias_UsesNativePointerCarrier()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-opaque-callback-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "api.h");
+        File.WriteAllText(header,
+            "typedef struct NativeMessageTag Message;\n" +
+            "typedef void (*MessageCallback)(Message* message);\n" +
+            "void set_message_callback(MessageCallback callback);\n");
+        try
+        {
+            var config = new CsCodeGeneratorConfig
+            {
+                ApiName = "CallbackApi",
+                Namespace = "BGCS.Tests.Generated",
+                LibName = "callback",
+                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                ImportType = ImportType.FunctionTable,
+                DelegatesAsVoidPointer = false,
+                SingleFileOutputName = "Bindings.cs"
+            };
+            var generator = new CsCodeGenerator(config);
+            Assert.True(generator.Generate(header, Path.Combine(temp, "out")));
+            string[] sources = generator.LastResult!.OutputFiles.Select(File.ReadAllText).ToArray();
+            Assert.Contains("delegate* unmanaged[Cdecl]<nint, void>", string.Join(Environment.NewLine, sources));
+            AssertCompiles(sources);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
     [Fact]
     public void Generate_WindowsCallbackTypedef_EmitsCallableDelegateOverload()
     {
@@ -687,6 +724,144 @@ public class BindingIntermediateRepresentationTests
             if (Directory.Exists(temp))
                 Directory.Delete(temp, true);
         }
+    }
+
+    /// <summary>
+    /// Verifies that every import strategy preserves the same pointer carrier and typed handle API.
+    /// </summary>
+    /// <param name="targetAbi">
+    /// The native parsing target recorded in the binding module.
+    /// </param>
+    /// <param name="importMode">
+    /// The import strategy used for native calls.
+    /// </param>
+    [Theory]
+    [InlineData("emscripten-wasm32-emscripten", BindingImportMode.DllImport)]
+    [InlineData("emscripten-wasm32-emscripten", BindingImportMode.LibraryImport)]
+    [InlineData("emscripten-wasm32-emscripten", BindingImportMode.FunctionTable)]
+    [InlineData("windows-x64-msvc", BindingImportMode.DllImport)]
+    [InlineData("windows-x64-msvc", BindingImportMode.LibraryImport)]
+    [InlineData("windows-x64-msvc", BindingImportMode.FunctionTable)]
+    [InlineData("macos-arm64-darwin", BindingImportMode.DllImport)]
+    [InlineData("macos-arm64-darwin", BindingImportMode.LibraryImport)]
+    [InlineData("macos-arm64-darwin", BindingImportMode.FunctionTable)]
+    public void CSharpEmitter_OpaqueHandle_UsesPointerSizedNativeCarrier(
+        string targetAbi,
+        BindingImportMode importMode
+    ) {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-wasm-handle-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            BindingModule module = new("WindowApi", "BGCS.Tests.Generated", "window", targetAbi)
+            {
+                ImportMode = importMode,
+                UseCustomContext = importMode == BindingImportMode.FunctionTable
+            };
+            module.Types.Add(new BindingType("NativeWindow", "NativeWindow", BindingTypeKind.OpaqueHandle, 4, 4));
+            BindingFunction function = new("window_next", "WindowNext", BindingFunctionKind.Free,
+                new("NativeWindow", "NativeWindow", 0, false, 4),
+                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed));
+            function.Parameters.Add(new BindingParameter("window", "window",
+                new("NativeWindow", "NativeWindow", 0, false, 4), BindingDirection.In,
+                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)));
+            if (importMode == BindingImportMode.FunctionTable)
+            {
+                function.FunctionTableIndex = 0;
+                module.FunctionTableEntries.Add(new(0, function.NativeName));
+            }
+            module.Functions.Add(function);
+
+            string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
+            string source = File.ReadAllText(emitted);
+
+            Assert.Contains("nint WindowNextInterop(nint window)", source);
+            Assert.Contains("NativeWindow WindowNextNative(NativeWindow window)", source);
+            Assert.Contains("new NativeWindow(WindowNextInterop(window.Handle))", source);
+            if (importMode == BindingImportMode.FunctionTable)
+                Assert.Contains("delegate* unmanaged[Cdecl]<nint, nint>", source);
+            if (importMode == BindingImportMode.LibraryImport)
+                AssertCompilesWithSdk(temp);
+            else
+                AssertCompiles(source);
+            Assert.DoesNotContain(CSharpSyntaxTree.ParseText(source).GetDiagnostics(),
+                diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        }
+        finally
+        {
+            if (Directory.Exists(temp))
+                Directory.Delete(temp, true);
+        }
+    }
+
+    [Theory]
+    [InlineData("BGCS.Runtime", true)]
+    [InlineData("Custom.Runtime", true)]
+    [InlineData("BGCS.Runtime", false)]
+    [InlineData("Custom.Runtime", false)]
+    public void CSharpEmitter_FunctionTableNamespaceDoesNotShadowRuntimeTypes(
+        string runtimeNamespace,
+        bool customContext
+    ) {
+        string directory = Path.Combine(Path.GetTempPath(), "bgcs-table-namespace-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            BindingModule module = new("NativeApi", "Example.FunctionTable", "native", "host")
+            {
+                ImportMode = BindingImportMode.FunctionTable,
+                UseCustomContext = customContext
+            };
+            BindingFunction function = new("fixture_value", "FixtureValue", BindingFunctionKind.Free,
+                new("int", "int", 0, false, 4), new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed))
+            {
+                FunctionTableIndex = 0
+            };
+            module.Functions.Add(function);
+            module.FunctionTableEntries.Add(new(0, function.NativeName));
+            EmissionContext context = new(directory, true, "Bindings.cs", runtimeNamespace);
+            string path = Assert.Single(new CSharpEmitter().Emit(module, context));
+            string runtime = Assert.Single(new RuntimeEmitter().Emit(module, context));
+            AssertCompiles(File.ReadAllText(path), File.ReadAllText(runtime));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
+        }
+    }
+
+    private static void AssertCompilesWithSdk(string directory)
+    {
+        XElement project = new("Project", new XAttribute("Sdk", "Microsoft.NET.Sdk"),
+            new XElement("PropertyGroup",
+                new XElement("TargetFramework", "net9.0"),
+                new XElement("AllowUnsafeBlocks", true),
+                new XElement("ImplicitUsings", "disable"),
+                new XElement("Nullable", "enable")),
+            new XElement("ItemGroup",
+                new XElement("Reference", new XAttribute("Include", "BGCS.Runtime"),
+                    new XElement("HintPath", typeof(BGCS.Runtime.Bool8).Assembly.Location))));
+        string path = Path.Combine(directory, "Generated.csproj");
+        File.WriteAllText(path, project.ToString());
+        string host = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet";
+        ProcessStartInfo start = new(host)
+        {
+            WorkingDirectory = directory,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (string argument in new[] { "build", path, "--nologo", "-m:1", "-nodeReuse:false" })
+            start.ArgumentList.Add(argument);
+        using Process process = Process.Start(start)!;
+        Task<string> output = process.StandardOutput.ReadToEndAsync();
+        Task<string> error = process.StandardError.ReadToEndAsync();
+        bool completed = process.WaitForExit(60000);
+        if (!completed)
+            process.Kill(entireProcessTree: true);
+        process.WaitForExit();
+        Task.WaitAll(output, error);
+        Assert.True(completed && process.ExitCode == 0, output.Result + error.Result);
     }
 
     [Theory]

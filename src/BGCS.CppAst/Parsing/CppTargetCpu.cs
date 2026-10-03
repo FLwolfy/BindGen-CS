@@ -27,5 +27,10 @@ public enum CppTargetCpu
     /// <summary>
     /// The ARM 64 CPU family (64bit)
     /// </summary>
-    ARM64
+    ARM64,
+
+    /// <summary>
+    /// The 32-bit WebAssembly CPU family.
+    /// </summary>
+    WASM32
 }

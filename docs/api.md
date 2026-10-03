@@ -88,6 +88,10 @@ Use `PatchContext.ReadFile` and `PatchContext.WriteFile` against staged relative
 
 ## 6. Runtime lifetime APIs
 
+- `FunctionTable` either borrows a caller-owned pointer array or owns allocated storage and its
+  `INativeContext`. Borrowed storage is never resized or freed by the table. `Free` / `Dispose`
+  release owned resources once; table operations after disposal reject use. Resizing owned storage
+  retains existing pointers and clears added slots. Missing symbols remain null entries.
 - `NativeCallback<T>` owns a shared callback lease.
 - `NativeCallbackRegistry<TKey,TDelegate>` manages keyed callback leases.
 - `NativeCallbackRegistration<TDelegate>` models native register/unregister and coordinates concurrent disposal, retry, and retained lifetime.

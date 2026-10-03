@@ -1,0 +1,55 @@
+    private static void Run__MODE__()
+    {
+        Assert(__MODE__.NativeApi.BgcsAdd(19, -7) == 12, "__MODE__: scalar arguments/result.");
+        m_checks.Add("__MODE__:scalar");
+
+        int marker = 123;
+        __MODE__.BgcsLayout layout = new() { Tag = 5, Value = -21, Count = 8, Context = &marker };
+        Assert(__MODE__.NativeApi.BgcsPointerSize() == 4, "__MODE__: native pointer size.");
+        Assert(__MODE__.NativeApi.BgcsLayoutSize() == (nuint)sizeof(__MODE__.BgcsLayout), "__MODE__: record size.");
+        Assert(__MODE__.NativeApi.BgcsLayoutContextOffset() ==
+            (nuint)((byte*)&layout.Context - (byte*)&layout), "__MODE__: record offset.");
+        __MODE__.NativeApi.BgcsTransform(&layout);
+        Assert(layout.Tag == 6 && layout.Value == -42 && layout.Count == 11 && layout.Context == &marker,
+            "__MODE__: record round trip preserves context.");
+        m_checks.Add("__MODE__:layout");
+
+        int* buffer = stackalloc int[3] { 2, 3, 5 };
+        Assert(__MODE__.NativeApi.BgcsSum(buffer, 3) == 10, "__MODE__: input buffer.");
+        nuint written = 99;
+        Assert(__MODE__.NativeApi.BgcsWrite(buffer, 3, &written) == 1 && written == 3,
+            "__MODE__: output buffer count.");
+        Assert(buffer[0] == 7 && buffer[1] == 11 && buffer[2] == 13, "__MODE__: output buffer values.");
+        m_checks.Add("__MODE__:buffer");
+        Assert(__MODE__.NativeApi.BgcsWrite(buffer, 2, &written) == 0 && written == 0 &&
+            buffer[0] == 7 && buffer[1] == 11 && buffer[2] == 13,
+            "__MODE__: insufficient capacity must not write.");
+        m_checks.Add("__MODE__:capacity");
+
+        Assert(__MODE__.NativeApi.BgcsLiveCount() == 0, "__MODE__: no outstanding allocation.");
+        __MODE__.BgcsCounter counter = __MODE__.NativeApi.BgcsCounterCreate(40);
+        Assert(!counter.IsNull, "__MODE__: native allocation.");
+        try
+        {
+            Assert(__MODE__.NativeApi.BgcsCounterNext(counter, 2) == 42 &&
+                __MODE__.NativeApi.BgcsLiveCount() == 1, "__MODE__: typed handle invocation.");
+            m_checks.Add("__MODE__:handle");
+            m_expectedCounter = counter.Handle;
+            int callbacksBefore = m_callbacks;
+            Assert(__MODE__.NativeApi.BgcsInvokeCallback(counter, 10, &Callback, &marker) == 133 &&
+                m_callbacks == callbacksBefore + 1, "__MODE__: native callback signature and context.");
+            m_checks.Add("__MODE__:callback");
+            Assert(__MODE__.NativeApi.BgcsInvokeCallback(counter, 10, null, &marker) == -1 &&
+                m_callbacks == callbacksBefore + 1, "__MODE__: null callback is rejected natively.");
+            m_checks.Add("__MODE__:null-callback");
+        }
+        finally
+        {
+            __MODE__.NativeApi.BgcsCounterDestroy(counter);
+            m_expectedCounter = 0;
+        }
+        __MODE__.NativeApi.BgcsCounterDestroy(__MODE__.BgcsCounter.Null);
+        Assert(__MODE__.NativeApi.BgcsCounterNext(__MODE__.BgcsCounter.Null, 1) == -1 &&
+            __MODE__.NativeApi.BgcsLiveCount() == 0, "__MODE__: release and null handle.");
+        m_checks.Add("__MODE__:release");
+    }

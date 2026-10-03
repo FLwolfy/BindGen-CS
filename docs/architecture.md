@@ -6,6 +6,23 @@ The primary C# generator uses shared Binding IR exclusively. Pre-release compati
 
 ## Current data flow
 
+BGCS.CppAst supplies its own embedded Clang 20 builtin resource headers. Compiler
+driver discovery contributes the host SDK and standard library include paths,
+excluding that driver's Clang resource directory. This prevents a newer system
+LLVM installation from supplying builtin headers that the packaged native parser
+cannot understand. Target sysroots and compiler selection remain explicit; Web
+SDK selection belongs to the caller's toolchain. See the
+[resource bundle provenance and license](../extern/clang-resource/README.md).
+
+Compiler discovery drains stdout and stderr concurrently for resource, include and
+fingerprint queries. Timed-out processes are terminated and observed before a query
+returns; an unsuccessful probe remains explicitly unavailable.
+
+Opaque handle wrappers remain the managed API. DllImport, LibraryImport and
+FunctionTable all lower scalar handle arguments and results to the pointer-sized
+`nint` native carrier, then share one typed adapter. This ABI rule applies to every
+target and library; it does not add a browser branch to generated call wrappers.
+
 ```text
 CLI / CsCodeGenerator / BindingGenerator
                  ↓
@@ -141,3 +158,13 @@ The equivalent C++ bridge criterion is that the C Bridge emitter consumes a comp
 ## Extension model
 
 New extensions should receive immutable configuration/requests, Binding IR, and scoped diagnostics. They must not depend on the CLI, change the global current directory, or hardcode one native library's names/layout into core. Library-specific facts belong in declarative lowerings, typed lowering plugins, or explicit C ABI shims. See the [final lowering architecture](lowering.md).
+
+## Consumer independence and WebAssembly targets
+
+BGCS owns parsing, ABI analysis, lowering, binding emission, and its own fixtures and acceptance reports. Consumers own their native facades, SDK selection, application link graph, deployment, and runtime integration. A consumer's successful application build is evidence for that consumer; it does not replace BGCS's standalone target acceptance. Capability claims here refer only to BGCS-owned evidence.
+
+`emscripten-wasm32-emscripten` selects the Clang triple `wasm32-unknown-emscripten` and its C/C++ ABI. BGCS models it through the same target/configuration/IR/emitter contracts as desktop targets. It does not create a separate generator for each library, install an SDK, or implement browser rendering, input, or application startup.
+
+The authoring host and target are separate. Emscripten supports Windows, macOS, and Linux authoring hosts and emits WebAssembly; `wasm32` describes the target's 32-bit pointer address model. Other WebAssembly environments, such as WASI, are distinct targets rather than aliases for Emscripten. See [Emscripten installation](https://emscripten.org/docs/getting_started/downloads.html), [WebAssembly output](https://emscripten.org/docs/compiling/WebAssembly.html), and [Clang cross-compilation](https://clang.llvm.org/docs/CrossCompilation.html).
+
+BGCS-owned target tests cover the triple and record layout; emitter tests cover opaque handles in all three import modes. The standalone fixture now executes generated DllImport, LibraryImport, and FunctionTable bindings against BGCS-owned C code inside a browser. Its Windows x64 / Edge run passed 26 checks; wider host/browser coverage, C++ Wasm semantics, AOT, and distribution packaging remain separate gates. See [invocation workflow](testing.md#independent-webassembly-invocation), [local acceptance](wasm-acceptance-2026-10-03.md), and [target evidence](capabilities.md#target-evidence).

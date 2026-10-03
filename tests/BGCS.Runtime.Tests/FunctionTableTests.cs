@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using BGCS.Runtime;
 using Xunit;
 
@@ -49,6 +50,47 @@ public class FunctionTableTests
         table.Free();
 
         Assert.True(context.DisposeCallCount >= 1);
+    }
+
+    [Fact]
+    public unsafe void BorrowedTable_DisposePreservesCallerStorageAndRejectsResize()
+    {
+        void** storage = (void**)Marshal.AllocHGlobal(sizeof(void*));
+        try
+        {
+            storage[0] = (void*)123;
+            FunctionTable table = new(storage, 1);
+            Assert.Equal((nint)123, (nint)table[0]);
+            Assert.Throws<InvalidOperationException>(() => table.Resize(2));
+            table.Dispose();
+            table.Dispose();
+            Assert.Equal((nint)123, (nint)storage[0]);
+            storage[0] = (void*)456;
+            Assert.Equal((nint)456, (nint)storage[0]);
+            Assert.Throws<ObjectDisposedException>(() => table.Load(0, "A"));
+        }
+        finally
+        {
+            Marshal.FreeHGlobal((nint)storage);
+        }
+    }
+
+    [Fact]
+    public unsafe void OwnedTable_ResizeRetainsEntriesClearsNewSlotsAndDisposesOnce()
+    {
+        FakeContext context = new();
+        FunctionTable table = new(context, 1);
+        table[0] = (void*)123;
+        table.Resize(3);
+        Assert.Equal((nint)123, (nint)table[0]);
+        Assert.Equal(0, (nint)table[1]);
+        Assert.Equal(0, (nint)table[2]);
+        Assert.Throws<ArgumentOutOfRangeException>(() => table.Load(3, "A"));
+        table.Free();
+        table.Dispose();
+        Assert.Equal(1, context.DisposeCallCount);
+        Assert.Equal(0, table.Length);
+        Assert.Throws<ObjectDisposedException>(() => table.Resize(1));
     }
 
     private sealed class FakeContext : INativeContext

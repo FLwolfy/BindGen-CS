@@ -13,7 +13,7 @@
 
 ## 运行工具
 
-仓库 [README 一分钟示例](../README.cn.md#getting-started) 使用 `dotnet run --project src/BGCS.Tool --` 和已提交的 `examples/QuickStart/native.h`，不依赖公开工具包。下文的 `bindgen-cs` 命令在源码 checkout 中可替换为该命令。
+仓库 [README 首次生成示例](../README.cn.md#快速开始) 使用 `dotnet run --project src/BGCS.Tool --` 和已提交的 `examples/QuickStart/native.h`，不依赖公开工具包。下文的 `bindgen-cs` 命令在源码 checkout 中可替换为该命令。
 
 `BindGen-CS` 工具包正式公开发布后，可以安装：
 

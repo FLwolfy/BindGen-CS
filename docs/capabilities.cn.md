@@ -85,6 +85,7 @@
 | Android | ⚠️ | 正式支持目标；target model 已有，NDK/sysroot、包布局和 device/emulator 报告待完成 |
 | iOS | ⚠️ | 正式支持目标；target model 已有，Xcode SDK、framework 布局和 device/simulator 报告待完成 |
 | FreeBSD | ⚠️ | 正式支持目标；target model 已有，toolchain、包布局和独立报告待完成 |
+| Emscripten wasm32 | 部分范围已验收 | BGCS 自有 triple / layout / emitter 测试，以及 Windows x64 / Edge 下 DllImport、LibraryImport、FunctionTable 的 26 项独立浏览器检查通过；其他主机 / 浏览器、C++ Wasm 语义、AOT、发布打包仍需独立验收；[报告](wasm-acceptance-2026-10-03.cn.md) |
 
 ## 成熟度判断
 

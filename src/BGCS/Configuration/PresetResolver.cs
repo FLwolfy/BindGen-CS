@@ -35,6 +35,8 @@ public sealed class PresetResolver
         RegisterTargetPreset("linux-cpp", CppParserKind.Cpp, CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu);
         RegisterTargetPreset("macos-c", CppParserKind.C, CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin);
         RegisterTargetPreset("macos-cpp", CppParserKind.Cpp, CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin);
+        RegisterTargetPreset("emscripten-c", CppParserKind.C, CppTargetPlatform.Emscripten, CppTargetArchitecture.Wasm32, CppTargetAbi.Emscripten);
+        RegisterTargetPreset("emscripten-cpp", CppParserKind.Cpp, CppTargetPlatform.Emscripten, CppTargetArchitecture.Wasm32, CppTargetAbi.Emscripten);
         Register("function-table", config =>
         {
             config.ImportType = ImportType.FunctionTable;

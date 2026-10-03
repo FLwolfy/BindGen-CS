@@ -69,7 +69,7 @@ This configuration follows the host ABI. Reproducible release configurations sho
 
 ## Target settings
 
-`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, and FreeBSD with their valid x86/x64/Arm/Arm64 combinations. `TargetTriple`, `TargetSysRoot`, and `CompilerPath` provide controlled overrides. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK.
+`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, FreeBSD, and Emscripten wasm32 with their valid architecture combinations. `TargetTriple`, `TargetSysRoot`, and `CompilerPath` provide controlled overrides. C# and C++ configuration paths expand environment variables before deciding whether a compiler value is a command name or a configuration-relative path; both absolute and relative path values are supported. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK. For Emscripten, provide the matching SDK sysroot explicitly.
 
 Model support is not the same as completed host acceptance. See the [target evidence matrix](capabilities.md#target-evidence) and the current generated acceptance report.
 
@@ -77,7 +77,9 @@ Model support is not the same as completed host acceptance. See the [target evid
 
 - `DllImport`: broad compatibility and simple diagnostics.
 - `LibraryImport`: source-generated imports; signatures must satisfy source-generator restrictions.
-- `FunctionTable`: explicit native context and symbol resolution, matching the current Inno.Native style.
+- `FunctionTable`: caller-owned native context and explicit symbol resolution; the generated API has no dependency on a consumer's loader or engine.
+
+Opaque handle wrappers retain their managed API while native imports carry pointer-sized `nint` values on every target. Callback signatures use the same recursive type analysis as ordinary parameters, including canonical record aliases and native pointer carriers for incomplete records. These rules apply to all ABIs; they do not depend on a browser target or a library-specific type name.
 
 ## C# emission backend
 
@@ -206,7 +208,7 @@ Relative base files resolve from the referring config. Circular references fail 
 
 ## Presets
 
-Presets are composable and generic: choose one target preset (`host-c`, `host-cpp`, `windows-c`, `windows-cpp`, `linux-c`, `linux-cpp`, `macos-c`, or `macos-cpp`) and optionally add API/output policies such as `c-library`, `function-table`, and `opaque-callbacks`. Library-specific facts stay in the consuming project's configuration rather than in BindGen-CS core.
+Presets are composable and generic: choose one target preset (`host-c`, `host-cpp`, `windows-c`, `windows-cpp`, `linux-c`, `linux-cpp`, `macos-c`, `macos-cpp`, `emscripten-c`, or `emscripten-cpp`) and optionally add API/output policies such as `c-library`, `function-table`, and `opaque-callbacks`. Library-specific facts stay in the consuming project's configuration rather than in BindGen-CS core.
 
 ```json
 {
@@ -237,3 +239,6 @@ bindgen-cs workspace diff native/bindings/workspace.json
 `generate` uses each config's `OutputPath`; `diff` checks that same path without replacing the checked-in output. With single-file output enabled, a workspace does not introduce target-specific source directories.
 
 The generated header records the `ABI reference target` used for native parsing. This is a marker, not a cross-platform certification: native headers may expose different declarations or layouts after target-specific preprocessing. Run ABI and native-consumer tests on every intended target before sharing one binding source.
+
+
+C++ bridge IncludeFolders, SystemIncludeFolders, TargetSysRoot and CompilerPath expand environment variables before resolving paths relative to the configuration directory. Cross-target bridge profiles must supply their actual SDK/sysroot and must not discover host C++ headers.

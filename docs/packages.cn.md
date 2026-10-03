@@ -71,6 +71,10 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 
 ## `BGCS.Runtime`
 
+`FunctionTable` 可以借用调用方的指针数组，也可以拥有分配的存储和 `INativeContext`。
+借用数组不能由 table 调整大小或释放；自有数组调整大小时保留现有项并清零新增项。
+释放可重复调用，自有 context 只释放一次，释放后拒绝继续访问 table。
+
 主要公开运行时 API：
 
 - `Bool8`、`Bool32`；

@@ -123,12 +123,12 @@
 
             for (int i = 0; i < config.IncludeFolders.Count; i++)
             {
-                options.IncludeFolders.Add(Path.GetFullPath(config.IncludeFolders[i], baseDirectory));
+                options.IncludeFolders.Add(Path.GetFullPath(Environment.ExpandEnvironmentVariables(config.IncludeFolders[i]), baseDirectory));
             }
 
             for (int i = 0; i < config.SystemIncludeFolders.Count; i++)
             {
-                options.SystemIncludeFolders.Add(Path.GetFullPath(config.SystemIncludeFolders[i], baseDirectory));
+                options.SystemIncludeFolders.Add(Path.GetFullPath(Environment.ExpandEnvironmentVariables(config.SystemIncludeFolders[i]), baseDirectory));
             }
 
             for (int i = 0; i < config.Defines.Count; i++)
@@ -154,6 +154,7 @@
         {
             if (string.IsNullOrWhiteSpace(value))
                 return null;
+            value = Environment.ExpandEnvironmentVariables(value);
             if (allowCommandName && !Path.IsPathRooted(value) && !value.Contains('/') && !value.Contains('\\'))
                 return value;
             return Path.GetFullPath(value, baseDirectory);

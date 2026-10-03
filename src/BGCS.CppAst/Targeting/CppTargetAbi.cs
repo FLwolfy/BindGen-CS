@@ -33,5 +33,10 @@ public enum CppTargetAbi
     /// <summary>
     /// Apple Darwin ABI.
     /// </summary>
-    Darwin
+    Darwin,
+
+    /// <summary>
+    /// Emscripten C and C++ ABI for WebAssembly.
+    /// </summary>
+    Emscripten
 }

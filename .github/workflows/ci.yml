@@ -10,6 +10,59 @@ permissions:
   contents: read
 
 jobs:
+  wasm-invocation:
+    name: Independent Wasm invocation (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build missing parser runtime for macOS Intel
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
+          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
+          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
+
+      - name: Install native WebAssembly workload
+        # SDK selection is independent of the repository's SDK 10 packaging pin.
+        working-directory: ${{ runner.temp }}
+        run: dotnet workload install wasm-tools
+
+      - name: Generate, link, and invoke all import modes in a browser
+        run: python scripts/test-wasm-bindings.py
+
+      - name: Upload standalone Wasm evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-invocation-${{ matrix.os }}
+          path: |
+            artifacts/wasm-acceptance/**/report.json
+            artifacts/wasm-acceptance/**/*.log
+            artifacts/wasm-acceptance/**/DllImport.json
+            artifacts/wasm-acceptance/**/LibraryImport.json
+            artifacts/wasm-acceptance/**/FunctionTable.json
+            artifacts/wasm-acceptance/**/global.json
+            artifacts/wasm-acceptance/**/Generated/**/*.cs
+            artifacts/wasm-acceptance/**/Program.cs
+            artifacts/wasm-acceptance/**/Consumer.csproj
+            artifacts/wasm-acceptance/**/Native/*
+
   build-and-test:
     name: Build and test (${{ matrix.target }})
     strategy:

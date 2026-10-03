@@ -17,6 +17,7 @@ public sealed class CppTargetTests
     [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu, "x86_64-unknown-linux-gnu", "linux-x64-gnu")]
     [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Musl, "aarch64-unknown-linux-musl", "linux-arm64-musl")]
     [InlineData(CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin, "arm64-apple-darwin", "macos-arm64-darwin")]
+    [InlineData(CppTargetPlatform.Emscripten, CppTargetArchitecture.Wasm32, CppTargetAbi.Emscripten, "wasm32-unknown-emscripten", "emscripten-wasm32-emscripten")]
     public void Resolve_ExplicitTarget_ShouldProduceStableTripleAndIdentifier(
         CppTargetPlatform platform,
         CppTargetArchitecture architecture,
@@ -37,6 +38,34 @@ public sealed class CppTargetTests
             CppTarget.Resolve(CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Msvc));
 
         Assert.Contains("not valid", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_EmscriptenStructure_ShouldUseWasm32PointerLayout()
+    {
+        CppParserOptions options = new()
+        {
+            ParserKind = CppParserKind.C,
+            ParseMacros = false,
+            ParseComments = false,
+            ParseSystemIncludes = false
+        };
+        options.ConfigureForTarget(
+            CppTarget.Resolve(
+                CppTargetPlatform.Emscripten,
+                CppTargetArchitecture.Wasm32,
+                CppTargetAbi.Emscripten),
+            discoverHostToolchain: false);
+
+        CppCompilation compilation = CppParser.Parse(
+            "struct BrowserAbi { void* handle; unsigned long count; };",
+            options);
+
+        Assert.False(compilation.HasErrors, string.Join(Environment.NewLine, compilation.Diagnostics.Messages));
+        CppClass type = Assert.Single(compilation.Classes, value => value.Name == "BrowserAbi");
+        Assert.Equal(8, type.SizeOf);
+        Assert.Equal(4, type.Fields.Single(field => field.Name == "handle").Type.SizeOf);
+        Assert.Equal(4, type.Fields.Single(field => field.Name == "count").Type.SizeOf);
     }
 
     [Fact]
@@ -135,6 +164,7 @@ public sealed class CppTargetTests
     [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu, 8, 4, 16)]
     [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Gnu, 8, 4, 16)]
     [InlineData(CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin, 8, 4, 8)]
+    [InlineData(CppTargetPlatform.Emscripten, CppTargetArchitecture.Wasm32, CppTargetAbi.Emscripten, 4, 4, 16)]
     public void Parse_Primitives_ShouldUseTargetAbiSizes(
         CppTargetPlatform platform,
         CppTargetArchitecture architecture,

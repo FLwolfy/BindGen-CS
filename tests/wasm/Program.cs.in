@@ -1,0 +1,113 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.JavaScript;
+using System.Text;
+using System.Text.Json;
+using BGCS.Runtime;
+
+namespace WasmAcceptance;
+
+internal static unsafe partial class Program
+{
+    private static readonly List<string> m_checks = [];
+    private static string m_report = "{}";
+    private static nint m_expectedCounter;
+    private static int m_callbacks;
+
+    private static int Main()
+    {
+        try
+        {
+            Assert(sizeof(nint) == 4, "The consumer must execute inside wasm32.");
+            RunDllImport();
+            RunLibraryImport();
+            WasmSymbolContext context = new();
+            Assert(!context.TryGetProcAddress("missing_symbol", out nint missing) && missing == 0,
+                "A missing symbol must remain unresolved.");
+            m_checks.Add("missing-symbol");
+            FunctionTable.NativeApi.InitApi(context);
+            try
+            {
+                RunFunctionTable();
+            }
+            finally
+            {
+                FunctionTable.NativeApi.FreeApi();
+                FunctionTable.NativeApi.FreeApi();
+            }
+            Assert(context.disposeCount == 1, "The generated table must dispose its context once.");
+            m_checks.Add("function-table-context");
+            m_report = JsonSerializer.Serialize(new { success = true, pointerSize = sizeof(nint), checks = m_checks });
+            Console.WriteLine(m_report);
+            return 0;
+        }
+        catch (Exception exception)
+        {
+            m_report = JsonSerializer.Serialize(new { success = false, error = exception.ToString(), checks = m_checks });
+            Console.Error.WriteLine(m_report);
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Returns the completed invocation report to the fixture's JavaScript host.
+    /// </summary>
+    /// <returns>
+    /// JSON containing the executed checks and any failure, or an empty object before Main completes.
+    /// </returns>
+    [JSExport]
+    public static string GetReport() => m_report;
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static int Callback(
+        nint counter,
+        int value,
+        void* state
+    ) {
+        m_callbacks++;
+        return counter == m_expectedCounter ? value + *(int*)state : int.MinValue;
+    }
+
+    private static void Assert(
+        bool condition,
+        string message
+    ) {
+        if (!condition)
+            throw new InvalidOperationException(message);
+    }
+
+__RUNNERS__
+
+    private sealed class WasmSymbolContext : INativeContext
+    {
+        /// <summary>
+        /// Gets the number of ownership releases performed by the generated function table.
+        /// </summary>
+        public int disposeCount { get; private set; }
+
+        /// <inheritdoc />
+        public nint GetProcAddress(string procName)
+        {
+            byte[] name = Encoding.UTF8.GetBytes(procName + "\0");
+            fixed (byte* pointer = name)
+                return (nint)DllImport.NativeApi.BgcsResolve(pointer);
+        }
+
+        /// <inheritdoc />
+        public bool TryGetProcAddress(
+            string procName,
+            out nint procAddress
+        ) {
+            procAddress = GetProcAddress(procName);
+            return procAddress != 0;
+        }
+
+        /// <inheritdoc />
+        public bool IsExtensionSupported(string extensionName) => false;
+
+        /// <inheritdoc />
+        public void Dispose() => disposeCount++;
+    }
+}

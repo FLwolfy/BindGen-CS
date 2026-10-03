@@ -50,6 +50,7 @@ public sealed record CppTarget(
             CppTargetArchitecture.X64 => CppTargetCpu.X86_64,
             CppTargetArchitecture.Arm => CppTargetCpu.ARM,
             CppTargetArchitecture.Arm64 => CppTargetCpu.ARM64,
+            CppTargetArchitecture.Wasm32 => CppTargetCpu.WASM32,
             _ => throw new ArgumentOutOfRangeException(nameof(architecture), resolvedArchitecture, null)
         };
         string triple = string.IsNullOrWhiteSpace(tripleOverride)
@@ -92,6 +93,7 @@ public sealed record CppTarget(
             CppTargetPlatform.Linux or CppTargetPlatform.FreeBSD => CppTargetAbi.Gnu,
             CppTargetPlatform.MacOS or CppTargetPlatform.IOS => CppTargetAbi.Darwin,
             CppTargetPlatform.Android => CppTargetAbi.Android,
+            CppTargetPlatform.Emscripten => CppTargetAbi.Emscripten,
             _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
         };
     }
@@ -105,6 +107,7 @@ public sealed record CppTarget(
             CppTargetPlatform.MacOS or CppTargetPlatform.IOS => abi == CppTargetAbi.Darwin,
             CppTargetPlatform.Android => abi == CppTargetAbi.Android,
             CppTargetPlatform.FreeBSD => abi == CppTargetAbi.Gnu,
+            CppTargetPlatform.Emscripten => abi == CppTargetAbi.Emscripten,
             _ => false
         };
         if (!validAbi)
@@ -114,6 +117,7 @@ public sealed record CppTarget(
         {
             CppTargetPlatform.Windows => architecture is CppTargetArchitecture.X86 or CppTargetArchitecture.X64 or CppTargetArchitecture.Arm64,
             CppTargetPlatform.MacOS or CppTargetPlatform.IOS => architecture is CppTargetArchitecture.X64 or CppTargetArchitecture.Arm64,
+            CppTargetPlatform.Emscripten => architecture == CppTargetArchitecture.Wasm32,
             _ => architecture is CppTargetArchitecture.X86 or CppTargetArchitecture.X64 or CppTargetArchitecture.Arm or CppTargetArchitecture.Arm64
         };
         if (!validArchitecture)
@@ -129,6 +133,7 @@ public sealed record CppTarget(
             CppTargetArchitecture.Arm => "armv7",
             CppTargetArchitecture.Arm64 when platform is CppTargetPlatform.MacOS or CppTargetPlatform.IOS => "arm64",
             CppTargetArchitecture.Arm64 => "aarch64",
+            CppTargetArchitecture.Wasm32 => "wasm32",
             _ => throw new ArgumentOutOfRangeException(nameof(architecture), architecture, null)
         };
         return platform switch
@@ -140,6 +145,7 @@ public sealed record CppTarget(
             CppTargetPlatform.Android => $"{cpu}-linux-android",
             CppTargetPlatform.IOS => $"{cpu}-apple-ios",
             CppTargetPlatform.FreeBSD => $"{cpu}-unknown-freebsd",
+            CppTargetPlatform.Emscripten => "wasm32-unknown-emscripten",
             _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
         };
     }
@@ -157,6 +163,7 @@ public sealed record CppTarget(
         CppTargetArchitecture.Arm => "arm",
         CppTargetArchitecture.X64 => "x64",
         CppTargetArchitecture.X86 => "x86",
+        CppTargetArchitecture.Wasm32 => "wasm32",
         _ => architecture.ToString().ToLowerInvariant()
     };
 

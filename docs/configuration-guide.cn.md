@@ -69,7 +69,7 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 
 ## Target
 
-`TargetPlatform`、`TargetArchitecture` 和 `TargetAbi` 共同组成经过验证的 target。`Host` 会解析为当前运行平台/架构；显式 target 覆盖 Windows、Linux、macOS、Android、iOS、FreeBSD 及其有效的 x86/x64/Arm/Arm64 组合。`TargetTriple`、`TargetSysRoot`、`CompilerPath` 提供受控覆盖。Defines 和 native binary 必须与解析后的 target 一致。宿主解析会发现编译器 system include，macOS 还会发现活动 SDK。
+`TargetPlatform`、`TargetArchitecture` 和 `TargetAbi` 共同组成经过验证的 target。`Host` 会解析为当前运行平台/架构；显式 target 覆盖 Windows、Linux、macOS、Android、iOS、FreeBSD 与 Emscripten wasm32 的有效组合。`TargetTriple`、`TargetSysRoot`、`CompilerPath` 提供受控覆盖。Defines 和 native binary 必须与解析后的 target 一致。宿主解析会发现编译器 system include，macOS 还会发现活动 SDK；Emscripten 需要显式提供匹配的 SDK sysroot。
 
 “模型支持”不等于“已在该宿主完成验收”。查看[能力矩阵](capabilities.cn.md#target-证据)和当前生成的 acceptance report。
 
@@ -77,7 +77,9 @@ Schema 直接来自当前安装版本的 C 或 C++ 配置类型，包含嵌套 p
 
 - `DllImport`：兼容广、诊断简单。
 - `LibraryImport`：source-generated import；签名必须满足 source generator 限制。
-- `FunctionTable`：显式 native context 和 symbol resolution，与当前 Inno.Native 风格一致。
+- `FunctionTable`：由调用方持有 native context 并显式解析符号；生成 API 不依赖使用方的加载器或引擎。
+
+Opaque handle wrapper 保留原 managed API，所有目标的 native import 使用 pointer-sized `nint` carrier。Callback 签名与普通参数共用递归类型分析，完整解析 record alias，并为 incomplete record 使用原生指针 carrier。这些规则适用于所有 ABI，不依赖浏览器目标或特定库的类型名。
 
 ## C# emission backend
 
@@ -206,7 +208,7 @@ C++ bridge 的 `LoweringSafetyPolicy` 默认为 `VerifiedOnly`；项目 recipe/p
 
 ## Preset
 
-Preset 可以组合且保持通用：选择一个 target preset（`host-c`、`host-cpp`、`windows-c`、`windows-cpp`、`linux-c`、`linux-cpp`、`macos-c` 或 `macos-cpp`），再按需追加 `c-library`、`function-table`、`opaque-callbacks` 等 API/output policy。库特定事实保留在消费项目配置中，不进入 BindGen-CS core。
+Preset 可以组合且保持通用：选择一个 target preset（`host-c`、`host-cpp`、`windows-c`、`windows-cpp`、`linux-c`、`linux-cpp`、`macos-c`、`macos-cpp`、`emscripten-c` 或 `emscripten-cpp`），再按需追加 `c-library`、`function-table`、`opaque-callbacks` 等 API/output policy。库特定事实保留在消费项目配置中，不进入 BindGen-CS core。
 
 ```json
 {
@@ -237,3 +239,8 @@ bindgen-cs workspace diff native/bindings/workspace.json
 `generate` 使用各配置的 `OutputPath`；`diff` 检查相同路径，不覆盖已签入的产物。启用单文件输出时，workspace 不会引入目标平台子目录。
 
 生成文件头的 `ABI reference target` 记录 native 解析时使用的参考目标，只是标记，不代表跨平台已验收。Native header 经 target 条件编译后，声明和布局仍可能变化。共享一份 binding 源文件前，应在每个目标上执行 ABI 与 native consumer 测试。
+
+
+C++ bridge 的 IncludeFolders、SystemIncludeFolders、TargetSysRoot 和 CompilerPath 先展开环境变量，再相对配置目录解析路径。跨目标 profile 必须提供实际 SDK/sysroot，不能采用宿主 C++ headers。
+
+编译器路径的环境变量先展开，再判断命令名或按配置目录解析相对路径。C# 与 C++ 入口使用相同顺序；变量可以携带绝对路径或配置目录下的相对路径。该规则不选择消费项目 SDK，也不依赖某个 native 库或引擎。

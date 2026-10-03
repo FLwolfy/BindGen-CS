@@ -1,7 +1,9 @@
 {
   "Contains": [
     "public readonly partial struct WidgetHandle : IEquatable<WidgetHandle>",
-    "internal static extern void WidgetHandleReleaseNative(WidgetHandle handle);",
+    "internal static extern void WidgetHandleReleaseInterop(nint handle);",
+    "internal static void WidgetHandleReleaseNative(WidgetHandle handle)",
+    "WidgetHandleReleaseInterop(handle.Handle);",
     "public static void WidgetHandleRelease(WidgetHandle handle)"
   ],
   "NotContains": [

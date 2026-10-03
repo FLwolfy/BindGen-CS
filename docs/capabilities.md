@@ -85,6 +85,7 @@ Status: completely verified ✅; formal support target with implementation or ho
 | Android | ⚠️ | Formal support target; target model exists, while NDK/sysroot, package layout, and device/emulator reports remain |
 | iOS | ⚠️ | Formal support target; target model exists, while Xcode SDK, framework layout, and device/simulator reports remain |
 | FreeBSD | ⚠️ | Formal support target; target model exists, while toolchain, package layout, and an independent report remain |
+| Emscripten wasm32 | Partial acceptance | BGCS-owned triple/layout/emitter tests plus 26 standalone browser checks passed on Windows x64 / Edge for DllImport, LibraryImport, and FunctionTable. Other host/browser runs, C++ Wasm semantics, AOT, and distribution packaging remain separate gates; [report](wasm-acceptance-2026-10-03.md) |
 
 ## Maturity assessment
 

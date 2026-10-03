@@ -6,6 +6,16 @@
 
 ## 当前真实数据流
 
+BGCS.CppAst 自带 Clang 20 系列内置 resource headers；编译器发现只提供宿主 SDK 与标准库，
+排除系统 clang 自己的 resource include。系统 LLVM 升级后不会把新内置语法交给包内旧主版本解析器。
+目标 sysroot 与编译器选择仍是显式输入，Web SDK 选择属于调用方工具链；
+来源、校验和与第三方许可见 [resource bundle](../extern/clang-resource/README.md)。
+
+编译器的 resource、include 和 fingerprint 查询同时排空 stdout/stderr；超时会终止并观察进程退出，
+失败查询仍明确标记为不可用。opaque handle 的 managed API 保持类型化包装，DllImport、LibraryImport
+和 FunctionTable 的标量 handle 参数/返回值统一使用指针宽度的 `nint` 原生载体，再经同一类型化 adapter 转换。
+这是所有目标和库共用的 ABI 规则，不在生成的调用包装中加入浏览器判断。
+
 ```text
 CLI / CsCodeGenerator / BindingGenerator
                  ↓
@@ -141,3 +151,13 @@ C++ Bridge 的对应完成条件是：C Bridge emitter 只消费完整 IR，AST 
 ## 扩展模型
 
 新扩展优先接收 immutable config/request、Binding IR 和 scoped diagnostics。不要依赖 CLI、修改全局 current directory，或把单一 native library 的名称/布局硬编码进 core。库特定事实应留在声明式 lowering、typed lowering plugin 或显式 C ABI shim 中。详见[最终 lowering 架构](lowering.cn.md)。
+
+## 使用方独立性与 WebAssembly 目标
+
+BGCS 负责解析、ABI 分析、lowering、binding 生成及自己的测试 fixture 和验收报告。使用方负责 native facade、SDK 选择、应用链接、部署和运行时集成。使用方应用构建成功属于使用方的证据，不能替代 BGCS 的独立目标验收。本文及能力矩阵只采用 BGCS 自有证据。
+
+`emscripten-wasm32-emscripten` 选择 Clang triple `wasm32-unknown-emscripten` 及对应的 C/C++ ABI。它复用桌面目标使用的 target/configuration/IR/emitter 契约，不为每个库建立另一套生成器。BGCS 不负责安装 SDK，也不实现浏览器渲染、输入或应用启动。
+
+作者主机与输出目标是独立的：Emscripten 支持 Windows、macOS、Linux 作者主机，输出 WebAssembly；`wasm32` 表示目标的 32 位指针地址模型。WASI 等其他 WebAssembly 环境是不同目标，不能当作 Emscripten 的别名。参见 [Emscripten 安装说明](https://emscripten.org/docs/getting_started/downloads.html)、[WebAssembly 输出](https://emscripten.org/docs/compiling/WebAssembly.html)及 [Clang 交叉编译](https://clang.llvm.org/docs/CrossCompilation.html)。
+
+BGCS 自有 target 测试覆盖 triple 与 record 布局，emitter 测试覆盖三种 import mode 的 opaque handle。独立 fixture 已在浏览器中通过生成的 DllImport、LibraryImport、FunctionTable 调用 BGCS 自有 C 实现，Windows x64 / Edge 的 26 项检查通过。其他作者主机 / 浏览器、C++ Wasm 语义、AOT 和发布打包仍需各自验收。详见[调用流程](testing.md#independent-webassembly-invocation)、[本次验收](wasm-acceptance-2026-10-03.cn.md)和[目标证据](capabilities.cn.md#目标证据)。

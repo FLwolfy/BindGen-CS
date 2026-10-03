@@ -94,6 +94,7 @@ public static class CppParser
         normalizedSystemIncludePaths.AddRange(options.SystemIncludeFolders.Select(x => Path.Combine(Environment.CurrentDirectory, x)));
 
         arguments.AddRange(options.AdditionalArguments);
+        arguments.Add("-resource-dir=" + ClangResourceHeaders.directory);
         arguments.AddRange(normalizedIncludePaths.Select(x => $"-I{x}"));
         arguments.AddRange(normalizedSystemIncludePaths.Select(x => $"-isystem{x}"));
         arguments.AddRange(options.Defines.Select(x => $"-D{x}"));
@@ -317,6 +318,9 @@ public static class CppParser
 
             case CppTargetCpu.ARM64:
                 return "aarch64";
+
+            case CppTargetCpu.WASM32:
+                return "wasm32";
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(targetCpu), targetCpu, null);

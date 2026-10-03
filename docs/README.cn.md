@@ -23,6 +23,7 @@
 | 判断当前是否已达到“超级通用” | [工程成熟度审计](assessment.cn.md) |
 | 具备专门回归测试的配置条目 | [生成配置条目参考](config.md) |
 | 嵌入 C# 工具 | [C# API 参考](api.md) |
+| 验证 Wasm 中的实际原生调用 | [独立测试流程](testing.md#independent-webassembly-invocation)、[本次验收](wasm-acceptance-2026-10-03.cn.md) |
 | 选择 NuGet 包 | [NuGet 包与公开 API](packages.cn.md) |
 | 运行测试与验收 | [测试说明](testing.md)、[验收规范](acceptance.cn.md) |
 | 发布包 | [发布说明](publish.cn.md) |

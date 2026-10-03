@@ -49,6 +49,8 @@ public sealed class TypeAnalyzer
         }
 
         string managedName = config.TypeConverter.Convert(type, CsTypeStyle.Raw);
+        if (!config.DelegatesAsVoidPointer && type.IsDelegate(out CppFunctionType? callback))
+            managedName = GetCallbackPointerType(callback!);
         if (managedAliases.TryGetValue(current, out string? managedAlias))
             managedName = managedAlias + new string('*', pointerDepth);
         else if (current is CppTypedef typedef && IsVoidPointerAlias(typedef))
@@ -76,6 +78,49 @@ public sealed class TypeAnalyzer
         ArgumentNullException.ThrowIfNull(nativeType);
         ArgumentException.ThrowIfNullOrWhiteSpace(managedName);
         managedAliases[nativeType] = managedName;
+    }
+
+    private string GetCallbackPointerType(CppFunctionType callback)
+    {
+        IEnumerable<string> carriers = callback.Parameters.Select(parameter => GetCallbackCarrier(parameter.Type))
+            .Append(GetCallbackCarrier(callback.ReturnType));
+        return $"delegate* unmanaged[{callback.CallingConvention.GetCallingConventionDelegate()}]<{string.Join(", ", carriers)}>";
+    }
+
+    private string GetCallbackCarrier(CppType type)
+    {
+        string managedName = Analyze(type).ManagedName;
+        if (!config.GenerateHandles)
+            return managedName;
+
+        int pointerDepth = 0;
+        CppType current = type;
+        while (true)
+        {
+            switch (current)
+            {
+                case CppQualifiedType qualified:
+                    current = qualified.ElementType;
+                    continue;
+                case CppTypedef typedef:
+                    current = typedef.ElementType;
+                    continue;
+                case CppPointerType pointer:
+                    pointerDepth++;
+                    current = pointer.ElementType;
+                    continue;
+                case CppReferenceType reference:
+                    pointerDepth++;
+                    current = reference.ElementType;
+                    continue;
+            }
+            break;
+        }
+
+        // Callback ABI signatures carry native pointers, independently of the managed handle's alias.
+        return pointerDepth > 0 && current is CppClass { IsDefinition: false }
+            ? "nint" + new string('*', pointerDepth - 1)
+            : managedName;
     }
 
     private void TrackReferencedRecord(CppType type, string managedName)

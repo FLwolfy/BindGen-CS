@@ -2,7 +2,7 @@
   "Contains": [
     "funcTable[7]",
     "delegate* unmanaged[Cdecl]<int, int, int>",
-    "new FunctionTable("
+    "new global::BGCS.Runtime.FunctionTable("
   ],
   "NotContains": [
     "[DllImport("

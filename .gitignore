@@ -41,6 +41,7 @@ ScaffoldingReadMe.txt
 *~
 CodeCoverage/
 .bindgen-cache/
+__pycache__/
 
 # MSBuild Binary and Structured Log
 *.binlog
@@ -93,4 +94,8 @@ lcov.info
 packages/
 
 # External library for referencing
-extern/
+extern/*
+!extern/clang-resource/
+!extern/clang-resource/Headers.zip
+!extern/clang-resource/LICENSE.txt
+!extern/clang-resource/README.md

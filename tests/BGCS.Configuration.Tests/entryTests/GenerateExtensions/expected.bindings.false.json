@@ -1,6 +1,8 @@
 {
   "Contains": [
-    "internal static extern void ExtHandleSetValueNative(ExtHandle handle, int value);",
+    "internal static extern void ExtHandleSetValueInterop(nint handle, int value);",
+    "internal static void ExtHandleSetValueNative(ExtHandle handle, int value)",
+    "ExtHandleSetValueInterop(handle.Handle, value);",
     "public static void ExtHandleSetValue(ExtHandle handle, int value)"
   ],
   "NotContains": [

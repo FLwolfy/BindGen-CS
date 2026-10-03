@@ -65,5 +65,8 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <EmbeddedResource Include="../../extern/clang-resource/Headers.zip" LogicalName="BGCS.CppAst.Clang.Headers.zip" />
+    <None Include="../../extern/clang-resource/LICENSE.txt" Pack="true" PackagePath="licenses/clang-resource/" />
+    <None Include="../../extern/clang-resource/README.md" Pack="true" PackagePath="licenses/clang-resource/" />
   </ItemGroup>
 </Project>

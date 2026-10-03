@@ -274,6 +274,7 @@ public class CppParserOptions
                 CppTargetPlatform.IOS => "ios",
                 CppTargetPlatform.Android => "linux",
                 CppTargetPlatform.FreeBSD => "freebsd",
+                CppTargetPlatform.Emscripten => "emscripten",
                 _ => "linux"
             };
             TargetAbi = target.Abi switch

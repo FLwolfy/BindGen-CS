@@ -71,6 +71,11 @@ Use it for analyzers, API diff tools, alternate language emitters, and build-sys
 
 ## `BGCS.Runtime`
 
+`FunctionTable` borrows caller-owned pointer arrays or owns allocated storage and an
+`INativeContext`. Borrowed storage cannot be resized and is never freed by the table;
+owned storage retains entries on resize and clears added slots. Disposal is idempotent,
+releases the owned context once, and rejects subsequent table operations.
+
 Primary public runtime surface:
 
 - `Bool8`, `Bool32`;
