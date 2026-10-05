@@ -134,12 +134,16 @@ public sealed class CppTargetTests
             new ClangTargetResolver().Resolve(new(new NativeTargetId("macos-x64-darwin"), new(sysRoot: sysroot))),
             discoverHostToolchain: false);
         Assert.Contains("--sysroot=" + sysroot, options.additionalArguments);
+        Assert.Contains("-isysroot", options.additionalArguments);
+        Assert.Contains(sysroot, options.additionalArguments);
 
         options.ConfigureForTarget(
             new ClangTargetResolver().Resolve(new(new NativeTargetId("linux-x64-gnu"))),
             discoverHostToolchain: false);
 
         Assert.DoesNotContain(options.additionalArguments, argument => argument.StartsWith("--sysroot=", StringComparison.Ordinal));
+        Assert.DoesNotContain("-isysroot", options.additionalArguments);
+        Assert.DoesNotContain(sysroot, options.additionalArguments);
         Assert.Equal("x86_64-unknown-linux-gnu", options.targetTriple);
     }
 
@@ -176,7 +180,9 @@ public sealed class CppTargetTests
         };
         options.ConfigureForTarget(target);
 
-        var compilation = CppParser.Parse("#include <vector>\nstruct NativeVectorHolder { std::vector<int> values; };", options);
+        var compilation = CppParser.Parse(
+            "#include <cstddef>\n#include <cstdio>\n#include <string>\n#include <vector>\n"
+            + "struct NativeVectorHolder { std::vector<std::string> values; std::size_t size; FILE* file; };", options);
 
         Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
         Assert.Equal(target.triple, options.targetTriple);

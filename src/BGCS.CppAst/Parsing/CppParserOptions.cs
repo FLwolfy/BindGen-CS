@@ -179,6 +179,9 @@ public class CppParserOptions
         {
             string fullSysRoot = System.IO.Path.GetFullPath(effectiveSysRoot);
             AddTargetArgument("--sysroot=" + fullSysRoot);
+            // Clang distinguishes the driver/linker sysroot from the header-search sysroot.
+            AddTargetArgument("-isysroot");
+            AddTargetArgument(fullSysRoot);
         }
         return this;
     }

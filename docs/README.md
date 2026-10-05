@@ -29,6 +29,7 @@ Other host and release execution states are reported separately.
 | Embed the generator in C# | [C# API reference](api.md) |
 | Choose a NuGet package | [NuGet packages and public APIs](packages.md) |
 | Run tests and acceptance | [Testing](testing.md), [Acceptance specification](acceptance.md) |
+| Clang resources and CI hosts | [CI host and target boundaries (Chinese)](ci-portability.cn.md) |
 | Verify native calls in Wasm | [Standalone workflow](testing.md#independent-webassembly-invocation), [local report](wasm-acceptance-2026-10-03.md) |
 | Publish packages | [Publishing](publish.md) |
 

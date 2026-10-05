@@ -198,6 +198,6 @@ BGCS 使用 [MIT License](LICENSE)，派生自 CppAst / HexaGen 的部分保留�
 
 ### 独立原生调用验证
 
-同一 fixture 在 Wasm 解释执行、Wasm AOT 和桌面 NativeAOT 中测试三个 import mode，共 47 项检查。它包含 BGCS 自有 C API 和经公开生成流程产生的 C++ bridge，覆盖数据布局、bool、原生 long、回调、构造、继承指针调整、销毁与 owned/borrowed 资源清理。`--inject-native-error` 用于确认错误返回值确实导致验收失败。
+同一 fixture 在 Wasm 解释执行、Wasm AOT 和桌面 NativeAOT 中测试三个 import mode，共 56 项检查。它包含 BGCS 自有 C API 和经公开生成流程产生的 C++ bridge，覆盖数据布局、bool、原生 long、回调、构造、继承指针调整、销毁与 owned/borrowed 资源清理。`--inject-native-error` 用于确认错误返回值确实导致验收失败。
 
 这些消费者启用 `DisableRuntimeMarshalling`，以符合 .NET source-generated P/Invoke 对 unmanaged wrapper struct 的要求。完整过程与证据边界见[测试说明](docs/testing.md)。

@@ -144,7 +144,11 @@ public static class CppToolchainDiscovery
             StringComparer pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             List<string> arguments = ["-E", "-x", language, "-", "-v"];
             if (sysRoot is not null)
+            {
                 arguments.Add("--sysroot=" + sysRoot);
+                arguments.Add("-isysroot");
+                arguments.Add(sysRoot);
+            }
             var captured = RunForOutput(compiler, arguments, 10_000);
             if (captured is not { } result)
                 return [];

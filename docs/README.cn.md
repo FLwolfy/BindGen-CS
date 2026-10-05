@@ -30,6 +30,7 @@
 | 验证 Wasm 中的实际原生调用 | [独立测试流程](testing.md#independent-webassembly-invocation)、[本次验收](wasm-acceptance-2026-10-03.cn.md) |
 | 选择 NuGet 包 | [NuGet 包与公开 API](packages.cn.md) |
 | 运行测试与验收 | [测试说明](testing.md)、[验收规范](acceptance.cn.md) |
+| Clang 资源与跨宿主 CI | [CI 宿主与目标边界](ci-portability.cn.md) |
 | 发布包 | [发布说明](publish.cn.md) |
 
 ## 设计与质量

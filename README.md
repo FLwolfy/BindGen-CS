@@ -121,7 +121,7 @@ code and supplies browser startup. BGCS does not depend on a game engine.
 
 The independent [Wasm invocation test](docs/testing.md#independent-webassembly-invocation)
 generates all three import modes and calls a BGCS-owned C API and generated C++ bridge inside
-a real browser. Its 47 checks cover values, layouts, buffers, opaque handles, callbacks,
+a real browser. Its 56 checks cover values, layouts, buffers, opaque handles, callbacks,
 construction, inheritance, and release. The same fixture runs in a standalone NativeAOT consumer.
 See [target evidence](docs/capabilities.md#target-evidence) for tested hosts and remaining gates;
 Windows, Linux, macOS, mobile, packaging, and browser coverage have separate acceptance scopes.
