@@ -1,37 +1,44 @@
-﻿using BGCS.Language.CSharp.Nodes;
+using BGCS.Language.CSharp.Nodes;
+using BGCS.Language.Lexing;
+using BGCS.Language.Parsing;
 
 namespace BGCS.Language.CSharp.Analyzers;
+
+/// <summary>
+/// Recognizes supported namespace declarations and coordinates their document scope.
+/// </summary>
+public class NamespaceAnalyzer : ISyntaxAnalyzer
+{
     /// <summary>
-    /// Defines the public class <c>NamespaceAnalyzer</c>.
+    /// Consumes supported syntax at the cursor and reports malformed recognized declarations through the context diagnostics.
     /// </summary>
-    public class NamespaceAnalyzer : ISyntaxAnalyzer
+    /// <param name="context">
+    /// The mutable context owned by the active parse operation.
+    /// </param>
+    /// <returns>
+    /// Success after cursor progress, Unrecognised when this analyzer does not match, or Error when recognized syntax is invalid.
+    /// </returns>
+    public AnalyserResult Analyze(ParserContext context)
     {
-        /// <summary>
-        /// Executes public operation <c>Analyze</c>.
-        /// </summary>
-        public AnalyserResult Analyze(ParserContext context)
+        if (!context.SeekInBounds(2))
         {
-            if (!context.SeekInBounds(2))
-            {
-                return AnalyserResult.Unrecognised;
-            }
-
-            if (context.CurrentToken == KeywordType.Namespace)
-            {
-                context.MoveNext();
-
-                if (!context.CurrentToken.IsIdentifier)
-                {
-                    context.Diagnostics.Error("Syntax Error: Expected namespace identifier", context.CurrentToken.Location);
-                    return AnalyserResult.Error;
-                }
-
-                NamespaceNode node = new(context.CurrentToken.AsString());
-                context.MoveNext();
-
-                return context.AnalyseScoped(node);
-            }
-
             return AnalyserResult.Unrecognised;
         }
+
+        if (context.currentToken == KeywordType.Namespace)
+        {
+            context.MoveNext();
+            if (!context.currentToken.isIdentifier)
+            {
+                context.diagnostics.Error("Syntax Error: Expected namespace identifier", context.currentToken.location);
+                return AnalyserResult.Error;
+            }
+
+            NamespaceNode node = new(context.currentToken.AsString());
+            context.MoveNext();
+            return context.AnalyseScoped(node);
+        }
+
+        return AnalyserResult.Unrecognised;
     }
+}

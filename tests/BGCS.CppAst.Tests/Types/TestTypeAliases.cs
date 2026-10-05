@@ -1,17 +1,6 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
 using Xunit;
 namespace BGCS.CppAst.Tests
 {
@@ -44,41 +33,41 @@ using Type_double = double;
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(13, compilation.Typedefs.Count);
+                    Assert.Equal(13, compilation.typedefs.Count);
 
                     var primitives = new CppPrimitiveType[]
                     {
-                        CppPrimitiveType.Void,
+                        CppPrimitiveType.@void,
 
-                        CppPrimitiveType.Bool,
+                        CppPrimitiveType.@bool,
 
-                        CppPrimitiveType.WChar,
+                        CppPrimitiveType.wChar,
 
-                        CppPrimitiveType.Char,
-                        CppPrimitiveType.UnsignedChar,
+                        CppPrimitiveType.@char,
+                        CppPrimitiveType.unsignedChar,
 
-                        CppPrimitiveType.Short,
-                        CppPrimitiveType.UnsignedShort,
+                        CppPrimitiveType.@short,
+                        CppPrimitiveType.unsignedShort,
 
-                        CppPrimitiveType.Int,
-                        CppPrimitiveType.UnsignedInt,
+                        CppPrimitiveType.@int,
+                        CppPrimitiveType.unsignedInt,
 
-                        CppPrimitiveType.LongLong,
-                        CppPrimitiveType.UnsignedLongLong,
+                        CppPrimitiveType.longLong,
+                        CppPrimitiveType.unsignedLongLong,
 
-                        CppPrimitiveType.Float,
-                        CppPrimitiveType.Double,
+                        CppPrimitiveType.@float,
+                        CppPrimitiveType.@double,
                     };
 
 
                     for (int i = 0; i < primitives.Length; i++)
                     {
-                        var typedef = compilation.Typedefs[i];
+                        var typedef = compilation.typedefs[i];
                         var expectedType = primitives[i];
-                        Assert.Equal(expectedType, typedef.ElementType);
-                        Assert.Equal("Type_" + expectedType.ToString().Replace(" ", "_"), typedef.Name);
+                        Assert.Equal(expectedType, typedef.elementType);
+                        Assert.Equal("Type_" + expectedType.ToString().Replace(" ", "_"), typedef.name);
                     }
                 }
             );
@@ -97,13 +86,13 @@ using MyStruct = struct {
             ParseAssert(text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Classes);
-                    Assert.Equal("MyStruct", compilation.Classes[0].Name);
+                    Assert.Single(compilation.classes);
+                    Assert.Equal("MyStruct", compilation.classes[0].name);
 
                     var cppStruct = compilation.FindByName<CppClass>("MyStruct");
-                    Assert.Equal(compilation.Classes[0], cppStruct);
+                    Assert.Equal(compilation.classes[0], cppStruct);
                 }
             );
 
@@ -111,14 +100,14 @@ using MyStruct = struct {
             ParseAssert(@text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Classes);
-                    Assert.Single(compilation.Typedefs);
-                    Assert.Equal("MyStruct", compilation.Classes[0].Name);
-                    Assert.Equal("MyStruct", compilation.Typedefs[0].Name);
+                    Assert.Single(compilation.classes);
+                    Assert.Single(compilation.typedefs);
+                    Assert.Equal("MyStruct", compilation.classes[0].name);
+                    Assert.Equal("MyStruct", compilation.typedefs[0].name);
                 },
-                new CppParserOptions() { AutoSquashTypedef = false }
+                new CppParserOptions() { autoSquashTypedef = false }
             );
         }
 
@@ -136,15 +125,15 @@ using MyStructInt = MyStruct<int>;
             ParseAssert(text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
-                    Assert.Equal(2, compilation.Classes.Count);
-                    Assert.Equal("MyStruct", compilation.Classes[0].Name);
+                    Assert.False(compilation.hasErrors);
+                    Assert.Equal(2, compilation.classes.Count);
+                    Assert.Equal("MyStruct", compilation.classes[0].name);
 
                     var cppStruct = compilation.FindByName<CppClass>("MyStruct");
-                    Assert.Equal(compilation.Classes[0], cppStruct);
+                    Assert.Equal(compilation.classes[0], cppStruct);
 
-                    Assert.Single(compilation.Typedefs);
-                    Assert.Equal("MyStructInt", compilation.Typedefs[0].Name);
+                    Assert.Single(compilation.typedefs);
+                    Assert.Equal("MyStructInt", compilation.typedefs[0].name);
 
                 }
             );
@@ -164,15 +153,15 @@ template<typename T1> using MyStructT = MyStruct<T1>;
             ParseAssert(text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
-                    Assert.Single(compilation.Classes);
-                    Assert.Equal("MyStruct", compilation.Classes[0].Name);
+                    Assert.False(compilation.hasErrors);
+                    Assert.Single(compilation.classes);
+                    Assert.Equal("MyStruct", compilation.classes[0].name);
 
                     var cppStruct = compilation.FindByName<CppClass>("MyStruct");
-                    Assert.Equal(compilation.Classes[0], cppStruct);
+                    Assert.Equal(compilation.classes[0], cppStruct);
 
-                    Assert.Single(compilation.Typedefs);
-                    Assert.Equal("MyStructT", compilation.Typedefs[0].Name);
+                    Assert.Single(compilation.typedefs);
+                    Assert.Equal("MyStructT", compilation.typedefs[0].name);
 
                 }
             );

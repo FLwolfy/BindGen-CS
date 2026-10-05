@@ -1,22 +1,45 @@
-using System.Diagnostics;
+using System;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using BGCS.Core.Execution;
 
 namespace BGCS.Cpp2C.Build;
 
 /// <summary>Locates optional native build tools without requiring a developer command prompt.</summary>
 public static class NativeBuildToolDiscovery
 {
-    public static string? FindExecutable(string executable, string? explicitPath = null)
-    {
-        foreach (string? candidate in new[] { explicitPath, executable })
+    /// <summary>
+    /// Resolves an explicit candidate first, then searches the requested command on PATH.
+    /// </summary>
+    /// <param name="executable">Command name to locate.</param>
+    /// <param name="explicitPath">Optional candidate checked before PATH discovery.</param>
+    /// <returns>An absolute executable path, or null when neither candidate can be resolved.</returns>
+    public static string? FindExecutable(
+        string executable,
+        string? explicitPath = null
+    ) {
+        foreach (string? candidate in new[]
+        {
+            explicitPath,
+            executable
+        }
+
+        )
         {
             string? resolved = ResolveExecutable(candidate);
             if (resolved != null)
                 return resolved;
         }
+
         return null;
     }
 
+    /// <summary>
+    /// Locates clang-cl through the supplied candidate, PATH, LLVM installation or Visual Studio.
+    /// </summary>
+    /// <param name="explicitPath">Optional clang-cl candidate.</param>
+    /// <returns>An absolute compiler path, or null when clang-cl is unavailable.</returns>
     public static string? FindClangCl(string? explicitPath = null)
     {
         string? resolved = FindExecutable("clang-cl", explicitPath);
@@ -32,6 +55,11 @@ public static class NativeBuildToolDiscovery
         return visualStudio == null ? null : ResolveExecutable(Path.Combine(visualStudio, "VC", "Tools", "Llvm", "x64", "bin", "clang-cl.exe"));
     }
 
+    /// <summary>
+    /// Locates MSBuild through an explicit candidate, Visual Studio, environment or PATH.
+    /// </summary>
+    /// <param name="explicitPath">Authoritative optional candidate; an unresolved explicit candidate returns null.</param>
+    /// <returns>An absolute MSBuild path, or null when the requested tool is unavailable.</returns>
     public static string? FindMSBuild(string? explicitPath = null)
     {
         if (!string.IsNullOrWhiteSpace(explicitPath))
@@ -39,14 +67,19 @@ public static class NativeBuildToolDiscovery
         if (OperatingSystem.IsWindows())
         {
             string? visualStudio = FindVisualStudioInstallation();
-            string? current = visualStudio == null ? null : ResolveExecutable(
-                Path.Combine(visualStudio, "MSBuild", "Current", "Bin", "MSBuild.exe"));
+            string? current = visualStudio == null ? null : ResolveExecutable(Path.Combine(visualStudio, "MSBuild", "Current", "Bin", "MSBuild.exe"));
             if (current != null)
                 return current;
         }
+
         return FindExecutable("msbuild", Environment.GetEnvironmentVariable("MSBUILD_EXE_PATH"));
     }
 
+    /// <summary>
+    /// Locates dumpbin through the supplied candidate, PATH or installed Visual Studio C++ tools.
+    /// </summary>
+    /// <param name="explicitPath">Optional dumpbin candidate.</param>
+    /// <returns>An absolute export inspection tool path, or null when it is unavailable.</returns>
     public static string? FindDumpBin(string? explicitPath = null)
     {
         string? resolved = FindExecutable("dumpbin", explicitPath);
@@ -63,6 +96,7 @@ public static class NativeBuildToolDiscovery
             if (resolved != null)
                 return resolved;
         }
+
         return null;
     }
 
@@ -76,19 +110,14 @@ public static class NativeBuildToolDiscovery
             return null;
         try
         {
-            ProcessStartInfo start = new(vswhere)
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            foreach (string argument in new[] { "-latest", "-products", "*", "-requires", "Microsoft.Component.MSBuild", "-property", "installationPath" })
-                start.ArgumentList.Add(argument);
-            using Process process = Process.Start(start)!;
-            string output = process.StandardOutput.ReadToEnd();
-            if (!process.WaitForExit(5_000) || process.ExitCode != 0)
+            ProcessExecutionResult result = ProcessExecutor.ExecuteAsync(
+                vswhere,
+                ["-latest", "-products", "*", "-requires", "Microsoft.Component.MSBuild", "-property", "installationPath"],
+                Environment.CurrentDirectory,
+                TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+            if (result.timedOut || result.exitCode != 0)
                 return null;
+            string output = result.standardOutput;
             string? installation = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
             return Directory.Exists(installation) ? Path.GetFullPath(installation) : null;
         }
@@ -116,6 +145,7 @@ public static class NativeBuildToolDiscovery
             if (OperatingSystem.IsWindows() && !value.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(path + ".exe"))
                 return Path.GetFullPath(path + ".exe");
         }
+
         return null;
     }
 }

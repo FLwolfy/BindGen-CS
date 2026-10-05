@@ -1,4 +1,4 @@
 {
-  "Property": "MergeGeneratedFilesToSingleFile",
+  "Property": "mergeGeneratedFilesToSingleFile",
   "Expected": false
 }

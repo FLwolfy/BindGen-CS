@@ -1,5 +1,3 @@
-using System.Linq;
-using System.Collections.Generic;
 using System;
 using System.IO;
 using BGCS.CppAst.Model.Metadata;
@@ -9,32 +7,32 @@ namespace BGCS.CppAst.Tests;
 
 public class InlineTestBase
 {
-    protected void ParseAssert(string text, Action<CppCompilation> assertCompilation, CppParserOptions? options = null)
-    {
+    protected void ParseAssert(
+        string text,
+        Action<CppCompilation> assertCompilation,
+        CppParserOptions? options = null
+    ) {
         ArgumentNullException.ThrowIfNull(assertCompilation);
+        options ??= new CppParserOptions { targetTriple = "x86_64-pc-windows-msvc" };
+        string headerFilename = $"bgcs-cppast-{Guid.NewGuid():N}.h";
+        string headerFile = Path.Combine(Environment.CurrentDirectory, headerFilename);
 
-        options ??= new CppParserOptions
+        using (CppCompilation compilation = CppParser.Parse(text, options, headerFilename))
         {
-            TargetCpu = CppTargetCpu.X86_64,
-            TargetCpuSub = string.Empty,
-            TargetVendor = "pc",
-            TargetSystem = "windows",
-            TargetAbi = string.Empty,
-            TargetTriple = "x86_64-pc-windows-msvc"
-        };
-        var headerFilename = $"bgcs-cppast-{Guid.NewGuid():N}.h";
-        var headerFile = Path.Combine(Environment.CurrentDirectory, headerFilename);
-
-        var compilation = CppParser.Parse(text, options, headerFilename);
-        foreach (var diagnosticsMessage in compilation.Diagnostics.Messages)
-        {
-            Console.WriteLine(diagnosticsMessage);
+            foreach (var diagnostic in compilation.diagnostics.messages)
+                Console.WriteLine(diagnostic);
+            assertCompilation(compilation);
         }
 
-        assertCompilation(compilation);
-
-        File.WriteAllText(headerFile, text);
-        compilation = CppParser.ParseFile(headerFile, options);
-        assertCompilation(compilation);
+        try
+        {
+            File.WriteAllText(headerFile, text);
+            using CppCompilation compilation = CppParser.ParseFile(headerFile, options);
+            assertCompilation(compilation);
+        }
+        finally
+        {
+            File.Delete(headerFile);
+        }
     }
 }

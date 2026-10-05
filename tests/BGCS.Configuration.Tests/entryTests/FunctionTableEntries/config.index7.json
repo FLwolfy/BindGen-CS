@@ -1,15 +1,15 @@
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "FunctionTable",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "FunctionTableEntries": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "FunctionTable",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "functionTableEntries": [
     {
-      "Index": 7,
-      "EntryPoint": "sample_add"
+      "index": 7,
+      "entryPoint": "sample_add"
     }
   ]
 }

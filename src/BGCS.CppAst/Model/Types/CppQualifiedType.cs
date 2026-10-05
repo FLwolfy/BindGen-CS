@@ -1,44 +1,53 @@
-using System;
+using BGCS.CppAst.Extensions;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 using ClangSharp.Interop;
-using BGCS.CppAst.Extensions;
 
 namespace BGCS.CppAst.Model.Types;
+
 /// <summary>
 /// A C++ qualified type (e.g `const int`)
 /// </summary>
 public sealed class CppQualifiedType : CppTypeWithElementType
 {
     /// <summary>
-    /// Constructor for a C++ qualified type.
+    /// Captures a borrowed native type relationship for attempt-local analysis.
     /// </summary>
-    /// <param name="cursor"></param>
-    /// <param name="qualifier">The C++ qualified (e.g `const`)</param>
-    /// <param name="elementType">The element type (e.g `int`)</param>
-    public CppQualifiedType(CXCursor cursor, CppTypeQualifier qualifier, CppType elementType) : base(cursor, CppTypeKind.Qualified, elementType)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="qualifier">
+    /// The native qualifier applied to the contained type.
+    /// </param>
+    /// <param name="elementType">
+    /// The non-null borrowed type receiving the qualifier.
+    /// </param>
+    public CppQualifiedType(
+        CXCursor cursor,
+        CppTypeQualifier qualifier,
+        CppType elementType
+    ) : base(cursor, CppTypeKind.Qualified, elementType)
     {
-        Qualifier = qualifier;
-        SizeOf = elementType.SizeOf;
+        this.qualifier = qualifier;
+        this.sizeOf = elementType.sizeOf;
     }
 
     /// <summary>
     /// Gets the qualifier
     /// </summary>
-    public CppTypeQualifier Qualifier { get; }
+    public CppTypeQualifier qualifier { get; }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override CppType GetCanonicalType()
     {
-        var elementTypeCanonical = ElementType.GetCanonicalType();
-        return ReferenceEquals(elementTypeCanonical, ElementType) ? this : new CppQualifiedType(Cursor.CanonicalCursor, Qualifier, elementTypeCanonical);
+        var elementTypeCanonical = this.elementType.GetCanonicalType();
+        return ReferenceEquals(elementTypeCanonical, this.elementType) ? this : new CppQualifiedType(this.cursor.CanonicalCursor, this.qualifier, elementTypeCanonical);
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{ElementType.GetDisplayName()} {Qualifier.ToString().ToLowerInvariant()}";
+        return $"{this.elementType.GetDisplayName()} {this.qualifier.ToString().ToLowerInvariant()}";
     }
 }

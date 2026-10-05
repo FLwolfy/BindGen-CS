@@ -1,4 +1,4 @@
 {
-  "Property": "ExtensionNamingConvention",
+  "Property": "extensionNamingConvention",
   "Expected": "CamelCase"
 }

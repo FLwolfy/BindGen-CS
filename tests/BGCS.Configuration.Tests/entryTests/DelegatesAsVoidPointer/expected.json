@@ -1,4 +1,4 @@
 {
-  "Property": "DelegatesAsVoidPointer",
+  "Property": "delegatesAsVoidPointer",
   "Expected": false
 }

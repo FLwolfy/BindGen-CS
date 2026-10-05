@@ -1,21 +1,23 @@
-using System;
 namespace BGCS.CppAst.Parsing;
-using ClangSharp.Interop;
+
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Interfaces;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>CppModelBuilder</c>.
 /// </summary>
-public unsafe partial class CppModelBuilder
+internal unsafe partial class CppModelBuilder
 {
     /// <summary>
     /// Executes public operation <c>VisitMember</c>.
     /// </summary>
-    public CXChildVisitResult VisitMember(CXCursor cursor, CXCursor parent, void* data = null)
-    {
+    public CXChildVisitResult VisitMember(
+        CXCursor cursor,
+        CXCursor parent,
+        void* data = null
+    ) {
         CppElement? element = null;
-
         // Only set the root container when we know the location
         // Otherwise assume that it hasn't changed
         // We expect it to be always set
@@ -23,26 +25,26 @@ public unsafe partial class CppModelBuilder
         {
             if (cursor.Location.IsInSystemHeader)
             {
-                if (!ParseSystemIncludes) return CXChildVisitResult.CXChildVisit_Continue;
-
-                context.CurrentRootContainer = context.SystemRootContainerContext;
+                if (!this.parseSystemIncludes)
+                    return CXChildVisitResult.CXChildVisit_Continue;
+                this.m_context.currentRootContainer = this.m_context.systemRootContainerContext;
             }
             else
             {
-                context.CurrentRootContainer = context.UserRootContainerContext;
+                this.m_context.currentRootContainer = this.m_context.userRootContainerContext;
             }
         }
 
-        if (context.CurrentRootContainer is null)
+        if (this.m_context.currentRootContainer is null)
         {
-            RootCompilation.Diagnostics.Error($"Unexpected error with cursor location. Cannot determine Root Compilation context.");
+            this.rootCompilation.diagnostics.Error($"Unexpected error with cursor location. Cannot determine Root Compilation context.");
             return CXChildVisitResult.CXChildVisit_Continue;
         }
 
-        var visitor = MemberVisitorRegistry.GetVisitor(cursor.Kind);
+        var visitor = this.m_context.memberVisitors.GetVisitor(cursor.Kind);
         if (visitor != null)
         {
-            element = visitor.Visit(context, cursor, parent);
+            element = visitor.Visit(this.m_context, cursor, parent);
         }
         else
         {
@@ -57,23 +59,21 @@ public unsafe partial class CppModelBuilder
             return CXChildVisitResult.CXChildVisit_Continue;
         }
 
-        if (element.SourceFile is null || cursor.IsCursorDefinition(element))
+        if (element.sourceFile is null || cursor.IsCursorDefinition(element))
         {
             element.AssignSourceSpan(cursor);
         }
 
-        if (element is ICppDeclaration cppDeclaration && ParseCommentsEnabled)
+        if (element is ICppDeclaration cppDeclaration && this.parseCommentsEnabled)
         {
-            cppDeclaration.Comment = cursor.GetComment();
-
-            if (cppDeclaration is ICppAttributeContainer attrContainer && ParseCommentAttributeEnabled)
+            cppDeclaration.comment = cursor.GetComment();
+            if (cppDeclaration is ICppAttributeContainer attrContainer && this.parseCommentAttributeEnabled)
             {
-                cppDeclaration.Comment?.TryToParseAttributes(attrContainer);
+                cppDeclaration.comment?.TryToParseAttributes(attrContainer);
             }
         }
 
         element.ConvertToMetaAttributes();
-
-        return visitor!.VisitResult;
+        return visitor!.visitResult;
     }
 }

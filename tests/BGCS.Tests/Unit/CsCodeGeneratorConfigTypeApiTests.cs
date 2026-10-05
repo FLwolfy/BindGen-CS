@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using BGCS.Configuration;
+using BGCS.Configuration.Mapping;
+using BGCS.Configuration.Naming;
 using BGCS.Conversion;
-using BGCS.Core;
-using BGCS.Core.Mapping;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Types;
 using Xunit;
@@ -15,31 +16,31 @@ public class CsCodeGeneratorConfigTypeApiTests
     public void MappingHelpers_ShouldFindConfiguredMappings()
     {
         CsCodeGeneratorConfig cfg = new();
-        cfg.EnumMappings.Add(new EnumMapping("EType", "ETypeFriendly", null));
-        cfg.FunctionMappings.Add(new FunctionMapping("DoThing", "DoThingFriendly", null, [], []));
-        cfg.ClassMappings.Add(new TypeMapping("NativeStruct", "NativeStructFriendly", null));
-        cfg.HandleMappings.Add(new HandleMapping("NativeHandle", "NativeHandleFriendly", null));
-        cfg.DelegateMappings.Add(new DelegateMapping("OnValue", "void", "int"));
+        cfg.enumMappings.Add(new EnumMapping("EType", "ETypeFriendly", null));
+        cfg.functionMappings.Add(new FunctionMapping("DoThing", "DoThingFriendly", null, [], []));
+        cfg.classMappings.Add(new TypeMapping("NativeStruct", "NativeStructFriendly", null));
+        cfg.handleMappings.Add(new HandleMapping("NativeHandle", "NativeHandleFriendly", null));
+        cfg.delegateMappings.Add(new DelegateMapping("OnValue", "void", "int"));
 
         Assert.True(cfg.TryGetEnumMapping("EType", out var enumMapping));
-        Assert.Equal("ETypeFriendly", enumMapping!.FriendlyName);
+        Assert.Equal("ETypeFriendly", enumMapping!.friendlyName);
         Assert.True(cfg.TryGetFunctionMapping("DoThing", out var fnMapping));
-        Assert.Equal("DoThingFriendly", fnMapping!.FriendlyName);
+        Assert.Equal("DoThingFriendly", fnMapping!.friendlyName);
         Assert.True(cfg.TryGetTypeMapping("NativeStruct", out var typeMapping));
-        Assert.Equal("NativeStructFriendly", typeMapping!.FriendlyName);
+        Assert.Equal("NativeStructFriendly", typeMapping!.friendlyName);
         Assert.True(cfg.TryGetHandleMapping("NativeHandle", out var handleMapping));
-        Assert.Equal("NativeHandleFriendly", handleMapping!.FriendlyName);
+        Assert.Equal("NativeHandleFriendly", handleMapping!.friendlyName);
         Assert.True(cfg.TryGetDelegateMapping("OnValue", out var delegateMapping));
-        Assert.Equal("int", delegateMapping!.Signature);
+        Assert.Equal("int", delegateMapping!.signature);
     }
 
     [Fact]
     public void ArrayMappingHelper_ShouldMatchPrimitiveAndSize()
     {
         CsCodeGeneratorConfig cfg = new();
-        cfg.ArrayMappings.Add(new ArrayMapping(CppPrimitiveKind.Float, 4, "Vector4"));
+        cfg.arrayMappings.Add(new ArrayMapping(CppPrimitiveKind.Float, 4, "Vector4"));
 
-        CppArrayType arrayType = new(default, CppPrimitiveType.Float, 4);
+        CppArrayType arrayType = new(default, CppPrimitiveType.@float, 4);
 
         Assert.True(cfg.TryGetArrayMapping(arrayType, out string? mapping));
         Assert.Equal("Vector4", mapping);
@@ -50,29 +51,29 @@ public class CsCodeGeneratorConfigTypeApiTests
     {
         CsCodeGeneratorConfig config = new();
 
-        Assert.Equal("int", config.TypeConverter.Convert(CppPrimitiveType.Long, CsTypeStyle.Raw));
-        Assert.Equal("char", config.TypeConverter.Convert(CppPrimitiveType.WChar, CsTypeStyle.Raw));
-        Assert.Equal("Int128", config.TypeConverter.Convert(CppPrimitiveType.Int128, CsTypeStyle.Raw));
-        Assert.Equal("UInt128", config.TypeConverter.Convert(CppPrimitiveType.UInt128, CsTypeStyle.Raw));
-        Assert.Equal("Half", config.TypeConverter.Convert(CppPrimitiveType.Float16, CsTypeStyle.Raw));
+        Assert.Equal("int", config.typeConverter.Convert(CppPrimitiveType.@long, CsTypeStyle.Raw));
+        Assert.Equal("char", config.typeConverter.Convert(CppPrimitiveType.wChar, CsTypeStyle.Raw));
+        Assert.Equal("Int128", config.typeConverter.Convert(CppPrimitiveType.int128, CsTypeStyle.Raw));
+        Assert.Equal("UInt128", config.typeConverter.Convert(CppPrimitiveType.uInt128, CsTypeStyle.Raw));
+        Assert.Equal("Half", config.typeConverter.Convert(CppPrimitiveType.float16, CsTypeStyle.Raw));
     }
 
     [Fact]
     public void TypeConverter_ShouldUseFriendlyMappingsForDeclaredTypes()
     {
         CsCodeGeneratorConfig config = new();
-        CppEnum nativeMode = new(default, "NATIVE_MODE") { IntegerType = CppPrimitiveType.Int };
+        CppEnum nativeMode = new(default, "NATIVE_MODE") { integerType = CppPrimitiveType.@int };
         CppClass nativeContext = new(default, "native_context");
-        config.EnumMappings.Add(new EnumMapping("NATIVE_MODE", "NativeMode", null));
-        config.ClassMappings.Add(new TypeMapping("native_context", "NativeContext", null));
+        config.enumMappings.Add(new EnumMapping("NATIVE_MODE", "NativeMode", null));
+        config.classMappings.Add(new TypeMapping("native_context", "NativeContext", null));
 
-        Assert.Equal("NativeMode", config.TypeConverter.Convert(nativeMode, CsTypeStyle.Raw));
-        Assert.Equal("NativeContext", config.TypeConverter.Convert(nativeContext, CsTypeStyle.Raw));
+        Assert.Equal("NativeMode", config.typeConverter.Convert(nativeMode, CsTypeStyle.Raw));
+        Assert.Equal("NativeContext", config.typeConverter.Convert(nativeContext, CsTypeStyle.Raw));
 
-        config.TypeMappings["NATIVE_MODE"] = "ExternalMode";
-        config.TypeMappings["native_context"] = "ExternalContext";
-        Assert.Equal("ExternalMode", config.TypeConverter.Convert(nativeMode, CsTypeStyle.Raw));
-        Assert.Equal("ExternalContext", config.TypeConverter.Convert(nativeContext, CsTypeStyle.Raw));
+        config.typeMappings["NATIVE_MODE"] = "ExternalMode";
+        config.typeMappings["native_context"] = "ExternalContext";
+        Assert.Equal("ExternalMode", config.typeConverter.Convert(nativeMode, CsTypeStyle.Raw));
+        Assert.Equal("ExternalContext", config.typeConverter.Convert(nativeContext, CsTypeStyle.Raw));
     }
 
     [Fact]
@@ -81,15 +82,15 @@ public class CsCodeGeneratorConfigTypeApiTests
         CsCodeGeneratorConfig config = new();
         CppUnexposedType opaque = new(default, "NativeOpaque");
         CppGenericType generic = new(default, new CppUnexposedType(default, "Vector"));
-        generic.GenericArguments.Add(CppPrimitiveType.Int);
+        generic.genericArguments.Add(CppPrimitiveType.@int);
 
-        Assert.Throws<UnexposedTypeException>(() => config.TypeConverter.Convert(opaque, CsTypeStyle.Raw));
-        Assert.Throws<NotSupportedException>(() => config.TypeConverter.Convert(generic, CsTypeStyle.Raw));
+        Assert.Throws<UnexposedTypeException>(() => config.typeConverter.Convert(opaque, CsTypeStyle.Raw));
+        Assert.Throws<NotSupportedException>(() => config.typeConverter.Convert(generic, CsTypeStyle.Raw));
 
-        config.TypeMappings["NativeOpaque"] = "nint";
-        config.TypeMappings["Vector<int>"] = "NativeIntVector";
-        Assert.Equal("nint", config.TypeConverter.Convert(opaque, CsTypeStyle.Raw));
-        Assert.Equal("NativeIntVector", config.TypeConverter.Convert(generic, CsTypeStyle.Raw));
+        config.typeMappings["NativeOpaque"] = "nint";
+        config.typeMappings["Vector<int>"] = "NativeIntVector";
+        Assert.Equal("nint", config.typeConverter.Convert(opaque, CsTypeStyle.Raw));
+        Assert.Equal("NativeIntVector", config.typeConverter.Convert(generic, CsTypeStyle.Raw));
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public class CsCodeGeneratorConfigTypeApiTests
         cfg.AddFunctionAliasMapping(alias);
 
         Assert.True(cfg.TryGetFunctionAliasMapping("glBindTexture", "glBindTextureEXT", out var resolved));
-        Assert.Equal("BindTextureExt", resolved!.FriendlyName);
+        Assert.Equal("BindTextureExt", resolved!.friendlyName);
         Assert.Same(alias, cfg.GetFunctionAliasMapping("glBindTexture", "glBindTextureEXT"));
     }
 
@@ -129,7 +130,7 @@ public class CsCodeGeneratorConfigTypeApiTests
     public void NormalizeParameterName_ShouldUseConventionAndPrefixDigit()
     {
         CsCodeGeneratorConfig cfg = new();
-        cfg.ParameterNamingConvention = NamingConvention.CamelCase;
+        cfg.parameterNamingConvention = NamingConvention.CamelCase;
 
         string normalized = cfg.NormalizeParameterName("9_VALUE");
 
@@ -142,44 +143,44 @@ public class CsCodeGeneratorConfigTypeApiTests
     {
         CsCodeGeneratorConfig cfg = new();
 
-        Assert.Equal("default", cfg.NormalizeValue("NULL", sanitize: false));
-        Assert.Equal("float.MaxValue", cfg.NormalizeValue("FLT_MAX", sanitize: false));
-        Assert.Equal("1.17549435E-38f", cfg.NormalizeValue("FLT_MIN", sanitize: false));
-        Assert.Equal("-1.17549435E-38f", cfg.NormalizeValue("-FLT_MIN", sanitize: false));
-        Assert.Equal("1", cfg.NormalizeValue("true", sanitize: false));
-        Assert.Equal("ExternalPoint(1,2)", cfg.NormalizeValue("ExternalPoint(1,2)", sanitize: false));
-        cfg.KnownDefaultValueNames["ExternalPoint(1,2)"] = "new Point2(1, 2)";
-        Assert.Equal("new Point2(1, 2)", cfg.NormalizeValue("ExternalPoint(1,2)", sanitize: false));
+        Assert.Equal("default", cfg.NormalizeValue("NULL"));
+        Assert.Equal("float.MaxValue", cfg.NormalizeValue("FLT_MAX"));
+        Assert.Equal("1.17549435E-38f", cfg.NormalizeValue("FLT_MIN"));
+        Assert.Equal("-1.17549435E-38f", cfg.NormalizeValue("-FLT_MIN"));
+        Assert.Equal("1", cfg.NormalizeValue("true"));
+        Assert.Equal("ExternalPoint(1,2)", cfg.NormalizeValue("ExternalPoint(1,2)"));
+        cfg.knownDefaultValueNames["ExternalPoint(1,2)"] = "new Point2(1, 2)";
+        Assert.Equal("new Point2(1, 2)", cfg.NormalizeValue("ExternalPoint(1,2)"));
     }
 
     [Fact]
     public void DefaultConfig_ShouldNotAssumeProjectOrPlatformSdkTypedefs()
     {
-        CsCodeGeneratorConfig cfg = CsCodeGeneratorConfig.Default;
+        CsCodeGeneratorConfig cfg = CsCodeGeneratorConfig.@default;
 
-        Assert.Equal("byte", cfg.TypeMappings["uint8_t"]);
-        Assert.False(cfg.TypeMappings.ContainsKey("Uint8"));
-        Assert.False(cfg.TypeMappings.ContainsKey("BOOL"));
-        Assert.False(cfg.TypeMappings.ContainsKey("HWND"));
-        Assert.Empty(cfg.IgnoredTypes);
-        Assert.Empty(cfg.IgnoredTypedefs);
+        Assert.Equal("byte", cfg.typeMappings["uint8_t"]);
+        Assert.False(cfg.typeMappings.ContainsKey("Uint8"));
+        Assert.False(cfg.typeMappings.ContainsKey("BOOL"));
+        Assert.False(cfg.typeMappings.ContainsKey("HWND"));
+        Assert.Empty(cfg.ignoredTypes);
+        Assert.Empty(cfg.ignoredTypedefs);
         HashSet<string> standardTypes =
         [
             "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t",
             "int32_t", "int64_t", "int64_t*", "unsigned char", "signed char",
             "char", "size_t", "bool"
         ];
-        Assert.All(cfg.TypeMappings.Keys, key => Assert.Contains(key, standardTypes));
+        Assert.All(cfg.typeMappings.Keys, key => Assert.Contains(key, standardTypes));
 
-        cfg.TypeMappings["Uint8"] = "byte";
-        Assert.Equal("byte", cfg.TypeMappings["Uint8"]);
+        cfg.typeMappings["Uint8"] = "byte";
+        Assert.Equal("byte", cfg.typeMappings["Uint8"]);
     }
 
     [Fact]
     public void GetConstantName_ShouldPreferKnownMapping()
     {
         CsCodeGeneratorConfig cfg = new();
-        cfg.KnownConstantNames["GL_TRIANGLES"] = "Triangles";
+        cfg.knownConstantNames["GL_TRIANGLES"] = "Triangles";
 
         Assert.Equal("Triangles", cfg.GetConstantName("GL_TRIANGLES"));
     }
@@ -211,8 +212,8 @@ public class CsCodeGeneratorConfigTypeApiTests
     public void GetCsFunctionName_ShouldUseFriendlyNameAndIgnoredParts()
     {
         CsCodeGeneratorConfig cfg = new();
-        cfg.IgnoredParts.Add("Gl");
-        cfg.FunctionMappings.Add(new FunctionMapping("vkDoThing", "DoThingFriendly", null, [], []));
+        cfg.ignoredParts.Add("Gl");
+        cfg.functionMappings.Add(new FunctionMapping("vkDoThing", "DoThingFriendly", null, [], []));
 
         Assert.Equal("DoThingFriendly", cfg.GetCsFunctionName("vkDoThing"));
         Assert.Equal("CreateBuffer", cfg.GetCsFunctionName("glCreateBuffer"));
@@ -222,15 +223,15 @@ public class CsCodeGeneratorConfigTypeApiTests
     public void GetCsFunctionName_ShouldPreferMappingThenStripLongestExactPrefix()
     {
         CsCodeGeneratorConfig cfg = new();
-        cfg.FunctionPrefixes.Add("Im");
-        cfg.FunctionPrefixes.Add("ImGuizmo_");
-        cfg.FunctionMappings.Add(new FunctionMapping("ImGuizmo_BeginFrame", "StartFrame", null, [], []));
+        cfg.functionPrefixes.Add("Im");
+        cfg.functionPrefixes.Add("ImGuizmo_");
+        cfg.functionMappings.Add(new FunctionMapping("ImGuizmo_BeginFrame", "StartFrame", null, [], []));
 
         Assert.Equal("SetRect", cfg.GetCsFunctionName("ImGuizmo_SetRect"));
         Assert.Equal("StartFrame", cfg.GetCsFunctionName("ImGuizmo_BeginFrame"));
         Assert.Equal("ImGuizmoSetRect", cfg.GetCsFunctionName("imGuizmoSetRect"));
 
-        cfg.FunctionNamingConvention = NamingConvention.Unknown;
+        cfg.functionNamingConvention = NamingConvention.Unknown;
         Assert.Equal("SetRect", cfg.GetCsFunctionName("ImGuizmo_SetRect"));
     }
 
@@ -238,25 +239,20 @@ public class CsCodeGeneratorConfigTypeApiTests
     public void GetBoolType_ShouldRespectConfiguredBoolMode()
     {
         CsCodeGeneratorConfig cfg = new();
-        Assert.Equal(BoolType.Bool8, cfg.BoolType);
+        Assert.Equal(BoolType.Bool8, cfg.boolType);
         Assert.Equal("Bool8", cfg.GetBoolType());
-        Assert.Equal("Bool8", cfg.GetBoolType(ptr: true));
 
-        cfg.BoolType = BoolType.Bool8;
+        cfg.boolType = BoolType.Bool8;
         Assert.Equal("Bool8", cfg.GetBoolType());
-        Assert.Equal("Bool8", cfg.GetBoolType(ptr: true));
 
-        cfg.BoolType = BoolType.Bool32;
+        cfg.boolType = BoolType.Bool32;
         Assert.Equal("Bool32", cfg.GetBoolType());
-        Assert.Equal("Bool32", cfg.GetBoolType(ptr: true));
 
-        cfg.BoolType = BoolType.Byte;
+        cfg.boolType = BoolType.Byte;
         Assert.Equal("byte", cfg.GetBoolType());
-        Assert.Equal("byte", cfg.GetBoolType(ptr: true));
 
-        cfg.BoolType = BoolType.Int32;
+        cfg.boolType = BoolType.Int32;
         Assert.Equal("int", cfg.GetBoolType());
-        Assert.Equal("int", cfg.GetBoolType(ptr: true));
     }
 
     [Fact]
@@ -264,14 +260,14 @@ public class CsCodeGeneratorConfigTypeApiTests
     {
         CsCodeGeneratorConfig cfg = new()
         {
-            BoolType = BoolType.Byte,
-            DelegatesAsVoidPointer = false
+            boolType = BoolType.Byte,
+            delegatesAsVoidPointer = false
         };
-        CppFunctionType callbackType = new(default, CppPrimitiveType.Bool)
+        CppFunctionType callbackType = new(default, CppPrimitiveType.@bool)
         {
-            CallingConvention = CppCallingConvention.C
+            callingConvention = CppCallingConvention.C
         };
-        callbackType.Parameters.Add(new CppParameter(default, CppPrimitiveType.Bool, "enabled"));
+        callbackType.parameters.Add(new CppParameter(default, CppPrimitiveType.@bool, "enabled"));
 
         string pointerType = cfg.GetDelegatePointerType(callbackType, withConvention: true);
 
@@ -282,27 +278,27 @@ public class CsCodeGeneratorConfigTypeApiTests
     [Fact]
     public void DelegatePointerType_ShouldRespectDelegatesAsVoidPointerFlag()
     {
-        CsCodeGeneratorConfig cfg = new() { BoolType = BoolType.Bool8 };
-        CppFunctionType callbackType = new(default, CppPrimitiveType.Void);
-        callbackType.Parameters.Add(new CppParameter(default, CppPrimitiveType.Int, "value"));
+        CsCodeGeneratorConfig cfg = new() { boolType = BoolType.Bool8 };
+        CppFunctionType callbackType = new(default, CppPrimitiveType.@void);
+        callbackType.parameters.Add(new CppParameter(default, CppPrimitiveType.@int, "value"));
 
-        cfg.DelegatesAsVoidPointer = false;
+        cfg.delegatesAsVoidPointer = false;
         string pointerType = cfg.GetDelegatePointerType(callbackType);
         Assert.Contains("delegate* unmanaged[", pointerType);
         Assert.Contains("int", pointerType);
 
-        cfg.DelegatesAsVoidPointer = true;
+        cfg.delegatesAsVoidPointer = true;
         Assert.Equal("void*", cfg.GetDelegatePointerType(callbackType));
     }
 
     [Fact]
     public void ParameterSignatureHelpers_ShouldPreservePointersAndBoolMapping()
     {
-        CsCodeGeneratorConfig cfg = new() { BoolType = BoolType.Bool8 };
+        CsCodeGeneratorConfig cfg = new() { boolType = BoolType.Bool8 };
         List<CppParameter> parameters =
         [
-            new CppParameter(default, CppPrimitiveType.Bool, "enabled"),
-            new CppParameter(default, new CppPointerType(default, CppPrimitiveType.Int), "values")
+            new CppParameter(default, CppPrimitiveType.@bool, "enabled"),
+            new CppParameter(default, new CppPointerType(default, CppPrimitiveType.@int, System.IntPtr.Size), "values")
         ];
 
         string signature = cfg.GetParameterSignature(parameters, canUseOut: false);
@@ -319,13 +315,13 @@ public class CsCodeGeneratorConfigTypeApiTests
     public void TryGetDefaultValue_ShouldResolveMappedDefaults()
     {
         CsCodeGeneratorConfig cfg = new();
-        cfg.FunctionMappings.Add(new FunctionMapping("set_mode", "SetMode", null, new Dictionary<string, string> { ["mode"] = "MY_MODE_FAST" }, []));
-        cfg.KnownEnumPrefixes["MyMode"] = "MY_MODE";
+        cfg.functionMappings.Add(new FunctionMapping("set_mode", "SetMode", null, new Dictionary<string, string> { ["mode"] = "MY_MODE_FAST" }, []));
+        cfg.knownEnumPrefixes["MyMode"] = "MY_MODE";
 
-        CppTypedef typedef = new(default, "MyMode", CppPrimitiveType.Int);
+        CppTypedef typedef = new(default, "MyMode", CppPrimitiveType.@int);
         CppParameter parameter = new(default, typedef, "mode");
 
-        bool found = cfg.TryGetDefaultValue("set_mode", parameter, sanitize: false, out string? defaultValue);
+        bool found = cfg.TryGetDefaultValue("set_mode", parameter, out string? defaultValue);
 
         Assert.True(found);
         Assert.Equal("MyMode.Fast", defaultValue);
@@ -347,7 +343,7 @@ public class CsCodeGeneratorConfigTypeApiTests
     [Fact]
     public void WriteCsSummary_WhenNullAndPlaceholderDisabled_ShouldReturnFalse()
     {
-        CsCodeGeneratorConfig cfg = new() { GeneratePlaceholderComments = false };
+        CsCodeGeneratorConfig cfg = new() { generatePlaceholderComments = false };
 
         bool ok = cfg.WriteCsSummary((string?)null, out string? summary);
 

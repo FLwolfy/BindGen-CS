@@ -1,5 +1,3 @@
-using System;
-using BGCS.Runtime;
 using Xunit;
 
 namespace BGCS.Runtime.Tests;
@@ -70,13 +68,13 @@ public unsafe class PointerAndIteratorTests
             p[1] = 9;
 
             Iterator<int> iterator = new(p);
-            Assert.Equal((nint)p, (nint)iterator.Current);
-            Assert.Equal(7, *iterator.Current);
+            Assert.Equal((nint)p, (nint)iterator.current);
+            Assert.Equal(7, *iterator.current);
 
             iterator.MoveNext();
 
-            Assert.Equal((nint)(p + 1), (nint)iterator.Current);
-            Assert.Equal(9, *iterator.Current);
+            Assert.Equal((nint)(p + 1), (nint)iterator.current);
+            Assert.Equal(9, *iterator.current);
         }
         finally
         {

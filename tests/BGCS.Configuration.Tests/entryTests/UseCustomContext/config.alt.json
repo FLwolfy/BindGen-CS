@@ -1,10 +1,10 @@
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "FunctionTable",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "UseCustomContext": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "FunctionTable",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "useCustomContext": false
 }

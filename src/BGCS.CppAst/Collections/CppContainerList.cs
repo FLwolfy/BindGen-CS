@@ -1,65 +1,78 @@
-using System.Linq;
-// Portions of this file are modified from original work by Alexandre Mutel.
-// Modified by BGCS contributors.
-// Licensed under the MIT License.
-
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+// Portions of this file are modified from original work by Alexandre Mutel.
+// Modified by BGCS contributors.
+// Licensed under the MIT License.
+using BGCS.CppAst.Model;
+using BGCS.CppAst.Model.Interfaces;
 
 namespace BGCS.CppAst.Collections;
+
 /// <summary>
-/// A generic list of <see cref="CppElement"/> hold by a <see cref="ICppContainer"/>
+/// Owns ordered AST children and maintains each child's unique parent association during list mutation.
 /// </summary>
-/// <typeparam name="TElement"></typeparam>
+/// <typeparam name="TElement">
+/// The AST node type owned by this collection.
+/// </typeparam>
 [DebuggerTypeProxy(typeof(CppContainerListDebugView<>))]
 [DebuggerDisplay("Count = {Count}")]
 public class CppContainerList<TElement> : ICollection<TElement>, IEnumerable<TElement>, IEnumerable, IList<TElement>, IReadOnlyCollection<TElement>, IReadOnlyList<TElement> where TElement : CppElement
 {
-    private readonly List<TElement> _elements;
-
+    private readonly List<TElement> m_elements;
     /// <summary>
-    /// Initializes a new instance of <see cref="CppContainerList"/>.
+    /// Creates an empty child collection attached to one non-null AST container.
     /// </summary>
+    /// <param name="container">
+    /// The parent retained for every child attached to this list.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The parent container is null.
+    /// </exception>
     public CppContainerList(ICppContainer container)
     {
-        Container = container ?? throw new ArgumentNullException(nameof(container));
-        _elements = [];
+        this.container = container ?? throw new ArgumentNullException(nameof(container));
+        this.m_elements = [];
     }
 
     /// <summary>
     /// Gets the container this list is attached to.
     /// </summary>
-    public ICppContainer Container { get; }
+    public ICppContainer container { get; }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public IEnumerator<TElement> GetEnumerator()
     {
-        return _elements.GetEnumerator();
+        return this.m_elements.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return ((IEnumerable)_elements).GetEnumerator();
+        return ((IEnumerable)this.m_elements).GetEnumerator();
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public void Add(TElement item)
     {
-        if (item.Parent != null)
-        {
-            throw new ArgumentException("The item belongs already to a container");
-        }
-        item.Parent = Container;
-        _elements.Add(item);
+        ValidateOwnership(item);
+        this.m_elements.Add(item);
+        item.parent = this.container;
     }
 
     /// <summary>
-    /// Adds data or behavior through <c>AddRange</c>.
+    /// Attaches children in enumeration order; a later invalid child does not undo earlier attachments.
     /// </summary>
+    /// <param name="collection">
+    /// Detached children to attach, or null to leave the collection unchanged.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// An enumerated child already has a parent or would introduce an ownership cycle.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// An enumerated child is null.
+    /// </exception>
     public void AddRange(IEnumerable<TElement> collection)
     {
         if (collection != null)
@@ -71,125 +84,189 @@ public class CppContainerList<TElement> : ICollection<TElement>, IEnumerable<TEl
         }
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public void Clear()
     {
-        foreach (var element in _elements)
+        foreach (var element in this.m_elements)
         {
-            element.Parent = null;
+            element.parent = null;
         }
 
-        _elements.Clear();
+        this.m_elements.Clear();
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public bool Contains(TElement item)
     {
-        return _elements.Contains(item);
+        return this.m_elements.Contains(item);
     }
 
-    /// <inheritdoc />
-    public void CopyTo(TElement[] array, int arrayIndex)
-    {
-        _elements.CopyTo(array, arrayIndex);
+    /// <inheritdoc/>
+    public void CopyTo(
+        TElement[] array,
+        int arrayIndex
+    ) {
+        this.m_elements.CopyTo(array, arrayIndex);
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public bool Remove(TElement item)
     {
-        if (_elements.Remove(item))
+        if (this.m_elements.Remove(item))
         {
-            item.Parent = null;
+            item.parent = null;
             return true;
         }
+
         return false;
     }
 
-    /// <inheritdoc />
-    public int Count => _elements.Count;
-
-    /// <inheritdoc />
+    /// <inheritdoc/>
+    public int Count => this.m_elements.Count;
+    /// <inheritdoc/>
     public bool IsReadOnly => false;
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public int IndexOf(TElement item)
     {
-        return _elements.IndexOf(item);
+        return this.m_elements.IndexOf(item);
     }
 
-    /// <inheritdoc />
-    public void Insert(int index, TElement item)
-    {
-        if (item.Parent != null)
-        {
-            throw new ArgumentException("The item belongs already to a container");
-        }
-
-        item.Parent = Container;
-        _elements.Insert(index, item);
+    /// <inheritdoc/>
+    public void Insert(
+        int index,
+        TElement item
+    ) {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(index, this.m_elements.Count);
+        ValidateOwnership(item);
+        this.m_elements.Insert(index, item);
+        item.parent = this.container;
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public void RemoveAt(int index)
     {
-        var element = _elements[index];
-        element.Parent = null;
-        _elements.RemoveAt(index);
+        var element = this.m_elements[index];
+        element.parent = null;
+        this.m_elements.RemoveAt(index);
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public TElement this[int index]
     {
-        get => _elements[index];
-        set => _elements[index] = value;
+        get => this.m_elements[index];
+        set
+        {
+            TElement previous = this.m_elements[index];
+            if (ReferenceEquals(previous, value))
+            {
+                return;
+            }
+            ValidateOwnership(value);
+            this.m_elements[index] = value;
+            previous.parent = null;
+            value.parent = this.container;
+        }
     }
 
     /// <summary>
-    /// Executes public operation <c>Find</c>.
+    /// Finds the first ordered child accepted by a caller-supplied predicate without capturing its context.
     /// </summary>
-    public TElement? Find<TUserdata>(TUserdata userdata, Func<TElement, TUserdata, bool> selector) where TUserdata : allows ref struct
+    /// <typeparam name="TUserdata">
+    /// The lookup context type, including ref-struct contexts.
+    /// </typeparam>
+    /// <param name="userdata">
+    /// The caller's lookup context, passed unchanged to each predicate invocation.
+    /// </param>
+    /// <param name="selector">
+    /// The predicate applied to each current child until the first match.
+    /// </param>
+    /// <returns>
+    /// The borrowed matching child, or null when the predicate accepts no child.
+    /// </returns>
+    public TElement? Find<TUserdata>(
+        TUserdata userdata,
+        Func<TElement, TUserdata, bool> selector
+    )
+        where TUserdata : allows ref struct
     {
-        foreach (var element in _elements)
+        foreach (var element in this.m_elements)
         {
             if (selector(element, userdata))
             {
                 return element;
             }
         }
+
         return null;
+    }
+
+    private void ValidateOwnership(TElement item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.parent is not null)
+        {
+            throw new ArgumentException("The item already belongs to a container.", nameof(item));
+        }
+        for (CppElement? ancestor = this.container as CppElement; ancestor is not null; ancestor = ancestor.parent as CppElement)
+        {
+            if (ReferenceEquals(ancestor, item))
+            {
+                throw new ArgumentException("A container cannot own itself or an ancestor.", nameof(item));
+            }
+        }
     }
 }
 
 /// <summary>
-/// Defines the public class <c>CppContainerListExtensions</c>.
+/// Provides ordinal name lookup over container-owned AST child collections.
 /// </summary>
 public static class CppContainerListExtensions
 {
     /// <summary>
-    /// Executes public operation <c>FindElementByName</c>.
+    /// Returns the first child whose current member name exactly matches the supplied character span.
     /// </summary>
-    public static TElement? FindElementByName<TElement>(this CppContainerList<TElement> list, ReadOnlySpan<char> name) where TElement : CppElement, ICppMember
+    /// <typeparam name="TElement">
+    /// The AST child type that exposes a native member name.
+    /// </typeparam>
+    /// <param name="list">
+    /// The child collection borrowed for the lookup.
+    /// </param>
+    /// <param name="name">
+    /// The case-sensitive native member name to find.
+    /// </param>
+    /// <returns>
+    /// The borrowed matching child, or null when no member has that name.
+    /// </returns>
+    public static TElement? FindElementByName<TElement>(
+        this CppContainerList<TElement> list,
+        ReadOnlySpan<char> name
+    )
+        where TElement : CppElement, ICppMember
     {
-        return list.Find(name, static (x, name) => name.SequenceEqual(x.Name));
+        return list.Find(name, static (
+            x,
+            name
+        ) => name.SequenceEqual(x.name));
     }
 }
 
 internal class CppContainerListDebugView<T>
 {
-    private readonly ICollection<T> _collection;
-
+    private readonly ICollection<T> m_collection;
     public CppContainerListDebugView(ICollection<T> collection)
     {
-        _collection = collection ?? throw new ArgumentNullException(nameof(collection));
+        this.m_collection = collection ?? throw new ArgumentNullException(nameof(collection));
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-    public T[] Items
+    public T[] items
     {
         get
         {
-            T[] array = new T[_collection.Count];
-            _collection.CopyTo(array, 0);
+            T[] array = new T[this.m_collection.Count];
+            this.m_collection.CopyTo(array, 0);
             return array;
         }
     }

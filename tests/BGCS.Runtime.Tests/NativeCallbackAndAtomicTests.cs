@@ -1,5 +1,4 @@
 using System;
-using BGCS.Runtime;
 using Xunit;
 
 namespace BGCS.Runtime.Tests;
@@ -24,13 +23,13 @@ public class NativeCallbackAndAtomicTests
 
         NativeCallback<Action<int>> callback = new(CallbackImpl);
 
-        Assert.False(callback.IsNull);
-        Assert.True(callback.IsAllocated);
+        Assert.False(callback.isNull);
+        Assert.True(callback.isAllocated);
 
         callback.Dispose();
 
-        Assert.True(callback.IsNull);
-        Assert.False(callback.IsAllocated);
+        Assert.True(callback.isNull);
+        Assert.False(callback.isAllocated);
     }
 
     [Fact]
@@ -42,10 +41,10 @@ public class NativeCallbackAndAtomicTests
         callback.Dispose();
         copy.Dispose();
 
-        Assert.True(callback.IsDisposed);
-        Assert.True(copy.IsDisposed);
-        Assert.False(callback.IsAllocated);
-        Assert.False(copy.IsAllocated);
+        Assert.True(callback.isDisposed);
+        Assert.True(copy.isDisposed);
+        Assert.False(callback.isAllocated);
+        Assert.False(copy.isAllocated);
     }
 
     [Fact]
@@ -82,12 +81,12 @@ public class NativeCallbackAndAtomicTests
 
         Assert.NotEqual(0, firstPointer);
         Assert.NotEqual(0, secondPointer);
-        Assert.Equal(1, registry.Count);
+        Assert.Equal(1, registry.count);
         Assert.True(registry.TryGet(7, out RegistryCallback? registered));
         Assert.Same(second, registered);
         Assert.True(registry.Unregister(7));
         Assert.False(registry.Unregister(7));
-        Assert.Equal(0, registry.Count);
+        Assert.Equal(0, registry.count);
         registry.ReleaseRetired();
         registry.Dispose();
         Assert.Throws<ObjectDisposedException>(() => registry.Register(8, first));
@@ -133,7 +132,7 @@ public class NativeCallbackAndAtomicTests
         Assert.Equal(0, first.DisposeCount);
         Assert.True(operation.TrySetResult(42));
         Assert.False(operation.TrySetCanceled());
-        Assert.Equal(42, await operation.Task);
+        Assert.Equal(42, await operation.task);
         Assert.Equal(1, first.DisposeCount);
         Assert.Equal(1, second.DisposeCount);
         operation.Dispose();
@@ -146,7 +145,7 @@ public class NativeCallbackAndAtomicTests
         using NativeAsyncOperation<int> operation = new([new ThrowingDisposable()]);
 
         Assert.True(operation.TrySetResult(42));
-        AggregateException exception = await Assert.ThrowsAsync<AggregateException>(async () => await operation.Task);
+        AggregateException exception = await Assert.ThrowsAsync<AggregateException>(async () => await operation.task);
         Assert.Contains("failed to release", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(operation.TrySetException(new InvalidOperationException("late")));
     }
@@ -162,7 +161,7 @@ public class NativeCallbackAndAtomicTests
         });
 
         Assert.Throws<InvalidOperationException>(registration.Dispose);
-        Assert.True(registration.IsClosing);
+        Assert.True(registration.isClosing);
         Assert.False(registration.TryEnterInvocation(out _));
         registration.Dispose();
         registration.Dispose();
@@ -196,10 +195,10 @@ public class NativeCallbackAndAtomicTests
     {
         Atomic<ulong> atomic = new(10);
 
-        Assert.Equal((ulong)10, atomic.Value);
+        Assert.Equal((ulong)10, atomic.value);
 
-        atomic.Value = 12;
-        Assert.Equal((ulong)12, atomic.Value);
+        atomic.value = 12;
+        Assert.Equal((ulong)12, atomic.value);
 
         Assert.Equal((ulong)13, atomic.Increment());
         Assert.Equal((ulong)12, atomic.Decrement());
@@ -216,7 +215,7 @@ public class NativeCallbackAndAtomicTests
 
         Assert.True(first);
         Assert.False(second);
-        Assert.Equal((ulong)30, atomic.Value);
+        Assert.Equal((ulong)30, atomic.value);
     }
 
     private sealed class CountingDisposable : IDisposable

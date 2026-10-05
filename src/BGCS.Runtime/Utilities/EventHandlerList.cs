@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace BGCS.Runtime;
@@ -8,28 +8,29 @@ using System.Collections;
 
 internal class EventHandlerList<T> : IEnumerable<T> where T : Delegate
 {
-    private readonly List<T> delegates = [];
-    private readonly Lock _lock = new();
-
+    private readonly List<T> m_delegates = [];
+    private readonly Lock m_lock = new();
     public void Add(T value)
     {
-        lock (_lock)
+        lock (this.m_lock)
         {
-            delegates.Add(value);
+            this.m_delegates.Add(value);
         }
     }
 
     public void Remove(T value)
     {
-        lock (_lock)
+        lock (this.m_lock)
         {
-            delegates.Remove(value);
+            this.m_delegates.Remove(value);
         }
     }
 
-    public void Invoke<TUserdata>(TUserdata userdata, Func<T, TUserdata, bool> action)
-    {
-        foreach (var item in delegates)
+    public void Invoke<TUserdata>(
+        TUserdata userdata,
+        Func<T, TUserdata, bool> action
+    ) {
+        foreach (var item in this.m_delegates)
         {
             if (action.Invoke(item, userdata))
             {
@@ -40,7 +41,7 @@ internal class EventHandlerList<T> : IEnumerable<T> where T : Delegate
 
     public IEnumerator<T> GetEnumerator()
     {
-        return delegates.GetEnumerator();
+        return this.m_delegates.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()

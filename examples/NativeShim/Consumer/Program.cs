@@ -1,3 +1,4 @@
+using System;
 using BGCS.Examples.NativeShim;
 
 unsafe

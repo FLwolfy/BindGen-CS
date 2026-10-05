@@ -1,4 +1,4 @@
 {
-  "Property": "ConstantNamingConvention",
+  "Property": "constantNamingConvention",
   "Expected": "ScreamingSnakeCase"
 }

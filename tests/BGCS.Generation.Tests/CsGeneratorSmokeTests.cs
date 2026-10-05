@@ -1,14 +1,49 @@
 using System;
 using System.IO;
-using System.Linq;
+using BGCS.Configuration;
 using BGCS.Core.Logging;
+using BGCS.Core.Targeting;
+using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
+using BGCS.Facade;
 using Xunit;
 
 namespace BGCS.Tests;
 
 public class CsGeneratorSmokeTests
 {
+    [Fact]
+    public void Generate_ExternalApi_ExcludesStaticAndInlineHeaderImplementation()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "bgcs-source-linkage-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string header = Path.Combine(directory, "api.hpp");
+            File.WriteAllText(header, """
+                extern "C" {
+                    static int internal_value(int value) { return value; }
+                    inline int header_only(int value, ...) { return value; }
+                    int external_value(int value);
+                }
+                """);
+            var generator = new CsCodeGenerator(new()
+            {
+                apiName = "NativeApi",
+                @namespace = "SourceLinkage",
+                libName = "fixture",
+                parserKind = CppParserKind.Cpp
+            });
+            Assert.True(generator.Generate(header, Path.Combine(directory, "out")));
+
+            Assert.Equal("external_value", Assert.Single(generator.lastResult!.module!.functions).nativeName);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public void Generate_MinimalHeader_ShouldNotReportErrors()
     {
@@ -23,17 +58,17 @@ public class CsGeneratorSmokeTests
         {
             CsCodeGeneratorConfig cfg = new()
             {
-                ApiName = "TestApi",
-                Namespace = "Test.Generated",
-                LibName = "test",
-                GenerateExtensions = false
+                apiName = "TestApi",
+                @namespace = "Test.Generated",
+                libName = "test",
+                generateExtensions = false
             };
 
             CsCodeGenerator gen = new(cfg);
             var ok = gen.Generate(header, output);
 
             Assert.True(ok);
-            Assert.DoesNotContain(gen.Messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+            Assert.DoesNotContain(gen.messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
         }
         finally
         {
@@ -68,7 +103,7 @@ public class CsGeneratorSmokeTests
 
         try
         {
-            CsCodeGeneratorConfig cfg = CsCodeGeneratorConfig.Load(configPath);
+            CsCodeGeneratorConfig cfg = new BGCS.Configuration.ConfigLoader().Load(configPath);
             CsCodeGenerator gen = new(cfg);
 
             Exception? ex = Record.Exception(() => gen.Generate(header, output));
@@ -97,25 +132,25 @@ public class CsGeneratorSmokeTests
         {
             CsCodeGeneratorConfig cfg = new()
             {
-                ApiName = "TestApi",
-                Namespace = "Test.Generated",
-                LibName = "test",
-                GenerateExtensions = false,
-                ImportType = ImportType.DllImport,
-                MergeGeneratedFilesToSingleFile = true
+                apiName = "TestApi",
+                @namespace = "Test.Generated",
+                libName = "test",
+                generateExtensions = false,
+                importType = ImportType.DllImport,
+                mergeGeneratedFilesToSingleFile = true
             };
 
             CsCodeGenerator gen = new(cfg);
             var ok = gen.Generate(header, output);
 
             Assert.True(ok);
-            Assert.DoesNotContain(gen.Messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+            Assert.DoesNotContain(gen.messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
 
             string mergedPath = Path.Combine(output, "Bindings.cs");
             Assert.True(File.Exists(mergedPath));
 
             string merged = File.ReadAllText(mergedPath);
-            Assert.Contains($"//     ABI reference target: {CppTarget.Resolve().Identifier}", merged);
+            Assert.Contains($"//     ABI reference target: {new ClangTargetResolver().Resolve(new(new NativeTargetId("host"))).targetId.value}", merged);
             Assert.Contains("TestFnNative", merged);
             Assert.Contains("partial struct MyStruct", merged);
 

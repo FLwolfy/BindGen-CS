@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using BGCS.Tool.Commands;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -19,19 +18,15 @@ public sealed class SchemaCommandTests
         using JsonDocument schema = directory.ReadJson("bindgen.schema.json");
         JsonElement root = schema.RootElement;
         Assert.False(root.GetProperty("additionalProperties").GetBoolean());
-        Assert.Equal("integer", root.GetProperty("properties").GetProperty("ConfigVersion").GetProperty("type").GetString());
-        Assert.Equal("array", root.GetProperty("properties").GetProperty("EntryFiles").GetProperty("type").GetString());
-        Assert.Contains("relative", root.GetProperty("properties").GetProperty("EntryFiles").GetProperty("description").GetString(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("DllImport", root.GetProperty("properties").GetProperty("ImportType").GetProperty("enum").ToString(), StringComparison.Ordinal);
-        JsonElement backend = root.GetProperty("properties").GetProperty("CSharpEmissionBackend");
-        Assert.Contains("IntermediateRepresentation", backend.GetProperty("enum").ToString(), StringComparison.Ordinal);
-        Assert.Equal("IntermediateRepresentation", backend.GetProperty("default").GetString());
-        JsonElement externalTypes = root.GetProperty("properties").GetProperty("ExternalTypeContracts");
+        Assert.Equal("array", root.GetProperty("properties").GetProperty("entryFiles").GetProperty("type").GetString());
+        Assert.Contains("relative", root.GetProperty("properties").GetProperty("entryFiles").GetProperty("description").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("DllImport", root.GetProperty("properties").GetProperty("importType").GetProperty("enum").ToString(), StringComparison.Ordinal);
+        JsonElement externalTypes = root.GetProperty("properties").GetProperty("externalTypeContracts");
         Assert.Equal("array", externalTypes.GetProperty("type").GetString());
-        JsonElement policy = externalTypes.GetProperty("items").GetProperty("properties").GetProperty("ByValuePolicy");
+        JsonElement policy = externalTypes.GetProperty("items").GetProperty("properties").GetProperty("byValuePolicy");
         Assert.Contains("RequireLayoutMatch", policy.GetProperty("enum").ToString(), StringComparison.Ordinal);
         Assert.Contains("BypassLayoutValidation", policy.GetProperty("enum").ToString(), StringComparison.Ordinal);
-        Assert.False(root.GetProperty("properties").TryGetProperty("HeaderInjector", out _));
+        Assert.False(root.GetProperty("properties").TryGetProperty("headerInjector", out _));
     }
 
     [Fact]
@@ -45,15 +40,15 @@ public sealed class SchemaCommandTests
         using JsonDocument schema = directory.ReadJson("bridge.schema.json");
         JsonElement root = schema.RootElement;
         Assert.Contains("C++ bridge", root.GetProperty("title").GetString(), StringComparison.Ordinal);
-        Assert.True(root.GetProperty("properties").TryGetProperty("TemplateInstantiations", out _));
-        Assert.True(root.GetProperty("properties").TryGetProperty("TypeLowerings", out JsonElement typeLowerings));
+        Assert.True(root.GetProperty("properties").TryGetProperty("templateInstantiations", out _));
+        Assert.True(root.GetProperty("properties").TryGetProperty("typeLowerings", out JsonElement typeLowerings));
         Assert.Equal("array", typeLowerings.GetProperty("type").GetString());
-        Assert.True(root.GetProperty("properties").TryGetProperty("NativeShims", out _));
-        JsonElement csharpSafety = root.GetProperty("properties").GetProperty("CSharpStrictSafetySeverity");
+        Assert.True(root.GetProperty("properties").TryGetProperty("nativeShims", out _));
+        JsonElement csharpSafety = root.GetProperty("properties").GetProperty("cSharpStrictSafetySeverity");
         Assert.Contains("SuppressFriendly", csharpSafety.GetProperty("enum").ToString(), StringComparison.Ordinal);
         Assert.Equal("SuppressFriendly", csharpSafety.GetProperty("default").GetString());
-        Assert.Contains("AllowUnsafe", root.GetProperty("properties").GetProperty("LoweringSafetyPolicy").GetProperty("enum").ToString(), StringComparison.Ordinal);
-        Assert.Equal("EntryFiles", root.GetProperty("required")[0].GetString());
+        Assert.Contains("AllowUnsafe", root.GetProperty("properties").GetProperty("loweringSafetyPolicy").GetProperty("enum").ToString(), StringComparison.Ordinal);
+        Assert.Equal("entryFiles", root.GetProperty("required")[0].GetString());
     }
 
     [Fact]
@@ -84,7 +79,7 @@ public sealed class SchemaCommandTests
     {
         using StringWriter output = new();
         using StringWriter error = new();
-        int exitCode = SchemaCommand.Run(args, directory.Path, output, error);
+        int exitCode = CliInvocation.Run(["schema", .. args], directory.Path, output, error);
         return new(exitCode, output.ToString(), error.ToString());
     }
 

@@ -11,11 +11,12 @@ permissions:
 
 jobs:
   wasm-invocation:
-    name: Independent Wasm invocation (${{ matrix.os }})
+    name: Independent Wasm invocation (${{ matrix.os }}, ${{ matrix.deployment }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-2022, macos-15-intel]
+        deployment: [interpreter, aot]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -44,13 +45,35 @@ jobs:
         run: dotnet workload install wasm-tools
 
       - name: Generate, link, and invoke all import modes in a browser
+        if: matrix.deployment == 'interpreter'
         run: python scripts/test-wasm-bindings.py
+
+      - name: Generate, link, and invoke all import modes with Wasm AOT
+        if: matrix.deployment == 'aot'
+        run: python scripts/test-wasm-bindings.py --aot
+
+      - name: Reject a corrupted native result
+        if: matrix.deployment == 'interpreter'
+        shell: bash
+        run: |
+          if python scripts/test-wasm-bindings.py --inject-native-error --output artifacts/wasm-negative; then
+            echo "A corrupted native result was incorrectly accepted." >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(next(Path('artifacts/wasm-negative').glob('*/report.json')).read_text())
+          assert not report['success']
+          assert not report['invocation']['success']
+          assert 'scalar arguments/result' in report['invocation']['error']
+          PY
 
       - name: Upload standalone Wasm evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: wasm-invocation-${{ matrix.os }}
+          name: wasm-invocation-${{ matrix.os }}-${{ matrix.deployment }}
           path: |
             artifacts/wasm-acceptance/**/report.json
             artifacts/wasm-acceptance/**/*.log
@@ -62,6 +85,62 @@ jobs:
             artifacts/wasm-acceptance/**/Program.cs
             artifacts/wasm-acceptance/**/Consumer.csproj
             artifacts/wasm-acceptance/**/Native/*
+            artifacts/wasm-negative
+
+  native-aot-invocation:
+    name: Independent NativeAOT invocation (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Initialize MSVC and Windows SDK
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Build missing parser runtime for macOS Intel
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
+          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
+          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
+          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
+      - name: Generate, publish and invoke all import modes
+        run: python scripts/test-native-aot-bindings.py
+      - name: Reject a corrupted native result
+        shell: bash
+        run: |
+          if python scripts/test-native-aot-bindings.py --inject-native-error --output artifacts/native-aot-negative; then
+            echo "A corrupted native result was incorrectly accepted." >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(next(Path('artifacts/native-aot-negative').glob('*/report.json')).read_text())
+          assert not report['success']
+          assert not report['invocation']['success']
+          assert 'scalar arguments/result' in report['invocation']['error']
+          PY
+      - name: Upload standalone NativeAOT evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-aot-invocation-${{ matrix.os }}
+          path: |
+            artifacts/native-aot-acceptance
+            artifacts/native-aot-negative
 
   build-and-test:
     name: Build and test (${{ matrix.target }})

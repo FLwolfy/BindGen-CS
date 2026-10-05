@@ -1,11 +1,10 @@
-using System;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 namespace BGCS.CppAst.Model.Types;
-using ClangSharp.Interop;
+
 using BGCS.CppAst.Model;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Base class for C++ types.
@@ -13,35 +12,40 @@ using BGCS.CppAst.Model;
 public abstract class CppType : CppElement
 {
     /// <summary>
-    /// Constructor with the specified type kind.
+    /// Captures the native type category and borrowed declaration cursor.
     /// </summary>
-    /// <param name="cursor"></param>
-    /// <param name="typeKind"></param>
-    protected CppType(CXCursor cursor, CppTypeKind typeKind) : base(cursor)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="typeKind">
+    /// The native type shape represented by this mutable projection.
+    /// </param>
+    protected CppType(
+        CXCursor cursor,
+        CppTypeKind typeKind
+    ) : base(cursor)
     {
-        TypeKind = typeKind;
+        this.typeKind = typeKind;
     }
 
     /// <summary>
-    /// Gets the <see cref="CppTypeKind"/> of this instance.
+    /// Gets the <see cref = "CppTypeKind"/> of this instance.
     /// </summary>
-    public CppTypeKind TypeKind { get; }
-
+    public CppTypeKind typeKind { get; }
     /// <summary>
-    /// Gets or sets <c>SizeOf</c>.
+    /// Gets or sets the selected target ABI byte size; derived immutable or computed layouts reject assignment.
     /// </summary>
-    public abstract int SizeOf { get; set; }
+    public abstract int sizeOf { get; set; }
 
     /// <summary>
     /// Gets the canonical type of this type instance.
     /// </summary>
     /// <returns>A canonical type of this type instance</returns>
     public abstract CppType GetCanonicalType();
-
     /// <summary>
     /// We can use this name in exporter to use this type.
     /// </summary>
-    public virtual string FullName
+    public virtual string fullName
     {
         get
         {

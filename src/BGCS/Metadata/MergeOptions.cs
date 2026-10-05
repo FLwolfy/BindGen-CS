@@ -1,13 +1,13 @@
-﻿namespace BGCS.Metadata
+namespace BGCS.Metadata
 {
     /// <summary>
-    /// Defines the public struct <c>MergeOptions</c>.
+    /// Controls optional contributions when compatible generation metadata entries are combined.
     /// </summary>
     public struct MergeOptions
     {
         /// <summary>
-        /// Exposes public member <c>MergeFunctionTable</c>.
+        /// Whether function-table entries participate in metadata merging.
         /// </summary>
-        public bool MergeFunctionTable;
+        public bool mergeFunctionTable;
     }
 }

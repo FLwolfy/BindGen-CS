@@ -1,49 +1,67 @@
-﻿namespace BGCS.Language.CSharp.Nodes
+using BGCS.Language.Lexing;
+using BGCS.Language.Syntax;
+namespace BGCS.Language.CSharp.Nodes
 {
-    using BGCS.Language;
+
 
     /// <summary>
-    /// Defines the public class <c>FieldNode</c>.
+    /// Retains a mutable field declaration projection and its uncompiled initializer spelling.
     /// </summary>
     public class FieldNode : SyntaxNode
     {
         /// <summary>
-        /// Initializes a new instance of <see cref="FieldNode"/>.
+        /// Retains the field declaration spelling and borrowed modifier array without compiling the initializer.
         /// </summary>
-        public FieldNode(string type, string name, KeywordType[] modifiers, string? expression)
-        {
-            Type = type;
-            Name = name;
-            Modifiers = modifiers;
-            Expression = expression;
+        /// <param name="type">
+        /// The declared type spelling.
+        /// </param>
+        /// <param name="name">
+        /// The field identifier.
+        /// </param>
+        /// <param name="modifiers">
+        /// The modifier array retained without copying.
+        /// </param>
+        /// <param name="expression">
+        /// The initializer spelling, or null when no initializer exists.
+        /// </param>
+        public FieldNode(
+            string type,
+            string name,
+            KeywordType[] modifiers,
+            string? expression
+        ) {
+            this.type = type;
+            this.name = name;
+            this.modifiers = modifiers;
+            this.expression = expression;
         }
 
         /// <summary>
-        /// Gets or sets <c>Type</c>.
+        /// Gets or sets the field's declared type spelling.
         /// </summary>
-        public string Type { get; set; }
+        public string type { get; set; }
+        /// <summary>
+        /// Gets or sets the field identifier.
+        /// </summary>
+        public string name { get; set; }
+        /// <summary>
+        /// Gets the retained mutable declaration modifier array.
+        /// </summary>
+        public KeywordType[] modifiers { get; }
+        /// <summary>
+        /// Gets or sets the uncompiled initializer spelling, or null when absent.
+        /// </summary>
+        public string? expression { get; set; }
 
         /// <summary>
-        /// Gets or sets <c>Name</c>.
+        /// Formats the current field projection for syntax-tree diagnostics.
         /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Gets <c>Modifiers</c>.
-        /// </summary>
-        public KeywordType[] Modifiers { get; }
-
-        /// <summary>
-        /// Gets or sets <c>Expression</c>.
-        /// </summary>
-        public string? Expression { get; set; }
-
-        /// <summary>
-        /// Executes public operation <c>ToString</c>.
-        /// </summary>
+        /// <returns>
+        /// The field label, modifiers, declared type, identifier, and initializer spelling.
+        /// </returns>
         public override string ToString()
         {
-            return $"field: {string.Join(" ", Modifiers)} {Type} {Name} = {Expression}";
+            return $"field: {string.Join(" ", this.modifiers)} {this.type} {this.name} = {this.expression}";
         }
     }
 }

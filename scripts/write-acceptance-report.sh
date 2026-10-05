@@ -27,7 +27,7 @@ case "${snapshot_platform}" in
     ;;
 esac
 
-score() {
+require_gates() {
   local gate
   for gate in "$@"; do
     if [[ ! -f "${GATE_DIR}/${gate}" ]]; then
@@ -35,24 +35,24 @@ score() {
       return 1
     fi
   done
-  printf '9.0'
+  printf 'passed'
 }
 
-small_c="$(score solution-build managed-tests native-c-abi)"
-large_c="$(score managed-tests real-libraries ir-native-real-libraries)"
-complex_c="$(score native-c-abi strict-safety managed-tests)"
-cpp_bridge="$(score native-cpp-bridge managed-tests)"
-modern_cpp="$(score modern-cpp native-cpp-bridge real-cpp-libraries strict-safety advanced-cpp-semantics callback-async-lifetime)"
-api_quality="$(score real-libraries managed-tests api-compatibility)"
-usability="$(score demo nuget-tool native-package strict-safety)"
-architecture="$(score solution-build managed-tests performance)"
-internal="$(score solution-build managed-tests strict-safety ir-native-real-libraries performance)"
-release="$(score solution-build managed-tests real-libraries api-compatibility nuget-tool native-package supply-chain performance)"
+small_c="$(require_gates solution-build managed-tests native-c-abi)"
+large_c="$(require_gates managed-tests real-libraries ir-native-real-libraries)"
+complex_c="$(require_gates native-c-abi strict-safety managed-tests)"
+cpp_bridge="$(require_gates native-cpp-bridge managed-tests)"
+modern_cpp="$(require_gates modern-cpp native-cpp-bridge real-cpp-libraries strict-safety advanced-cpp-semantics callback-async-lifetime)"
+api_quality="$(require_gates real-libraries managed-tests api-compatibility)"
+usability="$(require_gates examples nuget-tool native-package strict-safety)"
+architecture="$(require_gates solution-build managed-tests performance)"
+internal="$(require_gates solution-build managed-tests strict-safety ir-native-real-libraries performance)"
+release="$(require_gates solution-build managed-tests real-libraries api-compatibility nuget-tool native-package supply-chain performance)"
 
 platform_specific_json=""
 platform_specific_markdown=""
 if [[ "${target}" == "windows-x64-msvc" ]]; then
-  score windows-native-providers > /dev/null
+  require_gates windows-native-providers > /dev/null
   platform_specific_json=', "windowsNativeProviders": ["clang-cl build/export/invocation", "MSBuild build/export/invocation"]'
   platform_specific_markdown='- Windows native providers: clang-cl and MSBuild build/export/runtime invocation passed.'
 fi
@@ -63,19 +63,18 @@ cat > "${OUTPUT_DIR}/report.json" <<EOF
   "status": "passed",
   "generatedAtUtc": "${generated_at_utc}",
   "source": { "revision": "${source_revision}", "workingTreeDirty": ${source_dirty} },
-  "calculation": "A category scores 9.0 only when every listed mandatory gate is present; report generation fails when any gate is absent.",
-  "scoreRange": { "minimum": 9.0, "maximum": 9.0 },
+  "verificationPolicy": "Every listed mandatory gate must pass; report generation fails when any gate is absent.",
   "categories": [
-    { "name": "small-c-api", "score": ${small_c}, "gates": ["solution-build", "managed-tests", "native-c-abi"] },
-    { "name": "medium-large-c-api", "score": ${large_c}, "gates": ["managed-tests", "real-libraries", "ir-native-real-libraries"] },
-    { "name": "complex-c-abi", "score": ${complex_c}, "gates": ["native-c-abi", "strict-safety", "managed-tests"] },
-    { "name": "cpp-class-bridge", "score": ${cpp_bridge}, "gates": ["native-cpp-bridge", "managed-tests"] },
-    { "name": "modern-cpp", "score": ${modern_cpp}, "gates": ["modern-cpp", "native-cpp-bridge", "real-cpp-libraries", "strict-safety", "advanced-cpp-semantics", "callback-async-lifetime"] },
-    { "name": "generated-api-quality", "score": ${api_quality}, "gates": ["real-libraries", "managed-tests", "api-compatibility"] },
-    { "name": "beginner-usability", "score": ${usability}, "gates": ["demo", "nuget-tool", "native-package", "strict-safety"] },
-    { "name": "outer-architecture", "score": ${architecture}, "gates": ["solution-build", "managed-tests", "performance"] },
-    { "name": "inner-architecture", "score": ${internal}, "gates": ["solution-build", "managed-tests", "strict-safety", "ir-native-real-libraries", "performance"] },
-    { "name": "nuget-testing-release", "score": ${release}, "gates": ["solution-build", "managed-tests", "real-libraries", "api-compatibility", "nuget-tool", "native-package", "supply-chain", "performance"] }
+    { "name": "small-c-api", "status": "${small_c}", "gates": ["solution-build", "managed-tests", "native-c-abi"] },
+    { "name": "medium-large-c-api", "status": "${large_c}", "gates": ["managed-tests", "real-libraries", "ir-native-real-libraries"] },
+    { "name": "complex-c-abi", "status": "${complex_c}", "gates": ["native-c-abi", "strict-safety", "managed-tests"] },
+    { "name": "cpp-class-bridge", "status": "${cpp_bridge}", "gates": ["native-cpp-bridge", "managed-tests"] },
+    { "name": "modern-cpp", "status": "${modern_cpp}", "gates": ["modern-cpp", "native-cpp-bridge", "real-cpp-libraries", "strict-safety", "advanced-cpp-semantics", "callback-async-lifetime"] },
+    { "name": "generated-api-quality", "status": "${api_quality}", "gates": ["real-libraries", "managed-tests", "api-compatibility"] },
+    { "name": "beginner-usability", "status": "${usability}", "gates": ["examples", "nuget-tool", "native-package", "strict-safety"] },
+    { "name": "outer-architecture", "status": "${architecture}", "gates": ["solution-build", "managed-tests", "performance"] },
+    { "name": "inner-architecture", "status": "${internal}", "gates": ["solution-build", "managed-tests", "strict-safety", "ir-native-real-libraries", "performance"] },
+    { "name": "nuget-testing-release", "status": "${release}", "gates": ["solution-build", "managed-tests", "real-libraries", "api-compatibility", "nuget-tool", "native-package", "supply-chain", "performance"] }
   ],
   "realLibraries": {
     "rawAbiGeneratedCompiledAndSnapshotted": ["miniaudio", "SDL3", "cimgui", "cimguizmo", "bgfx"],
@@ -108,11 +107,11 @@ cat > "${OUTPUT_DIR}/report.md" <<EOF
 - Status: **passed**
 - Generated at: \`${generated_at_utc}\`
 - Source: \`${source_revision}\` (working tree dirty: \`${source_dirty}\`)
-- Score policy: every mandatory gate must pass; a complete category scores 9.0/10.0.
+- Verification policy: every mandatory gate must pass; missing evidence prevents report generation.
 ${platform_specific_markdown}
 
-| Category | Score |
-| --- | ---: |
+| Category | Status |
+| --- | --- |
 | Small C APIs | ${small_c} |
 | Medium/large C APIs | ${large_c} |
 | Complex C ABI correctness | ${complex_c} |
@@ -124,7 +123,7 @@ ${platform_specific_markdown}
 | Internal architecture | ${internal} |
 | NuGet/testing/release | ${release} |
 
-The report was emitted only after managed/native tests, warning-free IR-native generation for five real C libraries, real C++ bridge generation, advanced standard-library/lifetime semantics, deterministic source and public-API gates, NuGet/tool/native-RID consumer tests, dependency policy, and performance budgets passed. Consumer-specific generation and integration acceptance are owned by consuming repositories and are not folded into this BGCS score. This local report validates the OIDC/Sigstore workflow; only an authorized GitHub release run can produce the actual signed attestation.
+The report was emitted only after managed/native tests, warning-free IR-native generation for five real C libraries, real C++ bridge generation, advanced standard-library/lifetime semantics, deterministic source and public-API gates, NuGet/tool/native-RID consumer tests, dependency policy, and performance budgets passed. Consumer-specific generation and integration acceptance are owned by consuming repositories and are reported separately from BGCS evidence. This local report validates the OIDC/Sigstore workflow; only an authorized GitHub release run can produce the actual signed attestation.
 EOF
 
 # Keep the stable latest-report paths for existing automation while retaining

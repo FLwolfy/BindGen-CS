@@ -1,17 +1,5 @@
 using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
-using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
-using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
 using Xunit;
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
@@ -36,23 +24,23 @@ typedef MyStruct* MyStructPtr;
 "
             );
             // Print diagnostic messages
-            foreach (var message in compilation.Diagnostics.Messages)
+            foreach (var message in compilation.diagnostics.messages)
                 Console.WriteLine(message);
 
             // Print All enums
-            foreach (var cppEnum in compilation.Enums)
+            foreach (var cppEnum in compilation.enums)
                 Console.WriteLine(cppEnum);
 
             // Print All functions
-            foreach (var cppFunction in compilation.Functions)
+            foreach (var cppFunction in compilation.functions)
                 Console.WriteLine(cppFunction);
 
             // Print All classes, structs
-            foreach (var cppClass in compilation.Classes)
+            foreach (var cppClass in compilation.classes)
                 Console.WriteLine(cppClass);
 
             // Print All typedefs
-            foreach (var cppTypedef in compilation.Typedefs)
+            foreach (var cppTypedef in compilation.typedefs)
                 Console.WriteLine(cppTypedef);
         }
     }

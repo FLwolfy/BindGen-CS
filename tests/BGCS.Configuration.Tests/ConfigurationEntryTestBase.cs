@@ -5,12 +5,12 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using BGCS.Core.Logging;
-using BGCS.CppAst.Targeting;
+using BGCS.Facade;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace BGCS.Configuration.Tests;
@@ -44,24 +44,22 @@ public abstract class ConfigurationEntryTestBase
         try
         {
             Environment.CurrentDirectory = temp;
-            CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(tempConfigPath, new ConfigComposer());
-            config.TargetPlatform = CppTargetPlatform.Windows;
-            config.TargetArchitecture = CppTargetArchitecture.X64;
-            config.TargetAbi = CppTargetAbi.Msvc;
+            CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(tempConfigPath);
+            config.targetId = "windows-x64-msvc";
             CsCodeGenerator generator = new(config);
 
             bool success = generator.Generate(resolvedHeaderFiles.ToList(), outputPath, resolvedAllowedHeaders);
             string diagnostics = string.Join(
                 Environment.NewLine,
-                generator.Messages.Select(x => $"[{x.Severtiy}] {x.Message}"));
+                generator.messages.Select(x => $"[{x.severity}] {x.message}"));
 
-            string bindingsFileName = config.MergeGeneratedFilesToSingleFile
-                ? config.SingleFileOutputName
+            string bindingsFileName = config.mergeGeneratedFilesToSingleFile
+                ? config.singleFileOutputName
                 : "Bindings.cs";
             string bindingsPath = Path.Combine(outputPath, bindingsFileName);
             string bindings = File.Exists(bindingsPath) ? File.ReadAllText(bindingsPath) : string.Empty;
 
-            bool hasErrors = generator.Messages.Any(x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+            bool hasErrors = generator.messages.Any(x => x.severity is LogSeverity.Error or LogSeverity.Critical);
             return new GeneratedOutput(temp, outputPath, success, hasErrors, diagnostics, bindings, config);
         }
         finally

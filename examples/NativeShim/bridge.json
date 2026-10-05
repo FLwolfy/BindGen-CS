@@ -1,23 +1,32 @@
 {
-  "ConfigVersion": 1,
-  "EntryFiles": ["native/entry.hpp"],
-  "AllowedHeaders": ["native/entry.hpp"],
-  "IncludeFolders": ["native"],
-  "OutputPath": "GeneratedBridge",
-  "LanguageStandard": "c++23",
-  "GenerateBuildManifest": true,
-  "GenerateCSharpBindings": true,
-  "CSharpNamespace": "BGCS.Examples.NativeShim",
-  "CSharpApiName": "WidgetNative",
-  "NativeLibraryName": "widget_bridge",
-  "CSharpOutputPath": "Generated",
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "NativeShims": [
+  "entryFiles": [
+    "native/entry.hpp"
+  ],
+  "allowedHeaders": [
+    "native/entry.hpp"
+  ],
+  "includeFolders": [
+    "native"
+  ],
+  "outputPath": "GeneratedBridge",
+  "languageStandard": "c++23",
+  "generateBuildManifest": true,
+  "generateCSharpBindings": true,
+  "cSharpNamespace": "BGCS.Examples.NativeShim",
+  "cSharpApiName": "WidgetNative",
+  "nativeLibraryName": "widget_bridge",
+  "cSharpOutputPath": "Generated",
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "nativeShims": [
     {
-      "Name": "widget",
-      "PublicHeaders": ["shims/widget_c.h"],
-      "SourceFiles": ["shims/widget_c.cpp"],
-      "Safety": "UserAsserted"
+      "name": "widget",
+      "publicHeaders": [
+        "shims/widget_c.h"
+      ],
+      "sourceFiles": [
+        "shims/widget_c.cpp"
+      ],
+      "safety": "UserAsserted"
     }
   ]
 }

@@ -1,55 +1,19 @@
-using System;
-namespace BGCS.CppAst.Parsing;
-using ClangSharp.Interop;
 using BGCS.CppAst.Parsing.Visitors;
+using ClangSharp.Interop;
 
-/// <summary>
-/// Defines the public class <c>DeclContainerVisitorRegistry</c>.
-/// </summary>
-public class DeclContainerVisitorRegistry
+namespace BGCS.CppAst.Parsing;
+
+internal sealed class DeclContainerVisitorRegistry
 {
-    private static readonly CursorVisitorRegistry<DeclContainerVisitor, CppContainerContext> registry = new();
+    private readonly CursorVisitorRegistry<DeclContainerVisitor, CppContainerContext> m_registry = new();
+    private readonly TranslationUnitDeclVisitor m_fallback = new();
 
-    static DeclContainerVisitorRegistry()
+    internal DeclContainerVisitorRegistry()
     {
-        Register<ClassStructDeclVisitor>();
-        Register<EnumDeclVisitor>();
-        Register<NamespaceDeclVisitor>();
-        FallbackVisitor = Register<TranslationUnitDeclVisitor>();
+        m_registry.Register<ClassStructDeclVisitor>();
+        m_registry.Register<EnumDeclVisitor>();
+        m_registry.Register<NamespaceDeclVisitor>();
     }
 
-    /// <summary>
-    /// Gets or sets <c>FallbackVisitor</c>.
-    /// </summary>
-    public static DeclContainerVisitor FallbackVisitor { get; set; }
-
-    /// <summary>
-    /// Returns computed data from <c>GetVisitor</c>.
-    /// </summary>
-    public static T GetVisitor<T>() where T : DeclContainerVisitor => registry.GetVisitor<T>();
-
-    /// <summary>
-    /// Executes public operation <c>Register</c>.
-    /// </summary>
-    public static DeclContainerVisitor Register<T>() where T : DeclContainerVisitor, new() => registry.Register<T>();
-
-    /// <summary>
-    /// Executes public operation <c>Register</c>.
-    /// </summary>
-    public static void Register<T>(T visitor) where T : DeclContainerVisitor => registry.Register(visitor);
-
-    /// <summary>
-    /// Executes public operation <c>Override</c>.
-    /// </summary>
-    public static void Override<T>(DeclContainerVisitor visitor) where T : DeclContainerVisitor => registry.Override<T>(visitor);
-
-    /// <summary>
-    /// Executes public operation <c>Unregister</c>.
-    /// </summary>
-    public static void Unregister<T>() where T : DeclContainerVisitor => registry.Unregister<T>();
-
-    /// <summary>
-    /// Returns computed data from <c>GetVisitor</c>.
-    /// </summary>
-    public static DeclContainerVisitor GetVisitor(CXCursorKind kind) => registry.GetVisitorByKind(kind) ?? FallbackVisitor;
+    internal DeclContainerVisitor GetVisitor(CXCursorKind kind) => m_registry.GetVisitor(kind) ?? m_fallback;
 }

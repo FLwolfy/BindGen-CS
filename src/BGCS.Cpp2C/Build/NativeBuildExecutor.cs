@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using BGCS.Core.Execution;
 
 namespace BGCS.Cpp2C.Build;
 
@@ -7,82 +12,73 @@ namespace BGCS.Cpp2C.Build;
 /// </summary>
 public static class NativeBuildExecutor
 {
-    public static NativeBuildResult Execute(NativeBuildPlan plan, TimeSpan timeout)
-    {
+    /// <summary>
+    /// Runs one frozen compiler invocation and stops its process tree when the deadline expires.
+    /// </summary>
+    /// <param name="plan">Frozen compiler inputs.</param>
+    /// <param name="timeout">Positive maximum process duration.</param>
+    /// <returns>Captured process output, exit status and expected artifact path.</returns>
+    /// <exception cref="ArgumentNullException">The plan is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is not positive.</exception>
+    public static NativeBuildResult Execute(
+        NativeBuildPlan plan,
+        TimeSpan timeout
+    ) {
         ArgumentNullException.ThrowIfNull(plan);
         if (timeout <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Build timeout must be positive.");
-
-        string? outputDirectory = Path.GetDirectoryName(plan.OutputFile);
+        string? outputDirectory = Path.GetDirectoryName(plan.outputFile);
         if (!string.IsNullOrEmpty(outputDirectory))
             Directory.CreateDirectory(outputDirectory);
-        ProcessStartInfo startInfo = new(plan.Executable)
-        {
-            WorkingDirectory = plan.WorkingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        foreach (string argument in plan.Arguments)
-            startInfo.ArgumentList.Add(argument);
-
-        using Process process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException($"Failed to start native compiler '{plan.Executable}'.");
-        Task<string> standardOutput = process.StandardOutput.ReadToEndAsync();
-        Task<string> standardError = process.StandardError.ReadToEndAsync();
-        bool completed = process.WaitForExit((int)Math.Min(timeout.TotalMilliseconds, int.MaxValue));
-        if (!completed)
-        {
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit();
-        }
-        Task.WaitAll(standardOutput, standardError);
-        return new(
-            completed ? process.ExitCode : -1,
-            standardOutput.Result,
-            standardError.Result,
-            !completed,
-            plan.OutputFile);
+        ProcessExecutionResult result = ProcessExecutor.ExecuteAsync(
+            plan.executable, plan.arguments, plan.workingDirectory, timeout).GetAwaiter().GetResult();
+        return new(result.exitCode, result.standardOutput, result.standardError, result.timedOut, plan.outputFile);
     }
 
     /// <summary>
     /// Materializes deterministic provider inputs and executes each pipeline step without a command shell.
     /// </summary>
-    public static NativeBuildPipelineResult Execute(NativeBuildPipeline pipeline, TimeSpan timeout)
-    {
+    /// <param name="pipeline">Frozen input files and ordered compiler steps.</param>
+    /// <param name="timeout">Positive maximum duration shared by all process steps.</param>
+    /// <returns>Executed step results; later steps are omitted after failure or timeout.</returns>
+    /// <exception cref="ArgumentNullException">The pipeline is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is not positive.</exception>
+    /// <exception cref="InvalidDataException">The pipeline has no execution steps.</exception>
+    public static NativeBuildPipelineResult Execute(
+        NativeBuildPipeline pipeline,
+        TimeSpan timeout
+    ) {
         ArgumentNullException.ThrowIfNull(pipeline);
         if (timeout <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Build timeout must be positive.");
-        if (pipeline.Steps.Count == 0)
+        if (pipeline.steps.Count == 0)
             throw new InvalidDataException("A native build pipeline must contain at least one step.");
-
-        foreach (NativeBuildInputFile input in pipeline.InputFiles)
+        foreach (NativeBuildInputFile input in pipeline.inputFiles)
         {
-            string fullPath = Path.GetFullPath(input.Path);
+            string fullPath = Path.GetFullPath(input.path);
             string? directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
-            File.WriteAllText(fullPath, input.Content);
+            File.WriteAllText(fullPath, input.content);
         }
 
-        DateTime deadline = DateTime.UtcNow + timeout;
+        Stopwatch elapsed = Stopwatch.StartNew();
         List<NativeBuildStepResult> results = [];
-        foreach (NativeBuildStep step in pipeline.Steps)
+        foreach (NativeBuildStep step in pipeline.steps)
         {
-            TimeSpan remaining = deadline - DateTime.UtcNow;
+            TimeSpan remaining = timeout - elapsed.Elapsed;
             if (remaining <= TimeSpan.Zero)
             {
-                results.Add(new(step.Name, -1, string.Empty, "Pipeline timeout expired before this step started.", true));
+                results.Add(new(step.name, -1, string.Empty, "Pipeline timeout expired before this step started.", true));
                 break;
             }
-            NativeBuildResult result = Execute(
-                new NativeBuildPlan(pipeline.Provider, step.Executable, step.Arguments, step.WorkingDirectory, pipeline.OutputFile),
-                remaining);
-            results.Add(new(step.Name, result.ExitCode, result.StandardOutput, result.StandardError, result.TimedOut));
-            if (result.ExitCode != 0 || result.TimedOut)
+
+            NativeBuildResult result = Execute(new NativeBuildPlan(pipeline.provider, step.executable, step.arguments, step.workingDirectory, pipeline.outputFile), remaining);
+            results.Add(new(step.name, result.exitCode, result.standardOutput, result.standardError, result.timedOut));
+            if (result.exitCode != 0 || result.timedOut)
                 break;
         }
-        return new(pipeline.Provider, results.AsReadOnly(), results.Any(result => result.TimedOut), pipeline.OutputFile);
+
+        return new(pipeline.provider, results.AsReadOnly(), results.Any(result => result.timedOut), pipeline.outputFile);
     }
 }

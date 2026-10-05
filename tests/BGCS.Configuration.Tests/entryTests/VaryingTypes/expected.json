@@ -1,5 +1,5 @@
 {
-  "Property": "VaryingTypes",
+  "Property": "varyingTypes",
   "Expected": [
     "ReadOnlySpan<byte>",
     "string",

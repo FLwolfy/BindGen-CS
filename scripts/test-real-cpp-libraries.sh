@@ -34,22 +34,21 @@ else
 fi
 
 "${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release
-"${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release
 cat > "${ARTIFACTS_DIR}/bimg/bridge.json" <<EOF
 {
-  "EntryFiles": ["${BIMG_HEADER_JSON}"],
-  "AllowedHeaders": ["${BIMG_HEADER_JSON}"],
-  "IncludeFolders": ["${BIMG_INCLUDE_JSON}", "${BX_INCLUDE_JSON}"],
-  "OutputPath": "Bridge",
-  "GenerateCSharpBindings": true,
-  "CSharpStrictSafetySeverity": "Warning",
-  "CSharpNamespace": "BGCS.RealLibraries.Bimg",
-  "CSharpApiName": "Bimg",
-  "NativeLibraryName": "bimg_bridge",
-  "CSharpOutputPath": "GeneratedOneStep",
-  "NamePrefix": "Bimg_",
-  "ParseSystemIncludes": false,
-  "ParseComments": false
+  "entryFiles": ["${BIMG_HEADER_JSON}"],
+  "allowedHeaders": ["${BIMG_HEADER_JSON}"],
+  "includeFolders": ["${BIMG_INCLUDE_JSON}", "${BX_INCLUDE_JSON}"],
+  "outputPath": "Bridge",
+  "generateCSharpBindings": true,
+  "cSharpStrictSafetySeverity": "Warning",
+  "cSharpNamespace": "BGCS.RealLibraries.Bimg",
+  "cSharpApiName": "Bimg",
+  "nativeLibraryName": "bimg_bridge",
+  "cSharpOutputPath": "GeneratedOneStep",
+  "namePrefix": "Bimg_",
+  "parseSystemIncludes": false,
+  "parseComments": false
 }
 EOF
 start_seconds="$(date +%s)"
@@ -66,32 +65,34 @@ BRIDGE_HEADER_JSON="${ARTIFACTS_DIR}/bimg/Bridge/include/Classes.h"
 if command -v cygpath > /dev/null 2>&1; then BRIDGE_HEADER_JSON="$(cygpath -m "${BRIDGE_HEADER_JSON}")"; fi
 cat > "${ARTIFACTS_DIR}/bimg/bindgen.json" <<EOF
 {
-  "Preset": "host-c",
-  "Namespace": "BGCS.RealLibraries.Bimg",
-  "ApiName": "Bimg",
-  "LibName": "bimg_bridge",
-  "AutoSquashTypedef": false,
-  "ParseMacros": false,
-  "ParseComments": false,
-  "DelegatesAsVoidPointer": true,
-  "EntryFiles": ["${BRIDGE_HEADER_JSON}"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
-  "IncludeFolders": ["$(dirname "${BRIDGE_HEADER_JSON}")"],
-  "OutputPath": "Generated",
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "OneFilePerType": false,
-  "MergeGeneratedFilesToSingleFile": true
+  "preset": "host-c",
+  "namespace": "BGCS.RealLibraries.Bimg",
+  "apiName": "Bimg",
+  "libName": "bimg_bridge",
+  "autoSquashTypedef": false,
+  "parseMacros": false,
+  "parseComments": false,
+  "delegatesAsVoidPointer": true,
+  "entryFiles": ["${BRIDGE_HEADER_JSON}"],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true,
+  "includeFolders": ["$(dirname "${BRIDGE_HEADER_JSON}")"],
+  "outputPath": "Generated",
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "oneFilePerType": false,
+  "mergeGeneratedFilesToSingleFile": true
 }
 EOF
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- "${ARTIFACTS_DIR}/bimg/bindgen.json"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- generate "${ARTIFACTS_DIR}/bimg/bindgen.json"
 cat > "${ARTIFACTS_DIR}/bimg/consumer/Bimg.Generated.csproj" <<EOF
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net9.0</TargetFramework><AllowUnsafeBlocks>true</AllowUnsafeBlocks><Nullable>enable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup><ItemGroup><Compile Include="../GeneratedOneStep/Bindings.cs" Link="Bindings.cs" /><ProjectReference Include="${ROOT_DIR_JSON}/src/BGCS.Runtime/BGCS.Runtime.csproj" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net9.0</TargetFramework><AllowUnsafeBlocks>true</AllowUnsafeBlocks><Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup><ItemGroup><Compile Include="../GeneratedOneStep/Bindings.cs" Link="Bindings.cs" /><ProjectReference Include="${ROOT_DIR_JSON}/src/BGCS.Runtime/BGCS.Runtime.csproj" /></ItemGroup></Project>
 EOF
 "${DOTNET_CMD}" build "${ARTIFACTS_DIR}/bimg/consumer/Bimg.Generated.csproj" --configuration Release
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/bimg/consumer/bin/Release/net9.0/Bimg.Generated.dll" "${ARTIFACTS_DIR}/bimg/public-api.txt"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
+  validate api-snapshot   "${ARTIFACTS_DIR}/bimg/consumer/bin/Release/net9.0/Bimg.Generated.dll" "${ARTIFACTS_DIR}/bimg/public-api.txt"
 pushd "${ROOT_DIR}" > /dev/null
 if verify_or_capture_snapshot_manifest "tests/real-libraries/cpp-api-snapshots" \
   artifacts/real-cpp-libraries/bimg/Bridge/include/Classes.h \

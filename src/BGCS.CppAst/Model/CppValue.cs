@@ -1,32 +1,39 @@
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
-using ClangSharp.Interop;
-using BGCS.CppAst.Model.Declarations;
 using System;
+using BGCS.CppAst.Model.Declarations;
+using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Model;
+
 /// <summary>
-/// A C++ default value used to initialize <see cref="CppParameter"/>
+/// A C++ default value used to initialize <see cref = "CppParameter"/>
 /// </summary>
 public class CppValue : CppElement
 {
     /// <summary>
-    /// A default C++ value.
+    /// Creates a mutable native constant value projection borrowing its compilation lifetime.
     /// </summary>
-    /// <param name="cursor"></param>
-    /// <param name="value"></param>
-    public CppValue(CXCursor cursor, object value) : base(cursor)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its owning compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="value">
+    /// The non-null managed value retained without copying.
+    /// </param>
+    public CppValue(
+        CXCursor cursor,
+        object value
+    ) : base(cursor)
     {
-        Value = value ?? throw new ArgumentNullException(nameof(value));
+        this.value = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     /// <summary>
-    /// Gets the default value.
+    /// Gets or sets the managed evaluated value retained without copying.
     /// </summary>
-    public object Value { get; set; }
+    public object value { get; set; }
 
-    /// <inheritdoc />
-    public override string ToString() => Value.ToString() ?? string.Empty;
+    /// <inheritdoc/>
+    public override string ToString() => this.value.ToString() ?? string.Empty;
 }

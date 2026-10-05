@@ -4,9 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using BGCS.Configuration;
 using BGCS.Core.Logging;
+using BGCS.Core.Targeting;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
+using BGCS.Facade;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -21,7 +24,7 @@ public class GeneratedCodeCompilationTests
         const string header = "typedef __builtin_va_list bgcs_va_list; void consume_args(bgcs_va_list args);";
         var run = RunGenerator(header, static options =>
             options.ConfigureForTarget(
-                CppTarget.Resolve(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Gnu),
+                new ClangTargetResolver().Resolve(new(new NativeTargetId("linux-arm64-gnu"))),
                 discoverHostToolchain: false));
 
         try
@@ -173,7 +176,7 @@ public class GeneratedCodeCompilationTests
     private static void AssertGeneratorSucceeded(bool ok, IReadOnlyList<LogMessage> messages)
     {
         Assert.True(ok);
-        Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+        Assert.DoesNotContain(messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
     }
 
     private static (bool Ok, string TempDirectory, string OutputPath, IReadOnlyList<LogMessage> Messages) RunGenerator(
@@ -189,31 +192,31 @@ public class GeneratedCodeCompilationTests
 
         CsCodeGeneratorConfig cfg = new()
         {
-            ApiName = "CompileApi",
-            Namespace = "Compile.Generated",
-            LibName = "compiletest",
-            GenerateExtensions = false,
-            ImportType = ImportType.DllImport,
-            DelegatesAsVoidPointer = false
+            apiName = "CompileApi",
+            @namespace = "Compile.Generated",
+            libName = "compiletest",
+            generateExtensions = false,
+            importType = ImportType.DllImport,
+            delegatesAsVoidPointer = false
         };
 
         BaseGenerator generator = new CsCodeGenerator(cfg);
 
         CppParserOptions parserOptions = new()
         {
-            ParseMacros = true,
-            ParseComments = true,
-            ParseSystemIncludes = false,
-            ParseCommentAttribute = true,
-            ParserKind = CppParserKind.Cpp,
-            AutoSquashTypedef = false
+            parseMacros = true,
+            parseComments = true,
+            parseSystemIncludes = false,
+            parseCommentAttribute = true,
+            parserKind = CppParserKind.Cpp,
+            autoSquashTypedef = false
         };
-        parserOptions.AdditionalArguments.Add("-undef");
+        parserOptions.additionalArguments.Add("-undef");
         configureParser?.Invoke(parserOptions);
 
         bool ok = ((CsCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath);
 
-        return (ok, temp, outputPath, generator.Messages);
+        return (ok, temp, outputPath, generator.messages);
     }
 
     private static void Cleanup(string directory)

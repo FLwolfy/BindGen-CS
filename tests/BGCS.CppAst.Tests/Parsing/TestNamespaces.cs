@@ -1,17 +1,6 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
 using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
-using BGCS.CppAst.Model.Types;
-using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
 using Xunit;
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
@@ -44,7 +33,7 @@ namespace A::B::C
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
                     var namespaces = new List<string>() { "A", "B", "C" };
 
@@ -52,11 +41,11 @@ namespace A::B::C
 
                     foreach (var nsName in namespaces)
                     {
-                        Assert.Single(container.Namespaces);
-                        var ns = container.Namespaces[0];
-                        Assert.Equal(nsName, ns.Name);
-                        Assert.Single(ns.Fields);
-                        Assert.Equal(nsName.ToLowerInvariant(), ns.Fields[0].Name);
+                        Assert.Single(container.namespaces);
+                        var ns = container.namespaces[0];
+                        Assert.Equal(nsName, ns.name);
+                        Assert.Single(ns.fields);
+                        Assert.Equal(nsName.ToLowerInvariant(), ns.fields[0].name);
 
                         // Continue on the sub-namespaces
                         container = ns;
@@ -77,17 +66,17 @@ A::a c;
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Namespaces);
-                    ICppGlobalDeclarationContainer container = compilation.Namespaces[0];
-                    Assert.Single(container.Typedefs);
-                    Assert.Single(compilation.Fields);
+                    Assert.Single(compilation.namespaces);
+                    ICppGlobalDeclarationContainer container = compilation.namespaces[0];
+                    Assert.Single(container.typedefs);
+                    Assert.Single(compilation.fields);
 
-                    CppTypedef typedef = container.Typedefs[0];
-                    CppField field = compilation.Fields[0];
+                    CppTypedef typedef = container.typedefs[0];
+                    CppField field = compilation.fields[0];
 
-                    Assert.Equal(typedef, field.Type);
+                    Assert.Equal(typedef, field.type);
                 }
             );
         }
@@ -112,12 +101,12 @@ using MyStructInt = MyStruct<int>;
             ParseAssert(text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Namespaces);
+                    Assert.Single(compilation.namespaces);
 
                     var cppStruct = Assert.IsType<CppClass>(compilation.FindByFullName<CppClass>("A::MyStruct"));
-                    Assert.Equal(compilation.Namespaces[0].Classes[0], cppStruct);
+                    Assert.Equal(compilation.namespaces[0].classes[0], cppStruct);
                 }
             );
         }
@@ -145,22 +134,22 @@ inline namespace __1
             ParseAssert(text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Namespaces);
+                    Assert.Single(compilation.namespaces);
 
-                    var inlineNs = compilation.Namespaces[0].Namespaces[0];
-                    Assert.Equal("__1", inlineNs.Name);
-                    Assert.True(inlineNs.IsInlineNamespace);
+                    var inlineNs = compilation.namespaces[0].namespaces[0];
+                    Assert.Equal("__1", inlineNs.name);
+                    Assert.True(inlineNs.isInlineNamespace);
 
                     var cppStruct = Assert.IsType<CppClass>(compilation.FindByFullName<CppClass>("A::MyStruct"));
-                    Assert.Equal(inlineNs.Classes[0], cppStruct);
-                    Assert.Equal("A::MyStruct<T>", cppStruct.FullName);
+                    Assert.Equal(inlineNs.classes[0], cppStruct);
+                    Assert.Equal("A::MyStruct<T>", cppStruct.fullName);
 
                     var cppTypedef = Assert.IsType<CppTypedef>(compilation.FindByFullName<CppTypedef>("A::MyStructInt"));
-                    var cppStructInt = Assert.IsType<CppClass>(cppTypedef.ElementType);
+                    var cppStructInt = Assert.IsType<CppClass>(cppTypedef.elementType);
                     //So now we can use this full name in exporter convenience.
-                    Assert.Equal("A::MyStruct<int>", cppStructInt.FullName);
+                    Assert.Equal("A::MyStruct<int>", cppStructInt.fullName);
                 }
             );
         }

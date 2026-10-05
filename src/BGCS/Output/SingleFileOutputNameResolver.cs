@@ -1,17 +1,18 @@
-namespace BGCS.Output;
+using System;
+using System.IO;
+using BGCS.Configuration;
+using BGCS.Core.Text;
 
-using BGCS.Core;
+namespace BGCS.Output;
 
 internal static class SingleFileOutputNameResolver
 {
     internal static string Resolve(CsCodeGeneratorConfig config)
     {
-        string fileName = string.IsNullOrWhiteSpace(config.SingleFileOutputName)
-            ? "Bindings.cs"
-            : config.SingleFileOutputName.Trim();
+        string fileName = string.IsNullOrWhiteSpace(config.singleFileOutputName) ? "Bindings.cs" : config.singleFileOutputName.Trim();
         if (fileName.IndexOfAny(['/', '\\']) >= 0 || Path.IsPathRooted(fileName))
         {
-            throw new ArgumentException("SingleFileOutputName must be a file name in the output root.", nameof(config.SingleFileOutputName));
+            throw new ArgumentException("SingleFileOutputName must be a file name in the output root.", nameof(config.singleFileOutputName));
         }
 
         fileName = FileNameHelper.SanitizeFileName(fileName);
@@ -21,8 +22,9 @@ internal static class SingleFileOutputNameResolver
         }
         else if (!fileName.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("SingleFileOutputName must use the .cs extension.", nameof(config.SingleFileOutputName));
+            throw new ArgumentException("SingleFileOutputName must use the .cs extension.", nameof(config.singleFileOutputName));
         }
+
         return fileName;
     }
 }

@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BGCS.Configuration;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
+using BGCS.Facade;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -200,7 +202,7 @@ public class BindingCorrectnessMatrixTests
     {
         Assert.True(ok);
 
-        var failures = messages.Where(x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical).Select(x => x.ToString()).ToArray();
+        var failures = messages.Where(x => x.severity is LogSeverity.Error or LogSeverity.Critical).Select(x => x.ToString()).ToArray();
         if (failures.Length > 0)
         {
             Assert.Fail($"Case '{caseName}' had generator errors:\n{string.Join("\n", failures)}");
@@ -218,31 +220,31 @@ public class BindingCorrectnessMatrixTests
 
         CsCodeGeneratorConfig config = new()
         {
-            ApiName = "Bgcs",
-            Namespace = "BGCS.Tests.Generated",
-            LibName = "bgcs_test",
-            ImportType = ImportType.DllImport,
-            GenerateExtensions = false,
-            DelegatesAsVoidPointer = false
+            apiName = "Bgcs",
+            @namespace = "BGCS.Tests.Generated",
+            libName = "bgcs_test",
+            importType = ImportType.DllImport,
+            generateExtensions = false,
+            delegatesAsVoidPointer = false
         };
 
         CsCodeGenerator gen = new(config);
         bool ok = gen.Generate(CreateParserOptions(), headerPath, outputPath);
-        return (ok, temp, ReadGeneratedCode(outputPath), gen.Messages);
+        return (ok, temp, ReadGeneratedCode(outputPath), gen.messages);
     }
 
     private static CppParserOptions CreateParserOptions()
     {
         CppParserOptions options = new()
         {
-            ParseMacros = true,
-            ParseComments = true,
-            ParseSystemIncludes = false,
-            ParseCommentAttribute = true,
-            ParserKind = CppParserKind.Cpp,
-            AutoSquashTypedef = false
+            parseMacros = true,
+            parseComments = true,
+            parseSystemIncludes = false,
+            parseCommentAttribute = true,
+            parserKind = CppParserKind.Cpp,
+            autoSquashTypedef = false
         };
-        options.AdditionalArguments.Add("-undef");
+        options.additionalArguments.Add("-undef");
         return options;
     }
 

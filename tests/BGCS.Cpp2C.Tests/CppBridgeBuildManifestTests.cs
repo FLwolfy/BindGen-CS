@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using BGCS.Cpp2C.Build;
 using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 using BGCS.Intermediate;
 using Xunit;
 
@@ -22,24 +23,23 @@ public sealed class CppBridgeBuildManifestTests
         {
             Cpp2CGeneratorConfig config = new()
             {
-                NativeLibraryName = "demo_bridge",
-                LanguageStandard = "c++20"
+                nativeLibraryName = "demo_bridge",
+                languageStandard = "c++20"
             };
             Cpp2CCodeGenerator generator = new(config);
 
             generator.Generate(header, output);
 
-            Assert.True(generator.LastResult?.Success);
+            Assert.True(generator.lastResult?.success);
             string manifestPath = Path.Combine(output, "bridge.manifest.json");
-            Assert.Contains(manifestPath, generator.LastResult!.OutputFiles);
+            Assert.Contains(manifestPath, generator.lastResult!.outputFiles);
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestPath));
             JsonElement root = document.RootElement;
-            Assert.Equal(1, root.GetProperty("ManifestVersion").GetInt32());
-            Assert.Equal("c++20", root.GetProperty("LanguageStandard").GetString());
-            Assert.Equal("demo_bridge", root.GetProperty("LibraryName").GetString());
-            Assert.Contains("src/Classes.cpp", root.GetProperty("SourceFiles").ToString(), StringComparison.Ordinal);
-            Assert.Contains("include/Classes.h", root.GetProperty("PublicHeaderFiles").ToString(), StringComparison.Ordinal);
-            Assert.Contains("../sample.hpp", root.GetProperty("OriginalHeaderFiles").ToString(), StringComparison.Ordinal);
+            Assert.Equal("c++20", root.GetProperty("languageStandard").GetString());
+            Assert.Equal("demo_bridge", root.GetProperty("libraryName").GetString());
+            Assert.Contains("src/Classes.cpp", root.GetProperty("sourceFiles").ToString(), StringComparison.Ordinal);
+            Assert.Contains("include/Classes.h", root.GetProperty("publicHeaderFiles").ToString(), StringComparison.Ordinal);
+            Assert.Contains("../sample.hpp", root.GetProperty("originalHeaderFiles").ToString(), StringComparison.Ordinal);
             Assert.DoesNotContain(temp.Replace('\\', '/'), File.ReadAllText(manifestPath), StringComparison.Ordinal);
         }
         finally
@@ -58,9 +58,11 @@ public sealed class CppBridgeBuildManifestTests
         File.WriteAllText(Path.Combine(configDirectory, "bridge.json"),
             """
             {
-              "EntryFiles": ["sample.hpp"],
-              "CompilerPath": "toolchain/clang++",
-              "OutputPath": "GeneratedBridge"
+              "entryFiles": [
+                "sample.hpp"
+              ],
+              "compilerPath": "toolchain/clang++",
+              "outputPath": "GeneratedBridge"
             }
             """);
         try
@@ -74,7 +76,7 @@ public sealed class CppBridgeBuildManifestTests
                 [Path.Combine(configDirectory, "sample.hpp")], output);
             CppBridgeBuildManifest manifest = CppBridgeBuildManifestSerializer.Load(manifestPath);
 
-            Assert.Equal("../toolchain/clang++", manifest.CompilerPath);
+            Assert.Equal("../toolchain/clang++", manifest.compilerPath);
         }
         finally
         {
@@ -87,7 +89,7 @@ public sealed class CppBridgeBuildManifestTests
     [InlineData("..\\manifest.json")]
     public void Validator_RejectsManifestPathTraversal(string fileName)
     {
-        Cpp2CGeneratorConfig config = new() { BuildManifestFileName = fileName };
+        Cpp2CGeneratorConfig config = new() { buildManifestFileName = fileName };
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CConfigValidator.Validate(config));
 
@@ -99,8 +101,8 @@ public sealed class CppBridgeBuildManifestTests
     {
         Cpp2CGeneratorConfig config = new()
         {
-            CacheDirectory = " ",
-            PluginAssemblies = [""]
+            cacheDirectory = " ",
+            pluginAssemblies = [""]
         };
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CConfigValidator.Validate(config));
@@ -114,8 +116,8 @@ public sealed class CppBridgeBuildManifestTests
     {
         Cpp2CGeneratorConfig config = new()
         {
-            GenerateCSharpBindings = true,
-            CSharpStrictSafetySeverity = (StrictSafetySeverity)999
+            generateCSharpBindings = true,
+            cSharpStrictSafetySeverity = (StrictSafetySeverity)999
         };
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CConfigValidator.Validate(config));

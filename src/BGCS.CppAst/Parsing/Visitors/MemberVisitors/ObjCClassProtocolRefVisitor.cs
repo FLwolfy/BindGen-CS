@@ -1,40 +1,40 @@
-using System;
 namespace BGCS.CppAst.Parsing.Visitors.MemberVisitors;
-using ClangSharp.Interop;
+
+using System.Collections.Generic;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Types;
-using System.Collections.Generic;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>ObjCClassProtocolRefVisitor</c>.
 /// </summary>
-public unsafe class ObjCClassProtocolRefVisitor : MemberVisitor
+internal unsafe class ObjCClassProtocolRefVisitor : MemberVisitor
 {
     /// <summary>
     /// Gets <c>Kinds</c>.
     /// </summary>
-    public override IEnumerable<CXCursorKind> Kinds { get; } = [
-        CXCursorKind.CXCursor_ObjCClassRef,
-            CXCursorKind.CXCursor_ObjCProtocolRef
-    ];
+    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_ObjCClassRef, CXCursorKind.CXCursor_ObjCProtocolRef];
 
-    protected override CppElement? VisitCore(CXCursor cursor, CXCursor parent)
-    {
-        var objCContainer = Context.GetOrCreateDeclContainer(parent).Container;
-        if (objCContainer is CppClass cppClass && cppClass.ClassKind != CppClassKind.ObjCInterfaceCategory)
+    protected override CppElement? VisitCore(
+        CXCursor cursor,
+        CXCursor parent
+    ) {
+        var objCContainer = this.context.GetOrCreateDeclContainer(parent).container;
+        if (objCContainer is CppClass cppClass && cppClass.classKind != CppClassKind.ObjCInterfaceCategory)
         {
-            var referencedType = (CppClass)Context.GetOrCreateDeclContainer(cursor.Referenced).Container;
+            var referencedType = (CppClass)this.context.GetOrCreateDeclContainer(cursor.Referenced).container;
             if (cursor.Kind == CXCursorKind.CXCursor_ObjCClassRef)
             {
                 var cppBaseType = new CppBaseType(cursor, referencedType);
-                cppClass.BaseTypes.Add(cppBaseType);
+                cppClass.baseTypes.Add(cppBaseType);
             }
             else
             {
-                cppClass.ObjCImplementedProtocols.Add(referencedType);
+                cppClass.objCImplementedProtocols.Add(referencedType);
             }
         }
+
         return null;
     }
 }

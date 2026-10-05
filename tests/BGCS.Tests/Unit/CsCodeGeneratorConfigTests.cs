@@ -2,10 +2,10 @@ using System;
 using System.IO;
 using System.Text.Json;
 using BGCS.Configuration;
+using BGCS.Configuration.Mapping;
 using BGCS.Core.Extensibility;
-using BGCS.Core.Mapping;
 using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Targeting;
+using BGCS.Facade;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -13,51 +13,23 @@ namespace BGCS.Tests;
 public class CsCodeGeneratorConfigTests
 {
     [Fact]
-    public void Constructor_DefaultsToIrNativeBackend()
-    {
-        CsCodeGeneratorConfig config = new();
-
-        Assert.Equal(CsCodeGeneratorConfig.CurrentConfigVersion, config.ConfigVersion);
-        Assert.Equal(CSharpEmissionBackend.IntermediateRepresentation, config.CSharpEmissionBackend);
-    }
-
-    [Fact]
-    public void ConfigLoader_RejectsNonCurrentVersionWithoutLegacyMigration()
-    {
-        string temp = Path.Combine(Path.GetTempPath(), "bgcs-v1-backend-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(temp);
-        string path = Path.Combine(temp, "bindings.json");
-        File.WriteAllText(path,
-            "{\"ConfigVersion\":2,\"Namespace\":\"Test.Generated\",\"ApiName\":\"TestApi\",\"LibName\":\"test\",\"EntryFiles\":[]}");
-        try
-        {
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => new ConfigLoader().Load(path));
-            Assert.Contains("no legacy migration", exception.Message, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            Directory.Delete(temp, true);
-        }
-    }
-
-    [Fact]
     public void Constructor_CollectionsShouldBeInitialized()
     {
         CsCodeGeneratorConfig cfg = new();
 
-        Assert.NotNull(cfg.EntryFiles);
-        Assert.NotNull(cfg.AllowedHeaders);
-        Assert.NotNull(cfg.IncludeFolders);
-        Assert.NotNull(cfg.SystemIncludeFolders);
-        Assert.NotNull(cfg.Defines);
-        Assert.NotNull(cfg.AdditionalArguments);
-        Assert.NotNull(cfg.TypeMappings);
-        Assert.NotNull(cfg.ExternalTypeContracts);
-        Assert.NotNull(cfg.NameMappings);
-        Assert.NotNull(cfg.Keywords);
-        Assert.NotNull(cfg.FunctionMappings);
-        Assert.NotNull(cfg.ArrayMappings);
-        Assert.NotNull(cfg.PluginAssemblies);
+        Assert.NotNull(cfg.entryFiles);
+        Assert.NotNull(cfg.allowedHeaders);
+        Assert.NotNull(cfg.includeFolders);
+        Assert.NotNull(cfg.systemIncludeFolders);
+        Assert.NotNull(cfg.defines);
+        Assert.NotNull(cfg.additionalArguments);
+        Assert.NotNull(cfg.typeMappings);
+        Assert.NotNull(cfg.externalTypeContracts);
+        Assert.NotNull(cfg.nameMappings);
+        Assert.NotNull(cfg.keywords);
+        Assert.NotNull(cfg.functionMappings);
+        Assert.NotNull(cfg.arrayMappings);
+        Assert.NotNull(cfg.pluginAssemblies);
     }
 
     [Fact]
@@ -65,25 +37,25 @@ public class CsCodeGeneratorConfigTests
     {
         CsCodeGeneratorConfig config = new()
         {
-            Namespace = "Test.Generated",
-            ApiName = "TestApi",
-            LibName = "test"
+            @namespace = "Test.Generated",
+            apiName = "TestApi",
+            libName = "test"
         };
-        config.TypeMappings["NativeValue"] = "ManagedValue";
-        config.ExternalTypeContracts.Add(new()
+        config.typeMappings["NativeValue"] = "ManagedValue";
+        config.externalTypeContracts.Add(new()
         {
-            NativeTypes = ["NativeValue"],
-            ManagedTypes = ["ManagedValue"],
-            Size = 0,
-            Alignment = 3,
-            ByValuePolicy = (ExternalTypeByValuePolicy)99
+            nativeTypes = ["NativeValue"],
+            managedTypes = ["ManagedValue"],
+            size = 0,
+            alignment = 3,
+            byValuePolicy = (ExternalTypeByValuePolicy)99
         });
-        config.ExternalTypeContracts.Add(new()
+        config.externalTypeContracts.Add(new()
         {
-            NativeTypes = ["NativeValue"],
-            ManagedTypes = ["ManagedValue"],
-            Size = 8,
-            Alignment = 4
+            nativeTypes = ["NativeValue"],
+            managedTypes = ["ManagedValue"],
+            size = 8,
+            alignment = 4
         });
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => ConfigValidator.Validate(config));
@@ -111,11 +83,11 @@ public class CsCodeGeneratorConfigTests
     {
         CsCodeGeneratorConfig config = new()
         {
-            Namespace = "Test.Generated",
-            ApiName = "TestApi",
-            LibName = "test",
-            CacheDirectory = " ",
-            PluginAssemblies = [""]
+            @namespace = "Test.Generated",
+            apiName = "TestApi",
+            libName = "test",
+            cacheDirectory = " ",
+            pluginAssemblies = [""]
         };
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => ConfigValidator.Validate(config));
@@ -127,18 +99,18 @@ public class CsCodeGeneratorConfigTests
     [Fact]
     public void PresetResolver_ShouldComposeNamedDefaultsAndRejectUnknownNames()
     {
-        CsCodeGeneratorConfig config = new() { Preset = "windows-c,c-library,opaque-callbacks,function-table" };
+        CsCodeGeneratorConfig config = new() { preset = "windows-c,c-library,opaque-callbacks,function-table" };
 
-        BGCS.Configuration.PresetResolver.Default.Apply(config);
+        BGCS.Configuration.PresetResolver.@default.Apply(config);
 
-        Assert.Equal(CppParserKind.C, config.ParserKind);
-        Assert.Equal(ImportType.FunctionTable, config.ImportType);
-        Assert.True(config.UseCustomContext);
-        Assert.True(config.WrapPointersAsHandle);
-        Assert.True(config.DelegatesAsVoidPointer);
-        Assert.False(config.ParseMacros);
-        CsCodeGeneratorConfig invalid = new() { Preset = "missing-preset" };
-        Assert.Throws<InvalidOperationException>(() => BGCS.Configuration.PresetResolver.Default.Apply(invalid));
+        Assert.Equal(CppParserKind.C, config.parserKind);
+        Assert.Equal(ImportType.FunctionTable, config.importType);
+        Assert.True(config.useCustomContext);
+        Assert.True(config.wrapPointersAsHandle);
+        Assert.True(config.delegatesAsVoidPointer);
+        Assert.False(config.parseMacros);
+        CsCodeGeneratorConfig invalid = new() { preset = "missing-preset" };
+        Assert.Throws<InvalidOperationException>(() => BGCS.Configuration.PresetResolver.@default.Apply(invalid));
     }
 
     [Fact]
@@ -150,14 +122,14 @@ public class CsCodeGeneratorConfigTests
         File.WriteAllText(path,
             """
             {
-              "Preset": "c-library",
-              "Namespace": "Test.Generated",
-              "ApiName": "TestApi",
-              "LibName": "test",
-              "AutoSquashTypedef": true,
-              "ParseMacros": true,
-              "GenerateExtensions": true,
-              "ImportType": "LibraryImport"
+              "preset": "c-library",
+              "namespace": "Test.Generated",
+              "apiName": "TestApi",
+              "libName": "test",
+              "autoSquashTypedef": true,
+              "parseMacros": true,
+              "generateExtensions": true,
+              "importType": "LibraryImport"
             }
             """);
 
@@ -165,32 +137,11 @@ public class CsCodeGeneratorConfigTests
         {
             CsCodeGeneratorConfig config = new ConfigLoader().Load(path);
 
-            Assert.True(config.AutoSquashTypedef);
-            Assert.True(config.ParseMacros);
-            Assert.True(config.GenerateExtensions);
-            Assert.Equal(ImportType.LibraryImport, config.ImportType);
-            Assert.Equal(CppParserKind.C, config.ParserKind);
-        }
-        finally
-        {
-            Directory.Delete(temp, true);
-        }
-    }
-
-    [Fact]
-    public void ConfigLoader_FutureConfigVersion_ShouldFailBeforeGeneration()
-    {
-        string temp = Path.Combine(Path.GetTempPath(), "bgcs-config-version-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(temp);
-        string path = Path.Combine(temp, "bindings.json");
-        File.WriteAllText(path,
-            "{\"ConfigVersion\":999,\"Namespace\":\"Test.Generated\",\"ApiName\":\"TestApi\",\"LibName\":\"test\",\"EntryFiles\":[]}");
-
-        try
-        {
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => new ConfigLoader().Load(path));
-
-            Assert.Contains("ConfigVersion 999", exception.Message, StringComparison.Ordinal);
+            Assert.True(config.autoSquashTypedef);
+            Assert.True(config.parseMacros);
+            Assert.True(config.generateExtensions);
+            Assert.Equal(ImportType.LibraryImport, config.importType);
+            Assert.Equal(CppParserKind.C, config.parserKind);
         }
         finally
         {
@@ -216,9 +167,9 @@ public class CsCodeGeneratorConfigTests
         {
             CsCodeGeneratorConfig config = new ConfigLoader().Load(path);
 
-            BindingPluginService<ICacheFingerprintProvider> service = Assert.Single(config.Plugins.GetServices<ICacheFingerprintProvider>());
-            Assert.Equal("configured-plugin", service.Id);
-            Assert.Equal("ready", service.Service.GetCacheFingerprint());
+            BindingPluginService<ICacheFingerprintProvider> service = Assert.Single(config.plugins.GetServices<ICacheFingerprintProvider>());
+            Assert.Equal("configured-plugin", service.id);
+            Assert.Equal("ready", service.service.GetCacheFingerprint());
         }
         finally
         {
@@ -249,12 +200,12 @@ public class CsCodeGeneratorConfigTests
         {
             CsCodeGenerator first = CsCodeGenerator.Create(path);
             Assert.True(first.GenerateConfigured());
-            Assert.False(first.LastResult!.CacheHit);
+            Assert.False(first.lastResult!.cacheHit);
 
             CsCodeGenerator second = CsCodeGenerator.Create(path);
             Assert.True(second.GenerateConfigured());
-            Assert.True(second.LastResult!.CacheHit);
-            Assert.Equal(first.LastResult.CacheKey, second.LastResult.CacheKey);
+            Assert.True(second.lastResult!.cacheHit);
+            Assert.Equal(first.lastResult.cacheKey, second.lastResult.cacheKey);
         }
         finally
         {
@@ -269,13 +220,15 @@ public class CsCodeGeneratorConfigTests
         Directory.CreateDirectory(temp);
         string basePath = Path.Combine(temp, "base.json");
         string childPath = Path.Combine(temp, "child.json");
-        File.WriteAllText(basePath, "{\"Preset\":\"c-library\",\"Namespace\":\"Base.Namespace\",\"ApiName\":\"TestApi\",\"LibName\":\"test\"}");
+        File.WriteAllText(basePath, "{\"preset\":\"c-library\",\"namespace\":\"Base.Namespace\",\"apiName\":\"TestApi\",\"libName\":\"test\"}");
         File.WriteAllText(childPath,
             """
             {
-              "BaseConfig": { "Url": "file://base.json" },
-              "AutoSquashTypedef": true,
-              "ParseMacros": true
+              "baseConfig": {
+                "url": "file://base.json"
+              },
+              "autoSquashTypedef": true,
+              "parseMacros": true
             }
             """);
 
@@ -283,11 +236,11 @@ public class CsCodeGeneratorConfigTests
         {
             CsCodeGeneratorConfig config = new ConfigLoader().Load(childPath);
 
-            Assert.Equal("Base.Namespace", config.Namespace);
-            Assert.Equal("c-library", config.Preset);
-            Assert.True(config.AutoSquashTypedef);
-            Assert.True(config.ParseMacros);
-            Assert.False(config.GenerateExtensions);
+            Assert.Equal("Base.Namespace", config.@namespace);
+            Assert.Equal("c-library", config.preset);
+            Assert.True(config.autoSquashTypedef);
+            Assert.True(config.parseMacros);
+            Assert.False(config.generateExtensions);
         }
         finally
         {
@@ -300,18 +253,16 @@ public class CsCodeGeneratorConfigTests
     {
         CsCodeGeneratorConfig config = new()
         {
-            TargetPlatform = CppTargetPlatform.Windows,
-            TargetArchitecture = CppTargetArchitecture.X86,
-            TargetAbi = CppTargetAbi.Msvc
+            targetId = "windows-x86-msvc"
         };
         TestGenerator generator = new(config);
 
         CppParserOptions options = generator.GetParserOptions();
 
-        Assert.Equal(CppTargetCpu.X86, options.TargetCpu);
-        Assert.Contains("_WIN32=1", options.Defines);
-        Assert.Contains("_M_IX86=600", options.Defines);
-        Assert.DoesNotContain("_WIN64=1", options.Defines);
+        Assert.Equal("i686-pc-windows-msvc", options.targetTriple);
+        Assert.Contains("_WIN32=1", options.defines);
+        Assert.Contains("_M_IX86=600", options.defines);
+        Assert.DoesNotContain("_WIN64=1", options.defines);
     }
 
     [Fact]
@@ -320,15 +271,15 @@ public class CsCodeGeneratorConfigTests
         CsCodeGeneratorConfig cfg = new();
         CsCodeGeneratorConfig baseCfg = new();
 
-        cfg.IncludeFolders.Add("a");
-        baseCfg.IncludeFolders.Add("b");
-        baseCfg.Defines.Add("D1");
+        cfg.includeFolders.Add("a");
+        baseCfg.includeFolders.Add("b");
+        baseCfg.defines.Add("D1");
 
         cfg.Merge(baseCfg, MergeOptions.IncludeFolders);
 
-        Assert.Contains("a", cfg.IncludeFolders);
-        Assert.Contains("b", cfg.IncludeFolders);
-        Assert.Empty(cfg.Defines);
+        Assert.Contains("a", cfg.includeFolders);
+        Assert.Contains("b", cfg.includeFolders);
+        Assert.Empty(cfg.defines);
     }
 
     [Fact]
@@ -336,15 +287,15 @@ public class CsCodeGeneratorConfigTests
     {
         CsCodeGeneratorConfig cfg = new();
         CsCodeGeneratorConfig baseCfg = new();
-        baseCfg.IncludeFolders.Add("from-base");
+        baseCfg.includeFolders.Add("from-base");
 
         cfg.Merge(baseCfg, MergeOptions.None);
 
-        Assert.Empty(cfg.IncludeFolders);
+        Assert.Empty(cfg.includeFolders);
     }
 
     [Fact]
-    public void Load_WhenFileMissing_ShouldCreateFileAndReturnConfig()
+    public void Load_WhenFileMissing_FailsWithoutCreatingConfiguration()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-cfg-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -353,10 +304,8 @@ public class CsCodeGeneratorConfigTests
         try
         {
             Assert.False(File.Exists(configPath));
-            var cfg = CsCodeGeneratorConfig.Load(configPath);
-
-            Assert.NotNull(cfg);
-            Assert.True(File.Exists(configPath));
+            Assert.Throws<FileNotFoundException>(() => new BGCS.Configuration.ConfigLoader().Load(configPath));
+            Assert.False(File.Exists(configPath));
         }
         finally
         {
@@ -373,14 +322,14 @@ public class CsCodeGeneratorConfigTests
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-cfg-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         string configPath = Path.Combine(temp, "config.json");
-        const string source = "{\"ApiName\":\"Test\",\"ExtensionSetting\":42}";
+        const string source = "{\"apiName\":\"Test\",\"namespace\":\"Test.Generated\",\"extensionSetting\":42}";
         File.WriteAllText(configPath, source);
 
         try
         {
-            CsCodeGeneratorConfig cfg = CsCodeGeneratorConfig.Load(configPath);
+            CsCodeGeneratorConfig cfg = new BGCS.Configuration.ConfigLoader().Load(configPath);
 
-            Assert.Equal("Test", cfg.ApiName);
+            Assert.Equal("Test", cfg.apiName);
             Assert.Equal(source, File.ReadAllText(configPath));
         }
         finally
@@ -403,15 +352,17 @@ public class CsCodeGeneratorConfigTests
         File.WriteAllText(configPath,
             """
             {
-              "Namespace": "Configured.Generated",
-              "ApiName": "ConfiguredApi",
-              "LibName": "configured",
-              "EntryFiles": ["api.h"],
-              "IncludeTransitivelyReferencedHeaders": true,
-              "OutputPath": "generated",
-              "ImportType": "DllImport",
-              "GenerateExtensions": false,
-              "MergeGeneratedFilesToSingleFile": true
+              "namespace": "Configured.Generated",
+              "apiName": "ConfiguredApi",
+              "libName": "configured",
+              "entryFiles": [
+                "api.h"
+              ],
+              "includeTransitivelyReferencedHeaders": true,
+              "outputPath": "generated",
+              "importType": "DllImport",
+              "generateExtensions": false,
+              "mergeGeneratedFilesToSingleFile": true
             }
             """);
 
@@ -453,22 +404,22 @@ public class CsCodeGeneratorConfigTests
         {
             CsCodeGenerator first = CsCodeGenerator.Create(configPath);
             Assert.True(first.GenerateConfigured());
-            Assert.False(first.LastResult!.CacheHit);
-            string firstKey = Assert.IsType<string>(first.LastResult.CacheKey);
+            Assert.False(first.lastResult!.cacheHit);
+            string firstKey = Assert.IsType<string>(first.lastResult.cacheKey);
             string bindings = Path.Combine(temp, "generated", "Bindings.cs");
             File.WriteAllText(bindings, "corrupted");
 
             CsCodeGenerator second = CsCodeGenerator.Create(configPath);
             Assert.True(second.GenerateConfigured());
-            Assert.True(second.LastResult!.CacheHit);
-            Assert.NotNull(second.LastResult.Module);
+            Assert.True(second.lastResult!.cacheHit);
+            Assert.NotNull(second.lastResult.module);
             Assert.Contains("CacheFirstNative", File.ReadAllText(bindings), StringComparison.Ordinal);
 
             File.WriteAllText(header, "int cache_second(void);\n");
             CsCodeGenerator third = CsCodeGenerator.Create(configPath);
             Assert.True(third.GenerateConfigured());
-            Assert.False(third.LastResult!.CacheHit);
-            Assert.NotEqual(firstKey, third.LastResult.CacheKey);
+            Assert.False(third.lastResult!.cacheHit);
+            Assert.NotEqual(firstKey, third.lastResult.cacheKey);
             Assert.Contains("CacheSecondNative", File.ReadAllText(bindings), StringComparison.Ordinal);
         }
         finally
@@ -488,13 +439,13 @@ public class CsCodeGeneratorConfigTests
         File.WriteAllText(header, "typedef struct Forward Forward; typedef void Opaque; void use_forward(Forward* value, Opaque* opaque);");
         CsCodeGeneratorConfig config = new()
         {
-            Namespace = "BGCS.Tests.Generated",
-            ApiName = "ForwardApi",
-            LibName = "forward",
-            AutoSquashTypedef = false,
-            MergeGeneratedFilesToSingleFile = true,
-            GenerateExtensions = false,
-            ImportType = ImportType.DllImport
+            @namespace = "BGCS.Tests.Generated",
+            apiName = "ForwardApi",
+            libName = "forward",
+            autoSquashTypedef = false,
+            mergeGeneratedFilesToSingleFile = true,
+            generateExtensions = false,
+            importType = ImportType.DllImport
         };
 
         try
@@ -525,9 +476,9 @@ public class CsCodeGeneratorConfigTests
 
 public sealed class TestConfigPlugin : IBindingPlugin
 {
-    public string Id => "bgcs.tests.config-plugin";
-    public string Version => "1.0.0";
-    public int ContractVersion => BindingPluginContract.CurrentVersion;
+    public string id => "bgcs.tests.config-plugin";
+    public string version => "1.0.0";
+    public int contractVersion => BindingPluginContract.C_CURRENT_VERSION;
 
     public void Configure(IBindingPluginHost host) =>
         host.Register<ICacheFingerprintProvider>("configured-plugin", new Service());

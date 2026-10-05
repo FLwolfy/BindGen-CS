@@ -1,6 +1,6 @@
-using Xunit;
 using BGCS.Metadata;
 using Newtonsoft.Json;
+using Xunit;
 
 namespace BGCS.Configuration.Tests;
 
@@ -15,10 +15,10 @@ public class CustomEnumsEntryTests : ConfigurationEntryTestBase
 
         CsEnumMetadata metadata = JsonConvert.DeserializeObject<CsEnumMetadata>(json)!;
 
-        Assert.Equal("int", metadata.BaseType);
-        Assert.Empty(metadata.Attributes);
-        Assert.Single(metadata.Items);
-        Assert.Empty(metadata.Items[0].Attributes);
+        Assert.Equal("int", metadata.baseType);
+        Assert.Empty(metadata.attributes);
+        Assert.Single(metadata.items);
+        Assert.Empty(metadata.items[0].attributes);
     }
 
     [Fact]

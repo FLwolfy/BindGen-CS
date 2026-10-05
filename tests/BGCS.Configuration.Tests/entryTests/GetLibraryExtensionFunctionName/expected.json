@@ -1,4 +1,4 @@
 {
-  "Property": "GetLibraryExtensionFunctionName",
+  "Property": "getLibraryExtensionFunctionName",
   "Expected": "GetLibraryExtX"
 }

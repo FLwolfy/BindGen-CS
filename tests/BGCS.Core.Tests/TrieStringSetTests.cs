@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
-using BGCS.Core;
+using BGCS.Core.Collections;
+using BGCS.Core.Text;
 using Xunit;
 
 #pragma warning disable xUnit2017 // TrieStringSet.Contains honors its configured key comparer.
@@ -34,7 +35,7 @@ public class TrieStringSetTests
     [Fact]
     public void CaseInsensitiveComparer_ShouldTreatKeysAsEqual()
     {
-        TrieStringSet set = new(CharCaseInsensitiveEqualityComparer.Default);
+        TrieStringSet set = new(CharCaseInsensitiveEqualityComparer.@default);
         set.Add("Test");
 
         Assert.True(set.Contains("test"));
@@ -54,17 +55,48 @@ public class TrieStringSetTests
     }
 
     [Fact]
-    public void TryGetNode_ForTerminalAndIntermediateNode_ShouldBehaveAsExpected()
+    public void PrefixQueries_DoNotConfuseIntermediatePathsWithStoredKeys()
     {
         TrieStringSet set = new();
         set.Add("car");
         set.Add("cart");
 
-        Assert.True(set.TryGetNode("car", out var terminalNode));
-        Assert.NotNull(terminalNode);
+        Assert.True(set.Contains("car"));
+        Assert.False(set.Contains("ca"));
+        Assert.Equal(new[] { "car", "cart" }, set.GetByPrefix("ca").OrderBy(x => x));
+    }
 
-        Assert.False(set.TryGetNode("ca", out var intermediateNode));
-        Assert.NotNull(intermediateNode);
+    [Theory]
+    [InlineData("ab", "", "")]
+    [InlineData("zebra", "", "")]
+    [InlineData("abcdef", "abcd", "abc")]
+    [InlineData("", "", "")]
+    public void PrefixMatching_RequiresACompleteStoredKey(
+        string input,
+        string longest,
+        string shortest
+    ) {
+        var set = new TrieStringSet();
+        set.AddRange(new[] { "abc", "abcd" });
+
+        Assert.Equal(longest, set.FindLargestMatch(input.AsSpan()).ToString());
+        Assert.Equal(shortest, set.FindSmallestMatch(input.AsSpan()).ToString());
+    }
+
+    [Fact]
+    public void EmptyKey_IsEnumeratedRemovedAndClearedConsistently()
+    {
+        var set = new TrieStringSet();
+        set.Add(string.Empty);
+
+        Assert.Equal(string.Empty, Assert.Single(set));
+        Assert.True(set.Remove(string.Empty));
+        Assert.False(set.Remove(string.Empty));
+        set.Add(string.Empty);
+        set.Clear();
+        Assert.False(set.Contains(string.Empty));
+        set.Add(string.Empty);
+        Assert.Single(set);
     }
 
     [Fact]

@@ -1,5 +1,5 @@
 {
-  "Property": "IgnoredTypes",
+  "Property": "ignoredTypes",
   "Expected": [
     "my_type"
   ]

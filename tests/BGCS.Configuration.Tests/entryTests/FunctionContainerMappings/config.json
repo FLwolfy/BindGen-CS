@@ -1,18 +1,18 @@
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "FunctionMappings": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "functionMappings": [
     {
-      "ExportedName": "internal_add",
-      "FriendlyName": "Add",
-      "ContainerName": "EntryInternals",
-      "Defaults": {},
-      "CustomVariations": []
+      "exportedName": "internal_add",
+      "friendlyName": "Add",
+      "containerName": "EntryInternals",
+      "defaults": {},
+      "customVariations": []
     }
   ]
 }

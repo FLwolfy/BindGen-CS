@@ -1,393 +1,371 @@
 # Tested Configuration Entries
 
-This behavioral catalog is generated from dedicated entry tests in `BGCS.Configuration.Tests`. It is not the complete `CsCodeGeneratorConfig` property list.
+This catalog is generated from `BGCS.Configuration.Tests` fixtures and the current `CsCodeGeneratorConfig` source.
+It describes tested behavior; [Configuration Guide](configuration-guide.md) explains composition,
+targets, ownership, and failure boundaries. Use the CLI `schema` command for the full binding configuration.
 
-Use `bindgen-cs schema bindgen.schema.json` for every property in the installed version, and use [Configuration Guide](configuration-guide.md) for target, safety, marshalling, workspace, and precedence rules.
+## additionalArguments
 
-## AdditionalArguments
-
-### 1. Explanation
-**AdditionalArguments** controls the **AdditionalArguments** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `additionalArguments`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["-DFROM_ADDITIONAL_ARGUMENTS=1"]`
+- Source default: `[]`
+- Expected fixture value: `["-DFROM_ADDITIONAL_ARGUMENTS=1"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AdditionalArguments": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "additionalArguments": [
     "-DFROM_ADDITIONAL_ARGUMENTS=1"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 EntryPoint = "args_ok"
 ArgsOkNative
 partial class EntryApi
-// NotContains
+// Excluded markers
 ```
 
-## AllowedConstants
+## allowedConstants
 
-### 1. Explanation
-**AllowedConstants** controls the **AllowedConstants** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `allowedConstants`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["KEEP_CONST"]`
+- Source default: `[]`
+- Expected fixture value: `["KEEP_CONST"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateMetadata": true,
-  "AllowedConstants": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateMetadata": true,
+  "allowedConstants": [
     "KEEP_CONST"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 KEEP_CONST
-// NotContains
+// Excluded markers
 DROP_CONST
 ```
 
-## AllowedDelegates
+## allowedDelegates
 
-### 1. Explanation
-**AllowedDelegates** controls the **AllowedDelegates** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `allowedDelegates`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["KeepDelegate"]`
+- Source default: `[]`
+- Expected fixture value: `["KeepDelegate"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AllowedDelegates": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "allowedDelegates": [
     "KeepDelegate"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 delegate void KeepDelegate(
-// NotContains
+// Excluded markers
 delegate void DropDelegate(
 ```
 
-## AllowedEnums
+## allowedEnums
 
-### 1. Explanation
-**AllowedEnums** controls the **AllowedEnums** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `allowedEnums`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["KeepEnum"]`
+- Source default: `[]`
+- Expected fixture value: `["KeepEnum"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AllowedEnums": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "allowedEnums": [
     "KeepEnum"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 enum KeepEnum
-// NotContains
+// Excluded markers
 enum DropEnum
 ```
 
-## AllowedExtensions
+## allowedExtensions
 
-### 1. Explanation
-**AllowedExtensions** controls the **AllowedExtensions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `allowedExtensions`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["keep_ext"]`
+- Source default: `new()`
+- Expected fixture value: `["keep_ext"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": true,
-  "GenerateRuntimeSource": false,
-  "GenerateFunctions": true,
-  "AllowedExtensions": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": true,
+  "generateRuntimeSource": false,
+  "generateFunctions": true,
+  "allowedExtensions": [
     "keep_ext"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 partial class Extensions
 public static void KeepExt(this
-// NotContains
+// Excluded markers
 public static void DropExt(this
 ```
 
-## AllowedFunctions
+## allowedFunctions
 
-### 1. Explanation
-**AllowedFunctions** controls the **AllowedFunctions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `allowedFunctions`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["keep_fn"]`
+- Source default: `[]`
+- Expected fixture value: `["keep_fn"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AllowedFunctions": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "allowedFunctions": [
     "keep_fn"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 EntryPoint = "keep_fn"
 KeepFnNative
-// NotContains
+// Excluded markers
 drop_fn
 DropFnNative
 ```
 
-## AllowedTypedefs
+## allowedTypedefs
 
-### 1. Explanation
-**AllowedTypedefs** controls the **AllowedTypedefs** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `allowedTypedefs`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["KeepHandle"]`
+- Source default: `[]`
+- Expected fixture value: `["KeepHandle"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AllowedTypedefs": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "allowedTypedefs": [
     "KeepHandle"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 partial struct KeepHandle
-// NotContains
+// Excluded markers
 partial struct DropHandle
 ```
 
-## AllowedTypes
+## allowedTypes
 
-### 1. Explanation
-**AllowedTypes** controls the **AllowedTypes** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `allowedTypes`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["KeepType"]`
+- Source default: `[]`
+- Expected fixture value: `["KeepType"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AllowedTypes": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "allowedTypes": [
     "KeepType"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 partial struct KeepType
-// NotContains
+// Excluded markers
 partial struct DropType
 ```
 
-## ApiName
+## apiName
 
-### 1. Explanation
-**ApiName** controls the **ApiName** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `apiName`
 - Type: `string`
-- Default value: `string.Empty`
-- Example expected value: `"ExpectedApiName"`
+- Source default: `string.Empty`
+- Expected fixture value: `"ExpectedApiName"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "ExpectedApiName",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "ExpectedApiName",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 partial class ExpectedApiName
 ApiNameFnNative
-// NotContains
+// Excluded markers
 partial class EntryApi
 ```
 
-## AutoSquashTypedef
+## autoSquashTypedef
 
-### 1. Explanation
-**AutoSquashTypedef** controls the **AutoSquashTypedef** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `autoSquashTypedef`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AutoSquashTypedef": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "autoSquashTypedef": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 using BaseInt = int;
 using AliasInt = int;
 EntryPoint = "alias_add"
-AliasAddNative(AliasInt value)
-// NotContains
 AliasAddNative(int value)
+// Excluded markers
 ```
 
-## AutoWrapCallbacks
+## autoWrapCallbacks
 
-### 1. Explanation
-**AutoWrapCallbacks** controls the **AutoWrapCallbacks** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `autoWrapCallbacks`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `false`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "DelegatesAsVoidPointer": false,
-  "AutoWrapCallbacks": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "delegatesAsVoidPointer": false,
+  "strictSafetySeverity": "Warning",
+  "autoWrapCallbacks": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public unsafe delegate void LogCb(int level);
 public unsafe delegate int SumCb(int left, int right);
 public unsafe delegate void TickCb();
@@ -395,195 +373,184 @@ SetLogCallbackNative
 SetSumCallbackNative
 SetTickCallbackNative
 Utils.GetFunctionPointerForDelegate(cb)
-// NotContains
+// Excluded markers
 NativeCallback<LogCb>
 NativeCallback<SumCb>
 NativeCallback<TickCb>
 __AutoWrapCallback_SetLogCallback_cb_0
 ```
 
-## BaseConfig
+## baseConfig
 
-### 1. Explanation
-**BaseConfig** is validated through composition behavior, and tests assert the final **Namespace** after **BaseConfig** is applied.
-
-### 2. Type, Example, and Default Value
+- Result property: `baseConfig`
 - Type: `BaseConfig?`
-- Default value: `null`
-- Example expected value: `"Expected.FromBase"`
+- Source default: `null`
+- Expected fixture value: `"Expected.FromBase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "BaseConfig": {
-    "Url": "file://base.json"
+  "baseConfig": {
+    "url": "file://base.json"
   }
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 namespace Expected.FromBase
 partial class BaseApi
 internal const string LibName = "base-lib";
 EntryPoint = "sample_add"
 SampleAddNative
-// NotContains
+// Excluded markers
 partial class EntryApi
 internal const string LibName = "entry-lib";
 ```
 
-## BoolType
+## boolType
 
-### 1. Explanation
-**BoolType** controls the **BoolType** behavior and is validated by both property snapshots and generated-output checks.
+- Result property: `boolType`
+- Type: `boolType`
+- Source default: `BoolType.Bool8`
+- Expected fixture value: `"Bool8"`
 
-### 2. Type, Example, and Default Value
-- Type: `BoolType`
-- Default value: `BoolType.Bool8`
-- Example expected value: `"Bool32"`
+### Configuration
 
-### 3. Example Config and Generated Output
-#### Example config
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "BoolType": "Bool32"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "boolType": "Bool8"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-internal static extern Bool32 BoolEvalNative(Bool32 value);
+// Required markers
+internal static extern Bool8 BoolEvalNative(Bool8 value);
 public static bool BoolEval(bool value)
-internal static extern Bool32 BoolAndNative(Bool32 left, Bool32 right);
+internal static extern Bool8 BoolAndNative(Bool8 left, Bool8 right);
 public static bool BoolAnd(bool left, bool right)
 ret != 0
-left ? (Bool32)1 : (Bool32)0
-right ? (Bool32)1 : (Bool32)0
-// NotContains
-internal static extern int BoolEvalNative
-internal static extern int BoolAndNative
+left ? (Bool8)1 : (Bool8)0
+right ? (Bool8)1 : (Bool8)0
+// Excluded markers
+internal static extern byte BoolEvalNative
+internal static extern byte BoolAndNative
 public static int BoolEval(
 public static int BoolAnd(
 ```
 
-## ConstantNamingConvention
+## constantNamingConvention
 
-### 1. Explanation
-**ConstantNamingConvention** controls the **ConstantNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `constantNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.Unknown`
-- Example expected value: `"PascalCase"`
+- Source default: `NamingConvention.Unknown`
+- Expected fixture value: `"CamelCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "ConstantNamingConvention": "PascalCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "constantNamingConvention": "CamelCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-public const int MyFlag = 1;
-public const int AnotherValue = 2;
-// NotContains
+// Required markers
 public const int myFlag = 1;
-public const int MY_FLAG = 1;
 public const int anotherValue = 2;
+// Excluded markers
+public const int MyFlag = 1;
+public const int MY_FLAG = 1;
+public const int AnotherValue = 2;
 public const int ANOTHER_VALUE = 2;
 ```
 
-## CppLogLevel
+## cppLogLevel
 
-### 1. Explanation
-**CppLogLevel** controls the **CppLogLevel** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `cppLogLevel`
 - Type: `LogSeverity`
-- Default value: `LogSeverity.Error`
-- Example expected value: `"Warning"`
+- Source default: `LogSeverity.Error`
+- Expected fixture value: `"Error"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "CppLogLevel": "Warning"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "cppLogLevel": "Error"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 EntryPoint = "sample_add"
 SampleAddNative
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 ```
 
-## CustomEnums
+## customEnums
 
-### 1. Explanation
-**CustomEnums** controls the **CustomEnums** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `customEnums`
 - Type: `List<CsEnumMetadata>`
-- Default value: `[]`
-- Example expected value: `[{"Identifier":"custom_mode","CppName":"custom_mode","Name":"CustomMode","Attributes":[],"Comment":null,"BaseType":"int","Items":[{"Identifier":"CUSTOM_MODE_ONE","CppName":"CUSTOM_MODE_ONE","CppValue":"1","Name":"One","Value":"1","Attributes":[],"Comment":null}]}]`
+- Source default: `[]`
+- Expected fixture value: `[{"identifier": "custom_mode", "cppName": "custom_mode", "name": "CustomMode", "attributes": [], "comment": null, "baseType": "int", "items": [{"identifier": "CUSTOM_MODE_ONE", "cppName": "CUSTOM_MODE_ONE", "cppValue": "1", "name": "One", "value": "1", "attributes": [], "comment": null}]}]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "CustomEnums": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "customEnums": [
     {
-      "CppName": "custom_mode",
-      "Name": "CustomMode",
-      "Attributes": [],
-      "Comment": null,
-      "BaseType": "int",
-      "Items": [
+      "cppName": "custom_mode",
+      "name": "CustomMode",
+      "attributes": [],
+      "comment": "Plain enum comment",
+      "baseType": "int",
+      "items": [
         {
-          "CppName": "CUSTOM_MODE_ONE",
-          "CppValue": "1",
-          "Name": "One",
-          "Value": "1",
-          "Attributes": [],
-          "Comment": null
+          "cppName": "CUSTOM_MODE_ONE",
+          "cppValue": "1",
+          "name": "One",
+          "value": "1",
+          "attributes": [],
+          "comment": "Plain item comment"
         }
       ]
     }
@@ -591,2178 +558,1974 @@ public static int SampleAdd(int a, int b)
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
+/// Plain enum comment
+/// Plain item comment
 public enum CustomMode
-One = 1
-// NotContains
-enum custom_mode
+// Excluded markers
 ```
 
-## Defines
+## defines
 
-### 1. Explanation
-**Defines** controls the **Defines** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `defines`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["MY_DEF=1"]`
+- Source default: `[]`
+- Expected fixture value: `["MY_DEF=1"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "Defines": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "defines": [
     "MY_DEF=1"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 EntryPoint = "defined_fn"
 DefinedFnNative
-// NotContains
+// Excluded markers
 EntryPoint = "undefined_fn"
 UndefinedFnNative
 ```
 
-## DelegateNamingConvention
+## delegateNamingConvention
 
-### 1. Explanation
-**DelegateNamingConvention** controls the **DelegateNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `delegateNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"CamelCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "DelegateNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "delegateNamingConvention": "CamelCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public unsafe delegate void sampleCallback(int value);
-// NotContains
+// Excluded markers
 public unsafe delegate void SampleCallback(int value);
 ```
 
-## DelegatesAsVoidPointer
+## delegatesAsVoidPointer
 
-### 1. Explanation
-**DelegatesAsVoidPointer** controls the **DelegatesAsVoidPointer** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `delegatesAsVoidPointer`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "DelegatesAsVoidPointer": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "delegatesAsVoidPointer": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 ApplyCbNative
 SetNotifyNative
 DispatchMixNative
-delegate*<int, int> cb
-delegate*<void> cb
-delegate*<
-// NotContains
+delegate* unmanaged[Cdecl]<int, int> cb
+delegate* unmanaged[Cdecl]<void> cb
+delegate* unmanaged[
+// Excluded markers
 void* cb
 ```
 
-## EnableExperimentalOptions
+## enableExperimentalOptions
 
-### 1. Explanation
-**EnableExperimentalOptions** controls the **EnableExperimentalOptions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `enableExperimentalOptions`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `true`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "DelegatesAsVoidPointer": false,
-  "EnableExperimentalOptions": true
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "delegatesAsVoidPointer": false,
+  "enableExperimentalOptions": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 ApplyCbNative
-delegate*<int, int> cb
-// NotContains
+delegate* unmanaged[Cdecl]<int, int> cb
+// Excluded markers
 void* cb
 ```
 
-## EnumItemNamingConvention
+## enumItemNamingConvention
 
-### 1. Explanation
-**EnumItemNamingConvention** controls the **EnumItemNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `enumItemNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"CamelCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "EnumItemNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "enumItemNamingConvention": "CamelCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 enum ColorMode
 one = unchecked(1)
 two = unchecked(2)
-// NotContains
+// Excluded markers
 One = unchecked(1)
 Two = unchecked(2)
 ```
 
-## EnumNamingConvention
+## enumNamingConvention
 
-### 1. Explanation
-**EnumNamingConvention** controls the **EnumNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `enumNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"CamelCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "EnumNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "enumNamingConvention": "CamelCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public enum sampleMode
-// NotContains
+// Excluded markers
 public enum SampleMode
 ```
 
-## ExtensionNamingConvention
+## extensionNamingConvention
 
-### 1. Explanation
-**ExtensionNamingConvention** controls the **ExtensionNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `extensionNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"CamelCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "WrapPointersAsHandle": true,
-  "GenerateExtensions": true,
-  "GenerateFunctions": true,
-  "GenerateRuntimeSource": false,
-  "ExtensionNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "wrapPointersAsHandle": true,
+  "generateExtensions": true,
+  "generateFunctions": true,
+  "generateRuntimeSource": false,
+  "extensionNamingConvention": "CamelCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 partial class Extensions
 public static void setValue(this
-// NotContains
+// Excluded markers
 public static void SetValue(this
 ```
 
-## FunctionContainerMappings
+## functionContainerMappings
 
-### 1. Explanation
-**FunctionContainerMappings** controls the **FunctionContainerMappings** behavior and is validated by both property snapshots and generated-output checks.
+- Result property: `functionContainerMappings`
+- Type: `composition behavior`
+- Source default: `see the selected configuration`
+- Expected fixture value: `null`
 
-### 2. Type, Example, and Default Value
-- Type: `unknown`
-- Default value: `(runtime default)`
-- Example expected value: `(not specified in snapshot)`
+### Configuration
 
-### 3. Example Config and Generated Output
-#### Example config
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "FunctionMappings": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "functionMappings": [
     {
-      "ExportedName": "internal_add",
-      "FriendlyName": "Add",
-      "ContainerName": "EntryInternals",
-      "Defaults": {},
-      "CustomVariations": []
+      "exportedName": "internal_add",
+      "friendlyName": "Add",
+      "containerName": "EntryInternals",
+      "defaults": {},
+      "customVariations": []
     }
   ]
 }
 ```
 
-#### Example generated output markers
-```csharp
-// No expected.bindings snapshot for this entry
-```
+## functionNamingConvention
 
-## FunctionNamingConvention
-
-### 1. Explanation
-**FunctionNamingConvention** controls the **FunctionNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `functionNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"CamelCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "FunctionNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "functionNamingConvention": "CamelCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int sampleAddNative(int a, int b);
 public static int sampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 public static int SampleAdd(int a, int b)
 ```
 
-## FunctionTableEntries
+## functionTableEntries
 
-### 1. Explanation
-**FunctionTableEntries** controls the **FunctionTableEntries** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `functionTableEntries`
 - Type: `List<CsFunctionTableEntry>`
-- Default value: `[]`
-- Example expected value: `[{"Index":0,"EntryPoint":"sample_add"}]`
+- Source default: `[]`
+- Expected fixture value: `[{"index": 7, "entryPoint": "sample_add"}]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "FunctionTable",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "FunctionTableEntries": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "FunctionTable",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "functionTableEntries": [
     {
-      "Index": 0,
-      "EntryPoint": "sample_add"
+      "entryPoint": "sample_add"
+    },
+    {
+      "entryPoint": "sample_sub"
     }
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-funcTable[0]
-delegate* unmanaged[Cdecl]<int, int, int>
-new FunctionTable(
-// NotContains
-[DllImport(
+// Required markers
+candidate.LoadRequired(0, "sample_add");
+candidate.LoadRequired(1, "sample_sub");
+// Excluded markers
+candidate.LoadRequired(0, "sample_sub");
 ```
 
-## GenerateAdditionalOverloads
+## generateAdditionalOverloads
 
-### 1. Explanation
-**GenerateAdditionalOverloads** controls the **GenerateAdditionalOverloads** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateAdditionalOverloads`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `true`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateAdditionalOverloads": true
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateAdditionalOverloads": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 ```
 
-## GenerateConstants
+## generateConstants
 
-### 1. Explanation
-**GenerateConstants** controls the **GenerateConstants** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateConstants`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateConstants": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateConstants": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 public const int SAMPLE_FLAG = 7;
 ```
 
-## GenerateConstructorsForStructs
+## generateConstructorsForStructs
 
-### 1. Explanation
-**GenerateConstructorsForStructs** controls the **GenerateConstructorsForStructs** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateConstructorsForStructs`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `true`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateConstructorsForStructs": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateConstructorsForStructs": true
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public partial struct SampleVec2
 public int X;
 public int Y;
-// NotContains
 public unsafe SampleVec2(
+// Excluded markers
 ```
 
-## GenerateDelegates
+## generateDelegates
 
-### 1. Explanation
-**GenerateDelegates** controls the **GenerateDelegates** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateDelegates`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "DelegatesAsVoidPointer": false,
-  "GenerateDelegates": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "delegatesAsVoidPointer": false,
+  "generateDelegates": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 namespace EntryTests.Generated
 partial class EntryApi
 SetCallbackNative
-// NotContains
+// Excluded markers
 public unsafe delegate void SampleCb
 ```
 
-## GenerateEnums
+## generateEnums
 
-### 1. Explanation
-**GenerateEnums** controls the **GenerateEnums** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateEnums`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateEnums": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateEnums": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 public enum SampleMode
 ```
 
-## GenerateExtensions
+## generateExtensions
 
-### 1. Explanation
-**GenerateExtensions** controls the **GenerateExtensions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateExtensions`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `true`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "WrapPointersAsHandle": true,
-  "GenerateExtensions": true,
-  "GenerateFunctions": true,
-  "GenerateRuntimeSource": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "wrapPointersAsHandle": true,
+  "generateExtensions": false,
+  "generateFunctions": true,
+  "generateRuntimeSource": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
+internal static extern void ExtHandleSetValueInterop(nint handle, int value);
+internal static void ExtHandleSetValueNative(ExtHandle handle, int value)
+ExtHandleSetValueInterop(handle.Handle, value);
+public static void ExtHandleSetValue(ExtHandle handle, int value)
+// Excluded markers
 partial class Extensions
-public static void SetValue(this ExtHandle handle, int value)
-// NotContains
-public static void setValue(this ExtHandle handle, int value)
 ```
 
-## GenerateFunctions
+## generateFunctions
 
-### 1. Explanation
-**GenerateFunctions** controls the **GenerateFunctions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateFunctions`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateFunctions": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateFunctions": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-// NotContains
+// Required markers
+// Excluded markers
 DllImport(LibName
 SampleAddNative
 SampleAdd(
 ```
 
-## GenerateHandles
+## generateHandles
 
-### 1. Explanation
-**GenerateHandles** controls the **GenerateHandles** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateHandles`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `true`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateHandles": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateHandles": true
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 SampleAddNative
-// NotContains
 readonly partial struct GenHandle
+// Excluded markers
 ```
 
-## GenerateMetadata
+## generateMetadata
 
-### 1. Explanation
-**GenerateMetadata** controls the **GenerateMetadata** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateMetadata`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `true`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateMetadata": true
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateMetadata": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-[NativeName(NativeNameType.Func, "sample_add")]
-[return: NativeName(NativeNameType.Type, "int")]
-[NativeName(NativeNameType.Param, "a")]
+// Required markers
 [DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sample_add")]
-// NotContains
+// Excluded markers
+[NativeName(
 ```
 
-## GeneratePlaceholderComments
+## generatePlaceholderComments
 
-### 1. Explanation
-**GeneratePlaceholderComments** controls the **GeneratePlaceholderComments** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generatePlaceholderComments`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GeneratePlaceholderComments": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generatePlaceholderComments": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 To be documented.
 ```
 
-## GenerateRuntimeSource
+## generateRuntimeSource
 
-### 1. Explanation
-**GenerateRuntimeSource** controls the **GenerateRuntimeSource** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateRuntimeSource`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `true`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": true
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 ```
 
-## GenerateSizeOfStructs
+## generateSizeOfStructs
 
-### 1. Explanation
-**GenerateSizeOfStructs** controls the **GenerateSizeOfStructs** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateSizeOfStructs`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `true`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateSizeOfStructs": true
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateSizeOfStructs": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public partial struct SampleSizeType
+// Excluded markers
 public static readonly int SizeInBytes = 
-// NotContains
 ```
 
-## GenerateTypes
+## generateTypes
 
-### 1. Explanation
-**GenerateTypes** controls the **GenerateTypes** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `generateTypes`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `true`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateTypes": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateTypes": true
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-SampleAddNative
-// NotContains
+// Required markers
 public partial struct SamplePointType
 public int X;
 public int Y;
+// Excluded markers
 ```
 
-## GetLibraryExtensionFunctionName
+## getLibraryExtensionFunctionName
 
-### 1. Explanation
-**GetLibraryExtensionFunctionName** controls the **GetLibraryExtensionFunctionName** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `getLibraryExtensionFunctionName`
 - Type: `string?`
-- Default value: `null`
-- Example expected value: `"GetLibraryExtX"`
+- Source default: `null`
+- Expected fixture value: `"GetLibraryExtXAlt"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GetLibraryExtensionFunctionName": "GetLibraryExtX"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "getLibraryExtensionFunctionName": "GetLibraryExtXAlt"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 ```
 
-## GetLibraryNameFunctionName
+## getLibraryNameFunctionName
 
-### 1. Explanation
-**GetLibraryNameFunctionName** controls the **GetLibraryNameFunctionName** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `getLibraryNameFunctionName`
 - Type: `string`
-- Default value: `"GetLibraryName"`
-- Example expected value: `"GetLibraryNameX"`
+- Source default: `"GetLibraryName"`
+- Expected fixture value: `"GetLibraryNameXAlt"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GetLibraryNameFunctionName": "GetLibraryNameX"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "getLibraryNameFunctionName": "GetLibraryNameXAlt"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 ```
 
-## HandleNamingConvention
+## handleNamingConvention
 
-### 1. Explanation
-**HandleNamingConvention** controls the **HandleNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `handleNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"PascalCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "HandleNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "handleNamingConvention": "PascalCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public readonly partial struct WidgetHandle : IEquatable<WidgetHandle>
-internal static extern void WidgetHandleReleaseNative(WidgetHandle handle);
+internal static extern void WidgetHandleReleaseInterop(nint handle);
+internal static void WidgetHandleReleaseNative(WidgetHandle handle)
+WidgetHandleReleaseInterop(handle.Handle);
 public static void WidgetHandleRelease(WidgetHandle handle)
-// NotContains
+// Excluded markers
 widget_handle_t
 ```
 
-## HeaderInjector
+## ignoredConstants
 
-### 1. Explanation
-**HeaderInjector** controls the **HeaderInjector** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
-- Type: `HeaderInjectionDelegate?`
-- Default value: `null`
-- Example expected value: `null`
-
-### 3. Example Config and Generated Output
-#### Example config
-```json
-{
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
-}
-```
-
-#### Example generated output markers
-```csharp
-// Contains
-public const int HEADER_FLAG = 11;
-public enum HeaderMode : int
-Off = unchecked(0)
-On = unchecked(1)
-internal static extern int HeaderEvalNative(HeaderMode mode);
-// NotContains
-```
-
-## IgnoredConstants
-
-### 1. Explanation
-**IgnoredConstants** controls the **IgnoredConstants** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredConstants`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["MY_CONST"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "IgnoredConstants": [
-    "MY_CONST"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "ignoredConstants": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
+public const int MY_CONST = 9;
 public const int KEEP_CONST = 13;
 internal static extern int ReadConstNative();
-// NotContains
-public const int MY_CONST = 9;
+// Excluded markers
 ```
 
-## IgnoredDelegates
+## ignoredDelegates
 
-### 1. Explanation
-**IgnoredDelegates** controls the **IgnoredDelegates** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredDelegates`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["my_delegate"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "IgnoredDelegates": [
-    "my_delegate"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "ignoredDelegates": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
+public unsafe delegate void MyDelegate(int value);
 public unsafe delegate void KeepDelegate(int value);
 internal static extern void SetKeepDelegateNative(
-// NotContains
-public unsafe delegate void MyDelegate(int value);
+// Excluded markers
 ```
 
-## IgnoredEnums
+## ignoredEnums
 
-### 1. Explanation
-**IgnoredEnums** controls the **IgnoredEnums** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredEnums`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["my_enum"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "IgnoredEnums": [
-    "my_enum"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "ignoredEnums": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
+public enum MyEnum : int
 public enum KeepEnum : int
 internal static extern int UseEnumNative(KeepEnum mode);
-// NotContains
-public enum MyEnum : int
+// Excluded markers
 ```
 
-## IgnoredExtensions
+## ignoredExtensions
 
-### 1. Explanation
-**IgnoredExtensions** controls the **IgnoredExtensions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredExtensions`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["drop_ext"]`
+- Source default: `new()`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": true,
-  "GenerateRuntimeSource": false,
-  "IgnoredExtensions": [
-    "drop_ext"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": true,
+  "generateRuntimeSource": false,
+  "ignoredExtensions": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public static unsafe partial class Extensions
 public static void KeepExt(this WidgetHandle handle, int value)
-internal static extern void KeepExtNative(WidgetHandle handle, int value);
-internal static extern void DropExtNative(WidgetHandle handle, int value);
-// NotContains
 public static void DropExt(this WidgetHandle handle, int value)
+internal static extern void KeepExtInterop(nint handle, int value);
+internal static extern void DropExtInterop(nint handle, int value);
+internal static void KeepExtNative(WidgetHandle handle, int value)
+internal static void DropExtNative(WidgetHandle handle, int value)
+KeepExtInterop(handle.Handle, value);
+DropExtInterop(handle.Handle, value);
+// Excluded markers
 ```
 
-## IgnoredFunctions
+## ignoredFunctions
 
-### 1. Explanation
-**IgnoredFunctions** controls the **IgnoredFunctions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredFunctions`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["drop_fn"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "IgnoredFunctions": [
-    "drop_fn"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "ignoredFunctions": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int KeepFnNative(int a, int b);
+internal static extern int DropFnNative(int a, int b);
 public static int KeepFn(int a, int b)
-// NotContains
-DropFnNative
 public static int DropFn(int a, int b)
+// Excluded markers
 ```
 
-## IgnoredParts
+## ignoredParts
 
-### 1. Explanation
-**IgnoredParts** controls the **IgnoredParts** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredParts`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["Entry"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "IgnoredParts": [
-    "Entry"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "ignoredParts": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-internal static extern int SampleAddNative(int a, int b);
-public static int SampleAdd(int a, int b)
-// NotContains
-EntrySampleAddNative
-EntrySampleAdd(int a, int b)
+// Required markers
+internal static extern int EntrySampleAddNative(int a, int b);
+public static int EntrySampleAdd(int a, int b)
+// Excluded markers
 ```
 
-## IgnoredTypedefs
+## ignoredTypedefs
 
-### 1. Explanation
-**IgnoredTypedefs** controls the **IgnoredTypedefs** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredTypedefs`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["my_typedef"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "AutoSquashTypedef": false,
-  "IgnoredTypedefs": [
-    "my_typedef"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "autoSquashTypedef": false,
+  "ignoredTypedefs": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-using KeepTypedef = int;
-internal static extern KeepTypedef AddKeepNative(KeepTypedef value);
-// NotContains
+// Required markers
 using MyTypedef = int;
+using KeepTypedef = int;
+internal static extern int AddKeepNative(int value);
+// Excluded markers
 ```
 
-## IgnoredTypes
+## ignoredTypes
 
-### 1. Explanation
-**IgnoredTypes** controls the **IgnoredTypes** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `ignoredTypes`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["my_type"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "IgnoredTypes": [
-    "my_type"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "ignoredTypes": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
+public partial struct MyType
 public partial struct KeepType
 UseTypesNative(
-// NotContains
-public partial struct MyType
+// Excluded markers
 ```
 
-## ImportType
+## importType
 
-### 1. Explanation
-**ImportType** controls the **ImportType** behavior and is validated by both property snapshots and generated-output checks.
+- Result property: `importType`
+- Type: `importType`
+- Source default: `ImportType.FunctionTable`
+- Expected fixture value: `"DllImport"`
 
-### 2. Type, Example, and Default Value
-- Type: `ImportType`
-- Default value: `ImportType.FunctionTable`
-- Example expected value: `"FunctionTable"`
+### Configuration
 
-### 3. Example Config and Generated Output
-#### Example config
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "FunctionTable",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-internal static FunctionTable funcTable;
-public static void InitApi()
-funcTable.Load(0, "sample_add");
-delegate* unmanaged[Cdecl]<int, int, int>)funcTable[0]
-// NotContains
-[DllImport(
+// Required markers
+[DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sample_add")]
+internal static extern int SampleAddNative(int a, int b);
+// Excluded markers
+internal static global::BGCS.Runtime.FunctionTable funcTable = null !;
 ```
 
-## IncludeFolders
+## includeFolders
 
-### 1. Explanation
-**IncludeFolders** controls the **IncludeFolders** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `includeFolders`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["include"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "IncludeFolders": [
-    "include"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "includeFolders": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int UseDepNative(
 public static int UseDep(
-// NotContains
+// Excluded markers
 ```
 
-## Keywords
+## keywords
 
-### 1. Explanation
-**Keywords** controls the **Keywords** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `keywords`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["customKeyword"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "Keywords": [
-    "customKeyword"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "keywords": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-public static int UseKeyword(int @customKeyword)
-// NotContains
+// Required markers
 public static int UseKeyword(int customKeyword)
+// Excluded markers
+public static int UseKeyword(int @customKeyword)
 ```
 
-## KnownConstantNames
+## knownConstantNames
 
-### 1. Explanation
-**KnownConstantNames** controls the **KnownConstantNames** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `knownConstantNames`
 - Type: `Dictionary<string, string>`
-- Default value: `{}`
-- Example expected value: `{"SAMPLE_CONST":"SpecialConst"}`
+- Source default: `{}`
+- Expected fixture value: `{}`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "KnownConstantNames": {
-    "SAMPLE_CONST": "SpecialConst"
-  }
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "knownConstantNames": {}
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-public const int SpecialConst = 7;
-public const int KEEP_CONST = 3;
-// NotContains
+// Required markers
 public const int SAMPLE_CONST = 7;
+public const int KEEP_CONST = 3;
+// Excluded markers
+public const int SpecialConst = 7;
 ```
 
-## KnownConstructors
+## knownConstructors
 
-### 1. Explanation
-**KnownConstructors** controls the **KnownConstructors** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `knownConstructors`
 - Type: `Dictionary<string, List<string>>`
-- Default value: `{}`
-- Example expected value: `{"my_type":["my_type_create"]}`
+- Source default: `{}`
+- Expected fixture value: `{}`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "KnownConstructors": {
-    "my_type": [
-      "my_type_create"
-    ]
-  }
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "knownConstructors": {}
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public partial struct MyType
 internal static extern MyType MyTypeCreateNative(int value);
 public static MyType MyTypeCreate(int value)
-// NotContains
+// Excluded markers
 ```
 
-## KnownDefaultValueNames
+## knownDefaultValueNames
 
-### 1. Explanation
-**KnownDefaultValueNames** controls the **KnownDefaultValueNames** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `knownDefaultValueNames`
 - Type: `Dictionary<string, string>`
-- Default value: `{}`
-- Example expected value: `{"42":"7"}`
+- Source default: `{}`
+- Expected fixture value: `{}`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "FunctionMappings": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "functionMappings": [
     {
-      "ExportedName": "set_mode",
-      "FriendlyName": null,
-      "Comment": null,
-      "Defaults": {
+      "exportedName": "set_mode",
+      "friendlyName": null,
+      "comment": null,
+      "defaults": {
         "mode": "42"
       },
-      "CustomVariations": [],
-      "Parameters": null
+      "customVariations": [],
+      "parameters": null
     }
   ],
-  "KnownDefaultValueNames": {
-    "42": "7"
-  }
+  "knownDefaultValueNames": {}
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SetModeNative(int mode);
 public static int SetMode()
-SetModeNative((int)(7));
-// NotContains
-SetModeNative((int)(42));
+return SetMode((int)(42));
+// Excluded markers
+return SetMode((int)(7));
 ```
 
-## KnownEnumPrefixes
+## knownEnumPrefixes
 
-### 1. Explanation
-**KnownEnumPrefixes** controls the **KnownEnumPrefixes** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `knownEnumPrefixes`
 - Type: `Dictionary<string, string>`
-- Default value: `{}`
-- Example expected value: `{"strange_enum":"MY_PREFIX"}`
+- Source default: `{}`
+- Expected fixture value: `{}`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "KnownEnumPrefixes": {
-    "strange_enum": "MY_PREFIX"
-  }
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "knownEnumPrefixes": {}
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-public enum StrangeEnum : int
-Off = unchecked(0)
-On = unchecked(1)
-// NotContains
-MyPrefixOff
-MyPrefixOn
-```
-
-## KnownEnumValueNames
-
-### 1. Explanation
-**KnownEnumValueNames** controls the **KnownEnumValueNames** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
-- Type: `Dictionary<string, string>`
-- Default value: `{}`
-- Example expected value: `{"MY_PREFIX_ON":"Enabled"}`
-
-### 3. Example Config and Generated Output
-#### Example config
-```json
-{
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "KnownEnumValueNames": {
-    "MY_PREFIX_ON": "Enabled"
-  }
-}
-```
-
-#### Example generated output markers
-```csharp
-// Contains
+// Required markers
 public enum StrangeEnum : int
 MyPrefixOff = unchecked(0)
-Enabled = unchecked(1)
-// NotContains
+MyPrefixOn = unchecked(1)
+// Excluded markers
 ```
 
-## KnownExtensionNames
+## knownEnumValueNames
 
-### 1. Explanation
-**KnownExtensionNames** controls the **KnownExtensionNames** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `knownEnumValueNames`
 - Type: `Dictionary<string, string>`
-- Default value: `{}`
-- Example expected value: `{"WidgetHandleSetValue":"ApplyValue"}`
+- Source default: `{}`
+- Expected fixture value: `{}`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": true,
-  "GenerateRuntimeSource": false,
-  "KnownExtensionNames": {
-    "WidgetHandleSetValue": "ApplyValue"
-  }
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "knownEnumValueNames": {}
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
+public enum StrangeEnum : int
+MyPrefixOff = unchecked(0)
+MyPrefixOn = unchecked(1)
+// Excluded markers
+```
+
+## knownExtensionNames
+
+- Result property: `knownExtensionNames`
+- Type: `Dictionary<string, string>`
+- Source default: `{}`
+- Expected fixture value: `{}`
+
+### Configuration
+
+```json
+{
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": true,
+  "generateRuntimeSource": false,
+  "knownExtensionNames": {}
+}
+```
+
+### Generated output assertions
+
+```csharp
+// Required markers
 public static unsafe partial class Extensions
+public static void SetValue(this WidgetHandle handle, int value)
+// Excluded markers
 public static void ApplyValue(this WidgetHandle handle, int value)
-// NotContains
-public static void SetValue(this WidgetHandle handle, int value)
 ```
 
-## KnownExtensionPrefixes
+## knownExtensionPrefixes
 
-### 1. Explanation
-**KnownExtensionPrefixes** controls the **KnownExtensionPrefixes** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `knownExtensionPrefixes`
 - Type: `Dictionary<string, string>`
-- Default value: `{}`
-- Example expected value: `{"widget_handle_t":"LIB"}`
+- Source default: `{}`
+- Expected fixture value: `{}`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": true,
-  "GenerateRuntimeSource": false,
-  "KnownExtensionPrefixes": {
-    "widget_handle_t": "LIB"
-  }
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": true,
+  "generateRuntimeSource": false,
+  "knownExtensionPrefixes": {}
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public static unsafe partial class Extensions
-public static void SetValue(this WidgetHandle handle, int value)
-// NotContains
 public static void LibSetValue(this WidgetHandle handle, int value)
+// Excluded markers
+public static void SetValue(this WidgetHandle handle, int value)
 ```
 
-## KnownMemberFunctions
+## knownMemberFunctions
 
-### 1. Explanation
-**KnownMemberFunctions** controls the **KnownMemberFunctions** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `knownMemberFunctions`
 - Type: `Dictionary<string, List<string>>`
-- Default value: `{}`
-- Example expected value: `{"my_type":["my_type_inc"]}`
+- Source default: `{}`
+- Expected fixture value: `{}`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "KnownMemberFunctions": {
-    "my_type": [
-      "my_type_inc"
-    ]
-  }
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "knownMemberFunctions": {}
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public partial struct MyType
 internal static extern int MyTypeIncNative(MyType* self, int delta);
+// Excluded markers
 public unsafe int MyTypeInc(int delta)
-// NotContains
 ```
 
-## LibName
+## libName
 
-### 1. Explanation
-**LibName** controls the **LibName** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `libName`
 - Type: `string`
-- Default value: `string.Empty`
-- Example expected value: `"entry-lib-x"`
+- Source default: `string.Empty`
+- Expected fixture value: `"entry-lib-xAlt"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib-x",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib-xAlt",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-internal const string LibName = "entry-lib-x";
+// Required markers
+internal const string LibName = "entry-lib-xAlt";
 [DllImport(LibName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sample_add")]
-// NotContains
+// Excluded markers
 ```
 
-## LogLevel
+## logLevel
 
-### 1. Explanation
-**LogLevel** controls the **LogLevel** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `logLevel`
 - Type: `LogSeverity`
-- Default value: `LogSeverity.Warning`
-- Example expected value: `"Information"`
+- Source default: `LogSeverity.Warning`
+- Expected fixture value: `"Warning"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "LogLevel": "Information"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "logLevel": "Warning"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
 internal static extern int SampleSubNative(int a, int b);
 public static int SampleAdd(int a, int b)
 public static int SampleSub(int a, int b)
-// NotContains
+// Excluded markers
 ```
 
-## MemberNamingConvention
+## memberNamingConvention
 
-### 1. Explanation
-**MemberNamingConvention** controls the **MemberNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `memberNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"PascalCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "MemberNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "memberNamingConvention": "PascalCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public partial struct SampleType
-public int valueOne;
-public int valueTwo;
+public int ValueOne;
+public int ValueTwo;
 internal static extern int SampleUseNative(SampleType value);
-// NotContains
+// Excluded markers
 ```
 
-## MergeGeneratedFilesToSingleFile
+## mergeGeneratedFilesToSingleFile
 
-### 1. Explanation
-**MergeGeneratedFilesToSingleFile** controls the **MergeGeneratedFilesToSingleFile** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `mergeGeneratedFilesToSingleFile`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `false`
+- Source default: `false`
+- Expected fixture value: `true`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": false,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "singleFileOutputName": "Example.Native.Generated.cs",
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-// NotContains
+// Required markers
+public partial struct MergeType
+public enum MergeMode : int
+internal static extern int SampleAddNative(int a, int b);
+internal static extern void MergeSetModeNative(MergeType* data, MergeMode mode);
+// Excluded markers
 ```
 
-## Namespace
+## namespace
 
-### 1. Explanation
-**Namespace** controls the **Namespace** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `namespace`
 - Type: `string`
-- Default value: `string.Empty`
-- Example expected value: `"Expected.Namespace.Entry"`
+- Source default: `string.Empty`
+- Expected fixture value: `"Expected.Namespace.Entry.Alt"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "Expected.Namespace.Entry",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "Expected.Namespace.Entry.Alt",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-namespace Expected.Namespace.Entry
+// Required markers
+namespace Expected.Namespace.Entry.Alt
 internal static extern int SampleAddNative(int a, int b);
 public static int SampleAdd(int a, int b)
-// NotContains
+// Excluded markers
 ```
 
-## OneFilePerType
+## oneFilePerType
 
-### 1. Explanation
-**OneFilePerType** controls the **OneFilePerType** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `oneFilePerType`
 - Type: `bool`
-- Default value: `true`
-- Example expected value: `false`
+- Source default: `true`
+- Expected fixture value: `true`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": false,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "OneFilePerType": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": false,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "oneFilePerType": true
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-// NotContains
+// Required markers
+// Excluded markers
 ```
 
-## ParameterNamingConvention
+## parameterNamingConvention
 
-### 1. Explanation
-**ParameterNamingConvention** controls the **ParameterNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `parameterNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.CamelCase`
-- Example expected value: `"PascalCase"`
+- Source default: `NamingConvention.CamelCase`
+- Expected fixture value: `"CamelCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "ParameterNamingConvention": "PascalCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "parameterNamingConvention": "CamelCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-internal static extern int SampleAddNative(int InputValue, int MaxCount);
-public static int SampleAdd(int InputValue, int MaxCount)
-// NotContains
-SampleAddNative(int inputValue, int maxCount)
+// Required markers
+internal static extern int SampleAddNative(int inputValue, int maxCount);
+public static int SampleAdd(int inputValue, int maxCount)
+// Excluded markers
+SampleAddNative(int InputValue, int MaxCount)
 ```
 
-## RuntimeNamespace
+## runtimeNamespace
 
-### 1. Explanation
-**RuntimeNamespace** controls the **RuntimeNamespace** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `runtimeNamespace`
 - Type: `string`
-- Default value: `string.Empty`
-- Example expected value: `"EntryTests.Runtime"`
+- Source default: `string.Empty`
+- Expected fixture value: `"EntryTests.Runtime.Alt"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": true,
-  "RuntimeNamespace": "EntryTests.Runtime"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": true,
+  "runtimeNamespace": "EntryTests.Runtime.Alt"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-using EntryTests.Runtime;
+// Required markers
+using EntryTests.Runtime.Alt;
 internal static extern Bool8 BoolEvalNative(Bool8 value);
 public static bool BoolEval(bool value)
-// NotContains
+// Excluded markers
 ```
 
-## SystemIncludeFolders
+## systemIncludeFolders
 
-### 1. Explanation
-**SystemIncludeFolders** controls the **SystemIncludeFolders** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `systemIncludeFolders`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["sysinclude"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "ParseSystemIncludes": true,
-  "SystemIncludeFolders": [
-    "sysinclude"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "systemIncludeFolders": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-internal static extern int UseSysNative(int value);
-public static int UseSys(int value)
-// NotContains
+// Required markers
+// Excluded markers
 ```
 
-## TypeFieldMappings
+## typeFieldMappings
 
-### 1. Explanation
-**TypeFieldMappings** controls the **TypeFieldMappings** behavior and is validated by both property snapshots and generated-output checks.
+- Result property: `typeFieldMappings`
+- Type: `composition behavior`
+- Source default: `see the selected configuration`
+- Expected fixture value: `null`
 
-### 2. Type, Example, and Default Value
-- Type: `unknown`
-- Default value: `(runtime default)`
-- Example expected value: `(not specified in snapshot)`
+### Configuration
 
-### 3. Example Config and Generated Output
-#### Example config
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "MemberNamingConvention": "PascalCase",
-  "ClassMappings": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "memberNamingConvention": "PascalCase",
+  "classMappings": [
     {
-      "ExportedName": "sample_type",
-      "FriendlyName": "SampleType",
-      "FieldMappings": [
-        { "ExportedName": "id", "DisplayName": "ID" },
-        { "ExportedName": "url", "DisplayName": "URL" },
-        { "ExportedName": "cpu", "DisplayName": "CPU" }
+      "exportedName": "sample_type",
+      "friendlyName": "SampleType",
+      "fieldMappings": [
+        {
+          "exportedName": "id",
+          "displayName": "ID"
+        },
+        {
+          "exportedName": "url",
+          "displayName": "URL"
+        },
+        {
+          "exportedName": "cpu",
+          "displayName": "CPU"
+        }
       ]
     }
   ]
 }
 ```
 
-#### Example generated output markers
-```csharp
-// No expected.bindings snapshot for this entry
-```
+## typeNamingConvention
 
-## TypeNamingConvention
-
-### 1. Explanation
-**TypeNamingConvention** controls the **TypeNamingConvention** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `typeNamingConvention`
 - Type: `NamingConvention`
-- Default value: `NamingConvention.PascalCase`
-- Example expected value: `"CamelCase"`
+- Source default: `NamingConvention.PascalCase`
+- Expected fixture value: `"PascalCase"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "TypeNamingConvention": "CamelCase"
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "typeNamingConvention": "PascalCase"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 public partial struct SampleType
 internal static extern SampleType MakeSampleNative(int value);
 public static SampleType MakeSample(int value)
-// NotContains
+// Excluded markers
 ```
 
-## UseCustomContext
+## useCustomContext
 
-### 1. Explanation
-**UseCustomContext** controls the **UseCustomContext** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `useCustomContext`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `true`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "FunctionTable",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "UseCustomContext": true
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "FunctionTable",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "useCustomContext": false
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-internal static FunctionTable funcTable;
-public static void InitApi(INativeContext context)
-funcTable = new FunctionTable(context, 1);
-funcTable.Load(0, "sample_add");
-// NotContains
+// Required markers
+internal static global::BGCS.Runtime.FunctionTable funcTable = null !;
 private static string GetLibraryName()
 public static void InitApi()
+var candidate = new global::BGCS.Runtime.FunctionTable(global::BGCS.Runtime.LibraryLoader.LoadLibrary(GetLibraryName, null), 1);
+candidate.LoadRequired(0, "sample_add");
+// Excluded markers
+public static void InitApi(global::BGCS.Runtime.INativeContext context)
 ```
 
-## Usings
+## usings
 
-### 1. Explanation
-**Usings** controls the **Usings** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `usings`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["System.Text"]`
+- Source default: `[]`
+- Expected fixture value: `[]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "Usings": [
-    "System.Text"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "usings": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
-using System.Text;
+// Required markers
 internal static extern int SampleAddNative(int a, int b);
-// NotContains
-using System.IO;
+// Excluded markers
+using System.Text;
 ```
 
-## VaryingTypes
+## varyingTypes
 
-### 1. Explanation
-**VaryingTypes** controls the **VaryingTypes** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `varyingTypes`
 - Type: `HashSet<string>`
-- Default value: `[]`
-- Example expected value: `["ReadOnlySpan<byte>","string","ref string","nint"]`
+- Source default: `[]`
+- Expected fixture value: `["ReadOnlySpan<byte>", "string", "ref string"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "GenerateAdditionalOverloads": true,
-  "VaryingTypes": [
-    "nint"
-  ]
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "generateAdditionalOverloads": true,
+  "varyingTypes": []
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```csharp
-// Contains
+// Required markers
 internal static extern void SetNameNative(byte* name);
-public static void SetName(ReadOnlySpan<byte> name)
+public static void SetName(in byte name)
 public static void SetName(string name)
-// NotContains
+public static void SetName(ReadOnlySpan<byte> name)
+// Excluded markers
 ```
 
-## WrapPointersAsHandle
+## wrapPointersAsHandle
 
-### 1. Explanation
-**WrapPointersAsHandle** controls the **WrapPointersAsHandle** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `wrapPointersAsHandle`
 - Type: `bool`
-- Default value: `false`
-- Example expected value: `true`
+- Source default: `false`
+- Expected fixture value: `false`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "EnableExperimentalOptions": true,
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "WrapPointersAsHandle": true
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "enableExperimentalOptions": true,
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "wrapPointersAsHandle": false
 }
 ```
 
-#### Example generated output markers
-```csharp
-// Contains
-public unsafe struct SampleTypePtr : IEquatable<SampleTypePtr>
-internal static extern int SampleTakePtrNative(SampleType* value);
-public static int SampleTakePtr(SampleTypePtr value)
-public static int SampleTakePtr(ref SampleType value)
-// NotContains
-public static int SampleTakePtr(SampleType* value)
-```
+### Generated output assertions
 
+```csharp
+// Required markers
+internal static extern int SampleTakePtrNative(SampleType* value);
+public static int SampleTakePtr(SampleType* value)
+// Excluded markers
+public unsafe struct SampleTypePtr : IEquatable<SampleTypePtr>
+```

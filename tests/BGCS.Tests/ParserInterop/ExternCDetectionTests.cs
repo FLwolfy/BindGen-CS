@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using BGCS.CppAst.Extensions;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Interfaces;
@@ -23,19 +23,19 @@ public class ExternCDetectionTests
         {
             CppParserOptions options = new()
             {
-                ParserKind = CppParserKind.Cpp,
-                ParseMacros = true,
-                ParseSystemIncludes = false
+                parserKind = CppParserKind.Cpp,
+                parseMacros = true,
+                parseSystemIncludes = false
             };
-            options.AdditionalArguments.Add("-undef");
+            options.additionalArguments.Add("-undef");
 
             var compilation = CppParser.ParseFile(file, options);
-            var function = compilation.Functions.FirstOrDefault(x => x.Name == "Bgcs_Extern");
+            var function = compilation.functions.FirstOrDefault(x => x.name == "Bgcs_Extern");
 
             Assert.True(
                 function != null,
-                $"Function not found. Diagnostics:\n{compilation.Diagnostics}\nFunctions: {string.Join(", ", compilation.Functions.Select(x => x.Name))}");
-            Assert.True(function!.IsExternC);
+                $"Function not found. Diagnostics:\n{compilation.diagnostics}\nFunctions: {string.Join(", ", compilation.functions.Select(x => x.name))}");
+            Assert.True(function!.isExternC);
             Assert.True(function.IsPublicExport());
         }
         finally
@@ -59,19 +59,19 @@ public class ExternCDetectionTests
         {
             CppParserOptions options = new()
             {
-                ParserKind = CppParserKind.Cpp,
-                ParseMacros = true,
-                ParseSystemIncludes = false
+                parserKind = CppParserKind.Cpp,
+                parseMacros = true,
+                parseSystemIncludes = false
             };
-            options.AdditionalArguments.Add("-undef");
+            options.additionalArguments.Add("-undef");
 
             var compilation = CppParser.ParseFile(file, options);
-            var function = compilation.Functions.FirstOrDefault(x => x.Name == "Bgcs_Normal");
+            var function = compilation.functions.FirstOrDefault(x => x.name == "Bgcs_Normal");
 
             Assert.True(
                 function != null,
-                $"Function not found. Diagnostics:\n{compilation.Diagnostics}\nFunctions: {string.Join(", ", compilation.Functions.Select(x => x.Name))}");
-            Assert.False(function!.IsExternC);
+                $"Function not found. Diagnostics:\n{compilation.diagnostics}\nFunctions: {string.Join(", ", compilation.functions.Select(x => x.name))}");
+            Assert.False(function!.isExternC);
         }
         finally
         {
@@ -103,18 +103,18 @@ public class ExternCDetectionTests
         {
             CppParserOptions options = new()
             {
-                ParserKind = CppParserKind.Cpp,
-                ParseMacros = true,
-                ParseSystemIncludes = false
+                parserKind = CppParserKind.Cpp,
+                parseMacros = true,
+                parseSystemIncludes = false
             };
-            options.AdditionalArguments.Add("-undef");
+            options.additionalArguments.Add("-undef");
 
             var compilation = CppParser.ParseFile(file, options);
             var function = FindFunctionByName(compilation, "Bgcs_ExternNs");
             Assert.True(
                 function != null,
-                $"Function not found. Diagnostics:\n{compilation.Diagnostics}\nFunctions: {string.Join(", ", EnumerateFunctions(compilation).Select(x => x.Name))}");
-            Assert.True(function!.IsExternC);
+                $"Function not found. Diagnostics:\n{compilation.diagnostics}\nFunctions: {string.Join(", ", EnumerateFunctions(compilation).Select(x => x.name))}");
+            Assert.True(function!.isExternC);
             Assert.True(function.IsPublicExport());
         }
         finally
@@ -148,14 +148,14 @@ public class ExternCDetectionTests
         {
             CppParserOptions options = new()
             {
-                ParserKind = CppParserKind.Cpp,
-                ParseMacros = true,
-                ParseSystemIncludes = false
+                parserKind = CppParserKind.Cpp,
+                parseMacros = true,
+                parseSystemIncludes = false
             };
-            options.AdditionalArguments.Add("-undef");
+            options.additionalArguments.Add("-undef");
 
             var compilation = CppParser.ParseFile(file, options);
-            Assert.DoesNotContain(compilation.Functions, x => x.Name == "Bgcs_Method" && x.IsPublicExport());
+            Assert.DoesNotContain(compilation.functions, x => x.name == "Bgcs_Method" && x.IsPublicExport());
         }
         finally
         {
@@ -191,11 +191,11 @@ public class ExternCDetectionTests
         {
             CppParserOptions options = new()
             {
-                ParserKind = CppParserKind.Cpp,
-                ParseMacros = true,
-                ParseSystemIncludes = false
+                parserKind = CppParserKind.Cpp,
+                parseMacros = true,
+                parseSystemIncludes = false
             };
-            options.AdditionalArguments.Add("-undef");
+            options.additionalArguments.Add("-undef");
 
             var compilation = CppParser.ParseFile(file, options);
             var normal = FindFunctionByName(compilation, "Bgcs_Normal");
@@ -206,12 +206,12 @@ public class ExternCDetectionTests
             Assert.NotNull(externOnly);
             Assert.NotNull(nsOnly);
 
-            Assert.False(normal!.IsExternC);
+            Assert.False(normal!.isExternC);
 
-            Assert.True(externOnly!.IsExternC);
+            Assert.True(externOnly!.isExternC);
             Assert.True(externOnly.IsPublicExport());
 
-            Assert.False(nsOnly!.IsExternC);
+            Assert.False(nsOnly!.isExternC);
         }
         finally
         {
@@ -225,17 +225,17 @@ public class ExternCDetectionTests
     private static BGCS.CppAst.Model.Declarations.CppFunction? FindFunctionByName(BGCS.CppAst.Model.Metadata.CppCompilation compilation, string unqualifiedName)
     {
         return EnumerateFunctions(compilation).FirstOrDefault(
-            x => x.Name == unqualifiedName || x.Name.EndsWith("::" + unqualifiedName, System.StringComparison.Ordinal));
+            x => x.name == unqualifiedName || x.name.EndsWith("::" + unqualifiedName, System.StringComparison.Ordinal));
     }
 
     private static IEnumerable<CppFunction> EnumerateFunctions(ICppGlobalDeclarationContainer container)
     {
-        foreach (var function in container.Functions)
+        foreach (var function in container.functions)
         {
             yield return function;
         }
 
-        foreach (var ns in container.Namespaces)
+        foreach (var ns in container.namespaces)
         {
             foreach (var function in EnumerateFunctions(ns))
             {

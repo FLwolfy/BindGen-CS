@@ -5,8 +5,11 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using BGCS.Configuration;
+using BGCS.Configuration.Mapping;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
+using BGCS.Facade;
 using BGCS.Runtime;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -40,11 +43,11 @@ public class GeneratedCodeRuntimeSemanticsTests
             object generatedContext = CreateGeneratedContextAdapter(asm, context);
             InvokeStatic(apiType, "InitApi", [generatedContext]);
 
-            int sum = (int)InvokeStatic(apiType, "BgcsAddNative", [7, 35])!;
+            int sum = (int)InvokeStatic(apiType, "BgcsAdd", [7, 35])!;
             Assert.Equal(42, sum);
 
-            InvokeStatic(apiType, "BgcsSetLastNative", [1234]);
-            int last = (int)InvokeStatic(apiType, "BgcsGetLastNative", [])!;
+            InvokeStatic(apiType, "BgcsSetLast", [1234]);
+            int last = (int)InvokeStatic(apiType, "BgcsGetLast", [])!;
             Assert.Equal(1234, last);
 
             InvokeStatic(apiType, "FreeApi", []);
@@ -60,9 +63,44 @@ public class GeneratedCodeRuntimeSemanticsTests
         }
     }
 
+    [Fact]
+    public void FunctionAliasesShareTheOriginalNativeExportAndExecutePublicWrappers()
+    {
+        const string header = """
+            int bgcs_add(int a, int b);
+            #define bgcs_sum bgcs_add
+            #define bgcs_plus bgcs_add
+            """;
+        var run = RunGenerator(header, configuration =>
+            configuration.AddFunctionAliasMapping(new FunctionAliasMapping("bgcs_add", "bgcs_sum", "Total", null)));
+        try
+        {
+            AssertGeneratorSucceeded(run.Ok, run.Messages);
+            Assembly assembly = CompileGeneratedSources(run.OutputPath, "BGCS.Generated.FunctionAliases");
+            Type api = assembly.GetType("Runtime.Generated.RuntimeApi")!;
+            FakeNativeContext context = new();
+            InvokeStatic(api, "InitApi", [CreateGeneratedContextAdapter(assembly, context)]);
+            try
+            {
+                Assert.Equal(42, InvokeStatic(api, "BgcsAdd", [7, 35]));
+                Assert.Equal(42, InvokeStatic(api, "Total", [12, 30]));
+                Assert.Equal(42, InvokeStatic(api, "BgcsPlus", [20, 22]));
+                Assert.Equal(new[] { "bgcs_add" }, context.RequestedNames);
+            }
+            finally
+            {
+                InvokeStatic(api, "FreeApi", []);
+            }
+        }
+        finally
+        {
+            Cleanup(run.TempDirectory);
+        }
+    }
+
     private static object? InvokeStatic(Type type, string methodName, object?[] args)
     {
-        MethodInfo? method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        MethodInfo? method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
         Assert.NotNull(method);
         return method!.Invoke(null, args);
     }
@@ -189,10 +227,13 @@ public class GeneratedCodeRuntimeSemanticsTests
     private static void AssertGeneratorSucceeded(bool ok, IReadOnlyList<LogMessage> messages)
     {
         Assert.True(ok);
-        Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+        Assert.DoesNotContain(messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
     }
 
-    private static (bool Ok, string TempDirectory, string OutputPath, IReadOnlyList<LogMessage> Messages) RunGenerator(string headerText)
+    private static (bool Ok, string TempDirectory, string OutputPath, IReadOnlyList<LogMessage> Messages) RunGenerator(
+        string headerText,
+        Action<CsCodeGeneratorConfig>? configure = null
+    )
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-runtime-semantics-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -203,29 +244,30 @@ public class GeneratedCodeRuntimeSemanticsTests
 
         CsCodeGeneratorConfig cfg = new()
         {
-            ApiName = "RuntimeApi",
-            Namespace = GeneratedNamespace,
-            LibName = "runtimetest",
-            GenerateExtensions = false,
-            ImportType = ImportType.FunctionTable,
-            UseCustomContext = true,
-            DelegatesAsVoidPointer = false
+            apiName = "RuntimeApi",
+            @namespace = GeneratedNamespace,
+            libName = "runtimetest",
+            generateExtensions = false,
+            importType = ImportType.FunctionTable,
+            useCustomContext = true,
+            delegatesAsVoidPointer = false
         };
 
+        configure?.Invoke(cfg);
         CsCodeGenerator generator = new(cfg);
         CppParserOptions parserOptions = new()
         {
-            ParseMacros = true,
-            ParseComments = true,
-            ParseSystemIncludes = false,
-            ParseCommentAttribute = true,
-            ParserKind = CppParserKind.Cpp,
-            AutoSquashTypedef = false
+            parseMacros = true,
+            parseComments = true,
+            parseSystemIncludes = false,
+            parseCommentAttribute = true,
+            parserKind = CppParserKind.Cpp,
+            autoSquashTypedef = false
         };
-        parserOptions.AdditionalArguments.Add("-undef");
+        parserOptions.additionalArguments.Add("-undef");
 
         bool ok = generator.Generate(parserOptions, headerPath, outputPath);
-        return (ok, temp, outputPath, generator.Messages);
+        return (ok, temp, outputPath, generator.messages);
     }
 
     private static void Cleanup(string directory)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate BGCS bindings and invoke the fixture's native C API in a headless browser."""
+"""Generate BGCS bindings and invoke the fixtures' native C and C++ APIs in a headless browser."""
 
 import argparse
 import functools
@@ -13,6 +13,7 @@ import subprocess
 import threading
 import time
 import uuid
+import cpp_acceptance_fixture
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -124,6 +125,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default=os.environ.get("DOTNET_HOST_PATH") or shutil.which("dotnet"))
     parser.add_argument("--browser", help="Path to Chrome, Chromium, or Edge; otherwise discover locally.")
+    parser.add_argument("--aot", action="store_true", help="Compile managed code ahead of time instead of interpreting it.")
+    parser.add_argument("--inject-native-error", action="store_true", help="Corrupt a native return value to prove that invocation failures fail acceptance.")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/wasm-acceptance")
     args = parser.parse_args()
     if not args.dotnet or not Path(args.dotnet).is_file():
@@ -144,11 +147,16 @@ def main():
         (work / "global.json").write_text(json.dumps({"sdk": {
             "version": "9.0.100", "rollForward": "latestFeature"}}), encoding="utf-8")
         fixture = ROOT / "tests/wasm"
-        shutil.copytree(fixture / "Native", work / "Native")
+        shutil.copytree(ROOT / "tests/fixtures/NativeApi", work / "Native")
+        if args.inject_native_error:
+            native_source = work / "Native/api.c"
+            native_source.write_text(native_source.read_text(encoding="utf-8").replace("return left + right;", "return left + right + 1;"), encoding="utf-8")
         shutil.copytree(fixture / "wwwroot", work / "wwwroot")
         shutil.copyfile(fixture / "Consumer.project.xml", work / "Consumer.csproj")
         run([dotnet, "build", str(ROOT / "src/BGCS.Tool/BGCS.Tool.csproj"), "-c", "Release",
              "--disable-build-servers", "-m:1", "-nodeReuse:false"], work, work / "generator-build.log", environment)
+        run([dotnet, "build", str(ROOT / "src/BGCS.Runtime/BGCS.Runtime.csproj"), "-c", "Release",
+             "--disable-build-servers", "-m:1", "-nodeReuse:false"], work, work / "runtime-build.log", environment)
         shutil.copyfile(ROOT / "src/BGCS.Runtime/bin/Release/net9.0/BGCS.Runtime.dll", work / "BGCS.Runtime.dll")
         raw = run([dotnet, "msbuild", "Consumer.csproj", "-nologo", "-nodeReuse:false",
                    "-getProperty:EmscriptenSdkToolsPath,EmscriptenCacheSdkCacheDir"],
@@ -160,16 +168,23 @@ def main():
             raise RuntimeError("The selected .NET SDK does not have a complete .NET 9 wasm-tools workload.")
         report["sdk"] = sdk
         tool = ROOT / "src/BGCS.Tool/bin/Release/net9.0/BGCS.Tool.dll"
+        cpp_acceptance_fixture.prepare(ROOT, work, dotnet, tool, compiler, environment, run, sysroot)
         for mode in MODES:
-            config = {"Preset": "emscripten-c", "ApiName": "NativeApi",
-                      "Namespace": "WasmAcceptance." + mode, "LibName": "api",
-                      "EntryFiles": ["Native/api.h"], "OutputPath": "Generated/" + mode,
-                      "TargetSysRoot": str(sysroot), "CompilerPath": str(compiler),
-                      "ImportType": mode, "UseCustomContext": mode == "FunctionTable",
-                      "ParseSystemIncludes": False, "ParseMacros": False, "ParseComments": False,
-                      "GenerateExtensions": False, "DelegatesAsVoidPointer": False,
-                      "GenerateHandles": True, "GenerateRuntimeSource": False,
-                      "MergeGeneratedFilesToSingleFile": True, "SingleFileOutputName": "Bindings.cs"}
+            config = {"preset": "emscripten-c", "apiName": "NativeApi",
+                      "namespace": "WasmAcceptance." + mode, "libName": "api",
+                      "entryFiles": ["Native/api.h", "Bridge/include/Classes.h", "Bridge/include/common.h"], "outputPath": "Generated/" + mode,
+                      "targetSysRoot": str(sysroot), "compilerPath": str(compiler),
+                      "importType": mode, "useCustomContext": mode == "FunctionTable",
+                      "parseSystemIncludes": False, "parseMacros": False, "parseComments": False,
+                      "generateExtensions": False, "delegatesAsVoidPointer": False,
+                      "generateHandles": True, "generateRuntimeSource": False,
+                      "mergeGeneratedFilesToSingleFile": True, "singleFileOutputName": "Bindings.cs",
+                      "typeMappings": {"BgcsWideFlags": "BgcsWideFlags"},
+                      "ignoredTypedefs": ["BgcsWideFlags"],
+                      "customEnums": [{"cppName": "BgcsWideFlags", "name": "BgcsWideFlags",
+                                       "baseType": "ulong", "items": [
+                                           {"cppName": "BGCS_WIDE_HIGH_BIT", "name": "HighBit",
+                                            "cppValue": "1ULL << 60", "value": "1UL << 60"}]}]}
             config_path = work / (mode + ".json")
             config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
             run([dotnet, str(tool), "generate", str(config_path)], work,
@@ -179,13 +194,16 @@ def main():
         runners = "\n".join(invocation.replace("__MODE__", mode) for mode in MODES)
         (work / "Program.cs").write_text(program.replace("__RUNNERS__", runners), encoding="utf-8")
         run([dotnet, "publish", "Consumer.csproj", "-c", "Release", "-o", str(work / "published"),
-             "--disable-build-servers", "-m:1", "-nodeReuse:false"],
+             "--disable-build-servers", "-m:1", "-nodeReuse:false",
+             "-p:RunAOTCompilation=" + str(args.aot).lower(), "-p:PublishTrimmed=" + str(args.aot).lower()],
             work, work / "publish.log", environment)
         result = invoke_browser(browser, work / "published/wwwroot", work)
         report["invocation"] = result
         expected = {mode + ":" + check for mode in MODES for check in (
-            "scalar", "layout", "buffer", "capacity", "handle", "callback", "null-callback", "release")}
+            "scalar", "wide-integer", "wide-enum", "native-long", "bool", "layout", "bitfields", "buffer", "capacity", "handle", "callback", "null-callback", "release",
+            "cpp-construction", "cpp-method", "cpp-inheritance", "cpp-release")}
         expected.update(("missing-symbol", "function-table-context"))
+        expected.update(("failed-initialization", "borrowed-context", "borrowed-storage"))
         checks = result.get("checks", []) if result else []
         if not result or not result.get("success") or len(checks) != len(expected) or set(checks) != expected:
             raise RuntimeError("Native invocation failed or did not complete every required check.")

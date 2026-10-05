@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -6,37 +10,33 @@ namespace BGCS.Tool.Commands;
 
 internal static class SupplyChainCommand
 {
-    private const string DefaultRepository = "https://github.com/FLwolfy/BindGen-CS";
-    private const string DefaultBuilder = "https://github.com/FLwolfy/BindGen-CS/.github/workflows/release";
-
-    internal static int Run(string[] args, string workingDirectory, TextWriter output, TextWriter error)
-    {
+    private const string C_DEFAULTREPOSITORY = "https://github.com/FLwolfy/BindGen-CS";
+    private const string C_DEFAULTBUILDER = "https://github.com/FLwolfy/BindGen-CS/.github/workflows/release";
+    internal static int Run(
+        string[] args,
+        string workingDirectory,
+        TextWriter output,
+        TextWriter error
+    ) {
         try
         {
             Options options = Parse(args);
-            string artifactRoot = Path.GetFullPath(options.ArtifactRoot ?? "artifacts/nuget", workingDirectory);
-            string outputRoot = Path.GetFullPath(options.OutputRoot ?? "artifacts/supply-chain", workingDirectory);
+            string artifactRoot = Path.GetFullPath(options.artifactRoot ?? "artifacts/nuget", workingDirectory);
+            string outputRoot = Path.GetFullPath(options.outputRoot ?? "artifacts/supply-chain", workingDirectory);
             if (!Directory.Exists(artifactRoot))
                 throw new DirectoryNotFoundException($"Artifact directory was not found: {artifactRoot}");
             string sbomPath = Path.Combine(outputRoot, "sbom.spdx.json");
             string provenancePath = Path.Combine(outputRoot, "provenance.slsa.json");
-            Artifact[] artifacts = Directory.GetFiles(artifactRoot, "*", SearchOption.AllDirectories)
-                .Where(path => !string.Equals(Path.GetFullPath(path), sbomPath, StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(Path.GetFullPath(path), provenancePath, StringComparison.OrdinalIgnoreCase))
-                .Select(path => CreateArtifact(artifactRoot, path))
-                .OrderBy(artifact => artifact.Name, StringComparer.Ordinal)
-                .ToArray();
+            Artifact[] artifacts = Directory.GetFiles(artifactRoot, "*", SearchOption.AllDirectories).Where(path => !string.Equals(Path.GetFullPath(path), sbomPath, StringComparison.OrdinalIgnoreCase) && !string.Equals(Path.GetFullPath(path), provenancePath, StringComparison.OrdinalIgnoreCase)).Select(path => CreateArtifact(artifactRoot, path)).OrderBy(artifact => artifact.name, StringComparer.Ordinal).ToArray();
             if (artifacts.Length == 0)
                 throw new InvalidDataException($"Artifact directory '{artifactRoot}' contains no files.");
-
-            DateTimeOffset timestamp = ResolveTimestamp(options.Timestamp);
-            string revision = options.Revision ?? Environment.GetEnvironmentVariable("SOURCE_REVISION") ?? "unknown";
-            string repository = options.Repository ?? DefaultRepository;
+            DateTimeOffset timestamp = ResolveTimestamp(options.timestamp);
+            string revision = options.revision ?? Environment.GetEnvironmentVariable("SOURCE_REVISION") ?? "unknown";
+            string repository = options.repository ?? global::BGCS.Tool.Commands.SupplyChainCommand.C_DEFAULTREPOSITORY;
             string aggregate = ComputeAggregateDigest(artifacts);
             Directory.CreateDirectory(outputRoot);
             WriteJson(sbomPath, CreateSpdx(artifacts, timestamp, aggregate, repository));
-            WriteJson(provenancePath, CreateProvenance(artifacts, timestamp, aggregate, repository, revision,
-                options.BuilderId ?? DefaultBuilder));
+            WriteJson(provenancePath, CreateProvenance(artifacts, timestamp, aggregate, repository, revision, options.builderId ?? global::BGCS.Tool.Commands.SupplyChainCommand.C_DEFAULTBUILDER));
             output.WriteLine($"SPDX SBOM: {sbomPath}");
             output.WriteLine($"SLSA provenance: {provenancePath}");
             output.WriteLine($"Covered {artifacts.Length} artifact(s); aggregate SHA-256 {aggregate}.");
@@ -50,8 +50,12 @@ internal static class SupplyChainCommand
         }
     }
 
-    private static object CreateSpdx(IReadOnlyList<Artifact> artifacts, DateTimeOffset timestamp,
-        string aggregate, string repository) => new
+    private static object CreateSpdx(
+        IReadOnlyList<Artifact> artifacts,
+        DateTimeOffset timestamp,
+        string aggregate,
+        string repository
+    ) => new
     {
         spdxVersion = "SPDX-2.3",
         dataLicense = "CC0-1.0",
@@ -61,52 +65,65 @@ internal static class SupplyChainCommand
         creationInfo = new
         {
             created = timestamp.ToUniversalTime().ToString("O"),
-            creators = new[] { "Tool: BindGen-CS" },
+            creators = new[]
+            {
+                "Tool: BindGen-CS"
+            },
             licenseListVersion = "3.25"
         },
-        documentDescribes = artifacts.Select((_, index) => $"SPDXRef-Package-{index + 1}").ToArray(),
-        packages = artifacts.Select((artifact, index) => new
-        {
-            SPDXID = $"SPDXRef-Package-{index + 1}",
-            name = artifact.Name,
-            downloadLocation = "NOASSERTION",
-            filesAnalyzed = false,
-            checksums = new[] { new { algorithm = "SHA256", checksumValue = artifact.Sha256 } },
-            licenseConcluded = "NOASSERTION",
-            licenseDeclared = "NOASSERTION",
-            copyrightText = "NOASSERTION"
-        }).ToArray()
+        documentDescribes = artifacts.Select((
+            _,
+            index
+        ) => $"SPDXRef-Package-{index + 1}").ToArray(),
+        packages = artifacts.Select((
+            artifact,
+            index
+        ) => new { SPDXID = $"SPDXRef-Package-{index + 1}", name = artifact.name, downloadLocation = "NOASSERTION", filesAnalyzed = false, checksums = new[] { new { algorithm = "SHA256", checksumValue = artifact.sha256 } }, licenseConcluded = "NOASSERTION", licenseDeclared = "NOASSERTION", copyrightText = "NOASSERTION" }).ToArray()
     };
-
-    private static object CreateProvenance(IReadOnlyList<Artifact> artifacts, DateTimeOffset timestamp,
-        string aggregate, string repository, string revision, string builderId) => new
+    private static object CreateProvenance(
+        IReadOnlyList<Artifact> artifacts,
+        DateTimeOffset timestamp,
+        string aggregate,
+        string repository,
+        string revision,
+        string builderId
+    ) => new
     {
         _type = "https://in-toto.io/Statement/v1",
-        subject = artifacts.Select(artifact => new
-        {
-            name = artifact.Name,
-            digest = new { sha256 = artifact.Sha256 }
-        }).ToArray(),
+        subject = artifacts.Select(artifact => new { name = artifact.name, digest = new { sha256 = artifact.sha256 } }).ToArray(),
         predicateType = "https://slsa.dev/provenance/v1",
         predicate = new
         {
             buildDefinition = new
             {
                 buildType = "https://github.com/FLwolfy/BindGen-CS/buildtypes/dotnet-pack/v1",
-                externalParameters = new { configuration = "Release", deterministic = true },
-                internalParameters = new { aggregateSha256 = aggregate },
+                externalParameters = new
+                {
+                    configuration = "Release",
+                    deterministic = true
+                },
+                internalParameters = new
+                {
+                    aggregateSha256 = aggregate
+                },
                 resolvedDependencies = new[]
                 {
                     new
                     {
                         uri = $"git+{repository}.git",
-                        digest = new { gitCommit = revision }
+                        digest = new
+                        {
+                            gitCommit = revision
+                        }
                     }
                 }
             },
             runDetails = new
             {
-                builder = new { id = builderId },
+                builder = new
+                {
+                    id = builderId
+                },
                 metadata = new
                 {
                     invocationId = aggregate,
@@ -117,9 +134,10 @@ internal static class SupplyChainCommand
             }
         }
     };
-
-    private static Artifact CreateArtifact(string root, string path)
-    {
+    private static Artifact CreateArtifact(
+        string root,
+        string path
+    ) {
         string name = Path.GetRelativePath(root, path).Replace('\\', '/');
         using FileStream stream = File.OpenRead(path);
         return new(name, Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant());
@@ -129,24 +147,22 @@ internal static class SupplyChainCommand
     {
         StringBuilder canonical = new();
         foreach (Artifact artifact in artifacts)
-            canonical.Append(artifact.Name).Append('\0').Append(artifact.Sha256).Append('\n');
+            canonical.Append(artifact.name).Append('\0').Append(artifact.sha256).Append('\n');
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString()))).ToLowerInvariant();
     }
 
     private static DateTimeOffset ResolveTimestamp(string? configured)
     {
         if (!string.IsNullOrWhiteSpace(configured))
-            return DateTimeOffset.Parse(configured, System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+            return DateTimeOffset.Parse(configured, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
         string? epoch = Environment.GetEnvironmentVariable("SOURCE_DATE_EPOCH");
-        return long.TryParse(epoch, out long seconds)
-            ? DateTimeOffset.FromUnixTimeSeconds(seconds)
-            : DateTimeOffset.UtcNow;
+        return long.TryParse(epoch, out long seconds) ? DateTimeOffset.FromUnixTimeSeconds(seconds) : DateTimeOffset.UtcNow;
     }
 
-    private static void WriteJson(string path, object value) => File.WriteAllText(path,
-        JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine);
-
+    private static void WriteJson(
+        string path,
+        object value
+    ) => File.WriteAllText(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine);
     private static Options Parse(string[] args)
     {
         string? artifactRoot = null;
@@ -175,17 +191,30 @@ internal static class SupplyChainCommand
             else
                 throw new ArgumentException("supply-chain accepts at most one artifact directory.");
         }
+
         return new(artifactRoot, outputRoot, repository, revision, builderId, timestamp);
     }
 
-    private static string ReadValue(string[] args, ref int index, string option)
-    {
+    private static string ReadValue(
+        string[] args,
+        ref int index,
+        string option
+    ) {
         if (++index >= args.Length || string.IsNullOrWhiteSpace(args[index]))
             throw new ArgumentException($"Option '{option}' requires a value.");
         return args[index];
     }
 
-    private sealed record Artifact(string Name, string Sha256);
-    private sealed record Options(string? ArtifactRoot, string? OutputRoot, string? Repository,
-        string? Revision, string? BuilderId, string? Timestamp);
+    private sealed record Artifact(
+        string name,
+        string sha256
+    );
+    private sealed record Options(
+        string? artifactRoot,
+        string? outputRoot,
+        string? repository,
+        string? revision,
+        string? builderId,
+        string? timestamp
+    );
 }

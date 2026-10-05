@@ -1,9 +1,9 @@
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib-xAlt",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib-xAlt",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }

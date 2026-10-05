@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BGCS.Configuration;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
+using BGCS.Facade;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -126,7 +128,7 @@ public class BindingCoverageTests
     private static void AssertGeneratorSucceeded(bool ok, IReadOnlyList<LogMessage> messages)
     {
         Assert.True(ok);
-        Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+        Assert.DoesNotContain(messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
     }
 
     private static (bool Ok, string TempDirectory, string AllGeneratedCode, IReadOnlyList<LogMessage> Messages) RunGenerator(string headerText)
@@ -140,25 +142,25 @@ public class BindingCoverageTests
 
         CsCodeGeneratorConfig cfg = new()
         {
-            ApiName = "BindingApi",
-            Namespace = "BGCS.Tests.Generated",
-            LibName = "bindingtest",
-            GenerateExtensions = false,
-            ImportType = ImportType.DllImport,
-            DelegatesAsVoidPointer = false
+            apiName = "BindingApi",
+            @namespace = "BGCS.Tests.Generated",
+            libName = "bindingtest",
+            generateExtensions = false,
+            importType = ImportType.DllImport,
+            delegatesAsVoidPointer = false
         };
 
         BaseGenerator generator = new CsCodeGenerator(cfg);
         CppParserOptions parserOptions = new()
         {
-            ParseMacros = true,
-            ParseComments = true,
-            ParseSystemIncludes = false,
-            ParseCommentAttribute = true,
-            ParserKind = CppParserKind.Cpp,
-            AutoSquashTypedef = false
+            parseMacros = true,
+            parseComments = true,
+            parseSystemIncludes = false,
+            parseCommentAttribute = true,
+            parserKind = CppParserKind.Cpp,
+            autoSquashTypedef = false
         };
-        parserOptions.AdditionalArguments.Add("-undef");
+        parserOptions.additionalArguments.Add("-undef");
 
         bool ok = ((CsCodeGenerator)generator).Generate(parserOptions, headerPath, outputPath);
 
@@ -169,7 +171,7 @@ public class BindingCoverageTests
             allGeneratedCode = string.Join("\n\n", files.Select(File.ReadAllText));
         }
 
-        return (ok, temp, allGeneratedCode, generator.Messages);
+        return (ok, temp, allGeneratedCode, generator.messages);
     }
 
     private static void Cleanup(string directory)

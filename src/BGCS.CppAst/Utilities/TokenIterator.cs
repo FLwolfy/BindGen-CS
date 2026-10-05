@@ -1,44 +1,42 @@
-using System;
+using System.Diagnostics.CodeAnalysis;
+using BGCS.CppAst.Model.Expressions;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 using ClangSharp.Interop;
-using BGCS.CppAst.Model.Expressions;
-using System.Diagnostics.CodeAnalysis;
 
 namespace BGCS.CppAst.Utilities;
+
 /// <summary>
 /// Internal class to iterate on tokens
 /// </summary>
-public class TokenIterator
+internal sealed class TokenIterator
 {
-    private readonly Tokenizer tokens;
-    private int index;
-
+    private readonly Tokenizer m_tokens;
+    private int m_index;
     /// <summary>
-    /// Initializes a new instance of <see cref="TokenIterator"/>.
+    /// Initializes a new instance of <see cref = "TokenIterator"/>.
     /// </summary>
     public TokenIterator(Tokenizer tokens)
     {
-        this.tokens = tokens;
+        this.m_tokens = tokens;
     }
 
     /// <summary>
     /// Exposes public member <c>tokens.Cursor</c>.
     /// </summary>
-    public CXCursor Cursor => tokens.Cursor;
+    public CXCursor cursor => this.m_tokens.cursor;
 
     /// <summary>
     /// Executes public operation <c>Skip</c>.
     /// </summary>
     public bool Skip(string expectedText)
     {
-        if (index < tokens.Count)
+        if (this.m_index < this.m_tokens.count)
         {
-            if (tokens.GetString(index) == expectedText)
+            if (this.m_tokens.GetString(this.m_index) == expectedText)
             {
-                index++;
+                this.m_index++;
                 return true;
             }
         }
@@ -51,9 +49,9 @@ public class TokenIterator
     /// </summary>
     public CppToken? PreviousToken()
     {
-        if (index > 0)
+        if (this.m_index > 0)
         {
-            return tokens[index - 1];
+            return this.m_tokens[this.m_index - 1];
         }
 
         return null;
@@ -64,20 +62,22 @@ public class TokenIterator
     /// </summary>
     public bool Skip(params string[] expectedTokens)
     {
-        var startIndex = index;
+        var startIndex = this.m_index;
         foreach (var expectedToken in expectedTokens)
         {
-            if (startIndex < tokens.Count)
+            if (startIndex < this.m_tokens.count)
             {
-                if (tokens.GetString(startIndex) == expectedToken)
+                if (this.m_tokens.GetString(startIndex) == expectedToken)
                 {
                     startIndex++;
                     continue;
                 }
             }
+
             return false;
         }
-        index = startIndex;
+
+        this.m_index = startIndex;
         return true;
     }
 
@@ -86,27 +86,30 @@ public class TokenIterator
     /// </summary>
     public bool Find(params string[] expectedTokens)
     {
-        var startIndex = index;
+        var startIndex = this.m_index;
     restart:
-        while (startIndex < tokens.Count)
+        while (startIndex < this.m_tokens.count)
         {
             var firstIndex = startIndex;
             foreach (var expectedToken in expectedTokens)
             {
-                if (startIndex < tokens.Count)
+                if (startIndex < this.m_tokens.count)
                 {
-                    if (tokens.GetString(startIndex) == expectedToken)
+                    if (this.m_tokens.GetString(startIndex) == expectedToken)
                     {
                         startIndex++;
                         continue;
                     }
                 }
+
                 startIndex = firstIndex + 1;
                 goto restart;
             }
-            index = firstIndex;
+
+            this.m_index = firstIndex;
             return true;
         }
+
         return false;
     }
 
@@ -116,30 +119,32 @@ public class TokenIterator
     public bool Next([NotNullWhen(true)] out CppToken? token)
     {
         token = null;
-        if (index < tokens.Count)
+        if (this.m_index < this.m_tokens.count)
         {
-            token = tokens[index];
-            index++;
+            token = this.m_tokens[this.m_index];
+            this.m_index++;
             return true;
         }
+
         return false;
     }
 
     /// <summary>
     /// Exposes public member <c>tokens.Count</c>.
     /// </summary>
-    public bool CanPeek => index < tokens.Count;
+    public bool canPeek => this.m_index < this.m_tokens.count;
 
     /// <summary>
     /// Executes public operation <c>Next</c>.
     /// </summary>
     public bool Next()
     {
-        if (index < tokens.Count)
+        if (this.m_index < this.m_tokens.count)
         {
-            index++;
+            this.m_index++;
             return true;
         }
+
         return false;
     }
 
@@ -148,10 +153,11 @@ public class TokenIterator
     /// </summary>
     public CppToken? Peek()
     {
-        if (index < tokens.Count)
+        if (this.m_index < this.m_tokens.count)
         {
-            return tokens[index];
+            return this.m_tokens[this.m_index];
         }
+
         return null;
     }
 
@@ -160,10 +166,11 @@ public class TokenIterator
     /// </summary>
     public string? PeekText()
     {
-        if (index < tokens.Count)
+        if (this.m_index < this.m_tokens.count)
         {
-            return tokens.GetString(index);
+            return this.m_tokens.GetString(this.m_index);
         }
+
         return null;
     }
 }

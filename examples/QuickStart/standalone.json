@@ -1,0 +1,5 @@
+{
+  "baseConfig": { "url": "file://bindgen.json" },
+  "outputPath": "GeneratedStandalone",
+  "generateRuntimeSource": true
+}

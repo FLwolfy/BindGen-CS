@@ -2,11 +2,11 @@
 
 [Wiki](README.md) | [中文](acceptance.cn.md)
 
-This document is normative. A category score is generated from test artifacts; maintainers do not assign scores manually. The 9.0 value is a BindGen-CS internal release-gate level, not an external industry benchmark, complete C++ coverage percentage, or third-party audit score.
+This document defines mandatory acceptance evidence. Results report pass or failure for explicit gates, rather than assigning a numeric quality score.
 
 ## General rule
 
-Each category has an explicit set of automated mandatory gates. Every reported category scores **9.0/10.0** only when all of its gates pass on the release commit; report generation fails if any gate is absent. Reports are target-specific: a passing report proves only the platform, architecture, and ABI named in its `target` field.
+Each category has explicit automated mandatory gates. A category passes only when every gate succeeds; report generation fails if any gate is absent. Reports are target-specific and prove only the platform, architecture and ABI named in the target field.
 
 The release workflow must write machine-readable results to `artifacts/acceptance/report.json` and a human-readable summary to `artifacts/acceptance/report.md`.
 
@@ -14,18 +14,18 @@ Both reports record their UTC generation time, Git revision, and working-tree di
 
 ## Target matrix
 
-| Category | Target | Mandatory gates |
+| Category | Required result | Mandatory gates |
 | --- | ---: | --- |
-| Small C APIs | 9.0 | 100% generated compilation; ABI invocation; no source edits |
-| Medium/large C APIs | 9.0 | SDL3, miniaudio, cimgui, cimguizmo, and bgfx deterministic snapshots plus warning-free IR-native compilation |
-| Complex C ABI correctness | 9.0 | Host-native invocation and target-specific ABI/layout/calling-convention matrix |
-| Ordinary C++ class bridge | 9.0 | Native compile/link/run for lifecycle and methods |
-| Modern C++ | 9.0 | Selected templates/STL/smart pointers/virtual callbacks |
-| Generated API quality | 9.0 | Source/public-API snapshots; analyzers; no native imports outside generated output |
-| Beginner usability | 9.0 | Five-command maximum from header to validated output |
-| External architecture | 9.0 | Intermediate/Runtime dependency-boundary tests and complete solution build |
-| Internal architecture | 9.0 | Shared IR, analyzer/IR-emitter tests, and no pre-release fallback emitter |
-| NuGet/testing/release | 9.0 | Clean packages/symbols, API and dependency policy, deterministic output, native-RID consumer, host-native and managed matrices |
+| Small C APIs | passed | 100% generated compilation; ABI invocation; no source edits |
+| Medium/large C APIs | passed | SDL3, miniaudio, cimgui, cimguizmo, and bgfx deterministic snapshots plus warning-free IR-native compilation |
+| Complex C ABI correctness | passed | Host-native invocation and target-specific ABI/layout/calling-convention matrix |
+| Ordinary C++ class bridge | passed | Native compile/link/run for lifecycle and methods |
+| Modern C++ | passed | Selected templates/STL/smart pointers/virtual callbacks |
+| Generated API quality | passed | Source/public-API snapshots; analyzers; no native imports outside generated output |
+| Beginner usability | passed | Five-command maximum from header to validated output |
+| External architecture | passed | Intermediate/Runtime dependency-boundary tests and complete solution build |
+| Internal architecture | passed | Shared IR, analyzer/IR-emitter tests, and no pre-release fallback emitter |
+| NuGet/testing/release | passed | Clean packages/symbols, API and dependency policy, deterministic output, native-RID consumer, host-native and managed matrices |
 
 ## Real-library budgets
 
@@ -127,4 +127,4 @@ Primary configured generation calls `CSharpEmitter` from canonical IR and covers
 
 ## Current status
 
-`scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json`, `report.md`, and target-retained copies only after every local BGCS gate above passes. The required maintenance-candidate desktop reports are Windows x64 MSVC, Linux x64 GNU, and macOS x64 Darwin; Windows additionally requires real clang-cl and MSBuild DLL build/export/invocation. These same-version reports remain pending until their runners complete. Consumer-specific generation and integration acceptance belong to the consuming repositories and are not included in the BGCS score. A real OIDC/Sigstore signature likewise remains a release-run artifact, not local evidence.
+`scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json`, `report.md`, and target-retained copies only after every local BGCS gate above passes. The required maintenance-candidate desktop reports are Windows x64 MSVC, Linux x64 GNU, and macOS x64 Darwin; Windows additionally requires real clang-cl and MSBuild DLL build/export/invocation. These same-version reports remain pending until their runners complete. Consumer-specific generation and integration acceptance belong to the consuming repositories and are reported separately from BGCS evidence. A real OIDC/Sigstore signature likewise remains a release-run artifact, not local evidence.

@@ -1,226 +1,40 @@
-namespace BGCS.Cpp2C.Analysis;
-
-using BGCS.CppAst.Extensions;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Templates;
-using BGCS.CppAst.Model.Types;
+using System.Collections.Generic;
+using System.Linq;
+using BGCS.Core.IO;
+using BGCS.Cpp2C.Configuration;
 using BGCS.Cpp2C.Lowering;
 using BGCS.Intermediate;
+using BGCS.Intermediate.Bridges;
+
+namespace BGCS.Cpp2C.Analysis;
 
 /// <summary>
-/// Lowers C++ classes, enums, and methods into the shared binding intermediate representation.
+/// Completes AST-dependent ABI analysis and lowering before any native source is emitted.
 /// </summary>
 internal sealed class CppBridgeModuleAnalyzer
 {
-    private readonly Cpp2CGeneratorConfig config;
-
-    internal CppBridgeModuleAnalyzer(Cpp2CGeneratorConfig config)
-    {
-        this.config = config;
-    }
-
-    internal BindingModule Analyze(BGCS.CppAst.Model.Metadata.CppCompilation compilation)
-    {
-        BindingModule module = new("CppBridge", "C", string.Empty,
-            config.ResolvedTarget.Identifier);
-        AnalyzeContainer(compilation, module);
-        foreach (string lowering in config.Lowerings.UnsafeBypasses)
-            module.StructuredDiagnostics.Add(new(BindingDiagnosticSeverity.Warning,
-                $"Unsafe lowering '{lowering}' was explicitly allowed by LoweringSafetyPolicy=AllowUnsafe. The generated ABI must be covered by project-owned compile, invocation, and lifetime tests.",
-                BindingDiagnosticCodes.UnsafeLowering));
-        return module;
-    }
-
-    private void AnalyzeContainer(ICppGlobalDeclarationContainer container, BindingModule module)
-    {
-        foreach (CppClass template in container.Classes.Where(value => value.TemplateKind == CppTemplateKind.TemplateClass))
+    private readonly Cpp2CGeneratorConfig m_config;
+    internal CppBridgeModuleAnalyzer(Cpp2CGeneratorConfig config) => m_config = config;
+    internal CppBridgeModule Analyze(
+        FileSet files,
+        ParseResult result
+    ) {
+        List<CppBridgeArtifact> artifacts = [new CppBridgeEnumAnalyzer(m_config).Analyze(result, files)];
+        artifacts.AddRange(new CppBridgeClassAnalyzer(m_config).Analyze(files, result));
+        IReadOnlyList<CppBridgeArtifact> extensions = CppExtensionArtifactEmitter.CollectNative(m_config);
+        artifacts.AddRange(extensions);
+        CppBridgeArtifact[] exposed = extensions.Where(static artifact => artifact.exposeToBindings).OrderBy(static artifact => artifact.relativePath, System.StringComparer.Ordinal).ToArray();
+        if (exposed.Length > 0)
         {
-            string templatePrefix = template.FullName.Split('<')[0] + "<";
-            if (config.TemplateInstantiations.Any(value => value.StartsWith(templatePrefix, StringComparison.Ordinal)))
-                continue;
-            module.StructuredDiagnostics.Add(new(BindingDiagnosticSeverity.Warning,
-                $"Primary template '{template.FullName}' is not emitted. Add only the required concrete specialization to TemplateInstantiations.",
-                BindingDiagnosticCodes.CppInstantiation));
+            int umbrellaIndex = artifacts.FindIndex(static artifact => artifact.relativePath == "include/Classes.h");
+            CppBridgeArtifact umbrella = artifacts[umbrellaIndex];
+            artifacts[umbrellaIndex] = new(umbrella.relativePath, umbrella.operations.Concat(exposed.Select(static artifact => new CppBridgeOperation(CppBridgeOperationKind.Line, $"#include \"{artifact.relativePath["include/".Length..]}\""))));
         }
-        foreach (CppEnum cppEnum in container.Enums)
-            module.Types.Add(new(cppEnum.FullName, config.GetCTypeName(cppEnum), BindingTypeKind.Enumeration,
-                cppEnum.IntegerType?.SizeOf ?? sizeof(int), cppEnum.IntegerType?.SizeOf ?? sizeof(int)));
-        foreach (CppClass cppClass in container.Classes.Where(cppClass => cppClass.SourceFile != null &&
-            cppClass.TemplateKind != CppTemplateKind.TemplateClass && !IsLoweredType(cppClass)))
-        {
-            IReadOnlyList<CppFunction> functions = cppClass.Functions.Count > 0
-                ? cppClass.Functions.ToList()
-                : cppClass.SpecializedTemplate?.Functions.ToList() ?? [];
-            BindingType type = new(cppClass.FullName, config.GetCTypeName(cppClass),
-                cppClass.ClassKind == CppClassKind.Class || functions.Count > 0
-                    ? BindingTypeKind.OpaqueHandle
-                    : cppClass.ClassKind == CppClassKind.Union ? BindingTypeKind.Union : BindingTypeKind.Structure,
-                cppClass.SizeOf, cppClass.AlignOf);
-            module.Types.Add(type);
-            IReadOnlyList<CppFunction> availableConstructors = cppClass.Constructors.Count > 0
-                ? cppClass.Constructors.ToList()
-                : cppClass.SpecializedTemplate?.Constructors.ToList() ?? [];
-            List<CppFunction> constructors = availableConstructors.Where(constructor =>
-                (constructor.Visibility is CppVisibility.Public or CppVisibility.Default) &&
-                !constructor.Flags.HasFlag(CppFunctionFlags.Deleted)).ToList();
-            if (!functions.Any(function => function.Flags.HasFlag(CppFunctionFlags.Pure)))
-            {
-                if (constructors.Count == 0 && availableConstructors.Count == 0)
-                    module.Functions.Add(CreateImplicitLifecycle(cppClass, type.ManagedName + "Create", BindingFunctionKind.Constructor));
-                for (int index = 0; index < constructors.Count; index++)
-                {
-                    CppFunction constructor = constructors[index];
-                    string defaultName = type.ManagedName + "Create" + (index == 0 ? string.Empty : index.ToString());
-                    if (!config.IsCallableExcluded(cppClass, constructor, defaultName))
-                        module.Functions.Add(AnalyzeConstructor(cppClass, constructor, defaultName));
-                }
-            }
-            CppFunction? destructor = cppClass.Destructors.FirstOrDefault(value =>
-                (value.Visibility is CppVisibility.Public or CppVisibility.Default) &&
-                !value.Flags.HasFlag(CppFunctionFlags.Deleted));
-            string destroyName = type.ManagedName + "Destroy";
-            if (cppClass.Destructors.Count == 0)
-                module.Functions.Add(CreateImplicitLifecycle(cppClass, destroyName, BindingFunctionKind.Destructor));
-            else if (destructor != null && !config.IsCallableExcluded(cppClass, destructor, destroyName))
-                module.Functions.Add(AnalyzeDestructor(cppClass, destructor, destroyName));
-            foreach (CppFunction function in functions)
-            {
-                string defaultName = $"{config.GetCTypeName(cppClass)}_{function.Name}";
-                if (!config.IsCallableExcluded(cppClass, function, defaultName))
-                    module.Functions.Add(AnalyzeFunction(cppClass, function, defaultName));
-            }
-        }
-        foreach (CppFunction function in container.Functions.Where(function => function.TemplateParameters.Count == 0))
-        {
-            string defaultName = config.GetCFunctionName(function);
-            if (!config.IsCallableExcluded(null, function, defaultName))
-                module.Functions.Add(AnalyzeFunction(null, function, defaultName));
-        }
-        foreach (CppNamespace cppNamespace in container.Namespaces)
-            AnalyzeContainer(cppNamespace, module);
-    }
 
-    private BindingFunction AnalyzeFunction(CppClass? declaringType, CppFunction function, string defaultName)
-    {
-        BindingFunctionKind kind = function.Flags.HasFlag(CppFunctionFlags.Constructor)
-            ? BindingFunctionKind.Constructor
-            : function.Flags.HasFlag(CppFunctionFlags.Destructor)
-                ? BindingFunctionKind.Destructor
-                : declaringType == null ? BindingFunctionKind.Free
-                : (function.StorageQualifier & CppStorageQualifier.Static) != 0 ? BindingFunctionKind.Static
-                : BindingFunctionKind.Instance;
-        BindingFunction result = new(function.Name, config.GetCFunctionName(declaringType, function, defaultName), kind,
-            AnalyzeType(declaringType, function.ReturnType), AnalyzeMarshalling(function.ReturnType, null))
+        BindingModule abi = new CppBridgeAbiAnalyzer(m_config).Analyze(result.compilation, files);
+        return new(m_config.resolvedTarget.targetId.value, abi.types.Select(static type => new CppBridgeType(type.nativeName, type.managedName, type.kind, type.size, type.alignment)), abi.functions.Select(static function => new CppBridgeFunction(function.nativeName, function.managedName, function.kind, function.returnType, function.returnMarshalling, function.parameters)), artifacts, abi.structuredDiagnostics)
         {
-            CallingConvention = function.CallingConvention.ToString(),
-            IsVariadic = function.Flags.HasFlag(CppFunctionFlags.Variadic),
-            DeclaringType = declaringType?.FullName
+            managedArtifacts = m_config.generateCSharpBindings ? CppExtensionArtifactEmitter.CollectManaged(m_config) : null
         };
-        foreach (CppParameter parameter in function.Parameters)
-            result.Parameters.Add(new(parameter.Name, parameter.Name, AnalyzeType(declaringType, parameter.Type), BindingDirection.In,
-                AnalyzeMarshalling(parameter.Type, parameter.Name)));
-        return result;
-    }
-
-    private BindingFunction AnalyzeConstructor(CppClass declaringType, CppFunction constructor, string defaultName)
-    {
-        string typeName = config.GetCTypeName(declaringType);
-        BindingFunction result = new(constructor.Name, config.GetCFunctionName(declaringType, constructor, defaultName),
-            BindingFunctionKind.Constructor, new(declaringType.FullName + "*", typeName + "*", 1, false, nint.Size),
-            new(MarshallingStrategy.Handle, BindingOwnership.Owned))
-        {
-            DeclaringType = declaringType.FullName,
-            CallingConvention = constructor.CallingConvention.ToString()
-        };
-        foreach (CppParameter parameter in constructor.Parameters)
-            result.Parameters.Add(new(parameter.Name, parameter.Name, AnalyzeType(declaringType, parameter.Type), BindingDirection.In,
-                AnalyzeMarshalling(parameter.Type, parameter.Name)));
-        return result;
-    }
-
-    private BindingFunction AnalyzeDestructor(CppClass declaringType, CppFunction destructor, string defaultName)
-    {
-        BindingFunction result = CreateImplicitLifecycle(declaringType,
-            config.GetCFunctionName(declaringType, destructor, defaultName), BindingFunctionKind.Destructor);
-        return result;
-    }
-
-    private BindingFunction CreateImplicitLifecycle(CppClass declaringType, string exportedName, BindingFunctionKind kind)
-    {
-        BindingTypeReference returnType = kind == BindingFunctionKind.Constructor
-            ? new(declaringType.FullName + "*", config.GetCTypeName(declaringType) + "*", 1, false, nint.Size)
-            : new("void", "void", 0, false, 0);
-        BindingFunction result = new(kind == BindingFunctionKind.Constructor ? declaringType.Name : "~" + declaringType.Name,
-            exportedName, kind, returnType,
-            new(kind == BindingFunctionKind.Constructor ? MarshallingStrategy.Handle : MarshallingStrategy.Blittable,
-                kind == BindingFunctionKind.Constructor ? BindingOwnership.Owned : BindingOwnership.Borrowed))
-        {
-            DeclaringType = declaringType.FullName
-        };
-        if (kind == BindingFunctionKind.Destructor)
-            result.Parameters.Add(new("self", "self", new(declaringType.FullName + "*", config.GetCTypeName(declaringType) + "*", 1, false, nint.Size),
-                BindingDirection.In, new(MarshallingStrategy.Handle, BindingOwnership.Transferred)));
-        return result;
-    }
-
-    private MarshallingPlan AnalyzeMarshalling(CppType type, string? parameterName)
-    {
-        CppTypeLoweringPlan? lowering = config.ResolveTypeLowering(type,
-            parameterName == null ? CppTypeLoweringUse.Return : CppTypeLoweringUse.Parameter);
-        if (lowering != null)
-        {
-            string? length = lowering.Kind is CppTypeLoweringKind.Span or CppTypeLoweringKind.Vector or CppTypeLoweringKind.Array
-                ? parameterName == null ? "out_count" : parameterName + "_count"
-                : null;
-            return new(lowering.Marshalling, lowering.Ownership,
-                lowering.Kind is CppTypeLoweringKind.Utf8String or CppTypeLoweringKind.Path
-                    ? BindingStringEncoding.Utf8
-                    : BindingStringEncoding.None,
-                LengthParameter: length,
-                RequiresCleanup: lowering.RequiresCleanup,
-                CleanupFunction: lowering.CleanupFunction,
-                NullTerminated: lowering.Kind is CppTypeLoweringKind.Utf8String or CppTypeLoweringKind.Path,
-                AllocatorKind: lowering.AllocatorKind,
-                AllocatorFunction: lowering.AllocatorFunction);
-        }
-        return new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed);
-    }
-
-    private bool IsLoweredType(CppType type) => config.ResolveTypeLowering(type, CppTypeLoweringUse.Field) != null;
-
-    private BindingTypeReference AnalyzeType(CppClass? declaringType, CppType type)
-    {
-        CppType resolvedType = ResolveTemplateType(declaringType, type);
-        int pointerDepth = 0;
-        CppType current = resolvedType;
-        while (current is CppTypeWithElementType wrapper)
-        {
-            if (current is CppPointerType or CppReferenceType)
-                pointerDepth++;
-            current = wrapper.ElementType;
-        }
-        return new(type.GetDisplayName(), config.GetCType(resolvedType), pointerDepth, false, resolvedType.SizeOf);
-    }
-
-    private static CppType ResolveTemplateType(CppClass? declaringType, CppType type)
-    {
-        if (declaringType?.SpecializedTemplate == null)
-            return type;
-        string? parameterName = type switch
-        {
-            CppTemplateParameterType parameter => parameter.Name,
-            CppUnexposedType unexposed => unexposed.Name,
-            _ => null
-        };
-        if (parameterName == null)
-            return type;
-        int index = declaringType.SpecializedTemplate.TemplateParameters.ToList()
-            .FindIndex(candidate => candidate is CppTemplateParameterType parameter && parameter.Name == parameterName);
-        return index >= 0 && index < declaringType.TemplateSpecializedArguments.Count &&
-            declaringType.TemplateSpecializedArguments[index].ArgAsType is CppType argumentType
-                ? argumentType
-                : type;
     }
 }

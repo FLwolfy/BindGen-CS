@@ -1,5 +1,5 @@
 {
-  "Property": "AllowedExtensions",
+  "Property": "allowedExtensions",
   "Expected": [
     "keep_ext"
   ]

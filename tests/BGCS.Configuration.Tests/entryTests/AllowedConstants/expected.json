@@ -1,5 +1,5 @@
 {
-  "Property": "AllowedConstants",
+  "Property": "allowedConstants",
   "Expected": [
     "KEEP_CONST"
   ]

@@ -1,6 +1,6 @@
 {
-  "NamePrefix": "Inc_",
-  "IncludeFolders": [
+  "namePrefix": "Inc_",
+  "includeFolders": [
     "includes"
   ]
 }

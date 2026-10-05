@@ -1,47 +1,65 @@
-﻿namespace BGCS.Language.CSharp.Nodes
+using BGCS.Language.Lexing;
+using BGCS.Language.Syntax;
+namespace BGCS.Language.CSharp.Nodes
 {
     /// <summary>
-    /// Defines the public class <c>MethodNode</c>.
+    /// Retains a supported method signature as identifier, return-type, modifier, and parameter spellings.
     /// </summary>
     public class MethodNode : SyntaxNode
     {
         /// <summary>
-        /// Initializes a new instance of <see cref="MethodNode"/>.
+        /// Retains signature spelling and the caller-supplied modifier and parameter arrays without copying.
         /// </summary>
-        public MethodNode(string name, KeywordType[] modifiers, string[] parameters, string returnType)
-        {
-            Name = name;
-            Modifiers = modifiers;
-            Parameters = parameters;
-            ReturnType = returnType;
+        /// <param name="name">
+        /// The method identifier.
+        /// </param>
+        /// <param name="modifiers">
+        /// The retained mutable declaration modifier array.
+        /// </param>
+        /// <param name="parameters">
+        /// The retained parameter spelling array in declaration order.
+        /// </param>
+        /// <param name="returnType">
+        /// The declared return-type spelling.
+        /// </param>
+        public MethodNode(
+            string name,
+            KeywordType[] modifiers,
+            string[] parameters,
+            string returnType
+        ) {
+            this.name = name;
+            this.modifiers = modifiers;
+            this.parameters = parameters;
+            this.returnType = returnType;
         }
 
         /// <summary>
-        /// Gets <c>Name</c>.
+        /// Gets the retained method identifier.
         /// </summary>
-        public string Name { get; }
+        public string name { get; }
+        /// <summary>
+        /// Gets the retained mutable declaration modifier array.
+        /// </summary>
+        public KeywordType[] modifiers { get; }
+        /// <summary>
+        /// Gets the retained mutable parameter spelling array in declaration order.
+        /// </summary>
+        public string[] parameters { get; }
+        /// <summary>
+        /// Gets the retained return-type spelling.
+        /// </summary>
+        public string returnType { get; }
 
         /// <summary>
-        /// Gets <c>Modifiers</c>.
+        /// Formats the retained method signature for syntax-tree diagnostics.
         /// </summary>
-        public KeywordType[] Modifiers { get; }
-
-        /// <summary>
-        /// Gets <c>Parameters</c>.
-        /// </summary>
-        public string[] Parameters { get; }
-
-        /// <summary>
-        /// Gets <c>ReturnType</c>.
-        /// </summary>
-        public string ReturnType { get; }
-
-        /// <summary>
-        /// Executes public operation <c>ToString</c>.
-        /// </summary>
+        /// <returns>
+        /// The method label, modifiers, return type, identifier, and parameter spellings.
+        /// </returns>
         public override string ToString()
         {
-            return $"method: {string.Join(" ", Modifiers)} {ReturnType} {Name} ({string.Join(" ", Parameters)})";
+            return $"method: {string.Join(" ", this.modifiers)} {this.returnType} {this.name} ({string.Join(" ", this.parameters)})";
         }
     }
 }

@@ -1,83 +1,134 @@
-﻿using System.Threading;
+using System;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace BGCS.Runtime;
 
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
 /// <summary>
-/// Atomic value wrapper for unmanaged numeric-like types using interlocked primitives.
+/// Stores an unmanaged integer of at most 64 bits using atomic reads and compare-and-swap updates.
 /// </summary>
-/// <typeparam name="T">Unmanaged value type stored atomically.</typeparam>
-public struct Atomic<T> where T : unmanaged
+/// <typeparam name="T">
+/// The integer representation; arithmetic follows its unchecked overflow semantics.
+/// </typeparam>
+/// <remarks>
+/// This value type must remain at a stable storage location while threads share it.
+/// Copying the wrapper creates independent storage. Larger integers are rejected before access.
+/// </remarks>
+public struct Atomic<T> where T : unmanaged, IBinaryInteger<T>
 {
-    /// <summary>
-    /// Backing storage used for interlocked operations.
-    /// </summary>
-    /// <remarks>
-    /// The value is represented as <see cref="ulong"/> and bit-cast to <typeparamref name="T"/>.
-    /// </remarks>
-    public ulong value;
+    private long m_storage;
 
     /// <summary>
-    /// Initializes an atomic wrapper with an initial unmanaged value.
+    /// Initializes independent atomic storage without reading beyond the supplied value.
     /// </summary>
-    /// <param name="value">Initial value.</param>
+    /// <param name="value">
+    /// The initial integer.
+    /// </param>
+    /// <exception cref="NotSupportedException">
+    /// The integer representation occupies more than eight bytes.
+    /// </exception>
     public Atomic(T value)
     {
-        this.value = Unsafe.As<T, ulong>(ref value);
+        ValidateStorage();
+        m_storage = long.CreateTruncating(value);
     }
 
     /// <summary>
-    /// Gets or sets the wrapped value using interlocked operations.
+    /// Gets or replaces the value atomically.
     /// </summary>
-    public T Value
+    /// <exception cref="NotSupportedException">
+    /// The integer representation occupies more than eight bytes, including on a default wrapper.
+    /// </exception>
+    public T value
     {
-        get { var n = Interlocked.Read(ref value); return Unsafe.As<ulong, T>(ref n); }
-        set => Interlocked.Exchange(ref this.value, Unsafe.As<T, ulong>(ref value));
+        get
+        {
+            ValidateStorage();
+            return T.CreateTruncating(Interlocked.Read(ref m_storage));
+        }
+        set
+        {
+            ValidateStorage();
+            Interlocked.Exchange(ref m_storage, long.CreateTruncating(value));
+        }
     }
 
     /// <summary>
-    /// Atomically increments the current value by one.
+    /// Atomically adds one using the integer representation's unchecked arithmetic.
     /// </summary>
-    /// <returns>The incremented value.</returns>
-    public T Increment()
-    {
-        ulong result = (ulong)Interlocked.Increment(ref Unsafe.As<ulong, long>(ref value));
-        return Unsafe.As<ulong, T>(ref result);
-    }
+    /// <returns>
+    /// The value installed by this operation, which may subsequently change on another thread.
+    /// </returns>
+    /// <exception cref="NotSupportedException">
+    /// The integer representation exceeds eight bytes.
+    /// </exception>
+    public T Increment() => Add(T.One);
 
     /// <summary>
-    /// Atomically decrements the current value by one.
+    /// Atomically subtracts one using the integer representation's unchecked arithmetic.
     /// </summary>
-    /// <returns>The decremented value.</returns>
-    public T Decrement()
-    {
-        ulong result = (ulong)Interlocked.Decrement(ref Unsafe.As<ulong, long>(ref value));
-        return Unsafe.As<ulong, T>(ref result);
-    }
+    /// <returns>
+    /// The value installed by this operation, including wraparound at the minimum value.
+    /// </returns>
+    /// <exception cref="NotSupportedException">
+    /// The integer representation exceeds eight bytes.
+    /// </exception>
+    public T Decrement() => Add(unchecked(-T.One));
 
     /// <summary>
-    /// Atomically adds <paramref name="amount"/> to the current value.
+    /// Adds an integer without losing concurrent updates or retaining noncanonical overflow bits.
     /// </summary>
-    /// <param name="amount">Amount to add.</param>
-    /// <returns>The updated value after addition.</returns>
+    /// <param name="amount">
+    /// The signed or unsigned amount to add.
+    /// </param>
+    /// <returns>
+    /// The integer value installed by the successful compare-and-swap.
+    /// </returns>
+    /// <exception cref="NotSupportedException">
+    /// The integer representation exceeds eight bytes.
+    /// </exception>
     public T Add(T amount)
     {
-        ulong result = (ulong)Interlocked.Add(ref Unsafe.As<ulong, long>(ref value), Unsafe.As<T, long>(ref amount));
-        return Unsafe.As<ulong, T>(ref result);
+        ValidateStorage();
+        long previous = Interlocked.Read(ref m_storage);
+        while (true)
+        {
+            T updated = unchecked(T.CreateTruncating(previous) + amount);
+            long observed = Interlocked.CompareExchange(ref m_storage, long.CreateTruncating(updated), previous);
+            if (observed == previous)
+                return updated;
+            previous = observed;
+        }
     }
 
     /// <summary>
-    /// Performs an atomic compare-and-swap.
+    /// Replaces the value only when its current integer representation equals the expected value.
     /// </summary>
-    /// <param name="expected">Expected current value.</param>
-    /// <param name="newValue">Value to write when current value equals <paramref name="expected"/>.</param>
+    /// <param name="expected">
+    /// The value required for replacement.
+    /// </param>
+    /// <param name="newValue">
+    /// The replacement integer.
+    /// </param>
     /// <returns>
-    /// <see langword="true"/> when the swap succeeds; otherwise <see langword="false"/>.
+    /// True when replacement succeeds; otherwise false with storage unchanged by this operation.
     /// </returns>
-    public bool CompareAndSwap(T expected, T newValue)
+    /// <exception cref="NotSupportedException">
+    /// The integer representation exceeds eight bytes.
+    /// </exception>
+    public bool CompareAndSwap(
+        T expected,
+        T newValue
+    ) {
+        ValidateStorage();
+        long expectedStorage = long.CreateTruncating(expected);
+        return Interlocked.CompareExchange(ref m_storage, long.CreateTruncating(newValue), expectedStorage) == expectedStorage;
+    }
+
+    private static void ValidateStorage()
     {
-        return Interlocked.CompareExchange(ref value, Unsafe.As<T, ulong>(ref newValue), Unsafe.As<T, ulong>(ref expected)) == Unsafe.As<T, ulong>(ref expected);
+        if (Unsafe.SizeOf<T>() > sizeof(long))
+            throw new NotSupportedException("Atomic integer storage supports representations of at most 64 bits.");
     }
 }

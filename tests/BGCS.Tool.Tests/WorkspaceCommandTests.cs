@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using BGCS.Tool;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -17,8 +15,11 @@ public sealed class WorkspaceCommandTests
             { "Configs": ["bindgen.json"], "UnknownOption": true }
             """);
 
-        Assert.Throws<JsonException>(() => WorkspaceCommand.Run(
-            ["validate", directory.Resolve("workspace.json")]));
+        using StringWriter error = new();
+        int exitCode = CliInvocation.Run(["workspace", "validate", directory.Resolve("workspace.json")],
+            directory.Path, TextWriter.Null, error);
+        Assert.Equal(2, exitCode);
+        Assert.Contains("UnknownOption", error.ToString());
     }
 
     [Fact]
@@ -29,13 +30,17 @@ public sealed class WorkspaceCommandTests
         directory.Write("bindgen.json",
             """
             {
-              "Preset": "host-c,c-library",
-              "Namespace": "Workspace.Generated",
-              "ApiName": "Native",
-              "LibName": "native",
-              "EntryFiles": ["native.h"],
-              "AllowedHeaders": ["native.h"],
-              "OutputPath": "Generated"
+              "preset": "host-c,c-library",
+              "namespace": "Workspace.Generated",
+              "apiName": "Native",
+              "libName": "native",
+              "entryFiles": [
+                "native.h"
+              ],
+              "allowedHeaders": [
+                "native.h"
+              ],
+              "outputPath": "Generated"
             }
             """);
         directory.Write("workspace.json",
@@ -46,23 +51,26 @@ public sealed class WorkspaceCommandTests
             """);
 
         string manifest = directory.Resolve("workspace.json");
-        Assert.Equal(0, WorkspaceCommand.Run(["generate", manifest]));
+        Assert.Equal(0, Run(["generate", manifest]));
 
         string targetOutput = directory.Resolve("Generated");
         Assert.True(File.Exists(Path.Combine(targetOutput, "Bindings.cs")));
         Assert.Empty(Directory.GetDirectories(targetOutput));
-        Assert.Equal(0, WorkspaceCommand.Run(["diff", manifest]));
+        Assert.Equal(0, Run(["diff", manifest]));
 
         string bindingsPath = Path.Combine(targetOutput, "Bindings.cs");
         string source = File.ReadAllText(bindingsPath);
         string referenceLine = source.Split('\n').Single(line => line.Contains("ABI reference target:", StringComparison.Ordinal));
         File.WriteAllText(bindingsPath, source.Replace(referenceLine,
             "//     ABI reference target: another-target", StringComparison.Ordinal));
-        Assert.Equal(0, WorkspaceCommand.Run(["diff", manifest]));
+        Assert.Equal(0, Run(["diff", manifest]));
 
         File.AppendAllText(Path.Combine(targetOutput, "Bindings.cs"), "// drift\n");
-        Assert.Equal(1, WorkspaceCommand.Run(["diff", manifest]));
+        Assert.Equal(1, Run(["diff", manifest]));
     }
+
+    private static int Run(string[] args) => CliInvocation.Run(
+        ["workspace", .. args], Environment.CurrentDirectory, TextWriter.Null, TextWriter.Null);
 
     private sealed class TestDirectory : IDisposable
     {

@@ -9,10 +9,10 @@ This guide shows how to bind project-specific semantics **without modifying BGCS
 | Question | Choose | Why |
 | --- | --- | --- |
 | A verified built-in already covers the type | Nothing | Keep the built-in safety evidence |
-| A deterministic C ABI type and expressions describe the conversion | `TypeLowerings` | Reviewable JSON with deterministic caching |
-| A callable only needs matching, renaming, exclusion, or expression wrapping | `CallableLowerings` | JSON; no arbitrary code execution |
+| A deterministic C ABI type and expressions describe the conversion | `typeLowerings` | Reviewable JSON with deterministic caching |
+| A callable only needs matching, renaming, exclusion, or expression wrapping | `callableLowerings` | JSON; no arbitrary code execution |
 | The decision needs AST inspection, target branches, or generated artifacts | Typed lowering plugin | Independent trusted .NET assembly |
-| Only project C++ can interpret the template/coroutine/private ABI/lifetime | `NativeShims` | Establish an explicit stable C ABI |
+| Only project C++ can interpret the template/coroutine/private ABI/lifetime | `nativeShims` | Establish an explicit stable C ABI |
 | BGCS cannot prove a reviewed project assertion | `AllowUserAsserted` | Accept a reviewed recipe/plugin/shim |
 | The project deliberately owns an unproven risk | `AllowUnsafe` | Bypass only the safety gate and retain diagnostics |
 
@@ -40,8 +40,8 @@ Use a type recipe when a project value has a stable C ABI carrier:
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "TypeLowerings": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "typeLowerings": [
     {
       "Name": "engine.entity-id",
       "TypePattern": "Engine::EntityId",
@@ -53,7 +53,9 @@ Use a type recipe when a project value has a stable C ABI carrier:
       "AbiShape": "Direct",
       "ParameterToCppExpression": "Engine::EntityId::FromRaw({value})",
       "ReturnToCExpression": "({value}).Raw()",
-      "RequiredHeaders": ["Engine/EntityId.hpp"],
+      "RequiredHeaders": [
+        "Engine/EntityId.hpp"
+      ],
       "ManagedProjection": {
         "ManagedType": "EntityId",
         "ManagedToNativeExpression": "{value}.Value",
@@ -68,12 +70,12 @@ Use a type recipe when a project value has a stable C ABI carrier:
 
 `TypePattern` is an ordinal glob with `*`. Expression placeholders are `{value}`, `{name}`, `{count}`, and `{cppType}`. Use `AbiParameters` for pointer-plus-length expansion. Move to a plugin or shim when conversion needs control flow, shared state, or dynamic AST decisions.
 
-## Complete `CallableLowerings` example
+## Complete `callableLowerings` example
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "CallableLowerings": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "callableLowerings": [
     {
       "Name": "engine.checked-add",
       "FunctionPattern": "Engine::Math::Add",
@@ -81,7 +83,9 @@ Use a type recipe when a project value has a stable C ABI carrier:
       "ExportName": "engine_math_checked_add",
       "Exclude": false,
       "InvocationExpression": "Engine::Interop::Check({invocation})",
-      "RequiredHeaders": ["Engine/Interop/Check.hpp"],
+      "RequiredHeaders": [
+        "Engine/Interop/Check.hpp"
+      ],
       "Safety": "UserAsserted"
     },
     {
@@ -130,9 +134,9 @@ using BGCS.CppAst.Model.Declarations;
 
 public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
-    public string Id => "engine.lowering";
-    public string Version => "1.0.0";
-    public int ContractVersion => BindingPluginContract.CurrentVersion;
+    public string id => "engine.lowering";
+    public string version => "1.0.0";
+    public int contractVersion => BindingPluginContract.C_CURRENT_VERSION;
 
     public void Configure(IBindingPluginHost host) =>
         host.Register<ICppCallableLowering>(
@@ -166,13 +170,13 @@ dotnet build examples/LoweringPlugin/BGCS.Example.LoweringPlugin.csproj --config
 
 ```json
 {
-  "PluginAssemblies": [
+  "pluginAssemblies": [
     "examples/LoweringPlugin/bin/Release/net9.0/BGCS.Example.LoweringPlugin.dll"
   ]
 }
 ```
 
-Paths are relative to the configuration file. Plugins can register `ICppTypeLowering`, `ICppCallableLowering`, and `ICppArtifactContributor`. They execute trusted build-time code: pin and review the binary and build it in CI. Output-affecting state should implement `ICacheFingerprintProvider`; otherwise BGCS conservatively disables cache hits. Returning `BindingPluginContract.CurrentVersion` is a load-time compatibility guard, not a marketed “v1/v2 plugin” generation.
+Paths are relative to the configuration file. Plugins can register `ICppTypeLowering`, `ICppCallableLowering`, and `ICppArtifactContributor`. They execute trusted build-time code: pin and review the binary and build it in CI. Output-affecting state should implement `ICacheFingerprintProvider`; otherwise BGCS conservatively disables cache hits. Returning `BindingPluginContract.C_CURRENT_VERSION` is a load-time compatibility guard, not a marketed “v1/v2 plugin” generation.
 
 ## Complete native shim tutorial
 
@@ -245,24 +249,33 @@ The complete [`bridge.json`](../examples/NativeShim/bridge.json) enables C# outp
 
 ```json
 {
-  "ConfigVersion": 1,
-  "EntryFiles": ["native/entry.hpp"],
-  "AllowedHeaders": ["native/entry.hpp"],
-  "IncludeFolders": ["native"],
-  "OutputPath": "GeneratedBridge",
-  "LanguageStandard": "c++23",
-  "GenerateBuildManifest": true,
-  "GenerateCSharpBindings": true,
-  "CSharpNamespace": "BGCS.Examples.NativeShim",
-  "CSharpApiName": "WidgetNative",
-  "NativeLibraryName": "widget_bridge",
-  "CSharpOutputPath": "Generated",
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "NativeShims": [
+  "entryFiles": [
+    "native/entry.hpp"
+  ],
+  "allowedHeaders": [
+    "native/entry.hpp"
+  ],
+  "includeFolders": [
+    "native"
+  ],
+  "outputPath": "GeneratedBridge",
+  "languageStandard": "c++23",
+  "generateBuildManifest": true,
+  "generateCSharpBindings": true,
+  "cSharpNamespace": "BGCS.Examples.NativeShim",
+  "cSharpApiName": "WidgetNative",
+  "nativeLibraryName": "widget_bridge",
+  "cSharpOutputPath": "Generated",
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "nativeShims": [
     {
       "Name": "widget",
-      "PublicHeaders": ["shims/widget_c.h"],
-      "SourceFiles": ["shims/widget_c.cpp"],
+      "PublicHeaders": [
+        "shims/widget_c.h"
+      ],
+      "SourceFiles": [
+        "shims/widget_c.cpp"
+      ],
       "Safety": "UserAsserted"
     }
   ]

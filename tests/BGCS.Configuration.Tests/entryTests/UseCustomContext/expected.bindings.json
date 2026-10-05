@@ -2,8 +2,8 @@
   "Contains": [
     "internal static global::BGCS.Runtime.FunctionTable funcTable = null !;",
     "public static void InitApi(global::BGCS.Runtime.INativeContext context)",
-    "funcTable = new global::BGCS.Runtime.FunctionTable(context, 1);",
-    "funcTable.Load(0, \"sample_add\");"
+    "var candidate = new global::BGCS.Runtime.FunctionTable(context, 1);",
+    "candidate.LoadRequired(0, \"sample_add\");"
   ],
   "NotContains": [
     "private static string GetLibraryName()",

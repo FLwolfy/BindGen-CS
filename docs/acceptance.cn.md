@@ -2,11 +2,11 @@
 
 [Wiki](README.cn.md) | [English](acceptance.md)
 
-本文是规范性文档。评分必须由测试产物生成，维护者不得手工指定分数。这里的 9.0 是 BindGen-CS 自己定义的 release-gate 等级，不是外部行业基准、完整 C++ 覆盖率或第三方审计分数。
+本文定义强制验收证据。结果报告明确 gate 的通过或失败，不把测试结果换算为代码质量评分。
 
 ## 总规则
 
-每个分类都有明确的一组自动 mandatory gate。只有这些 gate 在发布 commit 上全部通过，该分类才得到 **9.0/10.0**；缺少任何 gate 时，报告生成直接失败。报告按 target 隔离：通过只证明 `target` 字段声明的平台、架构和 ABI。
+每个分类都有明确的自动验收 gate。只有全部 gate 成功，该分类才通过；缺少任何 gate 时报告生成失败。报告按 target 隔离，通过只证明 target 字段声明的平台、架构与 ABI。
 
 发布流程必须生成：
 
@@ -17,18 +17,18 @@
 
 ## 目标矩阵
 
-| 方面 | 目标 | 强制 gate |
+| 方面 | 必要结果 | 强制 gate |
 | --- | ---: | --- |
-| 普通小型 C API | 9.0 | 生成编译率 100%、ABI 调用、生成源码零手改 |
-| 中大型 C API | 9.0 | SDL3、miniaudio、cimgui、cimguizmo、bgfx 确定性 snapshot 与 IR-native 零警告编译 |
-| 复杂 C ABI 正确性 | 9.0 | 宿主原生 invocation 与 target-specific ABI/layout/调用约定矩阵 |
-| 普通 C++ class bridge | 9.0 | lifecycle/method 原生编译、链接和运行 |
-| 复杂现代 C++ | 9.0 | 选定模板、STL、智能指针、virtual callback |
-| 生成 API 美观程度 | 9.0 | 源码/public API 快照、analyzer、生成目录外零 native import |
-| 小白易用性 | 9.0 | 从 header 到验证输出最多五条命令 |
-| 外层架构 | 9.0 | Intermediate/Runtime dependency-boundary tests 与完整 solution build |
-| 内部架构 | 9.0 | 共享 IR、analyzer/IR-emitter tests，且没有预发布 fallback emitter |
-| NuGet/测试/发布工程化 | 9.0 | clean packages/symbols、API/dependency policy、确定性输出、native-RID consumer、host-native 与 managed matrix |
+| 普通小型 C API | passed | 生成编译率 100%、ABI 调用、生成源码零手改 |
+| 中大型 C API | passed | SDL3、miniaudio、cimgui、cimguizmo、bgfx 确定性 snapshot 与 IR-native 零警告编译 |
+| 复杂 C ABI 正确性 | passed | 宿主原生 invocation 与 target-specific ABI/layout/调用约定矩阵 |
+| 普通 C++ class bridge | passed | lifecycle/method 原生编译、链接和运行 |
+| 复杂现代 C++ | passed | 选定模板、STL、智能指针、virtual callback |
+| 生成 API 美观程度 | passed | 源码/public API 快照、analyzer、生成目录外零 native import |
+| 小白易用性 | passed | 从 header 到验证输出最多五条命令 |
+| 外层架构 | passed | Intermediate/Runtime dependency-boundary tests 与完整 solution build |
+| 内部架构 | passed | 共享 IR、analyzer/IR-emitter tests，且没有预发布 fallback emitter |
+| NuGet/测试/发布工程化 | passed | clean packages/symbols、API/dependency policy、确定性输出、native-RID consumer、host-native 与 managed matrix |
 
 ## 真实库性能预算
 
@@ -132,4 +132,4 @@ bindgen-cs build
 
 ## 当前状态
 
-`scripts/run-full-test-matrix.sh` 只有在上述本地 BGCS gates 全部通过后，才写入 `artifacts/acceptance/report.json`、`report.md` 与 target-specific 副本。维护候选必须具备 Windows x64 MSVC、Linux x64 GNU、macOS x64 Darwin 三份报告；Windows 还必须真实执行 clang-cl/MSBuild DLL build/export/invocation。三份同版本报告在 runner 完成前均保持 pending。具体消费者的配置、生成与集成验收归消费者仓库所有，不计入 BGCS 分数。真实 OIDC/Sigstore 签名同样属于 release runner 产物，不是本地证据。
+`scripts/run-full-test-matrix.sh` 只有在上述本地 BGCS gates 全部通过后，才写入 `artifacts/acceptance/report.json`、`report.md` 与 target-specific 副本。维护候选必须具备 Windows x64 MSVC、Linux x64 GNU、macOS x64 Darwin 三份报告；Windows 还必须真实执行 clang-cl/MSBuild DLL build/export/invocation。各 host 的结果在自身 runner 完成前保持 pending。具体消费者的配置、生成与集成验收归消费者仓库所有，单独报告。真实 OIDC/Sigstore 签名同样属于 release runner 产物，不是本地证据。

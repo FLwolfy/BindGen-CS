@@ -1,69 +1,85 @@
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
-using ClangSharp.Interop;
-using BGCS.CppAst.Model.Types;
 using System;
+using BGCS.CppAst.Model.Types;
+using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Model.Templates;
+
 /// <summary>
 /// A C++ template parameter type.
 /// </summary>
 public sealed class CppTemplateParameterNonType : CppType
 {
     /// <summary>
-    /// Constructor of this none type template parameter type.
+    /// Captures a template parameter from a borrowed native declaration cursor.
     /// </summary>
-    /// <param name="cursor"></param>
-    /// <param name="name"></param>
-    /// <param name="templateNonType"></param>
-    public CppTemplateParameterNonType(CXCursor cursor, string name, CppType templateNonType) : base(cursor, CppTypeKind.TemplateParameterNonType)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its owning compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="name">
+    /// The non-null template parameter identifier.
+    /// </param>
+    /// <param name="templateNonType">
+    /// The non-null borrowed native type accepted by this non-type template parameter.
+    /// </param>
+    public CppTemplateParameterNonType(
+        CXCursor cursor,
+        string name,
+        CppType templateNonType
+    ) : base(cursor, CppTypeKind.TemplateParameterNonType)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        NoneTemplateType = templateNonType ?? throw new ArgumentNullException(nameof(templateNonType));
+        this.name = name ?? throw new ArgumentNullException(nameof(name));
+        this.noneTemplateType = templateNonType ?? throw new ArgumentNullException(nameof(templateNonType));
     }
 
     /// <summary>
-    /// Executes public operation <c>CppTemplateParameterNonType</c>.
+    /// Captures a template parameter projection from a borrowed native template argument.
     /// </summary>
-    public CppTemplateParameterNonType(CX_TemplateArgument templateArgument, string name, CppType templateNonType) : base(CXCursor.Null, CppTypeKind.TemplateParameterNonType)
+    /// <param name="templateArgument">
+    /// The borrowed native template argument, valid while its compilation remains alive.
+    /// </param>
+    /// <param name="name">
+    /// The non-null template parameter identifier.
+    /// </param>
+    /// <param name="templateNonType">
+    /// The non-null borrowed native type accepted by this non-type template parameter.
+    /// </param>
+    public CppTemplateParameterNonType(
+        CX_TemplateArgument templateArgument,
+        string name,
+        CppType templateNonType
+    ) : base(CXCursor.Null, CppTypeKind.TemplateParameterNonType)
     {
-        TemplateArgument = templateArgument;
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        NoneTemplateType = templateNonType ?? throw new ArgumentNullException(nameof(templateNonType));
+        this.templateArgument = templateArgument;
+        this.name = name ?? throw new ArgumentNullException(nameof(name));
+        this.noneTemplateType = templateNonType ?? throw new ArgumentNullException(nameof(templateNonType));
     }
 
     /// <summary>
-    /// Gets or sets <c>TemplateArgument</c>.
+    /// Gets or sets the borrowed native template argument; its owning compilation must remain alive.
     /// </summary>
-    public CX_TemplateArgument TemplateArgument { get; set; }
-
+    public CX_TemplateArgument templateArgument { get; set; }
     /// <summary>
     /// Name of the template parameter.
     /// </summary>
-    public string Name { get; }
-
+    public string name { get; }
     /// <summary>
-    /// Gets <c>NoneTemplateType</c>.
+    /// Gets the borrowed native value type accepted by this non-type template parameter.
     /// </summary>
-    public CppType NoneTemplateType { get; }
+    public CppType noneTemplateType { get; }
 
     private bool Equals(CppTemplateParameterNonType other)
     {
-        return base.Equals(other) && Name.Equals(other.Name) && NoneTemplateType.Equals(other.NoneTemplateType);
+        return base.Equals(other) && this.name.Equals(other.name) && this.noneTemplateType.Equals(other.noneTemplateType);
     }
 
-    /// <inheritdoc />
-    public override int SizeOf
-    {
-        get => 0;
-        set => throw new InvalidOperationException("This type does not support SizeOf");
-    }
+    /// <inheritdoc/>
+    public override int sizeOf { get => 0; set => throw new InvalidOperationException("This type does not support SizeOf"); }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override CppType GetCanonicalType() => this;
-
-    /// <inheritdoc />
-    public override string ToString() => $"{NoneTemplateType.ToString()} {Name}";
+    /// <inheritdoc/>
+    public override string ToString() => $"{this.noneTemplateType.ToString()} {this.name}";
 }

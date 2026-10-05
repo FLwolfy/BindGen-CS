@@ -59,7 +59,7 @@ reproducible output; make changes in configuration, not in `Bindings.cs`.
 1. Include the generated `Bindings.cs` in your project.
 2. Reference `BGCS.Runtime`. From a source checkout, add a project reference to
    `src/BGCS.Runtime/BGCS.Runtime.csproj`; a published package can use a package reference.
-3. Build and deploy the native library for your application's target. `LibName` in the
+3. Build and deploy the native library for your application's target. `libName` in the
    configuration must match the library's loadable name, and the entry points must be exported.
 4. Call the generated API and test it against the real native library.
 
@@ -73,8 +73,12 @@ int result = NativeApi.BgcsAdd(2, 3);
 ```
 
 The initial configuration uses `Native.Bindings`, `NativeApi`, and library name `native`.
-Change `Namespace`, `ApiName`, and `LibName` to fit your project. The complete integration
+Change `namespace`, `apiName`, and `libName` to fit your project. The complete integration
 and troubleshooting guide is in [Getting started](docs/getting-started.md).
+
+Set `<DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>` in the consumer project.
+Generated wrappers already own ABI conversion; .NET should call the declared carriers directly.
+This applies across targets. Run actual native calls to verify the result; compilation and matching `sizeof` values are insufficient.
 
 ## C++ libraries
 
@@ -116,8 +120,9 @@ BGCS generates the bindings; your application toolchain compiles and links the n
 code and supplies browser startup. BGCS does not depend on a game engine.
 
 The independent [Wasm invocation test](docs/testing.md#independent-webassembly-invocation)
-generates all three import modes and calls BGCS-owned C functions inside a real browser.
-It checks values, layouts, buffers, opaque handles, callbacks, and resource release.
+generates all three import modes and calls a BGCS-owned C API and generated C++ bridge inside
+a real browser. Its 47 checks cover values, layouts, buffers, opaque handles, callbacks,
+construction, inheritance, and release. The same fixture runs in a standalone NativeAOT consumer.
 See [target evidence](docs/capabilities.md#target-evidence) for tested hosts and remaining gates;
 Windows, Linux, macOS, mobile, packaging, and browser coverage have separate acceptance scopes.
 
@@ -162,6 +167,8 @@ See [Packages and APIs](docs/packages.md).
 ```bash
 dotnet test BindGen-CS.sln -c Release
 python scripts/test-wasm-bindings.py
+python scripts/test-wasm-bindings.py --aot
+python scripts/test-native-aot-bindings.py
 ```
 
 The Wasm test additionally requires a **.NET 9 SDK with `wasm-tools`**, Python 3.10+, and

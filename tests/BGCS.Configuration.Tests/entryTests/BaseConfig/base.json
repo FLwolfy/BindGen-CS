@@ -1,9 +1,9 @@
 {
-  "Namespace": "Expected.FromBase",
-  "ApiName": "BaseApi",
-  "LibName": "base-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "Expected.FromBase",
+  "apiName": "BaseApi",
+  "libName": "base-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }

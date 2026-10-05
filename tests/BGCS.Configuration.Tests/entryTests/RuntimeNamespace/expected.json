@@ -1,4 +1,4 @@
 {
-  "Property": "RuntimeNamespace",
+  "Property": "runtimeNamespace",
   "Expected": "EntryTests.Runtime"
 }

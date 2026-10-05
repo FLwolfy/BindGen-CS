@@ -8,62 +8,71 @@ namespace BGCS.Runtime;
 /// Owns a retained native callback and coordinates synchronous unregistration with in-flight callback invocations.
 /// </summary>
 /// <remarks>
-/// Native code must guarantee that <paramref name="unregister"/> returns only after it will start no new
-/// invocations. Callback thunks call <see cref="TryEnterInvocation"/> before touching managed state and dispose
+/// Native code must guarantee that the unregister operation returns only after it will start no new
+/// invocations. Callback thunks call <see cref = "TryEnterInvocation"/> before touching managed state and dispose
 /// the returned lease on exit. Disposal then waits for already-entered invocations before releasing the delegate.
 /// </remarks>
+/// <typeparam name="TDelegate">Managed delegate signature retained for the native registration.</typeparam>
 public sealed class NativeCallbackRegistration<TDelegate> : IDisposable where TDelegate : Delegate
 {
-    private readonly object sync = new();
-    private readonly ManualResetEventSlim drained = new(initialState: true);
-    private readonly Action unregister;
-    private NativeCallback<TDelegate> callback;
-    private int activeInvocations;
-    private bool closing;
-    private bool unregistering;
-    private bool unregisterCompleted;
-    private bool releaseInProgress;
-    private bool disposed;
-
+    private readonly object m_sync = new();
+    private readonly ManualResetEventSlim m_drained = new(initialState: true);
+    private readonly Action m_unregister;
+    private NativeCallback<TDelegate> m_callback;
+    private int m_activeInvocations;
+    private bool m_closing;
+    private bool m_unregistering;
+    private bool m_unregisterCompleted;
+    private bool m_releaseInProgress;
+    private bool m_disposed;
     /// <summary>Creates and retains a callback registration.</summary>
-    /// <param name="callback">Managed callback exposed to native code.</param>
-    /// <param name="unregister">Synchronous native unregister operation.</param>
-    public NativeCallbackRegistration(TDelegate callback, Action unregister)
-    {
+    /// <param name = "callback">Managed callback exposed to native code.</param>
+    /// <param name = "unregister">Synchronous native unregister operation.</param>
+    public NativeCallbackRegistration(
+        TDelegate callback,
+        Action unregister
+    ) {
         ArgumentNullException.ThrowIfNull(callback);
         ArgumentNullException.ThrowIfNull(unregister);
-        this.callback = new(callback);
-        this.unregister = unregister;
-        FunctionPointer = Marshal.GetFunctionPointerForDelegate(callback);
+        this.m_callback = new(callback);
+        this.m_unregister = unregister;
+        this.functionPointer = Marshal.GetFunctionPointerForDelegate(callback);
     }
 
     /// <summary>Gets the stable unmanaged callback pointer retained by this registration.</summary>
-    public nint FunctionPointer { get; }
+    public nint functionPointer { get; }
 
     /// <summary>Gets whether disposal has begun and new invocations are rejected.</summary>
-    public bool IsClosing
+    public bool isClosing
     {
         get
         {
-            lock (sync)
-                return closing;
+            lock (this.m_sync)
+                return this.m_closing;
         }
     }
 
     /// <summary>
-    /// Enters an invocation while the registration is active. The lease must be disposed in a finally block.
+    /// Acquires one in-flight invocation lease while registration remains open.
     /// </summary>
+    /// <param name="lease">
+    /// Receives the invocation lease on success, or null when closing has begun. Dispose it in a finally block.
+    /// </param>
+    /// <returns>
+    /// True when the caller may enter managed callback state; false after closing begins.
+    /// </returns>
     public bool TryEnterInvocation(out InvocationLease? lease)
     {
-        lock (sync)
+        lock (this.m_sync)
         {
-            if (closing)
+            if (this.m_closing)
             {
                 lease = null;
                 return false;
             }
-            activeInvocations++;
-            drained.Reset();
+
+            this.m_activeInvocations++;
+            this.m_drained.Reset();
             lease = new(this);
             return true;
         }
@@ -73,16 +82,16 @@ public sealed class NativeCallbackRegistration<TDelegate> : IDisposable where TD
     public void Dispose()
     {
         bool performUnregister = false;
-        lock (sync)
+        lock (this.m_sync)
         {
-            closing = true;
-            while (unregistering)
-                Monitor.Wait(sync);
-            if (disposed)
+            this.m_closing = true;
+            while (this.m_unregistering)
+                Monitor.Wait(this.m_sync);
+            if (this.m_disposed)
                 return;
-            if (!unregisterCompleted)
+            if (!this.m_unregisterCompleted)
             {
-                unregistering = true;
+                this.m_unregistering = true;
                 performUnregister = true;
             }
         }
@@ -91,71 +100,72 @@ public sealed class NativeCallbackRegistration<TDelegate> : IDisposable where TD
         {
             try
             {
-                unregister();
-                lock (sync)
-                    unregisterCompleted = true;
+                this.m_unregister();
+                lock (this.m_sync)
+                    this.m_unregisterCompleted = true;
             }
             finally
             {
-                lock (sync)
+                lock (this.m_sync)
                 {
-                    unregistering = false;
-                    Monitor.PulseAll(sync);
+                    this.m_unregistering = false;
+                    Monitor.PulseAll(this.m_sync);
                 }
             }
         }
 
-        lock (sync)
+        lock (this.m_sync)
         {
-            while (!unregisterCompleted && unregistering)
-                Monitor.Wait(sync);
-            if (!unregisterCompleted)
+            while (!this.m_unregisterCompleted && this.m_unregistering)
+                Monitor.Wait(this.m_sync);
+            if (!this.m_unregisterCompleted)
                 return;
-            while (releaseInProgress && !disposed)
-                Monitor.Wait(sync);
-            if (disposed)
+            while (this.m_releaseInProgress && !this.m_disposed)
+                Monitor.Wait(this.m_sync);
+            if (this.m_disposed)
                 return;
-            releaseInProgress = true;
-            if (activeInvocations == 0)
-                drained.Set();
+            this.m_releaseInProgress = true;
+            if (this.m_activeInvocations == 0)
+                this.m_drained.Set();
         }
-        drained.Wait();
-        lock (sync)
+
+        this.m_drained.Wait();
+        lock (this.m_sync)
         {
-            callback.Dispose();
-            disposed = true;
-            releaseInProgress = false;
-            Monitor.PulseAll(sync);
+            this.m_callback.Dispose();
+            this.m_disposed = true;
+            this.m_releaseInProgress = false;
+            Monitor.PulseAll(this.m_sync);
         }
-        drained.Dispose();
+
+        this.m_drained.Dispose();
     }
 
     private void ExitInvocation()
     {
-        lock (sync)
+        lock (this.m_sync)
         {
-            if (activeInvocations <= 0)
+            if (this.m_activeInvocations <= 0)
                 throw new InvalidOperationException("Callback invocation lease was released more than once.");
-            activeInvocations--;
-            if (closing && activeInvocations == 0)
-                drained.Set();
+            this.m_activeInvocations--;
+            if (this.m_closing && this.m_activeInvocations == 0)
+                this.m_drained.Set();
         }
     }
 
     /// <summary>One in-flight callback invocation.</summary>
     public sealed class InvocationLease : IDisposable
     {
-        private NativeCallbackRegistration<TDelegate>? owner;
-
+        private NativeCallbackRegistration<TDelegate>? m_owner;
         internal InvocationLease(NativeCallbackRegistration<TDelegate> owner)
         {
-            this.owner = owner;
+            this.m_owner = owner;
         }
 
         /// <summary>Leaves the callback invocation. Repeated disposal is harmless.</summary>
         public void Dispose()
         {
-            NativeCallbackRegistration<TDelegate>? current = Interlocked.Exchange(ref owner, null);
+            NativeCallbackRegistration<TDelegate>? current = Interlocked.Exchange(ref this.m_owner, null);
             current?.ExitInvocation();
         }
     }

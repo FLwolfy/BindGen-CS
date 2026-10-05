@@ -1,3 +1,5 @@
+using System;
+
 namespace BGCS.Platform;
 
 using BGCS.CppAst.Model.Types;
@@ -6,11 +8,11 @@ internal static class NativeAbi
 {
     internal static string GetPrimitiveTypeName(CppPrimitiveType primitiveType)
     {
-        return primitiveType.Kind switch
+        return primitiveType.kind switch
         {
             CppPrimitiveKind.Void => "void",
             CppPrimitiveKind.Bool => "bool",
-            CppPrimitiveKind.WChar => primitiveType.SizeOf switch
+            CppPrimitiveKind.WChar => primitiveType.sizeOf switch
             {
                 2 => "char",
                 4 => "int",
@@ -19,15 +21,15 @@ internal static class NativeAbi
             CppPrimitiveKind.Char or CppPrimitiveKind.UnsignedChar => "byte",
             CppPrimitiveKind.Short => "short",
             CppPrimitiveKind.Int => "int",
-            CppPrimitiveKind.Long => primitiveType.SizeOf == 8 ? "long" : "int",
+            CppPrimitiveKind.Long => primitiveType.sizeOf == 8 ? "long" : "int",
             CppPrimitiveKind.LongLong => "long",
             CppPrimitiveKind.UnsignedShort => "ushort",
             CppPrimitiveKind.UnsignedInt => "uint",
-            CppPrimitiveKind.UnsignedLong => primitiveType.SizeOf == 8 ? "ulong" : "uint",
+            CppPrimitiveKind.UnsignedLong => primitiveType.sizeOf == 8 ? "ulong" : "uint",
             CppPrimitiveKind.UnsignedLongLong => "ulong",
             CppPrimitiveKind.Float => "float",
             CppPrimitiveKind.Double => "double",
-            CppPrimitiveKind.LongDouble => primitiveType.SizeOf switch
+            CppPrimitiveKind.LongDouble => primitiveType.sizeOf switch
             {
                 8 => "double",
                 12 => "NativeLongDouble12",
@@ -39,12 +41,12 @@ internal static class NativeAbi
             CppPrimitiveKind.Float16 => "Half",
             CppPrimitiveKind.BFloat16 => "ushort",
             CppPrimitiveKind.ObjCId or CppPrimitiveKind.ObjCSel or CppPrimitiveKind.ObjCClass or CppPrimitiveKind.ObjCObject => "nint",
-            _ => throw new NotSupportedException($"Primitive type '{primitiveType.Kind}' is not supported by the native ABI mapper.")
+            _ => throw new NotSupportedException($"Primitive type '{primitiveType.kind}' is not supported by the native ABI mapper.")
         };
     }
 
     private static NotSupportedException UnsupportedSize(CppPrimitiveType primitiveType)
     {
-        return new($"Primitive type '{primitiveType.Kind}' has unsupported ABI size {primitiveType.SizeOf} bytes.");
+        return new($"Primitive type '{primitiveType.kind}' has unsupported ABI size {primitiveType.sizeOf} bytes.");
     }
 }

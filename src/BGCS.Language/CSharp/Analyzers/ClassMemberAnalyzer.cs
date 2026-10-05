@@ -1,86 +1,82 @@
+using System.Collections.Generic;
+using BGCS.Language.Lexing;
+using BGCS.Language.Parsing;
+
 namespace BGCS.Language.CSharp.Analyzers;
 
 using BGCS.Language.CSharp.Nodes;
 
 /// <summary>
-/// Defines the public class <c>ClassMemberAnalyzer</c>.
+/// Collects member modifiers and dispatches supported field or method syntax within the current class scope.
 /// </summary>
 public class ClassMemberAnalyzer : ISyntaxAnalyzer
 {
-    private static readonly KeywordType[] ModifierKeywords =
-    [
-        KeywordType.Public,
-        KeywordType.Internal,
-        KeywordType.Protected,
-        KeywordType.Private,
-        KeywordType.Readonly,
-        KeywordType.Static,
-        KeywordType.Const,
-        KeywordType.Unsafe
-    ];
-
+    private static readonly KeywordType[] ModifierKeywords = [KeywordType.Public, KeywordType.Internal, KeywordType.Protected, KeywordType.Private, KeywordType.Readonly, KeywordType.Static, KeywordType.Const, KeywordType.Unsafe];
     /// <summary>
-    /// Executes public operation <c>Analyze</c>.
+    /// Consumes supported syntax at the cursor and reports malformed recognized declarations through the context diagnostics.
     /// </summary>
+    /// <param name="context">
+    /// The mutable context owned by the active parse operation.
+    /// </param>
+    /// <returns>
+    /// Success after cursor progress, Unrecognised when this analyzer does not match, or Error when recognized syntax is invalid.
+    /// </returns>
     public AnalyserResult Analyze(ParserContext context)
     {
-        if (context.Current is not ClassNode)
+        if (context.current is not ClassNode)
         {
             return AnalyserResult.Unrecognised;
         }
 
-        if (context.IsEnd)
+        if (context.isEnd)
         {
             return AnalyserResult.Unrecognised;
         }
 
-        int start = context.CurrentTokenIndex;
+        int start = context.currentTokenIndex;
         List<KeywordType> modifiers = [];
-
-        while (!context.IsEnd && context.CurrentToken.IsKeyword && IsModifier(context.CurrentToken.KeywordType))
+        while (!context.isEnd && context.currentToken.isKeyword && IsModifier(context.currentToken.keywordType))
         {
-            modifiers.Add(context.CurrentToken.KeywordType);
+            modifiers.Add(context.currentToken.keywordType);
             context.MoveNext();
         }
 
-        if (context.IsEnd)
+        if (context.isEnd)
         {
             context.MoveTo(start);
             return AnalyserResult.Unrecognised;
         }
 
         // Let scope closing be handled by AnalyseScoped.
-        if (context.CurrentToken.IsPunctuation && context.CurrentToken == '}')
+        if (context.currentToken.isPunctuation && context.currentToken == '}')
         {
             context.MoveTo(start);
             return AnalyserResult.Unrecognised;
         }
 
-        if (!IsTypeToken(context.CurrentToken))
+        if (!IsTypeToken(context.currentToken))
         {
             context.MoveTo(start);
             return AnalyserResult.Unrecognised;
         }
 
-        string memberType = context.CurrentToken.AsString();
+        string memberType = context.currentToken.AsString();
         context.MoveNext();
-
-        if (context.IsEnd || !context.CurrentToken.IsIdentifier)
+        if (context.isEnd || !context.currentToken.isIdentifier)
         {
             context.MoveTo(start);
             return AnalyserResult.Unrecognised;
         }
 
-        string memberName = context.CurrentToken.AsString();
+        string memberName = context.currentToken.AsString();
         context.MoveNext();
-
-        if (context.IsEnd)
+        if (context.isEnd)
         {
-            context.Diagnostics.Error("Syntax Error: Unexpected end of file.");
+            context.diagnostics.Error("Syntax Error: Unexpected end of file.");
             return AnalyserResult.Error;
         }
 
-        if (context.CurrentToken.IsPunctuation && context.CurrentToken == '(')
+        if (context.currentToken.isPunctuation && context.currentToken == '(')
         {
             return ParseMethod(context, modifiers, memberType, memberName);
         }
@@ -88,39 +84,42 @@ public class ClassMemberAnalyzer : ISyntaxAnalyzer
         return ParseField(context, modifiers, memberType, memberName);
     }
 
-    private static AnalyserResult ParseMethod(ParserContext context, List<KeywordType> modifiers, string returnType, string name)
-    {
+    private static AnalyserResult ParseMethod(
+        ParserContext context,
+        List<KeywordType> modifiers,
+        string returnType,
+        string name
+    ) {
         List<string> parameters = [];
         context.MoveNext(); // consume '('
-
-        while (!context.IsEnd)
+        while (!context.isEnd)
         {
-            if (context.CurrentToken.IsPunctuation && context.CurrentToken == ')')
+            if (context.currentToken.isPunctuation && context.currentToken == ')')
             {
                 context.MoveNext();
                 break;
             }
 
-            if (context.CurrentToken.IsPunctuation && context.CurrentToken == ',')
+            if (context.currentToken.isPunctuation && context.currentToken == ',')
             {
                 context.MoveNext();
                 continue;
             }
 
-            if (context.CurrentToken.IsIdentifier || context.CurrentToken.IsKeyword)
+            if (context.currentToken.isIdentifier || context.currentToken.isKeyword)
             {
-                parameters.Add(context.CurrentToken.AsString());
+                parameters.Add(context.currentToken.AsString());
                 context.MoveNext();
                 continue;
             }
 
-            context.Diagnostics.Error("Syntax Error: Expected token ) or parameter", context.CurrentToken.Location);
+            context.diagnostics.Error("Syntax Error: Expected token ) or parameter", context.currentToken.location);
             return AnalyserResult.Error;
         }
 
-        if (context.IsEnd)
+        if (context.isEnd)
         {
-            context.Diagnostics.Error("Syntax Error: Expected token )");
+            context.diagnostics.Error("Syntax Error: Expected token )");
             return AnalyserResult.Error;
         }
 
@@ -128,31 +127,33 @@ public class ClassMemberAnalyzer : ISyntaxAnalyzer
         return context.AnalyseScoped(node);
     }
 
-    private static AnalyserResult ParseField(ParserContext context, List<KeywordType> modifiers, string type, string name)
-    {
+    private static AnalyserResult ParseField(
+        ParserContext context,
+        List<KeywordType> modifiers,
+        string type,
+        string name
+    ) {
         string? expression = null;
-
-        if (context.CurrentToken.IsOperator && context.CurrentToken == '=')
+        if (context.currentToken.isOperator && context.currentToken == '=')
         {
             context.MoveNext();
-            if (context.IsEnd || (!context.CurrentToken.IsIdentifier && !context.CurrentToken.IsKeyword && !context.CurrentToken.IsLiteral))
+            if (context.isEnd || (!context.currentToken.isIdentifier && !context.currentToken.isKeyword && !context.currentToken.isLiteral))
             {
-                context.Diagnostics.Error("Syntax Error: Expected expression for field", context.IsEnd ? null : context.CurrentToken.Location);
+                context.diagnostics.Error("Syntax Error: Expected expression for field", context.isEnd ? null : context.currentToken.location);
                 return AnalyserResult.Error;
             }
 
-            expression = context.CurrentToken.AsString();
+            expression = context.currentToken.AsString();
             context.MoveNext();
         }
 
-        if (context.IsEnd || !context.CurrentToken.IsPunctuation || context.CurrentToken != ';')
+        if (context.isEnd || !context.currentToken.isPunctuation || context.currentToken != ';')
         {
-            context.Diagnostics.Error("Syntax Error: ; expected", context.IsEnd ? null : context.CurrentToken.Location);
+            context.diagnostics.Error("Syntax Error: ; expected", context.isEnd ? null : context.currentToken.location);
             return AnalyserResult.Error;
         }
 
         context.MoveNext();
-
         FieldNode node = new(type, name, modifiers.ToArray(), expression);
         context.AppendNode(node);
         return AnalyserResult.Success;
@@ -173,6 +174,6 @@ public class ClassMemberAnalyzer : ISyntaxAnalyzer
 
     private static bool IsTypeToken(Token token)
     {
-        return token.IsIdentifier || token.IsKeyword;
+        return token.isIdentifier || token.isKeyword;
     }
 }

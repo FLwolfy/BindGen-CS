@@ -1,119 +1,126 @@
 using System;
 using System.Collections.Generic;
-// Portions of this file are modified from original work by Alexandre Mutel.
-// Modified by BGCS contributors.
-// Licensed under the MIT License.
-
-using ClangSharp.Interop;
-using BGCS.CppAst.AttributeUtils;
+using System.Text;
+using BGCS.CppAst.AttributeParsing;
 using BGCS.CppAst.Collections;
 using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Utilities;
-using System.Text;
+// Portions of this file are modified from original work by Alexandre Mutel.
+// Modified by BGCS contributors.
+// Licensed under the MIT License.
+using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Model.Declarations;
+
 /// <summary>
 /// A C++ class, struct or union.
 /// </summary>
 public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclarationContainer, ICppTemplateOwner
 {
     /// <summary>
-    /// Creates a new instance.
+    /// Creates a mutable native record projection with empty owned child collections.
     /// </summary>
-    /// <param name="cursor"></param>
-    /// <param name="name">Name of this type.</param>
-    public CppClass(CXCursor cursor, string name) : base(cursor, CppTypeKind.StructOrClass)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its owning compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="name">
+    /// The native declaration identifier, empty for an unnamed declaration.
+    /// </param>
+    public CppClass(
+        CXCursor cursor,
+        string name
+    ) : base(cursor, CppTypeKind.StructOrClass)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        BaseTypes = [];
-        Fields = new CppContainerList<CppField>(this);
-        Constructors = new CppContainerList<CppFunction>(this);
-        Destructors = new CppContainerList<CppFunction>(this);
-        Functions = new CppContainerList<CppFunction>(this);
-        Enums = new CppContainerList<CppEnum>(this);
-        Classes = new CppContainerList<CppClass>(this);
-        Typedefs = new CppContainerList<CppTypedef>(this);
-        TemplateParameters = new CppContainerList<CppType>(this);
-        Attributes = [];
-        ObjCImplementedProtocols = [];
-        Properties = new CppContainerList<CppProperty>(this);
-        ObjCCategories = [];
-        ObjCCategoryName = string.Empty;
+        this.name = name ?? throw new ArgumentNullException(nameof(name));
+        this.baseTypes = [];
+        this.fields = new CppContainerList<CppField>(this);
+        this.constructors = new CppContainerList<CppFunction>(this);
+        this.destructors = new CppContainerList<CppFunction>(this);
+        this.functions = new CppContainerList<CppFunction>(this);
+        this.enums = new CppContainerList<CppEnum>(this);
+        this.classes = new CppContainerList<CppClass>(this);
+        this.typedefs = new CppContainerList<CppTypedef>(this);
+        this.templateParameters = new CppContainerList<CppType>(this);
+        this.attributes = [];
+        this.objCImplementedProtocols = [];
+        this.properties = new CppContainerList<CppProperty>(this);
+        this.objCCategories = [];
+        this.objCCategoryName = string.Empty;
     }
 
     /// <summary>
     /// Kind of the instance (`class` `struct` or `union`)
     /// </summary>
-    public CppClassKind ClassKind { get; set; }
+    public CppClassKind classKind { get; set; }
+    /// <summary>
+    /// Gets or sets whether this record is ordinary, a primary template, a partial template, or a concrete specialization.
+    /// </summary>
+    public CppTemplateKind templateKind { get; set; }
+    /// <inheritdoc/>
+    public string name { get; set; }
+    /// <summary>
+    /// Gets or sets the target of the Objective-C category. Null if this class is not an <see cref = "CppClassKind.ObjCInterfaceCategory"/>.
+    /// </summary>
+    public CppClass? objCCategoryTargetClass { get; set; }
+    /// <summary>
+    /// Gets or sets the name of the Objective-C category. Empty if this class is not an <see cref = "CppClassKind.ObjCInterfaceCategory"/>
+    /// </summary>
+    public string objCCategoryName { get; set; }
 
     /// <summary>
-    /// Gets or sets <c>TemplateKind</c>.
+    /// Gets the current qualified record name including template parameters or concrete specialization arguments.
     /// </summary>
-    public CppTemplateKind TemplateKind { get; set; }
-
-    /// <inheritdoc />
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the target of the Objective-C category. Null if this class is not an <see cref="CppClassKind.ObjCInterfaceCategory"/>.
-    /// </summary>
-    public CppClass? ObjCCategoryTargetClass { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the Objective-C category. Empty if this class is not an <see cref="CppClassKind.ObjCInterfaceCategory"/>
-    /// </summary>
-    public string ObjCCategoryName { get; set; }
-
-    /// <summary>
-    /// Exposes public member <c>FullName</c>.
-    /// </summary>
-    public override string FullName
+    public override string fullName
     {
         get
         {
             StringBuilder sb = new StringBuilder();
-            string fullparent = FullParentName;
+            string fullparent = this.fullParentName;
             if (string.IsNullOrEmpty(fullparent))
             {
-                sb.Append(Name);
+                sb.Append(this.name);
             }
             else
             {
-                sb.Append($"{fullparent}::{Name}");
+                sb.Append($"{fullparent}::{this.name}");
             }
 
-            if (TemplateKind == CppTemplateKind.TemplateClass
-                || TemplateKind == CppTemplateKind.PartialTemplateClass)
+            if (this.templateKind == CppTemplateKind.TemplateClass || this.templateKind == CppTemplateKind.PartialTemplateClass)
             {
                 sb.Append('<');
-                for (int i = 0; i < TemplateParameters.Count; i++)
+                for (int i = 0; i < this.templateParameters.Count; i++)
                 {
-                    var tp = TemplateParameters[i];
+                    var tp = this.templateParameters[i];
                     if (i != 0)
                     {
                         sb.Append(", ");
                     }
+
                     sb.Append(tp.ToString());
                 }
+
                 sb.Append('>');
             }
-            else if (TemplateKind == CppTemplateKind.TemplateSpecializedClass)
+            else if (this.templateKind == CppTemplateKind.TemplateSpecializedClass)
             {
                 sb.Append('<');
-                for (int i = 0; i < TemplateSpecializedArguments.Count; i++)
+                for (int i = 0; i < this.templateSpecializedArguments.Count; i++)
                 {
-                    var ta = TemplateSpecializedArguments[i];
+                    var ta = this.templateSpecializedArguments[i];
                     if (i != 0)
                     {
                         sb.Append(", ");
                     }
-                    sb.Append(ta.ArgString);
+
+                    sb.Append(ta.argString);
                 }
+
                 sb.Append('>');
             }
+
             //else if(TemplateKind == CppTemplateKind.PartialTemplateClass)
             //{
             //    sb.Append('<');
@@ -123,218 +130,190 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
         }
     }
 
-    /// <inheritdoc />
-    public CppVisibility Visibility { get; set; }
-
-    /// <inheritdoc />
-    public List<CppAttribute> Attributes { get; }
-
+    /// <inheritdoc/>
+    public CppVisibility visibility { get; set; }
+    /// <inheritdoc/>
+    public List<CppAttribute> attributes { get; }
     /// <summary>
-    /// Gets <c>TokenAttributes</c>.
+    /// Gets mutable source-token attributes recovered separately from native attribute cursors.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; } = [];
-
+    public List<CppAttribute> tokenAttributes { get; } = [];
     /// <summary>
-    /// Gets or sets <c>MetaAttributes</c>.
+    /// Gets the mutable recognized annotation map owned by this record.
     /// </summary>
-    public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
-
+    public MetaAttributeMap metaAttributes { get; private set; } = new MetaAttributeMap();
     /// <summary>
     /// Gets or sets a boolean indicating if this type is a definition. If <c>false</c> the type was only declared but is not defined.
     /// </summary>
-    public bool IsDefinition { get; set; }
-
+    public bool isDefinition { get; set; }
     /// <summary>
-    /// Gets or sets <c>Definition</c>.
+    /// Gets or sets the borrowed defining record node, or null when no definition has been resolved.
     /// </summary>
-    public CppClass? Definition { get; set; }
-
+    public CppClass? definition { get; set; }
     /// <summary>
     /// Gets or sets a boolean indicating if this declaration is anonymous.
     /// </summary>
-    public bool IsAnonymous { get; set; }
-
+    public bool isAnonymous { get; set; }
     /// <summary>
     /// Get the base types of this type.
     /// </summary>
-    public List<CppBaseType> BaseTypes { get; }
-
+    public List<CppBaseType> baseTypes { get; }
     /// <summary>
     /// Get the Objective-C implemented protocols.
     /// </summary>
-    public List<CppClass> ObjCImplementedProtocols { get; }
-
-    /// <inheritdoc />
-    public CppContainerList<CppField> Fields { get; }
-
-    /// <inheritdoc />
-    public CppContainerList<CppProperty> Properties { get; }
-
+    public List<CppClass> objCImplementedProtocols { get; }
+    /// <inheritdoc/>
+    public CppContainerList<CppField> fields { get; }
+    /// <inheritdoc/>
+    public CppContainerList<CppProperty> properties { get; }
     /// <summary>
     /// Gets the constructors of this instance.
     /// </summary>
-    public CppContainerList<CppFunction> Constructors { get; set; }
-
+    public CppContainerList<CppFunction> constructors { get; set; }
     /// <summary>
     /// Gets the destructors of this instance.
     /// </summary>
-    public CppContainerList<CppFunction> Destructors { get; set; }
-
-    /// <inheritdoc />
-    public CppContainerList<CppFunction> Functions { get; }
-
-    /// <inheritdoc />
-    public CppContainerList<CppEnum> Enums { get; }
-
-    /// <inheritdoc />
-    public CppContainerList<CppClass> Classes { get; }
-
-    /// <inheritdoc />
-    public CppContainerList<CppTypedef> Typedefs { get; }
-
+    public CppContainerList<CppFunction> destructors { get; set; }
+    /// <inheritdoc/>
+    public CppContainerList<CppFunction> functions { get; }
+    /// <inheritdoc/>
+    public CppContainerList<CppEnum> enums { get; }
+    /// <inheritdoc/>
+    public CppContainerList<CppClass> classes { get; }
+    /// <inheritdoc/>
+    public CppContainerList<CppTypedef> typedefs { get; }
     /// <summary>
     /// Gets the Objective-C categories of this instance.
     /// </summary>
-    public List<CppClass> ObjCCategories { get; }
-
-    /// <inheritdoc />
-    public CppContainerList<CppType> TemplateParameters { get; }
-
+    public List<CppClass> objCCategories { get; }
+    /// <inheritdoc/>
+    public CppContainerList<CppType> templateParameters { get; }
     /// <summary>
-    /// Gets <c>TemplateSpecializedArguments</c>.
+    /// Gets mutable concrete specialization arguments in native template order.
     /// </summary>
-    public List<CppTemplateArgument> TemplateSpecializedArguments { get; } = [];
-
+    public List<CppTemplateArgument> templateSpecializedArguments { get; } = [];
     /// <summary>
     /// Gets the specialized class template of this instance.
     /// </summary>
-    public CppClass? SpecializedTemplate { get; set; }
-
+    public CppClass? specializedTemplate { get; set; }
     /// <summary>
-    /// Exposes public member <c>CppClass</c>.
+    /// Gets whether the current parent is another class/struct/union node.
     /// </summary>
-    public bool IsEmbeded => Parent is CppClass;
-
+    public bool isEmbeded => this.parent is CppClass;
     /// <summary>
-    /// Gets or sets <c>IsAbstract</c>.
+    /// Gets or sets whether the native record has unresolved pure virtual methods.
     /// </summary>
-    public bool IsAbstract { get; set; }
-
+    public bool isAbstract { get; set; }
     /// <summary>
-    /// Gets or sets <c>IsCompleteDefinition</c>.
+    /// Gets or sets whether Clang reports a complete record definition.
     /// </summary>
-    public bool IsCompleteDefinition { get; set; }
-
+    public bool isCompleteDefinition { get; set; }
     /// <summary>
-    /// Gets or sets <c>IsDefined</c>.
+    /// Gets whether the parser has visited and populated this record definition.
     /// </summary>
-    public bool IsDefined { get; internal set; }
-
+    public bool isDefined { get; internal set; }
     /// <summary>
-    /// Gets or sets <c>IsPODType</c>.
+    /// Gets or sets whether Clang classifies the record as plain-old-data for the selected language and target.
     /// </summary>
-    public bool IsPODType { get; set; }
-
-    /// <inheritdoc />
-    public override int SizeOf { get; set; }
-
+    public bool isPODType { get; set; }
+    /// <inheritdoc/>
+    public override int sizeOf { get; set; }
     /// <summary>
     /// Gets the alignment of this instance.
     /// </summary>
-    public int AlignOf { get; set; }
+    public int alignOf { get; set; }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override CppType GetCanonicalType()
     {
         return this;
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override string ToString()
     {
         var builder = new StringBuilder();
-        switch (ClassKind)
+        switch (this.classKind)
         {
             case CppClassKind.Class:
                 builder.Append("class ");
                 break;
-
             case CppClassKind.Struct:
                 builder.Append("struct ");
                 break;
-
             case CppClassKind.Union:
                 builder.Append("union ");
                 break;
-
             case CppClassKind.ObjCInterface:
             case CppClassKind.ObjCInterfaceCategory:
                 builder.Append("@interface ");
                 break;
-
             case CppClassKind.ObjCProtocol:
                 builder.Append("@protocol ");
                 break;
-
             default:
                 throw new ArgumentOutOfRangeException();
         }
 
-        if (!string.IsNullOrEmpty(Name))
+        if (!string.IsNullOrEmpty(this.name))
         {
-            builder.Append(Name);
+            builder.Append(this.name);
         }
 
         //Add template arguments here
-        if (TemplateKind != CppTemplateKind.NormalClass)
+        if (this.templateKind != CppTemplateKind.NormalClass)
         {
             builder.Append('<');
-
-            if (TemplateKind == CppTemplateKind.TemplateSpecializedClass)
+            if (this.templateKind == CppTemplateKind.TemplateSpecializedClass)
             {
-                for (var i = 0; i < TemplateSpecializedArguments.Count; i++)
+                for (var i = 0; i < this.templateSpecializedArguments.Count; i++)
                 {
-                    if (i > 0) builder.Append(", ");
-                    builder.Append(TemplateSpecializedArguments[i].ToString());
+                    if (i > 0)
+                        builder.Append(", ");
+                    builder.Append(this.templateSpecializedArguments[i].ToString());
                 }
             }
-            else if (TemplateParameters.Count > 0)
+            else if (this.templateParameters.Count > 0)
             {
-                for (var i = 0; i < TemplateParameters.Count; i++)
+                for (var i = 0; i < this.templateParameters.Count; i++)
                 {
-                    if (i > 0) builder.Append(", ");
-                    builder.Append(TemplateParameters[i].ToString());
+                    if (i > 0)
+                        builder.Append(", ");
+                    builder.Append(this.templateParameters[i].ToString());
                 }
             }
 
             builder.Append('>');
         }
 
-        if (BaseTypes.Count > 0)
+        if (this.baseTypes.Count > 0)
         {
             builder.Append(" : ");
-            for (var i = 0; i < BaseTypes.Count; i++)
+            for (var i = 0; i < this.baseTypes.Count; i++)
             {
-                var baseType = BaseTypes[i];
-                if (i > 0) builder.Append(", ");
+                var baseType = this.baseTypes[i];
+                if (i > 0)
+                    builder.Append(", ");
                 builder.Append(baseType);
             }
         }
 
-        if (!string.IsNullOrEmpty(ObjCCategoryName))
+        if (!string.IsNullOrEmpty(this.objCCategoryName))
         {
-            builder.Append(" (").Append(ObjCCategoryName).Append(')');
+            builder.Append(" (").Append(this.objCCategoryName).Append(')');
         }
 
-        if (ObjCImplementedProtocols.Count > 0)
+        if (this.objCImplementedProtocols.Count > 0)
         {
             builder.Append(" <");
-            for (var i = 0; i < ObjCImplementedProtocols.Count; i++)
+            for (var i = 0; i < this.objCImplementedProtocols.Count; i++)
             {
-                var protocol = ObjCImplementedProtocols[i];
-                if (i > 0) builder.Append(", ");
-                builder.Append(protocol.Name);
+                var protocol = this.objCImplementedProtocols[i];
+                if (i > 0)
+                    builder.Append(", ");
+                builder.Append(protocol.name);
             }
+
             builder.Append('>');
         }
 
@@ -342,9 +321,9 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
     }
 
     /// <summary>
-    /// Exposes public member <c>Children</c>.
+    /// Enumerates borrowed current declarations, then constructors and destructors, in their container order.
     /// </summary>
-    public override IEnumerable<ICppDeclaration> Children
+    public override IEnumerable<ICppDeclaration> children
     {
         get
         {
@@ -353,12 +332,12 @@ public class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDeclar
                 yield return item;
             }
 
-            foreach (var item in Constructors)
+            foreach (var item in this.constructors)
             {
                 yield return item;
             }
 
-            foreach (var item in Destructors)
+            foreach (var item in this.destructors)
             {
                 yield return item;
             }

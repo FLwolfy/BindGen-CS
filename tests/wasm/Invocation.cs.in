@@ -3,9 +3,26 @@
         Assert(__MODE__.NativeApi.BgcsAdd(19, -7) == 12, "__MODE__: scalar arguments/result.");
         m_checks.Add("__MODE__:scalar");
 
+        Assert(__MODE__.NativeApi.BgcsUint64Transform(1UL << 60) == ((1UL << 60) | (1UL << 59)),
+            "__MODE__: 64-bit integer arguments and return values preserve high bits.");
+        m_checks.Add("__MODE__:wide-integer");
+        Assert((ulong)__MODE__.NativeApi.BgcsWideFlagsTransform(__MODE__.BgcsWideFlags.HighBit) ==
+            ((1UL << 60) | (1UL << 59)), "__MODE__: 64-bit enum carriers preserve their ABI.");
+        m_checks.Add("__MODE__:wide-enum");
+
+        Assert(__MODE__.NativeApi.BgcsLongSize() == SizeOf(__MODE__.NativeApi.BgcsLongTransform(0)) &&
+            __MODE__.NativeApi.BgcsLongTransform(-11) == -40,
+            "__MODE__: target C long width and signed invocation.");
+        m_checks.Add("__MODE__:native-long");
+        Assert(__MODE__.NativeApi.BgcsBoolNot(false) && !__MODE__.NativeApi.BgcsBoolNot(true),
+            "__MODE__: native bool arguments and return value.");
+        m_checks.Add("__MODE__:bool");
+
+        static nuint SizeOf<T>(T value) where T : unmanaged => (nuint)sizeof(T);
+
         int marker = 123;
         __MODE__.BgcsLayout layout = new() { Tag = 5, Value = -21, Count = 8, Context = &marker };
-        Assert(__MODE__.NativeApi.BgcsPointerSize() == 4, "__MODE__: native pointer size.");
+        Assert(__MODE__.NativeApi.BgcsPointerSize() == (nuint)sizeof(nint), "__MODE__: native pointer size.");
         Assert(__MODE__.NativeApi.BgcsLayoutSize() == (nuint)sizeof(__MODE__.BgcsLayout), "__MODE__: record size.");
         Assert(__MODE__.NativeApi.BgcsLayoutContextOffset() ==
             (nuint)((byte*)&layout.Context - (byte*)&layout), "__MODE__: record offset.");
@@ -13,6 +30,13 @@
         Assert(layout.Tag == 6 && layout.Value == -42 && layout.Count == 11 && layout.Context == &marker,
             "__MODE__: record round trip preserves context.");
         m_checks.Add("__MODE__:layout");
+
+        __MODE__.BgcsBits bits = new() { Count = 17, Mode = (__MODE__.BgcsMode)2, Delta = -123 };
+        Assert(__MODE__.NativeApi.BgcsBitsSize() == (nuint)sizeof(__MODE__.BgcsBits) &&
+            __MODE__.NativeApi.BgcsBitsTransform(&bits) == 1 &&
+            bits.Count == 18 && bits.Mode == (__MODE__.BgcsMode)1 && bits.Delta == -246,
+            "__MODE__: mixed signed, unsigned and enum bitfields round trip through native bytes.");
+        m_checks.Add("__MODE__:bitfields");
 
         int* buffer = stackalloc int[3] { 2, 3, 5 };
         Assert(__MODE__.NativeApi.BgcsSum(buffer, 3) == 10, "__MODE__: input buffer.");
@@ -52,4 +76,41 @@
         Assert(__MODE__.NativeApi.BgcsCounterNext(__MODE__.BgcsCounter.Null, 1) == -1 &&
             __MODE__.NativeApi.BgcsLiveCount() == 0, "__MODE__: release and null handle.");
         m_checks.Add("__MODE__:release");
+
+        Assert(__MODE__.NativeApi.BridgeCounterLiveCount() == 0, "__MODE__: no outstanding C++ owner.");
+        __MODE__.BridgeCounter cppCounter = __MODE__.NativeApi.BridgeCounterCreate(31);
+        Assert(!cppCounter.IsNull && __MODE__.NativeApi.BridgeCounterLiveCount() == 1,
+            "__MODE__: C++ constructor crosses the generated bridge.");
+        m_checks.Add("__MODE__:cpp-construction");
+        try
+        {
+            Assert(__MODE__.NativeApi.BridgeCounterRead(cppCounter) == 31 &&
+                __MODE__.NativeApi.BridgeCounterAdd(cppCounter, 11) == 42 &&
+                __MODE__.NativeApi.BridgeCounterRead(cppCounter) == 42,
+                "__MODE__: C++ methods preserve instance state.");
+            m_checks.Add("__MODE__:cpp-method");
+            __MODE__.BridgeBaseB baseB = __MODE__.NativeApi.BridgeCounterAsBridgeBaseB(cppCounter);
+            Assert(!baseB.IsNull && baseB.Handle != cppCounter.Handle &&
+                __MODE__.NativeApi.BridgeCounterFromBridgeBaseB(baseB) == cppCounter,
+                "__MODE__: multiple inheritance adjusts and restores native addresses.");
+            __MODE__.BridgeBaseB unrelated = __MODE__.NativeApi.BridgeBaseBCreate();
+            try
+            {
+                Assert(__MODE__.NativeApi.BridgeCounterFromBridgeBaseB(unrelated).IsNull,
+                    "__MODE__: checked downcast rejects an unrelated owner.");
+            }
+            finally
+            {
+                __MODE__.NativeApi.BridgeBaseBDestroy(unrelated);
+            }
+            m_checks.Add("__MODE__:cpp-inheritance");
+        }
+        finally
+        {
+            __MODE__.NativeApi.BridgeCounterDestroy(cppCounter);
+        }
+        __MODE__.NativeApi.BridgeCounterDestroy(__MODE__.BridgeCounter.Null);
+        Assert(__MODE__.NativeApi.BridgeCounterLiveCount() == 0,
+            "__MODE__: C++ destructor releases its owner and accepts a null handle.");
+        m_checks.Add("__MODE__:cpp-release");
     }

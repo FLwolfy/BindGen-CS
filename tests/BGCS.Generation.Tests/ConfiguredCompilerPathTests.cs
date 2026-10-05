@@ -2,10 +2,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-
 using BGCS.Configuration;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
+using BGCS.Facade;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -41,7 +41,7 @@ public sealed class ConfiguredCompilerPathTests
                 + variable + "%\"}");
             var generator = new ParserConfigurationProbe(new ConfigLoader().Load(configFile));
 
-            Assert.Contains(sdk, generator.CaptureSettings().SystemIncludeFolders);
+            Assert.Contains(sdk, generator.CaptureSettings().systemIncludeFolders);
         }
         finally
         {

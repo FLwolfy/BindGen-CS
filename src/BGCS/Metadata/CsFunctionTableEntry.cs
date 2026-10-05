@@ -1,35 +1,45 @@
-﻿namespace BGCS.Metadata
+namespace BGCS.Metadata
 {
     /// <summary>
-    /// Defines the public class <c>CsFunctionTableEntry</c>.
+    /// Associates one dynamic-import table slot with its exact native entry-point symbol.
     /// </summary>
     public class CsFunctionTableEntry
     {
         /// <summary>
-        /// Initializes a new instance of <see cref="CsFunctionTableEntry"/>.
+        /// Retains the slot and symbol assigned during generation.
         /// </summary>
-        public CsFunctionTableEntry(int index, string entryPoint)
-        {
-            Index = index;
-            EntryPoint = entryPoint;
+        /// <param name="index">
+        /// The zero-based function-table slot.
+        /// </param>
+        /// <param name="entryPoint">
+        /// The exact native symbol resolved by dynamic import.
+        /// </param>
+        public CsFunctionTableEntry(
+            int index,
+            string entryPoint
+        ) {
+            this.index = index;
+            this.entryPoint = entryPoint;
         }
 
         /// <summary>
-        /// Gets or sets <c>Index</c>.
+        /// Gets or sets the zero-based dynamic-import table slot.
         /// </summary>
-        public int Index { get; set; }
+        public int index { get; set; }
+        /// <summary>
+        /// Gets or sets the exact native symbol resolved by dynamic import.
+        /// </summary>
+        public string entryPoint { get; set; }
 
         /// <summary>
-        /// Gets or sets <c>EntryPoint</c>.
+        /// Copies the table slot and symbol into a separately mutable entry.
         /// </summary>
-        public string EntryPoint { get; set; }
-
-        /// <summary>
-        /// Executes public operation <c>Clone</c>.
-        /// </summary>
+        /// <returns>
+        /// An independent entry retaining the same immutable symbol string.
+        /// </returns>
         public CsFunctionTableEntry Clone()
         {
-            return new(Index, EntryPoint);
+            return new(this.index, this.entryPoint);
         }
     }
 }

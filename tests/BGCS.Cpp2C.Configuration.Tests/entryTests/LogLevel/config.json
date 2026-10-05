@@ -1,4 +1,4 @@
 {
-  "NamePrefix": "Log_",
-  "LogLevel": "Information"
+  "namePrefix": "Log_",
+  "logLevel": "Information"
 }

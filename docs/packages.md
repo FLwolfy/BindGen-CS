@@ -29,7 +29,7 @@ The tool depends on `BGCS` and `BGCS.Cpp2C` inside its isolated tool installatio
 
 Primary public APIs:
 
-- `CsCodeGenerator`, `CsCodeGeneratorConfig`, `GeneratorBuilder`, `BatchGenerator`;
+- `BGCS.Facade.CsCodeGenerator`, `BGCS.Configuration.CsCodeGeneratorConfig`;
 - `BGCS.Facade.BindingGenerator`;
 - `BindingGenerationPipeline`;
 - `ConfigLoader`, `ConfigValidator`, `PresetResolver`;
@@ -47,7 +47,8 @@ Primary public APIs:
 
 - `Cpp2CCodeGenerator`, `Cpp2CGeneratorConfig`;
 - `CppBridgeBuildManifest`, `CppBridgeBuildManifestEmitter`, `NativeAssetLayout`, and `Cpp2CConfigValidator`;
-- `INativeBuildProvider`, `ClangNativeBuildProvider`, `NativeBuildPlan`, and `NativeBuildExecutor`;
+- `INativeBuildProvider`, `NativeBuildPlan`, and `NativeBuildExecutor` in `BGCS.Cpp2C.Build`;
+- the Clang, ClangCl, CMake, Meson, and MSBuild providers in `BGCS.Cpp2C.Build.Providers`;
 - `BGCS.Cpp2C.Emission.CBridgeEmitter`;
 - bridge generation-step extension points;
 - C/C++ type lowering helpers and generated-function metadata.
@@ -88,7 +89,7 @@ Primary public runtime surface:
 - `NativeNameAttribute`, `SourceLocationAttribute`, `NativeNameType`;
 - `Utils` allocation, UTF-8/UTF-16, pointer, and array helpers.
 
-Generated bindings normally reference this package. `GenerateRuntimeSource=true` instead emits a guarded standalone `Runtime.cs`; do not combine embedded Runtime and the package without defining `BGCS_RUNTIME_EXTERNAL`.
+Generated bindings normally reference this package. `generateRuntimeSource=true` instead emits a guarded standalone `Runtime.cs`; do not combine embedded Runtime and the package without defining `BGCS_RUNTIME_EXTERNAL`.
 
 ## Advanced implementation packages
 

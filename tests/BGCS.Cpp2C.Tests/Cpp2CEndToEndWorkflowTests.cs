@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using BGCS.Core.Logging;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 using Xunit;
 
 namespace BGCS.Cpp2C.Tests;
@@ -21,19 +23,19 @@ public class Cpp2CEndToEndWorkflowTests
         File.WriteAllText(baseConfigPath,
             """
             {
-              "NamePrefix": "BASE_",
-              "LogLevel": "Warning",
-              "CppLogLevel": "Error"
+              "namePrefix": "BASE_",
+              "logLevel": "Warning",
+              "cppLogLevel": "Error"
             }
             """);
 
         File.WriteAllText(configPath,
             """
             {
-              "BaseConfig": {
-                "Url": "file://config.base.json"
+              "baseConfig": {
+                "url": "file://config.base.json"
               },
-              "NamePrefix": "CHILD_"
+              "namePrefix": "CHILD_"
             }
             """);
 
@@ -57,14 +59,14 @@ public class Cpp2CEndToEndWorkflowTests
         try
         {
             Cpp2CGeneratorConfig cfg = Cpp2CGeneratorConfig.Load(configPath);
-            Assert.Equal("CHILD_", cfg.NamePrefix);
-            Assert.Equal(LogSeverity.Warning, cfg.LogLevel);
-            Assert.Equal(LogSeverity.Error, cfg.CppLogLevel);
+            Assert.Equal("CHILD_", cfg.namePrefix);
+            Assert.Equal(LogSeverity.Warning, cfg.logLevel);
+            Assert.Equal(LogSeverity.Error, cfg.cppLogLevel);
 
             Cpp2CCodeGenerator generator = new(cfg);
             generator.Generate(headerPath, outputPath);
 
-            Assert.DoesNotContain(generator.Messages, m => m.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+            Assert.DoesNotContain(generator.messages, m => m.severity is LogSeverity.Error or LogSeverity.Critical);
             Assert.True(File.Exists(Path.Combine(outputPath, "include", "Classes.h")));
             Assert.True(File.Exists(Path.Combine(outputPath, "include", "enums.h")));
             Assert.True(File.Exists(Path.Combine(outputPath, "src", "Classes.cpp")));

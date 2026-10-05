@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using BGCS.Configuration;
+using BGCS.CppAst.Extensions;
+
 namespace BGCS.Analysis;
 
 using BGCS.Conversion;
@@ -10,15 +16,24 @@ using BGCS.Intermediate;
 /// </summary>
 public sealed class TypeAnalyzer
 {
-    private readonly CsCodeGeneratorConfig config;
-    private readonly Dictionary<CppType, string> managedAliases = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<string, ReferencedRecord> referencedRecords = new(StringComparer.Ordinal);
+    private readonly CsCodeGeneratorConfig m_config;
+    private readonly Dictionary<CppType, string> m_managedAliases = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<string, ReferencedRecord> m_referencedRecords = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Creates a target-aware analyzer for one generation attempt.
+    /// </summary>
+    /// <param name="config">Generation configuration; callers retain ownership and must not mutate it during analysis.</param>
     public TypeAnalyzer(CsCodeGeneratorConfig config)
     {
-        this.config = config ?? throw new ArgumentNullException(nameof(config));
+        this.m_config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
+    /// <summary>
+    /// Lowers one borrowed AST type into a target ABI type reference.
+    /// </summary>
+    /// <param name="type">Native type whose owning compilation must remain alive during analysis.</param>
+    /// <returns>An AST-independent type reference containing the resolved managed carrier and native layout facts.</returns>
     public BindingTypeReference Analyze(CppType type)
     {
         ArgumentNullException.ThrowIfNull(type);
@@ -31,68 +46,69 @@ public sealed class TypeAnalyzer
             {
                 case CppPointerType pointer:
                     pointerDepth++;
-                    current = pointer.ElementType;
+                    current = pointer.elementType;
                     continue;
                 case CppReferenceType reference:
                     pointerDepth++;
-                    current = reference.ElementType;
+                    current = reference.elementType;
                     continue;
                 case CppQualifiedType qualified:
-                    isConst |= qualified.Qualifier == CppTypeQualifier.Const;
-                    current = qualified.ElementType;
+                    isConst |= qualified.qualifier == CppTypeQualifier.Const;
+                    current = qualified.elementType;
                     continue;
                 case CppArrayType array:
-                    current = array.ElementType;
+                    current = array.elementType;
                     continue;
             }
+
             break;
         }
 
-        string managedName = config.TypeConverter.Convert(type, CsTypeStyle.Raw);
-        if (!config.DelegatesAsVoidPointer && type.IsDelegate(out CppFunctionType? callback))
+        string managedName = this.m_config.typeConverter.Convert(type, CsTypeStyle.Raw);
+        if (!this.m_config.delegatesAsVoidPointer && type.IsDelegate(out CppFunctionType? callback))
             managedName = GetCallbackPointerType(callback!);
-        if (managedAliases.TryGetValue(current, out string? managedAlias))
+        if (this.m_managedAliases.TryGetValue(current, out string? managedAlias))
             managedName = managedAlias + new string('*', pointerDepth);
         else if (current is CppTypedef typedef && IsVoidPointerAlias(typedef))
             managedName = "nint" + new string('*', pointerDepth);
         else if (current is CppTypedef voidAlias && IsVoidAlias(voidAlias))
-            managedName = config.GetManagedTypeName(voidAlias.Name) + new string('*', pointerDepth);
-        if (current is CppPrimitiveType { Kind: CppPrimitiveKind.Bool })
-            managedName = config.GetBoolType() + new string('*', pointerDepth);
-        if (config.GenerateHandles && pointerDepth > 0 && IsIncompleteRecord(current) &&
-            managedName.EndsWith('*'))
+            managedName = this.m_config.GetManagedTypeName(voidAlias.name) + new string('*', pointerDepth);
+        if (current is CppPrimitiveType { kind: CppPrimitiveKind.Bool })
+            managedName = this.m_config.GetBoolType() + new string('*', pointerDepth);
+        if (this.m_config.generateHandles && pointerDepth > 0 && IsIncompleteRecord(current) && managedName.EndsWith('*'))
         {
             // An incomplete record is emitted as an nint-backed opaque handle. One native
             // pointer indirection is therefore represented by the handle value itself;
             // additional indirections remain explicit (T** -> Handle*).
             managedName = managedName[..^1].TrimEnd();
         }
+
         TrackReferencedRecord(type, managedName);
-        return new(type.GetDisplayName(), managedName, pointerDepth, isConst, type.SizeOf);
+        return new(type.GetDisplayName(), managedName, pointerDepth, isConst, type.sizeOf);
     }
 
-    internal IReadOnlyCollection<ReferencedRecord> ReferencedRecords => referencedRecords.Values;
+    internal IReadOnlyCollection<ReferencedRecord> referencedRecords => this.m_referencedRecords.Values;
 
-    internal void RegisterManagedAlias(CppType nativeType, string managedName)
-    {
+    internal void RegisterManagedAlias(
+        CppType nativeType,
+        string managedName
+    ) {
         ArgumentNullException.ThrowIfNull(nativeType);
         ArgumentException.ThrowIfNullOrWhiteSpace(managedName);
-        managedAliases[nativeType] = managedName;
+        this.m_managedAliases[nativeType] = managedName;
     }
 
     private string GetCallbackPointerType(CppFunctionType callback)
     {
-        IEnumerable<string> carriers = callback.Parameters.Select(parameter => GetCallbackCarrier(parameter.Type))
-            .Append(GetCallbackCarrier(callback.ReturnType));
-        return $"delegate* unmanaged[{callback.CallingConvention.GetCallingConventionDelegate()}]<{string.Join(", ", carriers)}>";
+        IEnumerable<string> carriers = callback.parameters.Select(parameter => GetCallbackCarrier(parameter.type)).Append(GetCallbackCarrier(callback.returnType));
+        return $"delegate* unmanaged[{callback.callingConvention.GetCallingConventionDelegate()}]<{string.Join(", ", carriers)}>";
     }
 
     private string GetCallbackCarrier(CppType type)
     {
-        string managedName = Analyze(type).ManagedName;
-        if (!config.GenerateHandles)
+        string managedName = Analyze(type).managedName;
+        if (!this.m_config.generateHandles)
             return managedName;
-
         int pointerDepth = 0;
         CppType current = type;
         while (true)
@@ -100,31 +116,32 @@ public sealed class TypeAnalyzer
             switch (current)
             {
                 case CppQualifiedType qualified:
-                    current = qualified.ElementType;
+                    current = qualified.elementType;
                     continue;
                 case CppTypedef typedef:
-                    current = typedef.ElementType;
+                    current = typedef.elementType;
                     continue;
                 case CppPointerType pointer:
                     pointerDepth++;
-                    current = pointer.ElementType;
+                    current = pointer.elementType;
                     continue;
                 case CppReferenceType reference:
                     pointerDepth++;
-                    current = reference.ElementType;
+                    current = reference.elementType;
                     continue;
             }
+
             break;
         }
 
         // Callback ABI signatures carry native pointers, independently of the managed handle's alias.
-        return pointerDepth > 0 && current is CppClass { IsDefinition: false }
-            ? "nint" + new string('*', pointerDepth - 1)
-            : managedName;
+        return pointerDepth > 0 && current is CppClass { isDefinition: false } ? "nint" + new string('*', pointerDepth - 1) : managedName;
     }
 
-    private void TrackReferencedRecord(CppType type, string managedName)
-    {
+    private void TrackReferencedRecord(
+        CppType type,
+        string managedName
+    ) {
         CppType current = type;
         bool behindPointer = managedName.TrimEnd().EndsWith('*');
         while (true)
@@ -132,80 +149,88 @@ public sealed class TypeAnalyzer
             switch (current)
             {
                 case CppQualifiedType qualified:
-                    current = qualified.ElementType;
+                    current = qualified.elementType;
                     continue;
                 case CppTypedef typedef:
-                    current = typedef.ElementType;
+                    current = typedef.elementType;
                     continue;
                 case CppPointerType pointer:
                     behindPointer = true;
-                    current = pointer.ElementType;
+                    current = pointer.elementType;
                     continue;
                 case CppReferenceType reference:
                     behindPointer = true;
-                    current = reference.ElementType;
+                    current = reference.elementType;
                     continue;
                 case CppArrayType array:
-                    current = array.ElementType;
+                    current = array.elementType;
                     continue;
             }
+
             break;
         }
+
         if (current is not CppClass record)
             return;
         string name = managedName.Trim();
         while (name.EndsWith('*'))
             name = name[..^1].TrimEnd();
-        if (string.IsNullOrWhiteSpace(name) || name.Contains(' ') ||
-            !string.Equals(name, config.GetManagedTypeName(record.Name), StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(name) || name.Contains(' ') || !string.Equals(name, this.m_config.GetManagedTypeName(record.name), StringComparison.Ordinal))
             return;
-        if (referencedRecords.TryGetValue(name, out ReferencedRecord? existing))
+        if (this.m_referencedRecords.TryGetValue(name, out ReferencedRecord? existing))
         {
-            if (!behindPointer && existing.BehindPointerOnly)
-                referencedRecords[name] = existing with { BehindPointerOnly = false };
+            if (!behindPointer && existing.behindPointerOnly)
+                this.m_referencedRecords[name] = existing with
+                {
+                    behindPointerOnly = false
+                };
             return;
         }
-        referencedRecords.Add(name, new(record.FullName, name, Math.Max(0, record.SizeOf),
-            Math.Max(1, record.AlignOf), behindPointer));
+
+        this.m_referencedRecords.Add(name, new(record.fullName, name, Math.Max(0, record.sizeOf), Math.Max(1, record.alignOf), behindPointer));
     }
 
     private static bool IsVoidPointerAlias(CppTypedef typedef)
     {
-        CppType current = typedef.ElementType;
+        CppType current = typedef.elementType;
         while (current is CppQualifiedType qualified)
-            current = qualified.ElementType;
+            current = qualified.elementType;
         while (current is CppTypedef nested)
         {
-            current = nested.ElementType;
+            current = nested.elementType;
             while (current is CppQualifiedType qualified)
-                current = qualified.ElementType;
+                current = qualified.elementType;
         }
+
         if (current is not CppPointerType pointer)
             return false;
-        current = pointer.ElementType;
+        current = pointer.elementType;
         while (current is CppQualifiedType qualified)
-            current = qualified.ElementType;
-        return current is CppPrimitiveType { Kind: CppPrimitiveKind.Void };
+            current = qualified.elementType;
+        return current is CppPrimitiveType { kind: CppPrimitiveKind.Void };
     }
 
     private static bool IsVoidAlias(CppTypedef typedef)
     {
-        CppType current = typedef.ElementType;
+        CppType current = typedef.elementType;
         while (true)
         {
             if (current is CppQualifiedType qualified)
             {
-                current = qualified.ElementType;
+                current = qualified.elementType;
                 continue;
             }
+
             if (current is CppTypedef nested)
             {
-                current = nested.ElementType;
+                current = nested.elementType;
                 continue;
             }
+
             break;
         }
-        return current is CppPrimitiveType { Kind: CppPrimitiveKind.Void };
+
+        return current is CppPrimitiveType { kind: CppPrimitiveKind.Void };
     }
 
     private static bool IsIncompleteRecord(CppType type)
@@ -215,17 +240,22 @@ public sealed class TypeAnalyzer
             switch (type)
             {
                 case CppQualifiedType qualified:
-                    type = qualified.ElementType;
+                    type = qualified.elementType;
                     continue;
                 case CppTypedef typedef when !typedef.IsOpaqueHandle():
-                    type = typedef.ElementType;
+                    type = typedef.elementType;
                     continue;
                 default:
-                    return type is CppClass { IsDefinition: false };
+                    return type is CppClass { isDefinition: false };
             }
         }
     }
 
-    internal sealed record ReferencedRecord(string NativeName, string ManagedName, int Size, int Alignment,
-        bool BehindPointerOnly);
+    internal sealed record ReferencedRecord(
+        string nativeName,
+        string managedName,
+        int size,
+        int alignment,
+        bool behindPointerOnly
+    );
 }

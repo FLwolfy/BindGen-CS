@@ -1,4 +1,4 @@
 {
-  "Property": "NamePrefix",
+  "Property": "namePrefix",
   "Expected": "Wrapped_"
 }

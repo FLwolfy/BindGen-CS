@@ -5,10 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using BGCS.Core.Mapping;
-using BGCS.CppAst.Targeting;
+using BGCS.Configuration;
+using BGCS.Configuration.Mapping;
+using BGCS.Configuration.Naming;
 using BGCS.Emission;
+using BGCS.Facade;
 using BGCS.Intermediate;
+using BGCS.Intermediate.Emission;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -31,17 +34,17 @@ public class BindingIntermediateRepresentationTests
         {
             var config = new CsCodeGeneratorConfig
             {
-                ApiName = "CallbackApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "callback",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.FunctionTable,
-                DelegatesAsVoidPointer = false,
-                SingleFileOutputName = "Bindings.cs"
+                apiName = "CallbackApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "callback",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.FunctionTable,
+                delegatesAsVoidPointer = false,
+                singleFileOutputName = "Bindings.cs"
             };
             var generator = new CsCodeGenerator(config);
             Assert.True(generator.Generate(header, Path.Combine(temp, "out")));
-            string[] sources = generator.LastResult!.OutputFiles.Select(File.ReadAllText).ToArray();
+            string[] sources = generator.lastResult!.outputFiles.Select(File.ReadAllText).ToArray();
             Assert.Contains("delegate* unmanaged[Cdecl]<nint, void>", string.Join(Environment.NewLine, sources));
             AssertCompiles(sources);
         }
@@ -65,43 +68,41 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "NativeAbi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "native",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                TargetPlatform = CppTargetPlatform.Windows,
-                TargetArchitecture = CppTargetArchitecture.X64,
-                TargetAbi = CppTargetAbi.Msvc,
-                SingleFileOutputName = "Bindings.cs"
+                apiName = "NativeAbi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "native",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                targetId = "windows-x64-msvc",
+                singleFileOutputName = "Bindings.cs"
             };
-            config.MarshallingMappings["bgcs_call_callback"] = new FunctionMarshallingMapping
+            config.marshallingMappings["bgcs_call_callback"] = new FunctionMarshallingMapping
             {
-                Parameters =
+                parameters =
                 {
                     ["callback"] = new MarshallingMapping
                     {
-                        Strategy = MarshallingStrategy.Callback,
-                        CallbackLifetime = BindingCallbackLifetime.CallOnly,
-                        CallbackThreading = BindingCallbackThreading.CallerThread
+                        strategy = MarshallingStrategy.Callback,
+                        callbackLifetime = BindingCallbackLifetime.CallOnly,
+                        callbackThreading = BindingCallbackThreading.CallerThread
                     }
                 }
             };
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, Path.Combine(temp, "out")),
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
-            BindingModule module = generator.LastResult!.Module!;
-            BindingFunction function = Assert.Single(module.Functions);
-            BindingParameter parameter = Assert.Single(function.Parameters, candidate => candidate.NativeName == "callback");
-            string source = string.Join(Environment.NewLine, generator.LastResult.OutputFiles.Select(File.ReadAllText));
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
+            BindingModule module = generator.lastResult!.module!;
+            BindingFunction function = Assert.Single(module.functions);
+            BindingParameter parameter = Assert.Single(function.parameters, candidate => candidate.nativeName == "callback");
+            string source = string.Join(Environment.NewLine, generator.lastResult.outputFiles.Select(File.ReadAllText));
             Assert.Contains("// ABI reference target: windows-x64-msvc", source, StringComparison.Ordinal);
             Assert.True(source.Contains("public static int BgcsCallCallback(BgcsIntCallback callback, int value)", StringComparison.Ordinal),
-                $"Delegates: {string.Join(", ", module.Delegates.Select(value => value.NativeName + "/" + value.ManagedName))}; " +
-                $"Callback type: {parameter.Type.NativeName}/{parameter.Type.ManagedName}; " +
+                $"Delegates: {string.Join(", ", module.delegates.Select(value => value.nativeName + "/" + value.managedName))}; " +
+                $"Callback type: {parameter.type.nativeName}/{parameter.type.managedName}; " +
                 $"Methods: {string.Join(" | ", source.Split('\n').Where(line => line.Contains("BgcsCallCallback", StringComparison.Ordinal)))}");
             Assert.Contains("global::System.GC.KeepAlive(callback);", source, StringComparison.Ordinal);
-            AssertCompiles(generator.LastResult.OutputFiles.Select(File.ReadAllText).ToArray());
+            AssertCompiles(generator.lastResult.outputFiles.Select(File.ReadAllText).ToArray());
         }
         finally
         {
@@ -120,22 +121,22 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "SafeApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "safe",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                SingleFileOutputName = "Bindings.cs"
+                apiName = "SafeApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "safe",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                singleFileOutputName = "Bindings.cs"
             };
-            Assert.Equal(StrictSafetySeverity.SuppressFriendly, config.StrictSafetySeverity);
+            Assert.Equal(StrictSafetySeverity.SuppressFriendly, config.strictSafetySeverity);
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, Path.Combine(temp, "out")));
-            BindingFunction function = Assert.Single(generator.LastResult!.Module!.Functions);
-            Assert.True(function.SuppressFriendlySurface);
-            Assert.Contains(generator.LastResult.Diagnostics,
-                diagnostic => diagnostic.Code == BindingDiagnosticCodes.Ownership);
-            string source = string.Join(Environment.NewLine, generator.LastResult.OutputFiles.Select(File.ReadAllText));
+            BindingFunction function = Assert.Single(generator.lastResult!.module!.functions);
+            Assert.True(function.suppressFriendlySurface);
+            Assert.Contains(generator.lastResult.diagnostics,
+                diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP);
+            string source = string.Join(Environment.NewLine, generator.lastResult.outputFiles.Select(File.ReadAllText));
             Assert.Contains("public static byte* BgcsName()", source);
             Assert.DoesNotContain("public static string? BgcsName()", source);
             AssertCompiles(source);
@@ -159,23 +160,23 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "SafeApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "safe",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                SingleFileOutputName = "Bindings.cs",
-                WrapPointersAsHandle = true,
-                MemberNamingConvention = NamingConvention.Unknown
+                apiName = "SafeApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "safe",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                singleFileOutputName = "Bindings.cs",
+                wrapPointersAsHandle = true,
+                memberNamingConvention = NamingConvention.Unknown
             };
-            config.FunctionMappings.Add(new("NativeThing_Clone", "Clone", null, [], []));
-            config.KnownMemberFunctions["NativeThing"] = ["NativeThing_Clone"];
+            config.functionMappings.Add(new("NativeThing_Clone", "Clone", null, [], []));
+            config.knownMemberFunctions["NativeThing"] = ["NativeThing_Clone"];
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, Path.Combine(temp, "out")));
-            BindingFunction function = Assert.Single(generator.LastResult!.Module!.Functions);
-            Assert.True(function.SuppressFriendlySurface);
-            string[] sources = generator.LastResult.OutputFiles.Select(File.ReadAllText).ToArray();
+            BindingFunction function = Assert.Single(generator.lastResult!.module!.functions);
+            Assert.True(function.suppressFriendlySurface);
+            string[] sources = generator.lastResult.outputFiles.Select(File.ReadAllText).ToArray();
             string source = string.Join(Environment.NewLine, sources);
             Assert.Contains("public static NativeThing* Clone(NativeThing* self)", source);
             Assert.DoesNotContain("public NativeThingPtr Clone(", source);
@@ -206,38 +207,38 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "FriendlyApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "friendly",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                SingleFileOutputName = "Bindings.cs"
+                apiName = "FriendlyApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "friendly",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                singleFileOutputName = "Bindings.cs"
             };
-            config.MarshallingMappings["bgcs_sum"] = new FunctionMarshallingMapping
+            config.marshallingMappings["bgcs_sum"] = new FunctionMarshallingMapping
             {
-                Parameters =
+                parameters =
                 {
                     ["values"] = new MarshallingMapping
                     {
-                        Strategy = MarshallingStrategy.Span,
-                        LengthParameter = "count",
-                        Ownership = BindingOwnership.Borrowed
+                        strategy = MarshallingStrategy.Span,
+                        lengthParameter = "count",
+                        ownership = BindingOwnership.Borrowed
                     }
                 }
             };
-            config.MarshallingMappings["bgcs_name"] = new FunctionMarshallingMapping
+            config.marshallingMappings["bgcs_name"] = new FunctionMarshallingMapping
             {
-                Return = new MarshallingMapping { Ownership = BindingOwnership.Borrowed }
+                @return = new MarshallingMapping { ownership = BindingOwnership.Borrowed }
             };
-            config.FunctionMappings.Add(new FunctionMapping("bgcs_add", "BgcsAdd", null, [], [],
+            config.functionMappings.Add(new FunctionMapping("bgcs_add", "BgcsAdd", null, [], [],
             [
                 new ParameterMapping("left", "x", false),
                 new ParameterMapping("right", null, false)
             ])
             {
-                ContainerName = "MathApi"
+                containerName = "MathApi"
             });
-            config.FunctionMappings.Add(new FunctionMapping("bgcs_read", "BgcsRead", null, [], [],
+            config.functionMappings.Add(new FunctionMapping("bgcs_read", "BgcsRead", null, [], [],
             [
                 new ParameterMapping("value", "result", true)
             ]));
@@ -246,7 +247,7 @@ public class BindingIntermediateRepresentationTests
 
             Assert.True(generator.Generate(header, output));
             string source = string.Join(Environment.NewLine,
-                generator.LastResult!.OutputFiles.Select(File.ReadAllText));
+                generator.lastResult!.outputFiles.Select(File.ReadAllText));
             Assert.Contains("public unsafe partial class MathApi", source);
             Assert.Contains("public static int BgcsAdd(int x, int right)", source);
             Assert.Contains("FriendlyApi.BgcsAddNative(x, right)", source);
@@ -257,7 +258,7 @@ public class BindingIntermediateRepresentationTests
             Assert.DoesNotContain("BgcsFarSize(int kind, int mode, ReadOnlySpan<int>", source);
             Assert.Contains("public static void BgcsRead(out int result)", source);
             Assert.Contains("internal static extern int BgcsAddNative", source);
-            Assert.All(generator.LastResult.OutputFiles, file =>
+            Assert.All(generator.lastResult.outputFiles, file =>
                 Assert.DoesNotContain(CSharpSyntaxTree.ParseText(File.ReadAllText(file)).GetDiagnostics(),
                     diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
             AssertCompiles(source);
@@ -273,15 +274,15 @@ public class BindingIntermediateRepresentationTests
     public void CSharpEmitter_OwnedStringWithoutCleanupCallable_ShouldFailClosed()
     {
         BindingModule module = new("OwnedApi", "BGCS.Tests.Generated", "owned", "host");
-        module.Functions.Add(new BindingFunction("bgcs_create_name", "BgcsCreateName", BindingFunctionKind.Free,
+        module = module with { functions = [.. module.functions, new BindingFunction("bgcs_create_name", "BgcsCreateName", BindingFunctionKind.Free,
             new("const char *", "byte*", 1, true, IntPtr.Size),
             new(MarshallingStrategy.String, BindingOwnership.Owned, BindingStringEncoding.Utf8,
-                RequiresCleanup: true, CleanupFunction: "bgcs_free_name", NullTerminated: true)));
+                requiresCleanup: true, cleanupFunction: "bgcs_free_name", nullTerminated: true))] };
 
         BindingDiagnostic diagnostic = Assert.Single(new CSharpEmitter().Validate(module));
 
-        Assert.Equal(BindingDiagnosticCodes.CSharpUnsupported, diagnostic.Code);
-        Assert.Contains("cleanup function 'bgcs_free_name'", diagnostic.Message);
+        Assert.Equal(BindingDiagnosticCodes.C_CSHARPUNSUPPORTED, diagnostic.code);
+        Assert.Contains("cleanup function 'bgcs_free_name'", diagnostic.message);
     }
 
     [Fact]
@@ -300,39 +301,39 @@ public class BindingIntermediateRepresentationTests
             CsCodeGeneratorConfig missing = CreateStrictConfig();
             CsCodeGenerator missingGenerator = new(missing);
             Assert.True(missingGenerator.Generate(header, Path.Combine(temp, "missing")));
-            Assert.Contains(missingGenerator.LastResult!.Diagnostics,
-                diagnostic => diagnostic.Code == BindingDiagnosticCodes.CallbackLifetime);
-            Assert.Contains(missingGenerator.LastResult.Diagnostics,
-                diagnostic => diagnostic.Code == BindingDiagnosticCodes.CallbackThreading);
+            Assert.Contains(missingGenerator.lastResult!.diagnostics,
+                diagnostic => diagnostic.code == BindingDiagnosticCodes.C_CALLBACKLIFETIME);
+            Assert.Contains(missingGenerator.lastResult.diagnostics,
+                diagnostic => diagnostic.code == BindingDiagnosticCodes.C_CALLBACKTHREADING);
 
             CsCodeGeneratorConfig configured = CreateStrictConfig();
-            configured.MarshallingMappings["bgcs_register"] = new FunctionMarshallingMapping
+            configured.marshallingMappings["bgcs_register"] = new FunctionMarshallingMapping
             {
-                Parameters =
+                parameters =
                 {
                     ["callback"] = new MarshallingMapping
                     {
-                        Strategy = MarshallingStrategy.Callback,
-                        Ownership = BindingOwnership.Borrowed,
-                        CallbackLifetime = BindingCallbackLifetime.RetainedUntilCompletion,
-                        CallbackThreading = BindingCallbackThreading.AnyThread,
-                        AsyncCompletion = BindingAsyncCompletion.Callback,
-                        CompletionFunction = "bgcs_complete",
-                        UnregisterFunction = "bgcs_unregister"
+                        strategy = MarshallingStrategy.Callback,
+                        ownership = BindingOwnership.Borrowed,
+                        callbackLifetime = BindingCallbackLifetime.RetainedUntilCompletion,
+                        callbackThreading = BindingCallbackThreading.AnyThread,
+                        asyncCompletion = BindingAsyncCompletion.Callback,
+                        completionFunction = "bgcs_complete",
+                        unregisterFunction = "bgcs_unregister"
                     }
                 }
             };
             CsCodeGenerator configuredGenerator = new(configured);
             Assert.True(configuredGenerator.Generate(header, Path.Combine(temp, "configured")));
-            BindingFunction register = Assert.Single(configuredGenerator.LastResult!.Module!.Functions,
-                function => function.NativeName == "bgcs_register");
-            MarshallingPlan contract = register.Parameters[0].Marshalling;
-            Assert.Equal(BindingCallbackLifetime.RetainedUntilCompletion, contract.CallbackLifetime);
-            Assert.Equal(BindingCallbackThreading.AnyThread, contract.CallbackThreading);
-            Assert.Equal(BindingAsyncCompletion.Callback, contract.AsyncCompletion);
-            Assert.DoesNotContain(configuredGenerator.LastResult.Diagnostics,
-                diagnostic => diagnostic.Code is BindingDiagnosticCodes.CallbackLifetime or
-                    BindingDiagnosticCodes.CallbackThreading or BindingDiagnosticCodes.AsyncLifetime);
+            BindingFunction register = Assert.Single(configuredGenerator.lastResult!.module!.functions,
+                function => function.nativeName == "bgcs_register");
+            MarshallingPlan contract = register.parameters[0].marshalling;
+            Assert.Equal(BindingCallbackLifetime.RetainedUntilCompletion, contract.callbackLifetime);
+            Assert.Equal(BindingCallbackThreading.AnyThread, contract.callbackThreading);
+            Assert.Equal(BindingAsyncCompletion.Callback, contract.asyncCompletion);
+            Assert.DoesNotContain(configuredGenerator.lastResult.diagnostics,
+                diagnostic => diagnostic.code is BindingDiagnosticCodes.C_CALLBACKLIFETIME or
+                    BindingDiagnosticCodes.C_CALLBACKTHREADING or BindingDiagnosticCodes.C_ASYNCLIFETIME);
         }
         finally
         {
@@ -341,14 +342,14 @@ public class BindingIntermediateRepresentationTests
 
         static CsCodeGeneratorConfig CreateStrictConfig() => new()
         {
-            ApiName = "CallbackApi",
-            Namespace = "BGCS.Tests.Generated",
-            LibName = "callback",
-            ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-            ImportType = ImportType.DllImport,
-            StrictSafety = true,
-            StrictSafetySeverity = StrictSafetySeverity.Warning,
-            SingleFileOutputName = "Bindings.cs"
+            apiName = "CallbackApi",
+            @namespace = "BGCS.Tests.Generated",
+            libName = "callback",
+            parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+            importType = ImportType.DllImport,
+            strictSafety = true,
+            strictSafetySeverity = StrictSafetySeverity.Warning,
+            singleFileOutputName = "Bindings.cs"
         };
     }
 
@@ -363,49 +364,49 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "AllocatorApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "allocator",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                StrictSafety = true,
-                StrictSafetySeverity = StrictSafetySeverity.Error,
-                SingleFileOutputName = "Bindings.cs"
+                apiName = "AllocatorApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "allocator",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                strictSafety = true,
+                strictSafetySeverity = StrictSafetySeverity.Error,
+                singleFileOutputName = "Bindings.cs"
             };
-            config.MarshallingMappings["bgcs_create_name"] = new FunctionMarshallingMapping
+            config.marshallingMappings["bgcs_create_name"] = new FunctionMarshallingMapping
             {
-                Return = new MarshallingMapping
+                @return = new MarshallingMapping
                 {
-                    Strategy = MarshallingStrategy.String,
-                    Ownership = BindingOwnership.Owned,
-                    Encoding = BindingStringEncoding.Utf8,
-                    RequiresCleanup = true,
-                    CleanupFunction = "bgcs_free_name",
-                    AllocatorKind = BindingAllocatorKind.NativeFunction,
-                    AllocatorFunction = "bgcs_create_name",
-                    NullTerminated = true
+                    strategy = MarshallingStrategy.String,
+                    ownership = BindingOwnership.Owned,
+                    encoding = BindingStringEncoding.Utf8,
+                    requiresCleanup = true,
+                    cleanupFunction = "bgcs_free_name",
+                    allocatorKind = BindingAllocatorKind.NativeFunction,
+                    allocatorFunction = "bgcs_create_name",
+                    nullTerminated = true
                 }
             };
-            config.MarshallingMappings["bgcs_free_name"] = new FunctionMarshallingMapping
+            config.marshallingMappings["bgcs_free_name"] = new FunctionMarshallingMapping
             {
-                Parameters =
+                parameters =
                 {
                     ["value"] = new MarshallingMapping
                     {
-                        Strategy = MarshallingStrategy.Pointer,
-                        Ownership = BindingOwnership.Transferred
+                        strategy = MarshallingStrategy.Pointer,
+                        ownership = BindingOwnership.Transferred
                     }
                 }
             };
 
             CsCodeGenerator generator = new(config);
             Assert.True(generator.Generate(header, Path.Combine(temp, "out")),
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
-            BindingFunction create = Assert.Single(generator.LastResult!.Module!.Functions,
-                function => function.NativeName == "bgcs_create_name");
-            Assert.Equal(BindingAllocatorKind.NativeFunction, create.ReturnMarshalling.AllocatorKind);
-            Assert.DoesNotContain(generator.LastResult.Diagnostics,
-                diagnostic => diagnostic.Code == BindingDiagnosticCodes.Allocator);
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
+            BindingFunction create = Assert.Single(generator.lastResult!.module!.functions,
+                function => function.nativeName == "bgcs_create_name");
+            Assert.Equal(BindingAllocatorKind.NativeFunction, create.returnMarshalling.allocatorKind);
+            Assert.DoesNotContain(generator.lastResult.diagnostics,
+                diagnostic => diagnostic.code == BindingDiagnosticCodes.C_ALLOCATOR);
         }
         finally
         {
@@ -491,9 +492,9 @@ public class BindingIntermediateRepresentationTests
         {
             BindingModule module = new("Sample", "BGCS.Tests.Generated", "sample", "macos-arm64-darwin");
             BindingType type = new("sample_value", "SampleValue", BindingTypeKind.Structure, 4, 4);
-            type.Fields.Add(new BindingField("value", "Value", new BindingTypeReference("int", "int", 0, false, 4),
-                0, 0, 0, []));
-            module.Types.Add(type);
+            type = type with { fields = [.. type.fields, new BindingField("value", "Value", new BindingTypeReference("int", "int", 0, false, 4),
+                0, 0, 0, [])] };
+            module = module with { types = [.. module.types, type] };
 
             string path = Assert.Single(new CSharpEmitter().Emit(module,
                 new EmissionContext(temp, singleFile, "Bindings.cs")));
@@ -525,34 +526,34 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "IrNestedApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "ir_nested",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                AutoSquashTypedef = false,
-                CSharpEmissionBackend = CSharpEmissionBackend.IntermediateRepresentation,
-                SingleFileOutputName = "GeneratedBindings.cs"
+                apiName = "IrNestedApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "ir_nested",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                autoSquashTypedef = false,
+
+                singleFileOutputName = "GeneratedBindings.cs"
             };
 
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, output));
-            BindingModule module = generator.LastResult!.Module!;
-            BindingType context = Assert.Single(module.Types,
-                type => type.NativeName == "bgcs_context");
-            Assert.Equal(BindingTypeKind.Structure, context.Kind);
-            BindingType parent = Assert.Single(module.Types,
-                type => type.Kind == BindingTypeKind.Structure && type.NativeName == "BgcsParent");
-            Assert.Equal(3, parent.NestedTypes.Count);
-            Assert.All(parent.Fields, field => Assert.False(string.IsNullOrWhiteSpace(field.ManagedName)));
+            BindingModule module = generator.lastResult!.module!;
+            BindingType context = Assert.Single(module.types,
+                type => type.nativeName == "bgcs_context");
+            Assert.Equal(BindingTypeKind.Structure, context.kind);
+            BindingType parent = Assert.Single(module.types,
+                type => type.kind == BindingTypeKind.Structure && type.nativeName == "BgcsParent");
+            Assert.Equal(3, parent.nestedTypes.Count);
+            Assert.All(parent.fields, field => Assert.False(string.IsNullOrWhiteSpace(field.managedName)));
             string source = string.Join(Environment.NewLine,
-                generator.LastResult.OutputFiles.Select(File.ReadAllText));
-            Assert.Contains($"partial struct {context.ManagedName}", source);
-            Assert.All(parent.NestedTypes, nested => Assert.Contains($"partial struct {nested.ManagedName}", source));
-            Assert.All(parent.Fields, field => Assert.Contains($"public {field.Type.ManagedName} {field.ManagedName};", source));
-            Assert.DoesNotContain($"using {context.ManagedName} = void", source);
-            Assert.All(generator.LastResult.OutputFiles, file =>
+                generator.lastResult.outputFiles.Select(File.ReadAllText));
+            Assert.Contains($"partial struct {context.managedName}", source);
+            Assert.All(parent.nestedTypes, nested => Assert.Contains($"partial struct {nested.managedName}", source));
+            Assert.All(parent.fields, field => Assert.Contains($"public {field.type.managedName} {field.managedName};", source));
+            Assert.DoesNotContain($"using {context.managedName} = void", source);
+            Assert.All(generator.lastResult.outputFiles, file =>
                 Assert.DoesNotContain(CSharpSyntaxTree.ParseText(File.ReadAllText(file)).GetDiagnostics(),
                     diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
         }
@@ -576,23 +577,23 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "IrInlineApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "ir_inline",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                CSharpEmissionBackend = CSharpEmissionBackend.IntermediateRepresentation,
-                SingleFileOutputName = "GeneratedBindings.cs"
+                apiName = "IrInlineApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "ir_inline",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+
+                singleFileOutputName = "GeneratedBindings.cs"
             };
 
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, output));
-            BindingGenerationResult result = Assert.IsType<BindingGenerationResult>(generator.LastResult);
-            BindingFunction function = Assert.Single(result.Module!.Functions);
-            Assert.Equal("bgcs_public", function.NativeName);
-            Assert.Equal(BindingFunctionKind.Free, function.Kind);
-            string source = File.ReadAllText(Assert.Single(result.OutputFiles));
+            BindingGenerationResult<BindingModule> result = Assert.IsType<BindingGenerationResult<BindingModule>>(generator.lastResult);
+            BindingFunction function = Assert.Single(result.module!.functions);
+            Assert.Equal("bgcs_public", function.nativeName);
+            Assert.Equal(BindingFunctionKind.Free, function.kind);
+            string source = File.ReadAllText(Assert.Single(result.outputFiles));
             Assert.Contains("BgcsPublicNative", source);
             Assert.DoesNotContain("BgcsHelper", source);
         }
@@ -616,21 +617,21 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "IrBackendApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "ir_backend",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                CSharpEmissionBackend = CSharpEmissionBackend.IntermediateRepresentation,
-                MergeGeneratedFilesToSingleFile = true,
-                SingleFileOutputName = "GeneratedBindings.cs"
+                apiName = "IrBackendApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "ir_backend",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+
+                mergeGeneratedFilesToSingleFile = true,
+                singleFileOutputName = "GeneratedBindings.cs"
             };
 
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, output));
-            BindingGenerationResult result = Assert.IsType<BindingGenerationResult>(generator.LastResult);
-            string generated = Assert.Single(result.OutputFiles);
+            BindingGenerationResult<BindingModule> result = Assert.IsType<BindingGenerationResult<BindingModule>>(generator.lastResult);
+            string generated = Assert.Single(result.outputFiles);
             Assert.Equal("GeneratedBindings.cs", Path.GetFileName(generated));
             string source = File.ReadAllText(generated);
             Assert.Contains("public const int BGCS_LIMIT = 8;", source);
@@ -662,21 +663,21 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "IrBackendApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "ir_backend",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                CSharpEmissionBackend = CSharpEmissionBackend.IntermediateRepresentation
+                apiName = "IrBackendApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "ir_backend",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+
             };
 
             CsCodeGenerator generator = new(config);
 
             Assert.False(generator.Generate(header, output));
-            BindingGenerationResult result = Assert.IsType<BindingGenerationResult>(generator.LastResult);
-            Assert.False(result.Success);
-            Assert.Contains(result.Diagnostics, diagnostic =>
-                diagnostic.Code == BindingDiagnosticCodes.CSharpUnsupported &&
-                diagnostic.Message.Contains("variadic", StringComparison.Ordinal));
+            BindingGenerationResult<BindingModule> result = Assert.IsType<BindingGenerationResult<BindingModule>>(generator.lastResult);
+            Assert.False(result.success);
+            Assert.Contains(result.diagnostics, diagnostic =>
+                diagnostic.code == BindingDiagnosticCodes.C_CSHARPUNSUPPORTED &&
+                diagnostic.message.Contains("variadic", StringComparison.Ordinal));
             Assert.Equal("last-good", File.ReadAllText(sentinel));
             Assert.Single(Directory.GetFiles(output));
         }
@@ -690,7 +691,7 @@ public class BindingIntermediateRepresentationTests
     [Theory]
     [InlineData(BindingImportMode.DllImport, "[DllImport")]
     [InlineData(BindingImportMode.LibraryImport, "[LibraryImport")]
-    [InlineData(BindingImportMode.FunctionTable, "funcTable.Load(0, \"bgcs_add\")")]
+    [InlineData(BindingImportMode.FunctionTable, "candidate.LoadRequired(0, \"bgcs_add\")")]
     public void CSharpEmitter_ImportModes_ShouldBeRepresentedByIr(BindingImportMode mode, string expected)
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-emitter-import-" + Guid.NewGuid().ToString("N"));
@@ -698,20 +699,20 @@ public class BindingIntermediateRepresentationTests
         {
             BindingModule module = new("NativeApi", "BGCS.Tests.Generated", "native", "host")
             {
-                ImportMode = mode,
-                UseCustomContext = mode == BindingImportMode.FunctionTable
+                importMode = mode,
+                useCustomContext = mode == BindingImportMode.FunctionTable
             };
             BindingFunction function = new("bgcs_add", "BgcsAdd", BindingFunctionKind.Free,
                 new("int", "int", 0, false, 4),
                 new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed));
-            function.Parameters.Add(new("left", "left", new("int", "int", 0, false, 4), BindingDirection.In,
-                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)));
+            function = function with { parameters = [.. function.parameters, new("left", "left", new("int", "int", 0, false, 4), BindingDirection.In,
+                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed))] };
             if (mode == BindingImportMode.FunctionTable)
             {
-                function.FunctionTableIndex = 0;
-                module.FunctionTableEntries.Add(new(0, function.NativeName));
+                function = function with { functionTableIndex = 0 };
+                module = module with { functionTableEntries = [.. module.functionTableEntries, new(0, function.nativeName)] };
             }
-            module.Functions.Add(function);
+            module = module with { functions = [.. module.functions, function] };
 
             string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
             string source = File.ReadAllText(emitted);
@@ -754,22 +755,22 @@ public class BindingIntermediateRepresentationTests
         {
             BindingModule module = new("WindowApi", "BGCS.Tests.Generated", "window", targetAbi)
             {
-                ImportMode = importMode,
-                UseCustomContext = importMode == BindingImportMode.FunctionTable
+                importMode = importMode,
+                useCustomContext = importMode == BindingImportMode.FunctionTable
             };
-            module.Types.Add(new BindingType("NativeWindow", "NativeWindow", BindingTypeKind.OpaqueHandle, 4, 4));
+            module = module with { types = [.. module.types, new BindingType("NativeWindow", "NativeWindow", BindingTypeKind.OpaqueHandle, 4, 4)] };
             BindingFunction function = new("window_next", "WindowNext", BindingFunctionKind.Free,
                 new("NativeWindow", "NativeWindow", 0, false, 4),
                 new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed));
-            function.Parameters.Add(new BindingParameter("window", "window",
+            function = function with { parameters = [.. function.parameters, new BindingParameter("window", "window",
                 new("NativeWindow", "NativeWindow", 0, false, 4), BindingDirection.In,
-                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)));
+                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed))] };
             if (importMode == BindingImportMode.FunctionTable)
             {
-                function.FunctionTableIndex = 0;
-                module.FunctionTableEntries.Add(new(0, function.NativeName));
+                function = function with { functionTableIndex = 0 };
+                module = module with { functionTableEntries = [.. module.functionTableEntries, new(0, function.nativeName)] };
             }
-            module.Functions.Add(function);
+            module = module with { functions = [.. module.functions, function] };
 
             string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
             string source = File.ReadAllText(emitted);
@@ -794,6 +795,62 @@ public class BindingIntermediateRepresentationTests
     }
 
     [Theory]
+    [InlineData(BindingImportMode.DllImport, "long")]
+    [InlineData(BindingImportMode.LibraryImport, "long")]
+    [InlineData(BindingImportMode.FunctionTable, "long")]
+    [InlineData(BindingImportMode.DllImport, "ulong")]
+    [InlineData(BindingImportMode.LibraryImport, "ulong")]
+    [InlineData(BindingImportMode.FunctionTable, "ulong")]
+    public void CSharpEmitter_EnumCallsUseIntegralCarriersAndPreservePointerTypes(
+        BindingImportMode importMode,
+        string carrier
+    ) {
+        string directory = Path.Combine(Path.GetTempPath(), "bgcs-enum-carrier-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            BindingTypeReference value = new("Flags", "Flags", 0, false, 8);
+            BindingTypeReference pointer = new("Flags*", "Flags*", 1, false, 8);
+            MarshallingPlan marshalling = new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed);
+            BindingFunction function = new("transform", "Transform", BindingFunctionKind.Free, value, marshalling)
+            {
+                parameters = [
+                    new("value", "value", value, BindingDirection.In, marshalling),
+                    new("output", "output", pointer, BindingDirection.In, marshalling)
+                ],
+                functionTableIndex = importMode == BindingImportMode.FunctionTable ? 0 : null
+            };
+            BindingModule module = new("Api", "Fixture", "api", "emscripten-wasm32-emscripten")
+            {
+                importMode = importMode,
+                useCustomContext = importMode == BindingImportMode.FunctionTable,
+                types = [new BindingType("Flags", "Flags", BindingTypeKind.Enumeration, 8, 8)
+                {
+                    underlyingType = new(carrier, carrier, 0, false, 8)
+                }],
+                functions = [function],
+                functionTableEntries = importMode == BindingImportMode.FunctionTable ? [new(0, "transform")] : []
+            };
+            string path = Assert.Single(new CSharpEmitter().Emit(module, new(directory, true, "Bindings.cs")));
+            string source = File.ReadAllText(path);
+
+            Assert.Contains($"{carrier} TransformInterop({carrier} value, Flags* output)", source);
+            Assert.Contains("Flags TransformNative(Flags value, Flags* output)", source);
+            Assert.Contains($"(Flags)TransformInterop(({carrier})value, output)", source);
+            if (importMode == BindingImportMode.FunctionTable)
+                Assert.Contains($"delegate* unmanaged[Cdecl]<{carrier}, Flags*, {carrier}>", source);
+            if (importMode == BindingImportMode.LibraryImport)
+                AssertCompilesWithSdk(directory);
+            else
+                AssertCompiles(source);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Theory]
     [InlineData("BGCS.Runtime", true)]
     [InlineData("Custom.Runtime", true)]
     [InlineData("BGCS.Runtime", false)]
@@ -807,16 +864,16 @@ public class BindingIntermediateRepresentationTests
         {
             BindingModule module = new("NativeApi", "Example.FunctionTable", "native", "host")
             {
-                ImportMode = BindingImportMode.FunctionTable,
-                UseCustomContext = customContext
+                importMode = BindingImportMode.FunctionTable,
+                useCustomContext = customContext
             };
             BindingFunction function = new("fixture_value", "FixtureValue", BindingFunctionKind.Free,
                 new("int", "int", 0, false, 4), new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed))
             {
-                FunctionTableIndex = 0
+                functionTableIndex = 0
             };
-            module.Functions.Add(function);
-            module.FunctionTableEntries.Add(new(0, function.NativeName));
+            module = module with { functions = [.. module.functions, function] };
+            module = module with { functionTableEntries = [.. module.functionTableEntries, new(0, function.nativeName)] };
             EmissionContext context = new(directory, true, "Bindings.cs", runtimeNamespace);
             string path = Assert.Single(new CSharpEmitter().Emit(module, context));
             string runtime = Assert.Single(new RuntimeEmitter().Emit(module, context));
@@ -876,12 +933,12 @@ public class BindingIntermediateRepresentationTests
         {
             BindingModule module = new("NativeApi", "BGCS.Tests.Generated", "native", "host")
             {
-                ImportMode = mode,
-                EmitLibraryNameConstant = false
+                importMode = mode,
+                emitLibraryNameConstant = false
             };
-            module.Functions.Add(new BindingFunction("bgcs_add", "BgcsAdd", BindingFunctionKind.Free,
+            module = module with { functions = [.. module.functions, new BindingFunction("bgcs_add", "BgcsAdd", BindingFunctionKind.Free,
                 new("int", "int", 0, false, 4),
-                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)));
+                new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed))] };
 
             string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
             string source = File.ReadAllText(emitted);
@@ -904,17 +961,18 @@ public class BindingIntermediateRepresentationTests
         {
             BindingModule module = new("BitsApi", "BGCS.Tests.Generated", "bits", "host");
             BindingType type = new("Flags", "Flags", BindingTypeKind.Structure, 4, 4);
-            type.Fields.Add(new BindingField("mode", "Mode", new("int", "int", 0, false, 4),
-                0, 0, 3, [], true, true));
-            type.Fields.Add(new BindingField("enabled", "Enabled", new("unsigned int", "uint", 0, false, 4),
-                0, 3, 1, [], true));
-            module.Types.Add(type);
+            type = type with { fields = [.. type.fields, new BindingField("mode", "Mode", new("int", "int", 0, false, 4),
+                0, 0, 3, [], true, true)] };
+            type = type with { fields = [.. type.fields, new BindingField("enabled", "Enabled", new("unsigned int", "uint", 0, false, 4),
+                0, 3, 1, [], true)] };
+            module = module with { types = [.. module.types, type] };
 
             string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
             string source = File.ReadAllText(emitted);
             Assert.Contains("LayoutKind.Explicit, Size = 4", source);
-            Assert.Contains("Bitfield.GetSigned(RawBits0, 0, 3)", source);
-            Assert.Contains("Bitfield.Get(RawBits1, 0, 1)", source);
+            Assert.Contains("Bitfield.GetSigned(MemoryMarshal.CreateReadOnlySpan(ref RawBits0_0, 1), 0, 3)", source);
+            Assert.Contains("Bitfield.Get(MemoryMarshal.CreateReadOnlySpan(ref RawBits0_0, 1), 3, 1)", source);
+            AssertCompiles(source);
             Assert.DoesNotContain(CSharpSyntaxTree.ParseText(source).GetDiagnostics(),
                 diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         }
@@ -933,9 +991,9 @@ public class BindingIntermediateRepresentationTests
         {
             BindingModule module = new("PackedApi", "BGCS.Tests.Generated", "packed", "host");
             BindingType type = new("Packed", "Packed", BindingTypeKind.Structure, 5, 1);
-            type.Fields.Add(new BindingField("tag", "Tag", new("char", "byte", 0, false, 1), 0, 0, 0, []));
-            type.Fields.Add(new BindingField("value", "Value", new("int", "int", 0, false, 4), 1, 8, 0, []));
-            module.Types.Add(type);
+            type = type with { fields = [.. type.fields, new BindingField("tag", "Tag", new("char", "byte", 0, false, 1), 0, 0, 0, [])] };
+            type = type with { fields = [.. type.fields, new BindingField("value", "Value", new("int", "int", 0, false, 4), 1, 8, 0, [])] };
+            module = module with { types = [.. module.types, type] };
 
             string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
             string source = File.ReadAllText(emitted);
@@ -950,6 +1008,47 @@ public class BindingIntermediateRepresentationTests
         }
     }
 
+    [Theory]
+    [InlineData("windows-x64-msvc")]
+    [InlineData("linux-x64-gnu")]
+    public void Generate_MixedAndPackedBitfields_PreservesNativeByteBounds(string targetId)
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-mixed-bitfields-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        string header = Path.Combine(temp, "bits.h");
+        File.WriteAllText(header,
+            "typedef enum Kind { KIND_ZERO = 0, KIND_ONE = 1 } Kind;\n" +
+            "typedef struct Mixed { unsigned int count:8; Kind kind:8; unsigned int offset:16; } Mixed;\n" +
+            "#pragma pack(push, 1)\n" +
+            "typedef struct Packed { unsigned int value:7; } Packed;\n" +
+            "typedef struct BooleanBits { _Bool enabled:1; } BooleanBits;\n" +
+            "#pragma pack(pop)\n");
+        try
+        {
+            CsCodeGeneratorConfig config = new()
+            {
+                apiName = "BitApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "bits",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                targetId = targetId,
+                singleFileOutputName = "Bindings.cs"
+            };
+            CsCodeGenerator generator = new(config);
+            Assert.True(generator.Generate(header, Path.Combine(temp, "out")),
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
+            BindingType mixed = Assert.Single(generator.lastResult!.module!.types, type => type.nativeName == "Mixed");
+            Assert.Equal(4, mixed.size);
+            Assert.Equal(new long[] { 0, 8, 16 }, mixed.fields.Select(field => field.bitOffset));
+            string[] sources = generator.lastResult.outputFiles.Select(File.ReadAllText).ToArray();
+            AssertCompiles(sources);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
     [Fact]
     public void CSharpEmitter_EmptyUnion_ShouldEmitExplicitlyPositionedOpaqueStorage()
     {
@@ -957,7 +1056,7 @@ public class BindingIntermediateRepresentationTests
         try
         {
             BindingModule module = new("UnionApi", "BGCS.Tests.Generated", "union", "host");
-            module.Types.Add(new BindingType("NativeUnion", "NativeUnion", BindingTypeKind.Union, 8, 8));
+            module = module with { types = [.. module.types, new BindingType("NativeUnion", "NativeUnion", BindingTypeKind.Union, 8, 8)] };
 
             string emitted = Assert.Single(new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
             string source = File.ReadAllText(emitted);
@@ -980,18 +1079,18 @@ public class BindingIntermediateRepresentationTests
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-emitter-validation-" + Guid.NewGuid().ToString("N"));
         BindingModule module = new("UnsafeApi", "BGCS.Tests.Generated", "unsafe", "host");
         BindingType type = new("Flags", "Flags", BindingTypeKind.Structure, 4, 4);
-        type.Fields.Add(new BindingField("enabled", "Enabled", new("unsigned int", "uint", 0, false, 4),
-            0, 0, 1, [], true));
-        module.Types.Add(type);
-        module.Functions.Add(new BindingFunction("log", "Log", BindingFunctionKind.Free,
+        type = type with { fields = [.. type.fields, new BindingField("enabled", "Enabled", new("unsigned int", "uint", 0, false, 4),
+            0, 0, 1, [], true)] };
+        module = module with { types = [.. module.types, type] };
+        module = module with { functions = [.. module.functions, new BindingFunction("log", "Log", BindingFunctionKind.Free,
             new("void", "void", 0, false, 0),
-            new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)) { IsVariadic = true });
+            new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed)) { isVariadic = true }] };
 
         BindingEmissionException exception = Assert.Throws<BindingEmissionException>(() =>
             new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
 
-        Assert.Single(exception.Diagnostics);
-        Assert.All(exception.Diagnostics, diagnostic => Assert.Equal(BindingDiagnosticCodes.CSharpUnsupported, diagnostic.Code));
+        Assert.Single(exception.diagnostics);
+        Assert.All(exception.diagnostics, diagnostic => Assert.Equal(BindingDiagnosticCodes.C_CSHARPUNSUPPORTED, diagnostic.code));
         Assert.False(Directory.Exists(temp));
     }
 
@@ -1000,27 +1099,27 @@ public class BindingIntermediateRepresentationTests
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-emitter-opaque-value-" + Guid.NewGuid().ToString("N"));
         BindingModule module = new("UnsafeApi", "BGCS.Tests.Generated", "unsafe", "host");
-        module.Types.Add(new BindingType("NativeHidden", "NativeHidden", BindingTypeKind.Structure, 16, 8)
+        module = module with { types = [.. module.types, new BindingType("NativeHidden", "NativeHidden", BindingTypeKind.Structure, 16, 8)
         {
-            IsOpaqueStorage = true
-        });
-        module.Functions.Add(new BindingFunction("consume", "Consume", BindingFunctionKind.Free,
+            isOpaqueStorage = true
+        }] };
+        module = module with { functions = [.. module.functions, new BindingFunction("consume", "Consume", BindingFunctionKind.Free,
             new("void", "void", 0, false, 0),
             new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed))
         {
-            Parameters =
-            {
+            parameters =
+            [
                 new BindingParameter("value", "value", new("NativeHidden", "NativeHidden", 0, false, 16),
                     BindingDirection.In, new(MarshallingStrategy.Blittable, BindingOwnership.Borrowed))
-            }
-        });
+            ]
+        }] };
 
         BindingEmissionException exception = Assert.Throws<BindingEmissionException>(() =>
             new CSharpEmitter().Emit(module, new(temp, true, "Bindings.cs")));
 
-        BindingDiagnostic diagnostic = Assert.Single(exception.Diagnostics);
-        Assert.Equal(BindingDiagnosticCodes.CSharpUnsupported, diagnostic.Code);
-        Assert.Contains("opaque storage type 'NativeHidden' by value", diagnostic.Message);
+        BindingDiagnostic diagnostic = Assert.Single(exception.diagnostics);
+        Assert.Equal(BindingDiagnosticCodes.C_CSHARPUNSUPPORTED, diagnostic.code);
+        Assert.Contains("opaque storage type 'NativeHidden' by value", diagnostic.message);
         Assert.False(Directory.Exists(temp));
     }
 
@@ -1040,17 +1139,17 @@ public class BindingIntermediateRepresentationTests
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, output));
-            string source = File.ReadAllText(Assert.Single(generator.LastResult!.OutputFiles,
+            string source = File.ReadAllText(Assert.Single(generator.lastResult!.outputFiles,
                 file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)));
             Assert.Contains("Vector2 left", source, StringComparison.Ordinal);
             Assert.DoesNotContain("struct Vector2", source, StringComparison.Ordinal);
-            Assert.Contains(generator.LastResult.Diagnostics, diagnostic =>
-                diagnostic.Code == BindingDiagnosticCodes.ExternalType &&
-                diagnostic.Severity == BindingDiagnosticSeverity.Warning);
-            BindingExternalTypeContract contract = Assert.Single(generator.LastResult.Module!.ExternalTypes);
-            Assert.Equal("Vector2", contract.ManagedType);
-            Assert.True(contract.AllowsByValue);
-            Assert.False(contract.LayoutValidationBypassed);
+            Assert.Contains(generator.lastResult.diagnostics, diagnostic =>
+                diagnostic.code == BindingDiagnosticCodes.C_EXTERNALTYPE &&
+                diagnostic.severity == BindingDiagnosticSeverity.Warning);
+            BindingExternalTypeContract contract = Assert.Single(generator.lastResult.module!.externalTypes);
+            Assert.Equal("Vector2", contract.managedType);
+            Assert.True(contract.allowsByValue);
+            Assert.False(contract.layoutValidationBypassed);
             AssertCompiles(source);
         }
         finally
@@ -1072,22 +1171,22 @@ public class BindingIntermediateRepresentationTests
         try
         {
             CsCodeGeneratorConfig rejected = CreateExternalVectorConfig();
-            rejected.ExternalTypeContracts[0].Size = 16;
+            rejected.externalTypeContracts[0].size = 16;
             CsCodeGenerator rejectedGenerator = new(rejected);
             Assert.False(rejectedGenerator.Generate(header, Path.Combine(temp, "rejected")));
-            Assert.Contains(rejectedGenerator.LastResult!.Diagnostics, diagnostic =>
-                diagnostic.Code == BindingDiagnosticCodes.ExternalType &&
-                diagnostic.Severity == BindingDiagnosticSeverity.Error);
+            Assert.Contains(rejectedGenerator.lastResult!.diagnostics, diagnostic =>
+                diagnostic.code == BindingDiagnosticCodes.C_EXTERNALTYPE &&
+                diagnostic.severity == BindingDiagnosticSeverity.Error);
 
             CsCodeGeneratorConfig bypassed = CreateExternalVectorConfig();
-            bypassed.ExternalTypeContracts[0].Size = 16;
-            bypassed.ExternalTypeContracts[0].ByValuePolicy = ExternalTypeByValuePolicy.BypassLayoutValidation;
+            bypassed.externalTypeContracts[0].size = 16;
+            bypassed.externalTypeContracts[0].byValuePolicy = ExternalTypeByValuePolicy.BypassLayoutValidation;
             CsCodeGenerator bypassedGenerator = new(bypassed);
             Assert.True(bypassedGenerator.Generate(header, Path.Combine(temp, "bypassed")));
-            Assert.Contains(bypassedGenerator.LastResult!.Diagnostics, diagnostic =>
-                diagnostic.Code == BindingDiagnosticCodes.ExternalType &&
-                diagnostic.Severity == BindingDiagnosticSeverity.Warning);
-            Assert.True(Assert.Single(bypassedGenerator.LastResult.Module!.ExternalTypes).LayoutValidationBypassed);
+            Assert.Contains(bypassedGenerator.lastResult!.diagnostics, diagnostic =>
+                diagnostic.code == BindingDiagnosticCodes.C_EXTERNALTYPE &&
+                diagnostic.severity == BindingDiagnosticSeverity.Warning);
+            Assert.True(Assert.Single(bypassedGenerator.lastResult.module!.externalTypes).layoutValidationBypassed);
         }
         finally
         {
@@ -1110,34 +1209,34 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "ExternalGenericApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "external_generic",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                SingleFileOutputName = "Bindings.cs"
+                apiName = "ExternalGenericApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "external_generic",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                singleFileOutputName = "Bindings.cs"
             };
-            config.TypeMappings["NativeVector_int"] = "NativeVector<int>";
-            config.IgnoredTypes.Add("NativeVector_int");
-            config.IgnoredTypedefs.Add("NativeVector_int");
-            config.ExternalTypeContracts.Add(new()
+            config.typeMappings["NativeVector_int"] = "NativeVector<int>";
+            config.ignoredTypes.Add("NativeVector_int");
+            config.ignoredTypedefs.Add("NativeVector_int");
+            config.externalTypeContracts.Add(new()
             {
-                NativeTypes = ["NativeVector_*"],
-                ManagedTypes = ["NativeVector<*>"],
-                Size = 16,
-                Alignment = 8,
-                ByValuePolicy = ExternalTypeByValuePolicy.RequireLayoutMatch
+                nativeTypes = ["NativeVector_*"],
+                managedTypes = ["NativeVector<*>"],
+                size = 16,
+                alignment = 8,
+                byValuePolicy = ExternalTypeByValuePolicy.RequireLayoutMatch
             });
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, output),
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
-            string source = File.ReadAllText(Assert.Single(generator.LastResult!.OutputFiles,
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
+            string source = File.ReadAllText(Assert.Single(generator.lastResult!.outputFiles,
                 file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)));
             Assert.Contains("NativeVector<int>", source, StringComparison.Ordinal);
             Assert.DoesNotContain("struct NativeVector<int>", source, StringComparison.Ordinal);
-            BindingExternalTypeContract contract = Assert.Single(generator.LastResult.Module!.ExternalTypes);
-            Assert.Equal("NativeVector<int>", contract.ManagedType);
+            BindingExternalTypeContract contract = Assert.Single(generator.lastResult.module!.externalTypes);
+            Assert.Equal("NativeVector<int>", contract.managedType);
             AssertCompiles(source + Environment.NewLine +
                 "namespace BGCS.Tests.Generated { public unsafe struct NativeVector<T> where T : unmanaged " +
                 "{ public int Size; public int Capacity; public T* Data; } }");
@@ -1168,41 +1267,41 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "NativeApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "native",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                SingleFileOutputName = "Bindings.cs",
-                GenerateDelegates = false,
-                GenerateExtensions = false,
-                WrapPointersAsHandle = true,
-                MemberNamingConvention = NamingConvention.Unknown,
+                apiName = "NativeApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "native",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                singleFileOutputName = "Bindings.cs",
+                generateDelegates = false,
+                generateExtensions = false,
+                wrapPointersAsHandle = true,
+                memberNamingConvention = NamingConvention.Unknown,
                 // This fixture tests presentation rather than native lifetime semantics.
-                StrictSafetySeverity = StrictSafetySeverity.Warning
+                strictSafetySeverity = StrictSafetySeverity.Warning
             };
-            config.FunctionMappings.Add(new("NativeThing_NativeThing", "NativeThing", null, [], []));
-            config.FunctionMappings.Add(new("NativeThing_Reset", "Reset", null, [], []));
-            config.FunctionMappings.Add(new("NativeThing_Resize", "Resize", null, [], []));
-            config.FunctionMappings.Add(new("NativeThing_SetEnabled", "SetEnabled", null, [], []));
-            config.FunctionMappings.Add(new("NativeBegin", "NativeBegin", null,
+            config.functionMappings.Add(new("NativeThing_NativeThing", "NativeThing", null, [], []));
+            config.functionMappings.Add(new("NativeThing_Reset", "Reset", null, [], []));
+            config.functionMappings.Add(new("NativeThing_Resize", "Resize", null, [], []));
+            config.functionMappings.Add(new("NativeThing_SetEnabled", "SetEnabled", null, [], []));
+            config.functionMappings.Add(new("NativeBegin", "NativeBegin", null,
                 new() { ["p_open"] = "NULL", ["flags"] = "0" }, []));
-            config.FunctionMappings.Add(new("NativeFormat", "NativeFormat", null,
+            config.functionMappings.Add(new("NativeFormat", "NativeFormat", null,
                 new() { ["format"] = "\"%.3f\"" }, []));
-            config.KnownMemberFunctions["NativeThing"] =
+            config.knownMemberFunctions["NativeThing"] =
                 ["NativeThing_NativeThing", "NativeThing_Reset", "NativeThing_Resize", "NativeThing_SetEnabled"];
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, output),
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
-            BindingFunction factory = Assert.Single(generator.LastResult!.Module!.Functions,
-                function => function.NativeName == "NativeThing_NativeThing");
-            BindingFunction reset = Assert.Single(generator.LastResult.Module.Functions,
-                function => function.NativeName == "NativeThing_Reset");
-            Assert.Equal(BindingManagedFunctionKind.Static, factory.ManagedKind);
-            Assert.Equal(BindingManagedFunctionKind.Instance, reset.ManagedKind);
-            Assert.Empty(generator.LastResult.Module.Delegates);
-            string[] generatedSources = generator.LastResult.OutputFiles
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
+            BindingFunction factory = Assert.Single(generator.lastResult!.module!.functions,
+                function => function.nativeName == "NativeThing_NativeThing");
+            BindingFunction reset = Assert.Single(generator.lastResult.module.functions,
+                function => function.nativeName == "NativeThing_Reset");
+            Assert.Equal(BindingManagedFunctionKind.Static, factory.managedKind);
+            Assert.Equal(BindingManagedFunctionKind.Instance, reset.managedKind);
+            Assert.Empty(generator.lastResult.module.delegates);
+            string[] generatedSources = generator.lastResult.outputFiles
                 .Where(file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
                 .Select(File.ReadAllText)
                 .Where(text => !text.Contains("namespace BGCS.Runtime", StringComparison.Ordinal))
@@ -1250,51 +1349,51 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                ApiName = "NativeApi",
-                Namespace = "BGCS.Tests.Generated",
-                LibName = "native",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                ImportType = ImportType.DllImport,
-                SingleFileOutputName = "Bindings.cs",
-                GenerateExtensions = false,
-                WrapPointersAsHandle = true
+                apiName = "NativeApi",
+                @namespace = "BGCS.Tests.Generated",
+                libName = "native",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                importType = ImportType.DllImport,
+                singleFileOutputName = "Bindings.cs",
+                generateExtensions = false,
+                wrapPointersAsHandle = true
             };
-            config.MarshallingMappings["Native_CreateWindow"] = new FunctionMarshallingMapping
+            config.marshallingMappings["Native_CreateWindow"] = new FunctionMarshallingMapping
             {
-                Return = new MarshallingMapping
+                @return = new MarshallingMapping
                 {
-                    Ownership = BindingOwnership.Owned,
-                    AllocatorKind = BindingAllocatorKind.NativeFunction,
-                    AllocatorFunction = "Native_CreateWindow",
-                    CleanupFunction = "Native_DestroyWindow"
+                    ownership = BindingOwnership.Owned,
+                    allocatorKind = BindingAllocatorKind.NativeFunction,
+                    allocatorFunction = "Native_CreateWindow",
+                    cleanupFunction = "Native_DestroyWindow"
                 }
             };
-            config.MarshallingMappings["Native_GetWindows"] = new FunctionMarshallingMapping
+            config.marshallingMappings["Native_GetWindows"] = new FunctionMarshallingMapping
             {
-                Return = new MarshallingMapping { Ownership = BindingOwnership.Borrowed }
+                @return = new MarshallingMapping { ownership = BindingOwnership.Borrowed }
             };
-            config.MarshallingMappings["Native_GetEngine"] = new FunctionMarshallingMapping
+            config.marshallingMappings["Native_GetEngine"] = new FunctionMarshallingMapping
             {
-                Return = new MarshallingMapping { Ownership = BindingOwnership.Borrowed }
+                @return = new MarshallingMapping { ownership = BindingOwnership.Borrowed }
             };
             CsCodeGenerator generator = new(config);
 
             Assert.True(generator.Generate(header, output),
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
-            BindingType window = Assert.Single(generator.LastResult!.Module!.Types,
-                type => type.NativeName.Contains("NativeWindow", StringComparison.Ordinal) &&
-                    type.Kind == BindingTypeKind.OpaqueHandle);
-            Assert.Equal("NativeWindow", window.ManagedName);
-            BindingFunction create = Assert.Single(generator.LastResult.Module.Functions,
-                function => function.NativeName == "Native_CreateWindow");
-            Assert.Equal("NativeWindow", create.ReturnType.ManagedName);
-            Assert.Equal(1, create.ReturnType.PointerDepth);
-            BindingFunction getWindows = Assert.Single(generator.LastResult.Module.Functions,
-                function => function.NativeName == "Native_GetWindows");
-            Assert.Equal("NativeWindow*", getWindows.ReturnType.ManagedName);
-            Assert.Equal(2, getWindows.ReturnType.PointerDepth);
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
+            BindingType window = Assert.Single(generator.lastResult!.module!.types,
+                type => type.nativeName.Contains("NativeWindow", StringComparison.Ordinal) &&
+                    type.kind == BindingTypeKind.OpaqueHandle);
+            Assert.Equal("NativeWindow", window.managedName);
+            BindingFunction create = Assert.Single(generator.lastResult.module.functions,
+                function => function.nativeName == "Native_CreateWindow");
+            Assert.Equal("NativeWindow", create.returnType.managedName);
+            Assert.Equal(1, create.returnType.pointerDepth);
+            BindingFunction getWindows = Assert.Single(generator.lastResult.module.functions,
+                function => function.nativeName == "Native_GetWindows");
+            Assert.Equal("NativeWindow*", getWindows.returnType.managedName);
+            Assert.Equal(2, getWindows.returnType.pointerDepth);
 
-            string[] generatedSources = generator.LastResult.OutputFiles
+            string[] generatedSources = generator.lastResult.outputFiles
                 .Where(file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
                 .Select(File.ReadAllText)
                 .Where(text => !text.Contains("namespace BGCS.Runtime", StringComparison.Ordinal))
@@ -1328,18 +1427,18 @@ public class BindingIntermediateRepresentationTests
         {
             CsCodeGeneratorConfig config = new()
             {
-                Namespace = "Strict.Generated",
-                ApiName = "StrictApi",
-                LibName = "strict",
-                ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-                StrictSafetySeverity = StrictSafetySeverity.Error
+                @namespace = "Strict.Generated",
+                apiName = "StrictApi",
+                libName = "strict",
+                parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+                strictSafetySeverity = StrictSafetySeverity.Error
             };
             CsCodeGenerator generator = new(config);
 
             Assert.False(generator.Generate(header, output));
-            Assert.False(generator.LastResult!.Success);
-            Assert.Contains(generator.LastResult.Diagnostics, diagnostic =>
-                diagnostic.Code == "BGCS-SAFETY-OWNERSHIP" && diagnostic.Severity == BindingDiagnosticSeverity.Error);
+            Assert.False(generator.lastResult!.success);
+            Assert.Contains(generator.lastResult.diagnostics, diagnostic =>
+                diagnostic.code == "BGCS-SAFETY-OWNERSHIP" && diagnostic.severity == BindingDiagnosticSeverity.Error);
             Assert.Equal("last-good", File.ReadAllText(sentinel));
         }
         finally
@@ -1353,24 +1452,24 @@ public class BindingIntermediateRepresentationTests
     {
         CsCodeGeneratorConfig config = new()
         {
-            ApiName = "ExternalApi",
-            Namespace = "BGCS.Tests.Generated",
-            LibName = "external",
-            ParserKind = BGCS.CppAst.Parsing.CppParserKind.C,
-            ImportType = ImportType.DllImport,
-            SingleFileOutputName = "Bindings.cs"
+            apiName = "ExternalApi",
+            @namespace = "BGCS.Tests.Generated",
+            libName = "external",
+            parserKind = BGCS.CppAst.Parsing.CppParserKind.C,
+            importType = ImportType.DllImport,
+            singleFileOutputName = "Bindings.cs"
         };
-        config.TypeMappings["NativeVector"] = "Vector2";
-        config.IgnoredTypes.Add("NativeVector");
-        config.IgnoredTypedefs.Add("NativeVector");
-        config.Usings.Add("System.Numerics");
-        config.ExternalTypeContracts.Add(new()
+        config.typeMappings["NativeVector"] = "Vector2";
+        config.ignoredTypes.Add("NativeVector");
+        config.ignoredTypedefs.Add("NativeVector");
+        config.usings.Add("System.Numerics");
+        config.externalTypeContracts.Add(new()
         {
-            NativeTypes = ["NativeVector"],
-            ManagedTypes = ["Vector2"],
-            Size = 8,
-            Alignment = 4,
-            ByValuePolicy = ExternalTypeByValuePolicy.RequireLayoutMatch
+            nativeTypes = ["NativeVector"],
+            managedTypes = ["Vector2"],
+            size = 8,
+            alignment = 4,
+            byValuePolicy = ExternalTypeByValuePolicy.RequireLayoutMatch
         });
         return config;
     }
@@ -1403,37 +1502,37 @@ public class BindingIntermediateRepresentationTests
             """);
         CsCodeGeneratorConfig config = new()
         {
-            ApiName = "IrApi",
-            Namespace = "BGCS.Tests.Generated",
-            LibName = "ir",
-            ImportType = ImportType.DllImport,
-            GenerateExtensions = false,
-            AutoSquashTypedef = false
+            apiName = "IrApi",
+            @namespace = "BGCS.Tests.Generated",
+            libName = "ir",
+            importType = ImportType.DllImport,
+            generateExtensions = false,
+            autoSquashTypedef = false
         };
-        config.MarshallingMappings["bgcs_get_items"] = new FunctionMarshallingMapping
+        config.marshallingMappings["bgcs_get_items"] = new FunctionMarshallingMapping
         {
-            Parameters =
+            parameters =
             {
                 ["output"] = new MarshallingMapping
                 {
-                    Strategy = MarshallingStrategy.Span,
-                    Ownership = BindingOwnership.CallerAllocated,
-                    LengthParameter = "actual_count",
-                    CapacityParameter = "capacity",
-                    WrittenCountParameter = "actual_count"
+                    strategy = MarshallingStrategy.Span,
+                    ownership = BindingOwnership.CallerAllocated,
+                    lengthParameter = "actual_count",
+                    capacityParameter = "capacity",
+                    writtenCountParameter = "actual_count"
                 }
             }
         };
-        config.MarshallingMappings["bgcs_create_name"] = new FunctionMarshallingMapping
+        config.marshallingMappings["bgcs_create_name"] = new FunctionMarshallingMapping
         {
-            Return = new MarshallingMapping
+            @return = new MarshallingMapping
             {
-                Strategy = MarshallingStrategy.String,
-                Ownership = BindingOwnership.Owned,
-                Encoding = BindingStringEncoding.Utf8,
-                CleanupFunction = "bgcs_free_name",
-                RequiresCleanup = true,
-                NullTerminated = true
+                strategy = MarshallingStrategy.String,
+                ownership = BindingOwnership.Owned,
+                encoding = BindingStringEncoding.Utf8,
+                cleanupFunction = "bgcs_free_name",
+                requiresCleanup = true,
+                nullTerminated = true
             }
         };
 
@@ -1443,43 +1542,43 @@ public class BindingIntermediateRepresentationTests
 
             Assert.True(generator.Generate(header, output));
 
-            BindingGenerationResult result = Assert.IsType<BindingGenerationResult>(generator.LastResult);
-            Assert.True(result.Success);
-            BindingConstant limit = Assert.Single(result.Module!.Constants, constant => constant.NativeName == "BGCS_LIMIT");
-            Assert.Equal("int", limit.ManagedType);
-            Assert.Equal("42", limit.Value);
-            Assert.Single(result.Module.Constants, constant => constant.NativeName == "BGCS_LABEL");
-            BindingType alias = Assert.Single(result.Module.Types, type => type.NativeName.Contains("BgcsId", StringComparison.Ordinal));
-            Assert.Equal(BindingTypeKind.Alias, alias.Kind);
-            Assert.Equal("uint", alias.UnderlyingType!.ManagedName);
-            BindingDelegate callback = Assert.Single(result.Module.Delegates, value => value.NativeName == "BgcsCallback");
-            Assert.Equal("void", callback.ReturnType.ManagedName);
-            Assert.Single(callback.Parameters);
-            BindingType item = Assert.Single(result.Module.Types, type => type.Kind == BindingTypeKind.Structure &&
-                type.NativeName.Contains("BgcsItem", StringComparison.Ordinal));
-            Assert.Equal(BindingTypeKind.Structure, item.Kind);
-            Assert.Equal(20, item.Size);
-            BindingField values = Assert.Single(item.Fields, field => field.NativeName == "values");
-            Assert.Equal(new[] { 4 }, values.ArrayDimensions);
-            BindingFunction function = Assert.Single(result.Module.Functions, value => value.NativeName == "bgcs_get_items");
-            BindingParameter outputParameter = function.Parameters[0];
-            Assert.Equal(MarshallingStrategy.Span, outputParameter.Marshalling.Strategy);
-            Assert.Equal(BindingOwnership.CallerAllocated, outputParameter.Marshalling.Ownership);
-            Assert.Equal("actual_count", outputParameter.Marshalling.LengthParameter);
-            Assert.Equal("capacity", outputParameter.Marshalling.CapacityParameter);
-            Assert.Equal("actual_count", outputParameter.Marshalling.WrittenCountParameter);
-            BindingFunction createName = Assert.Single(result.Module.Functions, value => value.NativeName == "bgcs_create_name");
-            Assert.Equal(BindingOwnership.Owned, createName.ReturnMarshalling.Ownership);
-            Assert.Equal(BindingStringEncoding.Utf8, createName.ReturnMarshalling.StringEncoding);
-            Assert.Equal("bgcs_free_name", createName.ReturnMarshalling.CleanupFunction);
-            Assert.True(createName.ReturnMarshalling.RequiresCleanup);
-            Assert.True(createName.ReturnMarshalling.NullTerminated);
-            BindingDiagnostic safety = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == "BGCS-SAFETY-OWNERSHIP");
-            Assert.Contains("MarshallingMappings.bgcs_get_context.Return.Ownership", safety.Message);
-            Assert.NotEmpty(result.OutputFiles);
+            BindingGenerationResult<BindingModule> result = Assert.IsType<BindingGenerationResult<BindingModule>>(generator.lastResult);
+            Assert.True(result.success);
+            BindingConstant limit = Assert.Single(result.module!.constants, constant => constant.nativeName == "BGCS_LIMIT");
+            Assert.Equal("int", limit.managedType);
+            Assert.Equal("42", limit.value);
+            Assert.Single(result.module.constants, constant => constant.nativeName == "BGCS_LABEL");
+            BindingType alias = Assert.Single(result.module.types, type => type.nativeName.Contains("BgcsId", StringComparison.Ordinal));
+            Assert.Equal(BindingTypeKind.Alias, alias.kind);
+            Assert.Equal("uint", alias.underlyingType!.managedName);
+            BindingDelegate callback = Assert.Single(result.module.delegates, value => value.nativeName == "BgcsCallback");
+            Assert.Equal("void", callback.returnType.managedName);
+            Assert.Single(callback.parameters);
+            BindingType item = Assert.Single(result.module.types, type => type.kind == BindingTypeKind.Structure &&
+                type.nativeName.Contains("BgcsItem", StringComparison.Ordinal));
+            Assert.Equal(BindingTypeKind.Structure, item.kind);
+            Assert.Equal(20, item.size);
+            BindingField values = Assert.Single(item.fields, field => field.nativeName == "values");
+            Assert.Equal(new[] { 4 }, values.arrayDimensions);
+            BindingFunction function = Assert.Single(result.module.functions, value => value.nativeName == "bgcs_get_items");
+            BindingParameter outputParameter = function.parameters[0];
+            Assert.Equal(MarshallingStrategy.Span, outputParameter.marshalling.strategy);
+            Assert.Equal(BindingOwnership.CallerAllocated, outputParameter.marshalling.ownership);
+            Assert.Equal("actual_count", outputParameter.marshalling.lengthParameter);
+            Assert.Equal("capacity", outputParameter.marshalling.capacityParameter);
+            Assert.Equal("actual_count", outputParameter.marshalling.writtenCountParameter);
+            BindingFunction createName = Assert.Single(result.module.functions, value => value.nativeName == "bgcs_create_name");
+            Assert.Equal(BindingOwnership.Owned, createName.returnMarshalling.ownership);
+            Assert.Equal(BindingStringEncoding.Utf8, createName.returnMarshalling.stringEncoding);
+            Assert.Equal("bgcs_free_name", createName.returnMarshalling.cleanupFunction);
+            Assert.True(createName.returnMarshalling.requiresCleanup);
+            Assert.True(createName.returnMarshalling.nullTerminated);
+            BindingDiagnostic safety = Assert.Single(result.diagnostics, diagnostic => diagnostic.code == "BGCS-SAFETY-OWNERSHIP");
+            Assert.Contains("MarshallingMappings.bgcs_get_context.Return.Ownership", safety.message);
+            Assert.NotEmpty(result.outputFiles);
 
             string irOutput = Path.Combine(temp, "ir-output");
-            string emittedFile = Assert.Single(new CSharpEmitter().Emit(result.Module, new(irOutput, true, "Bindings.cs")));
+            string emittedFile = Assert.Single(new CSharpEmitter().Emit(result.module, new(irOutput, true, "Bindings.cs")));
             Diagnostic[] syntaxErrors = CSharpSyntaxTree.ParseText(File.ReadAllText(emittedFile)).GetDiagnostics()
                 .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
             Assert.Empty(syntaxErrors);

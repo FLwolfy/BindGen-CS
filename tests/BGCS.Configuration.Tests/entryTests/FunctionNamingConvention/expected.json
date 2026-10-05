@@ -1,4 +1,4 @@
 {
-  "Property": "FunctionNamingConvention",
+  "Property": "functionNamingConvention",
   "Expected": "CamelCase"
 }

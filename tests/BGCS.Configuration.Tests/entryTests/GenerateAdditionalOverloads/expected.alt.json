@@ -1,4 +1,4 @@
 {
-  "Property": "GenerateAdditionalOverloads",
+  "Property": "generateAdditionalOverloads",
   "Expected": false
 }

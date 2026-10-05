@@ -1,5 +1,9 @@
 # Architecture
 
+Native build plans and execution contracts belong to `BGCS.Cpp2C.Build`. The five concrete compiler
+and build-system providers belong to `BGCS.Cpp2C.Build.Providers` and reside in `Build/Providers`.
+The CLI selects providers at its composition boundary.
+
 [简体中文](architecture.cn.md) | [Documentation index](README.md) | [Capability matrix](capabilities.md)
 
 The primary C# generator uses shared Binding IR exclusively. Pre-release compatibility emitters and old configuration migration were removed; architecture claims follow the actual data flow.
@@ -17,6 +21,16 @@ SDK selection belongs to the caller's toolchain. See the
 Compiler discovery drains stdout and stderr concurrently for resource, include and
 fingerprint queries. Timed-out processes are terminated and observed before a query
 returns; an unsuccessful probe remains explicitly unavailable.
+
+`BGCS.Core.Execution.ProcessExecutor` owns the same process lifecycle for parser discovery,
+native build steps, export inspection and generated C# compilation. Output pipes are drained
+concurrently, standard input is closed, and timeout or cancellation retires the process tree
+before returning. Native build pipeline deadlines use a monotonic clock.
+
+`bindgen-cs validate architecture <repository-root>` checks the eight production projects,
+allowed dependencies, the sole CLI executable, source ownership and parser-free neutral layers.
+`bindgen-cs validate style <source-root> [--fix]` preserves authored call grouping and verifies
+unchanged syntax tokens, including raw string contents, before writing declaration formatting.
 
 Opaque handle wrappers remain the managed API. DllImport, LibraryImport and
 FunctionTable all lower scalar handle arguments and results to the pointer-sized
@@ -37,7 +51,7 @@ CLI / CsCodeGenerator / BindingGenerator
           ├─ StrictSafetyAnalyzer
           ├─ CSharpEmitter(BindingModule)
           ├─ post-patch / SingleFile / optional Runtime
-          └─ GeneratedOutputTransaction.commit
+          └─ OutputDirectoryTransaction.Commit
 ```
 
 Important facts:
@@ -46,8 +60,12 @@ Important facts:
 - `CSharpEmitter` is IR-only and is the sole configured C# output path.
 - The IR-native path carries constants, aliases, delegates, opaque handles, enum underlying types, anonymous/nested records, bitfields, all import modes, and public raw/string/span/ref/out friendly overloads.
 - The IR-native C# emitter validates lossless capability before writing and returns structured `BGCSCS001` diagnostics from configured generation for semantics it cannot preserve. It never falls back silently and failed emission leaves last-good output intact. Opaque storage whose fields are unavailable may be used through pointers, but by-value calls fail because size/alignment alone cannot prove platform ABI classification.
-- C++ bridging has its own analyzer and `CBridgeEmitter.EmitAst` path and also returns a `BindingModule`; it shares contracts with C# without every emission path being IR-only.
-- C++ bridge output includes an optional versioned build manifest. `INativeBuildPipelineProvider` converts it into shell-independent steps. Built-ins cover Clang/GNU, clang-cl, CMake, Meson, and MSBuild; binary export inspection uses `nm` or `dumpbin`.
+- C++ bridging uses one `CppBridgeGenerationPipeline`: `CppBridgeModuleAnalyzer` lowers the AST into frozen `CppBridgeModule` facts and source operations; `ICppBridgeEmitter` consumes that result. The direct AST emitter path has been removed. Generated C headers then enter the same C-to-C# Binding IR pipeline.
+- C++ bridge output includes an optional target-specific build manifest. `INativeBuildPipelineProvider` converts it into shell-independent steps. Built-ins cover Clang/GNU, clang-cl, CMake, Meson, and MSBuild; binary export inspection uses `nm` or `dumpbin`.
+- `BGCS.Core.Configuration.JsonConfigurationComposer` supplies one inheritance flow for C# and C++ configuration. File loaders preserve explicit JSON values; circular references include their source chain and fail before generation.
+- CLI `bridge` prepares native and managed candidates through `OutputDirectorySetTransaction`. Managed projection carrier types come from the generated C aliases analyzed into Binding IR, rather than a handwritten ABI type table. Managed syntax validation runs before publication.
+- Generation owns and disposes the Clang compilation it creates. Caller-supplied compilation inputs remain borrowed. Published IR does not retain the compilation or runtime lowering services.
+- Compiler plans, manifests, export inspection results and package indexes own copied read-only sequences. Native package updates validate the existing index and publish a complete candidate while retaining the previous package on failure.
 - CLI `build` creates a temporary .NET project after pipeline success for warning-as-error compilation. Compilation validation is not performed inside `BindingGenerationPipeline` itself.
 
 ## Target data flow
@@ -60,7 +78,7 @@ Configuration → Parsing → Analysis → immutable BindingModule
                             Transactional Output
 ```
 
-The C# target state is implemented: its emitter does not traverse mutable Clang AST state. C++ bridge generation still has an explicit AST-specific lowering boundary for constructs not yet represented by shared IR.
+C# and C++ bridge emitters consume frozen Binding IR and Bridge IR. AST traversal and C++ lowering remain in their analysis stages.
 
 ## Dependency rules
 
@@ -77,15 +95,46 @@ BGCS.Runtime is independent of generator assemblies
 BGCS.Intermediate depends on no other BGCS assembly
 ```
 
-`Analysis` and `Intermediate` must not reference the CLI. IR contracts should not contain Roslyn syntax, generated source strings, filesystem paths, or mutable Clang cursors.
+`Analysis` and `Intermediate` must not reference the CLI. Semantic facts do not retain Roslyn syntax, Clang cursors, services, or callbacks. Bridge lowering produces frozen target source units; the emission request supplies the actual output root.
 
 Consumer applications own their binding configurations, native source, custom shims, generated output, and integration tests in their own repositories. BGCS owns only generic generation/runtime code and its independent, pinned upstream test corpus; no sibling application checkout is required by BGCS CI.
+
+## Source and namespace ownership
+
+Configuration lives under `BGCS.Configuration` and `BGCS.Cpp2C.Configuration`; public entry
+points live under each generator's `Facade` namespace. Mutable declarations and overload planning
+belong to `Analysis`, target and language conversion to `Conversion`, and source writing to
+`Emission`. `BGCS.Core` owns reusable collections, text, IO, configuration composition and
+process execution. `BGCS.Intermediate` owns the actual frozen model files without linked sources.
+
+`BGCS.Runtime` deliberately uses its assembly namespace for its cohesive consumer API.
+Its `Primitives`, `Interop` and `Utilities` directories group source responsibilities;
+generated code imports one runtime namespace. This is a project namespace rule, independent
+of the native target or managed deployment.
+
+Pointer width belongs to `CppCompilation` and the analyzed declaration graph. Canonical pointer
+aliases and configured variadic carriers preserve that target width. C++ template argument packs
+are expanded by the parser into modeled type/integral arguments, so bridge lowering uses actual
+target layouts rather than inferring ABI from type spelling. Analysis clears temporary AST
+references in configuration on both success and failure; the frozen output retains none.
 
 ## Layer responsibilities
 
 ### Facade
 
 `CsCodeGenerator` is the embeddable generator API; `BGCS.Facade.BindingGenerator` returns `BindingGenerationResult`. The facade owns arguments and use-case entry points and should not accumulate AST traversal or output composition.
+
+`BindingGenerationPipeline` is the nonpublic application workflow shared by these entry points.
+The facade returns its completed result and fails if the workflow violates that contract.
+`IncrementalGenerationCache` acquires source and entry publication ownership in a stable order,
+then verifies the exact file set, lengths and SHA-256 digests before restoring output.
+Damaged entries are cache misses; overlapping output and cache trees are rejected.
+The directory transaction exposes `stagingPath`; cache identities expose `value` and `inputFileCount`.
+
+Installation and rollback share the internal Core rename boundary. Windows access or sharing failures
+are retried for at most two seconds per move. Persistent denial retains the original failure and restores
+the previous tree when installation has not completed. Temporary readers never justify dropping files,
+unlinking retained lock inodes or accepting partial output. The public transaction contract is shared by all targets.
 
 ### Configuration
 
@@ -96,7 +145,7 @@ Consumer applications own their binding configurations, native source, custom sh
 
 ### Parsing
 
-`BGCS.CppAst` uses Clang to build declaration/type/comment/token models. `CppTarget` and `CppToolchainDiscovery` supply target triples, system includes, and sysroots.
+`BGCS.CppAst` uses Clang to build declaration/type/comment/token models. `ClangTargetResolver` resolves neutral `INativeTargetProvider` requests; `CppToolchainDiscovery` supplies explicit host toolchain discovery.
 
 ### Target and runtime portability
 
@@ -110,6 +159,11 @@ Consumer applications own their binding configurations, native source, custom sh
 - `DeclarationGraph`: declaration dependency ordering.
 - `TypeAnalyzer`: native types to `BindingTypeReference`.
 - `AbiLayoutAnalyzer`: size, alignment, fields, arrays, unions, and bitfield facts.
+
+Bitfield bounds use Clang's absolute bit offset and declared width rather than the full size of each declared integer.
+The emitter creates exact byte storage for adjacent fields. The `Bitfield` Span API preserves neighboring bits and sign-extends the declared range.
+Signed, unsigned and enum fields can consequently share native storage, including packed records, without guessing an allocation unit.
+The currently supplied native targets are little-endian; another byte order requires corresponding ABI lowering and native invocation acceptance.
 - `OwnershipAnalyzer`: conservative marshalling/ownership defaults merged with explicit mappings.
 - `OverloadPlanner`: pointer/count, capacity, and written-count relationships.
 - `StrictSafetyAnalyzer`: unproven ownership, allocator, length, and callback lifetime.
@@ -120,30 +174,40 @@ Analyzers do not create final output files.
 
 `BGCS.Intermediate` is a dependency-free contract package containing `BindingModule`, types/functions/fields/parameters, `MarshallingPlan`, diagnostics, `IBindingEmitter`, and `EmissionContext`.
 
-It is both a usable analysis result and the only input to C# emission. The C++ bridge retains a separate, explicit AST-specific lowering boundary.
+Binding IR is the only C# emitter input. The `Bridges` contracts provide frozen Bridge IR to the C++ emitter. Source files belong to this project rather than reverse-linked `Compile Link` items.
 
 ### Emission
 
 - `CSharpEmitter`: the sole configured C# emitter, with IR-native `Emit`, friendly lowering, and lossless-capability validation.
 - `RuntimeEmitter`: emits standalone runtime contracts from a module.
 - `SingleFileComposer`: deterministic syntax-tree composition through Roslyn.
-- `CBridgeEmitter`: emits C++ to C wrappers and currently still consumes AST-specific generation data.
+- `CBridgeEmitter`: writes C headers and C++ bridge source from frozen `CppBridgeModule`; it does not read AST state or repeat lowering.
 
 ### Native build
 
-- `CppBridgeBuildManifest`: versioned, deterministic, config-relative description of generated sources, target, toolchain inputs, and link inputs.
+- `CppBridgeBuildManifest`: deterministic, current-format, config-relative description of generated sources, target, toolchain inputs, and link inputs.
 - `INativeBuildPipelineProvider`: maps a manifest to deterministic generated build inputs and argument-list process steps without shell quoting.
 - Providers: direct Clang/GNU, clang-cl, CMake, Meson, and MSBuild.
 - `NativeBuildExecutor`: bounded multi-step execution with captured output and no global working-directory mutation.
 - `NativeExportInspector`: compares generated public C symbols with the built artifact export table.
 
-Configuration-driven C++ generation also resolves headers, include directories, sysroots, compiler paths, outputs, lowering recipes, native shims, and file-based `BaseConfig` chains from an explicit configuration directory. It does not change `Environment.CurrentDirectory`, so concurrent generators do not race through process-global path state.
+Configuration-driven C++ generation also resolves headers, include directories, sysroots, compiler paths, outputs, lowering recipes, native shims, and file-based `baseConfig` chains from an explicit configuration directory. It does not change `Environment.CurrentDirectory`, so concurrent generators do not race through process-global path state.
+
+## Native call carriers
+
+Generated C# call surfaces retain semantic types. Imports and unmanaged function pointers use explicit ABI carriers:
+`nint` for opaque objects and the analyzed integral underlying type for by-value enums. Enum pointers retain their pointer types.
+Generated adapters perform the conversion consistently across all three import modes and targets.
+Custom-enum IR widths follow their configured integral underlying types.
+
+The independent invocation fixture sends and returns integer and enum values above 32 bits.
+Actual calls detect runtime signature errors that storage-size assertions cannot detect.
 
 ## Cache and plugins
 
 Configured C and C++ generation use an immutable SHA-256 output cache. The key includes generator identity, serialized configuration, parser arguments, resolved compiler identity/version, plugin/lowering/shim fingerprints, and exact contents of discovered C/C++ inputs. Entries publish atomically, restore through the same output transaction as generation, and are isolated by key. Custom state that cannot be fingerprinted disables cache hits.
 
-`BindingPluginContract.CurrentVersion` provides a load-time revision handshake, explicit assembly entry points, and deterministic typed registrations. No earlier plugin contract is loaded. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, and `ICppArtifactContributor`; the same registry carries built-ins, declarative recipes, and plugin lowerings. Plugin assemblies use an isolated dependency resolver and atomic registration, while assembly content hashes, versions, and lowering fingerprints enter the cache key.
+`BindingPluginContract.C_CURRENT_VERSION` provides a load-time revision handshake, explicit assembly entry points, and deterministic typed registrations. No earlier plugin contract is loaded. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, and `ICppArtifactContributor`; the same registry carries built-ins, declarative recipes, and plugin lowerings. Plugin assemblies use an isolated dependency resolver and atomic registration, while assembly content hashes, versions, and lowering fingerprints enter the cache key.
 
 ### Output
 
@@ -167,4 +231,17 @@ BGCS owns parsing, ABI analysis, lowering, binding emission, and its own fixture
 
 The authoring host and target are separate. Emscripten supports Windows, macOS, and Linux authoring hosts and emits WebAssembly; `wasm32` describes the target's 32-bit pointer address model. Other WebAssembly environments, such as WASI, are distinct targets rather than aliases for Emscripten. See [Emscripten installation](https://emscripten.org/docs/getting_started/downloads.html), [WebAssembly output](https://emscripten.org/docs/compiling/WebAssembly.html), and [Clang cross-compilation](https://clang.llvm.org/docs/CrossCompilation.html).
 
-BGCS-owned target tests cover the triple and record layout; emitter tests cover opaque handles in all three import modes. The standalone fixture now executes generated DllImport, LibraryImport, and FunctionTable bindings against BGCS-owned C code inside a browser. Its Windows x64 / Edge run passed 26 checks; wider host/browser coverage, C++ Wasm semantics, AOT, and distribution packaging remain separate gates. See [invocation workflow](testing.md#independent-webassembly-invocation), [local acceptance](wasm-acceptance-2026-10-03.md), and [target evidence](capabilities.md#target-evidence).
+BGCS-owned target tests cover the triple and record layout; emitter tests cover opaque handles in all three import modes. The standalone fixture now executes generated DllImport, LibraryImport, and FunctionTable bindings against BGCS-owned C code inside a browser. The 2026-10-04 Windows x64 NativeAOT and Edge/Wasm interpretation runs each passed 47 checks, including C++ bridge invocation. Managed Wasm AOT, wider host/browser coverage, and distribution packaging retain separate evidence gates. See [invocation workflow](testing.md#independent-webassembly-invocation), [local acceptance](wasm-acceptance-2026-10-03.md), and [target evidence](capabilities.md#target-evidence).
+
+## Explicit target composition
+
+`BGCS.Core.Targeting` owns `NativeTargetId`, immutable target/toolchain descriptors, requests,
+and `INativeTargetProvider`. Core has no parser reference. `BGCS.CppAst.Targeting` resolves
+exactly one provider, maps the resolved descriptor into Clang arguments, and keeps SDK headers
+separate from bundled builtin resources. Built-in Windows, Unix, Apple and Emscripten providers
+can be replaced with an explicit provider set; an empty set does not enable defaults.
+
+An Emscripten provider applies the selected sysroot's libc include directory. No Windows path
+or application runtime is inferred. The authoring compiler, Clang builtin bundle, target SDK,
+ABI, native linking, and managed deployment remain separate concerns. The `host` alias is
+resolved once before provider dispatch. Apple device and simulator IDs stay distinct.

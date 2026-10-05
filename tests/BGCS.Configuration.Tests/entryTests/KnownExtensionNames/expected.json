@@ -1,5 +1,5 @@
 {
-  "Property": "KnownExtensionNames",
+  "Property": "knownExtensionNames",
   "Expected": {
     "WidgetHandleSetValue": "ApplyValue"
   }

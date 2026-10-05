@@ -1,26 +1,26 @@
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "CustomEnums": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "customEnums": [
     {
-      "CppName": "custom_mode",
-      "Name": "CustomMode",
-      "Attributes": [],
-      "Comment": null,
-      "BaseType": "int",
-      "Items": [
+      "cppName": "custom_mode",
+      "name": "CustomMode",
+      "attributes": [],
+      "comment": null,
+      "baseType": "int",
+      "items": [
         {
-          "CppName": "CUSTOM_MODE_ONE",
-          "CppValue": "1",
-          "Name": "One",
-          "Value": "1",
-          "Attributes": [],
-          "Comment": null
+          "cppName": "CUSTOM_MODE_ONE",
+          "cppValue": "1",
+          "name": "One",
+          "value": "1",
+          "attributes": [],
+          "comment": null
         }
       ]
     }

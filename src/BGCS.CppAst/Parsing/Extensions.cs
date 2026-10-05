@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+
 namespace BGCS.CppAst.Parsing;
-using ClangSharp.Interop;
+
+using System.Text;
 using BGCS.CppAst.Extensions;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
@@ -10,12 +12,12 @@ using BGCS.CppAst.Model.Expressions;
 using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Utilities;
-using System.Text;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>Extensions</c>.
 /// </summary>
-public static class Extensions
+internal static class Extensions
 {
     /// <summary>
     /// Executes public operation <c>ToVisibility</c>.
@@ -55,23 +57,28 @@ public static class Extensions
     /// <summary>
     /// Executes public operation <c>IsAnonymousTypeUsed</c>.
     /// </summary>
-    public static bool IsAnonymousTypeUsed(this CppType type, CppType anonymousType)
-    {
+    public static bool IsAnonymousTypeUsed(
+        this CppType type,
+        CppType anonymousType
+    ) {
         return IsAnonymousTypeUsed(type, anonymousType, []);
     }
 
     /// <summary>
     /// Executes public operation <c>IsAnonymousTypeUsed</c>.
     /// </summary>
-    public static bool IsAnonymousTypeUsed(this CppType type, CppType anonymousType, HashSet<CppType> visited)
-    {
-        if (!visited.Add(type)) return false;
-
-        if (ReferenceEquals(type, anonymousType)) return true;
-
+    public static bool IsAnonymousTypeUsed(
+        this CppType type,
+        CppType anonymousType,
+        HashSet<CppType> visited
+    ) {
+        if (!visited.Add(type))
+            return false;
+        if (ReferenceEquals(type, anonymousType))
+            return true;
         if (type is CppTypeWithElementType typeWithElementType)
         {
-            return IsAnonymousTypeUsed(typeWithElementType.ElementType, anonymousType);
+            return IsAnonymousTypeUsed(typeWithElementType.elementType, anonymousType);
         }
 
         return false;
@@ -104,8 +111,10 @@ public static class Extensions
     /// <summary>
     /// Executes public operation <c>IsExternC</c>.
     /// </summary>
-    public static bool IsExternC(this in CXCursor cursor, in CXCursor parent)
-    {
+    public static bool IsExternC(
+        this in CXCursor cursor,
+        in CXCursor parent
+    ) {
         if (parent.Kind == CXCursorKind.CXCursor_LinkageSpec && parent.IsExternCLinkageSpec())
         {
             return true;
@@ -145,9 +154,7 @@ public static class Extensions
         }
 
         var text = cursor.AsText();
-        return text.Contains("extern", StringComparison.Ordinal)
-            && text.Contains("\"C\"", StringComparison.Ordinal)
-            && !text.Contains("\"C++\"", StringComparison.Ordinal);
+        return text.Contains("extern", StringComparison.Ordinal) && text.Contains("\"C\"", StringComparison.Ordinal) && !text.Contains("\"C++\"", StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -192,6 +199,7 @@ public static class Extensions
         {
             fileNameStr = Path.GetFullPath(fileNameStr);
         }
+
         return new CppSourceLocation(fileNameStr, (int)offset, (int)line, (int)column);
     }
 
@@ -232,24 +240,28 @@ public static class Extensions
     /// <summary>
     /// Returns computed data from <c>GetCursorAsTextBetweenOffset</c>.
     /// </summary>
-    public static string GetCursorAsTextBetweenOffset(this in CXCursor cursor, int startOffset, int endOffset)
-    {
+    public static string GetCursorAsTextBetweenOffset(
+        this in CXCursor cursor,
+        int startOffset,
+        int endOffset
+    ) {
         Tokenizer tokenizer = new(cursor);
         StringBuilder builder = new();
         var previousTokenKind = CppTokenKind.Punctuation;
-        for (int i = 0; i < tokenizer.Count; i++)
+        for (int i = 0; i < tokenizer.count; i++)
         {
             var token = tokenizer[i];
-            if (previousTokenKind.IsIdentifierOrKeyword() && token.Kind.IsIdentifierOrKeyword())
+            if (previousTokenKind.IsIdentifierOrKeyword() && token.kind.IsIdentifierOrKeyword())
             {
                 builder.Append(' ');
             }
 
-            if (token.Span.Start.Offset >= startOffset && token.Span.End.Offset <= endOffset)
+            if (token.span.start.offset >= startOffset && token.span.end.offset <= endOffset)
             {
-                builder.Append(token.Text);
+                builder.Append(token.text);
             }
         }
+
         return builder.ToString();
     }
 
@@ -265,15 +277,13 @@ public static class Extensions
     /// Executes public operation <c>AsText</c>.
     /// </summary>
     public static string AsText(this in CXCursor cursor) => new Tokenizer(cursor).TokensToString() ?? string.Empty;
-
     /// <summary>
     /// Executes public operation <c>IsCursorDefinition</c>.
     /// </summary>
-    public static bool IsCursorDefinition(this in CXCursor cursor, CppElement element)
-    {
-        return cursor.IsDefinition || element is CppInclusionDirective || element is CppClass cppClass && (cppClass.ClassKind == CppClassKind.ObjCInterface ||
-                                                                                                             cppClass.ClassKind == CppClassKind.ObjCProtocol ||
-                                                                                                             cppClass.ClassKind == CppClassKind.ObjCInterfaceCategory)
-            ;
+    public static bool IsCursorDefinition(
+        this in CXCursor cursor,
+        CppElement element
+    ) {
+        return cursor.IsDefinition || element is CppInclusionDirective || element is CppClass cppClass && (cppClass.classKind == CppClassKind.ObjCInterface || cppClass.classKind == CppClassKind.ObjCProtocol || cppClass.classKind == CppClassKind.ObjCInterfaceCategory);
     }
 }

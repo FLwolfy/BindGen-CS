@@ -1,5 +1,5 @@
 {
-  "Property": "AllowedTypedefs",
+  "Property": "allowedTypedefs",
   "Expected": [
     "KeepHandle"
   ]

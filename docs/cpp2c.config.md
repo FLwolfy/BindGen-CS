@@ -1,235 +1,219 @@
 # Tested C++ Bridge Configuration Entries
 
-This behavioral catalog is generated from dedicated entry tests in `BGCS.Cpp2C.Configuration.Tests`. It does not enumerate every `Cpp2CGeneratorConfig` property.
+This catalog is generated from `BGCS.Cpp2C.Configuration.Tests` fixtures and the current `Cpp2CGeneratorConfig` source.
+It describes tested behavior; [Configuration Guide](configuration-guide.md) explains composition,
+targets, ownership, and failure boundaries. Use the CLI `schema` command for the full binding configuration.
 
-Use [Getting Started](getting-started.md#c-bridge), [Capabilities](capabilities.md#c-bridge), the [final lowering architecture](lowering.md), and the public configuration type for the complete bridge workflow and current STL/template lowering scope.
+## additionalArguments
 
-## AdditionalArguments
-
-### 1. Explanation
-**AdditionalArguments** controls the **AdditionalArguments** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `additionalArguments`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["-DFROM_ADDITIONAL_ARGUMENTS=1"]`
+- Source default: `new()`
+- Expected fixture value: `["-DFROM_ADDITIONAL_ARGUMENTS=1"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "NamePrefix": "Args_",
-  "AdditionalArguments": [
+  "namePrefix": "Args_",
+  "additionalArguments": [
     "-DFROM_ADDITIONAL_ARGUMENTS=1"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
+// Required markers
 typedef struct Args_Counter Args_Counter;
 Args_Counter_Add
 #define Args_API(type)
-// NotContains
+// Excluded markers
 ```
 
-## BaseConfig
+## baseConfig
 
-### 1. Explanation
-**BaseConfig** is validated through composition behavior, and tests assert the final **NamePrefix** after **BaseConfig** is applied.
-
-### 2. Type, Example, and Default Value
+- Result property: `baseConfig`
 - Type: `BaseConfig?`
-- Default value: `null`
-- Example expected value: `"Base_"`
+- Source default: `null`
+- Expected fixture value: `"Base_"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "BaseConfig": {
-    "Url": "file://./base.json"
+  "baseConfig": {
+    "url": "file://./base.json"
   }
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
+// Required markers
 Base_Counter_Add
 BaseMode_A
 #define Base_API(type)
-// NotContains
+// Excluded markers
 ```
 
-## CppLogLevel
+## cppLogLevel
 
-### 1. Explanation
-**CppLogLevel** controls the **CppLogLevel** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `cppLogLevel`
 - Type: `LogSeverity`
-- Default value: `LogSeverity.Error`
-- Example expected value: `"Warning"`
+- Source default: `LogSeverity.Error`
+- Expected fixture value: `"Error"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "NamePrefix": "CppLog_",
-  "CppLogLevel": "Warning"
+  "namePrefix": "CppLog_",
+  "cppLogLevel": "Error"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
+// Required markers
 CppLog_Counter_Add
 typedef enum
 Mode_A = 1
-// NotContains
+// Excluded markers
 ```
 
-## Defines
+## defines
 
-### 1. Explanation
-**Defines** controls the **Defines** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `defines`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["FROM_DEFINES=1"]`
+- Source default: `new()`
+- Expected fixture value: `["FROM_DEFINES=1"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "NamePrefix": "Def_",
-  "Defines": [
+  "namePrefix": "Def_",
+  "defines": [
     "FROM_DEFINES=1"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
+// Required markers
 Def_Counter_Add
 typedef struct Def_Counter Def_Counter;
-// NotContains
+// Excluded markers
 ```
 
-## IncludeFolders
+## includeFolders
 
-### 1. Explanation
-**IncludeFolders** controls the **IncludeFolders** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `includeFolders`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["includes"]`
+- Source default: `new()`
+- Expected fixture value: `["includes"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "NamePrefix": "Inc_",
-  "IncludeFolders": [
+  "namePrefix": "Inc_",
+  "includeFolders": [
     "includes"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
+// Required markers
 DepMode_A = 1
 Inc_Counter_Add
-// NotContains
+// Excluded markers
 ```
 
-## LogLevel
+## logLevel
 
-### 1. Explanation
-**LogLevel** controls the **LogLevel** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `logLevel`
 - Type: `LogSeverity`
-- Default value: `LogSeverity.Warning`
-- Example expected value: `"Information"`
+- Source default: `LogSeverity.Warning`
+- Expected fixture value: `"Error"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "NamePrefix": "Log_",
-  "LogLevel": "Information"
+  "namePrefix": "Log_",
+  "logLevel": "Error"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
+// Required markers
 Log_Counter_Add
 Mode_A = 1
-// NotContains
+// Excluded markers
 ```
 
-## NamePrefix
+## namePrefix
 
-### 1. Explanation
-**NamePrefix** controls the **NamePrefix** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `namePrefix`
 - Type: `string`
-- Default value: `string.Empty`
-- Example expected value: `"Wrapped_"`
+- Source default: `string.Empty`
+- Expected fixture value: `"Api_"`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "NamePrefix": "Wrapped_"
+  "namePrefix": "Api_"
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
-typedef struct Wrapped_Counter Wrapped_Counter;
-Wrapped_Counter_Add
-#define Wrapped_API(type)
-// NotContains
+// Required markers
+typedef struct Api_Counter Api_Counter;
+Api_Counter_Add
+#define Api_API(type)
+// Excluded markers
 ```
 
-## SystemIncludeFolders
+## systemIncludeFolders
 
-### 1. Explanation
-**SystemIncludeFolders** controls the **SystemIncludeFolders** behavior and is validated by both property snapshots and generated-output checks.
-
-### 2. Type, Example, and Default Value
+- Result property: `systemIncludeFolders`
 - Type: `List<string>`
-- Default value: `[]`
-- Example expected value: `["sysincludes"]`
+- Source default: `new()`
+- Expected fixture value: `["sysincludes"]`
 
-### 3. Example Config and Generated Output
-#### Example config
+### Configuration
+
 ```json
 {
-  "NamePrefix": "Sys_",
-  "ParseSystemIncludes": true,
-  "SystemIncludeFolders": [
+  "namePrefix": "Sys_",
+  "parseSystemIncludes": true,
+  "systemIncludeFolders": [
     "sysincludes"
   ]
 }
 ```
 
-#### Example generated output markers
+### Generated output assertions
+
 ```cpp
-// Contains
+// Required markers
 typedef struct Sys_Counter Sys_Counter;
 Sys_Counter_Add
 #define Sys_API(type)
-// NotContains
+// Excluded markers
 ```

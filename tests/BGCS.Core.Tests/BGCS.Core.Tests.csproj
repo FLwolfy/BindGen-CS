@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../fixtures/OutputPublisher/OutputPublisher.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="coverlet.collector" Version="6.0.2"/>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0"/>
     <PackageReference Include="xunit" Version="2.9.2"/>
@@ -16,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../fixtures/FailingFingerprintPlugin/FailingFingerprintPlugin.csproj" />
   </ItemGroup>
 
 </Project>

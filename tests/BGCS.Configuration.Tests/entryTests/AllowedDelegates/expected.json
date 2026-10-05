@@ -1,5 +1,5 @@
 {
-  "Property": "AllowedDelegates",
+  "Property": "allowedDelegates",
   "Expected": [
     "KeepDelegate"
   ]

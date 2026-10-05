@@ -1,48 +1,53 @@
-﻿namespace BGCS.Core.Logging
+using System;
+
+namespace BGCS.Core.Logging;
+
+/// <summary>
+/// Captures immutable diagnostic text and severity without retaining a generation service.
+/// </summary>
+public readonly record struct LogMessage
 {
     /// <summary>
-    /// Defines the public struct <c>LogMessage</c>.
+    /// Creates a diagnostic suitable for deduplication and retention in an operation result.
     /// </summary>
-    public struct LogMessage
-    {
-        /// <summary>
-        /// Exposes public member <c>Severtiy</c>.
-        /// </summary>
-        public LogSeverity Severtiy;
-        /// <summary>
-        /// Exposes public member <c>Message</c>.
-        /// </summary>
-        public string Message;
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="LogMessage"/>.
-        /// </summary>
-        public LogMessage(LogSeverity severtiy, string message)
-        {
-            Severtiy = severtiy;
-            Message = message;
-        }
-
-        private static string GetServertiyString(LogSeverity severtiy)
-        {
-            return severtiy switch
-            {
-                LogSeverity.Trace => "[Trc]",
-                LogSeverity.Debug => "[Dbg]",
-                LogSeverity.Information => "[Inf]",
-                LogSeverity.Warning => "[Wrn]",
-                LogSeverity.Error => "[Err]",
-                LogSeverity.Critical => "[Crt]",
-                _ => throw new ArgumentOutOfRangeException(nameof(severtiy), severtiy, null),
-            };
-        }
-
-        /// <summary>
-        /// Executes public operation <c>ToString</c>.
-        /// </summary>
-        public override readonly string ToString()
-        {
-            return $"{GetServertiyString(Severtiy)}\t{Message}";
-        }
+    /// <param name="severity">
+    /// A declared diagnostic severity.
+    /// </param>
+    /// <param name="message">
+    /// Complete diagnostic text.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The severity is not declared.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// The text is null.
+    /// </exception>
+    public LogMessage(
+        LogSeverity severity,
+        string message
+    ) {
+        if (!Enum.IsDefined(severity))
+            throw new ArgumentOutOfRangeException(nameof(severity));
+        ArgumentNullException.ThrowIfNull(message);
+        this.severity = severity;
+        this.message = message;
     }
+
+    /// <summary>
+    /// Gets the diagnostic's declared importance.
+    /// </summary>
+    public LogSeverity severity { get; }
+
+    /// <summary>
+    /// Gets the complete diagnostic text supplied by the reporting component.
+    /// </summary>
+    public string message { get; }
+
+    /// <summary>
+    /// Formats this diagnostic without writing to a process-wide output stream.
+    /// </summary>
+    /// <returns>
+    /// A severity prefix and the stored diagnostic text.
+    /// </returns>
+    public override string ToString() => $"[{severity}]\t{message}";
 }

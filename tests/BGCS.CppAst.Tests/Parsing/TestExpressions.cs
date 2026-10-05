@@ -1,17 +1,8 @@
 using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
-using BGCS.CppAst.Model.Declarations;
+using BGCS.Core.Targeting;
 using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
-using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
+using BGCS.CppAst.Targeting;
 using Xunit;
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
@@ -35,20 +26,20 @@ namespace BGCS.CppAst.Tests
 DEFINE_GUID(IID_ID3D11DeviceChild,0x1841e5c8,0x16b0,0x489b,0xbc,0xc8,0x44,0xcf,0xb0,0xd5,0xde,0xae);
 ", compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
-                    Assert.Single(compilation.Fields);
-                    var cppField = compilation.Fields[0];
+                    Assert.False(compilation.hasErrors);
+                    Assert.Single(compilation.fields);
+                    var cppField = compilation.fields[0];
 
-                    Assert.Null(cppField.InitValue);
+                    Assert.Null(cppField.initValue);
 
-                    Assert.NotNull(cppField.InitExpression);
-                    Assert.IsType<CppInitListExpression>(cppField.InitExpression);
+                    Assert.NotNull(cppField.initExpression);
+                    Assert.IsType<CppInitListExpression>(cppField.initExpression);
 
-                    var toStr = cppField.InitExpression.ToString();
+                    var toStr = cppField.initExpression.ToString();
 
                     Assert.Equal("{0x1841e5c8, 0x16b0, 0x489b, {0xbc, 0xc8, 0x44, 0xcf, 0xb0, 0xd5, 0xde, 0xae}}", toStr);
                 },
-                new CppParserOptions().ConfigureForWindowsMsvc());
+                new CppParserOptions().ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId("windows-x86-msvc")))));
         }
 
 
@@ -59,17 +50,17 @@ DEFINE_GUID(IID_ID3D11DeviceChild,0x1841e5c8,0x16b0,0x489b,0xbc,0xc8,0x44,0xcf,0
 const int x = (0 + 1) << 2;
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Fields);
-                var cppField = compilation.Fields[0];
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.fields);
+                var cppField = compilation.fields[0];
 
-                Assert.NotNull(cppField.InitValue?.Value);
-                Assert.Equal(4L, Convert.ToInt64(cppField.InitValue.Value));
+                Assert.NotNull(cppField.initValue?.value);
+                Assert.Equal(4L, Convert.ToInt64(cppField.initValue.value));
 
-                Assert.NotNull(cppField.InitExpression);
-                Assert.IsType<CppBinaryExpression>(cppField.InitExpression);
+                Assert.NotNull(cppField.initExpression);
+                Assert.IsType<CppBinaryExpression>(cppField.initExpression);
 
-                Assert.Equal("(0 + 1) << 2", cppField.InitExpression.ToString());
+                Assert.Equal("(0 + 1) << 2", cppField.initExpression.ToString());
             });
         }
 
@@ -80,18 +71,18 @@ const int x = (0 + 1) << 2;
 const int x = ~(128 + 2);
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Fields);
-                var cppField = compilation.Fields[0];
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.fields);
+                var cppField = compilation.fields[0];
 
-                Assert.NotNull(cppField.InitValue?.Value);
+                Assert.NotNull(cppField.initValue?.value);
                 var result = ~(128 + 2);
-                Assert.Equal((long)result, Convert.ToInt64(cppField.InitValue.Value));
+                Assert.Equal((long)result, Convert.ToInt64(cppField.initValue.value));
 
-                Assert.NotNull(cppField.InitExpression);
-                Assert.IsType<CppUnaryExpression>(cppField.InitExpression);
+                Assert.NotNull(cppField.initExpression);
+                Assert.IsType<CppUnaryExpression>(cppField.initExpression);
 
-                Assert.Equal("~(128 + 2)", cppField.InitExpression.ToString());
+                Assert.Equal("~(128 + 2)", cppField.initExpression.ToString());
             });
         }
 
@@ -102,18 +93,18 @@ const int x = ~(128 + 2);
 const int x = 12|1;
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Fields);
-                var cppField = compilation.Fields[0];
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.fields);
+                var cppField = compilation.fields[0];
 
-                Assert.NotNull(cppField.InitValue?.Value);
+                Assert.NotNull(cppField.initValue?.value);
                 var result = 12 | 1;
-                Assert.Equal((long)result, Convert.ToInt64(cppField.InitValue.Value));
+                Assert.Equal((long)result, Convert.ToInt64(cppField.initValue.value));
 
-                Assert.NotNull(cppField.InitExpression);
-                Assert.IsType<CppBinaryExpression>(cppField.InitExpression);
+                Assert.NotNull(cppField.initExpression);
+                Assert.IsType<CppBinaryExpression>(cppField.initExpression);
 
-                Assert.Equal("12 | 1", cppField.InitExpression.ToString());
+                Assert.Equal("12 | 1", cppField.initExpression.ToString());
             });
         }
 
@@ -124,21 +115,21 @@ const int x = 12|1;
 void MyFunction(int x = (1 + 2) * 3);
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Functions);
-                var parameters = compilation.Functions[0].Parameters;
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.functions);
+                var parameters = compilation.functions[0].parameters;
                 Assert.Single(parameters);
                 var cppParam = parameters[0];
 
-                Assert.NotNull(cppParam.InitValue?.Value);
-                Assert.Equal(9L, Convert.ToInt64(cppParam.InitValue.Value));
+                Assert.NotNull(cppParam.initValue?.value);
+                Assert.Equal(9L, Convert.ToInt64(cppParam.initValue.value));
 
-                Assert.NotNull(cppParam.InitExpression);
-                Assert.IsType<CppBinaryExpression>(cppParam.InitExpression);
+                Assert.NotNull(cppParam.initExpression);
+                Assert.IsType<CppBinaryExpression>(cppParam.initExpression);
 
-                Assert.Equal("(1 + 2) * 3", cppParam.InitExpression.ToString());
+                Assert.Equal("(1 + 2) * 3", cppParam.initExpression.ToString());
 
-                Assert.Equal("void MyFunction(int x = (1 + 2) * 3)", compilation.Functions[0].ToString());
+                Assert.Equal("void MyFunction(int x = (1 + 2) * 3)", compilation.functions[0].ToString());
             });
         }
 
@@ -149,15 +140,15 @@ void MyFunction(int x = (1 + 2) * 3);
 const void* NullPtr = nullptr;
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Fields);
-                var cppField = compilation.Fields[0];
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.fields);
+                var cppField = compilation.fields[0];
 
-                Assert.Null(cppField.InitValue?.Value);
+                Assert.Null(cppField.initValue?.value);
 
-                Assert.IsType<CppRawExpression>(cppField.InitExpression);
+                Assert.IsType<CppRawExpression>(cppField.initExpression);
 
-                Assert.Equal("nullptr", cppField.InitExpression.ToString());
+                Assert.Equal("nullptr", cppField.initExpression.ToString());
             });
         }
     }

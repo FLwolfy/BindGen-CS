@@ -1,9 +1,9 @@
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "ExpectedApiName",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false
+  "namespace": "EntryTests.Generated",
+  "apiName": "ExpectedApiName",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false
 }

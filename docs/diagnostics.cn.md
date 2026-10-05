@@ -23,13 +23,13 @@ bindgen-cs explain --json
 
 ## StrictSafety 模式
 
-| `StrictSafetySeverity` | 行为 |
+| `strictSafetySeverity` | 行为 |
 | --- | --- |
 | `Warning` | 保留 raw ABI 和当前 friendly API，同时报告风险 |
 | `SuppressFriendly`（默认） | 保留 raw ABI，删除受影响函数推断生成的 friendly overload |
 | `Error` | 把风险升级为错误，在正式输出 commit 前失败 |
 
-`StrictSafety=false` 只适用于外部流程已经完整审计这些语义的场景。它不会让未知 ownership 变得正确。
+`strictSafety=false` 只适用于外部流程已经完整审计这些语义的场景。它不会让未知 ownership 变得正确。
 
 ## 诊断代码
 
@@ -40,7 +40,7 @@ bindgen-cs explain --json
 | `BGCS-SAFETY-LENGTH` | buffer pointer 没有可证明的 length/capacity 关系 | 设置 `LengthParameter`、`CapacityParameter` 和可选 `WrittenCountParameter` |
 | `BGCS-SAFETY-ALLOCATOR` | output string 没有 cleanup allocator | 设置 `CleanupFunction`、ownership、encoding 和 cleanup requirement |
 | `BGCSCS001` | IR-native C# emitter 无法在不丢语义的前提下表达某个声明 | 实现通用且有测试的 IR lowering，或显式排除该声明；emission 会在写文件前失败 |
-| `BGCSCPP-INSTANTIATION` | 发现 primary template，但没有请求 concrete instance | 把真正需要的完整 specialization 加入 `TemplateInstantiations` 或 `FunctionTemplateInstantiations` |
+| `BGCSCPP-INSTANTIATION` | 发现 primary template，但没有请求 concrete instance | 把真正需要的完整 specialization 加入 `templateInstantiations` 或 `functionTemplateInstantiations` |
 | `BGCSCPP001` | C++ declaration 没有被接受的 lowering | 配置内置 type list、显式 template instance、添加声明式 lowering/typed plugin/显式 C shim，或选择可审计的安全策略 |
 | `BGCS-SAFETY-LOWERING-BYPASS` | 显式允许了 `Unsafe` lowering | 保留项目拥有的 ABI、native invocation、allocator 与 lifetime 测试；证据完备后将 lowering 提升为 `UserAsserted` 或 `Verified` |
 | `BGCS-SAFETY-EXTERNAL-TYPE` | 项目提供的 managed value carrier 跨越 ABI | 用 `RequireLayoutMatch` 声明匹配的 target size/alignment、改用 pointer，或显式 bypass 并保留 native invocation 测试 |
@@ -49,9 +49,9 @@ bindgen-cs explain --json
 
 ```json
 {
-  "StrictSafety": true,
-  "StrictSafetySeverity": "Error",
-  "MarshallingMappings": {
+  "strictSafety": true,
+  "strictSafetySeverity": "Error",
+  "marshallingMappings": {
     "library_get_items": {
       "Parameters": {
         "items": {
@@ -78,15 +78,15 @@ bindgen-cs explain --json
 
 ## Parser 与 target 问题
 
-- 找不到 header：路径从配置文件目录解析；检查 `EntryFiles`、`IncludeFolders` 和文件名大小写。
-- umbrella header 没有输出声明：开启 `IncludeTransitivelyReferencedHeaders`，并确保用户头位于 entry 目录或 `IncludeFolders`。
-- 系统类型不匹配：不要复制另一平台的 `Defines`；检查 `TargetPlatform`、`TargetArchitecture`、`TargetAbi`、`TargetTriple` 和 `TargetSysRoot`。
-- macOS 找不到标准库/SDK：先运行 `xcrun --show-sdk-path`，再用 `doctor` 确认发现结果；必要时设置 `SDKROOT` 或 `CompilerPath`。
+- 找不到 header：路径从配置文件目录解析；检查 `entryFiles`、`includeFolders` 和文件名大小写。
+- umbrella header 没有输出声明：开启 `includeTransitivelyReferencedHeaders`，并确保用户头位于 entry 目录或 `includeFolders`。
+- 系统类型不匹配：不要复制另一平台的 `defines`；检查 `TargetPlatform`、`TargetArchitecture`、`TargetAbi`、`targetTriple` 和 `targetSysRoot`。
+- macOS 找不到标准库/SDK：先运行 `xcrun --show-sdk-path`，再用 `doctor` 确认发现结果；必要时设置 `SDKROOT` 或 `compilerPath`。
 - C++ symbol 无法 P/Invoke：没有 C linkage 的 method/function 应经过 `bridge`，不要把 mangled name 当稳定 ABI。
 
 ## 仍然不应做的事
 
 - 不要为了通过编译把未知 C++ class 映射成 `nint` 后假装已经处理 lifetime。
 - 不要在生成文件中手改 `[DllImport]`、布局或 cleanup。
-- 不要用 `StrictSafety=false` 代替项目级 ownership 文档。
+- 不要用 `strictSafety=false` 代替项目级 ownership 文档。
 - 不要让 binding 的 target 配置与 native binary 的实际 ABI 不一致。

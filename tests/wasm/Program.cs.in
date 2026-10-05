@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using BGCS.Runtime;
 
 namespace WasmAcceptance;
@@ -28,6 +29,18 @@ internal static unsafe partial class Program
                 "A missing symbol must remain unresolved.");
             m_checks.Add("missing-symbol");
             FunctionTable.NativeApi.InitApi(context);
+            WasmSymbolContext failing = new("bgcs_add");
+            bool rejected = false;
+            try {
+                FunctionTable.NativeApi.InitApi(failing);
+            }
+            catch (EntryPointNotFoundException) {
+                rejected = true;
+            }
+            Assert(rejected && failing.disposeCount == 1 && context.disposeCount == 0 &&
+                FunctionTable.NativeApi.BgcsAdd(3, 4) == 7,
+                "A failed table candidate must release its context and preserve the current table.");
+            m_checks.Add("failed-initialization");
             try
             {
                 RunFunctionTable();
@@ -39,13 +52,14 @@ internal static unsafe partial class Program
             }
             Assert(context.disposeCount == 1, "The generated table must dispose its context once.");
             m_checks.Add("function-table-context");
-            m_report = JsonSerializer.Serialize(new { success = true, pointerSize = sizeof(nint), checks = m_checks });
+            VerifyBorrowedResources();
+            m_report = SerializeReport(true, null);
             Console.WriteLine(m_report);
             return 0;
         }
         catch (Exception exception)
         {
-            m_report = JsonSerializer.Serialize(new { success = false, error = exception.ToString(), checks = m_checks });
+            m_report = SerializeReport(false, exception.ToString());
             Console.Error.WriteLine(m_report);
             return 1;
         }
@@ -59,6 +73,32 @@ internal static unsafe partial class Program
     /// </returns>
     [JSExport]
     public static string GetReport() => m_report;
+
+    private static string SerializeReport(
+        bool success,
+        string? error
+    ) => JsonSerializer.Serialize(new InvocationReport(success, sizeof(nint), m_checks.ToArray(), error),
+        ReportContext.Default.InvocationReport);
+
+    private static void VerifyBorrowedResources() {
+        WasmSymbolContext borrowedContext = new();
+        using (BGCS.Runtime.FunctionTable table = new(borrowedContext, 1, ownsContext: false)) {
+            table.LoadRequired(0, "bgcs_add");
+            Assert(((delegate* unmanaged[Cdecl]<int, int, int>)table[0])(2, 5) == 7,
+                "Borrowed context invocation.");
+        }
+        Assert(borrowedContext.disposeCount == 0, "Disposing a table must preserve its borrowed context.");
+        m_checks.Add("borrowed-context");
+        void** slots = stackalloc void*[1];
+        slots[0] = (void*)borrowedContext.GetProcAddress("bgcs_add");
+        using (BGCS.Runtime.FunctionTable table = new(slots, 1))
+            Assert(((delegate* unmanaged[Cdecl]<int, int, int>)table[0])(1, 8) == 9, "Borrowed storage invocation.");
+        Assert(((delegate* unmanaged[Cdecl]<int, int, int>)slots[0])(4, 5) == 9,
+            "Disposing a table must preserve its borrowed pointer storage.");
+        borrowedContext.Dispose();
+        Assert(borrowedContext.disposeCount == 1, "The external owner releases its context.");
+        m_checks.Add("borrowed-storage");
+    }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static int Callback(
@@ -82,6 +122,10 @@ __RUNNERS__
 
     private sealed class WasmSymbolContext : INativeContext
     {
+        private readonly string? m_missingExport;
+
+        internal WasmSymbolContext(string? missingExport = null) => m_missingExport = missingExport;
+
         /// <summary>
         /// Gets the number of ownership releases performed by the generated function table.
         /// </summary>
@@ -90,6 +134,8 @@ __RUNNERS__
         /// <inheritdoc />
         public nint GetProcAddress(string procName)
         {
+            if (procName == m_missingExport)
+                return 0;
             byte[] name = Encoding.UTF8.GetBytes(procName + "\0");
             fixed (byte* pointer = name)
                 return (nint)DllImport.NativeApi.BgcsResolve(pointer);
@@ -111,3 +157,13 @@ __RUNNERS__
         public void Dispose() => disposeCount++;
     }
 }
+
+internal sealed record InvocationReport(
+    bool success,
+    int pointerSize,
+    string[] checks,
+    string? error
+);
+
+[JsonSerializable(typeof(InvocationReport))]
+internal partial class ReportContext : JsonSerializerContext { }

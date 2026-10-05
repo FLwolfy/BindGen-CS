@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using BGCS.Runtime;
 using Xunit;
 
 namespace BGCS.Runtime.Tests;
@@ -119,13 +118,42 @@ public unsafe class UtilsAndAttributesTests
     }
 
     [Fact]
-    public void GetByteCountArray_ShouldUsePointerSizedElementCount()
+    public void GetByteCountArray_UsesTheActualUnmanagedElementSize()
     {
         int[] values = [1, 2, 3];
 
         int bytes = Utils.GetByteCountArray(values);
 
-        Assert.Equal(values.Length * IntPtr.Size, bytes);
+        Assert.Equal(values.Length * sizeof(int), bytes);
+        Assert.Equal(3, Utils.GetByteCountArray(new byte[3]));
+        Assert.Equal(24, Utils.GetByteCountArray(new long[3]));
+        Assert.Throws<ArgumentNullException>(() => Utils.GetByteCountArray<int>(null!));
+    }
+
+    [Fact]
+    public void Alloc_RejectsInvalidSizesBeforeAllocatingAndSupportsEmptyStorage()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Utils.Alloc<int>(-1));
+        Assert.Throws<OverflowException>(() => Utils.Alloc<long>(int.MaxValue));
+        Assert.Equal((nint)0, (nint)Utils.Alloc<byte>(0));
+        Utils.Free(null);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Unicode 😀")]
+    public void Utf16Allocation_IncludesTheTerminatorInOwnedStorage(string text)
+    {
+        char* pointer = Utils.StringToUTF16Ptr(text);
+        try
+        {
+            Assert.Equal(text, Utils.DecodeStringUTF16(pointer));
+            Assert.Equal('\0', pointer[text.Length]);
+        }
+        finally
+        {
+            Utils.Free(pointer);
+        }
     }
 
     [Fact]
@@ -135,12 +163,12 @@ public unsafe class UtilsAndAttributesTests
         NativeNameAttribute byType = new(NativeNameType.Func, "NativeBar");
         SourceLocationAttribute source = new("header.h", "1:1", "1:10");
 
-        Assert.Equal("NativeFoo", byName.Name);
-        Assert.Equal(default, byName.Type);
-        Assert.Equal(NativeNameType.Func, byType.Type);
-        Assert.Equal("NativeBar", byType.Name);
-        Assert.Equal("header.h", source.File);
-        Assert.Equal("1:1", source.Start);
-        Assert.Equal("1:10", source.End);
+        Assert.Equal("NativeFoo", byName.name);
+        Assert.Equal(default, byName.type);
+        Assert.Equal(NativeNameType.Func, byType.type);
+        Assert.Equal("NativeBar", byType.name);
+        Assert.Equal("header.h", source.file);
+        Assert.Equal("1:1", source.start);
+        Assert.Equal("1:10", source.end);
     }
 }

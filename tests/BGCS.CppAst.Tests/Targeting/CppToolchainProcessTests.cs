@@ -62,6 +62,19 @@ public sealed class CppToolchainProcessTests : IDisposable
     /// Completion after the timed-out query and its owned process have finished.
     /// </returns>
     [Fact]
+    public void CompilerFingerprintObservesAChangedDriverAtTheSamePath()
+    {
+        BuildCompiler(versionTimesOut: false);
+        string first = CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.C, m_compiler);
+        Assert.Equal(first, CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.C, m_compiler));
+        DateTime modified = File.GetLastWriteTimeUtc(m_compiler);
+        File.SetLastWriteTimeUtc(m_compiler, modified.AddSeconds(1));
+        string changed = CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.C, m_compiler);
+        Assert.NotEqual(first, changed);
+        Assert.Contains("fixture compiler", changed, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TimedOutCompilerQueryRetiresItsProcessBeforeReturning()
     {
         Task<string> query = Task.Run(() => CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.C, m_compiler));
@@ -97,7 +110,7 @@ public sealed class CppToolchainProcessTests : IDisposable
         Directory.Delete(m_root, recursive: true);
     }
 
-    private string BuildCompiler()
+    private string BuildCompiler(bool versionTimesOut = true)
     {
         string driver = CppToolchainDiscovery.FindCompiler(CppParserKind.C)
             ?? throw new InvalidOperationException("A C compiler is required for process-boundary tests.");
@@ -106,6 +119,7 @@ public sealed class CppToolchainProcessTests : IDisposable
         string processFile = QuoteCString(m_processFile);
         string sdk = QuoteCString(m_sdk);
         string resource = QuoteCString(Path.Combine(m_root, "resource"));
+        string versionAction = versionTimesOut ? "WAIT_FOR_TIMEOUT;" : "puts(\"fixture compiler\");";
         File.WriteAllText(source, $$"""
             #include <stdio.h>
             #include <string.h>
@@ -124,7 +138,7 @@ public sealed class CppToolchainProcessTests : IDisposable
                 fprintf(pid, "%d", (int)PROCESS_ID);
                 fclose(pid);
                 if (argc > 1 && strcmp(argv[1], "--version") == 0) {
-                    WAIT_FOR_TIMEOUT;
+                    {{versionAction}}
                     return 0;
                 }
                 if (argc > 1 && strcmp(argv[1], "-print-resource-dir") == 0) {

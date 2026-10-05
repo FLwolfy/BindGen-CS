@@ -14,10 +14,10 @@
 | 问题 | 选择 | 原因 |
 | --- | --- | --- |
 | BGCS 已内置 string/container/smart-pointer/path/chrono 等语义 | 不扩展 | 使用 verified built-in |
-| 类型能用确定的 C ABI 类型和表达式转换 | `TypeLowerings` | 只需 JSON，可审查、可缓存 |
-| 函数只需匹配、重命名、排除或包装调用表达式 | `CallableLowerings` | 只需 JSON，不执行任意代码 |
+| 类型能用确定的 C ABI 类型和表达式转换 | `typeLowerings` | 只需 JSON，可审查、可缓存 |
+| 函数只需匹配、重命名、排除或包装调用表达式 | `callableLowerings` | 只需 JSON，不执行任意代码 |
 | 需要读取 AST、按 target 分支或生成额外 artifact | typed lowering plugin | 独立受信任 .NET assembly |
-| 只有项目 C++ 才能解释模板、coroutine、private ABI 或 lifetime | `NativeShims` | 明确建立稳定 C ABI 边界 |
+| 只有项目 C++ 才能解释模板、coroutine、private ABI 或 lifetime | `nativeShims` | 明确建立稳定 C ABI 边界 |
 | 规则能生成，但 BGCS 无法证明项目断言 | `AllowUserAsserted` | 接受经过项目审查的 recipe/plugin/shim |
 | 项目决定承担未证明风险 | `AllowUnsafe` | 只绕过安全 gate，并保留审计诊断 |
 
@@ -47,8 +47,8 @@
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "TypeLowerings": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "typeLowerings": [
     {
       "Name": "engine.entity-id",
       "TypePattern": "Engine::EntityId",
@@ -60,7 +60,9 @@
       "AbiShape": "Direct",
       "ParameterToCppExpression": "Engine::EntityId::FromRaw({value})",
       "ReturnToCExpression": "({value}).Raw()",
-      "RequiredHeaders": ["Engine/EntityId.hpp"],
+      "RequiredHeaders": [
+        "Engine/EntityId.hpp"
+      ],
       "ManagedProjection": {
         "ManagedType": "EntityId",
         "ManagedToNativeExpression": "{value}.Value",
@@ -81,8 +83,8 @@
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "CallableLowerings": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "callableLowerings": [
     {
       "Name": "engine.checked-add",
       "FunctionPattern": "Engine::Math::Add",
@@ -90,7 +92,9 @@
       "ExportName": "engine_math_checked_add",
       "Exclude": false,
       "InvocationExpression": "Engine::Interop::Check({invocation})",
-      "RequiredHeaders": ["Engine/Interop/Check.hpp"],
+      "RequiredHeaders": [
+        "Engine/Interop/Check.hpp"
+      ],
       "Safety": "UserAsserted"
     },
     {
@@ -160,9 +164,9 @@ using BGCS.CppAst.Model.Declarations;
 
 public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
-    public string Id => "engine.lowering";
-    public string Version => "1.0.0";
-    public int ContractVersion => BindingPluginContract.CurrentVersion;
+    public string id => "engine.lowering";
+    public string version => "1.0.0";
+    public int contractVersion => BindingPluginContract.C_CURRENT_VERSION;
 
     public void Configure(IBindingPluginHost host) =>
         host.Register<ICppCallableLowering>(
@@ -198,7 +202,7 @@ dotnet build examples/LoweringPlugin/BGCS.Example.LoweringPlugin.csproj --config
 
 ```json
 {
-  "PluginAssemblies": [
+  "pluginAssemblies": [
     "examples/LoweringPlugin/bin/Release/net9.0/BGCS.Example.LoweringPlugin.dll"
   ]
 }
@@ -210,7 +214,7 @@ dotnet build examples/LoweringPlugin/BGCS.Example.LoweringPlugin.csproj --config
 - `ICppCallableLowering`：选择、排除、重命名或包装 callable；
 - `ICppArtifactContributor`：确定性生成 public header、native source、managed source 或 resource。
 
-Plugin 是构建期间执行的受信任代码，必须 pin binary、代码审查并在 CI 构建。所有影响输出的状态应实现 `ICacheFingerprintProvider`；否则 BGCS 会保守关闭 cache hit。`ContractVersion` 返回当前常量只是加载时不兼容保护，不是“v1/v2 plugin”产品代际。
+Plugin 是构建期间执行的受信任代码，必须 pin binary、代码审查并在 CI 构建。所有影响输出的状态应实现 `ICacheFingerprintProvider`；否则 BGCS 会保守关闭 cache hit。`contractVersion` 返回当前常量只是加载时不兼容保护，不是“v1/v2 plugin”产品代际。
 
 ## 完整 native shim 教程
 
@@ -285,24 +289,33 @@ API_INTERNAL(int) bgcs_widget_sum(
 
 ```json
 {
-  "ConfigVersion": 1,
-  "EntryFiles": ["native/entry.hpp"],
-  "AllowedHeaders": ["native/entry.hpp"],
-  "IncludeFolders": ["native"],
-  "OutputPath": "GeneratedBridge",
-  "LanguageStandard": "c++23",
-  "GenerateBuildManifest": true,
-  "GenerateCSharpBindings": true,
-  "CSharpNamespace": "BGCS.Examples.NativeShim",
-  "CSharpApiName": "WidgetNative",
-  "NativeLibraryName": "widget_bridge",
-  "CSharpOutputPath": "Generated",
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "NativeShims": [
+  "entryFiles": [
+    "native/entry.hpp"
+  ],
+  "allowedHeaders": [
+    "native/entry.hpp"
+  ],
+  "includeFolders": [
+    "native"
+  ],
+  "outputPath": "GeneratedBridge",
+  "languageStandard": "c++23",
+  "generateBuildManifest": true,
+  "generateCSharpBindings": true,
+  "cSharpNamespace": "BGCS.Examples.NativeShim",
+  "cSharpApiName": "WidgetNative",
+  "nativeLibraryName": "widget_bridge",
+  "cSharpOutputPath": "Generated",
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "nativeShims": [
     {
       "Name": "widget",
-      "PublicHeaders": ["shims/widget_c.h"],
-      "SourceFiles": ["shims/widget_c.cpp"],
+      "PublicHeaders": [
+        "shims/widget_c.h"
+      ],
+      "SourceFiles": [
+        "shims/widget_c.cpp"
+      ],
       "Safety": "UserAsserted"
     }
   ]

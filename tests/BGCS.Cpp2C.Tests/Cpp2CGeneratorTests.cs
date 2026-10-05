@@ -5,13 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using BGCS.Core;
 using BGCS.Core.Logging;
-using BGCS.Cpp2C.Metadata;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
 using BGCS.Intermediate;
+using BGCS.Intermediate.Bridges;
 using Xunit;
 
 namespace BGCS.Cpp2C.Tests;
@@ -34,57 +35,18 @@ public class Cpp2CGeneratorTests
     {
         Cpp2CGeneratorConfig cfg = new();
 
-        Assert.NotNull(cfg.IncludeFolders);
-        Assert.NotNull(cfg.SystemIncludeFolders);
-        Assert.NotNull(cfg.Defines);
-        Assert.NotNull(cfg.AdditionalArguments);
-    }
-
-    [Fact]
-    public void Config_FutureConfigVersion_ShouldFailBeforeGeneration()
-    {
-        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-version-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(temp);
-        string path = Path.Combine(temp, "bridge.json");
-        File.WriteAllText(path, "{\"ConfigVersion\":999,\"EntryFiles\":[]}");
-        try
-        {
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CGeneratorConfig.Load(path));
-
-            Assert.Contains("ConfigVersion 999", exception.Message, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(temp, true);
-        }
-    }
-
-    [Fact]
-    public void Config_LegacyConfigVersion_ShouldFailBeforeGeneration()
-    {
-        string temp = Path.Combine(Path.GetTempPath(), "bgcs-cpp2c-legacy-version-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(temp);
-        string path = Path.Combine(temp, "bridge.json");
-        File.WriteAllText(path, "{\"ConfigVersion\":0,\"EntryFiles\":[]}");
-        try
-        {
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => Cpp2CGeneratorConfig.Load(path));
-
-            Assert.Contains("ConfigVersion 0", exception.Message, StringComparison.Ordinal);
-            Assert.Contains("no legacy migration", exception.Message, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(temp, true);
-        }
+        Assert.NotNull(cfg.includeFolders);
+        Assert.NotNull(cfg.systemIncludeFolders);
+        Assert.NotNull(cfg.defines);
+        Assert.NotNull(cfg.additionalArguments);
     }
 
     [Fact]
     public void Config_GetCType_ShouldPreservePointerReferenceAndQualificationShape()
     {
         Cpp2CGeneratorConfig config = new();
-        CppType pointer = new CppPointerType(default, CppPrimitiveType.Int);
-        CppType reference = new CppReferenceType(default, new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.Float));
+        CppType pointer = new CppPointerType(default, CppPrimitiveType.@int, System.IntPtr.Size);
+        CppType reference = new CppReferenceType(default, new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.@float));
 
         Assert.Equal("int*", config.GetCType(pointer));
         Assert.Equal("const float*", config.GetCType(reference));
@@ -106,10 +68,10 @@ public class Cpp2CGeneratorTests
             Cpp2CCodeGenerator gen = new(cfg);
             gen.Generate(header, output);
 
-            Assert.DoesNotContain(gen.Messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
-            Assert.True(gen.LastResult?.Success);
-            Assert.Contains(gen.LastResult!.Module!.Types, type => type.NativeName == "Demo");
-            Assert.Contains(gen.LastResult.Module.Functions, function => function.NativeName == "Add");
+            Assert.DoesNotContain(gen.messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
+            Assert.True(gen.lastResult?.success);
+            Assert.Contains(gen.lastResult!.module!.types, type => type.nativeName == "Demo");
+            Assert.Contains(gen.lastResult.module.functions, function => function.nativeName == "Add");
             string classesHeader = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
             Assert.Contains("Demo_Add", classesHeader);
         }
@@ -134,7 +96,7 @@ public class Cpp2CGeneratorTests
         {
             Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load(path);
 
-            Assert.Equal("Demo", config.NamePrefix);
+            Assert.Equal("Demo", config.namePrefix);
             Assert.Equal(source, File.ReadAllText(path));
         }
         finally
@@ -159,7 +121,7 @@ public class Cpp2CGeneratorTests
 
             generator.GenerateConfigured();
 
-            Assert.True(generator.LastResult?.Success);
+            Assert.True(generator.lastResult?.success);
             Assert.True(File.Exists(Path.Combine(temp, "bridge-output", "include", "Classes.h")));
         }
         finally
@@ -183,23 +145,23 @@ public class Cpp2CGeneratorTests
         {
             Cpp2CCodeGenerator first = new(Cpp2CGeneratorConfig.Load(configPath));
             first.GenerateConfigured();
-            Assert.True(first.LastResult?.Success);
-            Assert.False(first.LastResult!.CacheHit);
-            string firstKey = Assert.IsType<string>(first.LastResult.CacheKey);
+            Assert.True(first.lastResult?.success);
+            Assert.False(first.lastResult!.cacheHit);
+            string firstKey = Assert.IsType<string>(first.lastResult.cacheKey);
             string classes = Path.Combine(temp, "bridge-output", "include", "Classes.h");
             File.WriteAllText(classes, "corrupted");
 
             Cpp2CCodeGenerator second = new(Cpp2CGeneratorConfig.Load(configPath));
             second.GenerateConfigured();
-            Assert.True(second.LastResult!.CacheHit);
-            Assert.NotNull(second.LastResult.Module);
+            Assert.True(second.lastResult!.cacheHit);
+            Assert.NotNull(second.lastResult.module);
             Assert.Contains("cache_first", File.ReadAllText(classes), StringComparison.Ordinal);
 
             File.WriteAllText(header, "int cache_second();\n");
             Cpp2CCodeGenerator third = new(Cpp2CGeneratorConfig.Load(configPath));
             third.GenerateConfigured();
-            Assert.False(third.LastResult!.CacheHit);
-            Assert.NotEqual(firstKey, third.LastResult.CacheKey);
+            Assert.False(third.lastResult!.cacheHit);
+            Assert.NotEqual(firstKey, third.lastResult.cacheKey);
             Assert.Contains("cache_second", File.ReadAllText(classes), StringComparison.Ordinal);
         }
         finally
@@ -220,9 +182,13 @@ public class Cpp2CGeneratorTests
         File.WriteAllText(Path.Combine(configDirectory, "bridge.json"),
             """
             {
-              "EntryFiles": ["include/sample.hpp"],
-              "IncludeFolders": ["include"],
-              "OutputPath": "GeneratedBridge"
+              "entryFiles": [
+                "include/sample.hpp"
+              ],
+              "includeFolders": [
+                "include"
+              ],
+              "outputPath": "GeneratedBridge"
             }
             """);
         string originalDirectory = Environment.CurrentDirectory;
@@ -233,7 +199,7 @@ public class Cpp2CGeneratorTests
 
             generator.GenerateConfigured();
 
-            Assert.True(generator.LastResult?.Success);
+            Assert.True(generator.lastResult?.success);
             Assert.Equal(originalDirectory, Environment.CurrentDirectory);
             Assert.True(File.Exists(Path.Combine(configDirectory, "GeneratedBridge", "bridge.manifest.json")));
         }
@@ -251,14 +217,14 @@ public class Cpp2CGeneratorTests
         Directory.CreateDirectory(temp);
         string first = Path.Combine(temp, "first.json");
         string second = Path.Combine(temp, "second.json");
-        File.WriteAllText(first, "{\"BaseConfig\":{\"Url\":\"file://second.json\"}}");
-        File.WriteAllText(second, "{\"BaseConfig\":{\"Url\":\"file://first.json\"}}");
+        File.WriteAllText(first, "{\"baseConfig\":{\"url\":\"file://second.json\"}}");
+        File.WriteAllText(second, "{\"baseConfig\":{\"url\":\"file://first.json\"}}");
         try
         {
             InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
                 Cpp2CGeneratorConfig.Load(first));
 
-            Assert.Contains("Cyclic C++ BaseConfig chain", exception.Message, StringComparison.Ordinal);
+            Assert.Contains("Circular BaseConfig reference", exception.Message, StringComparison.Ordinal);
             Assert.Contains(Path.GetFullPath(first), exception.Message, StringComparison.Ordinal);
             Assert.Contains(Path.GetFullPath(second), exception.Message, StringComparison.Ordinal);
         }
@@ -401,11 +367,11 @@ public class Cpp2CGeneratorTests
             Assert.Contains("Demo::Create().release()", classesSource);
             Assert.Contains("unique_ptr", classesSource);
             Assert.Contains("reinterpret_cast<Widget*>(value)", classesSource);
-            Assert.All(generator.LastResult!.Module!.Functions.Where(function => function.NativeName is "Create" or "Consume"), function =>
+            Assert.All(generator.lastResult!.module!.functions.Where(function => function.nativeName is "Create" or "Consume"), function =>
             {
-                MarshallingPlan plan = function.NativeName == "Create" ? function.ReturnMarshalling : function.Parameters[0].Marshalling;
-                Assert.Equal(BindingOwnership.Transferred, plan.Ownership);
-                Assert.True(plan.RequiresCleanup);
+                MarshallingPlan plan = function.nativeName == "Create" ? function.returnMarshalling : function.parameters[0].marshalling;
+                Assert.Equal(BindingOwnership.Transferred, plan.ownership);
+                Assert.True(plan.requiresCleanup);
             });
             Assert.True(CompileGeneratedBridge(output, temp, out string diagnostics), diagnostics);
         }
@@ -435,9 +401,9 @@ public class Cpp2CGeneratorTests
             string classesSource = File.ReadAllText(Path.Combine(output, "src", "Classes.cpp"));
             Assert.Contains("Demo_Sum(int* values, size_t values_count)", classesHeader);
             Assert.Contains("reinterpret_cast<int*>(values), values_count", classesSource);
-            BindingFunction sum = Assert.Single(generator.LastResult!.Module!.Functions, function => function.NativeName == "Sum");
-            Assert.Equal(MarshallingStrategy.Span, sum.Parameters[0].Marshalling.Strategy);
-            Assert.Equal("values_count", sum.Parameters[0].Marshalling.LengthParameter);
+            CppBridgeFunction sum = Assert.Single(generator.lastResult!.module!.functions, function => function.nativeName == "Sum");
+            Assert.Equal(MarshallingStrategy.Span, sum.parameters[0].marshalling.strategy);
+            Assert.Equal("values_count", sum.parameters[0].marshalling.lengthParameter);
             Assert.True(CompileGeneratedBridge(output, temp, out string diagnostics), diagnostics);
         }
         finally
@@ -469,9 +435,9 @@ public class Cpp2CGeneratorTests
             Assert.Contains("thread_local std::vector", classesSource);
             Assert.Contains("return_value.data()", classesSource);
             Assert.Contains("*out_count = return_value.size()", classesSource);
-            BindingFunction vector = Assert.Single(generator.LastResult!.Module!.Functions, function => function.NativeName == "Double");
-            Assert.Equal(MarshallingStrategy.Span, vector.ReturnMarshalling.Strategy);
-            Assert.Equal("out_count", vector.ReturnMarshalling.LengthParameter);
+            CppBridgeFunction vector = Assert.Single(generator.lastResult!.module!.functions, function => function.nativeName == "Double");
+            Assert.Equal(MarshallingStrategy.Span, vector.returnMarshalling.strategy);
+            Assert.Equal("out_count", vector.returnMarshalling.lengthParameter);
             Assert.True(CompileGeneratedBridge(output, temp, out string diagnostics), diagnostics);
         }
         finally
@@ -504,8 +470,8 @@ public class Cpp2CGeneratorTests
             Assert.Contains("SharedPtr_WidgetDestroy", classesHeader);
             Assert.Contains("new std::shared_ptr", classesSource);
             Assert.Contains("*reinterpret_cast<std::shared_ptr", classesSource);
-            BindingFunction make = Assert.Single(generator.LastResult!.Module!.Functions, function => function.NativeName == "Make");
-            Assert.Equal(BindingOwnership.Shared, make.ReturnMarshalling.Ownership);
+            CppBridgeFunction make = Assert.Single(generator.lastResult!.module!.functions, function => function.nativeName == "Make");
+            Assert.Equal(BindingOwnership.Shared, make.returnMarshalling.ownership);
             Assert.True(CompileGeneratedBridge(output, temp, out string diagnostics), diagnostics);
         }
         finally
@@ -525,7 +491,7 @@ public class Cpp2CGeneratorTests
         File.WriteAllText(header,
             "class ICompute { public: virtual ~ICompute() = default; virtual int Compute(int value) const = 0; virtual void Notify(int& value) = 0; };");
         Cpp2CGeneratorConfig config = new();
-        config.VirtualCallbackInterfaces.Add("ICompute");
+        config.virtualCallbackInterfaces.Add("ICompute");
         try
         {
             Cpp2CCodeGenerator generator = new(config);
@@ -570,8 +536,8 @@ public class Cpp2CGeneratorTests
             Assert.Contains("API(int) Demo_Read(int value, bool value_has_value)", classesHeader);
             Assert.Contains("if (!optional_result.has_value()) return false", classesSource);
             Assert.Contains("value_has_value ? std::optional<int>(value) : std::nullopt", classesSource);
-            BindingFunction maybe = Assert.Single(generator.LastResult!.Module!.Functions, function => function.NativeName == "Maybe");
-            Assert.Equal(MarshallingStrategy.Optional, maybe.ReturnMarshalling.Strategy);
+            CppBridgeFunction maybe = Assert.Single(generator.lastResult!.module!.functions, function => function.nativeName == "Maybe");
+            Assert.Equal(MarshallingStrategy.Optional, maybe.returnMarshalling.strategy);
             Assert.True(CompileGeneratedBridge(output, temp, out string diagnostics), diagnostics);
         }
         finally
@@ -591,14 +557,14 @@ public class Cpp2CGeneratorTests
         File.WriteAllText(header,
             "namespace Demo { template<class T> class Box { public: T Get() const; }; }");
         Cpp2CGeneratorConfig config = new();
-        config.TemplateInstantiations.Add("Demo::Box<int>");
+        config.templateInstantiations.Add("Demo::Box<int>");
         try
         {
             Cpp2CCodeGenerator generator = new(config);
 
             generator.Generate(header, output);
 
-            Assert.True(generator.LastResult?.Success);
+            Assert.True(generator.lastResult?.success);
             string classes = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
             Assert.Contains("Box", classes);
             Assert.Contains("Get", classes);
@@ -628,9 +594,9 @@ public class Cpp2CGeneratorTests
 
             generator.Generate(header, output);
 
-            Assert.False(generator.LastResult?.Success);
-            BindingDiagnostic diagnostic = Assert.Single(generator.LastResult!.Diagnostics, value => value.Code == "BGCSCPP001");
-            Assert.Contains("TemplateInstantiations", diagnostic.Message);
+            Assert.False(generator.lastResult?.success);
+            BindingDiagnostic diagnostic = Assert.Single(generator.lastResult!.diagnostics, value => value.code == "BGCSCPP001");
+            Assert.Contains("TemplateInstantiations", diagnostic.message);
             Assert.Equal("last-good", File.ReadAllText(sentinel));
         }
         finally
@@ -653,15 +619,15 @@ public class Cpp2CGeneratorTests
             Cpp2CCodeGenerator generator = new(new Cpp2CGeneratorConfig());
             generator.Generate(header, output);
 
-            Assert.True(generator.LastResult?.Success);
+            Assert.True(generator.lastResult?.success);
             string classesHeader = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
             string classesSource = File.ReadAllText(Path.Combine(output, "src", "Classes.cpp"));
             Assert.Contains("Demo_Maybe(bool set, Widget** out_value)", classesHeader);
             Assert.Contains("Demo_Read(Widget* value, bool value_has_value)", classesHeader);
             Assert.Contains("new Widget(*optional_result)", classesSource);
-            BindingFunction maybe = Assert.Single(generator.LastResult!.Module!.Functions, function => function.NativeName == "Maybe");
-            Assert.Equal(BindingOwnership.Owned, maybe.ReturnMarshalling.Ownership);
-            Assert.True(maybe.ReturnMarshalling.RequiresCleanup);
+            CppBridgeFunction maybe = Assert.Single(generator.lastResult!.module!.functions, function => function.nativeName == "Maybe");
+            Assert.Equal(BindingOwnership.Owned, maybe.returnMarshalling.ownership);
+            Assert.True(maybe.returnMarshalling.requiresCleanup);
             Assert.True(CompileGeneratedBridge(output, temp, out string diagnostics), diagnostics);
         }
         finally
@@ -679,13 +645,13 @@ public class Cpp2CGeneratorTests
         string output = Path.Combine(temp, "out");
         File.WriteAllText(header, "namespace Demo { template<class T> T Twice(T value){return value+value;} }");
         Cpp2CGeneratorConfig config = new();
-        config.FunctionTemplateInstantiations.Add("int Demo::Twice<int>(int)");
+        config.functionTemplateInstantiations.Add("int Demo::Twice<int>(int)");
         try
         {
             Cpp2CCodeGenerator generator = new(config);
             generator.Generate(header, output);
 
-            Assert.True(generator.LastResult?.Success, string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(value => value.Message) ?? []));
+            Assert.True(generator.lastResult?.success, string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(value => value.message) ?? []));
             string classesHeader = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
             Assert.Contains("BGCS_FunctionTemplate_0", classesHeader);
             Assert.True(CompileGeneratedBridge(output, temp, out string diagnostics), diagnostics);
@@ -774,6 +740,88 @@ public class Cpp2CGeneratorTests
         return process.ExitCode == 0;
     }
 
+    [Fact]
+    public void Generate_PublicFacade_ExcludesPrivateImplementationAndDtoLifetimes()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "bgcs-facade-visibility-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string header = Path.Combine(directory, "facade.hpp");
+            File.WriteAllText(header, """
+                class Facade {
+                public:
+                    struct Values { int count; };
+                    enum class Mode { First, Second };
+                    int Read() const { return 7; }
+                protected:
+                    struct ProtectedState { int value; };
+                private:
+                    struct Impl;
+                    Impl* state;
+                    enum class InternalMode { Hidden };
+                    struct PrivateOwner {
+                    public:
+                        struct NestedState { int value; };
+                    };
+                    Impl* ReadState();
+                };
+                struct PlainValue { int number; };
+                """);
+            string output = Path.Combine(directory, "out");
+            Cpp2CCodeGenerator generator = new(new() { namePrefix = "test_" });
+            generator.Generate(header, output);
+
+            Assert.True(generator.lastResult?.success,
+                string.Join(Environment.NewLine, generator.messages.Select(static value => value.message)));
+            CppBridgeModule module = generator.lastResult!.module!;
+            string declarations = File.ReadAllText(Path.Combine(output, "include", "Classes.h"))
+                + File.ReadAllText(Path.Combine(output, "include", "enums.h"));
+            foreach (string hidden in new[] { "Impl", "ProtectedState", "InternalMode", "PrivateOwner", "NestedState", "ReadState" })
+            {
+                Assert.DoesNotContain(hidden, declarations);
+                Assert.DoesNotContain(module.types, type => type.nativeName.Contains(hidden, StringComparison.Ordinal));
+                Assert.DoesNotContain(module.functions, function => function.exportName.Contains(hidden, StringComparison.Ordinal));
+            }
+            Assert.Contains(module.types, type => type.nativeName == "Facade::Values");
+            Assert.Contains(module.types, type => type.nativeName == "Facade::Mode");
+            Assert.DoesNotContain(module.functions, function => function.exportName.StartsWith("test_PlainValue", StringComparison.Ordinal)
+                || function.exportName.StartsWith("test_Values", StringComparison.Ordinal));
+            Assert.True(CompileGeneratedBridge(output, directory, out string diagnostics), diagnostics);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Generate_ForwardDeclaration_DoesNotInventCallableLifetimes()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "bgcs-forward-type-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string header = Path.Combine(directory, "forward.hpp");
+            File.WriteAllText(header, "struct External; External* Borrow();");
+            string output = Path.Combine(directory, "out");
+            Cpp2CCodeGenerator generator = new(new() { namePrefix = "test_" });
+            generator.Generate(header, output);
+
+            Assert.True(generator.lastResult?.success);
+            string declarations = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
+            Assert.Contains("typedef struct test_External test_External;", declarations);
+            Assert.DoesNotContain("ExternalCreate", declarations);
+            Assert.DoesNotContain(generator.lastResult!.module!.functions,
+                function => function.kind is BindingFunctionKind.Constructor or BindingFunctionKind.Destructor);
+            Assert.True(CompileGeneratedBridge(output, directory, out string diagnostics), diagnostics);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     private static bool CompileGeneratedBridge(string output, string sourceDirectory, out string diagnostics)
     {
         string? compiler = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp);
@@ -814,16 +862,16 @@ public class Cpp2CGeneratorTests
         try
         {
             Cpp2CGeneratorConfig cfg = new();
-            cfg.IncludeFolders.Add("include-a");
-            cfg.Defines.Add("DEF_A=1");
-            cfg.NamePrefix = "Prefix";
+            cfg.includeFolders.Add("include-a");
+            cfg.defines.Add("DEF_A=1");
+            cfg.namePrefix = "Prefix";
 
             cfg.Save(path);
             var loaded = Cpp2CGeneratorConfig.Load(path);
 
-            Assert.Contains("include-a", loaded.IncludeFolders);
-            Assert.Contains("DEF_A=1", loaded.Defines);
-            Assert.Equal("Prefix", loaded.NamePrefix);
+            Assert.Contains("include-a", loaded.includeFolders);
+            Assert.Contains("DEF_A=1", loaded.defines);
+            Assert.Equal("Prefix", loaded.namePrefix);
         }
         finally
         {
@@ -832,30 +880,6 @@ public class Cpp2CGeneratorTests
                 Directory.Delete(temp, true);
             }
         }
-    }
-
-    [Fact]
-    public void GenerationStep_AddGetOverwrite_ShouldWork()
-    {
-        Cpp2CCodeGenerator generator = new(new Cpp2CGeneratorConfig());
-
-        var a = new DummyStepA(generator, new Cpp2CGeneratorConfig());
-        var b = new DummyStepB(generator, new Cpp2CGeneratorConfig());
-
-        generator.AddGenerationStep(a);
-        Assert.Same(a, generator.GetGenerationStep<DummyStepA>());
-
-        generator.OverwriteGenerationStep<DummyStepA>(b);
-        Assert.Same(b, generator.GetGenerationStep<DummyStepB>());
-        Assert.Throws<InvalidOperationException>(() => generator.GetGenerationStep<DummyStepA>());
-    }
-
-    [Fact]
-    public void GetGenerationStep_WhenNotFound_ShouldThrow()
-    {
-        Cpp2CCodeGenerator generator = new(new Cpp2CGeneratorConfig());
-
-        Assert.Throws<InvalidOperationException>(() => generator.GetGenerationStep<DummyStepA>());
     }
 
     [Fact]
@@ -891,61 +915,4 @@ public class Cpp2CGeneratorTests
         }
     }
 
-    private sealed class DummyStepA : GenerationStep
-    {
-        public DummyStepA(Cpp2CCodeGenerator generator, Cpp2CGeneratorConfig config) : base(generator, config)
-        {
-        }
-
-        public override string Name => "DummyA";
-
-        public override void Configure(Cpp2CGeneratorConfig config)
-        {
-        }
-
-        public override void Generate(FileSet files, ParseResult result, string outputPath, Cpp2CGeneratorConfig config, Cpp2CGeneratorMetadata metadata)
-        {
-        }
-
-        public override void CopyToMetadata(Cpp2CGeneratorMetadata metadata)
-        {
-        }
-
-        public override void CopyFromMetadata(Cpp2CGeneratorMetadata metadata)
-        {
-        }
-
-        public override void Reset()
-        {
-        }
-    }
-
-    private sealed class DummyStepB : GenerationStep
-    {
-        public DummyStepB(Cpp2CCodeGenerator generator, Cpp2CGeneratorConfig config) : base(generator, config)
-        {
-        }
-
-        public override string Name => "DummyB";
-
-        public override void Configure(Cpp2CGeneratorConfig config)
-        {
-        }
-
-        public override void Generate(FileSet files, ParseResult result, string outputPath, Cpp2CGeneratorConfig config, Cpp2CGeneratorMetadata metadata)
-        {
-        }
-
-        public override void CopyToMetadata(Cpp2CGeneratorMetadata metadata)
-        {
-        }
-
-        public override void CopyFromMetadata(Cpp2CGeneratorMetadata metadata)
-        {
-        }
-
-        public override void Reset()
-        {
-        }
-    }
 }

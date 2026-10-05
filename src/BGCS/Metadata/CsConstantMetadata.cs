@@ -1,105 +1,142 @@
-﻿namespace BGCS.Metadata
+using BGCS.Core.Collections;
+using BGCS.Emission;
+namespace BGCS.Metadata
 {
-    using BGCS;
-    using BGCS.Core;
     using Newtonsoft.Json;
 
     /// <summary>
-    /// Defines the public class <c>CsConstantMetadata</c>.
+    /// Retains a native constant spelling and its mutable managed emission projection.
     /// </summary>
     public class CsConstantMetadata : IHasIdentifier, ICloneable<CsConstantMetadata>
     {
         /// <summary>
-        /// Initializes a new instance of <see cref="CsConstantMetadata"/>.
+        /// Retains native constant spelling and any already mapped managed projection.
         /// </summary>
-        public CsConstantMetadata(string cppName, string cppValue, CsConstantType type)
-        {
-            CppName = cppName;
-            CppValue = cppValue;
-            Type = type;
+        /// <param name="cppName">
+        /// The original native constant identifier.
+        /// </param>
+        /// <param name="cppValue">
+        /// The original native expression spelling.
+        /// </param>
+        /// <param name="type">
+        /// The selected constant carrier category.
+        /// </param>
+        public CsConstantMetadata(
+            string cppName,
+            string cppValue,
+            CsConstantType type
+        ) {
+            this.cppName = cppName;
+            this.cppValue = cppValue;
+            this.type = type;
         }
 
+        /// <summary>
+        /// Retains native constant spelling and any already mapped managed projection.
+        /// </summary>
+        /// <param name="cppName">
+        /// The original native constant identifier.
+        /// </param>
+        /// <param name="cppValue">
+        /// The original native expression spelling.
+        /// </param>
+        /// <param name="name">
+        /// The managed identifier, or null before mapping.
+        /// </param>
+        /// <param name="value">
+        /// The managed expression spelling, or null before mapping.
+        /// </param>
+        /// <param name="type">
+        /// The selected constant carrier category.
+        /// </param>
+        /// <param name="comment">
+        /// The emitted documentation fragment, or null when absent.
+        /// </param>
         [JsonConstructor]
-        /// <summary>
-        /// Executes public operation <c>CsConstantMetadata</c>.
-        /// </summary>
-        public CsConstantMetadata(string cppName, string cppValue, string? name, string? value, CsConstantType type, string? comment)
-        {
-            CppName = cppName;
-            CppValue = cppValue;
-            Name = name;
-            Value = value;
-            Type = type;
-            Comment = comment;
+        public CsConstantMetadata(
+            string cppName,
+            string cppValue,
+            string? name,
+            string? value,
+            CsConstantType type,
+            string? comment
+        ) {
+            this.cppName = cppName;
+            this.cppValue = cppValue;
+            this.name = name;
+            this.value = value;
+            this.type = type;
+            this.comment = comment;
         }
 
         /// <summary>
-        /// Exposes public member <c>CppName</c>.
+        /// Gets the original native identifier used for metadata matching.
         /// </summary>
-        public string Identifier => CppName;
+        public string identifier => this.cppName;
+        /// <summary>
+        /// Gets or sets the original native constant identifier.
+        /// </summary>
+        public string cppName { get; set; }
+        /// <summary>
+        /// Gets or sets the original native expression spelling.
+        /// </summary>
+        public string cppValue { get; set; }
+        /// <summary>
+        /// Formats the original native expression as an escaped C# string literal.
+        /// </summary>
+        public string escapedCppValue => this.cppValue.ToLiteral();
+        /// <summary>
+        /// Gets or sets the managed identifier, or null before identifier mapping.
+        /// </summary>
+        public string? name { get; set; }
+        /// <summary>
+        /// Gets or sets the managed expression spelling, or null before expression mapping.
+        /// </summary>
+        public string? value { get; set; }
+        /// <summary>
+        /// Gets or sets the selected managed constant carrier category.
+        /// </summary>
+        public CsConstantType type { get; set; }
+        /// <summary>
+        /// Gets or sets an explicit carrier type override, or null to use the selected constant category.
+        /// </summary>
+        public string? customType { get; set; }
+        /// <summary>
+        /// Gets or sets the emitted documentation fragment, or null when absent.
+        /// </summary>
+        public string? comment { get; set; }
 
         /// <summary>
-        /// Gets or sets <c>CppName</c>.
+        /// Hashes the original native identifier for in-process metadata lookup.
         /// </summary>
-        public string CppName { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>CppValue</c>.
-        /// </summary>
-        public string CppValue { get; set; }
-
-        /// <summary>
-        /// Executes public operation <c>ToLiteral</c>.
-        /// </summary>
-        public string EscapedCppValue => CppValue.ToLiteral();
-
-        /// <summary>
-        /// Gets or sets <c>Name</c>.
-        /// </summary>
-        public string? Name { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Value</c>.
-        /// </summary>
-        public string? Value { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Type</c>.
-        /// </summary>
-        public CsConstantType Type { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>CustomType</c>.
-        /// </summary>
-        public string? CustomType { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Comment</c>.
-        /// </summary>
-        public string? Comment { get; set; }
-
-        /// <summary>
-        /// Returns computed data from <c>GetHashCode</c>.
-        /// </summary>
+        /// <returns>
+        /// The current identifier hash; changing cppName changes this value.
+        /// </returns>
         public override int GetHashCode()
         {
-            return CppName.GetHashCode();
+            return this.cppName.GetHashCode();
         }
 
         /// <summary>
-        /// Executes public operation <c>ToString</c>.
+        /// Formats the native identifier and expression for diagnostic display.
         /// </summary>
+        /// <returns>
+        /// The native constant declaration summary.
+        /// </returns>
         public override string ToString()
         {
-            return $"Constant: {CppName} = {CppValue}";
+            return $"Constant: {this.cppName} = {this.cppValue}";
         }
 
         /// <summary>
-        /// Executes public operation <c>Clone</c>.
+        /// Copies the native and managed spellings, carrier override, and documentation into an independent descriptor.
         /// </summary>
+        /// <returns>
+        /// A separately mutable constant projection retaining the same immutable text values.
+        /// </returns>
         public CsConstantMetadata Clone()
         {
-            return new CsConstantMetadata(CppName, CppValue, Name, Value, Type, Comment);
+            return new CsConstantMetadata(this.cppName, this.cppValue, this.name, this.value, this.type, this.comment) { customType = customType };
         }
     }
 }

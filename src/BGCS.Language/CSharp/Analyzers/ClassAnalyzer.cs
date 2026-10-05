@@ -1,18 +1,25 @@
-﻿namespace BGCS.Language.CSharp.Analyzers
+using BGCS.Language.Lexing;
+using BGCS.Language.Parsing;
+namespace BGCS.Language.CSharp.Analyzers
 {
-    using BGCS.Language.CSharp.Nodes;
     using System.Collections.Generic;
+    using BGCS.Language.CSharp.Nodes;
 
     /// <summary>
-    /// Defines the public class <c>ClassAnalyzer</c>.
+    /// Recognizes class declarations and opens their syntax scope for subsequent member analysis.
     /// </summary>
     public class ClassAnalyzer : ISyntaxAnalyzer
     {
-        private readonly List<KeywordType> modifiers = new();
-
+        private readonly List<KeywordType> m_modifiers = new();
         /// <summary>
-        /// Executes public operation <c>Analyze</c>.
+        /// Consumes supported syntax at the cursor and reports malformed recognized declarations through the context diagnostics.
         /// </summary>
+        /// <param name="context">
+        /// The mutable context owned by the active parse operation.
+        /// </param>
+        /// <returns>
+        /// Success after cursor progress, Unrecognised when this analyzer does not match, or Error when recognized syntax is invalid.
+        /// </returns>
         public AnalyserResult Analyze(ParserContext context)
         {
             if (!context.SeekInBounds(2))
@@ -20,10 +27,10 @@
                 return AnalyserResult.Unrecognised;
             }
 
-            var start = context.CurrentTokenIndex;
+            var start = context.currentTokenIndex;
             while (context.TryMoveNext(out var current))
             {
-                if (current.IsKeyword)
+                if (current.isKeyword)
                 {
                     if (current == KeywordType.Class)
                     {
@@ -31,33 +38,32 @@
                     }
                     else if (current == KeywordType.Public || current == KeywordType.Internal || current == KeywordType.Protected || current == KeywordType.Private || current == KeywordType.Static || current == KeywordType.Unsafe)
                     {
-                        modifiers.Add(current.KeywordType);
+                        this.m_modifiers.Add(current.keywordType);
                     }
                     else
                     {
-                        modifiers.Clear();
+                        this.m_modifiers.Clear();
                         context.MoveTo(start);
                         return AnalyserResult.Unrecognised;
                     }
                 }
                 else
                 {
-                    modifiers.Clear();
+                    this.m_modifiers.Clear();
                     context.MoveTo(start);
                     return AnalyserResult.Unrecognised;
                 }
             }
 
-            if (context.IsEnd || !context.CurrentToken.IsIdentifier)
+            if (context.isEnd || !context.currentToken.isIdentifier)
             {
-                context.Diagnostics.Error("Syntax Error: Expected class identifier", context.IsEnd ? null : context.CurrentToken.Location);
+                context.diagnostics.Error("Syntax Error: Expected class identifier", context.isEnd ? null : context.currentToken.location);
                 return AnalyserResult.Error;
             }
 
-            ClassNode node = new(context.CurrentToken.AsString(), modifiers.ToArray());
-            modifiers.Clear();
+            ClassNode node = new(context.currentToken.AsString(), this.m_modifiers.ToArray());
+            this.m_modifiers.Clear();
             context.MoveNext();
-
             return context.AnalyseScoped(node);
         }
     }

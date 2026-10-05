@@ -1,65 +1,70 @@
 using System;
+using BGCS.CppAst.Collections;
+using BGCS.CppAst.Diagnostics;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 using ClangSharp.Interop;
-using BGCS.CppAst.Collections;
-using BGCS.CppAst.Diagnostics;
 
 namespace BGCS.CppAst.Model.Metadata;
+
 /// <summary>
 /// The result of a compilation for a sets of C++ files.
 /// </summary>
 public class CppCompilation : CppGlobalDeclarationContainer, IDisposable
 {
-    private CXTranslationUnit translationUnit;
-
+    private CXTranslationUnit m_translationUnit;
     /// <summary>
-    /// Constructor of this object.
+    /// Takes ownership of a live native translation unit and captures its target pointer size.
     /// </summary>
+    /// <param name="translationUnit">
+    /// The live Clang translation unit transferred to this compilation; the caller must not dispose it separately.
+    /// </param>
     public CppCompilation(CXTranslationUnit translationUnit) : base(translationUnit.Cursor)
     {
-        this.translationUnit = translationUnit;
-        Diagnostics = new();
-        InputText = string.Empty;
-        System = new(translationUnit.Cursor);
+        this.m_translationUnit = translationUnit;
+        this.diagnostics = new();
+        this.inputText = string.Empty;
+        this.system = new(translationUnit.Cursor);
+        using var targetInfo = translationUnit.TargetInfo;
+        pointerSize = targetInfo.PointerWidth / 8;
     }
 
     /// <summary>
     /// Exposes public member <c>translationUnit</c>.
     /// </summary>
-    public CXTranslationUnit TranslationUnit => translationUnit;
+    internal CXTranslationUnit translationUnit => this.m_translationUnit;
 
+    /// <summary>
+    /// Gets the native target's pointer width in bytes, captured while the translation unit is alive.
+    /// </summary>
+    public int pointerSize { get; }
     /// <summary>
     /// Gets the attached diagnostic messages.
     /// </summary>
-    public CppDiagnosticBag Diagnostics { get; }
-
+    public CppDiagnosticBag diagnostics { get; }
     /// <summary>
     /// Gets the final input header text used by this compilation.
     /// </summary>
-    public string InputText { get; set; }
-
+    public string inputText { get; set; }
     /// <summary>
-    /// Gets a boolean indicating whether this instance has errors. See <see cref="Diagnostics"/> for more details.
+    /// Gets a boolean indicating whether this instance has errors. See <see cref = "diagnostics"/> for more details.
     /// </summary>
-    public bool HasErrors => Diagnostics.HasErrors;
-
+    public bool hasErrors => this.diagnostics.hasErrors;
     /// <summary>
     /// Gets all the declarations that are coming from system include folders used by the declarations in this object.
     /// </summary>
-    public CppGlobalDeclarationContainer System { get; }
+    public CppGlobalDeclarationContainer system { get; }
 
     /// <summary>
-    /// Executes public operation <c>Dispose</c>.
+    /// Releases the owned translation unit once; all borrowed native cursors, comments, and template arguments then become invalid.
     /// </summary>
     public void Dispose()
     {
-        if (translationUnit.Handle != IntPtr.Zero)
+        if (this.m_translationUnit.Handle != IntPtr.Zero)
         {
-            translationUnit.Dispose();
-            translationUnit = default;
+            this.m_translationUnit.Dispose();
+            this.m_translationUnit = default;
         }
 
         GC.SuppressFinalize(this);

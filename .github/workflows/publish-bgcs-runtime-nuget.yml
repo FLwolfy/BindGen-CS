@@ -153,7 +153,7 @@ jobs:
         run: dotnet test BindGen-CS.sln --configuration Release --no-build
 
       - name: Public API compatibility gate
-        run: ./scripts/test-public-api-compatibility.sh
+        run: ./scripts/test-public-api-snapshot.sh
 
       - name: Dependency license and vulnerability gate
         run: ./scripts/test-supply-chain-policy.sh

@@ -1,99 +1,97 @@
-﻿namespace BGCS.Language.CSharp.Analyzers
+using System.Linq;
+using BGCS.Language.Lexing;
+using BGCS.Language.Parsing;
+
+namespace BGCS.Language.CSharp.Analyzers
 {
-    using BGCS.Language.CSharp.Nodes;
     using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
+    using BGCS.Language.CSharp.Nodes;
 
     /// <summary>
-    /// Defines the public class <c>MethodAnalyser</c>.
+    /// Recognizes supported method signatures and retains their parameter spellings without compiling a method body.
     /// </summary>
     public class MethodAnalyser : IMemberSyntaxAnalyzer
     {
-        private readonly List<Token> parameters = new();
-
+        private readonly List<Token> m_parameters = new();
         /// <summary>
-        /// Executes public operation <c>Analyze</c>.
+        /// Consumes supported syntax at the cursor and reports malformed recognized declarations through the context diagnostics.
         /// </summary>
-        public AnalyserResult Analyze(ParserContext context, IReadOnlyList<KeywordType> modifiers)
-        {
+        /// <param name="context">
+        /// The mutable context owned by the active parse operation.
+        /// </param>
+        /// <param name="modifiers">
+        /// The declaration modifiers collected by the containing member analyzer.
+        /// </param>
+        /// <returns>
+        /// Success after cursor progress, Unrecognised when this analyzer does not match, or Error when recognized syntax is invalid.
+        /// </returns>
+        public AnalyserResult Analyze(
+            ParserContext context,
+            IReadOnlyList<KeywordType> modifiers
+        ) {
             if (!context.SeekInBounds(2))
             {
                 return AnalyserResult.Unrecognised;
             }
 
-            while (!context.IsEnd &&
-                   context.CurrentToken.IsKeyword &&
-                   (context.CurrentToken == KeywordType.Public ||
-                    context.CurrentToken == KeywordType.Internal ||
-                    context.CurrentToken == KeywordType.Protected ||
-                    context.CurrentToken == KeywordType.Private ||
-                    context.CurrentToken == KeywordType.Readonly ||
-                    context.CurrentToken == KeywordType.Static ||
-                    context.CurrentToken == KeywordType.Const ||
-                    context.CurrentToken == KeywordType.Unsafe))
+            while (!context.isEnd && context.currentToken.isKeyword && (context.currentToken == KeywordType.Public || context.currentToken == KeywordType.Internal || context.currentToken == KeywordType.Protected || context.currentToken == KeywordType.Private || context.currentToken == KeywordType.Readonly || context.currentToken == KeywordType.Static || context.currentToken == KeywordType.Const || context.currentToken == KeywordType.Unsafe))
             {
                 context.MoveNext();
             }
 
-            if (context.IsEnd || (!context.CurrentToken.IsIdentifier && !context.CurrentToken.IsKeyword))
+            if (context.isEnd || (!context.currentToken.isIdentifier && !context.currentToken.isKeyword))
             {
-                context.Diagnostics.Error("Syntax Error: Expected method return type", context.IsEnd ? null : context.CurrentToken.Location);
+                context.diagnostics.Error("Syntax Error: Expected method return type", context.isEnd ? null : context.currentToken.location);
                 return AnalyserResult.Error;
             }
 
-            string returnType = context.CurrentToken.AsString();
-
+            string returnType = context.currentToken.AsString();
             context.MoveNext();
-
-            if (context.IsEnd || !context.CurrentToken.IsIdentifier)
+            if (context.isEnd || !context.currentToken.isIdentifier)
             {
-                context.Diagnostics.Error("Syntax Error: Expected method identifier", context.IsEnd ? null : context.CurrentToken.Location);
+                context.diagnostics.Error("Syntax Error: Expected method identifier", context.isEnd ? null : context.currentToken.location);
                 return AnalyserResult.Error;
             }
 
-            string name = context.CurrentToken.AsString();
-
+            string name = context.currentToken.AsString();
             context.MoveNext();
-
-            if (context.IsEnd || !context.CurrentToken.IsPunctuation || context.CurrentToken != '(')
+            if (context.isEnd || !context.currentToken.isPunctuation || context.currentToken != '(')
             {
-                context.Diagnostics.Error("Syntax Error: Expected token (", context.IsEnd ? null : context.CurrentToken.Location);
+                context.diagnostics.Error("Syntax Error: Expected token (", context.isEnd ? null : context.currentToken.location);
                 return AnalyserResult.Error;
             }
 
             context.MoveNext();
-
             while (context.TryMoveNext(out var current))
             {
-                if (current.IsIdentifier)
+                if (current.isIdentifier)
                 {
-                    parameters.Add(current);
+                    this.m_parameters.Add(current);
                 }
-                else if (current.IsPunctuation && current == ',')
+                else if (current.isPunctuation && current == ',')
                 {
                     continue;
                 }
-                else if (current.IsPunctuation && current == ')')
+                else if (current.isPunctuation && current == ')')
                 {
                     break;
                 }
                 else
                 {
-                    parameters.Clear();
-                    context.Diagnostics.Error("Syntax Error: Expected token ) or parameter", current.Location);
+                    this.m_parameters.Clear();
+                    context.diagnostics.Error("Syntax Error: Expected token ) or parameter", current.location);
                     return AnalyserResult.Error;
                 }
             }
 
-            string[] @params = new string[parameters.Count];
+            string[] @params = new string[this.m_parameters.Count];
             for (int i = 0; i < @params.Length; i++)
             {
-                @params[i] = parameters[i].AsString();
+                @params[i] = this.m_parameters[i].AsString();
             }
-            parameters.Clear();
 
+            this.m_parameters.Clear();
             MethodNode node = new(name, modifiers.ToArray(), @params, returnType);
-
             return context.AnalyseScoped(node);
         }
     }

@@ -1,5 +1,5 @@
 {
-  "Property": "IgnoredFunctions",
+  "Property": "ignoredFunctions",
   "Expected": [
     "drop_fn"
   ]

@@ -1,5 +1,5 @@
 {
-  "Property": "KnownExtensionPrefixes",
+  "Property": "knownExtensionPrefixes",
   "Expected": {
     "widget_handle_t": "LIB"
   }

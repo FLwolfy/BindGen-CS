@@ -1,4 +1,4 @@
 {
-  "Property": "DelegateNamingConvention",
+  "Property": "delegateNamingConvention",
   "Expected": "CamelCase"
 }

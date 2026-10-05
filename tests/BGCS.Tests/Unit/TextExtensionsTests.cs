@@ -1,4 +1,5 @@
 using System;
+using BGCS.Core.Text;
 using Xunit;
 
 namespace BGCS.Tests;

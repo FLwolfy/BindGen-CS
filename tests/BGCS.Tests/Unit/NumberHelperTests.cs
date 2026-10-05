@@ -1,3 +1,5 @@
+using BGCS.Analysis.Constants;
+using BGCS.Core.Text;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -16,6 +18,12 @@ public class NumberHelperTests
     [InlineData("0xFF", NumberType.Int)]
     [InlineData("0xFFFFFFFF", NumberType.UInt)]
     [InlineData("-1", NumberType.Int)]
+    [InlineData("-2147483648", NumberType.Int)]
+    [InlineData("-9223372036854775808", NumberType.Long)]
+    [InlineData("0XFFFFFFFF", NumberType.UInt)]
+    [InlineData("1e2", NumberType.Double)]
+    [InlineData("1E-2F", NumberType.Float)]
+    [InlineData("42UL", NumberType.ULong)]
     public void IsNumeric_WithTypeInference_ShouldReturnExpectedType(string input, NumberType expectedType)
     {
         bool ok = input.IsNumeric(out NumberType type);
@@ -47,5 +55,27 @@ public class NumberHelperTests
         bool ok = "(123)".IsNumeric(out NumberType type, NumberParseOptions.All);
         Assert.True(ok);
         Assert.Equal(NumberType.Int, type);
+    }
+
+    [Theory]
+    [InlineData("()")]
+    [InlineData("-")]
+    [InlineData("0x")]
+    [InlineData("1..2")]
+    [InlineData("0xFG")]
+    [InlineData("١")]
+    public void EmptyAndMalformedSyntaxDoesNotThrow(string source)
+    {
+        Assert.False(source.IsNumeric(NumberParseOptions.All));
+        Assert.False(source.IsNumeric(out NumberType actual));
+        Assert.Equal(NumberType.None, actual);
+    }
+
+    [Fact]
+    public void OversizedIntegerHasValidSyntaxButNoManagedCarrier()
+    {
+        const string value = "18446744073709551616";
+        Assert.True(value.IsNumeric(NumberParseOptions.All));
+        Assert.Throws<System.IO.InvalidDataException>(() => value.IsNumeric(out _));
     }
 }

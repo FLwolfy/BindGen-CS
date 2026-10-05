@@ -1,17 +1,6 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
 using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
-using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
 using Xunit;
 namespace BGCS.CppAst.Tests
 {
@@ -44,55 +33,55 @@ public:
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(4, compilation.Classes.Count);
+                    Assert.Equal(4, compilation.classes.Count);
 
                     {
-                        var cppStruct = compilation.Classes[0];
-                        Assert.Equal("Struct0", cppStruct.Name);
-                        Assert.Empty(cppStruct.Fields);
-                        Assert.Equal(sizeof(byte), cppStruct.SizeOf);
-                        Assert.Equal(1, cppStruct.AlignOf);
+                        var cppStruct = compilation.classes[0];
+                        Assert.Equal("Struct0", cppStruct.name);
+                        Assert.Empty(cppStruct.fields);
+                        Assert.Equal(sizeof(byte), cppStruct.sizeOf);
+                        Assert.Equal(1, cppStruct.alignOf);
                     }
 
                     {
-                        var cppStruct = compilation.Classes[1];
-                        Assert.Equal("Struct1", cppStruct.Name);
-                        Assert.Empty(cppStruct.Fields);
-                        Assert.Single(cppStruct.BaseTypes);
-                        Assert.True(cppStruct.BaseTypes[0].Type is CppClass);
-                        Assert.True(ReferenceEquals(compilation.Classes[0], cppStruct.BaseTypes[0].Type));
-                        Assert.Equal(sizeof(byte), cppStruct.SizeOf);
-                        Assert.Equal(1, cppStruct.AlignOf);
+                        var cppStruct = compilation.classes[1];
+                        Assert.Equal("Struct1", cppStruct.name);
+                        Assert.Empty(cppStruct.fields);
+                        Assert.Single(cppStruct.baseTypes);
+                        Assert.True(cppStruct.baseTypes[0].type is CppClass);
+                        Assert.True(ReferenceEquals(compilation.classes[0], cppStruct.baseTypes[0].type));
+                        Assert.Equal(sizeof(byte), cppStruct.sizeOf);
+                        Assert.Equal(1, cppStruct.alignOf);
                     }
 
                     {
-                        var cppStruct = compilation.Classes[2];
-                        Assert.Equal("Struct2", cppStruct.Name);
-                        Assert.Single(cppStruct.Fields);
-                        Assert.Equal("field0", cppStruct.Fields[0].Name);
-                        Assert.Equal(CppTypeKind.Primitive, cppStruct.Fields[0].Type.TypeKind);
-                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppStruct.Fields[0].Type).Kind);
-                        Assert.Equal(sizeof(int), cppStruct.SizeOf);
-                        Assert.Equal(4, cppStruct.AlignOf);
+                        var cppStruct = compilation.classes[2];
+                        Assert.Equal("Struct2", cppStruct.name);
+                        Assert.Single(cppStruct.fields);
+                        Assert.Equal("field0", cppStruct.fields[0].name);
+                        Assert.Equal(CppTypeKind.Primitive, cppStruct.fields[0].type.typeKind);
+                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppStruct.fields[0].type).kind);
+                        Assert.Equal(sizeof(int), cppStruct.sizeOf);
+                        Assert.Equal(4, cppStruct.alignOf);
                     }
 
                     {
-                        var cppStruct = compilation.Classes[3];
-                        Assert.Equal(2, cppStruct.Fields.Count);
-                        Assert.Equal("field0", cppStruct.Fields[0].Name);
-                        Assert.Equal(CppTypeKind.Primitive, cppStruct.Fields[0].Type.TypeKind);
-                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppStruct.Fields[0].Type).Kind);
-                        Assert.Equal(CppVisibility.Private, cppStruct.Fields[0].Visibility);
+                        var cppStruct = compilation.classes[3];
+                        Assert.Equal(2, cppStruct.fields.Count);
+                        Assert.Equal("field0", cppStruct.fields[0].name);
+                        Assert.Equal(CppTypeKind.Primitive, cppStruct.fields[0].type.typeKind);
+                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppStruct.fields[0].type).kind);
+                        Assert.Equal(CppVisibility.Private, cppStruct.fields[0].visibility);
 
-                        Assert.Equal("field1", cppStruct.Fields[1].Name);
-                        Assert.Equal(CppTypeKind.Primitive, cppStruct.Fields[1].Type.TypeKind);
-                        Assert.Equal(CppPrimitiveKind.Float, ((CppPrimitiveType)cppStruct.Fields[1].Type).Kind);
-                        Assert.Equal(CppVisibility.Public, cppStruct.Fields[1].Visibility);
-                        Assert.Equal(sizeof(int), cppStruct.Fields[1].Offset);
-                        Assert.Equal(sizeof(int) + sizeof(float), cppStruct.SizeOf);
-                        Assert.Equal(4, cppStruct.AlignOf);
+                        Assert.Equal("field1", cppStruct.fields[1].name);
+                        Assert.Equal(CppTypeKind.Primitive, cppStruct.fields[1].type.typeKind);
+                        Assert.Equal(CppPrimitiveKind.Float, ((CppPrimitiveType)cppStruct.fields[1].type).kind);
+                        Assert.Equal(CppVisibility.Public, cppStruct.fields[1].visibility);
+                        Assert.Equal(sizeof(int), cppStruct.fields[1].offset);
+                        Assert.Equal(sizeof(int) + sizeof(float), cppStruct.sizeOf);
+                        Assert.Equal(4, cppStruct.alignOf);
                     }
                 }
             );
@@ -111,17 +100,17 @@ struct
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Classes);
+                    Assert.Single(compilation.classes);
 
                     {
-                        var cppStruct = compilation.Classes[0];
-                        Assert.Equal(string.Empty, cppStruct.Name);
-                        Assert.Equal(2, cppStruct.Fields.Count);
-                        Assert.Equal(sizeof(int), cppStruct.Fields[1].Offset);
-                        Assert.Equal(sizeof(int) + sizeof(int), cppStruct.SizeOf);
-                        Assert.Equal(4, cppStruct.AlignOf);
+                        var cppStruct = compilation.classes[0];
+                        Assert.Equal(string.Empty, cppStruct.name);
+                        Assert.Equal(2, cppStruct.fields.Count);
+                        Assert.Equal(sizeof(int), cppStruct.fields[1].offset);
+                        Assert.Equal(sizeof(int) + sizeof(int), cppStruct.sizeOf);
+                        Assert.Equal(4, cppStruct.alignOf);
                     }
                 }
             );
@@ -148,33 +137,33 @@ struct HelloWorld
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Classes);
+                    Assert.Single(compilation.classes);
 
                     {
-                        var cppStruct = compilation.Classes[0];
-                        Assert.Equal(4, cppStruct.Fields.Count);
+                        var cppStruct = compilation.classes[0];
+                        Assert.Equal(4, cppStruct.fields.Count);
 
                         for (int i = 0; i < 4; i++)
                         {
-                            Assert.Equal(i * 4, cppStruct.Fields[i].Offset);
-                            Assert.Equal(4, cppStruct.Fields[i].Type.SizeOf);
+                            Assert.Equal(i * 4, cppStruct.fields[i].offset);
+                            Assert.Equal(4, cppStruct.fields[i].type.sizeOf);
                         }
 
                         // Check first union
-                        Assert.Equal(string.Empty, cppStruct.Fields[1].Name);
-                        Assert.IsType<CppClass>(cppStruct.Fields[1].Type);
-                        var cppUnion = ((CppClass)cppStruct.Fields[1].Type);
-                        Assert.Equal(CppClassKind.Union, ((CppClass)cppStruct.Fields[1].Type).ClassKind);
-                        Assert.Equal(2, cppUnion.Fields.Count);
+                        Assert.Equal(string.Empty, cppStruct.fields[1].name);
+                        Assert.IsType<CppClass>(cppStruct.fields[1].type);
+                        var cppUnion = ((CppClass)cppStruct.fields[1].type);
+                        Assert.Equal(CppClassKind.Union, ((CppClass)cppStruct.fields[1].type).classKind);
+                        Assert.Equal(2, cppUnion.fields.Count);
 
                         // Check 2nd union
-                        Assert.Equal(string.Empty, cppStruct.Fields[3].Name);
-                        Assert.IsType<CppClass>(cppStruct.Fields[3].Type);
-                        cppUnion = ((CppClass)cppStruct.Fields[3].Type);
-                        Assert.Equal(CppClassKind.Union, ((CppClass)cppStruct.Fields[3].Type).ClassKind);
-                        Assert.Equal(2, cppUnion.Fields.Count);
+                        Assert.Equal(string.Empty, cppStruct.fields[3].name);
+                        Assert.IsType<CppClass>(cppStruct.fields[3].type);
+                        cppUnion = ((CppClass)cppStruct.fields[3].type);
+                        Assert.Equal(CppClassKind.Union, ((CppClass)cppStruct.fields[3].type).classKind);
+                        Assert.Equal(2, cppUnion.fields.Count);
                     }
                 }
             );
@@ -195,25 +184,25 @@ struct HelloWorld
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Classes);
+                    Assert.Single(compilation.classes);
 
                     {
-                        var cppStruct = compilation.Classes[0];
+                        var cppStruct = compilation.classes[0];
 
                         // Only one union
-                        Assert.Single(cppStruct.Classes);
+                        Assert.Single(cppStruct.classes);
 
                         // Only 2 fields
-                        Assert.Equal(2, cppStruct.Fields.Count);
+                        Assert.Equal(2, cppStruct.fields.Count);
 
                         // Check the union
-                        Assert.Equal("e", cppStruct.Fields[1].Name);
-                        Assert.IsType<CppClass>(cppStruct.Fields[1].Type);
-                        var cppUnion = ((CppClass)cppStruct.Fields[1].Type);
-                        Assert.Equal(CppClassKind.Union, ((CppClass)cppStruct.Fields[1].Type).ClassKind);
-                        Assert.Equal(2, cppUnion.Fields.Count);
+                        Assert.Equal("e", cppStruct.fields[1].name);
+                        Assert.IsType<CppClass>(cppStruct.fields[1].type);
+                        var cppUnion = ((CppClass)cppStruct.fields[1].type);
+                        Assert.Equal(CppClassKind.Union, ((CppClass)cppStruct.fields[1].type).classKind);
+                        Assert.Equal(2, cppUnion.fields.Count);
                     }
                 }
             );
@@ -234,27 +223,27 @@ struct HelloWorld
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Classes);
+                    Assert.Single(compilation.classes);
 
                     {
-                        var cppStruct = compilation.Classes[0];
+                        var cppStruct = compilation.classes[0];
 
                         // Only one union
-                        Assert.Single(cppStruct.Classes);
+                        Assert.Single(cppStruct.classes);
 
                         // Only 2 fields
-                        Assert.Equal(2, cppStruct.Fields.Count);
+                        Assert.Equal(2, cppStruct.fields.Count);
 
                         // Check the union
-                        Assert.Equal("e", cppStruct.Fields[1].Name);
-                        Assert.IsType<CppArrayType>(cppStruct.Fields[1].Type);
-                        var cppArrayType = ((CppArrayType)cppStruct.Fields[1].Type);
-                        Assert.IsType<CppClass>(cppArrayType.ElementType);
-                        var cppUnion = ((CppClass)cppArrayType.ElementType);
-                        Assert.Equal(CppClassKind.Union, cppUnion.ClassKind);
-                        Assert.Equal(2, cppUnion.Fields.Count);
+                        Assert.Equal("e", cppStruct.fields[1].name);
+                        Assert.IsType<CppArrayType>(cppStruct.fields[1].type);
+                        var cppArrayType = ((CppArrayType)cppStruct.fields[1].type);
+                        Assert.IsType<CppClass>(cppArrayType.elementType);
+                        var cppUnion = ((CppClass)cppArrayType.elementType);
+                        Assert.Equal(CppClassKind.Union, cppUnion.classKind);
+                        Assert.Equal(2, cppUnion.fields.Count);
                     }
                 }
             );

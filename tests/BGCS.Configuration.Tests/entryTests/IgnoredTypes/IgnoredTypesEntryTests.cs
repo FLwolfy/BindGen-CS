@@ -10,7 +10,7 @@ public class IgnoredTypesEntryTests : ConfigurationEntryTestBase
         using var output = Generate("config.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
-        Assert.Contains("my_type", output.Config.IgnoredTypes);
+        Assert.Contains("my_type", output.Config.ignoredTypes);
         AssertBindingsExpected(output);
     }
 
@@ -20,7 +20,7 @@ public class IgnoredTypesEntryTests : ConfigurationEntryTestBase
         using var output = Generate("config.alt.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
-        Assert.DoesNotContain("my_type", output.Config.IgnoredTypes);
+        Assert.DoesNotContain("my_type", output.Config.ignoredTypes);
         AssertBindingsExpected(output, "expected.bindings.alt.json");
     }
 }

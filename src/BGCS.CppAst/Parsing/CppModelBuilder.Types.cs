@@ -1,31 +1,34 @@
 namespace BGCS.CppAst.Parsing;
-using ClangSharp.Interop;
+
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using BGCS.CppAst.Collections;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing.Visitors.MemberVisitors;
 using BGCS.CppAst.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>CppModelBuilder</c>.
 /// </summary>
-public unsafe partial class CppModelBuilder
+internal unsafe partial class CppModelBuilder
 {
     /// <summary>
     /// Returns computed data from <c>GetCppType</c>.
     /// </summary>
-    public CppType GetCppType(CXCursor cursor, CXType type, CXCursor parent)
-    {
+    public CppType GetCppType(
+        CXCursor cursor,
+        CXType type,
+        CXCursor parent
+    ) {
         var cppType = GetCppTypeInternal(cursor, type, parent);
-
         if (type.IsConstQualified)
         {
             // Skip if it is already qualified.
-            if (cppType is CppUnexposedType || cppType is CppQualifiedType q && q.Qualifier == CppTypeQualifier.Const)
+            if (cppType is CppUnexposedType || cppType is CppQualifiedType q && q.qualifier == CppTypeQualifier.Const)
             {
                 return cppType;
             }
@@ -35,7 +38,7 @@ public unsafe partial class CppModelBuilder
         else if (type.IsVolatileQualified)
         {
             // Skip if it is already qualified.
-            if (cppType is CppQualifiedType q && q.Qualifier == CppTypeQualifier.Volatile)
+            if (cppType is CppQualifiedType q && q.qualifier == CppTypeQualifier.Volatile)
             {
                 return cppType;
             }
@@ -46,9 +49,12 @@ public unsafe partial class CppModelBuilder
         return cppType;
     }
 
-    private CppType GetCppTypeInternal(CXCursor cursor, CXType type, CXCursor parent)
-    {
-        if (CppPrimitiveType.KindToPrimitive.TryGetValue(type.kind, out var primitiveType))
+    private CppType GetCppTypeInternal(
+        CXCursor cursor,
+        CXType type,
+        CXCursor parent
+    ) {
+        if (CppPrimitiveType.kindToPrimitive.TryGetValue(type.kind, out var primitiveType))
         {
             return CppPrimitiveType.ForAbiSize(primitiveType, type.SizeOf);
         }
@@ -57,32 +63,23 @@ public unsafe partial class CppModelBuilder
         {
             case CXTypeKind.CXType_ObjCObjectPointer:
             case CXTypeKind.CXType_Pointer:
-                return new CppPointerType(cursor, GetCppType(type.PointeeType.Declaration, type.PointeeType, parent)) { SizeOf = (int)type.SizeOf };
-
+                return new CppPointerType(cursor, GetCppType(type.PointeeType.Declaration, type.PointeeType, parent), this.rootCompilation.pointerSize);
             case CXTypeKind.CXType_LValueReference:
                 return new CppReferenceType(cursor, GetCppType(type.PointeeType.Declaration, type.PointeeType, parent));
-
             case CXTypeKind.CXType_Record:
                 return VisitClassDecl(cursor);
-
             case CXTypeKind.CXType_ObjCInterface:
                 return VisitClassDecl(cursor);
-
             case CXTypeKind.CXType_Enum:
-                return (CppType)MemberVisitorRegistry.GetVisitor<EnumDeclMemberVisitor>().Visit(context, cursor, parent)!;
-
+                return (CppType)this.m_context.memberVisitors.GetVisitor<EnumDeclMemberVisitor>().Visit(this.m_context, cursor, parent)!;
             case CXTypeKind.CXType_FunctionProto:
                 return VisitFunctionType(cursor, type, parent);
-
             case CXTypeKind.CXType_BlockPointer:
                 return VisitFunctionType(cursor, type.PointeeType, parent, true);
-
             case CXTypeKind.CXType_Typedef:
-                return (CppType)MemberVisitorRegistry.GetVisitor<TypedefDeclVisitor>().Visit(context, cursor, parent)!;
-
+                return (CppType)this.m_context.memberVisitors.GetVisitor<TypedefDeclVisitor>().Visit(this.m_context, cursor, parent)!;
             case CXTypeKind.CXType_Elaborated:
                 return VisitElaboratedDecl(cursor, type, parent);
-
             case CXTypeKind.CXType_ConstantArray:
             case CXTypeKind.CXType_IncompleteArray:
                 {
@@ -92,7 +89,7 @@ public unsafe partial class CppModelBuilder
 
             case CXTypeKind.CXType_DependentSizedArray:
                 {
-                    RootCompilation.Diagnostics.Warning($"Dependent sized arrays `{CXUtil.GetTypeSpelling(type)}` from `{CXUtil.GetCursorSpelling(parent)}` is not supported", parent.GetSourceLocation());
+                    this.rootCompilation.diagnostics.Warning($"Dependent sized arrays `{CXUtil.GetTypeSpelling(type)}` from `{CXUtil.GetCursorSpelling(parent)}` is not supported", parent.GetSourceLocation());
                     var elementType = GetCppType(type.ArrayElementType.Declaration, type.ArrayElementType, parent);
                     return new CppArrayType(cursor, elementType, 0);
                 }
@@ -106,42 +103,47 @@ public unsafe partial class CppModelBuilder
                         return GetCppType(type.Declaration, type.Declaration.Type, parent);
                     }
 
-                    CppUnexposedType cppUnexposedType = new(cursor, CXUtil.GetTypeSpelling(type)) { SizeOf = (int)type.SizeOf };
+                    CppUnexposedType cppUnexposedType = new(cursor, CXUtil.GetTypeSpelling(type))
+                    {
+                        sizeOf = (int)type.SizeOf
+                    };
                     var templateParameters = ParseTemplateSpecializedArguments(cursor, type);
                     if (templateParameters != null)
                     {
-                        cppUnexposedType.TemplateParameters.AddRange(templateParameters);
+                        cppUnexposedType.templateParameters.AddRange(templateParameters);
                     }
+
                     return cppUnexposedType;
                 }
 
             case CXTypeKind.CXType_Attributed:
                 return GetCppType(type.ModifiedType.Declaration, type.ModifiedType, parent);
-
             case CXTypeKind.CXType_Auto:
                 return GetCppType(type.Declaration, type.Declaration.Type, parent);
-
             case CXTypeKind.CXType_ObjCTypeParam:
                 {
-                    CppTemplateParameterType? templateArgType = context.TryToCreateTemplateParametersObjC(cursor);
+                    CppTemplateParameterType? templateArgType = this.m_context.TryToCreateTemplateParametersObjC(cursor);
                     if (templateArgType is null)
                     {
                         WarningUnhandled(cursor, parent, type);
-                        return new CppUnexposedType(cursor, CXUtil.GetTypeSpelling(type)) { SizeOf = (int)type.SizeOf };
+                        return new CppUnexposedType(cursor, CXUtil.GetTypeSpelling(type))
+                        {
+                            sizeOf = (int)type.SizeOf
+                        };
                     }
 
                     // Record that a typedef is using a template parameter type
                     // which will require to re-parent the typedef to the Obj-C interface it belongs to
-                    if (context.CurrentTypedefKey != default)
+                    if (this.m_context.currentTypedefKey != default)
                     {
-                        var map = context.MapTemplateParameterTypeToTypedefKeys;
+                        var map = this.m_context.mapTemplateParameterTypeToTypedefKeys;
                         if (!map.TryGetValue(templateArgType, out var typedefKeys))
                         {
                             typedefKeys = [];
                             map.Add(templateArgType, typedefKeys);
                         }
 
-                        typedefKeys.Add(context.CurrentTypedefKey);
+                        typedefKeys.Add(this.m_context.currentTypedefKey);
                     }
 
                     return templateArgType;
@@ -150,7 +152,10 @@ public unsafe partial class CppModelBuilder
             default:
                 {
                     WarningUnhandled(cursor, parent, type);
-                    return new CppUnexposedType(cursor, CXUtil.GetTypeSpelling(type)) { SizeOf = (int)type.SizeOf };
+                    return new CppUnexposedType(cursor, CXUtil.GetTypeSpelling(type))
+                    {
+                        sizeOf = (int)type.SizeOf
+                    };
                 }
         }
     }
@@ -170,76 +175,77 @@ public unsafe partial class CppModelBuilder
         /// <summary>
         /// Exposes public member <c>Builder</c>.
         /// </summary>
-        public CppModelBuilder Builder;
+        public CppModelBuilder builder;
         /// <summary>
         /// Exposes public member <c>CppFunction</c>.
         /// </summary>
-        public CppFunctionTypeBase CppFunction;
+        public CppFunctionTypeBase cppFunction;
         /// <summary>
         /// Exposes public member <c>IsParsingParameter</c>.
         /// </summary>
-        public bool IsParsingParameter;
-
+        public bool isParsingParameter;
         /// <summary>
-        /// Initializes a new instance of <see cref="VisitedFunctionTypeContext"/>.
+        /// Initializes a new instance of <see cref = "VisitedFunctionTypeContext"/>.
         /// </summary>
-        public VisitedFunctionTypeContext(CppModelBuilder builder, CppFunctionTypeBase cppFunction)
-        {
-            Builder = builder;
-            CppFunction = cppFunction;
+        public VisitedFunctionTypeContext(
+            CppModelBuilder builder,
+            CppFunctionTypeBase cppFunction
+        ) {
+            this.builder = builder;
+            this.cppFunction = cppFunction;
         }
     }
 
-    private CppFunctionTypeBase VisitFunctionType(CXCursor cursor, CXType type, CXCursor parent, bool isBlockFunctionType = false)
-    {
+    private CppFunctionTypeBase VisitFunctionType(
+        CXCursor cursor,
+        CXType type,
+        CXCursor parent,
+        bool isBlockFunctionType = false
+    ) {
         // Gets the return type
         var returnType = GetCppType(type.ResultType.Declaration, type.ResultType, cursor);
-
-        var cppFunction = isBlockFunctionType
-            ? (CppFunctionTypeBase)new CppBlockFunctionType(cursor, returnType)
-            : new CppFunctionType(cursor, returnType);
-        cppFunction.CallingConvention = type.GetCallingConvention();
-
+        var cppFunction = isBlockFunctionType ? (CppFunctionTypeBase)new CppBlockFunctionType(cursor, returnType) : new CppFunctionType(cursor, returnType);
+        cppFunction.callingConvention = type.GetCallingConvention();
         // We don't use this but use the visitor children to try to recover the parameter names
-
         //            for (uint i = 0; i < type.NumArgTypes; i++)
         //            {
         //                var argType = type.GetArgType(i);
         //                var cppType = GetCppType(argType.Declaration, argType, type.Declaration, data);
         //                cppFunction.ParameterTypes.Add(cppType);
         //            }
-
         VisitedFunctionTypeContext ctx = new(this, cppFunction);
-        parent.VisitChildren(static (argCursor, functionCursor, clientData) =>
-        {
+        parent.VisitChildren(static (
+            argCursor,
+            functionCursor,
+            clientData
+        ) => {
             ref var ctx = ref Unsafe.AsRef<VisitedFunctionTypeContext>(clientData);
-            var builder = ctx.Builder;
-            var cppFunction = ctx.CppFunction;
-
+            var builder = ctx.builder;
+            var cppFunction = ctx.cppFunction;
             if (argCursor.Kind == CXCursorKind.CXCursor_ParmDecl)
             {
                 var name = CXUtil.GetCursorSpelling(argCursor);
                 var parameterType = builder.GetCppType(argCursor.Type.Declaration, argCursor.Type, argCursor);
-
-                cppFunction.Parameters.Add(new CppParameter(argCursor, parameterType, name));
-                ctx.IsParsingParameter = true;
+                cppFunction.parameters.Add(new CppParameter(argCursor, parameterType, name));
+                ctx.isParsingParameter = true;
             }
-            return ctx.IsParsingParameter ? CXChildVisitResult.CXChildVisit_Continue : CXChildVisitResult.CXChildVisit_Recurse;
-        }, (CXClientData)Unsafe.AsPointer(ref ctx));
 
+            return ctx.isParsingParameter ? CXChildVisitResult.CXChildVisit_Continue : CXChildVisitResult.CXChildVisit_Recurse;
+        }, (CXClientData)Unsafe.AsPointer(ref ctx));
         return cppFunction;
     }
 
-    private List<CppType>? ParseTemplateSpecializedArguments(CXCursor cursor, CXType type)
-    {
+    private List<CppType>? ParseTemplateSpecializedArguments(
+        CXCursor cursor,
+        CXType type
+    ) {
         var numTemplateArguments = type.NumTemplateArguments;
-        if (numTemplateArguments < 0) return null;
-
+        if (numTemplateArguments < 0)
+            return null;
         List<CppType> templateCppTypes = [];
         for (var templateIndex = 0; templateIndex < numTemplateArguments; ++templateIndex)
         {
             var templateArg = type.GetTemplateArgument((uint)templateIndex);
-
             switch (templateArg.kind)
             {
                 case CXTemplateArgumentKind.CXTemplateArgumentKind_Type:
@@ -248,7 +254,6 @@ public unsafe partial class CppModelBuilder
                     var templateCppType = GetCppType(templateArgType.Declaration, templateArgType, cursor);
                     templateCppTypes.Add(templateCppType);
                     break;
-
                 case CXTemplateArgumentKind.CXTemplateArgumentKind_Null:
                 case CXTemplateArgumentKind.CXTemplateArgumentKind_Declaration:
                 case CXTemplateArgumentKind.CXTemplateArgumentKind_NullPtr:
@@ -259,7 +264,6 @@ public unsafe partial class CppModelBuilder
                 case CXTemplateArgumentKind.CXTemplateArgumentKind_Pack:
                 case CXTemplateArgumentKind.CXTemplateArgumentKind_Invalid:
                     break;
-
                 default:
                     throw new InvalidOperationException();
             }
@@ -273,51 +277,54 @@ public unsafe partial class CppModelBuilder
     /// </summary>
     public unsafe CppClass VisitClassDecl(CXCursor cursor)
     {
-        var cppStruct = this.context.GetOrCreateDeclContainer<CppClass>(cursor, out var context);
+        var cppStruct = this.m_context.GetOrCreateDeclContainer<CppClass>(cursor, out var context);
         if (cursor.Definition.Kind != CXCursorKind.CXCursor_FirstInvalid && cursor != cursor.Definition)
         {
             var definition = VisitClassDecl(cursor.Definition);
-            cppStruct.Definition = definition;
+            cppStruct.definition = definition;
         }
-        if (cursor.IsCursorDefinition(cppStruct) && !context.IsChildrenVisited)
+
+        if (cursor.IsCursorDefinition(cppStruct) && !context.isChildrenVisited)
         {
             ParseAttributes(cursor, cppStruct, false);
-            cppStruct.IsDefinition = true;
-            cppStruct.SizeOf = (int)cursor.Type.SizeOf;
-            cppStruct.AlignOf = (int)cursor.Type.AlignOf;
-            context.IsChildrenVisited = true;
-            var saveCurrentClassBeingVisited = this.context.CurrentClassBeingVisited;
-            this.context.CurrentClassBeingVisited = cppStruct;
+            cppStruct.isDefinition = true;
+            cppStruct.sizeOf = (int)cursor.Type.SizeOf;
+            cppStruct.alignOf = (int)cursor.Type.AlignOf;
+            context.isChildrenVisited = true;
+            var saveCurrentClassBeingVisited = this.m_context.currentClassBeingVisited;
+            this.m_context.currentClassBeingVisited = cppStruct;
             cursor.VisitChildren(VisitMember, default);
-
-            if (cppStruct.Properties.Count > 0)
+            if (cppStruct.properties.Count > 0)
             {
-                foreach (var prop in cppStruct.Properties)
+                foreach (var prop in cppStruct.properties)
                 {
-                    prop.Getter = cppStruct.Functions.FindElementByName(prop.GetterName);
-                    prop.Setter = cppStruct.Functions.FindElementByName(prop.SetterName);
+                    prop.getter = cppStruct.functions.FindElementByName(prop.getterName);
+                    prop.setter = cppStruct.functions.FindElementByName(prop.setterName);
                 }
             }
 
             cppStruct.AssignSourceSpan(cursor);
-
-            this.context.CurrentClassBeingVisited = saveCurrentClassBeingVisited;
+            this.m_context.currentClassBeingVisited = saveCurrentClassBeingVisited;
         }
+
         return cppStruct;
     }
 
-    private CppType VisitElaboratedDecl(CXCursor cursor, CXType type, CXCursor parent)
-    {
-        var key = context.GetCursorKey(cursor);
-        if (TypedefResolver.TryResolve(key, out var typeRef))
+    private CppType VisitElaboratedDecl(
+        CXCursor cursor,
+        CXType type,
+        CXCursor parent
+    ) {
+        var key = this.m_context.GetCursorKey(cursor);
+        if (this.typedefResolver.TryResolve(key, out var typeRef))
         {
             return typeRef;
         }
 
         // If the type has been already declared, return it immediately.
-        if (Containers.TryGetValue(key, out var containerContext))
+        if (this.containers.TryGetValue(key, out var containerContext))
         {
-            return (CppType)containerContext.Container;
+            return (CppType)containerContext.container;
         }
 
         // TODO: Pseudo fix, we are not supposed to land here, as the TryGet before should resolve an existing type already declared (but not necessarily defined)

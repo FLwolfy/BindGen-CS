@@ -1,12 +1,15 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using BGCS.Core.CSharp;
+using BGCS.Analysis;
+using BGCS.Conversion;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
+using BGCS.CSharp;
+using BGCS.Text;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -26,10 +29,10 @@ public class ExtensionsApiTests
     [Fact]
     public void GetDirection_ShouldHandlePrimitivePointerReferenceAndConstPointer()
     {
-        Direction primitiveDir = CppPrimitiveType.Int.GetDirection();
-        Direction pointerDir = new CppPointerType(default, CppPrimitiveType.Int).GetDirection();
-        Direction referenceDir = new CppReferenceType(default, CppPrimitiveType.Int).GetDirection();
-        Direction constPointerDir = new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.Int)).GetDirection();
+        Direction primitiveDir = CppPrimitiveType.@int.GetDirection();
+        Direction pointerDir = new CppPointerType(default, CppPrimitiveType.@int, System.IntPtr.Size).GetDirection();
+        Direction referenceDir = new CppReferenceType(default, CppPrimitiveType.@int).GetDirection();
+        Direction constPointerDir = new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.@int), System.IntPtr.Size).GetDirection();
 
         Assert.Equal(Direction.In, primitiveDir);
         Assert.Equal(Direction.InOut, pointerDir);
@@ -40,11 +43,11 @@ public class ExtensionsApiTests
     [Fact]
     public void CanBeUsedAsOutput_ShouldSupportTypedefAndSizedStruct()
     {
-        CppTypedef typedef = new(default, "MyInt", CppPrimitiveType.Int);
-        CppType typedefPointer = new CppPointerType(default, typedef);
+        CppTypedef typedef = new(default, "MyInt", CppPrimitiveType.@int);
+        CppType typedefPointer = new CppPointerType(default, typedef, System.IntPtr.Size);
 
-        CppClass structType = new(default, "MyStruct") { ClassKind = CppClassKind.Struct, SizeOf = 4 };
-        CppType structPointer = new CppPointerType(default, structType);
+        CppClass structType = new(default, "MyStruct") { classKind = CppClassKind.Struct, sizeOf = 4 };
+        CppType structPointer = new CppPointerType(default, structType, System.IntPtr.Size);
 
         Assert.True(typedefPointer.CanBeUsedAsOutput(out var typedefResult));
         Assert.Same(typedef, typedefResult);
@@ -55,9 +58,9 @@ public class ExtensionsApiTests
     [Fact]
     public void CanonicalRootAndTypeQueries_ShouldResolveThroughWrappers()
     {
-        CppEnum enumType = new(default, "Mode") { IntegerType = CppPrimitiveType.Int };
+        CppEnum enumType = new(default, "Mode") { integerType = CppPrimitiveType.@int };
         CppTypedef enumAlias = new(default, "ModeAlias", enumType);
-        CppPointerType pointerToAlias = new(default, enumAlias);
+        CppPointerType pointerToAlias = new(default, enumAlias, IntPtr.Size);
 
         CppType canonicalWithTypedef = pointerToAlias.GetCanonicalRoot(followTypedefs: true);
         CppType canonicalWithoutTypedef = pointerToAlias.GetCanonicalRoot(followTypedefs: false);
@@ -72,13 +75,13 @@ public class ExtensionsApiTests
     public void ClassAndDelegateQueries_ShouldResolveThroughPointers()
     {
         CppClass classType = new(default, "Widget");
-        CppType wrappedClass = new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, classType));
+        CppType wrappedClass = new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, classType), System.IntPtr.Size);
 
         Assert.True(wrappedClass.IsClass(out var resolvedClass));
         Assert.Same(classType, resolvedClass);
 
-        CppFunctionType callbackType = new(default, CppPrimitiveType.Void);
-        CppPointerType callbackPointer = new(default, callbackType);
+        CppFunctionType callbackType = new(default, CppPrimitiveType.@void);
+        CppPointerType callbackPointer = new(default, callbackType, IntPtr.Size);
         Assert.True(callbackPointer.IsDelegate(out var resolvedDelegate));
         Assert.Same(callbackType, resolvedDelegate);
         Assert.True(((CppType)callbackPointer).IsDelegate());
@@ -87,11 +90,11 @@ public class ExtensionsApiTests
     [Fact]
     public void OpaqueHandleDetection_ShouldRequirePointerToNonDefinitionClass()
     {
-        CppClass incomplete = new(default, "NativeHandle") { IsDefinition = false };
-        CppTypedef handle = new(default, "Handle", new CppPointerType(default, incomplete));
+        CppClass incomplete = new(default, "NativeHandle") { isDefinition = false };
+        CppTypedef handle = new(default, "Handle", new CppPointerType(default, incomplete, System.IntPtr.Size));
 
-        CppClass complete = new(default, "NativeHandleDef") { IsDefinition = true };
-        CppTypedef notHandle = new(default, "NotHandle", new CppPointerType(default, complete));
+        CppClass complete = new(default, "NativeHandleDef") { isDefinition = true };
+        CppTypedef notHandle = new(default, "NotHandle", new CppPointerType(default, complete, System.IntPtr.Size));
 
         Assert.True(handle.IsOpaqueHandle());
         Assert.False(notHandle.IsOpaqueHandle());
@@ -100,15 +103,15 @@ public class ExtensionsApiTests
     [Fact]
     public void StringHelpers_ShouldConvertCaseAndSplitByCase()
     {
-        Assert.Equal("Api2Version", "API2VERSION".ToCamelCase());
+        Assert.Equal("Api2Version", "API2VERSION".ToTitleCaseFragment());
         Assert.Equal(["XML", "Http", "2", "Request"], "XMLHttp2Request".SplitByCase());
     }
 
     [Fact]
     public void ComObjectHeuristic_ShouldDetectAbstractMethodOnlyClass()
     {
-        CppClass cppClass = new(default, "IComLike") { IsAbstract = true };
-        cppClass.Functions.Add(new CppFunction(default, "DoWork"));
+        CppClass cppClass = new(default, "IComLike") { isAbstract = true };
+        cppClass.functions.Add(new CppFunction(default, "DoWork"));
 
         Assert.True(cppClass.IsCOMObject());
     }
@@ -123,7 +126,7 @@ public class ExtensionsApiTests
 
         try
         {
-            CppParserOptions options = new() { ParseMacros = true, ParseSystemIncludes = false, ParserKind = CppParserKind.C };
+            CppParserOptions options = new() { parseMacros = true, parseSystemIncludes = false, parserKind = CppParserKind.C };
             CppCompilation compilation = CppParser.ParseFile(header, options);
 
             CppMacro? alpha = compilation.FindMacro("BGCS_ALPHA");
@@ -149,7 +152,7 @@ public class ExtensionsApiTests
     {
         CppMacro macro = new(default, "TEST")
         {
-            Span = new CppSourceSpan(
+            span = new CppSourceSpan(
                 new CppSourceLocation("demo.h", 0, 10, 2),
                 new CppSourceLocation("demo.h", 5, 10, 7))
         };

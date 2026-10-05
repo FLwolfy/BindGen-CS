@@ -1,4 +1,6 @@
-namespace BGCS;
+using System.Collections.Generic;
+
+namespace BGCS.Configuration;
 
 /// <summary>
 /// Defines one fixed managed signature for a native C variadic function.
@@ -8,15 +10,13 @@ public sealed class VariadicFunctionVariant
     /// <summary>
     /// Gets or sets the suffix appended to generated method names.
     /// </summary>
-    public string Suffix { get; set; } = string.Empty;
-
+    public string suffix { get; set; } = string.Empty;
     /// <summary>
     /// Gets or sets promoted managed ABI types appended after fixed native parameters.
     /// </summary>
-    public List<string> ParameterTypes { get; set; } = [];
-
+    public List<string> parameterTypes { get; set; } = [];
     /// <summary>
     /// Gets or sets managed names for appended parameters. Missing names use <c>argN</c>.
     /// </summary>
-    public List<string> ParameterNames { get; set; } = [];
+    public List<string> parameterNames { get; set; } = [];
 }

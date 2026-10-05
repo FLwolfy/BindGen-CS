@@ -1,33 +1,27 @@
-# 预发布兼容与未来废弃政策
+# 当前契约与发布证据
 
-[English](compatibility-policy.md) | [文档首页](README.cn.md)
+[English](compatibility-policy.md) | [文档索引](README.cn.md)
 
-BindGen-CS 尚未发布首个稳定版，因此当前产品明确**不承诺**兼容旧的预发布配置、emitter、生成源码或公开 API。
+BindGen-CS 维护一套当前配置、lowering 和生成契约。修改源码时同步调用方、示例、schema、API snapshot 与测试；删除的 API 和旧配置布局不保留为 fallback 路径。
 
-## 首个稳定版之前
+## 配置与公开 API
 
-- 只接受唯一当前 `ConfigVersion`；其他版本稳定失败，不做隐式迁移或 fallback emitter。
-- canonical Binding IR 是唯一 C# emission 来源；已删除的原型/AST 输出路径不会藏在兼容开关后继续运行。
-- public API snapshot 是 code review gate，不表示预发布 API 永远不能改；有意变更必须在同一审查中更新 baseline。
-- ABI 与内存安全优先。C binding 的 ownership、allocator、callback 或 async 语义未知时，默认保留 raw ABI 和诊断，但抑制推断的 friendly overload；`StrictSafetySeverity=Error` 会拒绝整次输出。未知 C++ inheritance/template lowering 在没有显式扩展时拒绝生成。
-- 平台支持必须由同一源码 revision 的 target-specific report 证明；plan、cross compile 或其他架构报告都不能替代。
+- 配置使用当前属性名，不包含配置 schema revision、迁移 reader 或旧 emitter。
+- C# 输出只消费 Binding IR；C++ 桥输出只消费 Bridge IR。分析层管理 Clang AST，emitter 接收冻结的生成事实。
+- 文件组合保留显式 JSON 值，包括与默认值相同的值。每个文件的相对引用由该文件所在目录解析，组合结果移除继承引用。
+- API snapshot 用于审阅变化。更新 snapshot 时必须检查实际消费者和文档，snapshot 本身不能证明功能正确。
+- 插件契约 revision handshake 用于拒绝不同扩展 ABI 的程序集，是加载完整性检查，不是配置迁移机制。
 
-架构仍保留显式配置版本、typed diagnostics、plugin revision 握手和 API diff 自动化，以便稳定版后干净地引入 compatibility。当前只有一套 lowering contract；它不会加载或包装已删除的预发布 adapter SPI。revision 握手只是实现层保护，不是对外的“v1/v2”产品标记。
+## ABI、所有权与平台支持
 
-## 首个稳定版之后
+分配器、回调、异步或 ownership 语义缺失时不能猜测 managed 便捷 API。C 生成链在能安全表达时保留原始 ABI，并报告缺少的语义；`strictSafetySeverity` 决定这些诊断是否阻止发布。无法表达的 C++ lowering 必须失败，除非显式注册的扩展定义了转换。
 
-首个稳定版建立初始 compatibility baseline。此后删除公开 contract 必须经过：
+目标描述记录解析所用 ABI 和 SDK 输入。解析或交叉编译成功不能证明运行时支持。平台证据必须包含同一源码 revision 下、独立 BGCS 消费者实际调用原生 API 的结果，并记录 import mode、managed runtime、工具链和宿主。引擎联调报告属于该引擎的证据，不能替代 BGCS 独立验收。
 
-1. 公告、changelog、替代方案和 machine-readable diagnostic；
-2. 至少两个 minor release 的 compile-time/CLI/schema deprecation；
-3. 配置语法变化时提供显式 config migration command；
-4. 只能在下一 major 删除，通常距离公告不少于 12 个月；
-5. API diff、migration tests、clean consumers 和 target acceptance 全部通过。
-
-安全漏洞、已证实 ABI corruption 或上游运行时强制移除可以缩短周期，但 release notes 必须提供证据与缓解方法。
-
-当前没有 deprecation register，因为现在不存在稳定 legacy contract。
+生成和打包先准备完整候选，失败保留旧输出。有关联的 native 和 managed 输出目录由共同 publication owner 管理；读取方也需要遵守该所有权，因为文件系统不能同时重命名多个目录。
 
 ## 发布证据
 
-`bindgen-cs supply-chain` 生成确定性的 SPDX 2.3 SBOM 与 SLSA v1 provenance payload，记录 artifact SHA-256、source revision、builder identity 和 build parameters。release workflow 已配置为通过 GitHub OIDC/Sigstore 对 package provenance 与 SBOM association 签名。只有获授权的 release job 实际取得 OIDC identity 并发布可验证 attestation 时，签名才构成证据；本地运行不能满足或模拟该条件。Release candidate 同时必须通过 public API、dependency license、vulnerability、deterministic package、clean native-RID consumer 与完整 desktop acceptance gates。
+`bindgen-cs supply-chain` 输出确定性的 SPDX 2.3 SBOM 与 SLSA v1 provenance，记录产物 SHA-256、源码 revision、builder 身份与构建参数。发布自动化可以生成 GitHub OIDC/Sigstore attestations；只有实际取得身份并发布可验证 attestation 的授权 job 才能证明签名发布，本地执行不能替代。
+
+Package 验收还需要检查公开 API、依赖许可证、漏洞、确定性包内容、干净消费者及支持目标的实际调用矩阵。未执行的宿主和架构在验收报告中明确标为未验证。

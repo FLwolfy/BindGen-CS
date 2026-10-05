@@ -1,18 +1,11 @@
 using System;
-using System.IO;
 using System.Linq;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
+using BGCS.Core.Targeting;
 using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
+using BGCS.CppAst.Targeting;
 using Xunit;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
@@ -32,8 +25,8 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                var errors = compilation.Diagnostics.Messages
-                    .Where(x => x.Type == BGCS.CppAst.Diagnostics.CppLogMessageType.Error)
+                var errors = compilation.diagnostics.messages
+                    .Where(x => x.type == BGCS.CppAst.Diagnostics.CppLogMessageType.Error)
                     .ToList();
 
                 if (errors.Count == 0)
@@ -64,23 +57,23 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Classes);
-                var myInterface = compilation.Classes[0];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
-                Assert.Equal(2, myInterface.Functions.Count);
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.classes);
+                var myInterface = compilation.classes[0];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
+                Assert.Equal(2, myInterface.functions.Count);
 
-                Assert.Empty(myInterface.Functions[0].Parameters);
-                Assert.Equal("helloworld", myInterface.Functions[0].Name);
-                Assert.True(myInterface.Functions[0].ReturnType is CppPrimitiveType primitive && primitive.Kind == CppPrimitiveKind.Float);
+                Assert.Empty(myInterface.functions[0].parameters);
+                Assert.Equal("helloworld", myInterface.functions[0].name);
+                Assert.True(myInterface.functions[0].returnType is CppPrimitiveType primitive && primitive.kind == CppPrimitiveKind.Float);
 
-                Assert.Equal(2, myInterface.Functions[1].Parameters.Count);
-                Assert.Equal("index", myInterface.Functions[1].Parameters[0].Name);
-                Assert.Equal("arg1", myInterface.Functions[1].Parameters[1].Name);
-                Assert.Equal("doSomething:argSpecial:", myInterface.Functions[1].Name);
-                Assert.True(myInterface.Functions[1].ReturnType is CppPrimitiveType primitive2 && primitive2.Kind == CppPrimitiveKind.Void);
-                Assert.True(myInterface.Functions[1].Parameters[1].Type is CppPrimitiveType primitive3 && primitive3.Kind == CppPrimitiveKind.Float);
+                Assert.Equal(2, myInterface.functions[1].parameters.Count);
+                Assert.Equal("index", myInterface.functions[1].parameters[0].name);
+                Assert.Equal("arg1", myInterface.functions[1].parameters[1].name);
+                Assert.Equal("doSomething:argSpecial:", myInterface.functions[1].name);
+                Assert.True(myInterface.functions[1].returnType is CppPrimitiveType primitive2 && primitive2.kind == CppPrimitiveKind.Void);
+                Assert.True(myInterface.functions[1].parameters[1].type is CppPrimitiveType primitive3 && primitive3.kind == CppPrimitiveKind.Float);
             }, GetDefaultObjCOptions()
         );
     }
@@ -96,35 +89,35 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Classes);
-                var myInterface = compilation.Classes[0];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
-                Assert.Equal(2, myInterface.Properties.Count);
-                Assert.Equal("id", myInterface.Properties[0].Name);
-                Assert.Equal("id2", myInterface.Properties[1].Name);
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.classes);
+                var myInterface = compilation.classes[0];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
+                Assert.Equal(2, myInterface.properties.Count);
+                Assert.Equal("id", myInterface.properties[0].name);
+                Assert.Equal("id2", myInterface.properties[1].name);
 
-                Assert.True(myInterface.Properties[0].Type is CppPrimitiveType primitive && primitive.Kind == CppPrimitiveKind.Int);
-                Assert.True(myInterface.Properties[0].Getter is not null);
-                Assert.True(myInterface.Properties[0].Setter is not null);
+                Assert.True(myInterface.properties[0].type is CppPrimitiveType primitive && primitive.kind == CppPrimitiveKind.Int);
+                Assert.True(myInterface.properties[0].getter is not null);
+                Assert.True(myInterface.properties[0].setter is not null);
 
-                Assert.True(myInterface.Properties[1].Type is CppPrimitiveType primitive2 && primitive2.Kind == CppPrimitiveKind.Float);
-                Assert.True(myInterface.Properties[1].Setter is null);
+                Assert.True(myInterface.properties[1].type is CppPrimitiveType primitive2 && primitive2.kind == CppPrimitiveKind.Float);
+                Assert.True(myInterface.properties[1].setter is null);
 
-                Assert.Equal(3, myInterface.Functions.Count);
-                Assert.Equal("id", myInterface.Functions[0].Name);
-                Assert.True(myInterface.Functions[0].ReturnType is CppPrimitiveType primitive3 && primitive3.Kind == CppPrimitiveKind.Int);
+                Assert.Equal(3, myInterface.functions.Count);
+                Assert.Equal("id", myInterface.functions[0].name);
+                Assert.True(myInterface.functions[0].returnType is CppPrimitiveType primitive3 && primitive3.kind == CppPrimitiveKind.Int);
 
-                Assert.Equal("setId:", myInterface.Functions[1].Name);
-                Assert.True(myInterface.Functions[1].ReturnType is CppPrimitiveType primitive4 && primitive4.Kind == CppPrimitiveKind.Void);
-                Assert.Single(myInterface.Functions[1].Parameters);
-                Assert.Equal("id", myInterface.Functions[1].Parameters[0].Name);
-                Assert.True(myInterface.Functions[1].Parameters[0].Type is CppPrimitiveType primitive5 && primitive5.Kind == CppPrimitiveKind.Int);
+                Assert.Equal("setId:", myInterface.functions[1].name);
+                Assert.True(myInterface.functions[1].returnType is CppPrimitiveType primitive4 && primitive4.kind == CppPrimitiveKind.Void);
+                Assert.Single(myInterface.functions[1].parameters);
+                Assert.Equal("id", myInterface.functions[1].parameters[0].name);
+                Assert.True(myInterface.functions[1].parameters[0].type is CppPrimitiveType primitive5 && primitive5.kind == CppPrimitiveKind.Int);
 
-                Assert.Equal("id2", myInterface.Functions[2].Name);
-                Assert.True(myInterface.Functions[2].ReturnType is CppPrimitiveType primitive6 && primitive6.Kind == CppPrimitiveKind.Float);
-                Assert.Empty(myInterface.Functions[2].Parameters);
+                Assert.Equal("id2", myInterface.functions[2].name);
+                Assert.True(myInterface.functions[2].returnType is CppPrimitiveType primitive6 && primitive6.kind == CppPrimitiveKind.Float);
+                Assert.Empty(myInterface.functions[2].parameters);
             }, GetDefaultObjCOptions()
         );
     }
@@ -139,17 +132,17 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Classes);
-                var myInterface = compilation.Classes[0];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
-                Assert.Single(myInterface.Functions);
-                Assert.Equal("getInstance", myInterface.Functions[0].Name);
-                Assert.True((myInterface.Functions[0].Flags & CppFunctionFlags.ClassMethod) != 0);
-                var pointerType = myInterface.Functions[0].ReturnType as CppPointerType;
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.classes);
+                var myInterface = compilation.classes[0];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
+                Assert.Single(myInterface.functions);
+                Assert.Equal("getInstance", myInterface.functions[0].name);
+                Assert.True((myInterface.functions[0].flags & CppFunctionFlags.ClassMethod) != 0);
+                var pointerType = myInterface.functions[0].returnType as CppPointerType;
                 Assert.NotNull(pointerType);
-                Assert.Equal(myInterface, pointerType!.ElementType);
+                Assert.Equal(myInterface, pointerType!.elementType);
             }, GetDefaultObjCOptions()
         );
     }
@@ -169,20 +162,20 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Equal(2, compilation.Classes.Count);
-                var myInterface = compilation.Classes[1];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
-                Assert.Equal(2, myInterface.TemplateParameters.Count);
-                Assert.True(myInterface.TemplateParameters[0] is CppTemplateParameterType templateParam1 && templateParam1.Name == "T1");
-                Assert.True(myInterface.TemplateParameters[1] is CppTemplateParameterType templateParam2 && templateParam2.Name == "T2");
+                Assert.False(compilation.hasErrors);
+                Assert.Equal(2, compilation.classes.Count);
+                var myInterface = compilation.classes[1];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
+                Assert.Equal(2, myInterface.templateParameters.Count);
+                Assert.True(myInterface.templateParameters[0] is CppTemplateParameterType templateParam1 && templateParam1.name == "T1");
+                Assert.True(myInterface.templateParameters[1] is CppTemplateParameterType templateParam2 && templateParam2.name == "T2");
 
-                Assert.Equal(2, myInterface.Functions.Count);
-                Assert.Equal("get_at:", myInterface.Functions[0].Name);
-                Assert.Equal("get_at2:", myInterface.Functions[1].Name);
-                Assert.True(myInterface.Functions[0].ReturnType is CppTemplateParameterType templateSpecialization && templateSpecialization.Name == "T1");
-                Assert.True(myInterface.Functions[1].ReturnType is CppTemplateParameterType templateSpecialization2 && templateSpecialization2.Name == "T2");
+                Assert.Equal(2, myInterface.functions.Count);
+                Assert.Equal("get_at:", myInterface.functions[0].name);
+                Assert.Equal("get_at2:", myInterface.functions[1].name);
+                Assert.True(myInterface.functions[0].returnType is CppTemplateParameterType templateSpecialization && templateSpecialization.name == "T1");
+                Assert.True(myInterface.functions[1].returnType is CppTemplateParameterType templateSpecialization2 && templateSpecialization2.name == "T2");
             }, GetDefaultObjCOptions()
         );
     }
@@ -201,24 +194,24 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Equal(2, compilation.Classes.Count);
-                var myInterface = compilation.Classes[1];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
-                Assert.Single(myInterface.TemplateParameters);
-                Assert.True(myInterface.TemplateParameters[0] is CppTemplateParameterType templateParam1 && templateParam1.Name == "T1");
+                Assert.False(compilation.hasErrors);
+                Assert.Equal(2, compilation.classes.Count);
+                var myInterface = compilation.classes[1];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
+                Assert.Single(myInterface.templateParameters);
+                Assert.True(myInterface.templateParameters[0] is CppTemplateParameterType templateParam1 && templateParam1.name == "T1");
 
                 var text = myInterface.ToString();
                 Assert.Equal("@interface MyInterface<T1> : BaseInterface", text);
 
                 // By default, typedef declared within interfaces are global, but in that case, it is depending on a template parameter
                 // So it is not part of the global namespace
-                Assert.Empty(compilation.Typedefs);
-                Assert.Single(myInterface.Typedefs);
-                var typedef = myInterface.Typedefs[0];
-                Assert.Equal("HelloWorld", typedef.Name);
-                Assert.True(typedef.ElementType is CppTemplateParameterType templateSpecialization && templateSpecialization.Name == "T1");
+                Assert.Empty(compilation.typedefs);
+                Assert.Single(myInterface.typedefs);
+                var typedef = myInterface.typedefs[0];
+                Assert.Equal("HelloWorld", typedef.name);
+                Assert.True(typedef.elementType is CppTemplateParameterType templateSpecialization && templateSpecialization.name == "T1");
             }, GetDefaultObjCOptions()
         );
     }
@@ -231,22 +224,22 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                Assert.Single(compilation.Typedefs);
+                Assert.False(compilation.hasErrors);
+                Assert.Single(compilation.typedefs);
 
-                var typedef = compilation.Typedefs[0];
-                Assert.Equal("MyBlock", typedef.Name);
+                var typedef = compilation.typedefs[0];
+                Assert.Equal("MyBlock", typedef.name);
 
-                Assert.IsType<CppBlockFunctionType>(typedef.ElementType);
-                var blockType = (CppBlockFunctionType)typedef.ElementType;
+                Assert.IsType<CppBlockFunctionType>(typedef.elementType);
+                var blockType = (CppBlockFunctionType)typedef.elementType;
 
-                Assert.Equal(CppTypeKind.ObjCBlockFunction, blockType.TypeKind);
+                Assert.Equal(CppTypeKind.ObjCBlockFunction, blockType.typeKind);
 
-                Assert.True(blockType.ReturnType is CppPrimitiveType primitive && primitive.Kind == CppPrimitiveKind.Float);
+                Assert.True(blockType.returnType is CppPrimitiveType primitive && primitive.kind == CppPrimitiveKind.Float);
 
-                Assert.Equal(2, blockType.Parameters.Count);
-                Assert.True(blockType.Parameters[0].Type is CppPrimitiveType primitive2 && primitive2.Kind == CppPrimitiveKind.Int);
-                Assert.True(blockType.Parameters[1].Type is CppPointerType pointerType && pointerType.ElementType is CppPrimitiveType primitive3 && primitive3.Kind == CppPrimitiveKind.Int);
+                Assert.Equal(2, blockType.parameters.Count);
+                Assert.True(blockType.parameters[0].type is CppPrimitiveType primitive2 && primitive2.kind == CppPrimitiveKind.Int);
+                Assert.True(blockType.parameters[1].type is CppPointerType pointerType && pointerType.elementType is CppPrimitiveType primitive3 && primitive3.kind == CppPrimitiveKind.Int);
             }, GetDefaultObjCOptions()
         );
     }
@@ -269,33 +262,33 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Equal(4, compilation.Classes.Count);
+                Assert.Equal(4, compilation.classes.Count);
 
-                var myProtocol = compilation.Classes[0];
-                Assert.Equal(CppClassKind.ObjCProtocol, myProtocol.ClassKind);
-                Assert.Equal("MyProtocol", myProtocol.Name);
+                var myProtocol = compilation.classes[0];
+                Assert.Equal(CppClassKind.ObjCProtocol, myProtocol.classKind);
+                Assert.Equal("MyProtocol", myProtocol.name);
 
-                var myProtocol1 = compilation.Classes[1];
-                Assert.Equal(CppClassKind.ObjCProtocol, myProtocol1.ClassKind);
-                Assert.Equal("MyProtocol1", myProtocol1.Name);
+                var myProtocol1 = compilation.classes[1];
+                Assert.Equal(CppClassKind.ObjCProtocol, myProtocol1.classKind);
+                Assert.Equal("MyProtocol1", myProtocol1.name);
 
-                var myProtocol2 = compilation.Classes[2];
-                Assert.Equal(CppClassKind.ObjCProtocol, myProtocol2.ClassKind);
-                Assert.Equal("MyProtocol2", myProtocol2.Name);
-                Assert.Equal(2, myProtocol2.ObjCImplementedProtocols.Count);
-                Assert.Equal(myProtocol, myProtocol2.ObjCImplementedProtocols[0]);
-                Assert.Equal(myProtocol1, myProtocol2.ObjCImplementedProtocols[1]);
+                var myProtocol2 = compilation.classes[2];
+                Assert.Equal(CppClassKind.ObjCProtocol, myProtocol2.classKind);
+                Assert.Equal("MyProtocol2", myProtocol2.name);
+                Assert.Equal(2, myProtocol2.objCImplementedProtocols.Count);
+                Assert.Equal(myProtocol, myProtocol2.objCImplementedProtocols[0]);
+                Assert.Equal(myProtocol1, myProtocol2.objCImplementedProtocols[1]);
 
                 var text2 = myProtocol2.ToString();
                 Assert.Equal("@protocol MyProtocol2 <MyProtocol, MyProtocol1>", text2);
 
-                var myInterface = compilation.Classes[3];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
-                Assert.Single(myInterface.ObjCImplementedProtocols);
-                Assert.Equal(myProtocol, myInterface.ObjCImplementedProtocols[0]);
+                var myInterface = compilation.classes[3];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
+                Assert.Single(myInterface.objCImplementedProtocols);
+                Assert.Equal(myProtocol, myInterface.objCImplementedProtocols[0]);
             }, GetDefaultObjCOptions()
         );
     }
@@ -312,20 +305,20 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Equal(2, compilation.Classes.Count);
+                Assert.Equal(2, compilation.classes.Count);
 
-                var myInterfaceBase = compilation.Classes[0];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterfaceBase.ClassKind);
-                Assert.Empty(myInterfaceBase.BaseTypes);
-                Assert.Equal("InterfaceBase", myInterfaceBase.Name);
+                var myInterfaceBase = compilation.classes[0];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterfaceBase.classKind);
+                Assert.Empty(myInterfaceBase.baseTypes);
+                Assert.Equal("InterfaceBase", myInterfaceBase.name);
 
-                var myInterface = compilation.Classes[1];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
-                Assert.Single(myInterface.BaseTypes);
-                Assert.Equal(myInterfaceBase, myInterface.BaseTypes[0].Type);
+                var myInterface = compilation.classes[1];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
+                Assert.Single(myInterface.baseTypes);
+                Assert.Equal(myInterfaceBase, myInterface.baseTypes[0].type);
             }, GetDefaultObjCOptions()
         );
     }
@@ -342,19 +335,19 @@ public class TestObjectiveC : InlineTestBase
                     """,
             compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Equal(2, compilation.Classes.Count);
+                Assert.Equal(2, compilation.classes.Count);
 
-                var myInterface = compilation.Classes[0];
-                Assert.Equal(CppClassKind.ObjCInterface, myInterface.ClassKind);
-                Assert.Equal("MyInterface", myInterface.Name);
+                var myInterface = compilation.classes[0];
+                Assert.Equal(CppClassKind.ObjCInterface, myInterface.classKind);
+                Assert.Equal("MyInterface", myInterface.name);
 
-                var myInterfaceWithCategory = compilation.Classes[1];
-                Assert.Equal(CppClassKind.ObjCInterfaceCategory, myInterfaceWithCategory.ClassKind);
-                Assert.Equal("MyInterface", myInterfaceWithCategory.Name);
-                Assert.Equal("MyCategory", myInterfaceWithCategory.ObjCCategoryName);
-                Assert.Equal(myInterface, myInterfaceWithCategory.ObjCCategoryTargetClass);
+                var myInterfaceWithCategory = compilation.classes[1];
+                Assert.Equal(CppClassKind.ObjCInterfaceCategory, myInterfaceWithCategory.classKind);
+                Assert.Equal("MyInterface", myInterfaceWithCategory.name);
+                Assert.Equal("MyCategory", myInterfaceWithCategory.objCCategoryName);
+                Assert.Equal(myInterface, myInterfaceWithCategory.objCCategoryTargetClass);
 
                 var text = myInterfaceWithCategory.ToString();
                 Assert.Equal("@interface MyInterface (MyCategory)", text);
@@ -366,12 +359,10 @@ public class TestObjectiveC : InlineTestBase
     {
         return new CppParserOptions
         {
-            ParserKind = CppParserKind.ObjC,
-            TargetCpu = CppTargetCpu.ARM64,
-            TargetVendor = "apple",
-            TargetSystem = "darwin",
-            ParseMacros = false,
-            ParseSystemIncludes = false,
+            parserKind = CppParserKind.ObjC,
+            targetTriple = "arm64-apple-darwin",
+            parseMacros = false,
+            parseSystemIncludes = false,
         };
     }
 
@@ -379,42 +370,19 @@ public class TestObjectiveC : InlineTestBase
     {
         var options = new CppParserOptions
         {
-            ParserKind = CppParserKind.C,
-            ParseMacros = false,
-            ParseComments = false,
-            ParseSystemIncludes = true
+            parserKind = CppParserKind.C,
+            parseMacros = false,
+            parseComments = false,
+            parseSystemIncludes = true
         };
 
-        if (OperatingSystem.IsWindows())
-        {
-            var targetCpu = RuntimeInformation.ProcessArchitecture switch
-            {
-                Architecture.Arm64 => CppTargetCpu.ARM64,
-                Architecture.Arm => CppTargetCpu.ARM,
-                Architecture.X64 => CppTargetCpu.X86_64,
-                _ => CppTargetCpu.X86
-            };
-            options.ConfigureForWindowsMsvc(targetCpu);
-            return options;
-        }
-
-        options.TargetCpu = RuntimeInformation.ProcessArchitecture switch
-        {
-            Architecture.Arm64 => CppTargetCpu.ARM64,
-            Architecture.Arm => CppTargetCpu.ARM,
-            Architecture.X64 => CppTargetCpu.X86_64,
-            _ => CppTargetCpu.X86
-        };
-        options.TargetCpuSub = string.Empty;
-        options.TargetVendor = OperatingSystem.IsMacOS() ? "apple" : "pc";
-        options.TargetSystem = OperatingSystem.IsMacOS() ? "darwin" : "linux";
-        options.TargetAbi = string.Empty;
+        options.ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId("host"))));
         return options;
     }
 
     private static bool IsMissingSystemHeaderError(BGCS.CppAst.Diagnostics.CppDiagnosticMessage message)
     {
-        var text = message.Text;
+        var text = message.text;
         return text.Contains("file not found", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("cannot open source file", StringComparison.OrdinalIgnoreCase);
     }

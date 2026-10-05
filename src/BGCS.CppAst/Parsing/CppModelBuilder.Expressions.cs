@@ -1,13 +1,13 @@
-using System;
 namespace BGCS.CppAst.Parsing;
-using ClangSharp.Interop;
+
 using BGCS.CppAst.Model.Expressions;
 using BGCS.CppAst.Utilities;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>CppModelBuilder</c>.
 /// </summary>
-public unsafe partial class CppModelBuilder
+internal unsafe partial class CppModelBuilder
 {
     /// <summary>
     /// Executes public operation <c>VisitExpression</c>.
@@ -17,7 +17,6 @@ public unsafe partial class CppModelBuilder
         CppExpression? expr = null;
         bool visitChildren = false;
         CppExpressionKind kind = ToExpressionKind(cursor.Kind);
-
         switch (cursor.Kind)
         {
             case CXCursorKind.CXCursor_IntegerLiteral:
@@ -28,31 +27,26 @@ public unsafe partial class CppModelBuilder
             case CXCursorKind.CXCursor_FixedPointLiteral:
                 expr = new CppLiteralExpression(cursor, kind, cursor.AsText());
                 break;
-
             case CXCursorKind.CXCursor_ParenExpr:
                 expr = new CppParenExpression(cursor);
                 visitChildren = true;
                 break;
-
             case CXCursorKind.CXCursor_UnaryOperator:
                 var tokens = new Tokenizer(cursor);
                 expr = new CppUnaryExpression(cursor, CppExpressionKind.UnaryOperator)
                 {
-                    Operator = tokens.Count > 0 ? tokens.GetString(0) : string.Empty
+                    @operator = tokens.count > 0 ? tokens.GetString(0) : string.Empty
                 };
                 visitChildren = true;
                 break;
-
             case CXCursorKind.CXCursor_BinaryOperator:
                 expr = new CppBinaryExpression(cursor, CppExpressionKind.BinaryOperator);
                 visitChildren = true;
                 break;
-
             case CXCursorKind.CXCursor_InitListExpr:
                 expr = new CppInitListExpression(cursor);
                 visitChildren = true;
                 break;
-
             default:
                 var rawExpression = new CppRawExpression(cursor, kind);
                 rawExpression.AppendTokens(cursor);
@@ -61,12 +55,14 @@ public unsafe partial class CppModelBuilder
         }
 
         expr.AssignSourceSpan(cursor);
-
         if (visitChildren)
         {
             using DGCHandle<CppExpression> handle = new(expr);
-            cursor.VisitChildren(static (listCursor, initListCursor, clientData) =>
-            {
+            cursor.VisitChildren(static (
+                listCursor,
+                initListCursor,
+                clientData
+            ) => {
                 CppExpression expr = DGCHandle<CppExpression>.ObjFrom(clientData);
                 var item = VisitExpression(listCursor);
                 if (item != null)
@@ -80,9 +76,9 @@ public unsafe partial class CppModelBuilder
 
         if (expr is CppBinaryExpression binaryExpression)
         {
-            var beforeOperatorOffset = expr.Arguments[0].Span.End.Offset;
-            var afterOperatorOffset = expr.Arguments[1].Span.Start.Offset;
-            binaryExpression.Operator = cursor.GetCursorAsTextBetweenOffset(beforeOperatorOffset, afterOperatorOffset);
+            var beforeOperatorOffset = expr.arguments[0].span.end.offset;
+            var afterOperatorOffset = expr.arguments[1].span.start.offset;
+            binaryExpression.@operator = cursor.GetCursorAsTextBetweenOffset(beforeOperatorOffset, afterOperatorOffset);
         }
 
         return expr;

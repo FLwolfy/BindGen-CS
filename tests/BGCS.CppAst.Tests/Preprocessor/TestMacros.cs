@@ -1,17 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
-using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
-using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
 using Xunit;
 namespace BGCS.CppAst.Tests
 {
@@ -30,80 +18,80 @@ namespace BGCS.CppAst.Tests
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(6, compilation.Macros.Count);
+                    Assert.Equal(6, compilation.macros.Count);
 
                     {
-                        var macro = compilation.Macros[0];
-                        Assert.Equal("MACRO0", macro.Name);
-                        Assert.Equal("", macro.Value);
-                        Assert.Empty(macro.Tokens);
-                        Assert.Null(macro.Parameters);
+                        var macro = compilation.macros[0];
+                        Assert.Equal("MACRO0", macro.name);
+                        Assert.Equal("", macro.value);
+                        Assert.Empty(macro.tokens);
+                        Assert.Null(macro.parameters);
                     }
 
                     {
-                        var macro = compilation.Macros[1];
-                        Assert.Equal("MACRO1", macro.Name);
-                        Assert.Equal("1", macro.Value);
-                        Assert.Single(macro.Tokens);
-                        Assert.Equal("1", macro.Tokens[0].Text);
-                        Assert.Equal(CppTokenKind.Literal, macro.Tokens[0].Kind);
-                        Assert.Null(macro.Parameters);
+                        var macro = compilation.macros[1];
+                        Assert.Equal("MACRO1", macro.name);
+                        Assert.Equal("1", macro.value);
+                        Assert.Single(macro.tokens);
+                        Assert.Equal("1", macro.tokens[0].text);
+                        Assert.Equal(CppTokenKind.Literal, macro.tokens[0].kind);
+                        Assert.Null(macro.parameters);
                     }
 
                     {
-                        var macro = compilation.Macros[2];
-                        Assert.Equal("MACRO2", macro.Name);
-                        Assert.Equal("", macro.Value);
-                        Assert.NotNull(macro.Parameters);
-                        Assert.Single(macro.Parameters);
-                        Assert.Equal("x", macro.Parameters[0]);
+                        var macro = compilation.macros[2];
+                        Assert.Equal("MACRO2", macro.name);
+                        Assert.Equal("", macro.value);
+                        Assert.NotNull(macro.parameters);
+                        Assert.Single(macro.parameters);
+                        Assert.Equal("x", macro.parameters[0]);
                     }
 
                     {
-                        var macro = compilation.Macros[3];
-                        Assert.Equal("MACRO3", macro.Name);
-                        Assert.Equal("x+1", macro.Value);
-                        Assert.NotNull(macro.Parameters);
-                        Assert.Single(macro.Parameters);
-                        Assert.Equal("x", macro.Parameters[0]);
+                        var macro = compilation.macros[3];
+                        Assert.Equal("MACRO3", macro.name);
+                        Assert.Equal("x+1", macro.value);
+                        Assert.NotNull(macro.parameters);
+                        Assert.Single(macro.parameters);
+                        Assert.Equal("x", macro.parameters[0]);
 
-                        Assert.Equal(3, macro.Tokens.Count);
-                        Assert.Equal("x", macro.Tokens[0].Text);
-                        Assert.Equal("+", macro.Tokens[1].Text);
-                        Assert.Equal("1", macro.Tokens[2].Text);
-                        Assert.Equal(CppTokenKind.Identifier, macro.Tokens[0].Kind);
-                        Assert.Equal(CppTokenKind.Punctuation, macro.Tokens[1].Kind);
-                        Assert.Equal(CppTokenKind.Literal, macro.Tokens[2].Kind);
+                        Assert.Equal(3, macro.tokens.Count);
+                        Assert.Equal("x", macro.tokens[0].text);
+                        Assert.Equal("+", macro.tokens[1].text);
+                        Assert.Equal("1", macro.tokens[2].text);
+                        Assert.Equal(CppTokenKind.Identifier, macro.tokens[0].kind);
+                        Assert.Equal(CppTokenKind.Punctuation, macro.tokens[1].kind);
+                        Assert.Equal(CppTokenKind.Literal, macro.tokens[2].kind);
                     }
 
                     {
-                        var macro = compilation.Macros[4];
-                        Assert.Equal("MACRO4", macro.Name);
-                        Assert.Equal("(x)", macro.Value);
-                        Assert.Null(macro.Parameters);
+                        var macro = compilation.macros[4];
+                        Assert.Equal("MACRO4", macro.name);
+                        Assert.Equal("(x)", macro.value);
+                        Assert.Null(macro.parameters);
 
-                        Assert.Equal(3, macro.Tokens.Count);
-                        Assert.Equal("(", macro.Tokens[0].Text);
-                        Assert.Equal("x", macro.Tokens[1].Text);
-                        Assert.Equal(")", macro.Tokens[2].Text);
-                        Assert.Equal(CppTokenKind.Punctuation, macro.Tokens[0].Kind);
-                        Assert.Equal(CppTokenKind.Identifier, macro.Tokens[1].Kind);
-                        Assert.Equal(CppTokenKind.Punctuation, macro.Tokens[2].Kind);
+                        Assert.Equal(3, macro.tokens.Count);
+                        Assert.Equal("(", macro.tokens[0].text);
+                        Assert.Equal("x", macro.tokens[1].text);
+                        Assert.Equal(")", macro.tokens[2].text);
+                        Assert.Equal(CppTokenKind.Punctuation, macro.tokens[0].kind);
+                        Assert.Equal(CppTokenKind.Identifier, macro.tokens[1].kind);
+                        Assert.Equal(CppTokenKind.Punctuation, macro.tokens[2].kind);
                     }
 
                     {
-                        var macro = compilation.Macros[5];
-                        Assert.Equal("MACRO5", macro.Name);
-                        Assert.Equal("1", macro.Value);
-                        Assert.Null(macro.Parameters);
+                        var macro = compilation.macros[5];
+                        Assert.Equal("MACRO5", macro.name);
+                        Assert.Equal("1", macro.value);
+                        Assert.Null(macro.parameters);
 
-                        Assert.Equal(2, macro.Tokens.Count);
-                        Assert.Equal("1", macro.Tokens[0].Text);
-                        Assert.Equal("/* with a comment */", macro.Tokens[1].Text);
-                        Assert.Equal(CppTokenKind.Literal, macro.Tokens[0].Kind);
-                        Assert.Equal(CppTokenKind.Comment, macro.Tokens[1].Kind);
+                        Assert.Equal(2, macro.tokens.Count);
+                        Assert.Equal("1", macro.tokens[0].text);
+                        Assert.Equal("/* with a comment */", macro.tokens[1].text);
+                        Assert.Equal(CppTokenKind.Literal, macro.tokens[0].kind);
+                        Assert.Equal(CppTokenKind.Comment, macro.tokens[1].kind);
                     }
                 }
                 , new CppParserOptions().EnableMacros()

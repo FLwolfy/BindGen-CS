@@ -1,13 +1,37 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using BGCS.Tool.Commands;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
 
 public sealed class InitCommandTests
 {
+    [Theory]
+    [InlineData("c", "native.h", "int native_add(int left, int right);", "bindgen.json", "generate")]
+    [InlineData("cpp", "native.hpp", "class Widget { public: int Add(int value); };", "bridge.json", "bridge")]
+    public void Run_InitializedConfiguration_CanGenerateWithoutEditing(
+        string language,
+        string header,
+        string source,
+        string config,
+        string command
+    ) {
+        using TestDirectory directory = new();
+        directory.Write(header, source);
+        Assert.Equal(0, Run(directory, header, "--language", language).ExitCode);
+
+        using StringWriter output = new();
+        using StringWriter error = new();
+        int exitCode = CliInvocation.Run([command, config], directory.Path, output, error);
+
+        Assert.True(exitCode == 0, output.ToString() + error.ToString());
+        Assert.True(File.Exists(directory.Resolve("Generated/Bindings.cs")));
+        using JsonDocument document = directory.ReadJson(config);
+        foreach (JsonProperty property in document.RootElement.EnumerateObject())
+            Assert.True(char.IsLower(property.Name[0]), property.Name);
+    }
+
     [Fact]
     public void Run_CHeader_WritesPortableRepositoryRelativePaths()
     {
@@ -19,11 +43,9 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindgen.json");
         JsonElement root = config.RootElement;
-        Assert.Equal(CsCodeGeneratorConfig.CurrentConfigVersion, root.GetProperty("ConfigVersion").GetInt32());
-        Assert.Equal("IntermediateRepresentation", root.GetProperty("CSharpEmissionBackend").GetString());
-        Assert.Equal("host-c,c-library", root.GetProperty("Preset").GetString());
-        Assert.Equal("include/native.h", root.GetProperty("EntryFiles")[0].GetString());
-        Assert.Equal("include", root.GetProperty("IncludeFolders")[0].GetString());
+        Assert.Equal("host-c,c-library", root.GetProperty("preset").GetString());
+        Assert.Equal("include/native.h", root.GetProperty("entryFiles")[0].GetString());
+        Assert.Equal("include", root.GetProperty("includeFolders")[0].GetString());
         Assert.DoesNotContain(directory.Path, File.ReadAllText(directory.Resolve("bindgen.json")), StringComparison.Ordinal);
     }
 
@@ -38,10 +60,9 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindings/bridge.json");
         JsonElement root = config.RootElement;
-        Assert.Equal(BGCS.Cpp2C.Cpp2CGeneratorConfig.CurrentConfigVersion, root.GetProperty("ConfigVersion").GetInt32());
-        Assert.Equal("../include/library.hpp", root.GetProperty("EntryFiles")[0].GetString());
-        Assert.Equal("../include", root.GetProperty("IncludeFolders")[0].GetString());
-        Assert.True(root.GetProperty("GenerateCSharpBindings").GetBoolean());
+        Assert.Equal("../include/library.hpp", root.GetProperty("entryFiles")[0].GetString());
+        Assert.Equal("../include", root.GetProperty("includeFolders")[0].GetString());
+        Assert.True(root.GetProperty("generateCSharpBindings").GetBoolean());
     }
 
     [Fact]
@@ -54,8 +75,8 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindings/bindgen.json");
         JsonElement root = config.RootElement;
-        Assert.Equal("native.h", root.GetProperty("EntryFiles")[0].GetString());
-        Assert.Equal(".", root.GetProperty("IncludeFolders")[0].GetString());
+        Assert.Equal("native.h", root.GetProperty("entryFiles")[0].GetString());
+        Assert.Equal(".", root.GetProperty("includeFolders")[0].GetString());
     }
 
     [Theory]
@@ -103,7 +124,7 @@ public sealed class InitCommandTests
     {
         using StringWriter output = new();
         using StringWriter error = new();
-        int exitCode = InitCommand.Run(args, directory.Path, output, error);
+        int exitCode = CliInvocation.Run(["init", .. args], directory.Path, output, error);
         return new(exitCode, output.ToString(), error.ToString());
     }
 

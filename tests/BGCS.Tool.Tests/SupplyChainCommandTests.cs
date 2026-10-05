@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using BGCS.Tool.Commands;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -20,7 +19,7 @@ public sealed class SupplyChainCommandTests
         {
             using StringWriter output = new();
             using StringWriter error = new();
-            int exitCode = SupplyChainCommand.Run(
+            int exitCode = Run(
                 [artifacts, "--output", outputDirectory, "--revision", "0123456789abcdef", "--timestamp", "2026-01-02T03:04:05Z"],
                 temp, output, error);
 
@@ -42,7 +41,7 @@ public sealed class SupplyChainCommandTests
                 .GetProperty("digest").GetProperty("gitCommit").GetString());
             string firstSbom = File.ReadAllText(Path.Combine(outputDirectory, "sbom.spdx.json"));
             string firstProvenance = File.ReadAllText(Path.Combine(outputDirectory, "provenance.slsa.json"));
-            Assert.Equal(0, SupplyChainCommand.Run(
+            Assert.Equal(0, Run(
                 [artifacts, "--output", outputDirectory, "--revision", "0123456789abcdef", "--timestamp", "2026-01-02T03:04:05Z"],
                 temp, TextWriter.Null, TextWriter.Null));
             Assert.Equal(firstSbom, File.ReadAllText(Path.Combine(outputDirectory, "sbom.spdx.json")));
@@ -54,4 +53,10 @@ public sealed class SupplyChainCommandTests
                 Directory.Delete(temp, true);
         }
     }
+    private static int Run(
+        string[] args,
+        string directory,
+        TextWriter output,
+        TextWriter error
+    ) => CliInvocation.Run(["supply-chain", .. args], directory, output, error);
 }

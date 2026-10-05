@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <PackageId>BGCS.Intermediate</PackageId>
     <Authors>FLwolfy</Authors>
     <Description>Dependency-free binding intermediate representation shared by BindGen-CS emitters.</Description>
@@ -17,9 +16,8 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
   <ItemGroup>
-    <Compile Include="..\BGCS\Intermediate\*.cs" Link="Intermediate\%(Filename)%(Extension)" />
-    <Compile Include="..\BGCS\Emission\IBindingEmitter.cs" Link="Emission\IBindingEmitter.cs" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

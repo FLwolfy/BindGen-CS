@@ -1,18 +1,18 @@
-using System;
 namespace BGCS.CppAst.Parsing;
-using ClangSharp.Interop;
+
 using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Utilities;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>CompilationLoggerBase</c>.
 /// </summary>
-public abstract class CompilationLoggerBase
+internal abstract class CompilationLoggerBase
 {
     /// <summary>
     /// Gets <c>RootCompilation</c>.
     /// </summary>
-    public abstract CppCompilation RootCompilation { get; }
+    public abstract CppCompilation rootCompilation { get; }
 
     /// <summary>
     /// Executes public operation <c>Unhandled</c>.
@@ -20,32 +20,39 @@ public abstract class CompilationLoggerBase
     public void Unhandled(CXCursor cursor)
     {
         var cppLocation = cursor.GetSourceLocation();
-        RootCompilation.Diagnostics.Warning($"Unhandled declaration: {cursor.Kind}/{CXUtil.GetCursorSpelling(cursor)}.", cppLocation);
+        this.rootCompilation.diagnostics.Warning($"Unhandled declaration: {cursor.Kind}/{CXUtil.GetCursorSpelling(cursor)}.", cppLocation);
     }
 
     /// <summary>
     /// Executes public operation <c>WarningUnhandled</c>.
     /// </summary>
-    public void WarningUnhandled(CXCursor cursor, CXCursor parent, CXType type)
-    {
+    public void WarningUnhandled(
+        CXCursor cursor,
+        CXCursor parent,
+        CXType type
+    ) {
         var cppLocation = cursor.GetSourceLocation();
-        if (cppLocation.Line == 0)
+        if (cppLocation.line == 0)
         {
             cppLocation = parent.GetSourceLocation();
         }
-        RootCompilation.Diagnostics.Warning($"The type {cursor.Kind}/`{CXUtil.GetTypeSpelling(type)}` of kind `{CXUtil.GetTypeKindSpelling(type)}` is not supported in `{CXUtil.GetCursorSpelling(parent)}`", cppLocation);
+
+        this.rootCompilation.diagnostics.Warning($"The type {cursor.Kind}/`{CXUtil.GetTypeSpelling(type)}` of kind `{CXUtil.GetTypeKindSpelling(type)}` is not supported in `{CXUtil.GetCursorSpelling(parent)}`", cppLocation);
     }
 
     /// <summary>
     /// Executes public operation <c>WarningUnhandled</c>.
     /// </summary>
-    public void WarningUnhandled(CXCursor cursor, CXCursor parent)
-    {
+    public void WarningUnhandled(
+        CXCursor cursor,
+        CXCursor parent
+    ) {
         var cppLocation = cursor.GetSourceLocation();
-        if (cppLocation.Line == 0)
+        if (cppLocation.line == 0)
         {
             cppLocation = parent.GetSourceLocation();
         }
-        RootCompilation.Diagnostics.Warning($"Unhandled declaration: {cursor.Kind}/{CXUtil.GetCursorSpelling(cursor)} in {CXUtil.GetCursorSpelling(parent)}.", cppLocation);
+
+        this.rootCompilation.diagnostics.Warning($"Unhandled declaration: {cursor.Kind}/{CXUtil.GetCursorSpelling(cursor)} in {CXUtil.GetCursorSpelling(parent)}.", cppLocation);
     }
 }

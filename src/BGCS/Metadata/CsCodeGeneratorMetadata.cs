@@ -1,191 +1,167 @@
-﻿namespace BGCS.Metadata
-{
-    using BGCS.Core.CSharp;
+using System.Collections.Generic;
+using BGCS.Configuration;
 
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Converters;
+namespace BGCS.Metadata
+{
     using System.Diagnostics.CodeAnalysis;
+    using BGCS.CSharp;
 
     /// <summary>
-    /// Defines the public class <c>CsCodeGeneratorMetadata</c>.
+    /// Collects mutable named generation metadata used by overload planning, patches, and output composition.
     /// </summary>
     public class CsCodeGeneratorMetadata
     {
-        private readonly Dictionary<string, GeneratorMetadataEntry> entries = [];
+        private readonly Dictionary<string, GeneratorMetadataEntry> m_entries = [];
+        /// <summary>
+        /// Gets or sets the generation configuration retained by this metadata container.
+        /// </summary>
+        public CsCodeGeneratorConfig settings { get; set; } = null!;
+        /// <summary>
+        /// Gets the mutable named-entry dictionary used by metadata extensions.
+        /// </summary>
+        public Dictionary<string, GeneratorMetadataEntry> entries => this.m_entries;
 
         /// <summary>
-        /// Gets or sets <c>Settings</c>.
+        /// Gets or replaces a named metadata contribution; reading an absent name throws.
         /// </summary>
-        public CsCodeGeneratorConfig Settings { get; set; } = null!;
+        /// <param name="index">
+        /// The exact metadata entry name.
+        /// </param>
+        /// <exception cref="KeyNotFoundException">
+        /// The getter cannot find the requested name.
+        /// </exception>
+        public GeneratorMetadataEntry this[string index] { get => this.entries[index]; set => this.entries[index] = value; }
 
         /// <summary>
-        /// Exposes public member <c>entries</c>.
+        /// Gets or replaces constant projections, lazily creating an empty sequence when absent.
         /// </summary>
-        public Dictionary<string, GeneratorMetadataEntry> Entries => entries;
+        public List<CsConstantMetadata> definedConstants { get => GetOrCreate<MetadataListEntry<CsConstantMetadata>>("DefinedConstants").values; set => this.m_entries["DefinedConstants"] = new MetadataListEntry<CsConstantMetadata>(value); }
+        /// <summary>
+        /// Gets or replaces enum projections, lazily creating an empty sequence when absent.
+        /// </summary>
+        public List<CsEnumMetadata> definedEnums { get => GetOrCreate<MetadataListEntry<CsEnumMetadata>>("DefinedEnums").values; set => this.m_entries["DefinedEnums"] = new MetadataListEntry<CsEnumMetadata>(value); }
+        /// <summary>
+        /// Gets or replaces managed receiver names with generated extension methods.
+        /// </summary>
+        public List<string> definedExtensionTypes { get => GetOrCreate<MetadataListEntry<string>>("DefinedExtensionTypes").values; set => this.m_entries["DefinedExtensionTypes"] = new MetadataListEntry<string>(value); }
+        /// <summary>
+        /// Gets or replaces the analyzed function descriptors projected as managed extensions.
+        /// </summary>
+        public List<CsFunction> definedExtensions { get => GetOrCreate<MetadataListEntry<CsFunction>>("DefinedExtensions").values; set => this.m_entries["DefinedExtensions"] = new MetadataListEntry<CsFunction>(value); }
+        /// <summary>
+        /// Gets or replaces native receiver names with generated COM extension methods.
+        /// </summary>
+        public List<string> definedCOMExtensionTypes { get => GetOrCreate<MetadataListEntry<string>>("DefinedCOMExtensionTypes").values; set => this.m_entries["DefinedCOMExtensionTypes"] = new MetadataListEntry<string>(value); }
+        /// <summary>
+        /// Gets or replaces managed COM variations grouped by receiver name.
+        /// </summary>
+        public Dictionary<string, HashSet<CsFunctionVariation>> definedCOMExtensions { get => GetOrCreate<MetadataDictionaryEntry<string, HashSet<CsFunctionVariation>>>("DefinedCOMExtensions").dictionary; set => this.m_entries["DefinedCOMExtensions"] = new MetadataDictionaryEntry<string, HashSet<CsFunctionVariation>>(value); }
+        /// <summary>
+        /// Gets or replaces native function identities observed during analysis.
+        /// </summary>
+        public List<string> cppDefinedFunctions { get => GetOrCreate<MetadataListEntry<string>>("CppDefinedFunctions").values; set => this.m_entries["CppDefinedFunctions"] = new MetadataListEntry<string>(value); }
+        /// <summary>
+        /// Gets or replaces analyzed native function and managed overload descriptors.
+        /// </summary>
+        public List<CsFunction> definedFunctions { get => GetOrCreate<MetadataListEntry<CsFunction>>("DefinedFunctions").values; set => this.m_entries["DefinedFunctions"] = new MetadataListEntry<CsFunction>(value); }
+        /// <summary>
+        /// Gets or replaces native alias names already emitted by this generation.
+        /// </summary>
+        public List<string> definedTypedefs { get => GetOrCreate<MetadataListEntry<string>>("DefinedTypedefs").values; set => this.m_entries["DefinedTypedefs"] = new MetadataListEntry<string>(value); }
+        /// <summary>
+        /// Gets or replaces native type names already emitted by this generation.
+        /// </summary>
+        public List<string> definedTypes { get => GetOrCreate<MetadataListEntry<string>>("DefinedTypes").values; set => this.m_entries["DefinedTypes"] = new MetadataListEntry<string>(value); }
+        /// <summary>
+        /// Gets or replaces callback delegate projections already emitted by this generation.
+        /// </summary>
+        public List<CsDelegate> definedDelegates { get => GetOrCreate<MetadataListEntry<CsDelegate>>("DefinedDelegates").values; set => this.m_entries["DefinedDelegates"] = new MetadataListEntry<CsDelegate>(value); }
+        /// <summary>
+        /// Gets or replaces native pointer carrier mappings keyed by native type name.
+        /// </summary>
+        public Dictionary<string, string> wrappedPointers { get => GetOrCreate<MetadataDictionaryEntry<string, string>>("WrappedPointers").dictionary; set => this.m_entries["WrappedPointers"] = new MetadataDictionaryEntry<string, string>(value); }
+        /// <summary>
+        /// Gets or replaces the dynamic-import entry-point table, lazily creating an empty table when absent.
+        /// </summary>
+        public CsFunctionTableMetadata functionTable { get => GetOrCreate<CsFunctionTableMetadata>("FunctionTable"); set => this.m_entries["FunctionTable"] = value; }
 
         /// <summary>
-        /// Exposes public member <c>index]</c>.
+        /// Tests whether a named metadata contribution exists without creating it.
         /// </summary>
-        public GeneratorMetadataEntry this[string index]
-        {
-            get => Entries[index];
-            set => Entries[index] = value;
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedConstants</c>.
-        /// </summary>
-        public List<CsConstantMetadata> DefinedConstants
-        {
-            get => GetOrCreate<MetadataListEntry<CsConstantMetadata>>("DefinedConstants").Values;
-            set => entries["DefinedConstants"] = new MetadataListEntry<CsConstantMetadata>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedEnums</c>.
-        /// </summary>
-        public List<CsEnumMetadata> DefinedEnums
-        {
-            get => GetOrCreate<MetadataListEntry<CsEnumMetadata>>("DefinedEnums").Values;
-            set => entries["DefinedEnums"] = new MetadataListEntry<CsEnumMetadata>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedExtensionTypes</c>.
-        /// </summary>
-        public List<string> DefinedExtensionTypes
-        {
-            get => GetOrCreate<MetadataListEntry<string>>("DefinedExtensionTypes").Values;
-            set => entries["DefinedExtensionTypes"] = new MetadataListEntry<string>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedExtensions</c>.
-        /// </summary>
-        public List<CsFunction> DefinedExtensions
-        {
-            get => GetOrCreate<MetadataListEntry<CsFunction>>("DefinedExtensions").Values;
-            set => entries["DefinedExtensions"] = new MetadataListEntry<CsFunction>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedCOMExtensionTypes</c>.
-        /// </summary>
-        public List<string> DefinedCOMExtensionTypes
-        {
-            get => GetOrCreate<MetadataListEntry<string>>("DefinedCOMExtensionTypes").Values;
-            set => entries["DefinedCOMExtensionTypes"] = new MetadataListEntry<string>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedCOMExtensions</c>.
-        /// </summary>
-        public Dictionary<string, HashSet<CsFunctionVariation>> DefinedCOMExtensions
-        {
-            get => GetOrCreate<MetadataDictionaryEntry<string, HashSet<CsFunctionVariation>>>("DefinedCOMExtensions").Dictionary;
-            set => entries["DefinedCOMExtensions"] = new MetadataDictionaryEntry<string, HashSet<CsFunctionVariation>>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>CppDefinedFunctions</c>.
-        /// </summary>
-        public List<string> CppDefinedFunctions
-        {
-            get => GetOrCreate<MetadataListEntry<string>>("CppDefinedFunctions").Values;
-            set => entries["CppDefinedFunctions"] = new MetadataListEntry<string>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedFunctions</c>.
-        /// </summary>
-        public List<CsFunction> DefinedFunctions
-        {
-            get => GetOrCreate<MetadataListEntry<CsFunction>>("DefinedFunctions").Values;
-            set => entries["DefinedFunctions"] = new MetadataListEntry<CsFunction>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedTypedefs</c>.
-        /// </summary>
-        public List<string> DefinedTypedefs
-        {
-            get => GetOrCreate<MetadataListEntry<string>>("DefinedTypedefs").Values;
-            set => entries["DefinedTypedefs"] = new MetadataListEntry<string>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedTypes</c>.
-        /// </summary>
-        public List<string> DefinedTypes
-        {
-            get => GetOrCreate<MetadataListEntry<string>>("DefinedTypes").Values;
-            set => entries["DefinedTypes"] = new MetadataListEntry<string>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>DefinedDelegates</c>.
-        /// </summary>
-        public List<CsDelegate> DefinedDelegates
-        {
-            get => GetOrCreate<MetadataListEntry<CsDelegate>>("DefinedDelegates").Values;
-            set => entries["DefinedDelegates"] = new MetadataListEntry<CsDelegate>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>WrappedPointers</c>.
-        /// </summary>
-        public Dictionary<string, string> WrappedPointers
-        {
-            get => GetOrCreate<MetadataDictionaryEntry<string, string>>("WrappedPointers").Dictionary;
-            set => entries["WrappedPointers"] = new MetadataDictionaryEntry<string, string>(value);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>FunctionTable</c>.
-        /// </summary>
-        public CsFunctionTableMetadata FunctionTable
-        {
-            get => GetOrCreate<CsFunctionTableMetadata>("FunctionTable");
-            set => entries["FunctionTable"] = value;
-        }
-
-        /// <summary>
-        /// Executes public operation <c>ContainsKey</c>.
-        /// </summary>
+        /// <param name="key">
+        /// The exact metadata entry name.
+        /// </param>
+        /// <returns>
+        /// True when the name is present; otherwise false.
+        /// </returns>
         public bool ContainsKey(string key)
         {
-            return Entries.ContainsKey(key);
+            return this.entries.ContainsKey(key);
         }
 
         /// <summary>
-        /// Attempts to resolve data via <c>TryGetEntry</c> without throwing.
+        /// Looks up a named contribution without creating or converting it.
         /// </summary>
-        public bool TryGetEntry(string key, [NotNullWhen(true)] out GeneratorMetadataEntry? entry)
-        {
-            return Entries.TryGetValue(key, out entry);
+        /// <param name="key">
+        /// The exact entry name.
+        /// </param>
+        /// <param name="entry">
+        /// The retained entry, or null when absent.
+        /// </param>
+        /// <returns>
+        /// True when the named contribution exists; otherwise false.
+        /// </returns>
+        public bool TryGetEntry(
+            string key,
+            [NotNullWhen(true)] out GeneratorMetadataEntry? entry
+        ) {
+            return this.entries.TryGetValue(key, out entry);
         }
 
         /// <summary>
-        /// Attempts to resolve data via <c>TryGetEntry</c> without throwing.
+        /// Looks up a named contribution only when its runtime type matches the requested metadata type.
         /// </summary>
-        public bool TryGetEntry<T>(string key, [NotNullWhen(true)] out T? entry) where T : GeneratorMetadataEntry
+        /// <typeparam name="T">The requested metadata entry type.</typeparam>
+        /// <param name="key">
+        /// The exact entry name.
+        /// </param>
+        /// <param name="entry">
+        /// The retained typed entry, or null for an absent or incompatible entry.
+        /// </param>
+        /// <returns>
+        /// True when a compatible entry exists; otherwise false.
+        /// </returns>
+        public bool TryGetEntry<T>(
+            string key,
+            [NotNullWhen(true)] out T? entry
+        )
+            where T : GeneratorMetadataEntry
         {
-            bool result = Entries.TryGetValue(key, out var metadataEntry);
+            bool result = this.entries.TryGetValue(key, out var metadataEntry);
             if (result && metadataEntry is T t)
             {
                 entry = t;
                 return true;
             }
+
             entry = default;
             return false;
         }
 
         /// <summary>
-        /// Returns computed data from <c>GetEntry</c>.
+        /// Looks up a typed metadata contribution without creating or replacing it.
         /// </summary>
-        public T? GetEntry<T>(string key) where T : GeneratorMetadataEntry
+        /// <typeparam name="T">The requested metadata entry type.</typeparam>
+        /// <param name="key">
+        /// The exact entry name.
+        /// </param>
+        /// <returns>
+        /// The retained typed entry, or null for an absent or incompatible entry.
+        /// </returns>
+        public T? GetEntry<T>(string key)
+            where T : GeneratorMetadataEntry
         {
-            bool result = Entries.TryGetValue(key, out var metadataEntry);
+            bool result = this.entries.TryGetValue(key, out var metadataEntry);
             if (result && metadataEntry is T t)
             {
                 return t;
@@ -195,9 +171,17 @@
         }
 
         /// <summary>
-        /// Returns computed data from <c>GetOrCreate</c>.
+        /// Returns a compatible entry or replaces an absent or incompatible entry with a newly constructed one.
         /// </summary>
-        public T GetOrCreate<T>(string key) where T : GeneratorMetadataEntry, new()
+        /// <typeparam name="T">The metadata entry type with a public parameterless constructor.</typeparam>
+        /// <param name="key">
+        /// The exact metadata entry name.
+        /// </param>
+        /// <returns>
+        /// The retained compatible or newly created entry.
+        /// </returns>
+        public T GetOrCreate<T>(string key)
+            where T : GeneratorMetadataEntry, new()
         {
             T entryT;
             if (TryGetEntry(key, out var entry))
@@ -209,71 +193,65 @@
             }
 
             entryT = new T();
-            Entries[key] = entryT;
+            this.entries[key] = entryT;
             return entryT;
         }
 
         /// <summary>
-        /// Merges configuration or metadata via <c>Merge</c>.
+        /// Merges matching contributions and clones previously absent contributions from the incoming metadata.
         /// </summary>
-        public void Merge(CsCodeGeneratorMetadata from, in MergeOptions options)
-        {
-            foreach (var item in from.Entries)
+        /// <param name="from">
+        /// The source metadata retained unchanged by merging.
+        /// </param>
+        /// <param name="options">
+        /// Options forwarded to concrete entry merge operations.
+        /// </param>
+        public void Merge(
+            CsCodeGeneratorMetadata from,
+            in MergeOptions options
+        ) {
+            foreach (var item in from.entries)
             {
+                if (item.Value is CsFunctionTableMetadata && !options.mergeFunctionTable)
+                    continue;
                 if (TryGetEntry(item.Key, out var entry))
                 {
                     entry.Merge(item.Value, options);
                 }
+                else
+                {
+                    entries.Add(item.Key, item.Value.Clone());
+                }
             }
         }
 
         /// <summary>
-        /// Executes public operation <c>Clone</c>.
+        /// Copies the named-entry dictionary while either retaining entries or invoking their individual cloning policies.
         /// </summary>
+        /// <param name="shallow">
+        /// True to retain the entry objects; false to clone each entry.
+        /// </param>
+        /// <returns>
+        /// A new metadata container retaining the same configuration object.
+        /// </returns>
         public CsCodeGeneratorMetadata Clone(bool shallow = false)
         {
             CsCodeGeneratorMetadata metadata = new();
-            metadata.Settings = Settings;
-            foreach (var item in Entries)
+            metadata.settings = this.settings;
+            foreach (var item in this.entries)
             {
                 if (shallow)
                 {
-                    metadata.Entries[item.Key] = item.Value;
+                    metadata.entries[item.Key] = item.Value;
                 }
                 else
                 {
-                    metadata.Entries[item.Key] = item.Value.Clone();
+                    metadata.entries[item.Key] = item.Value.Clone();
                 }
             }
+
             return metadata;
         }
 
-        private static readonly JsonSerializerSettings options = new()
-        {
-            Formatting = Formatting.Indented,
-            Converters = { new StringEnumConverter() }
-        };
-
-        private static readonly JsonSerializer serializer = JsonSerializer.Create(options);
-
-        /// <summary>
-        /// Persists data using <c>Save</c>.
-        /// </summary>
-        public void Save(string path)
-        {
-            using var fs = File.CreateText(path);
-            using JsonTextWriter writer = new(fs);
-            serializer.Serialize(writer, this);
-        }
-
-        /// <summary>
-        /// Loads resources or metadata using <c>Load</c>.
-        /// </summary>
-        public static CsCodeGeneratorMetadata Load(string path)
-        {
-            using var fs = File.OpenText(path);
-            using JsonTextReader reader = new(fs);
-            return serializer.Deserialize<CsCodeGeneratorMetadata>(reader) ?? new();
-        }
     }
 }

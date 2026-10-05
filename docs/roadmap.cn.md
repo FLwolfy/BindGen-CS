@@ -90,7 +90,7 @@
 
 ### Phase 4：C++ 语义 Bridge 与最终 Lowering SPI
 
-状态：声明的桌面子集已完成。内置 lowering、`TypeLowerings` / `CallableLowerings`、typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugin 和显式 `NativeShims` 使用同一个确定性 registry。被取代的预发布 adapter SPI 已删除，没有 compatibility layer。
+状态：声明的桌面子集已完成。内置 lowering、`typeLowerings` / `callableLowerings`、typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugin 和显式 `nativeShims` 使用同一个确定性 registry。被取代的预发布 adapter SPI 已删除，没有 compatibility layer。
 
 - 完整覆盖 ctor/dtor、static/instance、cv/ref qualifier、overload、operator、namespace 和异常边界。
 - inheritance graph、virtual/non-virtual base、pointer adjustment、RTTI 可用性形成显式模型。
@@ -109,7 +109,7 @@
 - allocator/deallocator 配对、arena/context、nullable、encoding、length/capacity/written-count 进入 typed contract。
 - callback retention、线程调用、同步/异步完成和 unregister 形成可组合策略。
 - 生成 SafeHandle/IDisposable/Span/string friendly APIs，同时保留可审计 raw ABI。
-- `StrictSafetySeverity=Error` 成为 release/CI 推荐默认值。
+- `strictSafetySeverity=Error` 成为 release/CI 推荐默认值。
 
 完成条件：任何会分配、保留 pointer 或跨调用保存 callback 的 friendly API 都能从 IR 查到完整 lifetime 来源。
 

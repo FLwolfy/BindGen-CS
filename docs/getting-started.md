@@ -53,7 +53,11 @@ project/
 dotnet add package BGCS.Runtime
 ```
 
-If `GenerateRuntimeSource` is enabled, compile the generated `Runtime.cs` instead and do not reference duplicate Runtime types.
+If `generateRuntimeSource` is enabled, compile the generated `Runtime.cs` instead and do not reference duplicate Runtime types.
+
+Set `<DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>` in the consumer project's `PropertyGroup`.
+Generated wrappers already own ABI conversion; .NET should call the declared carriers directly rather than apply default marshalling again.
+This applies across targets. Validate enum widths, handles and callbacks with actual native calls, not only compilation or `sizeof` checks.
 
 `init` writes portable paths relative to the generated configuration. For an ambiguous `.h`, select the workflow explicitly; use `--config` to place the configuration in another directory:
 
@@ -68,20 +72,24 @@ For headers such as SDL3's `SDL.h`, use:
 
 ```json
 {
-  "EntryFiles": ["include/SDL3/SDL.h"],
-  "IncludeFolders": ["include"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true
+  "entryFiles": [
+    "include/SDL3/SDL.h"
+  ],
+  "includeFolders": [
+    "include"
+  ],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true
 }
 ```
 
-Only declarations under entry-file directories and configured include folders are included. Compiler system headers remain excluded unless `ParseSystemIncludes` is enabled.
+Only declarations under entry-file directories and configured include folders are included. Compiler system headers remain excluded unless `parseSystemIncludes` is enabled.
 
 ## Select C or C++ parsing
 
 ```json
 {
-  "ParserKind": "C"
+  "parserKind": "C"
 }
 ```
 
@@ -90,7 +98,8 @@ Use `C` for C libraries and `Cpp` for C++ declarations or C headers requiring C+
 ## Embedded facade
 
 ```csharp
-using BGCS;
+using BGCS.Configuration;
+using BGCS.Facade;
 
 CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
 generator.LogToConsole();
@@ -114,12 +123,15 @@ Create `bridge.json`:
 
 ```json
 {
-  "ConfigVersion": 1,
-  "EntryFiles": ["include/library.hpp"],
-  "AllowedHeaders": ["include/library.hpp"],
-  "OutputPath": "GeneratedBridge",
-  "LanguageStandard": "c++23",
-  "GenerateBuildManifest": true
+  "entryFiles": [
+    "include/library.hpp"
+  ],
+  "allowedHeaders": [
+    "include/library.hpp"
+  ],
+  "outputPath": "GeneratedBridge",
+  "languageStandard": "c++23",
+  "generateBuildManifest": true
 }
 ```
 
@@ -130,12 +142,13 @@ bindgen-cs bridge bridge.json
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
-Set `GenerateCSharpBindings=true` plus `CSharpNamespace`, `CSharpApiName`, `NativeLibraryName`, and `CSharpOutputPath` to emit both the native C bridge and C# bindings in this single command. The optional C# output defaults to `CSharpStrictSafetySeverity=SuppressFriendly`: unresolved ownership or lifetime keeps raw ABI but suppresses inferred friendly methods. A project that has independently audited those contracts can explicitly choose `Warning`; `Error` rejects generation until they are configured.
+Set `generateCSharpBindings=true` plus `cSharpNamespace`, `cSharpApiName`, `nativeLibraryName`, and `cSharpOutputPath` to emit both the native C bridge and C# bindings in this single command. The optional C# output defaults to `cSharpStrictSafetySeverity=SuppressFriendly`: unresolved ownership or lifetime keeps raw ABI but suppresses inferred friendly methods. A project that has independently audited those contracts can explicitly choose `Warning`; `Error` rejects generation until they are configured.
 
 Embedded API:
 
 ```csharp
-using BGCS.Cpp2C;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 
 Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load("bridge.json");
 Cpp2CCodeGenerator generator = new(config);
@@ -144,7 +157,7 @@ generator.Generate("include/library.hpp", "GeneratedBridge");
 
 Compile generated `src/Classes.cpp` as a DLL with the generated `include` directory and original include directories. Then run BGCS against the generated C headers. Automatic native linking remains dependent on the original library build and is a separate acceptance gate.
 
-The generated `bridge.manifest.json` is the deterministic handoff to native build automation. Paths are relative to the manifest when possible; it records the target, C++ standard, generated/original files, include directories, definitions, compiler/linker arguments, search directories, and libraries. `LanguageStandard` defaults to `c++23`; an existing `-std=` entry in `AdditionalArguments` remains an explicit compatibility override.
+The generated `bridge.manifest.json` is the deterministic handoff to native build automation. Paths are relative to the manifest when possible; it records the target, C++ standard, generated/original files, include directories, definitions, compiler/linker arguments, search directories, and libraries. `languageStandard` defaults to `c++23`; an existing `-std=` entry in `additionalArguments` remains an explicit compatibility override.
 
 Inspect without executing, override the compiler, or select an explicit artifact path:
 
@@ -187,9 +200,9 @@ The output transaction replaces the complete generated directory after success, 
 
 ## Troubleshooting
 
-- **No declarations generated:** inspect `AllowedHeaders` and enable transitive user headers for umbrella headers.
+- **No declarations generated:** inspect `allowedHeaders` and enable transitive user headers for umbrella headers.
 - **Parsing takes too long:** disable macros/comments when not required and report the header as a performance regression; the real-library budgets are mandatory.
-- **Unknown type:** add a `TypeMappings` entry or generate a C++ bridge specialization. Never map a non-trivial C++ value type directly to a blittable C# struct.
+- **Unknown type:** add a `typeMappings` entry or generate a C++ bridge specialization. Never map a non-trivial C++ value type directly to a blittable C# struct.
 - **Duplicate Runtime types:** reference `BGCS.Runtime` or compile generated `Runtime.cs`, not both without `BGCS_RUNTIME_EXTERNAL`.
 - **Native compiler missing:** set `BGCS_CC` and `BGCS_CPP2C_CXX` (or `CC`/`CXX`) to the appropriate compiler drivers.
 - **Need every configuration property:** run `bindgen-cs schema bindgen.schema.json`; `docs/config.md` lists only properties with dedicated entry regression tests.

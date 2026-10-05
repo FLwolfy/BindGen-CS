@@ -1,4 +1,4 @@
 {
-  "Property": "LibName",
+  "Property": "libName",
   "Expected": "entry-lib-x"
 }

@@ -1,5 +1,5 @@
 {
-  "BaseConfig": {
-    "Url": "file://base.json"
+  "baseConfig": {
+    "url": "file://base.json"
   }
 }

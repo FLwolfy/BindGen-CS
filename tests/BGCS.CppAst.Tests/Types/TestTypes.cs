@@ -1,17 +1,9 @@
 using System;
-using System.IO;
 using System.Linq;
-using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
+using BGCS.CppAst.Extensions;
 using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
-using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
 using Xunit;
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
@@ -35,32 +27,32 @@ t1* f4;
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(5, compilation.Fields.Count);
-                    Assert.Equal(2, compilation.Typedefs.Count);
+                    Assert.Equal(5, compilation.fields.Count);
+                    Assert.Equal(2, compilation.typedefs.Count);
 
                     var types = new CppType[]
                     {
-                        new CppReferenceType(default, CppPrimitiveType.Int) ,
-                        new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.Float),
+                        new CppReferenceType(default, CppPrimitiveType.@int) ,
+                        new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.@float),
 
-                        new CppPointerType(default, CppPrimitiveType.Char),
-                        new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.Int),
-                        new CppArrayType(default, CppPrimitiveType.Int, 5),
-                        new CppPointerType(default, new CppFunctionType(default, CppPrimitiveType.Void)
+                        new CppPointerType(default, CppPrimitiveType.@char, System.IntPtr.Size),
+                        new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.@int),
+                        new CppArrayType(default, CppPrimitiveType.@int, 5),
+                        new CppPointerType(default, new CppFunctionType(default, CppPrimitiveType.@void)
                         {
-                            Parameters =
+                            parameters =
                             {
-                                new CppParameter(default, CppPrimitiveType.Int, "a"),
-                                new CppParameter(default, CppPrimitiveType.Float, "b"),
+                                new CppParameter(default, CppPrimitiveType.@int, "a"),
+                                new CppParameter(default, CppPrimitiveType.@float, "b"),
                             }
-                        }) { SizeOf = IntPtr.Size },
-                        new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.Float))
+                        }, System.IntPtr.Size) { sizeOf = IntPtr.Size },
+                        new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, CppPrimitiveType.@float), System.IntPtr.Size)
                     };
 
-                    var canonicalTypes = compilation.Typedefs.Select(x => x.GetCanonicalType()).Concat(compilation.Fields.Select(x => x.Type.GetCanonicalType())).ToList();
-                    Assert.Equal(types.Select(x => x.SizeOf), canonicalTypes.Select(x => x.SizeOf));
+                    var canonicalTypes = compilation.typedefs.Select(x => x.GetCanonicalType()).Concat(compilation.fields.Select(x => x.type.GetCanonicalType())).ToList();
+                    Assert.Equal(types.Select(x => x.sizeOf), canonicalTypes.Select(x => x.sizeOf));
                 }
             );
         }
@@ -85,32 +77,32 @@ TemplateStruct<int, Struct2> unexposed;
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(2, compilation.Fields.Count);
+                    Assert.Equal(2, compilation.fields.Count);
 
-                    var exposed = Assert.IsType<CppClass>(compilation.Fields[0].Type);
-                    Assert.Equal("TemplateStruct", exposed.Name);
-                    Assert.Equal(2, exposed.TemplateParameters.Count);
-                    Assert.Equal(CppTemplateArgumentKind.AsType, exposed.TemplateSpecializedArguments[0]?.ArgKind);
-                    var exposedPrimitive = Assert.IsType<CppPrimitiveType>(exposed.TemplateSpecializedArguments[0]?.ArgAsType);
-                    Assert.Equal(CppPrimitiveKind.Int, exposedPrimitive.Kind);
-                    Assert.Equal("Struct2", (exposed.TemplateSpecializedArguments[1].ArgAsType as CppClass)?.Name);
+                    var exposed = Assert.IsType<CppClass>(compilation.fields[0].type);
+                    Assert.Equal("TemplateStruct", exposed.name);
+                    Assert.Equal(2, exposed.templateParameters.Count);
+                    Assert.Equal(CppTemplateArgumentKind.AsType, exposed.templateSpecializedArguments[0]?.argKind);
+                    var exposedPrimitive = Assert.IsType<CppPrimitiveType>(exposed.templateSpecializedArguments[0]?.argAsType);
+                    Assert.Equal(CppPrimitiveKind.Int, exposedPrimitive.kind);
+                    Assert.Equal("Struct2", (exposed.templateSpecializedArguments[1].argAsType as CppClass)?.name);
 
-                    var specialized = Assert.IsType<CppClass>(exposed.SpecializedTemplate);
-                    Assert.Equal("TemplateStruct", specialized.Name);
-                    Assert.Equal(2, specialized.Fields.Count);
-                    Assert.Equal("field0", specialized.Fields[0].Name);
-                    Assert.Equal("T", specialized.Fields[0].Type.GetDisplayName());
-                    Assert.Equal("field1", specialized.Fields[1].Name);
-                    Assert.Equal("U", specialized.Fields[1].Type.GetDisplayName());
+                    var specialized = Assert.IsType<CppClass>(exposed.specializedTemplate);
+                    Assert.Equal("TemplateStruct", specialized.name);
+                    Assert.Equal(2, specialized.fields.Count);
+                    Assert.Equal("field0", specialized.fields[0].name);
+                    Assert.Equal("T", specialized.fields[0].type.GetDisplayName());
+                    Assert.Equal("field1", specialized.fields[1].name);
+                    Assert.Equal("U", specialized.fields[1].type.GetDisplayName());
 
-                    var unexposed = Assert.IsType<CppClass>(compilation.Fields[1].Type);
-                    Assert.Equal("TemplateStruct", unexposed.Name);
-                    Assert.Equal(2, unexposed.TemplateParameters.Count);
-                    Assert.Equal(CppTemplateArgumentKind.AsType, unexposed.TemplateSpecializedArguments[0]?.ArgKind);
-                    Assert.Equal(CppPrimitiveKind.Int, exposedPrimitive.Kind);
-                    Assert.Equal("Struct2", (unexposed.TemplateSpecializedArguments[1].ArgAsType as CppClass)?.Name);
+                    var unexposed = Assert.IsType<CppClass>(compilation.fields[1].type);
+                    Assert.Equal("TemplateStruct", unexposed.name);
+                    Assert.Equal(2, unexposed.templateParameters.Count);
+                    Assert.Equal(CppTemplateArgumentKind.AsType, unexposed.templateSpecializedArguments[0]?.argKind);
+                    Assert.Equal(CppPrimitiveKind.Int, exposedPrimitive.kind);
+                    Assert.Equal("Struct2", (unexposed.templateSpecializedArguments[1].argAsType as CppClass)?.name);
 
                     Assert.NotEqual(exposed.GetHashCode(), specialized.GetHashCode());
                     Assert.Equal(exposed.GetHashCode(), unexposed.GetHashCode());
@@ -128,13 +120,13 @@ template <typename T> struct Box { T value; };
 GenericHolder<Box, int>* holder;
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                CppClass generic = Assert.Single(compilation.Classes, candidate =>
-                    candidate.Name == "GenericHolder" && candidate.SpecializedTemplate == null);
-                CppTemplateParameterTemplate parameter = Assert.IsType<CppTemplateParameterTemplate>(generic.TemplateParameters[0]);
-                Assert.Equal("Container", parameter.Name);
-                Assert.Equal(CppTypeKind.TemplateParameterTemplate, parameter.TypeKind);
-                Assert.Equal("Item", Assert.IsType<CppTemplateParameterType>(Assert.Single(parameter.Parameters)).Name);
+                Assert.False(compilation.hasErrors);
+                CppClass generic = Assert.Single(compilation.classes, candidate =>
+                    candidate.name == "GenericHolder" && candidate.specializedTemplate == null);
+                CppTemplateParameterTemplate parameter = Assert.IsType<CppTemplateParameterTemplate>(generic.templateParameters[0]);
+                Assert.Equal("Container", parameter.name);
+                Assert.Equal(CppTypeKind.TemplateParameterTemplate, parameter.typeKind);
+                Assert.Equal("Item", Assert.IsType<CppTemplateParameterType>(Assert.Single(parameter.parameters)).name);
             });
         }
 
@@ -143,10 +135,10 @@ GenericHolder<Box, int>* holder;
         {
             ParseAssert("extern int values[];", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                CppArrayType array = Assert.IsType<CppArrayType>(Assert.Single(compilation.Fields).Type);
-                Assert.Equal(0, array.Size);
-                Assert.Equal(0, array.SizeOf);
+                Assert.False(compilation.hasErrors);
+                CppArrayType array = Assert.IsType<CppArrayType>(Assert.Single(compilation.fields).type);
+                Assert.Equal(0, array.size);
+                Assert.Equal(0, array.sizeOf);
             });
         }
 
@@ -155,13 +147,13 @@ GenericHolder<Box, int>* holder;
         {
             ParseAssert("template <int N> struct Buffer { int values[N]; };", compilation =>
             {
-                Assert.False(compilation.HasErrors);
-                CppClass buffer = Assert.Single(compilation.Classes);
-                CppArrayType array = Assert.IsType<CppArrayType>(Assert.Single(buffer.Fields).Type);
-                Assert.Equal(0, array.Size);
-                Assert.Equal(0, array.SizeOf);
-                Assert.Contains(compilation.Diagnostics.Messages,
-                    message => message.Text.Contains("Dependent sized arrays", StringComparison.Ordinal));
+                Assert.False(compilation.hasErrors);
+                CppClass buffer = Assert.Single(compilation.classes);
+                CppArrayType array = Assert.IsType<CppArrayType>(Assert.Single(buffer.fields).type);
+                Assert.Equal(0, array.size);
+                Assert.Equal(0, array.sizeOf);
+                Assert.Contains(compilation.diagnostics.messages,
+                    message => message.text.Contains("Dependent sized arrays", StringComparison.Ordinal));
             });
         }
 
@@ -180,26 +172,26 @@ class Derived : public ::BaseTemplate<::Derived>
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(3, compilation.Classes.Count);
+                    Assert.Equal(3, compilation.classes.Count);
 
-                    var baseTemplate = compilation.Classes[0];
-                    var derived = compilation.Classes[1];
-                    var baseClassSpecialized = compilation.Classes[2];
+                    var baseTemplate = compilation.classes[0];
+                    var derived = compilation.classes[1];
+                    var baseClassSpecialized = compilation.classes[2];
 
-                    Assert.Equal("BaseTemplate", baseTemplate.Name);
-                    Assert.Equal("Derived", derived.Name);
-                    Assert.Equal("BaseTemplate", baseClassSpecialized.Name);
+                    Assert.Equal("BaseTemplate", baseTemplate.name);
+                    Assert.Equal("Derived", derived.name);
+                    Assert.Equal("BaseTemplate", baseClassSpecialized.name);
 
-                    Assert.Single(derived.BaseTypes);
-                    Assert.Equal(baseClassSpecialized, derived.BaseTypes[0].Type);
+                    Assert.Single(derived.baseTypes);
+                    Assert.Equal(baseClassSpecialized, derived.baseTypes[0].type);
 
-                    Assert.Single(baseClassSpecialized.TemplateParameters);
+                    Assert.Single(baseClassSpecialized.templateParameters);
 
                     //Here change to argument as a template deduce instance, not as a Template Parameters~~
-                    Assert.Equal(derived, baseClassSpecialized.TemplateSpecializedArguments[0].ArgAsType);
-                    Assert.Equal(baseTemplate, baseClassSpecialized.SpecializedTemplate);
+                    Assert.Equal(derived, baseClassSpecialized.templateSpecializedArguments[0].argAsType);
+                    Assert.Equal(baseTemplate, baseClassSpecialized.specializedTemplate);
                 }
             );
         }
@@ -218,41 +210,41 @@ foo<int, int> foobar;
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(3, compilation.Classes.Count);
-                    Assert.Single(compilation.Fields);
+                    Assert.Equal(3, compilation.classes.Count);
+                    Assert.Single(compilation.fields);
 
-                    var baseTemplate = compilation.Classes[0];
-                    var fullSpecializedClass = compilation.Classes[1];
-                    var partialSpecializedTemplate = compilation.Classes[2];
+                    var baseTemplate = compilation.classes[0];
+                    var fullSpecializedClass = compilation.classes[1];
+                    var partialSpecializedTemplate = compilation.classes[2];
 
-                    var field = compilation.Fields[0];
-                    Assert.Equal("foobar", field.Name);
+                    var field = compilation.fields[0];
+                    Assert.Equal("foobar", field.name);
 
-                    Assert.Equal(CppTemplateKind.TemplateClass, baseTemplate.TemplateKind);
-                    Assert.Equal(CppTemplateKind.TemplateSpecializedClass, fullSpecializedClass.TemplateKind);
-                    Assert.Equal(CppTemplateKind.PartialTemplateClass, partialSpecializedTemplate.TemplateKind);
+                    Assert.Equal(CppTemplateKind.TemplateClass, baseTemplate.templateKind);
+                    Assert.Equal(CppTemplateKind.TemplateSpecializedClass, fullSpecializedClass.templateKind);
+                    Assert.Equal(CppTemplateKind.PartialTemplateClass, partialSpecializedTemplate.templateKind);
 
                     //Need be a specialized for partial template here
-                    Assert.Equal(fullSpecializedClass.SpecializedTemplate, partialSpecializedTemplate);
+                    Assert.Equal(fullSpecializedClass.specializedTemplate, partialSpecializedTemplate);
 
                     //Need be a full specialized class for this field
-                    Assert.Equal(field.Type, fullSpecializedClass);
+                    Assert.Equal(field.type, fullSpecializedClass);
 
-                    Assert.Equal(2, partialSpecializedTemplate.TemplateSpecializedArguments.Count);
+                    Assert.Equal(2, partialSpecializedTemplate.templateSpecializedArguments.Count);
                     //The first argument is integer now
-                    Assert.Equal("int", partialSpecializedTemplate.TemplateSpecializedArguments[0].ArgString);
+                    Assert.Equal("int", partialSpecializedTemplate.templateSpecializedArguments[0].argString);
                     //The second argument is not a specialized argument, we do not specialized a `B` template parameter here(partial specialized template)
-                    Assert.False(partialSpecializedTemplate.TemplateSpecializedArguments[1].IsSpecializedArgument);
+                    Assert.False(partialSpecializedTemplate.templateSpecializedArguments[1].isSpecializedArgument);
 
                     //The field use type is a full specialized type here~, so we can have two `int` template parmerater here
                     //It's a not template or partial template class, so we can instantiate it, see `foo<int, int> foobar;` before.
-                    Assert.Equal(2, fullSpecializedClass.TemplateSpecializedArguments.Count);
+                    Assert.Equal(2, fullSpecializedClass.templateSpecializedArguments.Count);
                     //The first argument is integer now
-                    Assert.Equal("int", fullSpecializedClass.TemplateSpecializedArguments[0].ArgString);
+                    Assert.Equal("int", fullSpecializedClass.templateSpecializedArguments[0].argString);
                     //The second argument is not a specialized argument
-                    Assert.Equal("int", fullSpecializedClass.TemplateSpecializedArguments[1].ArgString);
+                    Assert.Equal("int", fullSpecializedClass.templateSpecializedArguments[1].argString);
                 }
             );
         }
@@ -278,18 +270,18 @@ class TmpClass {
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    var tmpClass1 = compilation.Namespaces[1].Fields[0];
-                    var tmpClass2 = compilation.Namespaces[1].Fields[1];
-                    var constDummyPointer = compilation.Namespaces[1].Fields[2];
+                    var tmpClass1 = compilation.namespaces[1].fields[0];
+                    var tmpClass2 = compilation.namespaces[1].fields[1];
+                    var constDummyPointer = compilation.namespaces[1].fields[2];
 
-                    var hoge = tmpClass1.Type.GetDisplayName();
-                    var hoge2 = tmpClass2.Type.GetDisplayName();
-                    var hoge3 = tmpClass2.Type.GetDisplayName();
-                    Assert.Equal("TmpClass const *", tmpClass1.Type.GetDisplayName());
-                    Assert.Equal("TmpClass volatile *", tmpClass2.Type.GetDisplayName());
-                    Assert.Equal("unsigned int const * const", constDummyPointer.Type.GetDisplayName());
+                    var hoge = tmpClass1.type.GetDisplayName();
+                    var hoge2 = tmpClass2.type.GetDisplayName();
+                    var hoge3 = tmpClass2.type.GetDisplayName();
+                    Assert.Equal("TmpClass const *", tmpClass1.type.GetDisplayName());
+                    Assert.Equal("TmpClass volatile *", tmpClass2.type.GetDisplayName());
+                    Assert.Equal("unsigned int const * const", constDummyPointer.type.GetDisplayName());
                 }
             );
         }

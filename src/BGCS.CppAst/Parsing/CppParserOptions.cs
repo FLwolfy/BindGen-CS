@@ -1,160 +1,111 @@
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using BGCS.Core.Targeting;
 using BGCS.CppAst.Targeting;
 
 namespace BGCS.CppAst.Parsing;
+
 /// <summary>
-/// Defines the options used by the <see cref="CppParser"/>
+/// Defines the options used by the <see cref = "CppParser"/>
 /// </summary>
 public class CppParserOptions
 {
-    private List<string> targetSystemIncludeFolders = [];
-    private List<string> targetAdditionalArguments = [];
-
+    private List<string> m_targetSystemIncludeFolders = [];
+    private List<string> m_targetAdditionalArguments = [];
+    private List<string> m_targetDefines = [];
     /// <summary>
     /// Default constructor.
     /// </summary>
     public CppParserOptions()
     {
-        ParserKind = CppParserKind.Cpp;
-        SystemIncludeFolders = [];
-        IncludeFolders = [];
-
+        this.parserKind = CppParserKind.Cpp;
+        this.systemIncludeFolders = [];
+        this.includeFolders = [];
         //Add a default macro here for CppAst.Net
-        Defines = [ 
-            "__cppast_run__",                                     //Help us for identify the CppAst.Net handler
-            @"__cppast_impl(...)=__attribute__((annotate(#__VA_ARGS__)))",          //Help us for use annotate attribute convenience
-            @"__cppast(...)=__cppast_impl(__VA_ARGS__)",                         //Add a macro wrapper here, so the argument with macro can be handle right for compiler.
-        ];
-        AdditionalArguments =
-        [
-            "-Wno-pragma-once-outside-header"
-        ];
-        AutoSquashTypedef = true;
-        ParseMacros = false;
-        ParseComments = true;
-        ParseSystemIncludes = true;
-        ParseTokenAttributes = false;
-        ParseCommentAttribute = false;
-
-        // Default triple targets
-        TargetCpu = nint.Size == 8 ? CppTargetCpu.X86_64 : CppTargetCpu.X86;
-        TargetCpuSub = string.Empty;
-        TargetVendor = "pc";
-        TargetSystem = "windows";
-        TargetAbi = "";
-        ConfigureForTarget(CppTarget.Resolve(), discoverHostToolchain: false);
+        this.defines = ["__cppast_run__", //Help us for identify the CppAst.Net handler
+ @"__cppast_impl(...)=__attribute__((annotate(#__VA_ARGS__)))", //Help us for use annotate attribute convenience
+ @"__cppast(...)=__cppast_impl(__VA_ARGS__)", //Add a macro wrapper here, so the argument with macro can be handle right for compiler.
+ ];
+        this.additionalArguments = ["-Wno-pragma-once-outside-header"];
+        this.autoSquashTypedef = true;
+        this.parseMacros = false;
+        this.parseComments = true;
+        this.parseSystemIncludes = true;
+        this.parseTokenAttributes = false;
+        this.parseCommentAttribute = false;
+        ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId("host"))), discoverHostToolchain: false);
     }
 
     /// <summary>
     /// List of the include folders.
     /// </summary>
-    public List<string> IncludeFolders { get; private set; }
-
+    public List<string> includeFolders { get; private set; }
     /// <summary>
     /// List of the system include folders.
     /// </summary>
-    public List<string> SystemIncludeFolders { get; private set; }
-
+    public List<string> systemIncludeFolders { get; private set; }
     /// <summary>
     /// List of the defines.
     /// </summary>
-    public List<string> Defines { get; private set; }
-
+    public List<string> defines { get; private set; }
     /// <summary>
     /// List of the additional arguments passed directly to the C++ Clang compiler.
     /// </summary>
-    public List<string> AdditionalArguments { get; private set; }
-
+    public List<string> additionalArguments { get; private set; }
     /// <summary>
-    /// Gets or sets the parser kind. Default is <see cref="CppParserKind.Cpp"/>. This is used to select the parser to use.
+    /// Gets or sets the parser kind. Default is <see cref = "CppParserKind.Cpp"/>. This is used to select the parser to use.
     /// </summary>
-    public CppParserKind ParserKind { get; set; } = CppParserKind.Cpp;
-    
+    public CppParserKind parserKind { get; set; } = CppParserKind.Cpp;
     /// <summary>
     /// Gets or sets a boolean indicating whether to parser non-Doxygen comments in addition to Doxygen comments. Default is <c>true</c>
     /// </summary>
-    public bool ParseComments { get; set; }
-
+    public bool parseComments { get; set; }
     /// <summary>
     /// Gets or sets a boolean indicating whether to parse macros. Default is <c>false</c>.
     /// </summary>
-    public bool ParseMacros { get; set; }
-
+    public bool parseMacros { get; set; }
     /// <summary>
     /// Gets or sets a boolean indicating whether un-named enum/struct referenced by a typedef will be renamed directly to the typedef name. Default is <c>true</c>
     /// </summary>
-    public bool AutoSquashTypedef { get; set; }
-
+    public bool autoSquashTypedef { get; set; }
     /// <summary>
     /// Gets or sets a boolean indicating whether to parse System Include headers. Default is <c>true</c>
     /// </summary>
-    public bool ParseSystemIncludes { get; set; }
-
+    public bool parseSystemIncludes { get; set; }
     /// <summary>
     /// Gets or sets a boolean indicating whether to parse meta attributes. Default is <c>false</c>
     /// </summary>
-    public bool ParseTokenAttributes { get; set; }
-
+    public bool parseTokenAttributes { get; set; }
     /// <summary>
     /// Gets or sets a boolean indicating whether to parse comment attributes. Default is <c>false</c>
     /// </summary>
-    public bool ParseCommentAttribute { get; set; }
+    public bool parseCommentAttribute { get; set; }
 
     /// <summary>
-    /// Sets <see cref="ParseMacros"/> to <c>true</c> and return this instance.
+    /// Sets <see cref = "parseMacros"/> to <c>true</c> and return this instance.
     /// </summary>
     /// <returns>This instance</returns>
     public CppParserOptions EnableMacros()
     {
-        ParseMacros = true;
+        this.parseMacros = true;
         return this;
     }
 
     /// <summary>
-    /// Cpu Clang target. Default is <see cref="CppTargetCpu.X86"/>
-    /// </summary>
-    public CppTargetCpu TargetCpu { get; set; }
-
-    /// <summary>
-    /// Cpu sub Clang target. Default is ""
-    /// </summary>
-    public string TargetCpuSub { get; set; }
-
-    /// <summary>
-    /// Vendor Clang target. Default is "pc"
-    /// </summary>
-    public string TargetVendor { get; set; }
-
-    /// <summary>
-    /// System Clang target. Default is "windows"
-    /// </summary>
-    public string TargetSystem { get; set; }
-
-    /// <summary>
-    /// Abi Clang target. Default is ""
-    /// </summary>
-    public string TargetAbi { get; set; }
-
-    /// <summary>
     /// Gets or sets an explicit Clang target triple. When set, it takes precedence over the component fields.
     /// </summary>
-    public string? TargetTriple { get; set; }
-
+    public string? targetTriple { get; set; }
     /// <summary>
     /// Gets or sets a C/C++ pre-header included before the files/text to parse
     /// </summary>
-    public string? PreHeaderText { get; set; }
-
+    public string? preHeaderText { get; set; }
     /// <summary>
     /// Gets or sets a C/C++ post-header included after the files/text to parse
     /// </summary>
-    public string? PostHeaderText { get; set; }
+    public string? postHeaderText { get; set; }
 
     /// <summary>
     /// Clone this instance.
@@ -163,192 +114,101 @@ public class CppParserOptions
     public virtual CppParserOptions Clone()
     {
         var newOptions = (CppParserOptions)MemberwiseClone();
-
         // Copy lists
-        newOptions.IncludeFolders = new List<string>(IncludeFolders);
-        newOptions.SystemIncludeFolders = new List<string>(SystemIncludeFolders);
-        newOptions.Defines = new List<string>(Defines);
-        newOptions.AdditionalArguments = new List<string>(AdditionalArguments);
-        newOptions.targetSystemIncludeFolders = new List<string>(targetSystemIncludeFolders);
-        newOptions.targetAdditionalArguments = new List<string>(targetAdditionalArguments);
-
+        newOptions.includeFolders = new List<string>(this.includeFolders);
+        newOptions.systemIncludeFolders = new List<string>(this.systemIncludeFolders);
+        newOptions.defines = new List<string>(this.defines);
+        newOptions.additionalArguments = new List<string>(this.additionalArguments);
+        newOptions.m_targetSystemIncludeFolders = new List<string>(this.m_targetSystemIncludeFolders);
+        newOptions.m_targetAdditionalArguments = new List<string>(this.m_targetAdditionalArguments);
+        newOptions.m_targetDefines = new List<string>(m_targetDefines);
         return newOptions;
-    }
-
-    /// <summary>
-    /// Configure this instance with Windows and MSVC.
-    /// </summary>
-    /// <returns>This instance</returns>
-    public CppParserOptions ConfigureForWindowsMsvc(CppTargetCpu targetCpu = CppTargetCpu.X86, CppVisualStudioVersion vsVersion = CppVisualStudioVersion.VS2022)
-    {
-        ClearTargetConfiguration();
-        // 1920
-        var highVersion = (int)vsVersion / 100;  // => 19
-        var lowVersion = (int)vsVersion % 100;   // => 20
-
-        var versionAsString = $"{highVersion}.{lowVersion}";
-
-        TargetCpu = targetCpu;
-        TargetCpuSub = string.Empty;
-        TargetVendor = "pc";
-        TargetSystem = "windows";
-        TargetAbi = $"msvc{versionAsString}";
-        TargetTriple = targetCpu switch
-        {
-            CppTargetCpu.X86 => "i686-pc-windows-msvc",
-            CppTargetCpu.X86_64 => "x86_64-pc-windows-msvc",
-            CppTargetCpu.ARM => "armv7-pc-windows-msvc",
-            CppTargetCpu.ARM64 => "aarch64-pc-windows-msvc",
-            _ => throw new ArgumentOutOfRangeException(nameof(targetCpu), targetCpu, null)
-        };
-
-        // See https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
-
-        Defines.Add($"_MSC_VER={(int)vsVersion}");
-        Defines.Add("_WIN32=1");
-
-        switch (targetCpu)
-        {
-            case CppTargetCpu.X86:
-                Defines.Add("_M_IX86=600");
-                break;
-            case CppTargetCpu.X86_64:
-                Defines.Add("_M_AMD64=100");
-                Defines.Add("_M_X64=100");
-                Defines.Add("_WIN64=1");
-                break;
-            case CppTargetCpu.ARM:
-                Defines.Add("_M_ARM=7");
-                break;
-            case CppTargetCpu.ARM64:
-                Defines.Add("_M_ARM64=1");
-                Defines.Add("_WIN64=1");
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(targetCpu), targetCpu, null);
-        }
-
-        AdditionalArguments.Add("-fms-extensions");
-        AdditionalArguments.Add("-fms-compatibility");
-        AdditionalArguments.Add($"-fms-compatibility-version={versionAsString}");
-        if (OperatingSystem.IsWindows())
-        {
-            foreach (string include in (Environment.GetEnvironmentVariable("INCLUDE") ?? string.Empty)
-                .Split(System.IO.Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (System.IO.Directory.Exists(include))
-                    AddTargetSystemInclude(include);
-            }
-        }
-        return this;
     }
 
     /// <summary>
     /// Configures this instance for a resolved cross-platform native target.
     /// </summary>
-    /// <param name="target">Resolved target platform, architecture, ABI, and Clang triple.</param>
-    /// <param name="sysRoot">Optional target SDK or sysroot.</param>
-    /// <param name="compilerPath">Optional compiler driver used to discover host system headers.</param>
-    /// <param name="discoverHostToolchain">Whether to discover SDK and system include paths when the target matches the host.</param>
+    /// <param name = "target">Resolved target platform, architecture, ABI, and Clang triple.</param>
+    /// <param name = "discoverHostToolchain">Whether to discover SDK and system include paths when the target matches the host.</param>
     /// <returns>This instance.</returns>
     public CppParserOptions ConfigureForTarget(
-        CppTarget target,
-        string? sysRoot = null,
-        string? compilerPath = null,
-        bool discoverHostToolchain = true)
-    {
+        NativeTargetDescriptor target,
+        bool discoverHostToolchain = true
+    ) {
         ArgumentNullException.ThrowIfNull(target);
-        if (target.Platform == CppTargetPlatform.Windows)
+        ClearTargetConfiguration();
+        this.targetTriple = target.triple;
+        foreach (string definition in target.toolchain.defines)
         {
-            ConfigureForWindowsMsvc(target.Cpu);
-        }
-        else
-        {
-            ClearTargetConfiguration();
-            TargetCpu = target.Cpu;
-            TargetCpuSub = string.Empty;
-            TargetVendor = target.Platform is CppTargetPlatform.MacOS or CppTargetPlatform.IOS ? "apple" : "unknown";
-            TargetSystem = target.Platform switch
+            if (!this.defines.Contains(definition))
             {
-                CppTargetPlatform.MacOS => "darwin",
-                CppTargetPlatform.IOS => "ios",
-                CppTargetPlatform.Android => "linux",
-                CppTargetPlatform.FreeBSD => "freebsd",
-                CppTargetPlatform.Emscripten => "emscripten",
-                _ => "linux"
-            };
-            TargetAbi = target.Abi switch
-            {
-                CppTargetAbi.Gnu => "gnu",
-                CppTargetAbi.Musl => "musl",
-                CppTargetAbi.Android => "android",
-                _ => string.Empty
-            };
+                this.defines.Add(definition);
+                m_targetDefines.Add(definition);
+            }
         }
-        TargetTriple = target.Triple;
 
-        string? effectiveSysRoot = discoverHostToolchain && string.IsNullOrWhiteSpace(sysRoot) && target.Platform == CppTargetPlatform.MacOS
-            ? CppToolchainDiscovery.FindMacOsSdkRoot()
-            : sysRoot;
+        foreach (string argument in target.toolchain.arguments)
+            AddTargetArgument(argument);
+        // C++ wrappers use include_next to reach C headers, so their search roots must come first.
+        if (this.parserKind == CppParserKind.Cpp)
+        {
+            foreach (string include in target.toolchain.cxxSystemIncludeFolders)
+                AddTargetSystemInclude(include);
+        }
+        foreach (string include in target.toolchain.systemIncludeFolders)
+            AddTargetSystemInclude(include);
+        string? effectiveSysRoot = target.toolchain.sysRoot;
+        string? effectiveCompiler = target.toolchain.compilerPath;
+        IReadOnlyList<string> discoveredIncludes = [];
+        if (discoverHostToolchain)
+        {
+            NativeTargetDescriptor host = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));
+            if (target.targetId == host.targetId)
+            {
+                discoveredIncludes = CppToolchainDiscovery.DiscoverSystemIncludeFolders(this.parserKind, effectiveCompiler);
+                foreach (string include in discoveredIncludes)
+                    AddTargetSystemInclude(include);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(effectiveSysRoot))
         {
             string fullSysRoot = System.IO.Path.GetFullPath(effectiveSysRoot);
-            AddTargetArgument("-isysroot");
-            AddTargetArgument(fullSysRoot);
-        }
-
-        CppTarget host = CppTarget.Resolve();
-        IReadOnlyList<string> discoveredIncludes = [];
-        if (discoverHostToolchain && target.Platform == host.Platform && target.Architecture == host.Architecture)
-        {
-            discoveredIncludes = CppToolchainDiscovery.DiscoverSystemIncludeFolders(ParserKind, compilerPath);
-            foreach (string include in discoveredIncludes)
-                AddTargetSystemInclude(include);
-        }
-        // The compiler-matched libc++ must win over an SDK fallback. In particular,
-        // Homebrew LLVM's libclang cannot safely parse a mixed Homebrew/Xcode libc++.
-        if (ParserKind == CppParserKind.Cpp && !string.IsNullOrWhiteSpace(effectiveSysRoot) &&
-            !discoveredIncludes.Any(include => include.Replace('\\', '/').EndsWith("/c++/v1", StringComparison.Ordinal)))
-        {
-            string libcxx = System.IO.Path.Combine(System.IO.Path.GetFullPath(effectiveSysRoot), "usr", "include", "c++", "v1");
-            if (System.IO.Directory.Exists(libcxx))
-                AddTargetSystemInclude(libcxx);
+            AddTargetArgument("--sysroot=" + fullSysRoot);
         }
         return this;
     }
 
     private void ClearTargetConfiguration()
     {
-        foreach (string include in targetSystemIncludeFolders)
-            SystemIncludeFolders.Remove(include);
-        targetSystemIncludeFolders.Clear();
-        foreach (string argument in targetAdditionalArguments)
+        foreach (string include in this.m_targetSystemIncludeFolders)
+            this.systemIncludeFolders.Remove(include);
+        this.m_targetSystemIncludeFolders.Clear();
+        foreach (string argument in this.m_targetAdditionalArguments)
         {
-            int index = AdditionalArguments.LastIndexOf(argument);
+            int index = this.additionalArguments.LastIndexOf(argument);
             if (index >= 0)
-                AdditionalArguments.RemoveAt(index);
+                this.additionalArguments.RemoveAt(index);
         }
-        targetAdditionalArguments.Clear();
-        Defines.RemoveAll(define =>
-            define.StartsWith("_MSC_VER=", StringComparison.Ordinal) ||
-            define is "_WIN32=1" or "_WIN64=1" or "_M_IX86=600" or "_M_AMD64=100" or "_M_X64=100" or "_M_ARM=7" or "_M_ARM64=1");
-        AdditionalArguments.RemoveAll(argument =>
-            argument is "-fms-extensions" or "-fms-compatibility" ||
-            argument.StartsWith("-fms-compatibility-version=", StringComparison.Ordinal));
+
+        this.m_targetAdditionalArguments.Clear();
+        foreach (string definition in m_targetDefines)
+            this.defines.Remove(definition);
+        m_targetDefines.Clear();
     }
 
     private void AddTargetSystemInclude(string include)
     {
-        if (!SystemIncludeFolders.Contains(include))
+        if (!this.systemIncludeFolders.Contains(include))
         {
-            SystemIncludeFolders.Add(include);
-            targetSystemIncludeFolders.Add(include);
+            this.systemIncludeFolders.Add(include);
+            this.m_targetSystemIncludeFolders.Add(include);
         }
     }
 
     private void AddTargetArgument(string argument)
     {
-        AdditionalArguments.Add(argument);
-        targetAdditionalArguments.Add(argument);
+        this.additionalArguments.Add(argument);
+        this.m_targetAdditionalArguments.Add(argument);
     }
 }

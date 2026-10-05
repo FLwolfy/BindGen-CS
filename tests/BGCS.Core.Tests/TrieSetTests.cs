@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Core;
+using BGCS.Core.Collections;
 using Xunit;
 
 #pragma warning disable xUnit2017 // TrieSet.Contains validates trie-key semantics, not enumerator item equality.
@@ -84,5 +84,50 @@ public class TrieSetTests
 
         set.Clear();
         Assert.Empty(set);
+    }
+
+    [Fact]
+    public void StoredKeys_AreOwnedAndCannotBeChangedThroughTheSourceOrEnumeration()
+    {
+        var set = new TrieSet<char>();
+        char[] key = "abc".ToCharArray();
+        set.Add(key);
+        key[0] = 'z';
+
+        var stored = Assert.IsAssignableFrom<IList<char>>(Assert.Single(set));
+        Assert.Throws<NotSupportedException>(() => stored[0] = 'z');
+        Assert.True(set.Contains("abc"));
+        Assert.False(set.Contains("zbc"));
+    }
+
+    [Theory]
+    [InlineData("ab", "", "")]
+    [InlineData("zebra", "", "")]
+    [InlineData("abcdef", "abcd", "abc")]
+    public void PrefixMatching_AdvancesThroughNodesAndReturnsOnlyStoredKeys(
+        string input,
+        string longest,
+        string shortest
+    ) {
+        var set = new TrieSet<char>();
+        set.Add("abc");
+        set.Add("abcd");
+
+        Assert.Equal(longest, new string(set.FindLargestMatch(input.AsSpan())));
+        Assert.Equal(shortest, new string(set.FindSmallestMatch(input.AsSpan())));
+    }
+
+    [Fact]
+    public void EmptyKey_ParticipatesInEnumerationAndClear()
+    {
+        var set = new TrieSet<char>();
+        set.Add(Array.Empty<char>());
+
+        Assert.Empty(Assert.Single(set));
+        Assert.Empty(set.FindSmallestMatch("abc".AsSpan()).ToArray());
+        set.Clear();
+        Assert.False(set.Contains(Array.Empty<char>()));
+        set.Add(Array.Empty<char>());
+        Assert.Single(set);
     }
 }

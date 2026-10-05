@@ -1,22 +1,22 @@
 {
-  "Property": "CustomEnums",
+  "Property": "customEnums",
   "Expected": [
     {
-      "Identifier": "custom_mode",
-      "CppName": "custom_mode",
-      "Name": "CustomMode",
-      "Attributes": [],
-      "Comment": null,
-      "BaseType": "int",
-      "Items": [
+      "identifier": "custom_mode",
+      "cppName": "custom_mode",
+      "name": "CustomMode",
+      "attributes": [],
+      "comment": null,
+      "baseType": "int",
+      "items": [
         {
-          "Identifier": "CUSTOM_MODE_ONE",
-          "CppName": "CUSTOM_MODE_ONE",
-          "CppValue": "1",
-          "Name": "One",
-          "Value": "1",
-          "Attributes": [],
-          "Comment": null
+          "identifier": "CUSTOM_MODE_ONE",
+          "cppName": "CUSTOM_MODE_ONE",
+          "cppValue": "1",
+          "name": "One",
+          "value": "1",
+          "attributes": [],
+          "comment": null
         }
       ]
     }

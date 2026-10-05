@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -5,46 +7,40 @@ namespace BGCS.Tool.Commands;
 
 internal static partial class InitCommand
 {
-    private const string DefaultCConfigName = "bindgen.json";
-    private const string DefaultCppConfigName = "bridge.json";
-
-    internal static int Run(string[] args, string workingDirectory, TextWriter output, TextWriter error)
-    {
+    private const string C_DEFAULTCCONFIGNAME = "bindgen.json";
+    private const string C_DEFAULTCPPCONFIGNAME = "bridge.json";
+    internal static int Run(
+        string[] args,
+        string workingDirectory,
+        TextWriter output,
+        TextWriter error
+    ) {
         try
         {
             InitOptions options = Parse(args);
-            string inputArgument = options.InputPath ?? DefaultCConfigName;
+            string inputArgument = options.inputPath ?? global::BGCS.Tool.Commands.InitCommand.C_DEFAULTCCONFIGNAME;
             string inputPath = Path.GetFullPath(inputArgument, workingDirectory);
             string extension = Path.GetExtension(inputPath).ToLowerInvariant();
             bool isHeader = extension is ".h" or ".hh" or ".hpp" or ".hxx";
-
             if (isHeader && !File.Exists(inputPath))
                 return Fail(error, $"Header does not exist: {inputPath}");
-
-            bool isCpp = ResolveCppMode(options.Language, extension, isHeader ? File.ReadAllText(inputPath) : null);
+            bool isCpp = ResolveCppMode(options.language, extension, isHeader ? File.ReadAllText(inputPath) : null);
             string configPath = ResolveConfigPath(options, workingDirectory, inputPath, isHeader, isCpp);
             if (File.Exists(configPath))
                 return Fail(error, $"Configuration already exists: {configPath}");
-
-            string configDirectory = Path.GetDirectoryName(configPath)
-                ?? throw new InvalidOperationException($"Cannot determine configuration directory for '{configPath}'.");
+            string configDirectory = Path.GetDirectoryName(configPath) ?? throw new InvalidOperationException($"Cannot determine configuration directory for '{configPath}'.");
             Directory.CreateDirectory(configDirectory);
-
             string nativeInputPath = isHeader ? inputPath : Path.Combine(configDirectory, "native.h");
             string nativeInput = ToPortableConfigPath(configDirectory, nativeInputPath);
             string? includeFolder = Path.GetDirectoryName(nativeInput)?.Replace('\\', '/');
             if (string.IsNullOrEmpty(includeFolder))
                 includeFolder = ".";
-
-            object config = isCpp
-                ? CreateCppConfig(nativeInput, includeFolder)
-                : CreateCConfig(nativeInput, includeFolder);
-
+            object config = isCpp ? CreateCppConfig(nativeInput, includeFolder) : CreateCConfig(nativeInput, includeFolder);
             File.WriteAllText(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions
             {
-                WriteIndented = true
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             }) + Environment.NewLine);
-
             output.WriteLine($"Created {configPath}");
             output.WriteLine($"Input: {nativeInput} ({(isCpp ? "C++ bridge" : "C ABI")})");
             return 0;
@@ -59,29 +55,46 @@ internal static partial class InitCommand
         }
     }
 
-    private static object CreateCConfig(string nativeInput, string includeFolder) => new
+    private static object CreateCConfig(
+        string nativeInput,
+        string includeFolder
+    ) => new
     {
-        ConfigVersion = CsCodeGeneratorConfig.CurrentConfigVersion,
         Preset = "host-c,c-library",
         Namespace = "Native.Bindings",
         ApiName = "NativeApi",
         LibName = "native",
-        EntryFiles = new[] { nativeInput },
+        EntryFiles = new[]
+        {
+            nativeInput
+        },
         AllowedHeaders = Array.Empty<string>(),
         IncludeTransitivelyReferencedHeaders = true,
-        IncludeFolders = new[] { includeFolder },
+        IncludeFolders = new[]
+        {
+            includeFolder
+        },
         OutputPath = "Generated",
         ImportType = "DllImport",
-        CSharpEmissionBackend = "IntermediateRepresentation",
         MergeGeneratedFilesToSingleFile = true
     };
-
-    private static object CreateCppConfig(string nativeInput, string includeFolder) => new
+    private static object CreateCppConfig(
+        string nativeInput,
+        string includeFolder
+    ) => new
     {
-        ConfigVersion = BGCS.Cpp2C.Cpp2CGeneratorConfig.CurrentConfigVersion,
-        EntryFiles = new[] { nativeInput },
-        AllowedHeaders = new[] { nativeInput },
-        IncludeFolders = new[] { includeFolder },
+        EntryFiles = new[]
+        {
+            nativeInput
+        },
+        AllowedHeaders = new[]
+        {
+            nativeInput
+        },
+        IncludeFolders = new[]
+        {
+            includeFolder
+        },
         OutputPath = "GeneratedBridge",
         LanguageStandard = "c++23",
         GenerateBuildManifest = true,
@@ -93,30 +106,30 @@ internal static partial class InitCommand
         ParseSystemIncludes = false,
         ParseComments = false
     };
-
     private static string ResolveConfigPath(
         InitOptions options,
         string workingDirectory,
         string inputPath,
         bool isHeader,
-        bool isCpp)
-    {
-        if (!string.IsNullOrWhiteSpace(options.ConfigPath))
+        bool isCpp
+    ) {
+        if (!string.IsNullOrWhiteSpace(options.configPath))
         {
             if (!isHeader)
                 throw new ArgumentException("--config can only be used when the input is a header.");
-            if (!string.Equals(Path.GetExtension(options.ConfigPath), ".json", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(Path.GetExtension(options.configPath), ".json", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("--config must name a .json file.");
-            return Path.GetFullPath(options.ConfigPath, workingDirectory);
+            return Path.GetFullPath(options.configPath, workingDirectory);
         }
 
-        return isHeader
-            ? Path.Combine(workingDirectory, isCpp ? DefaultCppConfigName : DefaultCConfigName)
-            : inputPath;
+        return isHeader ? Path.Combine(workingDirectory, isCpp ? global::BGCS.Tool.Commands.InitCommand.C_DEFAULTCPPCONFIGNAME : global::BGCS.Tool.Commands.InitCommand.C_DEFAULTCCONFIGNAME) : inputPath;
     }
 
-    private static bool ResolveCppMode(InitLanguage language, string extension, string? headerText)
-    {
+    private static bool ResolveCppMode(
+        InitLanguage language,
+        string extension,
+        string? headerText
+    ) {
         if (language == InitLanguage.C)
             return false;
         if (language == InitLanguage.Cpp)
@@ -125,19 +138,19 @@ internal static partial class InitCommand
             return true;
         if (headerText == null)
             return false;
-
         return CppSyntaxRegex().IsMatch(headerText);
     }
 
-    private static string ToPortableConfigPath(string configDirectory, string path)
-    {
+    private static string ToPortableConfigPath(
+        string configDirectory,
+        string path
+    ) {
         string relativePath = Path.GetRelativePath(configDirectory, path);
         if (Path.IsPathRooted(relativePath))
         {
-            throw new InvalidOperationException(
-                $"Cannot create a portable relative path from '{configDirectory}' to '{path}'. " +
-                "Place the configuration and header on the same filesystem root.");
+            throw new InvalidOperationException($"Cannot create a portable relative path from '{configDirectory}' to '{path}'. " + "Place the configuration and header on the same filesystem root.");
         }
+
         return relativePath.Replace('\\', '/');
     }
 
@@ -146,7 +159,6 @@ internal static partial class InitCommand
         string? inputPath = null;
         string? configPath = null;
         InitLanguage language = InitLanguage.Auto;
-
         for (int index = 0; index < args.Length; index++)
         {
             string argument = args[index];
@@ -182,15 +194,20 @@ internal static partial class InitCommand
         return new(inputPath, configPath, language);
     }
 
-    private static string ReadValue(string[] args, ref int index, string option)
-    {
+    private static string ReadValue(
+        string[] args,
+        ref int index,
+        string option
+    ) {
         if (++index >= args.Length || string.IsNullOrWhiteSpace(args[index]))
             throw new ArgumentException($"Option '{option}' requires a value.");
         return args[index];
     }
 
-    private static int Fail(TextWriter error, string message)
-    {
+    private static int Fail(
+        TextWriter error,
+        string message
+    ) {
         error.WriteLine($"error: {message}");
         error.WriteLine("Run 'bindgen-cs --help' for usage.");
         return 2;
@@ -198,9 +215,11 @@ internal static partial class InitCommand
 
     [GeneratedRegex("\\bnamespace\\s+[A-Za-z_]|\\btemplate\\s*<|\\bclass\\s+[A-Za-z_]|\\bextern\\s+\"C\\+\\+\"")]
     private static partial Regex CppSyntaxRegex();
-
-    private sealed record InitOptions(string? InputPath, string? ConfigPath, InitLanguage Language);
-
+    private sealed record InitOptions(
+        string? inputPath,
+        string? configPath,
+        InitLanguage language
+    );
     private enum InitLanguage
     {
         Auto,

@@ -10,7 +10,7 @@ public class KeywordsEntryTests : ConfigurationEntryTestBase
         using var output = Generate("config.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
-        Assert.Contains("customKeyword", output.Config.Keywords);
+        Assert.Contains("customKeyword", output.Config.keywords);
         AssertBindingsExpected(output);
     }
 
@@ -20,7 +20,7 @@ public class KeywordsEntryTests : ConfigurationEntryTestBase
         using var output = Generate("config.alt.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
-        Assert.DoesNotContain("customKeyword", output.Config.Keywords);
+        Assert.DoesNotContain("customKeyword", output.Config.keywords);
         AssertBindingsExpected(output, "expected.bindings.alt.json");
     }
 }

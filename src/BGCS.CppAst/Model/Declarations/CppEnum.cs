@@ -1,58 +1,64 @@
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
-using ClangSharp.Interop;
-using BGCS.CppAst.AttributeUtils;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using BGCS.CppAst.AttributeParsing;
 using BGCS.CppAst.Collections;
 using BGCS.CppAst.Extensions;
 using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Types;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Model.Declarations;
+
 /// <summary>
 /// A C++ standard or scoped enum.
 /// </summary>
 public sealed class CppEnum : CppTypeDeclaration, ICppMemberWithVisibility, ICppAttributeContainer
 {
     /// <summary>
-    /// Creates a new instance of this enum.
+    /// Creates a mutable native enumeration projection with empty owned child collections.
     /// </summary>
-    /// <param name="cursor"></param>
-    /// <param name="name">Name of this enum</param>
-    public CppEnum(CXCursor cursor, string name) : base(cursor, CppTypeKind.Enum)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its owning compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="name">
+    /// The native declaration identifier, empty for an unnamed declaration.
+    /// </param>
+    public CppEnum(
+        CXCursor cursor,
+        string name
+    ) : base(cursor, CppTypeKind.Enum)
     {
-        Name = name;
-        Items = new CppContainerList<CppEnumItem>(this);
-        Attributes = [];
-        IntegerType = CppPrimitiveType.Int;
+        this.name = name;
+        this.items = new CppContainerList<CppEnumItem>(this);
+        this.attributes = [];
+        this.integerType = CppPrimitiveType.@int;
     }
 
-    /// <inheritdoc />
-    public CppVisibility Visibility { get; set; }
-
-    /// <inheritdoc />
-    public string Name { get; set; }
+    /// <inheritdoc/>
+    public CppVisibility visibility { get; set; }
+    /// <inheritdoc/>
+    public string name { get; set; }
 
     /// <summary>
-    /// Exposes public member <c>FullName</c>.
+    /// Gets the current enum identifier qualified by enclosing classes and non-inline namespaces.
     /// </summary>
-    public override string FullName
+    public override string fullName
     {
         get
         {
-            string fullparent = FullParentName;
+            string fullparent = this.fullParentName;
             if (string.IsNullOrEmpty(fullparent))
             {
-                return Name;
+                return this.name;
             }
             else
             {
-                return $"{fullparent}::{Name}";
+                return $"{fullparent}::{this.name}";
             }
         }
     }
@@ -60,73 +66,60 @@ public sealed class CppEnum : CppTypeDeclaration, ICppMemberWithVisibility, ICpp
     /// <summary>
     /// Gets or sets a boolean indicating if this enum is scoped.
     /// </summary>
-    public bool IsScoped { get; set; }
-
+    public bool isScoped { get; set; }
     /// <summary>
     /// Gets or sets the underlying integer type of this enum.
     /// </summary>
-    public CppType IntegerType { get; set; }
-
+    public CppType integerType { get; set; }
     /// <summary>
     /// Gets the definition of the enum items.
     /// </summary>
-    public CppContainerList<CppEnumItem> Items { get; }
-
+    public CppContainerList<CppEnumItem> items { get; }
     /// <summary>
-    /// Gets or sets <c>IsAnonymous</c>.
+    /// Gets or sets whether the native enum declaration lacks an explicit identifier.
     /// </summary>
-    public bool IsAnonymous { get; set; }
-
+    public bool isAnonymous { get; set; }
     /// <summary>
     /// Gets the list of attached attributes.
     /// </summary>
-    public List<CppAttribute> Attributes { get; }
-
+    public List<CppAttribute> attributes { get; }
     /// <summary>
-    /// Gets <c>TokenAttributes</c>.
+    /// Gets mutable attributes recovered from source tokens outside the native attribute-cursor list.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; } = [];
-
+    public List<CppAttribute> tokenAttributes { get; } = [];
     /// <summary>
-    /// Gets or sets <c>MetaAttributes</c>.
+    /// Gets the mutable recognized annotation map owned by this declaration.
     /// </summary>
-    public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
+    public MetaAttributeMap metaAttributes { get; private set; } = new MetaAttributeMap();
+    /// <inheritdoc/>
+    public override int sizeOf { get => this.integerType?.sizeOf ?? 0; set => throw new InvalidOperationException("Cannot set the SizeOf an enum as it is determined only by the SizeOf of its underlying IntegerType"); }
 
-    /// <inheritdoc />
-    public override int SizeOf
-    {
-        get => IntegerType?.SizeOf ?? 0;
-        set => throw new InvalidOperationException("Cannot set the SizeOf an enum as it is determined only by the SizeOf of its underlying IntegerType");
-    }
+    /// <inheritdoc/>
+    public override CppType GetCanonicalType() => this.integerType;
+    /// <inheritdoc/>
+    public override IEnumerable<ICppDeclaration> children => this.items;
 
-    /// <inheritdoc />
-    public override CppType GetCanonicalType() => IntegerType;
-
-    /// <inheritdoc />
-    public override IEnumerable<ICppDeclaration> Children => Items;
-
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override string ToString()
     {
         var builder = new StringBuilder();
-        if (Visibility != CppVisibility.Default)
+        if (this.visibility != CppVisibility.Default)
         {
-            builder.Append(Visibility.ToString().ToLowerInvariant());
+            builder.Append(this.visibility.ToString().ToLowerInvariant());
             builder.Append(' ');
         }
 
         builder.Append("enum ");
-        if (IsScoped)
+        if (this.isScoped)
         {
             builder.Append("class ");
         }
 
-        builder.Append(Name);
-
-        if (IntegerType != null && !(IntegerType is CppPrimitiveType primitive && primitive.Kind == CppPrimitiveKind.Int))
+        builder.Append(this.name);
+        if (this.integerType != null && !(this.integerType is CppPrimitiveType primitive && primitive.kind == CppPrimitiveKind.Int))
         {
             builder.Append(": ");
-            builder.Append(IntegerType.GetDisplayName());
+            builder.Append(this.integerType.GetDisplayName());
         }
 
         builder.Append(" {...}");

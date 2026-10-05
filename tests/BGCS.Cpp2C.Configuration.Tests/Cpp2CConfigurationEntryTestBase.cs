@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using BGCS.Core.Logging;
-using BGCS.Cpp2C;
+using BGCS.Cpp2C.Facade;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
 using Newtonsoft.Json;
@@ -49,7 +49,7 @@ public abstract class Cpp2CConfigurationEntryTestBase
         try
         {
             Environment.CurrentDirectory = temp;
-            config = Cpp2CGeneratorConfig.Load(tempConfigPath, new ConfigComposer());
+            config = Cpp2CGeneratorConfig.Load(tempConfigPath);
             generator = new Cpp2CCodeGenerator(config);
             generator.Generate(resolvedHeaderFiles.ToList(), outputPath, resolvedAllowedHeaders);
         }
@@ -60,9 +60,9 @@ public abstract class Cpp2CConfigurationEntryTestBase
 
         string diagnostics = string.Join(
             Environment.NewLine,
-            generator.Messages.Select(x => $"[{x.Severtiy}] {x.Message}"));
+            generator.messages.Select(x => $"[{x.severity}] {x.message}"));
 
-        bool hasErrors = generator.Messages.Any(x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+        bool hasErrors = generator.messages.Any(x => x.severity is LogSeverity.Error or LogSeverity.Critical);
         string generatedText = ReadGeneratedText(outputPath);
         bool hasGeneratedFiles = Directory.Exists(outputPath) &&
                                  Directory.GetFiles(outputPath, "*.*", SearchOption.AllDirectories)
@@ -318,7 +318,7 @@ public abstract class Cpp2CConfigurationEntryTestBase
             sb.Append(' ');
         }
 
-        foreach (string define in output.Config.Defines)
+        foreach (string define in output.Config.defines)
         {
             if (string.IsNullOrWhiteSpace(define))
                 continue;
@@ -330,7 +330,7 @@ public abstract class Cpp2CConfigurationEntryTestBase
             sb.Append(' ');
         }
 
-        foreach (string argument in output.Config.AdditionalArguments)
+        foreach (string argument in output.Config.additionalArguments)
         {
             if (string.IsNullOrWhiteSpace(argument))
                 continue;
@@ -344,12 +344,12 @@ public abstract class Cpp2CConfigurationEntryTestBase
 
     private static IEnumerable<string> ResolveConfigIncludeFolders(GeneratedOutput output)
     {
-        foreach (string folder in output.Config.IncludeFolders)
+        foreach (string folder in output.Config.includeFolders)
         {
             yield return Path.IsPathRooted(folder) ? folder : Path.Combine(output.TempDirectory, folder);
         }
 
-        foreach (string folder in output.Config.SystemIncludeFolders)
+        foreach (string folder in output.Config.systemIncludeFolders)
         {
             yield return Path.IsPathRooted(folder) ? folder : Path.Combine(output.TempDirectory, folder);
         }

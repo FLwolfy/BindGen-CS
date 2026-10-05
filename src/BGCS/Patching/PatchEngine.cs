@@ -1,105 +1,133 @@
-﻿namespace BGCS.Patching
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using BGCS.Analysis;
+using BGCS.Configuration;
+using BGCS.Core.IO;
+using BGCS.Metadata;
+
+namespace BGCS.Patching;
+
+/// <summary>
+/// Runs ordered analysis transformations and atomically publishes transformed managed output.
+/// </summary>
+public sealed class PatchEngine
 {
-    using BGCS.Metadata;
-    using Newtonsoft.Json;
-    using System.Collections.Generic;
+    private readonly List<IPrePatch> m_preGenerationPatches = [];
+    private readonly List<IPostPatch> m_postGenerationPatches = [];
 
     /// <summary>
-    /// Defines the public class <c>PatchEngine</c>.
+    /// Creates empty ordered patch catalogs without allocating filesystem state.
     /// </summary>
-    public class PatchEngine
+    public PatchEngine()
     {
-        private readonly List<IPrePatch> preGenerationPatches = new();
-        private readonly List<IPostPatch> postGenerationPatches = new();
-        private readonly string baseStagePath;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of <see cref="PatchEngine"/>.
-        /// </summary>
-        public PatchEngine(string baseStagePath)
+    /// <summary>
+    /// Registers an analysis transformation after the currently registered pre-patches.
+    /// </summary>
+    /// <param name="patch">
+    /// The transformation retained until this engine is released.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The transformation is null.
+    /// </exception>
+    public void RegisterPrePatch(IPrePatch patch)
+    {
+        ArgumentNullException.ThrowIfNull(patch);
+        m_preGenerationPatches.Add(patch);
+    }
+
+    /// <summary>
+    /// Registers an output transformation after the currently registered post-patches.
+    /// </summary>
+    /// <param name="patch">
+    /// The transformation retained until this engine is released.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The transformation is null.
+    /// </exception>
+    public void RegisterPostPatch(IPostPatch patch)
+    {
+        ArgumentNullException.ThrowIfNull(patch);
+        m_postGenerationPatches.Add(patch);
+    }
+
+    /// <summary>
+    /// Runs pre-patches against the borrowed analysis model without publishing source-file changes.
+    /// </summary>
+    /// <param name="settings">
+    /// The active mutable generation configuration.
+    /// </param>
+    /// <param name="result">
+    /// The model owned by the current generation attempt.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The configuration or model is null.
+    /// </exception>
+    public void ApplyPrePatches(
+        CsCodeGeneratorConfig settings,
+        ParseResult result
+    ) {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(result);
+        foreach (IPrePatch patch in m_preGenerationPatches)
         {
-            this.baseStagePath = baseStagePath;
+            patch.Apply(settings, result);
         }
+    }
 
-        /// <summary>
-        /// Executes public operation <c>PatchEngine</c>.
-        /// </summary>
-        public PatchEngine() : this($"patches/{Guid.NewGuid()}")
+    /// <summary>
+    /// Runs all post-patches within one owned output transaction and replaces output only after success.
+    /// </summary>
+    /// <param name="metadata">
+    /// The mutable generated metadata shared by the ordered transformations.
+    /// </param>
+    /// <param name="outputDir">
+    /// The existing output tree to snapshot and replace. Unselected files are preserved.
+    /// </param>
+    /// <param name="files">
+    /// The selected full source paths inside the output tree, converted to relative paths for patches.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The metadata or selected file collection is null.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// A selected file is outside the output tree.
+    /// </exception>
+    /// <exception cref="IOException">
+    /// Snapshot, transformation, or publication IO fails; the transaction preserves previous output.
+    /// </exception>
+    public void ApplyPostPatches(
+        CsCodeGeneratorMetadata metadata,
+        string outputDir,
+        List<string> files
+    ) {
+        ArgumentNullException.ThrowIfNull(metadata);
+        ArgumentNullException.ThrowIfNull(files);
+        if (m_postGenerationPatches.Count == 0)
         {
+            return;
         }
-
-        /// <summary>
-        /// Executes public operation <c>RegisterPrePatch</c>.
-        /// </summary>
-        public void RegisterPrePatch(IPrePatch patch)
+        string root = Path.GetFullPath(outputDir);
+        using OutputDirectoryTransaction transaction = new(root);
+        PatchContext context = new(transaction.stagingPath);
+        context.CopyFromInput(root);
+        List<string> relativeFiles = files.Select(file => Path.GetRelativePath(root, Path.GetFullPath(file))).ToList();
+        foreach (string relativeFile in relativeFiles)
         {
-            preGenerationPatches.Add(patch);
+            context.GetFullPath(relativeFile);
         }
-
-        /// <summary>
-        /// Executes public operation <c>RegisterPostPatch</c>.
-        /// </summary>
-        public void RegisterPostPatch(IPostPatch patch)
+        foreach (IPostPatch patch in m_postGenerationPatches)
         {
-            postGenerationPatches.Add(patch);
-        }
-
-        internal void Build()
-        {
-        }
-
-        private readonly JsonSerializerSettings options = new() { Formatting = Formatting.Indented };
-
-        /// <summary>
-        /// Executes public operation <c>ApplyPrePatches</c>.
-        /// </summary>
-        public void ApplyPrePatches(CsCodeGeneratorConfig settings, string outputDir, List<string> files, ParseResult result)
-        {
-            PatchContext? last = null;
-            for (int i = 0; i < preGenerationPatches.Count; i++)
+            patch.Apply(context, metadata, relativeFiles);
+            foreach (string writtenFile in context.writtenFiles)
             {
-                IPrePatch? patch = preGenerationPatches[i];
-                PatchContext context = new(Path.Combine(baseStagePath, "pre", $"stage{i}"));
-                if (last != null)
-                {
-                    context.CopyFromStage(last);
-                }
-                else
-                {
-                    context.CopyFromInput(outputDir, files);
-                }
-
-                patch.Apply(context, settings, files, result);
-                context.WriteFile("settings.json", JsonConvert.SerializeObject(settings, options));
-                last = context;
+                if (!relativeFiles.Contains(writtenFile, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
+                    relativeFiles.Add(writtenFile);
             }
-
-            last?.CopyToOutput(outputDir);
         }
-
-        /// <summary>
-        /// Executes public operation <c>ApplyPostPatches</c>.
-        /// </summary>
-        public void ApplyPostPatches(CsCodeGeneratorMetadata metadata, string outputDir, List<string> files)
-        {
-            PatchContext? last = null;
-            for (int i = 0; i < postGenerationPatches.Count; i++)
-            {
-                IPostPatch? patch = postGenerationPatches[i];
-                PatchContext context = new(Path.Combine(baseStagePath, "post", $"stage{i}"));
-                if (last != null)
-                {
-                    context.CopyFromStage(last);
-                }
-                else
-                {
-                    context.CopyFromInput(outputDir, files);
-                }
-                patch.Apply(context, metadata, files);
-                last = context;
-            }
-
-            last?.CopyToOutput(outputDir);
-        }
+        transaction.Commit();
     }
 }

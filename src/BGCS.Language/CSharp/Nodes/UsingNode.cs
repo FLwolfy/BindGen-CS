@@ -1,31 +1,38 @@
-﻿namespace BGCS.Language.CSharp.Nodes
+using BGCS.Language.Syntax;
+namespace BGCS.Language.CSharp.Nodes
 {
-    using BGCS.Language;
+
 
     /// <summary>
-    /// Defines the public class <c>UsingNode</c>.
+    /// Retains the namespace spelling of one parsed namespace-import declaration.
     /// </summary>
     public class UsingNode : SyntaxNode
     {
         /// <summary>
-        /// Initializes a new instance of <see cref="UsingNode"/>.
+        /// Retains a namespace-import spelling without resolving its referenced assembly.
         /// </summary>
+        /// <param name="using">
+        /// The imported namespace spelling.
+        /// </param>
         public UsingNode(string @using)
         {
-            Using = @using;
+            this.@using = @using;
         }
 
         /// <summary>
-        /// Gets <c>Using</c>.
+        /// Gets the retained imported namespace spelling.
         /// </summary>
-        public string Using { get; }
+        public string @using { get; }
 
         /// <summary>
-        /// Executes public operation <c>ToString</c>.
+        /// Formats the namespace-import spelling for syntax-tree diagnostics.
         /// </summary>
+        /// <returns>
+        /// The using label followed by the retained namespace spelling.
+        /// </returns>
         public override string ToString()
         {
-            return $"using: {Using}";
+            return $"using: {this.@using}";
         }
     }
 }

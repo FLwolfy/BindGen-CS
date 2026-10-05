@@ -1,25 +1,29 @@
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
-using ClangSharp.Interop;
 using BGCS.CppAst.Model.Types;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Model.Declarations;
+
 /// <summary>
 /// A C++ function type (e.g `void (*)(int arg1, int arg2)`)
 /// </summary>
 public sealed class CppFunctionType : CppFunctionTypeBase
 {
     /// <summary>
-    /// Constructor of a function type.
+    /// Captures a borrowed native type relationship for attempt-local analysis.
     /// </summary>
-    /// <param name="cursor"></param>
-    /// <param name="returnType">Return type of this function type.</param>
-    public CppFunctionType(CXCursor cursor, CppType returnType) : base(cursor, CppTypeKind.Function, returnType)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="returnType">
+    /// The non-null borrowed native result type.
+    /// </param>
+    public CppFunctionType(
+        CXCursor cursor,
+        CppType returnType
+    ) : base(cursor, CppTypeKind.Function, returnType)
     {
     }
 }

@@ -2,6 +2,8 @@
   "Contains": [
     "public enum MyEnum : int",
     "public enum KeepEnum : int",
-    "internal static extern int UseEnumNative(KeepEnum mode);"
+    "internal static extern int UseEnumInterop(int mode);",
+    "internal static int UseEnumNative(KeepEnum mode)",
+    "UseEnumInterop((int)mode)"
   ]
 }

@@ -1,22 +1,26 @@
-﻿namespace BGCS.Language.CSharp
+using BGCS.Language.Parsing;
+namespace BGCS.Language.CSharp
 {
     using BGCS.Language.CSharp.Analyzers;
 
     /// <summary>
-    /// Defines the public class <c>CSharpParser</c>.
+    /// Composes the supported namespace, class, using, and member syntax analyzers.
     /// </summary>
     public class CSharpParser : ParserBase
     {
         /// <summary>
-        /// Initializes a new instance of <see cref="CSharpParser"/>.
+        /// Creates a parser using the shared default comment-handling policy.
         /// </summary>
-        public CSharpParser() : this(ParserOptions.Default)
+        public CSharpParser() : this(ParserOptions.@default)
         {
         }
 
         /// <summary>
-        /// Executes public operation <c>CSharpParser</c>.
+        /// Creates a parser with the selected comment-handling policy and the dialect's supported analyzers.
         /// </summary>
+        /// <param name="options">
+        /// The caller-owned parsing policy retained for later parse invocations.
+        /// </param>
         public CSharpParser(ParserOptions options) : base(options)
         {
             analyzers.Add(new NamespaceAnalyzer());

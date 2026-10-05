@@ -1,4 +1,4 @@
 {
-  "Property": "EnumItemNamingConvention",
+  "Property": "enumItemNamingConvention",
   "Expected": "CamelCase"
 }

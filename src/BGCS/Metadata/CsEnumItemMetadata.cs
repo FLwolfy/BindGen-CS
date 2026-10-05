@@ -1,86 +1,120 @@
-﻿namespace BGCS.Metadata
+using System.Collections.Generic;
+using BGCS.Core.Collections;
+
+namespace BGCS.Metadata
 {
-    using BGCS.Core;
     using Newtonsoft.Json;
 
     /// <summary>
-    /// Defines the public class <c>CsEnumItemMetadata</c>.
+    /// Retains one native enum constant and its mutable managed name, expression, attributes, and documentation.
     /// </summary>
     public class CsEnumItemMetadata : IHasIdentifier
     {
         /// <summary>
-        /// Initializes a new instance of <see cref="CsEnumItemMetadata"/>.
+        /// Retains native enum-item spelling and any already mapped managed projection.
         /// </summary>
-        public CsEnumItemMetadata(string cppName, string cppValue)
-        {
-            CppName = cppName;
-            CppValue = cppValue;
-            Attributes = new();
+        /// <param name="cppName">
+        /// The original native enum-item identifier.
+        /// </param>
+        /// <param name="cppValue">
+        /// The original native expression spelling.
+        /// </param>
+        public CsEnumItemMetadata(
+            string cppName,
+            string cppValue
+        ) {
+            this.cppName = cppName;
+            this.cppValue = cppValue;
+            this.attributes = new();
         }
 
+        /// <summary>
+        /// Retains native enum-item spelling and any already mapped managed projection.
+        /// </summary>
+        /// <param name="cppName">
+        /// The original native enum-item identifier.
+        /// </param>
+        /// <param name="cppValue">
+        /// The original native expression spelling.
+        /// </param>
+        /// <param name="name">
+        /// The managed item identifier, or null before mapping.
+        /// </param>
+        /// <param name="value">
+        /// The managed constant expression, or null before mapping.
+        /// </param>
+        /// <param name="attributes">
+        /// Managed attribute fragments retained without copying; null creates an empty list.
+        /// </param>
+        /// <param name="comment">
+        /// The emitted documentation fragment, or null when absent.
+        /// </param>
         [JsonConstructor]
-        /// <summary>
-        /// Executes public operation <c>CsEnumItemMetadata</c>.
-        /// </summary>
-        public CsEnumItemMetadata(string cppName, string cppValue, string? name, string? value, List<string>? attributes, string? comment)
-        {
-            CppName = cppName;
-            CppValue = cppValue;
-            Name = name;
-            Value = value;
-            Attributes = attributes ?? [];
-            Comment = comment;
+        public CsEnumItemMetadata(
+            string cppName,
+            string cppValue,
+            string? name,
+            string? value,
+            List<string>? attributes,
+            string? comment
+        ) {
+            this.cppName = cppName;
+            this.cppValue = cppValue;
+            this.name = name;
+            this.value = value;
+            this.attributes = attributes ?? [];
+            this.comment = comment;
         }
 
         /// <summary>
-        /// Exposes public member <c>CppName</c>.
+        /// Gets the original native enum-item identifier used for metadata matching.
         /// </summary>
-        public string Identifier => CppName;
+        public string identifier => this.cppName;
+        /// <summary>
+        /// Gets or sets the original native enum-item identifier.
+        /// </summary>
+        public string cppName { get; set; }
+        /// <summary>
+        /// Gets or sets the original native constant expression spelling.
+        /// </summary>
+        public string cppValue { get; set; }
+        /// <summary>
+        /// Gets or sets the managed item identifier, or null before mapping.
+        /// </summary>
+        public string? name { get; set; }
+        /// <summary>
+        /// Gets or sets the managed constant expression, or null before mapping.
+        /// </summary>
+        public string? value { get; set; }
+        /// <summary>
+        /// Gets or sets managed item attribute fragments in emission order.
+        /// </summary>
+        public List<string> attributes { get; set; }
+        /// <summary>
+        /// Gets or sets the emitted item documentation fragment, or null when absent.
+        /// </summary>
+        public string? comment { get; set; }
 
         /// <summary>
-        /// Gets or sets <c>CppName</c>.
+        /// Hashes the original native enum-item identifier for in-process metadata lookup.
         /// </summary>
-        public string CppName { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>CppValue</c>.
-        /// </summary>
-        public string CppValue { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Name</c>.
-        /// </summary>
-        public string? Name { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Value</c>.
-        /// </summary>
-        public string? Value { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Attributes</c>.
-        /// </summary>
-        public List<string> Attributes { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Comment</c>.
-        /// </summary>
-        public string? Comment { get; set; }
-
-        /// <summary>
-        /// Returns computed data from <c>GetHashCode</c>.
-        /// </summary>
+        /// <returns>
+        /// The current identifier hash; changing cppName changes this value.
+        /// </returns>
         public override int GetHashCode()
         {
-            return Identifier.GetHashCode();
+            return this.identifier.GetHashCode();
         }
 
         /// <summary>
-        /// Executes public operation <c>Clone</c>.
+        /// Copies the attribute container and all item spellings into an independent projection.
         /// </summary>
+        /// <returns>
+        /// A separately mutable descriptor retaining the same immutable text values.
+        /// </returns>
         public CsEnumItemMetadata Clone()
         {
-            return new CsEnumItemMetadata(CppName, CppValue, Name, Value, new List<string>(Attributes), Comment);
+            return new CsEnumItemMetadata(this.cppName, this.cppValue, this.name, this.value, new List<string>(this.attributes), this.comment);
         }
     }
 }

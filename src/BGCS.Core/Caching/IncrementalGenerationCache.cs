@@ -1,165 +1,325 @@
-using System.Collections.Concurrent;
+using System;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+
 using BGCS.Core.IO;
 
 namespace BGCS.Core.Caching;
 
-/// <summary>Content-addressed key for one complete generation result.</summary>
-public sealed record IncrementalCacheKey(string Value, int InputFileCount);
-
 /// <summary>
-/// Immutable output cache with atomic publication and restoration. Cache entries are never modified after publication.
+/// Publishes complete content-addressed generation results and validates their bytes before restoration.
 /// </summary>
 public sealed class IncrementalGenerationCache
 {
-    private const int FormatVersion = 1;
-    private static readonly ConcurrentDictionary<string, object> EntryLocks = new(StringComparer.Ordinal);
-    private readonly string root;
+    private const string C_MAGIC = "BGCS.GenerationCache";
+    private readonly string m_root;
 
+    /// <summary>
+    /// Selects the rebuildable cache root without creating entries or retaining in-memory publication locks.
+    /// </summary>
+    /// <param name="root">
+    /// The cache directory; generated output must reside outside this tree.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// The directory is empty or is a volume root.
+    /// </exception>
     public IncrementalGenerationCache(string root)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
-        this.root = Path.GetFullPath(root);
+        m_root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        _ = DirectoryPublicationLease.GetPath(m_root);
     }
 
-    /// <summary>Computes a SHA-256 key from the generator fingerprint and exact contents of all inputs.</summary>
-    public static IncrementalCacheKey CreateKey(string generatorFingerprint, IEnumerable<string> inputFiles)
-    {
+    /// <summary>
+    /// Hashes the generator identity, normalized input paths, file lengths and exact input bytes in stable order.
+    /// </summary>
+    /// <param name="generatorFingerprint">
+    /// The identity of the complete generator, configuration, target and extension closure.
+    /// </param>
+    /// <param name="inputFiles">
+    /// All source inputs; repeated absolute paths participate only once.
+    /// </param>
+    /// <returns>
+    /// A normalized SHA-256 identity with its distinct input count.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// The generator identity or an input path is empty.
+    /// </exception>
+    /// <exception cref="IOException">
+    /// An input is missing, unreadable or changes while being hashed.
+    /// </exception>
+    public static IncrementalCacheKey CreateKey(
+        string generatorFingerprint,
+        IEnumerable<string> inputFiles
+    ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(generatorFingerprint);
         ArgumentNullException.ThrowIfNull(inputFiles);
         string[] files = inputFiles.Select(Path.GetFullPath).Distinct(StringComparer.Ordinal)
-            .OrderBy(path => path, StringComparer.Ordinal).ToArray();
+            .OrderBy(static path => path, StringComparer.Ordinal).ToArray();
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        Add(hash, "BGCS incremental cache v" + FormatVersion);
+        Add(hash, C_MAGIC);
         Add(hash, generatorFingerprint);
-        foreach (string file in files)
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+        Span<byte> length = stackalloc byte[sizeof(long)];
+        try
         {
-            if (!File.Exists(file))
-                throw new FileNotFoundException($"Incremental cache input not found: {file}", file);
-            Add(hash, file.Replace('\\', '/'));
-            using FileStream stream = File.OpenRead(file);
-            byte[] buffer = new byte[64 * 1024];
-            int read;
-            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
-                hash.AppendData(buffer, 0, read);
+            foreach (string file in files)
+            {
+                Add(hash, file.Replace('\\', '/'));
+                using FileStream stream = File.OpenRead(file);
+                long expectedLength = stream.Length;
+                DateTime modified = File.GetLastWriteTimeUtc(file);
+                BinaryPrimitives.WriteInt64LittleEndian(length, expectedLength);
+                hash.AppendData(length);
+                long total = 0;
+                int read;
+                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    hash.AppendData(buffer, 0, read);
+                    total += read;
+                }
+                if (total != expectedLength || stream.Length != expectedLength || File.GetLastWriteTimeUtc(file) != modified)
+                    throw new IOException($"Generation input changed while hashing: '{file}'.");
+            }
         }
-        return new(Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant(), files.Length);
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+        return new IncrementalCacheKey(Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant(), files.Length);
     }
 
-    /// <summary>Restores an entry into the requested destination using an output transaction.</summary>
-    public bool TryRestore(IncrementalCacheKey key, string outputPath, out string metadata)
-    {
+    /// <summary>
+    /// Restores a verified entry under publication ownership, preserving current output when the entry is unavailable or damaged.
+    /// </summary>
+    /// <param name="key">
+    /// The frozen generation identity to restore.
+    /// </param>
+    /// <param name="outputPath">
+    /// The destination outside the cache tree, replaced only after the complete candidate is copied and verified.
+    /// </param>
+    /// <param name="metadata">
+    /// Receives verified generation metadata on success, or an empty string on a cache miss.
+    /// </param>
+    /// <returns>
+    /// True after complete restoration; false for a missing, malformed or content-mismatched entry.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// The destination overlaps the cache tree.
+    /// </exception>
+    /// <exception cref="IOException">
+    /// Publication ownership, copying or output installation fails.
+    /// </exception>
+    /// <exception cref="TimeoutException">
+    /// Another process retains publication ownership for more than five minutes.
+    /// </exception>
+    public bool TryRestore(
+        IncrementalCacheKey key,
+        string outputPath,
+        out string metadata
+    ) {
         ArgumentNullException.ThrowIfNull(key);
-        string entry = GetEntryPath(key);
-        string marker = Path.Combine(entry, "entry.json");
-        string files = Path.Combine(entry, "files");
-        if (!File.Exists(marker) || !Directory.Exists(files))
-        {
-            metadata = string.Empty;
+        string output = ResolveOutput(outputPath);
+        string entry = Path.Combine(m_root, key.value);
+        metadata = string.Empty;
+        if (!Directory.Exists(entry))
             return false;
-        }
-        lock (EntryLocks.GetOrAdd(entry, static _ => new()))
-        {
-            CacheEntry? descriptor = System.Text.Json.JsonSerializer.Deserialize<CacheEntry>(File.ReadAllText(marker));
-            if (descriptor is not { FormatVersion: FormatVersion } || !string.Equals(descriptor.Key, key.Value, StringComparison.Ordinal))
-            {
-                metadata = string.Empty;
-                return false;
-            }
-            using OutputDirectoryTransaction transaction = new(outputPath);
-            CopyDirectory(files, transaction.StagingPath);
-            transaction.Commit();
-            metadata = descriptor.Metadata;
-            return true;
-        }
+        using var ownership = new DirectoryPublicationOwnership(entry, output);
+        CacheEntry? descriptor = ReadComplete(entry, key);
+        if (descriptor is null)
+            return false;
+        using var transaction = new OutputDirectoryTransaction(output, ownership.GetLease(output));
+        CopyDirectory(Path.Combine(entry, "files"), transaction.stagingPath);
+        if (!MatchesFiles(transaction.stagingPath, descriptor.files))
+            return false;
+        transaction.Commit();
+        metadata = descriptor.metadata;
+        return true;
     }
 
-    /// <summary>Publishes a complete successful output directory if the content-addressed entry does not exist.</summary>
-    public void Store(IncrementalCacheKey key, string outputPath, string metadata)
-    {
+    /// <summary>
+    /// Copies a successful output under publication ownership and installs an immutable, verified cache entry.
+    /// </summary>
+    /// <param name="key">
+    /// The identity of the completed generation.
+    /// </param>
+    /// <param name="outputPath">
+    /// The complete generated output outside the cache tree.
+    /// </param>
+    /// <param name="metadata">
+    /// Neutral generation metadata restored together with verified output bytes.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// Output overlaps the cache tree.
+    /// </exception>
+    /// <exception cref="IOException">
+    /// Output is missing, changes during copying or cannot be published.
+    /// </exception>
+    /// <exception cref="TimeoutException">
+    /// Another process retains publication ownership for more than five minutes.
+    /// </exception>
+    public void Store(
+        IncrementalCacheKey key,
+        string outputPath,
+        string metadata
+    ) {
         ArgumentNullException.ThrowIfNull(key);
-        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
-        string source = Path.GetFullPath(outputPath);
+        ArgumentNullException.ThrowIfNull(metadata);
+        string source = ResolveOutput(outputPath);
+        string entry = Path.Combine(m_root, key.value);
+        using var ownership = new DirectoryPublicationOwnership(entry, source);
         if (!Directory.Exists(source))
-            throw new DirectoryNotFoundException($"Generated output directory not found: {source}");
-        Directory.CreateDirectory(root);
-        string entry = GetEntryPath(key);
-        lock (EntryLocks.GetOrAdd(entry, static _ => new()))
-        {
-            if (File.Exists(Path.Combine(entry, "entry.json")))
-                return;
-            string staging = Path.Combine(root, ".publish-" + key.Value + "-" + Guid.NewGuid().ToString("N"));
-            try
-            {
-                string files = Path.Combine(staging, "files");
-                Directory.CreateDirectory(files);
-                CopyDirectory(source, files);
-                File.WriteAllText(Path.Combine(staging, "entry.json"), System.Text.Json.JsonSerializer.Serialize(
-                    new CacheEntry(FormatVersion, key.Value, key.InputFileCount, metadata)));
-                try
-                {
-                    Directory.Move(staging, entry);
-                }
-                catch (IOException) when (Directory.Exists(entry))
-                {
-                    // A process outside this runtime won the immutable publication race.
-                }
-            }
-            finally
-            {
-                if (Directory.Exists(staging))
-                    Directory.Delete(staging, true);
-            }
-        }
+            throw new DirectoryNotFoundException($"Generated output directory not found: '{source}'.");
+        if (ReadComplete(entry, key) is not null)
+            return;
+        using var transaction = new OutputDirectoryTransaction(entry, ownership.GetLease(entry));
+        string files = Path.Combine(transaction.stagingPath, "files");
+        CopyDirectory(source, files);
+        CacheFile[] contents = DescribeFiles(files);
+        if (!MatchesFiles(source, contents))
+            throw new IOException($"Generated output changed while caching: '{source}'.");
+        var descriptor = new CacheEntry(C_MAGIC, key.value, key.inputFileCount, metadata, Digest(metadata), contents);
+        File.WriteAllText(Path.Combine(transaction.stagingPath, "entry.json"), JsonSerializer.Serialize(descriptor));
+        transaction.Commit();
     }
 
-    /// <summary>Enumerates C/C++ source-like inputs recursively with deterministic ordering.</summary>
-    public static IReadOnlyList<string> DiscoverInputs(IEnumerable<string> explicitFiles, IEnumerable<string> includeDirectories,
-        IEnumerable<string>? excludedDirectories = null)
-    {
+    /// <summary>
+    /// Enumerates C/C++ source files and extensionless SDK headers in deterministic absolute-path order.
+    /// </summary>
+    /// <param name="explicitFiles">
+    /// Required source files, retained even when their extension is not a recognized header extension.
+    /// </param>
+    /// <param name="includeDirectories">
+    /// Header roots searched recursively; nonexistent roots contribute no files.
+    /// </param>
+    /// <param name="excludedDirectories">
+    /// Optional generated or cached subtrees excluded from include-root discovery.
+    /// </param>
+    /// <returns>
+    /// Distinct normalized paths sorted ordinally; files are not opened by discovery.
+    /// </returns>
+    public static IReadOnlyList<string> DiscoverInputs(
+        IEnumerable<string> explicitFiles,
+        IEnumerable<string> includeDirectories,
+        IEnumerable<string>? excludedDirectories = null
+    ) {
         ArgumentNullException.ThrowIfNull(explicitFiles);
         ArgumentNullException.ThrowIfNull(includeDirectories);
         HashSet<string> files = explicitFiles.Select(Path.GetFullPath).ToHashSet(StringComparer.Ordinal);
-        string[] exclusions = (excludedDirectories ?? []).Select(path => Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
-            .ToArray();
+        string[] exclusions = (excludedDirectories ?? []).Select(static path => Path.GetFullPath(path)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar).ToArray();
         HashSet<string> extensions = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".h", ".hh", ".hpp", ".hxx", ".inc", ".inl", ".c", ".cc", ".cpp", ".cxx"
-        };
+            { ".h", ".hh", ".hpp", ".hxx", ".inc", ".inl", ".c", ".cc", ".cpp", ".cxx" };
+        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         foreach (string directory in includeDirectories.Select(Path.GetFullPath).Distinct(StringComparer.Ordinal))
         {
             if (!Directory.Exists(directory))
                 continue;
             foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
-                if (extensions.Contains(Path.GetExtension(file)) && !exclusions.Any(exclusion => Path.GetFullPath(file).StartsWith(exclusion, StringComparison.Ordinal)))
+                if ((extensions.Contains(Path.GetExtension(file)) || !Path.HasExtension(file))
+                    && !exclusions.Any(exclusion => file.StartsWith(exclusion, comparison)))
                     files.Add(Path.GetFullPath(file));
         }
-        return files.OrderBy(path => path, StringComparer.Ordinal).ToArray();
+        return files.OrderBy(static path => path, StringComparer.Ordinal).ToArray();
     }
 
-    private string GetEntryPath(IncrementalCacheKey key) => Path.Combine(root, key.Value);
-
-    private static void Add(IncrementalHash hash, string value)
+    private string ResolveOutput(string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        string output = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (string.Equals(output, m_root, comparison) || output.StartsWith(m_root + Path.DirectorySeparatorChar, comparison)
+            || m_root.StartsWith(output + Path.DirectorySeparatorChar, comparison))
+            throw new ArgumentException("Generated output must not overlap its incremental cache tree.", nameof(path));
+        return output;
+    }
+
+    private static CacheEntry? ReadComplete(
+        string entry,
+        IncrementalCacheKey key
+    ) {
+        string marker = Path.Combine(entry, "entry.json");
+        if (!File.Exists(marker))
+            return null;
+        try
+        {
+            CacheEntry? descriptor = JsonSerializer.Deserialize<CacheEntry>(File.ReadAllText(marker));
+            return descriptor is not null && descriptor.magic == C_MAGIC && descriptor.key == key.value
+                && descriptor.inputFileCount == key.inputFileCount && descriptor.metadata is not null
+                && descriptor.metadataFingerprint == Digest(descriptor.metadata) && descriptor.files is not null
+                && MatchesFiles(Path.Combine(entry, "files"), descriptor.files) ? descriptor : null;
+        }
+        catch (Exception failure) when (failure is JsonException or IOException)
+        {
+            return null;
+        }
+    }
+
+    private static CacheFile[] DescribeFiles(string directory)
+    {
+        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0
+            || Directory.EnumerateFileSystemEntries(directory, "*", SearchOption.AllDirectories)
+                .Any(static path => (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0))
+            throw new IOException("Generation cache trees cannot contain symbolic links or reparse points.");
+        return Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+            .OrderBy(static file => file, StringComparer.Ordinal).Select(file =>
+            {
+                using FileStream stream = File.OpenRead(file);
+                return new CacheFile(Path.GetRelativePath(directory, file).Replace('\\', '/'), stream.Length,
+                    Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant());
+            }).ToArray();
+    }
+
+    private static bool MatchesFiles(
+        string directory,
+        CacheFile[] files
+    ) => Directory.Exists(directory) && DescribeFiles(directory).SequenceEqual(files);
+
+    private static string Digest(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+
+    private static void Add(
+        IncrementalHash hash,
+        string value
+    ) {
         byte[] bytes = Encoding.UTF8.GetBytes(value);
-        hash.AppendData(BitConverter.GetBytes(bytes.Length));
+        Span<byte> length = stackalloc byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(length, bytes.Length);
+        hash.AppendData(length);
         hash.AppendData(bytes);
     }
 
-    private static void CopyDirectory(string source, string destination)
-    {
+    private static void CopyDirectory(
+        string source,
+        string destination
+    ) {
+        _ = DescribeFiles(source);
         Directory.CreateDirectory(destination);
-        foreach (string directory in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
-            Directory.CreateDirectory(Path.Combine(destination, Path.GetRelativePath(source, directory)));
-        foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
         {
             string target = Path.Combine(destination, Path.GetRelativePath(source, file));
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.Copy(file, target, true);
+            File.Copy(file, target);
         }
     }
 
-    private sealed record CacheEntry(int FormatVersion, string Key, int InputFileCount, string Metadata);
+    private sealed record CacheEntry(
+        string magic,
+        string key,
+        int inputFileCount,
+        string metadata,
+        string metadataFingerprint,
+        CacheFile[] files
+    );
+
+    private sealed record CacheFile(
+        string path,
+        long length,
+        string fingerprint
+    );
 }

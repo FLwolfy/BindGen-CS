@@ -11,7 +11,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 "${DOTNET_CMD}" list "${ROOT_DIR}/BindGen-CS.sln" package \
   --include-transitive --vulnerable --format json --output-version 1 > "${REPORT_PATH}"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.DependencyAudit/BGCS.DependencyAudit.csproj" \
-  --configuration Release -- vulnerabilities "${REPORT_PATH}"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.DependencyAudit/BGCS.DependencyAudit.csproj" \
-  --configuration Release -- licenses "${ROOT_DIR}" "${INVENTORY_PATH}"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+  --configuration Release -- validate dependencies vulnerabilities "${REPORT_PATH}"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+  --configuration Release -- validate dependencies licenses "${ROOT_DIR}" "${INVENTORY_PATH}"

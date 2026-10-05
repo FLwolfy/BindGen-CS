@@ -10,7 +10,7 @@ public class IgnoredTypedefsEntryTests : ConfigurationEntryTestBase
         using var output = Generate("config.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
-        Assert.Contains("my_typedef", output.Config.IgnoredTypedefs);
+        Assert.Contains("my_typedef", output.Config.ignoredTypedefs);
         AssertBindingsExpected(output);
     }
 
@@ -20,7 +20,7 @@ public class IgnoredTypedefsEntryTests : ConfigurationEntryTestBase
         using var output = Generate("config.alt.json", ["header.h"], ["header.h"]);
         PrintBindings(output);
         AssertGenerationSucceeded(output);
-        Assert.DoesNotContain("my_typedef", output.Config.IgnoredTypedefs);
+        Assert.DoesNotContain("my_typedef", output.Config.ignoredTypedefs);
         AssertBindingsExpected(output, "expected.bindings.alt.json");
     }
 }

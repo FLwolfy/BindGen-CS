@@ -1,138 +1,136 @@
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
-using ClangSharp.Interop;
-using BGCS.CppAst.AttributeUtils;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using BGCS.CppAst.AttributeParsing;
 using BGCS.CppAst.Extensions;
 using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Expressions;
 using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Types;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Model.Declarations;
+
 /// <summary>
 /// A C++ field (of a struct/class) or global variable.
 /// </summary>
 public sealed class CppField : CppDeclaration, ICppMemberWithVisibility, ICppAttributeContainer
 {
     /// <summary>
-    /// Initializes a new instance of <see cref="CppField"/>.
+    /// Creates a mutable native field projection borrowing its compilation lifetime.
     /// </summary>
-    public CppField(CXCursor cursor, CppType type, string name) : base(cursor)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its owning compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="type">
+    /// The non-null borrowed native field type.
+    /// </param>
+    /// <param name="name">
+    /// The native field identifier, empty for anonymous storage.
+    /// </param>
+    public CppField(
+        CXCursor cursor,
+        CppType type,
+        string name
+    ) : base(cursor)
     {
-        Type = type ?? throw new ArgumentNullException(nameof(type));
-        Name = name;
-        Attributes = [];
+        this.type = type ?? throw new ArgumentNullException(nameof(type));
+        this.name = name;
+        this.attributes = [];
     }
 
-    /// <inheritdoc />
-    public CppVisibility Visibility { get; set; }
-
+    /// <inheritdoc/>
+    public CppVisibility visibility { get; set; }
     /// <summary>
     /// Gets or sets the storage qualifier of this field/variable.
     /// </summary>
-    public CppStorageQualifier StorageQualifier { get; set; }
-
+    public CppStorageQualifier storageQualifier { get; set; }
     /// <summary>
     /// Gets attached attributes. Might be null.
     /// </summary>
-    public List<CppAttribute> Attributes { get; }
-
+    public List<CppAttribute> attributes { get; }
     /// <summary>
-    /// Gets <c>TokenAttributes</c>.
+    /// Gets mutable attributes recovered from source tokens outside the native attribute-cursor list.
     /// </summary>
-    public List<CppAttribute> TokenAttributes { get; } = [];
-
+    public List<CppAttribute> tokenAttributes { get; } = [];
     /// <summary>
-    /// Gets or sets <c>MetaAttributes</c>.
+    /// Gets the mutable recognized annotation map owned by this declaration.
     /// </summary>
-    public MetaAttributeMap MetaAttributes { get; private set; } = new MetaAttributeMap();
-
+    public MetaAttributeMap metaAttributes { get; private set; } = new MetaAttributeMap();
     /// <summary>
     /// Gets the type of this field/variable.
     /// </summary>
-    public CppType Type { get; set; }
-
-    /// <inheritdoc />
-    public string Name { get; set; }
-
+    public CppType type { get; set; }
+    /// <inheritdoc/>
+    public string name { get; set; }
     /// <summary>
     /// Gets or sets a boolean indicating if this field was created from an anonymous type
     /// </summary>
-    public bool IsAnonymous { get; set; }
-
+    public bool isAnonymous { get; set; }
     /// <summary>
     /// Gets the associated init value (either an integer or a string...)
     /// </summary>
-    public CppValue? InitValue { get; set; }
-
+    public CppValue? initValue { get; set; }
     /// <summary>
     /// Gets the associated init value as an expression.
     /// </summary>
-    public CppExpression? InitExpression { get; set; }
-
+    public CppExpression? initExpression { get; set; }
     /// <summary>
-    /// Gets or sets a boolean indicating that this field is a bit field. See <see cref="BitFieldWidth"/> to get the width of this field if <see cref="IsBitField"/> is <c>true</c>
+    /// Gets or sets a boolean indicating that this field is a bit field. See <see cref = "bitFieldWidth"/> to get the width of this field if <see cref = "isBitField"/> is <c>true</c>
     /// </summary>
-    public bool IsBitField { get; set; }
-
+    public bool isBitField { get; set; }
     /// <summary>
-    /// Gets or sets the number of bits for this bit field. Only valid if <see cref="IsBitField"/> is <c>true</c>.
+    /// Gets or sets the number of bits for this bit field. Only valid if <see cref = "isBitField"/> is <c>true</c>.
     /// </summary>
-    public int BitFieldWidth { get; set; }
-
+    public int bitFieldWidth { get; set; }
     /// <summary>
     /// Gets or sets the offset of the field in bytes.
     /// </summary>
-    public long Offset { get => BitOffset / 8; }
-
+    public long offset { get => this.bitOffset / 8; }
     /// <summary>
     /// Gets or sets the offset of the field in bytes.
     /// </summary>
-    public long BitOffset { get; set; }
+    public long bitOffset { get; set; }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override string ToString()
     {
         var builder = new StringBuilder();
-
-        if (Visibility != CppVisibility.Default)
+        if (this.visibility != CppVisibility.Default)
         {
-            builder.Append(Visibility.ToString().ToLowerInvariant());
+            builder.Append(this.visibility.ToString().ToLowerInvariant());
             builder.Append(' ');
         }
 
-        if (StorageQualifier != CppStorageQualifier.None)
+        if (this.storageQualifier != CppStorageQualifier.None)
         {
-            builder.Append(StorageQualifier.ToString().ToLowerInvariant());
+            builder.Append(this.storageQualifier.ToString().ToLowerInvariant());
             builder.Append(' ');
         }
 
-        builder.Append(Type.GetDisplayName());
+        builder.Append(this.type.GetDisplayName());
         builder.Append(' ');
-        builder.Append(Name);
-
-        if (InitExpression != null)
+        builder.Append(this.name);
+        if (this.initExpression != null)
         {
             builder.Append(" = ");
-            var initExpressionStr = InitExpression.ToString();
+            var initExpressionStr = this.initExpression.ToString();
             if (string.IsNullOrEmpty(initExpressionStr))
             {
-                builder.Append(InitValue);
+                builder.Append(this.initValue);
             }
             else
             {
                 builder.Append(initExpressionStr);
             }
         }
-        else if (InitValue != null)
+        else if (this.initValue != null)
         {
             builder.Append(" = ");
-            builder.Append(InitValue);
+            builder.Append(this.initValue);
         }
 
         return builder.ToString();

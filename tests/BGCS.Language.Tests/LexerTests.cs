@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Language;
+using BGCS.Language.Lexing;
 using Xunit;
 
 namespace BGCS.Language.Tests;
@@ -9,7 +9,7 @@ public class LexerTests
 {
     private static void AssertNoErrors(LexerResult result)
     {
-        Assert.False(result.Diagnostics.HasErrors, result.Diagnostics.ToString());
+        Assert.False(result.diagnostics.hasErrors, result.diagnostics.ToString());
     }
 
     [Fact]
@@ -21,8 +21,8 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        var tokens = Assert.IsType<List<Token>>(result.Tokens);
-        var kinds = tokens.Select(x => x.Type).ToArray();
+        var tokens = Assert.IsType<List<Token>>(result.tokens);
+        var kinds = tokens.Select(x => x.type).ToArray();
         Assert.Equal(
         [
             TokenType.Identifier,
@@ -41,9 +41,9 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        var tokens = Assert.IsType<List<Token>>(result.Tokens);
+        var tokens = Assert.IsType<List<Token>>(result.tokens);
         Assert.Single(tokens);
-        Assert.Equal(TokenType.Literal, tokens[0].Type);
+        Assert.Equal(TokenType.Literal, tokens[0].type);
         Assert.Equal("Hello World", tokens[0].AsString());
     }
 
@@ -54,7 +54,7 @@ public class LexerTests
         Lexer lexer = new();
 
         var result = lexer.Tokenize(input, "");
-        Assert.True(result.Diagnostics.HasErrors);
+        Assert.True(result.diagnostics.hasErrors);
     }
 
     [Fact]
@@ -66,9 +66,9 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        var tokens = result.Tokens;
+        var tokens = result.tokens;
         Assert.NotNull(tokens);
-        Assert.Contains(tokens!, x => x.Type == TokenType.Comment && x.AsString() == "comment");
+        Assert.Contains(tokens!, x => x.type == TokenType.Comment && x.AsString() == "comment");
     }
 
     [Fact]
@@ -80,9 +80,9 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        var tokens = result.Tokens;
+        var tokens = result.tokens;
         Assert.NotNull(tokens);
-        Assert.Contains(tokens!, x => x.Type == TokenType.Comment && x.AsString() == " block ");
+        Assert.Contains(tokens!, x => x.type == TokenType.Comment && x.AsString() == " block ");
     }
 
     [Fact]
@@ -94,10 +94,10 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        Assert.Single(result.Tokens!);
-        Assert.Equal(TokenType.Literal, result.Tokens![0].Type);
-        Assert.Equal(LiteralType.Char, result.Tokens[0].LiteralType);
-        Assert.Equal("x", result.Tokens[0].AsString());
+        Assert.Single(result.tokens!);
+        Assert.Equal(TokenType.Literal, result.tokens![0].type);
+        Assert.Equal(LiteralType.Char, result.tokens[0].literalType);
+        Assert.Equal("x", result.tokens[0].AsString());
     }
 
     [Fact]
@@ -109,11 +109,11 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        var tokens = result.Tokens!;
-        Assert.Contains(tokens, x => x.Type == TokenType.Keyword && x.KeywordType == KeywordType.Public);
-        Assert.Contains(tokens, x => x.Type == TokenType.Keyword && x.KeywordType == KeywordType.Class);
-        Assert.Contains(tokens, x => x.Type == TokenType.Keyword && x.KeywordType == KeywordType.Return);
-        Assert.Contains(tokens, x => x.Type == TokenType.Literal && x.LiteralType == LiteralType.Number && x.AsString() == "42");
+        var tokens = result.tokens!;
+        Assert.Contains(tokens, x => x.type == TokenType.Keyword && x.keywordType == KeywordType.Public);
+        Assert.Contains(tokens, x => x.type == TokenType.Keyword && x.keywordType == KeywordType.Class);
+        Assert.Contains(tokens, x => x.type == TokenType.Keyword && x.keywordType == KeywordType.Return);
+        Assert.Contains(tokens, x => x.type == TokenType.Literal && x.literalType == LiteralType.Number && x.AsString() == "42");
     }
 
     [Fact]
@@ -125,9 +125,9 @@ public class LexerTests
         var result = lexer.Tokenize(input, "");
         AssertNoErrors(result);
 
-        var tokens = result.Tokens!;
-        Assert.Contains(tokens, x => x.Type == TokenType.Keyword && x.KeywordType == KeywordType.Void);
-        Assert.Contains(tokens, x => x.Type == TokenType.Identifier && x.AsString() == "M");
+        var tokens = result.tokens!;
+        Assert.Contains(tokens, x => x.type == TokenType.Keyword && x.keywordType == KeywordType.Void);
+        Assert.Contains(tokens, x => x.type == TokenType.Identifier && x.AsString() == "M");
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class LexerTests
         Lexer lexer = new();
 
         var result = lexer.Tokenize(input, "");
-        Assert.True(result.Diagnostics.HasErrors);
-        Assert.Null(result.Tokens);
+        Assert.True(result.diagnostics.hasErrors);
+        Assert.Null(result.tokens);
     }
 }

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BGCS.Configuration;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
+using BGCS.Facade;
 using BGCS.Metadata;
 using BGCS.Patching;
 using Xunit;
@@ -25,12 +27,12 @@ public class SingleFilePatchCompatibilityTests
         {
             CsCodeGeneratorConfig config = CreateSingleFileConfig(generateRuntimeSource: false);
             CsCodeGenerator generator = new(config);
-            generator.PatchEngine.RegisterPostPatch(new ReplaceFunctionSymbolPostPatch("BgcsSumNative", "BgcsSumNativePatched"));
+            generator.patchEngine.RegisterPostPatch(new ReplaceFunctionSymbolPostPatch("BgcsSumNative", "BgcsSumNativePatched"));
 
             bool ok = generator.Generate(CreateParserOptions(), headerPath, outputPath);
 
             Assert.True(ok);
-            Assert.DoesNotContain(generator.Messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+            Assert.DoesNotContain(generator.messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
 
             string mergedPath = Path.Combine(outputPath, "Bindings.cs");
             Assert.True(File.Exists(mergedPath));
@@ -66,12 +68,12 @@ public class SingleFilePatchCompatibilityTests
         {
             CsCodeGeneratorConfig config = CreateSingleFileConfig(generateRuntimeSource: true);
             CsCodeGenerator generator = new(config);
-            generator.PatchEngine.RegisterPostPatch(new ReplaceFunctionSymbolPostPatch("BgcsSumNative", "BgcsSumNativePatched"));
+            generator.patchEngine.RegisterPostPatch(new ReplaceFunctionSymbolPostPatch("BgcsSumNative", "BgcsSumNativePatched"));
 
             bool ok = generator.Generate(CreateParserOptions(), headerPath, outputPath);
 
             Assert.True(ok);
-            Assert.DoesNotContain(generator.Messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+            Assert.DoesNotContain(generator.messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
 
             string mergedPath = Path.Combine(outputPath, "Bindings.cs");
             Assert.True(File.Exists(mergedPath));
@@ -102,15 +104,15 @@ public class SingleFilePatchCompatibilityTests
     {
         return new CsCodeGeneratorConfig
         {
-            ApiName = "TestApi",
-            Namespace = "BGCS.Tests.Generated",
-            LibName = "test",
-            ImportType = ImportType.FunctionTable,
-            UseCustomContext = false,
-            GenerateExtensions = false,
-            DelegatesAsVoidPointer = false,
-            MergeGeneratedFilesToSingleFile = true,
-            GenerateRuntimeSource = generateRuntimeSource
+            apiName = "TestApi",
+            @namespace = "BGCS.Tests.Generated",
+            libName = "test",
+            importType = ImportType.FunctionTable,
+            useCustomContext = false,
+            generateExtensions = false,
+            delegatesAsVoidPointer = false,
+            mergeGeneratedFilesToSingleFile = true,
+            generateRuntimeSource = generateRuntimeSource
         };
     }
 
@@ -118,15 +120,15 @@ public class SingleFilePatchCompatibilityTests
     {
         CppParserOptions options = new()
         {
-            ParseMacros = true,
-            ParseComments = true,
-            ParseSystemIncludes = false,
-            ParseCommentAttribute = true,
-            ParserKind = CppParserKind.Cpp,
-            AutoSquashTypedef = false
+            parseMacros = true,
+            parseComments = true,
+            parseSystemIncludes = false,
+            parseCommentAttribute = true,
+            parserKind = CppParserKind.Cpp,
+            autoSquashTypedef = false
         };
 
-        options.AdditionalArguments.Add("-undef");
+        options.additionalArguments.Add("-undef");
         return options;
     }
 
@@ -151,12 +153,6 @@ public class SingleFilePatchCompatibilityTests
 
         public void Apply(PatchContext context, CsCodeGeneratorMetadata metadata, List<string> files)
         {
-            string? root = GetCommonDirectory(files);
-            if (root == null)
-            {
-                return;
-            }
-
             string? targetPath = null;
             for (int i = 0; i < files.Count; i++)
             {
@@ -166,11 +162,10 @@ public class SingleFilePatchCompatibilityTests
                     continue;
                 }
 
-                string relativePath = Path.GetRelativePath(root, file);
-                string text = context.ReadFile(relativePath);
+                string text = context.ReadFile(file);
                 if (text.Contains(oldValue, StringComparison.Ordinal))
                 {
-                    targetPath = relativePath;
+                    targetPath = file;
                     break;
                 }
             }
@@ -184,45 +179,5 @@ public class SingleFilePatchCompatibilityTests
             context.WriteFile(targetPath, targetText.Replace(oldValue, newValue, StringComparison.Ordinal));
         }
 
-        private static string? GetCommonDirectory(List<string> files)
-        {
-            if (files.Count == 0)
-            {
-                return null;
-            }
-
-            string? commonPath = Path.GetDirectoryName(files[0]);
-            if (string.IsNullOrWhiteSpace(commonPath))
-            {
-                return null;
-            }
-
-            for (int i = 1; i < files.Count; i++)
-            {
-                string? directory = Path.GetDirectoryName(files[i]);
-                if (string.IsNullOrWhiteSpace(directory))
-                {
-                    return null;
-                }
-
-                while (!IsAncestorOrSame(commonPath, directory))
-                {
-                    commonPath = Path.GetDirectoryName(commonPath);
-                    if (string.IsNullOrWhiteSpace(commonPath))
-                    {
-                        return null;
-                    }
-                }
-            }
-
-            return commonPath;
-        }
-
-        private static bool IsAncestorOrSame(string ancestor, string path)
-        {
-            string relative = Path.GetRelativePath(ancestor, path);
-            return relative == "."
-                || (!relative.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(relative));
-        }
     }
 }

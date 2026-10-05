@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using BGCS.Configuration;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -21,15 +22,16 @@ public class ConfigComposerBaseConfigPathTests
         File.WriteAllText(basePath,
             """
             {
-              "Namespace": "Expected.FromBase"
+              "namespace": "Expected.FromBase",
+              "apiName": "NativeApi"
             }
             """);
 
         File.WriteAllText(mainPath,
             """
             {
-              "BaseConfig": {
-                "Url": "file://base.json"
+              "baseConfig": {
+                "url": "file://base.json"
               }
             }
             """);
@@ -39,9 +41,9 @@ public class ConfigComposerBaseConfigPathTests
         {
             Environment.CurrentDirectory = otherDir;
 
-            CsCodeGeneratorConfig config = CsCodeGeneratorConfig.Load(mainPath, new ConfigComposer());
+            CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(mainPath);
 
-            Assert.Equal("Expected.FromBase", config.Namespace);
+            Assert.Equal("Expected.FromBase", config.@namespace);
         }
         finally
         {

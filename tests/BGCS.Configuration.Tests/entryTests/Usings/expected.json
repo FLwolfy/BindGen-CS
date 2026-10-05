@@ -1,5 +1,5 @@
 {
-  "Property": "Usings",
+  "Property": "usings",
   "Expected": [
     "System.Text"
   ]

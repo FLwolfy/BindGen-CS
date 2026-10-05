@@ -1,93 +1,116 @@
 using System;
+using System.Text;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 using ClangSharp.Interop;
-using System.Text;
 
 namespace BGCS.CppAst.Model.Attributes;
+
 /// <summary>
 /// An attached C++ attribute
 /// </summary>
 public class CppAttribute : CppElement
 {
     /// <summary>
-    /// Initializes a new instance of <see cref="CppAttribute"/>.
+    /// Creates an attribute node borrowing the native declaration cursor.
     /// </summary>
-    public CppAttribute(CXCursor cursor, string name, AttributeKind kind) : base(cursor)
+    /// <param name="cursor">
+    /// The borrowed Clang cursor, valid only while its owning compilation remains alive; default creates a synthetic node.
+    /// </param>
+    /// <param name="name">
+    /// The non-null attribute identifier.
+    /// </param>
+    /// <param name="kind">
+    /// The native attribute category.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The attribute name is null.
+    /// </exception>
+    public CppAttribute(
+        CXCursor cursor,
+        string name,
+        AttributeKind kind
+    ) : base(cursor)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Kind = kind;
+        this.name = name ?? throw new ArgumentNullException(nameof(name));
+        this.kind = kind;
     }
 
     /// <summary>
-    /// Executes public operation <c>CppAttribute</c>.
+    /// Creates an attribute projection borrowing a native documentation comment.
     /// </summary>
-    public CppAttribute(CXComment comment, string name, AttributeKind kind) : base(CXCursor.Null)
+    /// <param name="comment">
+    /// The borrowed Clang comment, valid only while its owning compilation remains alive.
+    /// </param>
+    /// <param name="name">
+    /// The non-null attribute identifier.
+    /// </param>
+    /// <param name="kind">
+    /// The native attribute category.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The attribute name is null.
+    /// </exception>
+    public CppAttribute(
+        CXComment comment,
+        string name,
+        AttributeKind kind
+    ) : base(CXCursor.Null)
     {
-        Comment = comment;
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Kind = kind;
+        this.comment = comment;
+        this.name = name ?? throw new ArgumentNullException(nameof(name));
+        this.kind = kind;
     }
 
     /// <summary>
-    /// Gets or sets <c>Comment</c>.
+    /// Gets or sets the borrowed native documentation comment; its owning compilation must remain alive.
     /// </summary>
-    public CXComment Comment { get; set; }
-
+    public CXComment comment { get; set; }
     /// <summary>
     /// Gets or sets the scope of this attribute
     /// </summary>
-    public string? Scope { get; set; }
-
+    public string? scope { get; set; }
     /// <summary>
     /// Gets the attribute name.
     /// </summary>
-    public string Name { get; set; }
-
+    public string name { get; set; }
     /// <summary>
     /// Gets the attribute arguments
     /// </summary>
-    public string? Arguments { get; set; }
-
+    public string? arguments { get; set; }
     /// <summary>
     /// Gets a boolean indicating whether this attribute is variadic
     /// </summary>
-    public bool IsVariadic { get; set; }
-
+    public bool isVariadic { get; set; }
     /// <summary>
-    /// Gets <c>Kind</c>.
+    /// Gets the native attribute category captured when this projection was created.
     /// </summary>
-    public AttributeKind Kind { get; }
+    public AttributeKind kind { get; }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public override string ToString()
     {
         StringBuilder builder = new();
-
         ////builder.Append("[[");
-
-        builder.Append(Name);
-        if (Arguments != null)
+        builder.Append(this.name);
+        if (this.arguments != null)
         {
-            builder.Append('(').Append(Arguments).Append(')');
+            builder.Append('(').Append(this.arguments).Append(')');
         }
 
-        if (IsVariadic)
+        if (this.isVariadic)
         {
             builder.Append("...");
         }
 
         ////builder.Append("]]");
-
         ////if (Scope != null)
         ////{
         ////    builder.Append(" { scope:");
         ////    builder.Append(Scope).Append("::");
         ////    builder.Append("}");
         ////}
-
         return builder.ToString();
     }
 }

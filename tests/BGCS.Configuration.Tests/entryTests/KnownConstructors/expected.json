@@ -1,5 +1,5 @@
 {
-  "Property": "KnownConstructors",
+  "Property": "knownConstructors",
   "Expected": {
     "my_type": [
       "my_type_create"

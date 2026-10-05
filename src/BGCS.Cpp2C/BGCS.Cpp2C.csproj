@@ -1,8 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
@@ -21,12 +20,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BGCS.Core\BGCS.Core.csproj" />
-    <ProjectReference Include="..\BGCS.Intermediate\BGCS.Intermediate.csproj" />
+    <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../BGCS.Intermediate/BGCS.Intermediate.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../BGCS.CppAst/BGCS.CppAst.csproj" />
+  </ItemGroup>
 </Project>

@@ -1,31 +1,32 @@
-using System;
 namespace BGCS.CppAst.Parsing.Visitors.MemberVisitors;
-using ClangSharp.Interop;
+
+using System.Collections.Generic;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Types;
-using System.Collections.Generic;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>TypeRefVisitor</c>.
 /// </summary>
-public unsafe class TypeRefVisitor : MemberVisitor
+internal unsafe class TypeRefVisitor : MemberVisitor
 {
     /// <summary>
     /// Gets <c>Kinds</c>.
     /// </summary>
-    public override IEnumerable<CXCursorKind> Kinds { get; } = [
-        CXCursorKind.CXCursor_TypeRef
-    ];
+    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_TypeRef];
 
-    protected override CppElement? VisitCore(CXCursor cursor, CXCursor parent)
-    {
-        if (Context.CurrentClassBeingVisited != null && Context.CurrentClassBeingVisited.BaseTypes.Count == 1)
+    protected override CppElement? VisitCore(
+        CXCursor cursor,
+        CXCursor parent
+    ) {
+        if (this.context.currentClassBeingVisited != null && this.context.currentClassBeingVisited.baseTypes.Count == 1)
         {
-            var baseType = Context.CurrentClassBeingVisited.BaseTypes[0].Type;
+            var baseType = this.context.currentClassBeingVisited.baseTypes[0].type;
             CppGenericType genericType = baseType as CppGenericType ?? new CppGenericType(cursor, baseType);
-            var type = Builder.GetCppType(cursor.Referenced, cursor.Type, cursor);
-            genericType.GenericArguments.Add(type);
+            var type = this.builder.GetCppType(cursor.Referenced, cursor.Type, cursor);
+            genericType.genericArguments.Add(type);
         }
+
         return null;
     }
 }

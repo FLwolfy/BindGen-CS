@@ -1,7 +1,8 @@
 using System;
 using System.IO;
-using BGCS.Cpp2C.GenerationSteps;
 using BGCS.Core.Logging;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 using Xunit;
 
 namespace BGCS.Cpp2C.Tests;
@@ -36,13 +37,11 @@ public class Cpp2CGeneratedOutputSemanticsTests
 
         try
         {
-            Cpp2CGeneratorConfig cfg = new() { NamePrefix = "BGCS_" };
+            Cpp2CGeneratorConfig cfg = new() { namePrefix = "BGCS_" };
             Cpp2CCodeGenerator gen = new(cfg);
-            gen.AddGenerationStep(new EnumGenerationStep(gen, cfg));
-            gen.AddGenerationStep(new ClassGenerationStep(gen, cfg));
 
             gen.Generate(header, output);
-            Assert.DoesNotContain(gen.Messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+            Assert.DoesNotContain(gen.messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
 
             string common = Path.Combine(output, "include", "common.h");
             string classesH = Path.Combine(output, "include", "Classes.h");
@@ -107,7 +106,7 @@ public class Cpp2CGeneratedOutputSemanticsTests
 
         try
         {
-            Cpp2CGeneratorConfig config = new() { NamePrefix = "BGCS_" };
+            Cpp2CGeneratorConfig config = new() { namePrefix = "BGCS_" };
             Cpp2CCodeGenerator generator = new(config);
             generator.Generate(header, output);
 

@@ -14,17 +14,13 @@ using System.Runtime.InteropServices;
 public struct Aapcs64VaList
 {
     /// <summary>Pointer to the next stacked argument.</summary>
-    public nint Stack;
-
+    public nint stack;
     /// <summary>End of the general-purpose register save area.</summary>
-    public nint GeneralRegisterTop;
-
+    public nint generalRegisterTop;
     /// <summary>End of the floating-point/SIMD register save area.</summary>
-    public nint VectorRegisterTop;
-
+    public nint vectorRegisterTop;
     /// <summary>Current offset in the general-purpose register save area.</summary>
-    public int GeneralRegisterOffset;
-
+    public int generalRegisterOffset;
     /// <summary>Current offset in the floating-point/SIMD register save area.</summary>
-    public int VectorRegisterOffset;
+    public int vectorRegisterOffset;
 }

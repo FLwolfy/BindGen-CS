@@ -1,20 +1,29 @@
 {
-  "Namespace": "EntryTests.Generated",
-  "ApiName": "EntryApi",
-  "LibName": "entry-lib",
-  "MergeGeneratedFilesToSingleFile": true,
-  "ImportType": "DllImport",
-  "GenerateExtensions": false,
-  "GenerateRuntimeSource": false,
-  "MemberNamingConvention": "PascalCase",
-  "ClassMappings": [
+  "namespace": "EntryTests.Generated",
+  "apiName": "EntryApi",
+  "libName": "entry-lib",
+  "mergeGeneratedFilesToSingleFile": true,
+  "importType": "DllImport",
+  "generateExtensions": false,
+  "generateRuntimeSource": false,
+  "memberNamingConvention": "PascalCase",
+  "classMappings": [
     {
-      "ExportedName": "sample_type",
-      "FriendlyName": "SampleType",
-      "FieldMappings": [
-        { "ExportedName": "id", "DisplayName": "ID" },
-        { "ExportedName": "url", "DisplayName": "URL" },
-        { "ExportedName": "cpu", "DisplayName": "CPU" }
+      "exportedName": "sample_type",
+      "friendlyName": "SampleType",
+      "fieldMappings": [
+        {
+          "exportedName": "id",
+          "displayName": "ID"
+        },
+        {
+          "exportedName": "url",
+          "displayName": "URL"
+        },
+        {
+          "exportedName": "cpu",
+          "displayName": "CPU"
+        }
       ]
     }
   ]

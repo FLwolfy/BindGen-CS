@@ -1,72 +1,113 @@
-﻿namespace BGCS.Conversion
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using BGCS.Analysis;
+using BGCS.Configuration;
+
+namespace BGCS.Conversion
 {
+    using System.Text;
     using BGCS.CppAst.Model.Declarations;
     using BGCS.CppAst.Model.Interfaces;
     using BGCS.CppAst.Model.Templates;
     using BGCS.CppAst.Model.Types;
     using BGCS.Platform;
-    using System.Text;
 
     /// <summary>
-    /// Defines values for <c>CsTypeStyle</c>.
+    /// Selects an ABI carrier, managed reference projection, or runtime pointer wrapper during type conversion.
     /// </summary>
     public enum CsTypeStyle
     {
+        /// <summary>
+        /// Native ABI carrier without managed reference projections.
+        /// </summary>
         Raw,
+        /// <summary>
+        /// Managed reference projection used by generated convenience overloads.
+        /// </summary>
         Ref,
+        /// <summary>
+        /// Runtime pointer or handle wrapper projection.
+        /// </summary>
         Wrapped,
     }
 
     /// <summary>
-    /// Defines the public class <c>CppTypeConverter</c>.
+    /// Converts borrowed native types according to generation policy and retains only attempt-local AST caches.
     /// </summary>
     public class CppTypeConverter
     {
-        private readonly CsCodeGeneratorConfig config;
-        private readonly Dictionary<CppType, AnalysisResult> typedefCache = [];
-        private readonly Lock syncObj = new();
-        private Dictionary<string, CppEnum> typeDefToEnum = [];
-        private Dictionary<CppType, string> anonymousMapping = [];
-
+        private readonly CsCodeGeneratorConfig m_config;
+        private readonly Dictionary<CppType, AnalysisResult> m_typedefCache = [];
+        private readonly Lock m_syncObj = new();
+        private Dictionary<string, CppEnum> m_typeDefToEnum = [];
+        private Dictionary<CppType, string> m_anonymousMapping = [];
         /// <summary>
-        /// Initializes a new instance of <see cref="CppTypeConverter"/>.
+        /// Retains the mutable target, naming, and interop policy used by conversion.
         /// </summary>
+        /// <param name="config">
+        /// The configuration borrowed for this converter's lifetime.
+        /// </param>
         public CppTypeConverter(CsCodeGeneratorConfig config)
         {
-            this.config = config;
+            this.m_config = config;
         }
 
         /// <summary>
-        /// Executes public operation <c>Initialize</c>.
+        /// Clears previous AST caches and discovers enum/typedef relationships in the current compilation.
         /// </summary>
+        /// <param name="result">
+        /// The attempt-local model whose compilation remains alive until conversion completes.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// The analysis result is null.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// The compilation contains duplicate enum names after configured enum-name preprocessing.
+        /// </exception>
         public void Initialize(ParseResult result)
         {
-            typedefCache.Clear();
-            anonymousMapping.Clear();
-
-            var compilation = result.Compilation;
-            typeDefToEnum = compilation.Enums.ToDictionary(e => PreprocessEnumName(e.Name));
-
-            var enumMap = compilation.Enums.ToDictionary(e => e.Name);
-            foreach (var pair in config.TypedefToEnumMappings)
+            ArgumentNullException.ThrowIfNull(result);
+            this.m_typedefCache.Clear();
+            this.m_anonymousMapping.Clear();
+            var compilation = result.compilation;
+            this.m_typeDefToEnum = compilation.enums.ToDictionary(e => PreprocessEnumName(e.name));
+            var enumMap = compilation.enums.ToDictionary(e => e.name);
+            foreach (var pair in this.m_config.typedefToEnumMappings)
             {
                 if (pair.Value == null)
                 {
-                    typeDefToEnum.Remove(pair.Key);
+                    this.m_typeDefToEnum.Remove(pair.Key);
                 }
                 else if (enumMap.TryGetValue(pair.Value, out var cppEnum))
                 {
-                    typeDefToEnum[pair.Key] = cppEnum;
+                    this.m_typeDefToEnum[pair.Key] = cppEnum;
                 }
             }
         }
 
-        /// <summary>
-        /// Adds data or behavior through <c>AddAnonymousMapping</c>.
-        /// </summary>
-        public void AddAnonymousMapping(CppType anon, string name)
+        internal void ReleaseCompilation()
         {
-            anonymousMapping[anon] = name;
+            this.m_typedefCache.Clear();
+            this.m_anonymousMapping.Clear();
+            this.m_typeDefToEnum.Clear();
+        }
+
+        /// <summary>
+        /// Registers the managed name for an anonymous native type in the current attempt.
+        /// </summary>
+        /// <param name="anon">
+        /// The borrowed anonymous type node used as the exact cache key.
+        /// </param>
+        /// <param name="name">
+        /// The managed identifier replacing inferred anonymous-type naming.
+        /// </param>
+        public void AddAnonymousMapping(
+            CppType anon,
+            string name
+        ) {
+            this.m_anonymousMapping[anon] = name;
         }
 
         private static string PreprocessEnumName(ReadOnlySpan<char> name)
@@ -79,6 +120,7 @@
             {
                 name = name[..^1];
             }
+
             return name.ToString();
         }
 
@@ -87,52 +129,71 @@
             /// <summary>
             /// Exposes public member <c>BaseType</c>.
             /// </summary>
-            public string BaseType;
+            public string baseType;
             /// <summary>
             /// Exposes public member <c>PointerLevel</c>.
             /// </summary>
-            public int PointerLevel;
+            public int pointerLevel;
             /// <summary>
             /// Exposes public member <c>IsConst</c>.
             /// </summary>
-            public bool IsConst;
+            public bool isConst;
             /// <summary>
             /// Exposes public member <c>Function</c>.
             /// </summary>
-            public CppFunctionType? Function;
-
+            public CppFunctionType? function;
             /// <summary>
             /// Exposes public member <c>null</c>.
             /// </summary>
-            public readonly bool IsFunctionPointer => PointerLevel == 1 && Function != null;
+            public readonly bool isFunctionPointer => this.pointerLevel == 1 && this.function != null;
 
             /// <summary>
             /// Merges configuration or metadata via <c>Merge</c>.
             /// </summary>
             public void Merge(in AnalysisResult result)
             {
-                BaseType = result.BaseType;
-                PointerLevel += result.PointerLevel;
-                IsConst |= result.IsConst && PointerLevel == 1;
-                Function = result.Function;
+                this.baseType = result.baseType;
+                this.pointerLevel += result.pointerLevel;
+                this.isConst |= result.isConst && this.pointerLevel == 1;
+                this.function = result.function;
             }
         }
 
         /// <summary>
-        /// Executes public operation <c>Convert</c>.
+        /// Resolves a target ABI carrier or formats the recursively analyzed type in the requested projection style.
         /// </summary>
-        public string Convert(CppType type, CsTypeStyle style)
-        {
+        /// <param name="type">
+        /// The borrowed native type to convert while its compilation remains alive.
+        /// </param>
+        /// <param name="style">
+        /// The raw, reference, or wrapped managed projection to produce.
+        /// </param>
+        /// <returns>
+        /// A C# type spelling suitable for the selected projection, with pointer levels and qualifiers lowered according to policy.
+        /// </returns>
+        /// <exception cref="UnexposedTypeException">
+        /// An unexposed native type cannot be represented by the configured conversion policy.
+        /// </exception>
+        /// <exception cref="NotSupportedException">
+        /// The projection style or encountered native type kind is unsupported.
+        /// </exception>
+        public string Convert(
+            CppType type,
+            CsTypeStyle style
+        ) {
             if (PlatformAbiTypeClassifier.TryGetManagedCarrier(type, out string managedType))
             {
                 return managedType;
             }
+
             var result = AnalyzeType(type);
             return Format(result, style);
         }
 
-        private string Format(in AnalysisResult result, CsTypeStyle style)
-        {
+        private string Format(
+            in AnalysisResult result,
+            CsTypeStyle style
+        ) {
             return style switch
             {
                 CsTypeStyle.Raw => FormatRaw(result),
@@ -144,47 +205,49 @@
 
         private string FormatRaw(AnalysisResult result)
         {
-            if (result.Function != null)
+            if (result.function != null)
             {
-                if (config.DelegatesAsVoidPointer)
+                if (this.m_config.delegatesAsVoidPointer)
                 {
-                    result.BaseType = "void";
+                    result.baseType = "void";
                 }
                 else
                 {
-                    result.BaseType = config.MakeDelegatePointer(result.Function);
-                    --result.PointerLevel;
+                    result.baseType = this.m_config.MakeDelegatePointer(result.function);
+                    --result.pointerLevel;
                 }
             }
-            return result.BaseType + new string('*', result.PointerLevel);
+
+            return result.baseType + new string('*', result.pointerLevel);
         }
 
         private string FormatRef(AnalysisResult result)
         {
-            if (result.BaseType == "void" && result.PointerLevel > 0)
+            if (result.baseType == "void" && result.pointerLevel > 0)
             {
-                result.BaseType = "nint";
-                --result.PointerLevel;
+                result.baseType = "nint";
+                --result.pointerLevel;
             }
 
-            if (result.Function != null)
+            if (result.function != null)
             {
-                if (result.PointerLevel > 1 || string.IsNullOrWhiteSpace(result.BaseType))
+                if (result.pointerLevel > 1 || string.IsNullOrWhiteSpace(result.baseType))
                 {
                     return FormatRaw(result);
                 }
-                --result.PointerLevel;
+
+                --result.pointerLevel;
             }
 
             StringBuilder sb = new();
-            if (result.PointerLevel > 0)
+            if (result.pointerLevel > 0)
             {
-                sb.Append(result.IsConst ? "in " : "ref ");
-                --result.PointerLevel;
+                sb.Append(result.isConst ? "in " : "ref ");
+                --result.pointerLevel;
             }
 
-            sb.Append(result.BaseType);
-            for (int i = 0; i < result.PointerLevel; i++)
+            sb.Append(result.baseType);
+            for (int i = 0; i < result.pointerLevel; i++)
             {
                 sb.Append('*');
             }
@@ -194,28 +257,30 @@
 
         private string FormatWrapped(AnalysisResult result)
         {
-            if (result.BaseType == "void" && result.PointerLevel > 0)
+            if (result.baseType == "void" && result.pointerLevel > 0)
             {
-                result.BaseType = "nint";
-                --result.PointerLevel;
+                result.baseType = "nint";
+                --result.pointerLevel;
             }
 
-            if (result.Function != null)
+            if (result.function != null)
             {
-                if (result.PointerLevel > 1 || string.IsNullOrWhiteSpace(result.BaseType))
+                if (result.pointerLevel > 1 || string.IsNullOrWhiteSpace(result.baseType))
                 {
                     return FormatRaw(result);
                 }
-                --result.PointerLevel;
+
+                --result.pointerLevel;
             }
 
             StringBuilder sb = new();
-            for (int i = 0; i < result.PointerLevel; ++i)
+            for (int i = 0; i < result.pointerLevel; ++i)
             {
                 sb.Append("Pointer<");
             }
-            sb.Append(result.BaseType);
-            for (int i = 0; i < result.PointerLevel; ++i)
+
+            sb.Append(result.baseType);
+            for (int i = 0; i < result.pointerLevel; ++i)
             {
                 sb.Append('>');
             }
@@ -231,22 +296,22 @@
             {
                 if (currentType is CppPointerType pointerType)
                 {
-                    ++result.PointerLevel;
-                    currentType = pointerType.ElementType;
+                    ++result.pointerLevel;
+                    currentType = pointerType.elementType;
                 }
                 else if (currentType is CppReferenceType referenceType)
                 {
-                    ++result.PointerLevel;
-                    currentType = referenceType.ElementType;
+                    ++result.pointerLevel;
+                    currentType = referenceType.elementType;
                 }
                 else if (currentType is CppQualifiedType qualifiedType)
                 {
-                    result.IsConst |= qualifiedType.Qualifier == CppTypeQualifier.Const && result.PointerLevel == 1;
-                    currentType = qualifiedType.ElementType;
+                    result.isConst |= qualifiedType.qualifier == CppTypeQualifier.Const && result.pointerLevel == 1;
+                    currentType = qualifiedType.elementType;
                 }
                 else if (currentType is CppPrimitiveType primitiveType)
                 {
-                    result.BaseType = ConvertPrimitiveType(primitiveType);
+                    result.baseType = ConvertPrimitiveType(primitiveType);
                     break;
                 }
                 else if (currentType is CppTypedef typedef)
@@ -256,63 +321,66 @@
                 }
                 else if (currentType is CppEnum cppEnum)
                 {
-                    result.BaseType = GetMapping(cppEnum);
+                    result.baseType = GetMapping(cppEnum);
                     break;
                 }
                 else if (currentType is CppClass cppClass)
                 {
-                    result.BaseType = GetMapping(cppClass);
+                    result.baseType = GetMapping(cppClass);
                     break;
                 }
                 else if (currentType is CppArrayType arrayType)
                 {
-                    ++result.PointerLevel;
-                    currentType = arrayType.ElementType;
+                    ++result.pointerLevel;
+                    currentType = arrayType.elementType;
                 }
                 else if (currentType is CppFunctionType functionType)
                 {
-                    result.Function = functionType;
+                    result.function = functionType;
                     break;
                 }
-                else if (currentType is CppTemplateArgument { ArgAsType: not null } templateArgument)
+                else if (currentType is CppTemplateArgument { argAsType: not null } templateArgument)
                 {
-                    currentType = templateArgument.ArgAsType;
+                    currentType = templateArgument.argAsType;
                 }
                 else if (currentType is CppTemplateParameterNonType nonTypeParameter)
                 {
-                    currentType = nonTypeParameter.NoneTemplateType;
+                    currentType = nonTypeParameter.noneTemplateType;
                 }
                 else if (currentType is CppTemplateParameterType templateParameter)
                 {
-                    if (!config.TypeMappings.TryGetValue(templateParameter.Name, out string? mapping))
+                    if (!this.m_config.typeMappings.TryGetValue(templateParameter.name, out string? mapping))
                     {
-                        throw new NotSupportedException($"Template parameter '{templateParameter.Name}' requires a concrete specialization or TypeMappings entry.");
+                        throw new NotSupportedException($"Template parameter '{templateParameter.name}' requires a concrete specialization or TypeMappings entry.");
                     }
-                    result.BaseType = mapping;
+
+                    result.baseType = mapping;
                     break;
                 }
                 else if (currentType is CppUnexposedType unexposedType)
                 {
-                    if (!config.TypeMappings.TryGetValue(unexposedType.Name, out string? mapping))
+                    if (!this.m_config.typeMappings.TryGetValue(unexposedType.name, out string? mapping))
                     {
                         throw new UnexposedTypeException(unexposedType);
                     }
-                    result.BaseType = mapping;
+
+                    result.baseType = mapping;
                     break;
                 }
                 else if (currentType is CppGenericType genericType)
                 {
                     string genericName = genericType.ToString();
-                    if (!config.TypeMappings.TryGetValue(genericName, out string? mapping))
+                    if (!this.m_config.typeMappings.TryGetValue(genericName, out string? mapping))
                     {
                         throw new NotSupportedException($"Generic type '{genericName}' requires a TypeMappings entry or a generated C++ bridge specialization.");
                     }
-                    result.BaseType = mapping;
+
+                    result.baseType = mapping;
                     break;
                 }
                 else
                 {
-                    throw new NotSupportedException($"C++ type '{currentType}' ({currentType.TypeKind}) is not supported by the C# type converter.");
+                    throw new NotSupportedException($"C++ type '{currentType}' ({currentType.typeKind}) is not supported by the C# type converter.");
                 }
             }
 
@@ -321,81 +389,100 @@
 
         private AnalysisResult ResolveTypedef(CppTypedef typedef)
         {
-            bool isDelegate = typedef.ElementType.IsDelegate(out var delegateType);
+            bool isDelegate = typedef.elementType.IsDelegate(out var delegateType);
             if (isDelegate)
             {
-                if (config.DelegatesAsVoidPointer)
+                if (this.m_config.delegatesAsVoidPointer)
                 {
-                    return new() { BaseType = "void", PointerLevel = 1 };
+                    return new()
+                    {
+                        baseType = "void",
+                        pointerLevel = 1
+                    };
                 }
-                if (!config.GenerateDelegates)
+
+                if (!this.m_config.generateDelegates)
                 {
-                    return new() { BaseType = config.GetDelegatePointerType(delegateType!) };
+                    return new()
+                    {
+                        baseType = this.m_config.GetDelegatePointerType(delegateType!)
+                    };
                 }
             }
 
-            if (typeDefToEnum.TryGetValue(typedef.Name, out var cppEnum))
+            if (this.m_typeDefToEnum.TryGetValue(typedef.name, out var cppEnum))
             {
-                return new() { BaseType = GetMapping(cppEnum) };
+                return new()
+                {
+                    baseType = GetMapping(cppEnum)
+                };
             }
-            if (config.TypeMappings.TryGetValue(typedef.Name, out var name))
+
+            if (this.m_config.typeMappings.TryGetValue(typedef.name, out var name))
             {
-                return new() { BaseType = name };
+                return new()
+                {
+                    baseType = name
+                };
             }
-            lock (syncObj)
+
+            lock (this.m_syncObj)
             {
-                if (!typedefCache.TryGetValue(typedef, out var result))
+                if (!this.m_typedefCache.TryGetValue(typedef, out var result))
                 {
                     if (typedef.IsOpaqueHandle())
                     {
-                        result = config.GenerateHandles
-                            ? new() { BaseType = config.GetManagedHandleName(typedef.Name) }
-                            : AnalyzeType(typedef.ElementType);
-                        typedefCache.Add(typedef, result);
+                        result = this.m_config.generateHandles ? new()
+                        {
+                            baseType = this.m_config.GetManagedHandleName(typedef.name)
+                        }
+
+                        : AnalyzeType(typedef.elementType);
+                        this.m_typedefCache.Add(typedef, result);
                         return result;
                     }
-                    result = AnalyzeType(typedef.ElementType);
-                    if (result.IsFunctionPointer)
+
+                    result = AnalyzeType(typedef.elementType);
+                    if (result.isFunctionPointer)
                     {
-                        result.BaseType = GetMapping(typedef);
+                        result.baseType = GetMapping(typedef);
                     }
-                    typedefCache.Add(typedef, result);
+
+                    this.m_typedefCache.Add(typedef, result);
                 }
+
                 return result;
             }
         }
 
-        private string GetMapping<T>(T member) where T : CppType, ICppMember
+        private string GetMapping<T>(T member)
+            where T : CppType, ICppMember
         {
-            if (anonymousMapping.TryGetValue(member, out var name))
+            if (this.m_anonymousMapping.TryGetValue(member, out var name))
             {
                 return name;
             }
 
-            if (config.TypeMappings.TryGetValue(member.Name, out name))
+            if (this.m_config.typeMappings.TryGetValue(member.name, out name))
             {
                 return name;
             }
 
-            if (member is CppEnum cppEnum &&
-                config.TryGetEnumMapping(cppEnum.Name, out var enumMapping) &&
-                !string.IsNullOrWhiteSpace(enumMapping.FriendlyName))
+            if (member is CppEnum cppEnum && this.m_config.TryGetEnumMapping(cppEnum.name, out var enumMapping) && !string.IsNullOrWhiteSpace(enumMapping.friendlyName))
             {
-                return enumMapping.FriendlyName;
+                return enumMapping.friendlyName;
             }
 
-            if (member is CppClass cppClass &&
-                config.TryGetTypeMapping(cppClass.Name, out var typeMapping) &&
-                !string.IsNullOrWhiteSpace(typeMapping.FriendlyName))
+            if (member is CppClass cppClass && this.m_config.TryGetTypeMapping(cppClass.name, out var typeMapping) && !string.IsNullOrWhiteSpace(typeMapping.friendlyName))
             {
-                return typeMapping.FriendlyName;
+                return typeMapping.friendlyName;
             }
 
             return member switch
             {
-                CppEnum => config.GetManagedEnumName(member.Name),
-                CppTypedef typedef when typedef.IsOpaqueHandle() => config.GetManagedHandleName(member.Name),
-                _ => config.GetManagedTypeName(member.Name)
+                CppEnum => this.m_config.GetManagedEnumName(member.name),
+                CppTypedef typedef when typedef.IsOpaqueHandle() => this.m_config.GetManagedHandleName(member.name),
+                _ => this.m_config.GetManagedTypeName(member.name)
             };
         }
 

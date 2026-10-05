@@ -1,17 +1,9 @@
 using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
-using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
+using BGCS.Core.Targeting;
+using BGCS.CppAst.Extensions;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
+using BGCS.CppAst.Targeting;
 using Xunit;
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
@@ -34,45 +26,45 @@ void *fun2(int align) __attribute__((alloc_align(1)));
                 {
 
                     // Print diagnostic messages
-                    foreach (var message in compilation.Diagnostics.Messages)
+                    foreach (var message in compilation.diagnostics.messages)
                         Console.WriteLine(message);
 
                     // Print All enums
-                    foreach (var cppEnum in compilation.Enums)
+                    foreach (var cppEnum in compilation.enums)
                         Console.WriteLine(cppEnum);
 
                     // Print All functions
-                    foreach (var cppFunction in compilation.Functions)
+                    foreach (var cppFunction in compilation.functions)
                         Console.WriteLine(cppFunction);
 
                     // Print All classes, structs
-                    foreach (var cppClass in compilation.Classes)
+                    foreach (var cppClass in compilation.classes)
                         Console.WriteLine(cppClass);
 
                     // Print All typedefs
-                    foreach (var cppTypedef in compilation.Typedefs)
+                    foreach (var cppTypedef in compilation.typedefs)
                         Console.WriteLine(cppTypedef);
 
 
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Fields);
-                    Assert.NotNull(compilation.Fields[0].Attributes);
-                    Assert.Equal("dllimport", compilation.Fields[0].Attributes[0].Name);
+                    Assert.Single(compilation.fields);
+                    Assert.NotNull(compilation.fields[0].attributes);
+                    Assert.Equal("dllimport", compilation.fields[0].attributes[0].name);
 
-                    Assert.Equal(3, compilation.Functions.Count);
-                    Assert.NotNull(compilation.Functions[0].Attributes);
-                    Assert.Single(compilation.Functions[0].Attributes);
-                    Assert.Equal("dllexport", compilation.Functions[0].Attributes[0].Name);
+                    Assert.Equal(3, compilation.functions.Count);
+                    Assert.NotNull(compilation.functions[0].attributes);
+                    Assert.Single(compilation.functions[0].attributes);
+                    Assert.Equal("dllexport", compilation.functions[0].attributes[0].name);
 
-                    Assert.Equal(CppCallingConvention.X86StdCall, compilation.Functions[1].CallingConvention);
+                    Assert.Equal(CppCallingConvention.X86StdCall, compilation.functions[1].callingConvention);
 
-                    Assert.NotNull(compilation.Functions[2].Attributes);
-                    Assert.Single(compilation.Functions[2].Attributes);
-                    Assert.Equal("allocalign", compilation.Functions[2].Attributes[0].Name);
+                    Assert.NotNull(compilation.functions[2].attributes);
+                    Assert.Single(compilation.functions[2].attributes);
+                    Assert.Equal("allocalign", compilation.functions[2].attributes[0].name);
 
                 },
-                new CppParserOptions() { }.ConfigureForWindowsMsvc() // Force using X86 to get __stdcall calling convention
+                new CppParserOptions() { }.ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId("windows-x86-msvc")))) // Force using X86 to get __stdcall calling convention
             );
         }
 
@@ -85,25 +77,25 @@ struct __declspec(uuid(""1841e5c8-16b0-489b-bcc8-44cfb0d5deae"")) __declspec(nov
     int b;
 };", compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Single(compilation.Classes);
+                    Assert.Single(compilation.classes);
 
-                    Assert.NotNull(compilation.Classes[0].Attributes);
+                    Assert.NotNull(compilation.classes[0].attributes);
 
-                    Assert.Equal(2, compilation.Classes[0].Attributes.Count);
+                    Assert.Equal(2, compilation.classes[0].attributes.Count);
 
                     {
-                        var attr = compilation.Classes[0].Attributes[0];
-                        Assert.Equal("uuid", attr.Name);
+                        var attr = compilation.classes[0].attributes[0];
+                        Assert.Equal("uuid", attr.name);
                     }
 
                     {
-                        var attr = compilation.Classes[0].Attributes[1];
-                        Assert.Equal("msnovtable", attr.Name);
+                        var attr = compilation.classes[0].attributes[1];
+                        Assert.Equal("msnovtable", attr.name);
                     }
                 },
-                new CppParserOptions() { }.ConfigureForWindowsMsvc());
+                new CppParserOptions() { }.ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId("windows-x86-msvc")))));
         }
 
         [Fact]
@@ -112,17 +104,17 @@ struct __declspec(uuid(""1841e5c8-16b0-489b-bcc8-44cfb0d5deae"")) __declspec(nov
             ParseAssert(@"
 alignas(128) char cacheline[128];", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Fields);
-                Assert.Single(compilation.Fields[0].Attributes);
+                Assert.Single(compilation.fields);
+                Assert.Single(compilation.fields[0].attributes);
                 {
-                    var attr = compilation.Fields[0].Attributes[0];
-                    Assert.Equal("alignas", attr.Name);
+                    var attr = compilation.fields[0].attributes[0];
+                    Assert.Equal("alignas", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -132,17 +124,17 @@ alignas(128) char cacheline[128];", compilation =>
             ParseAssert(@"
 struct alignas(8) S {};", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Classes);
-                Assert.Single(compilation.Classes[0].Attributes);
+                Assert.Single(compilation.classes);
+                Assert.Single(compilation.classes[0].attributes);
                 {
-                    var attr = compilation.Classes[0].Attributes[0];
-                    Assert.Equal("alignas", attr.Name);
+                    var attr = compilation.classes[0].attributes[0];
+                    Assert.Equal("alignas", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -152,22 +144,22 @@ struct alignas(8) S {};", compilation =>
             ParseAssert(@"
 struct [[deprecated(""abc"")]] alignas(8) S {};", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Classes);
-                Assert.Equal(2, compilation.Classes[0].Attributes.Count);
+                Assert.Single(compilation.classes);
+                Assert.Equal(2, compilation.classes[0].attributes.Count);
                 {
-                    var attr = compilation.Classes[0].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.classes[0].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
 
                 {
-                    var attr = compilation.Classes[0].Attributes[1];
-                    Assert.Equal("alignas", attr.Name);
+                    var attr = compilation.classes[0].attributes[1];
+                    Assert.Equal("alignas", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -185,23 +177,23 @@ struct [[deprecated(""old"")]] TestMessage{
     int b;
 };", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Equal(2, compilation.Classes.Count);
-                Assert.Single(compilation.Classes[0].Attributes);
+                Assert.Equal(2, compilation.classes.Count);
+                Assert.Single(compilation.classes[0].attributes);
                 {
-                    var attr = compilation.Classes[0].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.classes[0].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
 
-                Assert.Single(compilation.Classes[1].Attributes);
+                Assert.Single(compilation.classes[1].attributes);
                 {
-                    var attr = compilation.Classes[1].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.classes[1].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -216,25 +208,25 @@ struct Test{
 
 [[deprecated]] int x;", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Classes);
-                Assert.Equal(2, compilation.Classes[0].Fields.Count);
-                Assert.Single(compilation.Classes[0].Fields[0].Attributes);
+                Assert.Single(compilation.classes);
+                Assert.Equal(2, compilation.classes[0].fields.Count);
+                Assert.Single(compilation.classes[0].fields[0].attributes);
                 {
-                    var attr = compilation.Classes[0].Fields[0].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.classes[0].fields[0].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
 
-                Assert.Single(compilation.Fields);
-                Assert.Single(compilation.Fields[0].Attributes);
+                Assert.Single(compilation.fields);
+                Assert.Single(compilation.fields[0].attributes);
                 {
-                    var attr = compilation.Fields[0].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.fields[0].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -244,17 +236,17 @@ struct Test{
             ParseAssert(@"
 [[noreturn]] void x() {};", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Functions);
-                Assert.Single(compilation.Functions[0].Attributes);
+                Assert.Single(compilation.functions);
+                Assert.Single(compilation.functions[0].attributes);
                 {
-                    var attr = compilation.Functions[0].Attributes[0];
-                    Assert.Equal("cxx11noreturn", attr.Name);
+                    var attr = compilation.functions[0].attributes[0];
+                    Assert.Equal("cxx11noreturn", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -264,17 +256,17 @@ struct Test{
             ParseAssert(@"
 namespace [[deprecated]] cppast {};", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Namespaces);
-                Assert.Single(compilation.Namespaces[0].Attributes);
+                Assert.Single(compilation.namespaces);
+                Assert.Single(compilation.namespaces[0].attributes);
                 {
-                    var attr = compilation.Namespaces[0].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.namespaces[0].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -284,17 +276,17 @@ namespace [[deprecated]] cppast {};", compilation =>
             ParseAssert(@"
 enum [[deprecated]] E { };", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Enums);
-                Assert.Single(compilation.Enums[0].Attributes);
+                Assert.Single(compilation.enums);
+                Assert.Single(compilation.enums[0].attributes);
                 {
-                    var attr = compilation.Enums[0].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.enums[0].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -305,18 +297,18 @@ enum [[deprecated]] E { };", compilation =>
 template<typename T> struct X {};
 template<> struct [[deprecated]] X<int> {};", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Equal(2, compilation.Classes.Count);
-                Assert.Empty(compilation.Classes[0].Attributes);
-                Assert.Single(compilation.Classes[1].Attributes);
+                Assert.Equal(2, compilation.classes.Count);
+                Assert.Empty(compilation.classes[0].attributes);
+                Assert.Single(compilation.classes[1].attributes);
                 {
-                    var attr = compilation.Classes[1].Attributes[0];
-                    Assert.Equal("deprecated", attr.Name);
+                    var attr = compilation.classes[1].attributes[0];
+                    Assert.Equal("deprecated", attr.name);
                 }
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -327,13 +319,13 @@ template<> struct [[deprecated]] X<int> {};", compilation =>
             ParseAssert(@"
 [[noreturn]] void x() {};", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
-                Assert.Single(compilation.Functions);
-                Assert.Single(compilation.Functions[0].Attributes);
+                Assert.Single(compilation.functions);
+                Assert.Single(compilation.functions[0].attributes);
             },
             // we are using a C++14 attribute because it can be used everywhere
-            new CppParserOptions() { AdditionalArguments = { "-std=c++14" } }
+            new CppParserOptions() { additionalArguments = { "-std=c++14" } }
           );
         }
 
@@ -353,10 +345,10 @@ class EXPORT_API TestClass
             ParseAssert(text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    var cppClass = compilation.Classes[0];
-                    Assert.Single(cppClass.Attributes);
+                    var cppClass = compilation.classes[0];
+                    Assert.Single(cppClass.attributes);
                     Assert.True(cppClass.IsPublicExport());
 
                 },
@@ -365,12 +357,12 @@ class EXPORT_API TestClass
             ParseAssert(text,
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    var cppClass = compilation.Classes[0];
-                    Assert.Single(cppClass.Attributes);
+                    var cppClass = compilation.classes[0];
+                    Assert.Single(cppClass.attributes);
                     Assert.True(cppClass.IsPublicExport());
-                }, new CppParserOptions() { }.ConfigureForWindowsMsvc()
+                }, new CppParserOptions() { }.ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId("windows-x86-msvc"))))
             );
         }
 

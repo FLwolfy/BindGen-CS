@@ -29,7 +29,7 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 
 主要公开 API：
 
-- `CsCodeGenerator`、`CsCodeGeneratorConfig`、`GeneratorBuilder`、`BatchGenerator`；
+- `BGCS.Facade.CsCodeGenerator`、`BGCS.Configuration.CsCodeGeneratorConfig`；
 - `BGCS.Facade.BindingGenerator`；
 - `BindingGenerationPipeline`；
 - `ConfigLoader`、`ConfigValidator`、`PresetResolver`；
@@ -47,7 +47,8 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 
 - `Cpp2CCodeGenerator`、`Cpp2CGeneratorConfig`；
 - `CppBridgeBuildManifest`、`CppBridgeBuildManifestEmitter`、`NativeAssetLayout` 和 `Cpp2CConfigValidator`；
-- `INativeBuildProvider`、`ClangNativeBuildProvider`、`NativeBuildPlan` 和 `NativeBuildExecutor`；
+- `BGCS.Cpp2C.Build` 中的 `INativeBuildProvider`、`NativeBuildPlan` 和 `NativeBuildExecutor`；
+- `BGCS.Cpp2C.Build.Providers` 中的 Clang、ClangCl、CMake、Meson 和 MSBuild provider；
 - `BGCS.Cpp2C.Emission.CBridgeEmitter`；
 - bridge generation-step 扩展点；
 - C/C++ type lowering helpers 和生成函数 metadata。
@@ -87,7 +88,7 @@ Tool 在隔离安装环境中依赖 `BGCS` 和 `BGCS.Cpp2C`。最终生成代码
 - `NativeNameAttribute`、`SourceLocationAttribute`、`NativeNameType`；
 - `Utils` allocation、UTF-8/UTF-16、pointer 和 array helpers。
 
-生成代码通常引用本包。`GenerateRuntimeSource=true` 会改为输出带 guard 的 standalone `Runtime.cs`；同时使用 package 和嵌入 Runtime 时应定义 `BGCS_RUNTIME_EXTERNAL`。
+生成代码通常引用本包。`generateRuntimeSource=true` 会改为输出带 guard 的 standalone `Runtime.cs`；同时使用 package 和嵌入 Runtime 时应定义 `BGCS_RUNTIME_EXTERNAL`。
 
 ## 高级实现包
 

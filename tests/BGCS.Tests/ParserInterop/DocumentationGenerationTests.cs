@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using BGCS.Configuration;
 using BGCS.CppAst.Parsing;
 using Xunit;
 
@@ -26,15 +27,15 @@ public class DocumentationGenerationTests
         {
             CppParserOptions options = new()
             {
-                ParseComments = true,
-                ParseSystemIncludes = false,
-                ParseCommentAttribute = true,
-                ParserKind = CppParserKind.C
+                parseComments = true,
+                parseSystemIncludes = false,
+                parseCommentAttribute = true,
+                parserKind = CppParserKind.C
             };
             var compilation = CppParser.ParseFile(header, options);
-            CsCodeGeneratorConfig config = new() { GeneratePlaceholderComments = false };
+            CsCodeGeneratorConfig config = new() { generatePlaceholderComments = false };
 
-            config.WriteCsSummary(compilation.Functions[0].Comment, out string? documentation);
+            config.WriteCsSummary(compilation.functions[0].comment, out string? documentation);
 
             Assert.Contains("<summary>", documentation);
             Assert.Contains("Computes a value.", documentation);

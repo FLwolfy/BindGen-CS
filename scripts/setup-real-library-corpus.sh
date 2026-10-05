@@ -3,9 +3,20 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CORPUS_DIR="${BGCS_REAL_LIBRARY_ROOT:-${ROOT_DIR}/artifacts/real-library-corpus}"
+mkdir -p "${CORPUS_DIR}"
+CORPUS_DIR="$(cd "${CORPUS_DIR}" && pwd -P)"
+if [[ "${CORPUS_DIR}" == "/" || "${CORPUS_DIR}" == "${ROOT_DIR}" ||
+      "${CORPUS_DIR}" == "${HOME:-}" ]]; then
+  printf 'The corpus requires a dedicated directory.\n' >&2
+  exit 1
+fi
 
 clone_pinned() {
   local name="$1" repository="$2" revision="$3" sparse_directory="${4:-}"
+  if [[ ! "${name}" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    printf 'Invalid corpus directory name: %s\n' "${name}" >&2
+    exit 1
+  fi
   local destination="${CORPUS_DIR}/${name}"
   if [[ -e "${destination}" ]]; then
     if [[ "$(git -C "${destination}" rev-parse HEAD 2>/dev/null)" != "${revision}" ]]; then
@@ -16,6 +27,12 @@ clone_pinned() {
   fi
   local staging
   staging="$(mktemp -d "${CORPUS_DIR}/.${name}.XXXXXX")"
+  staging="$(cd "${staging}" && pwd -P)"
+  if [[ "${staging}" != "${CORPUS_DIR}/.${name}."* ||
+        "${destination}" != "${CORPUS_DIR}/"* ]]; then
+    printf 'Corpus staging escaped its dedicated root.\n' >&2
+    exit 1
+  fi
   if ! (
     git init --quiet "${staging}" || exit 1
     git -C "${staging}" remote add origin "https://github.com/${repository}.git" || exit 1
@@ -37,7 +54,6 @@ clone_pinned() {
   mv "${staging}" "${destination}"
 }
 
-mkdir -p "${CORPUS_DIR}"
 clone_pinned miniaudio mackron/miniaudio 9634bedb5b5a2ca38c1ee7108a9358a4e233f14d extras/miniaudio_split
 clone_pinned SDL libsdl-org/SDL 5f78ded3194a85ebdabc219f844811ba953b4450 include
 clone_pinned cimgui cimgui/cimgui 715802490eabca2fc86cf25b41b83aa7c5d6060d

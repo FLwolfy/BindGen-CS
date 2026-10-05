@@ -1,189 +1,133 @@
-﻿namespace BGCS.Core.Collections
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace BGCS.Core.Collections;
+
+/// <summary>
+/// Serializes individual list operations and enumerates an owned snapshot captured under the same lock.
+/// </summary>
+/// <typeparam name="T">The type of elements retained by the list.</typeparam>
+/// <remarks>
+/// Operations do not make a caller's multi-step workflow atomic. Lock syncObject around such workflows.
+/// Enumerators retain their snapshot and never hold the list lock while consumer code runs.
+/// </remarks>
+public class ConcurrentList<T> : IList<T>, IReadOnlyList<T>
 {
-    using System.Collections;
+    private readonly List<T> m_list;
+    private readonly object m_lock = new();
 
-    /// <summary>
-    /// Defines the public class <c>ConcurrentList</c>.
-    /// </summary>
-    public class ConcurrentList<T> : IList<T>, IReadOnlyList<T>
+    /// <summary>Creates an empty list with the default initial capacity.</summary>
+    public ConcurrentList() => m_list = new();
+
+    /// <summary>Creates an empty list with space reserved for the requested number of elements.</summary>
+    /// <param name="capacity">The non-negative initial capacity.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The capacity is negative.</exception>
+    public ConcurrentList(int capacity) => m_list = new(capacity);
+
+    /// <summary>Copies an initial sequence into a new, independently owned list.</summary>
+    /// <param name="values">The sequence to enumerate once; its elements are retained by reference when applicable.</param>
+    /// <exception cref="ArgumentNullException">The sequence is null.</exception>
+    public ConcurrentList(IEnumerable<T> values) => m_list = new(values);
+
+    /// <inheritdoc />
+    public T this[int index]
     {
-        private readonly List<T> _list;
-        private readonly object _lock = new();
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="ConcurrentList"/>.
-        /// </summary>
-        public ConcurrentList()
+        get
         {
-            _list = new();
+            lock (m_lock)
+                return m_list[index];
         }
-
-        /// <summary>
-        /// Executes public operation <c>ConcurrentList</c>.
-        /// </summary>
-        public ConcurrentList(int capacity)
+        set
         {
-            _list = new(capacity);
-        }
-
-        /// <summary>
-        /// Executes public operation <c>ConcurrentList</c>.
-        /// </summary>
-        public ConcurrentList(IEnumerable<T> values)
-        {
-            _list = new(values);
-        }
-
-        /// <summary>
-        /// Exposes public member <c>index]</c>.
-        /// </summary>
-        public T this[int index]
-        {
-            get
-            {
-                lock (_lock)
-                {
-                    return _list[index];
-                }
-            }
-            set
-            {
-                lock (_lock)
-                {
-                    _list[index] = value;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Exposes public member <c>Count</c>.
-        /// </summary>
-        public int Count
-        {
-            get
-            {
-                lock (_lock)
-                {
-                    return _list.Count;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets <c>IsReadOnly</c>.
-        /// </summary>
-        public bool IsReadOnly { get; } = false;
-
-        /// <summary>
-        /// Exposes public member <c>_lock</c>.
-        /// </summary>
-        public object SyncObject => _lock;
-
-        /// <summary>
-        /// Adds data or behavior through <c>Add</c>.
-        /// </summary>
-        public void Add(T item)
-        {
-            lock (_lock)
-            {
-                _list.Add(item);
-            }
-        }
-
-        /// <summary>
-        /// Executes public operation <c>Clear</c>.
-        /// </summary>
-        public void Clear()
-        {
-            lock (_lock)
-            {
-                _list.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Executes public operation <c>Contains</c>.
-        /// </summary>
-        public bool Contains(T item)
-        {
-            lock (_lock)
-            {
-                return _list.Contains(item);
-            }
-        }
-
-        /// <summary>
-        /// Executes public operation <c>CopyTo</c>.
-        /// </summary>
-        public void CopyTo(T[] array, int arrayIndex)
-        {
-            lock (_lock)
-            {
-                _list.CopyTo(array, arrayIndex);
-            }
-        }
-
-        /// <summary>
-        /// Returns computed data from <c>GetEnumerator</c>.
-        /// </summary>
-        public IEnumerator<T> GetEnumerator()
-        {
-            lock (_lock)
-            {
-                return _list.GetEnumerator();
-            }
-        }
-
-        /// <summary>
-        /// Executes public operation <c>IndexOf</c>.
-        /// </summary>
-        public int IndexOf(T item)
-        {
-            lock (_lock)
-            {
-                return _list.IndexOf(item);
-            }
-        }
-
-        /// <summary>
-        /// Executes public operation <c>Insert</c>.
-        /// </summary>
-        public void Insert(int index, T item)
-        {
-            lock (_lock)
-            {
-                _list.Insert(index, item);
-            }
-        }
-
-        /// <summary>
-        /// Removes data or behavior through <c>Remove</c>.
-        /// </summary>
-        public bool Remove(T item)
-        {
-            lock (_lock)
-            {
-                return _list.Remove(item);
-            }
-        }
-
-        /// <summary>
-        /// Removes data or behavior through <c>RemoveAt</c>.
-        /// </summary>
-        public void RemoveAt(int index)
-        {
-            lock (_lock)
-            {
-                _list.RemoveAt(index);
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            lock (_lock)
-            {
-                return _list.GetEnumerator();
-            }
+            lock (m_lock)
+                m_list[index] = value;
         }
     }
+
+    /// <inheritdoc />
+    public int Count
+    {
+        get
+        {
+            lock (m_lock)
+                return m_list.Count;
+        }
+    }
+
+    /// <inheritdoc />
+    public bool IsReadOnly => false;
+
+    /// <summary>Gets the monitor shared by all operations for caller-owned atomic compound workflows.</summary>
+    public object syncObject => m_lock;
+
+    /// <inheritdoc />
+    public void Add(T item)
+    {
+        lock (m_lock)
+            m_list.Add(item);
+    }
+
+    /// <inheritdoc />
+    public void Clear()
+    {
+        lock (m_lock)
+            m_list.Clear();
+    }
+
+    /// <inheritdoc />
+    public bool Contains(T item)
+    {
+        lock (m_lock)
+            return m_list.Contains(item);
+    }
+
+    /// <inheritdoc />
+    public void CopyTo(
+        T[] array,
+        int arrayIndex
+    ) {
+        lock (m_lock)
+            m_list.CopyTo(array, arrayIndex);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Subsequent mutations cannot invalidate or alter the captured sequence.</remarks>
+    public IEnumerator<T> GetEnumerator()
+    {
+        lock (m_lock)
+            return ((IEnumerable<T>)m_list.ToArray()).GetEnumerator();
+    }
+
+    /// <inheritdoc />
+    public int IndexOf(T item)
+    {
+        lock (m_lock)
+            return m_list.IndexOf(item);
+    }
+
+    /// <inheritdoc />
+    public void Insert(
+        int index,
+        T item
+    ) {
+        lock (m_lock)
+            m_list.Insert(index, item);
+    }
+
+    /// <inheritdoc />
+    public bool Remove(T item)
+    {
+        lock (m_lock)
+            return m_list.Remove(item);
+    }
+
+    /// <inheritdoc />
+    public void RemoveAt(int index)
+    {
+        lock (m_lock)
+            m_list.RemoveAt(index);
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

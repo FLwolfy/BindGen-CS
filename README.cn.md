@@ -57,7 +57,7 @@ dotnet run --project src/BGCS.Tool -- build examples/QuickStart/bindgen.json
 1. 把生成的 `Bindings.cs` 纳入项目编译。
 2. 引用 `BGCS.Runtime`。从源码接入时，添加到
    `src/BGCS.Runtime/BGCS.Runtime.csproj` 的项目引用；使用已发布包时可改为包引用。
-3. 为应用目标平台编译并部署原生库。配置中的 `LibName` 要与可加载库名对应，
+3. 为应用目标平台编译并部署原生库。配置中的 `libName` 要与可加载库名对应，
    原生函数也必须正确导出。
 4. 调用生成的 API，并用真实原生库验证结果。
 
@@ -70,8 +70,12 @@ int result = NativeApi.BgcsAdd(2, 3);
 ```
 
 初始配置使用 `Native.Bindings`、`NativeApi` 和库名 `native`。
-可按项目需要修改 `Namespace`、`ApiName`、`LibName`。
+可按项目需要修改 `namespace`、`apiName`、`libName`。
 完整接入步骤与排错方式见[快速开始](docs/getting-started.cn.md)。
+
+消费项目应启用 `<DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>`。
+生成的 wrapper 已明确实现 ABI 转换；该设置让 .NET 按声明调用原生函数，避免运行时重复封送。
+它适用于各目标，并不是浏览器专用选项。还需运行实际 API，不能仅凭生成成功或 `sizeof` 相等判断调用正确。
 
 ## 接入 C++ 库
 
@@ -154,6 +158,8 @@ BGCS 保留 raw ABI，并在安全契约明确时生成方便使用的 `string`�
 ```bash
 dotnet test BindGen-CS.sln -c Release
 python scripts/test-wasm-bindings.py
+python scripts/test-wasm-bindings.py --aot
+python scripts/test-native-aot-bindings.py
 ```
 
 Wasm 测试额外需要 **.NET 9 SDK + `wasm-tools` workload**、Python 3.10+ 和 Chrome、Chromium 或 Edge。
@@ -176,3 +182,9 @@ Wasm 测试额外需要 **.NET 9 SDK + `wasm-tools` workload**、Python 3.10+ �
 BGCS 使用 [MIT License](LICENSE)，派生自 CppAst / HexaGen 的部分保留原始声明。
 随解析器提供的 Clang builtin headers 使用 Apache-2.0 WITH LLVM-exception，
 其[来源、校验值与许可](extern/clang-resource/README.md)包含在 parser 包中。
+
+### 独立原生调用验证
+
+同一 fixture 在 Wasm 解释执行、Wasm AOT 和桌面 NativeAOT 中测试三个 import mode，共 47 项检查。它包含 BGCS 自有 C API 和经公开生成流程产生的 C++ bridge，覆盖数据布局、bool、原生 long、回调、构造、继承指针调整、销毁与 owned/borrowed 资源清理。`--inject-native-error` 用于确认错误返回值确实导致验收失败。
+
+这些消费者启用 `DisableRuntimeMarshalling`，以符合 .NET source-generated P/Invoke 对 unmanaged wrapper struct 的要求。完整过程与证据边界见[测试说明](docs/testing.md)。

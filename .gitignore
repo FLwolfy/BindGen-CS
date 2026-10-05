@@ -27,6 +27,10 @@ bld/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+*.bgcs-lock
+/examples/NativeShim/Generated/
+/examples/NativeShim/GeneratedBridge/
+/examples/QuickStart/Generated/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt

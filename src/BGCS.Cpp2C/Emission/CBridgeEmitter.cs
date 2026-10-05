@@ -1,74 +1,120 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using BGCS.Core.Writing;
+using BGCS.Intermediate.Bridges;
+using BGCS.Intermediate.Emission;
+
 namespace BGCS.Cpp2C.Emission;
 
-using System.Text;
-using BGCS.Core;
-using BGCS.Cpp2C.Metadata;
-using BGCS.Cpp2C.Lowering;
-using BGCS.Intermediate;
-using SharedEmissionContext = BGCS.Emission.EmissionContext;
-using SharedEmitter = BGCS.Emission.IBindingEmitter;
-
 /// <summary>
-/// Emits C ABI declarations from shared binding IR. The AST bridge pipeline uses <see cref="EmitAst"/>
-/// only for C++ constructs that are not yet representable in the shared C-facing IR.
+/// Writes native bridge artifacts exclusively from frozen, fully lowered source operations.
 /// </summary>
-public sealed class CBridgeEmitter : SharedEmitter
+public sealed class CBridgeEmitter : ICppBridgeEmitter
 {
-    /// <inheritdoc />
-    public string Name => "C++ to C bridge emitter";
-
-    /// <inheritdoc />
-    public IReadOnlyList<string> Emit(BindingModule module, SharedEmissionContext context)
-    {
+    /// <inheritdoc/>
+    /// <exception cref = "ArgumentNullException">
+    /// The module or emission context is null.
+    /// </exception>
+    /// <exception cref = "InvalidOperationException">
+    /// Artifact paths escape the output root, repeat, or contain invalid source operations.
+    /// </exception>
+    public IReadOnlyList<string> Emit(
+        CppBridgeModule module,
+        EmissionContext context
+    ) {
         ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(context);
-        Directory.CreateDirectory(context.OutputPath);
-        string outputFile = Path.Combine(context.OutputPath, context.SingleFileName);
-        StringBuilder writer = new();
-        writer.AppendLine("#pragma once");
-        writer.AppendLine("#include <stdint.h>");
-        writer.AppendLine("#ifdef __cplusplus");
-        writer.AppendLine("extern \"C\" {");
-        writer.AppendLine("#endif");
-        HashSet<string> declaredTypes = new(StringComparer.Ordinal);
-        foreach (BindingType type in module.Types.Where(type => type.Kind == BindingTypeKind.OpaqueHandle))
+        string outputRoot = Path.GetFullPath(context.outputPath);
+        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        HashSet<string> paths = new(comparer);
+        List<(string path, CppBridgeArtifact artifact)> outputs = [];
+        foreach (CppBridgeArtifact artifact in module.artifacts)
         {
-            if (declaredTypes.Add(type.ManagedName))
-                writer.Append("typedef struct ").Append(type.ManagedName).Append(' ').Append(type.ManagedName).AppendLine(";");
+            string path = Path.GetFullPath(artifact.relativePath, outputRoot);
+            string relative = Path.GetRelativePath(outputRoot, path);
+            if (Path.IsPathRooted(artifact.relativePath) || Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Bridge artifact '{artifact.relativePath}' escapes its output root.");
+            if (!paths.Add(path))
+                throw new InvalidOperationException($"Bridge artifacts repeat output path '{artifact.relativePath}'.");
+            ValidateOperations(artifact);
+            outputs.Add((path, artifact));
         }
-        foreach (BindingFunction function in module.Functions)
+
+        foreach ((string path, CppBridgeArtifact artifact) in outputs)
         {
-            writer.Append(function.ReturnType.ManagedName).Append(' ').Append(function.ManagedName).Append('(');
-            List<string> parameters = [];
-            if (function.Kind == BindingFunctionKind.Instance && function.DeclaringType != null)
-            {
-                BindingType? declaringType = module.Types.FirstOrDefault(type => type.NativeName == function.DeclaringType);
-                if (declaringType != null)
-                    parameters.Add(declaringType.ManagedName + "* self");
-            }
-            parameters.AddRange(function.Parameters.Select(parameter => parameter.Type.ManagedName + " " + parameter.ManagedName));
-            writer.Append(parameters.Count == 0 ? "void" : string.Join(", ", parameters));
-            writer.AppendLine(");");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            using CodeWriter writer = new(path);
+            foreach (CppBridgeOperation operation in artifact.operations)
+                Apply(writer, operation);
         }
-        writer.AppendLine("#ifdef __cplusplus");
-        writer.AppendLine("}");
-        writer.AppendLine("#endif");
-        File.WriteAllText(outputFile, writer.ToString());
-        return [outputFile];
+
+        return outputs.ConvertAll(static output => output.path).AsReadOnly();
     }
 
-    internal void EmitAst(Cpp2CCodeGenerator generator, IReadOnlyList<GenerationStep> steps, FileSet files,
-        ParseResult result, string outputPath, Cpp2CGeneratorConfig config, Cpp2CGeneratorMetadata metadata)
+    private static void ValidateOperations(CppBridgeArtifact artifact)
     {
-        generator.LogInfo("Configuring Steps...");
-        foreach (GenerationStep step in steps)
-            step.Configure(config);
-        foreach (GenerationStep step in steps.Where(step => step.Enabled))
+        int blocks = 0;
+        int indentation = 0;
+        foreach (CppBridgeOperation operation in artifact.operations)
         {
-            generator.LogInfo($"Generating {step.Name}...");
-            step.Generate(files, result, outputPath, config, metadata);
-            step.CopyToMetadata(metadata);
+            switch (operation.kind)
+            {
+                case CppBridgeOperationKind.BeginBlock:
+                    blocks++;
+                    indentation++;
+                    break;
+                case CppBridgeOperationKind.EndBlock:
+                    if (blocks == 0)
+                        throw new InvalidOperationException($"Bridge artifact '{artifact.relativePath}' closes an unopened block.");
+                    blocks--;
+                    indentation--;
+                    break;
+                case CppBridgeOperationKind.Indent:
+                case CppBridgeOperationKind.Unindent:
+                    if (operation.count < 0)
+                        throw new InvalidOperationException("Bridge indentation counts cannot be negative.");
+                    indentation += operation.kind == CppBridgeOperationKind.Indent ? operation.count : -operation.count;
+                    break;
+                case CppBridgeOperationKind.Fragment:
+                case CppBridgeOperationKind.Line:
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown bridge operation '{operation.kind}'.");
+            }
+
+            if (indentation < 0)
+                throw new InvalidOperationException($"Bridge artifact '{artifact.relativePath}' has negative indentation.");
         }
-        CppExtensionArtifactEmitter.EmitNative(config, outputPath);
+
+        if (blocks != 0 || indentation != 0)
+            throw new InvalidOperationException($"Bridge artifact '{artifact.relativePath}' has unbalanced source scopes.");
+    }
+
+    private static void Apply(
+        CodeWriter writer,
+        CppBridgeOperation operation
+    ) {
+        switch (operation.kind)
+        {
+            case CppBridgeOperationKind.Fragment:
+                writer.Write(operation.syntax);
+                break;
+            case CppBridgeOperationKind.Line:
+                writer.WriteLine(operation.syntax);
+                break;
+            case CppBridgeOperationKind.BeginBlock:
+                writer.BeginBlock(operation.syntax);
+                break;
+            case CppBridgeOperationKind.EndBlock:
+                writer.EndBlock(operation.syntax);
+                break;
+            case CppBridgeOperationKind.Indent:
+                writer.Indent(operation.count);
+                break;
+            case CppBridgeOperationKind.Unindent:
+                writer.Unindent(operation.count);
+                break;
+        }
     }
 }

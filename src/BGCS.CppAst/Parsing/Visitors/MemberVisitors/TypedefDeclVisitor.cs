@@ -1,62 +1,60 @@
-using System;
 using System.Linq;
+
 namespace BGCS.CppAst.Parsing.Visitors.MemberVisitors;
-using ClangSharp.Interop;
+
+using System.Collections.Generic;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Types;
 using BGCS.CppAst.Utilities;
-using System.Collections.Generic;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>TypedefDeclVisitor</c>.
 /// </summary>
-public unsafe class TypedefDeclVisitor : MemberVisitor
+internal unsafe class TypedefDeclVisitor : MemberVisitor
 {
     /// <summary>
     /// Gets <c>Kinds</c>.
     /// </summary>
-    public override IEnumerable<CXCursorKind> Kinds { get; } = [
-        CXCursorKind.CXCursor_TypedefDecl
-    ];
+    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_TypedefDecl];
 
-    protected override CppElement? VisitCore(CXCursor cursor, CXCursor parent)
-    {
-        var fulltypeDefName = Context.GetCursorKey(cursor);
-        if (TypedefResolver.TryResolve(fulltypeDefName, out var type))
+    protected override CppElement? VisitCore(
+        CXCursor cursor,
+        CXCursor parent
+    ) {
+        var fulltypeDefName = this.context.GetCursorKey(cursor);
+        if (this.typedefResolver.TryResolve(fulltypeDefName, out var type))
         {
             return type;
         }
 
-        var contextContainer = Context.GetOrCreateDeclContainer(cursor.SemanticParent);
-        Context.CurrentTypedefKey = fulltypeDefName;
-        var underlyingTypeDefType = Builder.GetCppType(cursor.TypedefDeclUnderlyingType.Declaration, cursor.TypedefDeclUnderlyingType, cursor);
-        Context.CurrentTypedefKey = default;
-
+        var contextContainer = this.context.GetOrCreateDeclContainer(cursor.SemanticParent);
+        this.context.currentTypedefKey = fulltypeDefName;
+        var underlyingTypeDefType = this.builder.GetCppType(cursor.TypedefDeclUnderlyingType.Declaration, cursor.TypedefDeclUnderlyingType, cursor);
+        this.context.currentTypedefKey = default;
         var typedefName = CXUtil.GetCursorSpelling(cursor);
-
         ICppDeclarationContainer? container = null;
-
-        if (Builder.AutoSquashTypedef && underlyingTypeDefType is ICppMember cppMember && (string.IsNullOrEmpty(cppMember.Name) || typedefName == cppMember.Name))
+        if (this.builder.autoSquashTypedef && underlyingTypeDefType is ICppMember cppMember && (string.IsNullOrEmpty(cppMember.name) || typedefName == cppMember.name))
         {
-            cppMember.Name = typedefName;
+            cppMember.name = typedefName;
             type = (CppType)cppMember;
         }
         else
         {
-            CppTypedef typedef = new(cursor, typedefName, underlyingTypeDefType) { Visibility = contextContainer.CurrentVisibility };
-            container = contextContainer.DeclarationContainer;
+            CppTypedef typedef = new(cursor, typedefName, underlyingTypeDefType)
+            {
+                visibility = contextContainer.currentVisibility
+            };
+            container = contextContainer.declarationContainer;
             type = typedef;
         }
 
-        Builder.ParseTypedefAttribute(cursor, type, underlyingTypeDefType);
-
+        this.builder.ParseTypedefAttribute(cursor, type, underlyingTypeDefType);
         // The type could have been added separately as part of the GetCppType above
-        TypedefResolver.RegisterTypedef(fulltypeDefName, type);
-
-        var map = Context.MapTemplateParameterTypeToTypedefKeys;
-
+        this.typedefResolver.RegisterTypedef(fulltypeDefName, type);
+        var map = this.context.mapTemplateParameterTypeToTypedefKeys;
         // Try to remap typedef using a parameter type declared in an ObjC interface
         if (map.Count > 0)
         {
@@ -64,22 +62,21 @@ public unsafe class TypedefDeclVisitor : MemberVisitor
             {
                 if (pair.Value.Contains(fulltypeDefName))
                 {
-                    container = (ICppDeclarationContainer?)pair.Key.Parent;
+                    container = (ICppDeclarationContainer?)pair.Key.parent;
                     map.Remove(pair.Key);
                     break;
                 }
             }
         }
 
-        container?.Typedefs.Add((CppTypedef)type);
-
+        container?.typedefs.Add((CppTypedef)type);
         // Update Span
         if (type is CppElement element)
         {
             element.AssignSourceSpan(cursor);
-            if (element is CppTypedef typedef && typedef.ElementType is CppClass && string.IsNullOrWhiteSpace(typedef.ElementType.SourceFile))
+            if (element is CppTypedef typedef && typedef.elementType is CppClass && string.IsNullOrWhiteSpace(typedef.elementType.sourceFile))
             {
-                typedef.ElementType.Span = element.Span;
+                typedef.elementType.span = element.span;
             }
         }
 

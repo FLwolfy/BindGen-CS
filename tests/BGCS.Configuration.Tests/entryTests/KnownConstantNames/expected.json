@@ -1,5 +1,5 @@
 {
-  "Property": "KnownConstantNames",
+  "Property": "knownConstantNames",
   "Expected": {
     "SAMPLE_CONST": "SpecialConst"
   }

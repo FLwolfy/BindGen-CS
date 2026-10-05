@@ -1,4 +1,4 @@
 {
-  "Property": "GenerateEnums",
+  "Property": "generateEnums",
   "Expected": false
 }

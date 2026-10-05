@@ -7,14 +7,18 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
     <WasmBuildNative>true</WasmBuildNative>
     <PublishTrimmed>false</PublishTrimmed>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EmccExtraCFlags>-fexceptions -DBUILD_SHARED=1 -I&quot;$(MSBuildProjectDirectory)/Bridge/include&quot; -I&quot;$(MSBuildProjectDirectory)/CppFacade&quot;</EmccExtraCFlags>
+    <EmccExtraLDFlags>$(EmccExtraCFlags)</EmccExtraLDFlags>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BGCS.Runtime">
       <HintPath>BGCS.Runtime.dll</HintPath>
     </Reference>
     <NativeFileReference Include="Native/api.c" />
+    <NativeFileReference Include="Bridge/src/Classes.cpp" />
   </ItemGroup>
 </Project>

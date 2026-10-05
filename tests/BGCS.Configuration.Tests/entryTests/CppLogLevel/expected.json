@@ -1,4 +1,4 @@
 {
-  "Property": "CppLogLevel",
+  "Property": "cppLogLevel",
   "Expected": "Warning"
 }

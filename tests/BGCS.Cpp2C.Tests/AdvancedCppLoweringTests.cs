@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
 using BGCS.Intermediate;
@@ -71,8 +73,8 @@ public sealed class AdvancedCppLoweringTests
             Cpp2CCodeGenerator generator = new(new Cpp2CGeneratorConfig());
             generator.Generate(header, output);
 
-            Assert.True(generator.LastResult?.Success,
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            Assert.True(generator.lastResult?.success,
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
             string bridgeHeader = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
             string bridgeSource = File.ReadAllText(Path.Combine(output, "src", "Classes.cpp"));
             Assert.Contains("Demo_ArraySum(int* values, size_t values_count)", bridgeHeader);
@@ -86,10 +88,10 @@ public sealed class AdvancedCppLoweringTests
             Assert.Contains("TryGetValue", bridgeHeader);
             Assert.Contains("std::filesystem::path(std::u8string", bridgeSource);
             Assert.Contains("std::chrono::duration_cast", bridgeSource);
-            Assert.Contains(generator.LastResult!.Module!.Functions,
-                function => function.NativeName == "MakeMap" &&
-                    function.ReturnMarshalling.Ownership == BindingOwnership.Owned &&
-                    function.ReturnMarshalling.RequiresCleanup);
+            Assert.Contains(generator.lastResult!.module!.functions,
+                function => function.nativeName == "MakeMap" &&
+                    function.returnMarshalling.ownership == BindingOwnership.Owned &&
+                    function.returnMarshalling.requiresCleanup);
             Assert.True(CompileGeneratedBridgeDll(output, temp, library, out string diagnostics), diagnostics);
 
             nint native = NativeLibrary.Load(library);
@@ -146,8 +148,8 @@ public sealed class AdvancedCppLoweringTests
         {
             Cpp2CCodeGenerator generator = new(new Cpp2CGeneratorConfig());
             generator.Generate(header, output);
-            Assert.True(generator.LastResult?.Success,
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            Assert.True(generator.lastResult?.success,
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
             Assert.True(CompileGeneratedBridgeDll(output, temp, library, out string diagnostics), diagnostics);
 
             nint native = NativeLibrary.Load(library);
@@ -187,19 +189,19 @@ public sealed class AdvancedCppLoweringTests
             "template<> class Selector<int> { public: int Kind() const { return 2; } }; " +
             "}");
         Cpp2CGeneratorConfig config = new();
-        config.TemplateInstantiations.Add("Demo::Selector<int>");
-        config.TemplateInstantiations.Add("Demo::Selector<float*>");
+        config.templateInstantiations.Add("Demo::Selector<int>");
+        config.templateInstantiations.Add("Demo::Selector<float*>");
         try
         {
             Cpp2CCodeGenerator generator = new(config);
             generator.Generate(header, output);
-            Assert.True(generator.LastResult?.Success,
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            Assert.True(generator.lastResult?.success,
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
             string bridgeHeader = File.ReadAllText(Path.Combine(output, "include", "Classes.h"));
             Assert.Contains("Selector", bridgeHeader);
             Assert.Contains("Kind", bridgeHeader);
-            Assert.DoesNotContain(generator.LastResult!.Diagnostics,
-                diagnostic => diagnostic.Code == BindingDiagnosticCodes.CppInstantiation);
+            Assert.DoesNotContain(generator.lastResult!.diagnostics,
+                diagnostic => diagnostic.code == BindingDiagnosticCodes.C_CPPINSTANTIATION);
             Assert.True(CompileGeneratedBridgeDll(output, temp,
                 Path.Combine(temp, OperatingSystem.IsMacOS() ? "libspecializations.dylib" : OperatingSystem.IsWindows() ? "specializations.dll" : "libspecializations.so"),
                 out string diagnostics), diagnostics);

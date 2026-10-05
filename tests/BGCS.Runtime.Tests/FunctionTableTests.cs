@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using BGCS.Runtime;
 using Xunit;
 
 namespace BGCS.Runtime.Tests;
@@ -14,7 +13,7 @@ public class FunctionTableTests
         FakeContext context = new();
         using FunctionTable table = new(context, 4);
 
-        Assert.Equal(4, table.Length);
+        Assert.Equal(4, table.length);
     }
 
     [Fact]
@@ -38,7 +37,7 @@ public class FunctionTableTests
 
         table.Resize(5);
 
-        Assert.Equal(5, table.Length);
+        Assert.Equal(5, table.length);
     }
 
     [Fact]
@@ -89,8 +88,29 @@ public class FunctionTableTests
         table.Free();
         table.Dispose();
         Assert.Equal(1, context.DisposeCallCount);
-        Assert.Equal(0, table.Length);
+        Assert.Equal(0, table.length);
         Assert.Throws<ObjectDisposedException>(() => table.Resize(1));
+    }
+
+    [Fact]
+    public void BorrowedContext_DisposeDoesNotReleaseTheExternalOwner() {
+        FakeContext context = new();
+        FunctionTable table = new(context, 1, ownsContext: false);
+        table.Dispose();
+        table.Dispose();
+
+        Assert.Equal(0, context.DisposeCallCount);
+        context.Dispose();
+        Assert.Equal(1, context.DisposeCallCount);
+    }
+
+    [Fact]
+    public void RequiredExport_MissingSymbolRejectsTheCandidate() {
+        FakeContext context = new();
+        using FunctionTable table = new(context, 1);
+
+        EntryPointNotFoundException failure = Assert.Throws<EntryPointNotFoundException>(() => table.LoadRequired(0, "Missing"));
+        Assert.Contains("Missing", failure.Message);
     }
 
     private sealed class FakeContext : INativeContext

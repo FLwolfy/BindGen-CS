@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using BGCS.Configuration;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -18,24 +19,30 @@ public class ConfigComposerTests
         File.WriteAllText(basePath,
             """
             {
-              "Namespace": "Base.Namespace",
-              "ApiName": "BaseApi",
-              "LibName": "base",
-              "IncludeFolders": [ "base/include" ],
-              "Defines": [ "BASE_DEFINE" ],
-              "GenerateExtensions": true
+              "namespace": "Base.Namespace",
+              "apiName": "BaseApi",
+              "libName": "base",
+              "includeFolders": [
+                "base/include"
+              ],
+              "defines": [
+                "BASE_DEFINE"
+              ],
+              "generateExtensions": true
             }
             """);
 
         File.WriteAllText(childPath,
             """
             {
-              "BaseConfig": {
-                "Url": "file://base.json"
+              "baseConfig": {
+                "url": "file://base.json"
               },
-              "ApiName": "ChildApi",
-              "IncludeFolders": [ "child/include" ],
-              "GenerateExtensions": false
+              "apiName": "ChildApi",
+              "includeFolders": [
+                "child/include"
+              ],
+              "generateExtensions": false
             }
             """);
 
@@ -43,15 +50,15 @@ public class ConfigComposerTests
         Environment.CurrentDirectory = temp;
         try
         {
-            CsCodeGeneratorConfig cfg = CsCodeGeneratorConfig.Load(childPath, new ConfigComposer());
+            CsCodeGeneratorConfig cfg = new BGCS.Configuration.ConfigLoader().Load(childPath);
 
-            Assert.Equal("Base.Namespace", cfg.Namespace);
-            Assert.Equal("ChildApi", cfg.ApiName);
-            Assert.Equal("base", cfg.LibName);
-            Assert.Contains("base/include", cfg.IncludeFolders);
-            Assert.Contains("child/include", cfg.IncludeFolders);
-            Assert.Contains("BASE_DEFINE", cfg.Defines);
-            Assert.False(cfg.GenerateExtensions);
+            Assert.Equal("Base.Namespace", cfg.@namespace);
+            Assert.Equal("ChildApi", cfg.apiName);
+            Assert.Equal("base", cfg.libName);
+            Assert.Contains("base/include", cfg.includeFolders);
+            Assert.Contains("child/include", cfg.includeFolders);
+            Assert.Contains("BASE_DEFINE", cfg.defines);
+            Assert.False(cfg.generateExtensions);
         }
         finally
         {
@@ -75,17 +82,22 @@ public class ConfigComposerTests
         File.WriteAllText(basePath,
             """
             {
-              "Namespace": "Base.Namespace",
-              "Defines": [ "BASE_DEFINE" ]
+              "namespace": "Base.Namespace",
+              "apiName": "BaseApi",
+              "defines": [
+                "BASE_DEFINE"
+              ]
             }
             """);
 
         File.WriteAllText(childPath,
             """
             {
-              "BaseConfig": {
-                "Url": "file://base.json",
-                "IgnoredProperties": [ "Defines" ]
+              "baseConfig": {
+                "url": "file://base.json",
+                "ignoredProperties": [
+                  "defines"
+                ]
               }
             }
             """);
@@ -94,10 +106,10 @@ public class ConfigComposerTests
         Environment.CurrentDirectory = temp;
         try
         {
-            CsCodeGeneratorConfig cfg = CsCodeGeneratorConfig.Load(childPath, new ConfigComposer());
+            CsCodeGeneratorConfig cfg = new BGCS.Configuration.ConfigLoader().Load(childPath);
 
-            Assert.Equal("Base.Namespace", cfg.Namespace);
-            Assert.DoesNotContain("BASE_DEFINE", cfg.Defines);
+            Assert.Equal("Base.Namespace", cfg.@namespace);
+            Assert.DoesNotContain("BASE_DEFINE", cfg.defines);
         }
         finally
         {
@@ -116,12 +128,12 @@ public class ConfigComposerTests
         Directory.CreateDirectory(temp);
         string firstPath = Path.Combine(temp, "first.json");
         string secondPath = Path.Combine(temp, "second.json");
-        File.WriteAllText(firstPath, "{\"BaseConfig\":{\"Url\":\"file://second.json\"}}");
-        File.WriteAllText(secondPath, "{\"BaseConfig\":{\"Url\":\"file://first.json\"}}");
+        File.WriteAllText(firstPath, "{\"baseConfig\":{\"url\":\"file://second.json\"}}");
+        File.WriteAllText(secondPath, "{\"baseConfig\":{\"url\":\"file://first.json\"}}");
 
         try
         {
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => CsCodeGeneratorConfig.Load(firstPath));
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => new BGCS.Configuration.ConfigLoader().Load(firstPath));
 
             Assert.Contains("Circular BaseConfig", exception.Message);
         }

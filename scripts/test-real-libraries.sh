@@ -58,27 +58,26 @@ BX_INCLUDE_JSON="${CORPUS_ROOT}/bx/include"
 if command -v cygpath > /dev/null 2>&1; then BX_INCLUDE_JSON="$(cygpath -m "${BX_INCLUDE_JSON}")"; fi
 
 "${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release -m:1 -nodeReuse:false
-"${DOTNET_CMD}" build "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release -m:1 -nodeReuse:false
 
 cat > "${ARTIFACTS_DIR}/miniaudio/bindgen.json" <<EOF
 {
-  "Preset": "host-c,c-library",
-  "StrictSafetySeverity": "Warning",
-  "Namespace": "BGCS.RealLibraries.MiniAudio",
-  "ApiName": "MiniAudio",
-  "LibName": "miniaudio",
-  "EntryFiles": ["${MINIAUDIO_HEADER_JSON}"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
-  "IncludeFolders": ["${MINIAUDIO_INCLUDE_JSON}"],
-  "IgnoredFunctions": ["ma_log_postf"],
-  "OutputPath": "Generated"
+  "preset": "host-c,c-library",
+  "strictSafetySeverity": "Warning",
+  "namespace": "BGCS.RealLibraries.MiniAudio",
+  "apiName": "MiniAudio",
+  "libName": "miniaudio",
+  "entryFiles": ["${MINIAUDIO_HEADER_JSON}"],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true,
+  "includeFolders": ["${MINIAUDIO_INCLUDE_JSON}"],
+  "ignoredFunctions": ["ma_log_postf"],
+  "outputPath": "Generated"
 }
 EOF
 
 start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/miniaudio/bindgen.json"
+  generate "${ARTIFACTS_DIR}/miniaudio/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
 check_generation_budget miniaudio "${elapsed_seconds}" 60
 
@@ -88,6 +87,8 @@ cat > "${ARTIFACTS_DIR}/miniaudio/consumer/MiniAudio.Generated.csproj" <<EOF
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
@@ -103,20 +104,20 @@ printf '[real-libraries] miniaudio passed in %ss.\n' "${elapsed_seconds}"
 mkdir -p "${ARTIFACTS_DIR}/sdl3/consumer"
 cat > "${ARTIFACTS_DIR}/sdl3/bindgen.json" <<EOF
 {
-  "Preset": "host-c,c-library,opaque-callbacks",
-  "StrictSafetySeverity": "Warning",
-  "Namespace": "BGCS.RealLibraries.SDL3",
-  "ApiName": "SDL3",
-  "LibName": "SDL3",
-  "EntryFiles": ["${SDL3_HEADER_JSON}"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
-  "IncludeFolders": ["${SDL3_INCLUDE_JSON}"],
-  "TypeMappings": {
-    "Uint8": "byte", "Uint16": "ushort", "Uint32": "uint", "Uint64": "ulong",
-    "Sint8": "sbyte", "Sint16": "short", "Sint32": "int", "Sint64": "long"
+  "preset": "host-c,c-library,opaque-callbacks",
+  "strictSafetySeverity": "Warning",
+  "namespace": "BGCS.RealLibraries.SDL3",
+  "apiName": "SDL3",
+  "libName": "SDL3",
+  "entryFiles": ["${SDL3_HEADER_JSON}"],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true,
+  "includeFolders": ["${SDL3_INCLUDE_JSON}"],
+  "typeMappings": {
+    "uint8": "byte", "uint16": "ushort", "uint32": "uint", "uint64": "ulong",
+    "sint8": "sbyte", "sint16": "short", "sint32": "int", "sint64": "long"
   },
-  "IgnoredFunctions": [
+  "ignoredFunctions": [
     "SDL_sscanf",
     "SDL_snprintf",
     "SDL_swprintf",
@@ -134,13 +135,13 @@ cat > "${ARTIFACTS_DIR}/sdl3/bindgen.json" <<EOF
     "SDL_LogMessage",
     "SDL_RenderDebugTextFormat"
   ],
-  "OutputPath": "Generated"
+  "outputPath": "Generated"
 }
 EOF
 
 start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/sdl3/bindgen.json"
+  generate "${ARTIFACTS_DIR}/sdl3/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
 check_generation_budget SDL3 "${elapsed_seconds}" 45
 
@@ -150,6 +151,8 @@ cat > "${ARTIFACTS_DIR}/sdl3/consumer/SDL3.Generated.csproj" <<EOF
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
@@ -165,17 +168,17 @@ printf '[real-libraries] SDL3 passed in %ss.\n' "${elapsed_seconds}"
 mkdir -p "${ARTIFACTS_DIR}/cimgui/consumer"
 cat > "${ARTIFACTS_DIR}/cimgui/bindgen.json" <<EOF
 {
-  "Preset": "host-c,c-library,opaque-callbacks",
-  "StrictSafetySeverity": "Warning",
-  "Namespace": "BGCS.RealLibraries.CImGui",
-  "ApiName": "CImGui",
-  "LibName": "cimgui",
-  "EntryFiles": ["${CIMGUI_HEADER_JSON}"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
-  "IncludeFolders": ["${CIMGUI_INCLUDE_JSON}"],
-  "Defines": ["CIMGUI_DEFINE_ENUMS_AND_STRUCTS"],
-  "IgnoredFunctions": [
+  "preset": "host-c,c-library,opaque-callbacks",
+  "strictSafetySeverity": "Warning",
+  "namespace": "BGCS.RealLibraries.CImGui",
+  "apiName": "CImGui",
+  "libName": "cimgui",
+  "entryFiles": ["${CIMGUI_HEADER_JSON}"],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true,
+  "includeFolders": ["${CIMGUI_INCLUDE_JSON}"],
+  "defines": ["CIMGUI_DEFINE_ENUMS_AND_STRUCTS"],
+  "ignoredFunctions": [
     "igText",
     "igTextColored",
     "igTextDisabled",
@@ -195,13 +198,13 @@ cat > "${ARTIFACTS_DIR}/cimgui/bindgen.json" <<EOF
     "igTextAligned",
     "ImGuiTextBuffer_appendf"
   ],
-  "OutputPath": "Generated"
+  "outputPath": "Generated"
 }
 EOF
 
 start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/cimgui/bindgen.json"
+  generate "${ARTIFACTS_DIR}/cimgui/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
 check_generation_budget cimgui "${elapsed_seconds}" 30
 
@@ -211,6 +214,8 @@ cat > "${ARTIFACTS_DIR}/cimgui/consumer/CImGui.Generated.csproj" <<EOF
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
@@ -226,17 +231,17 @@ printf '[real-libraries] cimgui passed in %ss.\n' "${elapsed_seconds}"
 mkdir -p "${ARTIFACTS_DIR}/cimguizmo/consumer"
 cat > "${ARTIFACTS_DIR}/cimguizmo/bindgen.json" <<EOF
 {
-  "Preset": "host-c,c-library,opaque-callbacks",
-  "StrictSafetySeverity": "Warning",
-  "Namespace": "BGCS.RealLibraries.CImGuizmo",
-  "ApiName": "CImGuizmo",
-  "LibName": "cimguizmo",
-  "EntryFiles": ["${CIMGUIZMO_HEADER_JSON}"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
-  "IncludeFolders": ["${CIMGUIZMO_INCLUDE_JSON}", "${CIMGUI_INCLUDE_JSON}"],
-  "Defines": ["CIMGUI_DEFINE_ENUMS_AND_STRUCTS"],
-  "IgnoredFunctions": [
+  "preset": "host-c,c-library,opaque-callbacks",
+  "strictSafetySeverity": "Warning",
+  "namespace": "BGCS.RealLibraries.CImGuizmo",
+  "apiName": "CImGuizmo",
+  "libName": "cimguizmo",
+  "entryFiles": ["${CIMGUIZMO_HEADER_JSON}"],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true,
+  "includeFolders": ["${CIMGUIZMO_INCLUDE_JSON}", "${CIMGUI_INCLUDE_JSON}"],
+  "defines": ["CIMGUI_DEFINE_ENUMS_AND_STRUCTS"],
+  "ignoredFunctions": [
     "igText",
     "igTextColored",
     "igTextDisabled",
@@ -256,13 +261,13 @@ cat > "${ARTIFACTS_DIR}/cimguizmo/bindgen.json" <<EOF
     "igTextAligned",
     "ImGuiTextBuffer_appendf"
   ],
-  "OutputPath": "Generated"
+  "outputPath": "Generated"
 }
 EOF
 
 start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/cimguizmo/bindgen.json"
+  generate "${ARTIFACTS_DIR}/cimguizmo/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
 check_generation_budget cimguizmo "${elapsed_seconds}" 15
 
@@ -272,6 +277,8 @@ cat > "${ARTIFACTS_DIR}/cimguizmo/consumer/CImGuizmo.Generated.csproj" <<EOF
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
@@ -287,22 +294,22 @@ printf '[real-libraries] cimguizmo passed in %ss.\n' "${elapsed_seconds}"
 mkdir -p "${ARTIFACTS_DIR}/bgfx/consumer"
 cat > "${ARTIFACTS_DIR}/bgfx/bindgen.json" <<EOF
 {
-  "Preset": "host-c,c-library,opaque-callbacks",
-  "StrictSafetySeverity": "Warning",
-  "Namespace": "BGCS.RealLibraries.Bgfx",
-  "ApiName": "Bgfx",
-  "LibName": "bgfx",
-  "EntryFiles": ["${BGFX_HEADER_JSON}"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true,
-  "IncludeFolders": ["${BGFX_INCLUDE_JSON}", "${BX_INCLUDE_JSON}"],
-  "IgnoredFunctions": ["bgfx_dbg_text_printf"],
-  "OutputPath": "Generated"
+  "preset": "host-c,c-library,opaque-callbacks",
+  "strictSafetySeverity": "Warning",
+  "namespace": "BGCS.RealLibraries.Bgfx",
+  "apiName": "Bgfx",
+  "libName": "bgfx",
+  "entryFiles": ["${BGFX_HEADER_JSON}"],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true,
+  "includeFolders": ["${BGFX_INCLUDE_JSON}", "${BX_INCLUDE_JSON}"],
+  "ignoredFunctions": ["bgfx_dbg_text_printf"],
+  "outputPath": "Generated"
 }
 EOF
 start_seconds="$(date +%s)"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/bgfx/bindgen.json"
+  generate "${ARTIFACTS_DIR}/bgfx/bindgen.json"
 elapsed_seconds="$(( $(date +%s) - start_seconds ))"
 check_generation_budget bgfx "${elapsed_seconds}" 30
 cat > "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" <<EOF
@@ -311,6 +318,8 @@ cat > "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" <<EOF
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
@@ -322,67 +331,16 @@ EOF
 "${DOTNET_CMD}" build "${ARTIFACTS_DIR}/bgfx/consumer/Bgfx.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
 printf '[real-libraries] bgfx passed in %ss.\n' "${elapsed_seconds}"
 
-verify_ir_backend() {
-  local library_name="$1"
-  local project_name="$2"
-  local library_dir="${ARTIFACTS_DIR}/${library_name}"
-  local consumer_dir="${library_dir}/ir-consumer"
-  mkdir -p "${consumer_dir}"
-
-  cat > "${library_dir}/bindgen.ir.json" <<EOF
-{
-  "BaseConfig": { "Url": "file://bindgen.json" },
-  "CSharpEmissionBackend": "IntermediateRepresentation",
-  "SingleFileOutputName": "Bindings.cs",
-  "OutputPath": "IRGenerated"
-}
-EOF
-
-  local start_seconds
-  local elapsed_seconds
-  start_seconds="$(date +%s)"
-  "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
-    "${library_dir}/bindgen.ir.json"
-  elapsed_seconds="$(( $(date +%s) - start_seconds ))"
-  check_generation_budget "${library_name} IR" "${elapsed_seconds}" 120
-
-  cat > "${consumer_dir}/${project_name}.IR.Generated.csproj" <<EOF
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Nullable>enable</Nullable>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="../IRGenerated/Bindings.cs" Link="Bindings.cs" />
-    <ProjectReference Include="${ROOT_DIR_JSON}/src/BGCS.Runtime/BGCS.Runtime.csproj" />
-  </ItemGroup>
-</Project>
-EOF
-
-  "${DOTNET_CMD}" build "${consumer_dir}/${project_name}.IR.Generated.csproj" --configuration Release -m:1 -nodeReuse:false
-  printf '[real-libraries] %s IR-native ABI generation and warning-free compilation passed in %ss.\n' \
-    "${library_name}" "${elapsed_seconds}"
-}
-
-verify_ir_backend "miniaudio" "MiniAudio"
-verify_ir_backend "sdl3" "SDL3"
-verify_ir_backend "cimgui" "CImGui"
-verify_ir_backend "cimguizmo" "CImGuizmo"
-verify_ir_backend "bgfx" "Bgfx"
-
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/miniaudio/consumer/bin/Release/net9.0/MiniAudio.Generated.dll" "${ARTIFACTS_DIR}/miniaudio/public-api.txt"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/sdl3/consumer/bin/Release/net9.0/SDL3.Generated.dll" "${ARTIFACTS_DIR}/sdl3/public-api.txt"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/cimgui/consumer/bin/Release/net9.0/CImGui.Generated.dll" "${ARTIFACTS_DIR}/cimgui/public-api.txt"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/cimguizmo/consumer/bin/Release/net9.0/CImGuizmo.Generated.dll" "${ARTIFACTS_DIR}/cimguizmo/public-api.txt"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/scripts/BGCS.ApiSnapshot/BGCS.ApiSnapshot.csproj" --configuration Release --no-build -- \
-  "${ARTIFACTS_DIR}/bgfx/consumer/bin/Release/net9.0/Bgfx.Generated.dll" "${ARTIFACTS_DIR}/bgfx/public-api.txt"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
+  validate api-snapshot   "${ARTIFACTS_DIR}/miniaudio/consumer/bin/Release/net9.0/MiniAudio.Generated.dll" "${ARTIFACTS_DIR}/miniaudio/public-api.txt"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
+  validate api-snapshot   "${ARTIFACTS_DIR}/sdl3/consumer/bin/Release/net9.0/SDL3.Generated.dll" "${ARTIFACTS_DIR}/sdl3/public-api.txt"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
+  validate api-snapshot   "${ARTIFACTS_DIR}/cimgui/consumer/bin/Release/net9.0/CImGui.Generated.dll" "${ARTIFACTS_DIR}/cimgui/public-api.txt"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
+  validate api-snapshot   "${ARTIFACTS_DIR}/cimguizmo/consumer/bin/Release/net9.0/CImGuizmo.Generated.dll" "${ARTIFACTS_DIR}/cimguizmo/public-api.txt"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" --configuration Release --no-build -- \
+  validate api-snapshot   "${ARTIFACTS_DIR}/bgfx/consumer/bin/Release/net9.0/Bgfx.Generated.dll" "${ARTIFACTS_DIR}/bgfx/public-api.txt"
 
 pushd "${ROOT_DIR}" > /dev/null
 snapshot_status=0

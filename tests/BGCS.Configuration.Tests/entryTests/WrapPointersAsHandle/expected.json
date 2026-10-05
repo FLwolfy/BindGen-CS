@@ -1,4 +1,4 @@
 {
-  "Property": "WrapPointersAsHandle",
+  "Property": "wrapPointersAsHandle",
   "Expected": true
 }

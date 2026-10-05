@@ -1,6 +1,7 @@
 using System;
 using System.IO;
-using BGCS.Core;
+using System.Text;
+using BGCS.Core.Text;
 using Xunit;
 
 namespace BGCS.Core.Tests;
@@ -57,5 +58,28 @@ public class FileNameHelperTests
         string actual = FileNameHelper.SanitizeFileName(input);
 
         Assert.Equal(Path.Combine(directory, "aQuestionMarkb.cs"), actual);
+    }
+
+    [Theory]
+    [InlineData("CON.txt", "_CON.txt")]
+    [InlineData("nul .cs", "_nul .cs")]
+    [InlineData("COM¹.txt", "_COM¹.txt")]
+    [InlineData("name. ", "name")]
+    [InlineData("..", "_")]
+    [InlineData("name\u0001.cs", "name_.cs")]
+    public void SanitizeFileName_UsesPortableRulesRegardlessOfHost(
+        string input,
+        string expected
+    ) => Assert.Equal(expected, FileNameHelper.SanitizeFileName(input));
+
+    [Fact]
+    public void SanitizeFileName_UnicodeLimitPreservesScalarsAndThePortableByteBudget()
+    {
+        string input = new string('a', 252) + "😀";
+        string actual = FileNameHelper.SanitizeFileName(input);
+
+        Assert.Equal(new string('a', 252), actual);
+        Assert.True(Encoding.UTF8.GetByteCount(actual) <= 255);
+        Assert.Throws<ArgumentException>(() => FileNameHelper.SanitizeFileName("bad\uD800"));
     }
 }

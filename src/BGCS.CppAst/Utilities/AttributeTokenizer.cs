@@ -2,17 +2,17 @@ using System;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Utilities;
+
 /// <summary>
 /// Defines the public class <c>AttributeTokenizer</c>.
 /// </summary>
-public unsafe class AttributeTokenizer : Tokenizer
+internal sealed unsafe class AttributeTokenizer : Tokenizer
 {
     /// <summary>
-    /// Initializes a new instance of <see cref="AttributeTokenizer"/>.
+    /// Initializes a new instance of <see cref = "AttributeTokenizer"/>.
     /// </summary>
     public AttributeTokenizer(CXCursor cursor) : base(cursor)
     {
@@ -21,12 +21,17 @@ public unsafe class AttributeTokenizer : Tokenizer
     /// <summary>
     /// Executes public operation <c>AttributeTokenizer</c>.
     /// </summary>
-    public AttributeTokenizer(CXTranslationUnit tu, CXSourceRange range) : base(tu, range)
+    public AttributeTokenizer(
+        CXTranslationUnit tu,
+        CXSourceRange range
+    ) : base(tu, range)
     {
     }
 
-    private uint IncOffset(int inc, uint offset)
-    {
+    private uint IncOffset(
+        int inc,
+        uint offset
+    ) {
         if (inc >= 0)
             offset += (uint)inc;
         else
@@ -34,17 +39,16 @@ public unsafe class AttributeTokenizer : Tokenizer
         return offset;
     }
 
-    private Tuple<CXSourceRange, CXSourceRange> GetExtent(CXTranslationUnit tu, CXCursor cur)
-    {
+    private Tuple<CXSourceRange, CXSourceRange> GetExtent(
+        CXTranslationUnit tu,
+        CXCursor cur
+    ) {
         var cursorExtend = cur.Extent;
         var begin = cursorExtend.Start;
         var end = cursorExtend.End;
-
         bool CursorIsFunction(CXCursorKind inKind)
         {
-            return inKind == CXCursorKind.CXCursor_FunctionDecl || inKind == CXCursorKind.CXCursor_CXXMethod
-                   || inKind == CXCursorKind.CXCursor_Constructor || inKind == CXCursorKind.CXCursor_Destructor
-                   || inKind == CXCursorKind.CXCursor_ConversionFunction;
+            return inKind == CXCursorKind.CXCursor_FunctionDecl || inKind == CXCursorKind.CXCursor_CXXMethod || inKind == CXCursorKind.CXCursor_Constructor || inKind == CXCursorKind.CXCursor_Destructor || inKind == CXCursorKind.CXCursor_ConversionFunction;
         }
 
         bool CursorIsVar(CXCursorKind inKind)
@@ -52,15 +56,15 @@ public unsafe class AttributeTokenizer : Tokenizer
             return inKind == CXCursorKind.CXCursor_VarDecl || inKind == CXCursorKind.CXCursor_FieldDecl;
         }
 
-        bool IsInRange(CXSourceLocation loc, CXSourceRange range)
-        {
+        bool IsInRange(
+            CXSourceLocation loc,
+            CXSourceRange range
+        ) {
             var xbegin = range.Start;
             var xend = range.End;
-
             loc.GetSpellingLocation(out var fileLocation, out var lineLocation, out var u1, out var u2);
             xbegin.GetSpellingLocation(out var fileBegin, out var lineBegin, out u1, out u2);
             xend.GetSpellingLocation(out var fileEnd, out var lineEnd, out u1, out u2);
-
             return lineLocation >= lineBegin && lineLocation < lineEnd && fileLocation.Equals(fileBegin);
         }
 
@@ -69,14 +73,15 @@ public unsafe class AttributeTokenizer : Tokenizer
             var typeDecl = varDecl.Type.Declaration;
             if (typeDecl.IsNull)
                 return false;
-
             var typeLocation = typeDecl.Location;
             var varRange = typeDecl.Extent;
             return IsInRange(typeLocation, varRange);
         }
 
-        CXSourceLocation GetNextLocation(CXSourceLocation loc, int inc = 1)
-        {
+        CXSourceLocation GetNextLocation(
+            CXSourceLocation loc,
+            int inc = 1
+        ) {
             CXSourceLocation value;
             loc.GetSpellingLocation(out var file, out var line, out var column, out var originalOffset);
             var signedOffset = (int)column + inc;
@@ -94,8 +99,10 @@ public unsafe class AttributeTokenizer : Tokenizer
             return value;
         }
 
-        CXSourceLocation GetPrevLocation(CXSourceLocation loc, int tokenLength)
-        {
+        CXSourceLocation GetPrevLocation(
+            CXSourceLocation loc,
+            int tokenLength
+        ) {
             var inc = 1;
             while (true)
             {
@@ -105,7 +112,6 @@ public unsafe class AttributeTokenizer : Tokenizer
                 clang.tokenize(tu, clang.getRange(locBefore, loc), &tokens, &size);
                 if (size == 0)
                     return CXSourceLocation.Null;
-
                 var tokenLocation = tokens[0].GetLocation(tu);
                 if (locBefore.Equals(tokenLocation))
                 {
@@ -116,36 +122,37 @@ public unsafe class AttributeTokenizer : Tokenizer
             }
         }
 
-        bool TokenIsBefore(CXSourceLocation loc, string tokenString)
-        {
+        bool TokenIsBefore(
+            CXSourceLocation loc,
+            string tokenString
+        ) {
             var length = tokenString.Length;
             var locBefore = GetPrevLocation(loc, length);
-
             var tokenizer = new Tokenizer(tu, clang.getRange(locBefore, loc));
-            if (tokenizer.Count == 0) return false;
-
-            return tokenizer.GetStringForLength(length) == tokenString;
-        }
-
-        bool TokenAtIs(CXSourceLocation loc, string tokenString)
-        {
-            var length = tokenString.Length;
-
-            var locAfter = GetNextLocation(loc, length);
-            var tokenizer = new Tokenizer(tu, clang.getRange(locAfter, loc));
-
-            return tokenizer.GetStringForLength(length) == tokenString;
-        }
-
-        bool ConsumeIfTokenAtIs(ref CXSourceLocation loc, string tokenString)
-        {
-            var length = tokenString.Length;
-
-            var locAfter = GetNextLocation(loc, length);
-            var tokenizer = new Tokenizer(tu, clang.getRange(locAfter, loc));
-            if (tokenizer.Count == 0)
+            if (tokenizer.count == 0)
                 return false;
+            return tokenizer.GetStringForLength(length) == tokenString;
+        }
 
+        bool TokenAtIs(
+            CXSourceLocation loc,
+            string tokenString
+        ) {
+            var length = tokenString.Length;
+            var locAfter = GetNextLocation(loc, length);
+            var tokenizer = new Tokenizer(tu, clang.getRange(locAfter, loc));
+            return tokenizer.GetStringForLength(length) == tokenString;
+        }
+
+        bool ConsumeIfTokenAtIs(
+            ref CXSourceLocation loc,
+            string tokenString
+        ) {
+            var length = tokenString.Length;
+            var locAfter = GetNextLocation(loc, length);
+            var tokenizer = new Tokenizer(tu, clang.getRange(locAfter, loc));
+            if (tokenizer.count == 0)
+                return false;
             if (tokenizer.GetStringForLength(length) == tokenString)
             {
                 loc = locAfter;
@@ -155,12 +162,12 @@ public unsafe class AttributeTokenizer : Tokenizer
                 return false;
         }
 
-        bool ConsumeIfTokenBeforeIs(ref CXSourceLocation loc, string tokenString)
-        {
+        bool ConsumeIfTokenBeforeIs(
+            ref CXSourceLocation loc,
+            string tokenString
+        ) {
             var length = tokenString.Length;
-
             var locBefore = GetPrevLocation(loc, length);
-
             var tokenizer = new Tokenizer(tu, clang.getRange(locBefore, loc));
             if (tokenizer.GetStringForLength(length) == tokenString)
             {
@@ -171,8 +178,10 @@ public unsafe class AttributeTokenizer : Tokenizer
                 return false;
         }
 
-        bool CheckIfValidOrReset(ref CXSourceLocation checkedLocation, CXSourceLocation resetLocation)
-        {
+        bool CheckIfValidOrReset(
+            ref CXSourceLocation checkedLocation,
+            CXSourceLocation resetLocation
+        ) {
             bool isValid = true;
             if (checkedLocation.Equals(CXSourceLocation.Null))
             {
@@ -184,9 +193,7 @@ public unsafe class AttributeTokenizer : Tokenizer
         }
 
         var kind = cur.Kind;
-        if (CursorIsFunction(kind) || CursorIsFunction(cur.TemplateCursorKind)
-        || kind == CXCursorKind.CXCursor_VarDecl || kind == CXCursorKind.CXCursor_FieldDecl || kind == CXCursorKind.CXCursor_ParmDecl
-        || kind == CXCursorKind.CXCursor_NonTypeTemplateParameter)
+        if (CursorIsFunction(kind) || CursorIsFunction(cur.TemplateCursorKind) || kind == CXCursorKind.CXCursor_VarDecl || kind == CXCursorKind.CXCursor_FieldDecl || kind == CXCursorKind.CXCursor_ParmDecl || kind == CXCursorKind.CXCursor_NonTypeTemplateParameter)
         {
             while (TokenIsBefore(begin, "]]") || TokenIsBefore(begin, ")"))
             {
@@ -214,9 +221,7 @@ public unsafe class AttributeTokenizer : Tokenizer
                             --parenCount;
                         else if (TokenIsBefore(begin, ")"))
                             ++parenCount;
-
                         begin = GetPrevLocation(begin, 1);
-
                         // We have reached the end of the source of trying to deal
                         // with the potential of alignas, so we just break, which
                         // will cause ConsumeIfTokenBeforeIs(ref begin, "alignas") to be false
@@ -239,10 +244,8 @@ public unsafe class AttributeTokenizer : Tokenizer
                 {
                     var typeCursor = clang.getTypeDeclaration(clang.getCursorType(cur));
                     var typeExtent = clang.getCursorExtent(typeCursor);
-
                     var typeBegin = clang.getRangeStart(typeExtent);
                     var typeEnd = clang.getRangeEnd(typeExtent);
-
                     return new Tuple<CXSourceRange, CXSourceRange>(clang.getRange(begin, typeBegin), clang.getRange(typeEnd, end));
                 }
             }
@@ -258,6 +261,7 @@ public unsafe class AttributeTokenizer : Tokenizer
                         --parenCount;
                     prev = next;
                 }
+
                 end = next;
             }
             else if (kind == CXCursorKind.CXCursor_TemplateTemplateParameter && TokenAtIs(end, "<"))
@@ -275,11 +279,9 @@ public unsafe class AttributeTokenizer : Tokenizer
 
                 while (!TokenAtIs(next, ">") && !TokenAtIs(next, ","))
                     next = GetNextLocation(next, 1);
-
                 end = GetPrevLocation(next, 1);
             }
-            else if (kind == CXCursorKind.CXCursor_TemplateTypeParameter || kind == CXCursorKind.CXCursor_NonTypeTemplateParameter
-                || kind == CXCursorKind.CXCursor_TemplateTemplateParameter)
+            else if (kind == CXCursorKind.CXCursor_TemplateTypeParameter || kind == CXCursorKind.CXCursor_NonTypeTemplateParameter || kind == CXCursorKind.CXCursor_TemplateTemplateParameter)
             {
                 ConsumeIfTokenAtIs(ref end, "...");
             }
@@ -310,12 +312,10 @@ public unsafe class AttributeTokenizer : Tokenizer
             doesn't currently support all cases but it supports most valid cases.
         */
         var range = GetExtent(tu, cursor);
-
         var beg = range.Item1.Start;
         var end = range.Item1.End;
         if (!range.Item2.Equals(CXSourceRange.Null))
             end = range.Item2.End;
-
         return clang.getRange(beg, end);
     }
 }

@@ -15,7 +15,7 @@ Projects that compile the generated bindings also need `BGCS.Runtime`, unless th
 ## Generate from configuration
 
 ```csharp
-using BGCS;
+using BGCS.Configuration; using BGCS.Facade; using BGCS.Analysis;
 
 CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
 

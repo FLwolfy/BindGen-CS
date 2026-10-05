@@ -1,203 +1,205 @@
-using System.Security.Cryptography;
-using BGCS.Core.Extensibility;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Intermediate;
+using BGCS.Intermediate.Bridges;
+using BGCS.Intermediate.Emission;
 
 namespace BGCS.Cpp2C.Lowering;
 
+/// <summary>
+/// Freezes lowering source contributions and emits managed conversions from analyzed C ABI carriers.
+/// </summary>
 public static class CppExtensionArtifactEmitter
 {
-    public static IReadOnlyList<string> EmitNative(Cpp2CGeneratorConfig config, string outputPath)
+    /// <summary>
+    /// Freezes native extension artifacts before the bridge emitter writes any files.
+    /// </summary>
+    /// <param name = "config">
+    /// The configured lowering contributors and resolved native target.
+    /// </param>
+    /// <returns>
+    /// The source artifacts, including a separate binding umbrella when extensions expose headers.
+    /// </returns>
+    public static IReadOnlyList<CppBridgeArtifact> CollectNative(Cpp2CGeneratorConfig config)
     {
-        List<string> written = [];
-        List<string> exposedHeaders = [];
+        ArgumentNullException.ThrowIfNull(config);
+        List<CppBridgeArtifact> artifacts = [];
         foreach (CppGeneratedArtifactKind stage in new[]
-                 {
-                     CppGeneratedArtifactKind.PublicHeader,
-                     CppGeneratedArtifactKind.NativeSource,
-                     CppGeneratedArtifactKind.Resource
-                 })
         {
-            CppArtifactContext context = new(config, config.ResolvedTarget.Identifier, stage);
-            foreach (CppGeneratedArtifact artifact in config.Lowerings.CollectArtifacts(context))
+            CppGeneratedArtifactKind.PublicHeader,
+            CppGeneratedArtifactKind.NativeSource,
+            CppGeneratedArtifactKind.Resource
+        }
+
+        )
+        {
+            CppArtifactContext context = new(config, config.resolvedTarget.targetId.value, stage);
+            foreach (CppGeneratedArtifact artifact in config.lowerings.CollectArtifacts(context))
             {
-                if (artifact.Kind != stage)
-                    throw new InvalidOperationException($"Artifact '{artifact.RelativePath}' was returned for stage {stage} but declares {artifact.Kind}.");
-                string baseDirectory = stage switch
+                if (artifact.kind != stage)
+                    throw new InvalidOperationException($"Artifact '{artifact.relativePath}' was returned for stage {stage} but declares {artifact.kind}.");
+                string directory = stage switch
                 {
-                    CppGeneratedArtifactKind.PublicHeader => Path.Combine(outputPath, "include", "extensions"),
-                    CppGeneratedArtifactKind.NativeSource => Path.Combine(outputPath, "src", "extensions"),
-                    _ => Path.Combine(outputPath, "resources", "extensions")
+                    CppGeneratedArtifactKind.PublicHeader => "include/extensions",
+                    CppGeneratedArtifactKind.NativeSource => "src/extensions",
+                    _ => "resources/extensions"
                 };
-                string path = Path.GetFullPath(artifact.RelativePath, baseDirectory);
-                EnsureContained(baseDirectory, path);
-                if (File.Exists(path))
-                    throw new InvalidOperationException($"Lowering artifact would overwrite generated file '{path}'.");
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, artifact.Content);
-                written.Add(path);
-                if (artifact.Kind == CppGeneratedArtifactKind.PublicHeader && artifact.ExposeToBindings)
-                    exposedHeaders.Add(Path.GetRelativePath(Path.Combine(outputPath, "include"), path).Replace('\\', '/'));
+                string relativePath = Path.Combine(directory, artifact.relativePath).Replace('\\', '/');
+                if (Path.IsPathRooted(artifact.relativePath) || artifact.relativePath.Split('/', '\\').Any(part => part == ".."))
+                    throw new InvalidOperationException($"Lowering artifact '{artifact.relativePath}' escapes its contribution directory.");
+                artifacts.Add(new(relativePath, [new(CppBridgeOperationKind.Fragment, artifact.content)], artifact.exposeToBindings && stage == CppGeneratedArtifactKind.PublicHeader));
             }
         }
 
-        if (exposedHeaders.Count > 0)
+        CppTypeLoweringRecipe[] projections = GetProjectionRecipes(config);
+        if (projections.Length > 0)
         {
-            string umbrella = Path.Combine(outputPath, "include", "Classes.h");
-            using StreamWriter writer = File.AppendText(umbrella);
-            foreach (string header in exposedHeaders.OrderBy(value => value, StringComparer.Ordinal))
-                writer.WriteLine($"#include \"{header}\"");
+            StringBuilder header = new("#pragma once\n#include <stdint.h>\n#include <stddef.h>\n#include <stdbool.h>\n");
+            foreach (CppTypeLoweringRecipe recipe in projections)
+                header.Append("typedef ").Append(recipe.cAbiType).Append(' ').Append(GetProjectionAlias(recipe.name)).AppendLine(";");
+            artifacts.Add(new("include/extensions/managed_projection_types.h", [new(CppBridgeOperationKind.Fragment, header.ToString())], true));
         }
-        return written;
+        return artifacts.AsReadOnly();
     }
 
-    public static IReadOnlyList<string> EmitManaged(Cpp2CGeneratorConfig config, string outputPath)
+    /// <summary>
+    /// Captures managed source contributions and conversions before emission begins.
+    /// </summary>
+    /// <param name="config">Attempt-local configuration and lowering contributors.</param>
+    /// <returns>A frozen plan that retains neither configuration nor extension instances.</returns>
+    /// <exception cref="InvalidOperationException">A contribution uses an invalid stage or repeated conversion identity.</exception>
+    public static CppManagedArtifactPlan CollectManaged(Cpp2CGeneratorConfig config)
     {
         ArgumentNullException.ThrowIfNull(config);
-        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
-        string root = Path.Combine(Path.GetFullPath(outputPath), "Extensions");
-        List<string> written = [];
-        CppArtifactContext context = new(config, config.ResolvedTarget.Identifier, CppGeneratedArtifactKind.ManagedSource);
-        foreach (CppGeneratedArtifact artifact in config.Lowerings.CollectArtifacts(context))
+        List<CppManagedSourceArtifact> sources = [];
+        CppArtifactContext context = new(config, config.resolvedTarget.targetId.value, CppGeneratedArtifactKind.ManagedSource);
+        foreach (CppGeneratedArtifact artifact in config.lowerings.CollectArtifacts(context))
         {
-            if (artifact.Kind != CppGeneratedArtifactKind.ManagedSource)
-                throw new InvalidOperationException($"Artifact '{artifact.RelativePath}' was returned for managed stage but declares {artifact.Kind}.");
-            string path = Path.GetFullPath(artifact.RelativePath, root);
-            EnsureContained(root, path);
-            if (!path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Managed lowering artifact '{artifact.RelativePath}' must use the .cs extension.");
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, artifact.Content);
-            written.Add(path);
+            if (artifact.kind != CppGeneratedArtifactKind.ManagedSource)
+                throw new InvalidOperationException($"Artifact '{artifact.relativePath}' was returned for managed stage but declares {artifact.kind}.");
+            if (!artifact.relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Managed lowering artifact '{artifact.relativePath}' must use the .cs extension.");
+            sources.Add(new(artifact.relativePath, artifact.content));
         }
-        string? configuredProjections = BuildConfiguredManagedProjections(config);
-        if (configuredProjections != null)
-        {
-            string path = Path.Combine(root, "ConfiguredLoweringProjections.g.cs");
-            Directory.CreateDirectory(root);
-            File.WriteAllText(path, configuredProjections);
-            written.Add(path);
-        }
-        return written;
+        CppManagedProjectionBinding[] projections = GetProjectionRecipes(config).Select(recipe => new CppManagedProjectionBinding(
+            GetProjectionAlias(recipe.name), SanitizeIdentifier(recipe.name), recipe.managedProjection!.managedType,
+            recipe.managedProjection.managedToNativeExpression, recipe.managedProjection.nativeToManagedExpression,
+            recipe.managedProjection.requiredNamespace)).ToArray();
+        return new(config.resolvedTarget.targetId.value, config.cSharpNamespace, SanitizeIdentifier(config.cSharpApiName), sources, projections);
     }
 
-    private static string? BuildConfiguredManagedProjections(Cpp2CGeneratorConfig config)
-    {
-        CppTypeLoweringRecipe[] recipes = config.TypeLowerings
-            .Where(recipe => recipe.ManagedProjection != null)
-            .OrderBy(recipe => recipe.Name, StringComparer.Ordinal)
-            .ToArray();
-        if (recipes.Length == 0)
-            return null;
+    /// <summary>
+    /// Writes frozen extension sources and conversions into a caller-owned candidate directory.
+    /// </summary>
+    /// <param name="plan">Frozen managed contribution captured during bridge analysis.</param>
+    /// <param name="bindings">C binding IR supplying the actual target ABI carriers.</param>
+    /// <param name="context">Caller-owned candidate output and runtime namespace.</param>
+    /// <returns>Written source paths; publication remains the caller's responsibility.</returns>
+    /// <exception cref="ArgumentNullException">A required input is null.</exception>
+    /// <exception cref="InvalidOperationException">Targets differ, carriers are unavailable, or output paths escape or repeat.</exception>
+    public static IReadOnlyList<string> EmitManaged(
+        CppManagedArtifactPlan plan,
+        BindingModule bindings,
+        EmissionContext context
+    ) {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(bindings);
+        ArgumentNullException.ThrowIfNull(context);
+        if (plan.targetId != bindings.targetAbi)
+            throw new InvalidOperationException($"Managed projection target '{plan.targetId}' differs from binding target '{bindings.targetAbi}'.");
+        string root = Path.Combine(Path.GetFullPath(context.outputPath), "Extensions");
+        List<(string path, string content)> outputs = [];
+        foreach (CppManagedSourceArtifact source in plan.sources)
+            outputs.Add((Path.GetFullPath(source.relativePath, root), source.content));
+        if (plan.projections.Count > 0)
+            outputs.Add((Path.Combine(root, "ConfiguredLoweringProjections.g.cs"), BuildConfiguredManagedProjections(plan, bindings, context.runtimeNamespace)));
+        HashSet<string> paths = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        foreach ((string path, _) in outputs)
+        {
+            EnsureContained(root, path);
+            if (!path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || !paths.Add(path))
+                throw new InvalidOperationException($"Managed projection output path is invalid or repeated: '{path}'.");
+        }
+        foreach ((string path, string content) in outputs)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, content);
+        }
+        return Array.AsReadOnly(outputs.Select(output => output.path).ToArray());
+    }
+
+    private static string BuildConfiguredManagedProjections(
+        CppManagedArtifactPlan plan,
+        BindingModule bindings,
+        string runtimeNamespace
+    ) {
         SortedSet<string> namespaces = new(StringComparer.Ordinal);
-        foreach (CppTypeLoweringRecipe recipe in recipes)
-            if (!string.IsNullOrWhiteSpace(recipe.ManagedProjection!.RequiredNamespace))
-                namespaces.Add(recipe.ManagedProjection.RequiredNamespace!);
-        System.Text.StringBuilder writer = new();
+        if (!string.IsNullOrWhiteSpace(runtimeNamespace))
+            namespaces.Add(runtimeNamespace);
+        foreach (CppManagedProjectionBinding projection in plan.projections)
+            if (!string.IsNullOrWhiteSpace(projection.requiredNamespace))
+                namespaces.Add(projection.requiredNamespace!);
+        StringBuilder writer = new();
         writer.AppendLine("// <auto-generated/>");
         foreach (string value in namespaces)
             writer.Append("using ").Append(value).AppendLine(";");
-        writer.Append("namespace ").Append(config.CSharpNamespace).AppendLine(";");
-        writer.Append("public static partial class ").Append(SanitizeIdentifier(config.CSharpApiName)).AppendLine("Lowerings");
+        writer.Append("namespace ").Append(plan.namespaceName).AppendLine(";");
+        writer.Append("public static unsafe partial class ").Append(plan.apiName).AppendLine("Lowerings");
         writer.AppendLine("{");
-        foreach (CppTypeLoweringRecipe recipe in recipes)
+        foreach (CppManagedProjectionBinding projection in plan.projections)
         {
-            CppManagedProjection projection = recipe.ManagedProjection!;
-            string methodName = SanitizeIdentifier(recipe.Name);
-            string nativeType = ToManagedAbiType(recipe.CAbiType);
-            if (!string.IsNullOrWhiteSpace(projection.ManagedToNativeExpression))
+            BindingType? alias = bindings.types.SingleOrDefault(type => type.nativeName == projection.aliasName);
+            string nativeType = alias?.underlyingType?.managedName
+                ?? throw new InvalidOperationException($"C ABI carrier '{projection.aliasName}' is absent from analyzed bindings.");
+            string methodName = projection.methodName;
+            if (!string.IsNullOrWhiteSpace(projection.managedToNativeExpression))
             {
-                writer.Append("    public static ").Append(nativeType).Append(" ToNative_").Append(methodName)
-                    .Append('(').Append(projection.ManagedType).Append(" value) => ")
-                    .Append(projection.ManagedToNativeExpression!.Replace("{value}", "value", StringComparison.Ordinal)).AppendLine(";");
+                writer.Append("    public static ").Append(nativeType).Append(" ToNative_").Append(methodName).Append('(').Append(projection.managedType).Append(" value) => ").Append(projection.managedToNativeExpression!.Replace("{value}", "value", StringComparison.Ordinal)).AppendLine(";");
             }
-            if (!string.IsNullOrWhiteSpace(projection.NativeToManagedExpression))
+
+            if (!string.IsNullOrWhiteSpace(projection.nativeToManagedExpression))
             {
-                writer.Append("    public static ").Append(projection.ManagedType).Append(" FromNative_").Append(methodName)
-                    .Append('(').Append(nativeType).Append(" value) => ")
-                    .Append(projection.NativeToManagedExpression!.Replace("{value}", "value", StringComparison.Ordinal)).AppendLine(";");
+                writer.Append("    public static ").Append(projection.managedType).Append(" FromNative_").Append(methodName).Append('(').Append(nativeType).Append(" value) => ").Append(projection.nativeToManagedExpression!.Replace("{value}", "value", StringComparison.Ordinal)).AppendLine(";");
             }
         }
+
         writer.AppendLine("}");
         return writer.ToString();
     }
 
-    private static string ToManagedAbiType(string cAbiType)
+    private static CppTypeLoweringRecipe[] GetProjectionRecipes(Cpp2CGeneratorConfig config)
     {
-        string type = cAbiType.Replace("const ", string.Empty, StringComparison.Ordinal).Trim();
-        if (type.EndsWith('*')) return "nint";
-        return type switch
+        CppTypeLoweringRecipe[] recipes = config.typeLowerings.Where(recipe => recipe.managedProjection != null)
+            .OrderBy(recipe => recipe.name, StringComparer.Ordinal).ToArray();
+        HashSet<string> aliases = new(StringComparer.Ordinal);
+        foreach (CppTypeLoweringRecipe recipe in recipes)
         {
-            "bool" => "bool",
-            "char" or "int8_t" => "sbyte",
-            "uint8_t" => "byte",
-            "short" or "int16_t" => "short",
-            "uint16_t" => "ushort",
-            "int" or "int32_t" => "int",
-            "unsigned" or "unsigned int" or "uint32_t" => "uint",
-            "long long" or "int64_t" => "long",
-            "unsigned long long" or "uint64_t" or "size_t" => "ulong",
-            "float" => "float",
-            "double" => "double",
-            _ => "nint"
-        };
+            if (!aliases.Add(GetProjectionAlias(recipe.name)))
+                throw new InvalidOperationException($"Managed lowering identity '{recipe.name}' repeats after identifier normalization.");
+        }
+        return recipes;
     }
+
+    private static string GetProjectionAlias(string name) => "BGCS_Projection_" + SanitizeIdentifier(name);
 
     private static string SanitizeIdentifier(string value)
     {
         string result = string.Concat(value.Select(character => char.IsLetterOrDigit(character) || character == '_' ? character : '_'));
-        if (string.IsNullOrEmpty(result)) return "Custom";
+        if (string.IsNullOrEmpty(result))
+            return "Custom";
         return char.IsDigit(result[0]) ? "_" + result : result;
     }
 
-    private static void EnsureContained(string root, string path)
-    {
+    private static void EnsureContained(
+        string root,
+        string path
+    ) {
         string relative = Path.GetRelativePath(Path.GetFullPath(root), path);
         if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
             throw new InvalidOperationException($"Generated extension path escapes its output root: {path}");
     }
-}
-
-internal sealed class ConfiguredNativeShimContributor(CppNativeShim shim, string configDirectory)
-    : ICppArtifactContributor, ICacheFingerprintProvider
-{
-    public string Name => "shim." + shim.Name;
-    public int Priority => 0;
-
-    public IReadOnlyList<CppGeneratedArtifact> Contribute(CppArtifactContext context)
-    {
-        IEnumerable<string> files = context.Stage switch
-        {
-            CppGeneratedArtifactKind.PublicHeader => shim.PublicHeaders,
-            CppGeneratedArtifactKind.NativeSource => shim.SourceFiles,
-            _ => []
-        };
-        CppGeneratedArtifactKind kind = context.Stage;
-        return files.Select(path =>
-        {
-            string fullPath = Path.GetFullPath(path, configDirectory);
-            if (!File.Exists(fullPath))
-                throw new FileNotFoundException($"Configured native shim file not found: {fullPath}", fullPath);
-            return new CppGeneratedArtifact(
-                Path.Combine(Sanitize(shim.Name), Path.GetFileName(fullPath)),
-                File.ReadAllText(fullPath),
-                kind,
-                ExposeToBindings: kind == CppGeneratedArtifactKind.PublicHeader,
-                Safety: shim.Safety);
-        }).ToArray();
-    }
-
-    public string GetCacheFingerprint()
-    {
-        using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (string path in shim.PublicHeaders.Concat(shim.SourceFiles).OrderBy(value => value, StringComparer.Ordinal))
-        {
-            string fullPath = Path.GetFullPath(path, configDirectory);
-            hash.AppendData(System.Text.Encoding.UTF8.GetBytes(path));
-            if (File.Exists(fullPath))
-                hash.AppendData(File.ReadAllBytes(fullPath));
-        }
-        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
-    }
-
-    private static string Sanitize(string value) => string.Concat(value.Select(character =>
-        char.IsLetterOrDigit(character) || character is '_' or '-' ? character : '_'));
 }

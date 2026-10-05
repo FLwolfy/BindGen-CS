@@ -2,11 +2,15 @@
 
 [English](README.md) | [简体中文](README.cn.md) | [仓库 README](../README.cn.md)
 
+完整重构的本机结果见[验收记录](architecture-refactor-acceptance.cn.md)，
+[逐项核对](architecture-plan-audit.cn.md)将批准的 Plan、实际边界和独立证据对应起来。
+其他宿主实机和远程发布状态单独记录。
+
 ## 第一次使用
 
 1. [快速开始](getting-started.cn.md)：从 header 到可编译的 bindings。
 2. [能力与边界](capabilities.cn.md)：先确认目标 ABI/C++ 特性是否在支持范围内。
-3. [兼容与废弃政策](compatibility-policy.cn.md)：配置版本、公开 API、废弃周期与供应链证据。
+3. [当前契约与发布证据](compatibility-policy.cn.md)：配置、公开 API、目标支持与供应链证据。
 4. [配置指南](configuration-guide.cn.md)：选择 preset、target、import mode 和 marshalling policy。
 5. [诊断指南](diagnostics.cn.md)：处理 parser、ownership、buffer、callback 和 C++ lowering 问题。
 
@@ -30,7 +34,10 @@
 
 ## 设计与质量
 
+- [通用 C# 开发规范](csharp-development-standard.cn.md)：独立于消费方的命名、排版、API 与生命周期要求。
+- [平台架构完整重构计划](platform-architecture-refactor-plan.cn.md)：目标目录、依赖边界、执行顺序与验收矩阵。
 - [架构说明](architecture.cn.md)：分层、依赖规则和 IR-native 数据流。
+- [平台扩展与 Solution 组织](platform-extension.cn.md)：宿主/目标区分、iOS 目标描述、新 provider 接入和工程分组。
 - [C++ 扩展实战手册](cpp-extension-cookbook.cn.md)：从配置到真实 native/C# invocation 的高级扩展教程。
 - [验收规范](acceptance.cn.md)：9.0 gate、性能预算和 target 隔离。
 - [能力与边界](capabilities.cn.md)：实现、证据和未覆盖范围的对照表。

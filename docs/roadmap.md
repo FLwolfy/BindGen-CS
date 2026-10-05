@@ -82,7 +82,7 @@ Exit: real C library failures are explicit unsupported contracts, never silent m
 
 ### Phase 4 — C++ semantic bridge and final lowering SPI
 
-Status: complete for the declared desktop subset. Built-ins, `TypeLowerings` / `CallableLowerings`, typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugins, and explicit `NativeShims` use one deterministic registry. The superseded pre-release adapter SPI was deleted without a compatibility layer.
+Status: complete for the declared desktop subset. Built-ins, `typeLowerings` / `callableLowerings`, typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugins, and explicit `nativeShims` use one deterministic registry. The superseded pre-release adapter SPI was deleted without a compatibility layer.
 
 - Complete callable qualifiers, overloads, operators, namespaces, constructors/destructors, and exception boundaries.
 - Model inheritance, virtual/non-virtual bases, pointer adjustment, and RTTI availability.
@@ -101,7 +101,7 @@ Status: complete for the declared contracts. IR models allocator domains/pairs, 
 - Type allocator/deallocator pairs, arenas, contexts, encoding, nullability, length, capacity, and written counts.
 - Compose callback retention, threading, async completion, and unregister policies.
 - Generate SafeHandle/IDisposable/Span/string APIs while retaining auditable raw ABI.
-- Make `StrictSafetySeverity=Error` the recommended release/CI mode.
+- Make `strictSafetySeverity=Error` the recommended release/CI mode.
 
 Exit: every friendly API that allocates, retains a pointer, or stores a callback exposes the complete lifetime source in IR.
 

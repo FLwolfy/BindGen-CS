@@ -30,14 +30,14 @@ mkdir -p "${PERF_DIR}"
 awk -v count="${DECLARATION_COUNT}" 'BEGIN { for (i = 0; i < count; i++) printf "int bgcs_perf_%d(int value);\n", i }' > "${PERF_DIR}/large.h"
 cat > "${PERF_DIR}/bindgen.json" <<EOF
 {
-  "Preset": "host-c,c-library",
-  "Namespace": "BGCS.Performance.Generated",
-  "ApiName": "PerformanceApi",
-  "LibName": "performance",
-  "EntryFiles": ["large.h"],
-  "OutputPath": "Generated",
-  "EnableIncrementalCache": true,
-  "CacheDirectory": ".cache"
+  "preset": "host-c,c-library",
+  "namespace": "BGCS.Performance.Generated",
+  "apiName": "PerformanceApi",
+  "libName": "performance",
+  "entryFiles": ["large.h"],
+  "outputPath": "Generated",
+  "enableIncrementalCache": true,
+  "cacheDirectory": ".cache"
 }
 EOF
 

@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using BGCS.Configuration;
+using BGCS.Facade;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -7,7 +9,7 @@ namespace BGCS.Tests;
 public class EndToEndWorkflowTests
 {
     [Fact]
-    public void BatchGenerator_WithConfigFileAndCliOutputOverride_ShouldGenerateBindingsAndRuntimeWithConfiguredNamespace()
+    public void ConfiguredGeneration_OutputOverrideUsesTheSharedPipelineAndRuntimeNamespace()
     {
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-e2e-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -21,25 +23,23 @@ public class EndToEndWorkflowTests
 
         CsCodeGeneratorConfig cfg = new()
         {
-            ApiName = "DemoApi",
-            Namespace = "BGCS.Tests.E2E",
-            LibName = "demo",
-            GenerateExtensions = false,
-            MergeGeneratedFilesToSingleFile = true,
-            GenerateRuntimeSource = true,
-            RuntimeNamespace = "Custom.Runtime",
-            ImportType = ImportType.DllImport
+            entryFiles = ["demo.h"],
+            apiName = "DemoApi",
+            @namespace = "BGCS.Tests.E2E",
+            libName = "demo",
+            generateExtensions = false,
+            mergeGeneratedFilesToSingleFile = true,
+            generateRuntimeSource = true,
+            runtimeNamespace = "Custom.Runtime",
+            importType = ImportType.DllImport
         };
 
         cfg.Save(configPath);
 
         try
         {
-            BatchGenerator
-                .Create()
-                .WithArgs(["--output-dir", cliRoot])
-                .Setup<CsCodeGenerator>(configPath)
-                .Generate(headerPath, relativeOut);
+            CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
+            Assert.True(generator.GenerateConfigured(Path.Combine(cliRoot, relativeOut)));
 
             string actualOut = Path.Combine(cliRoot, relativeOut);
             string bindingsPath = Path.Combine(actualOut, "Bindings.cs");

@@ -1,3 +1,5 @@
+using System;
+
 namespace BGCS.Conversion;
 
 using BGCS.CppAst.Model.Declarations;
@@ -8,10 +10,11 @@ using BGCS.CppAst.Model.Types;
 /// </summary>
 internal static class PlatformAbiTypeClassifier
 {
-    internal const string Aapcs64VaListManagedType = "global::BGCS.Runtime.Aapcs64VaList";
-
-    internal static bool TryGetManagedCarrier(CppType type, out string managedType)
-    {
+    internal const string C_AAPCS64VALISTMANAGEDTYPE = "global::BGCS.Runtime.Aapcs64VaList";
+    internal static bool TryGetManagedCarrier(
+        CppType type,
+        out string managedType
+    ) {
         if (IsDecayedVaList(type))
         {
             managedType = "nint";
@@ -20,7 +23,7 @@ internal static class PlatformAbiTypeClassifier
 
         if (IsAapcs64VaList(type))
         {
-            managedType = Aapcs64VaListManagedType;
+            managedType = global::BGCS.Conversion.PlatformAbiTypeClassifier.C_AAPCS64VALISTMANAGEDTYPE;
             return true;
         }
 
@@ -29,7 +32,6 @@ internal static class PlatformAbiTypeClassifier
     }
 
     internal static bool IsVaList(CppType type) => IsDecayedVaList(type) || IsAapcs64VaList(type);
-
     /// <summary>
     /// Detects the SysV x64 <c>va_list</c> representation: an array of one compiler-owned
     /// <c>__va_list_tag</c>. C function parameters decay this array to a pointer, so the portable
@@ -40,18 +42,17 @@ internal static class PlatformAbiTypeClassifier
     {
         ArgumentNullException.ThrowIfNull(type);
         while (type is CppTypedef typedef)
-            type = typedef.ElementType;
+            type = typedef.elementType;
         while (type is CppQualifiedType qualified)
-            type = qualified.ElementType;
-        if (type is not CppArrayType { Size: 1 } array)
+            type = qualified.elementType;
+        if (type is not CppArrayType { size: 1 } array)
             return false;
-        type = array.ElementType;
+        type = array.elementType;
         while (type is CppTypedef typedef)
-            type = typedef.ElementType;
+            type = typedef.elementType;
         while (type is CppQualifiedType qualified)
-            type = qualified.ElementType;
-        return type is CppClass cppClass &&
-            string.Equals(cppClass.Name, "__va_list_tag", StringComparison.Ordinal);
+            type = qualified.elementType;
+        return type is CppClass cppClass && string.Equals(cppClass.name, "__va_list_tag", StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -63,42 +64,36 @@ internal static class PlatformAbiTypeClassifier
     {
         ArgumentNullException.ThrowIfNull(type);
         type = Unwrap(type);
-        if (type is not CppClass { SizeOf: 32 } cppClass || cppClass.Fields.Count != 5)
+        if (type is not CppClass { sizeOf: 32 } cppClass || cppClass.fields.Count != 5)
             return false;
-
         string[] names = ["__stack", "__gr_top", "__vr_top", "__gr_offs", "__vr_offs"];
         for (int i = 0; i < names.Length; i++)
         {
-            if (!string.Equals(cppClass.Fields[i].Name, names[i], StringComparison.Ordinal))
+            if (!string.Equals(cppClass.fields[i].name, names[i], StringComparison.Ordinal))
                 return false;
         }
 
-        return IsVoidPointer(cppClass.Fields[0].Type) &&
-            IsVoidPointer(cppClass.Fields[1].Type) &&
-            IsVoidPointer(cppClass.Fields[2].Type) &&
-            IsInt32(cppClass.Fields[3].Type) &&
-            IsInt32(cppClass.Fields[4].Type);
+        return IsVoidPointer(cppClass.fields[0].type) && IsVoidPointer(cppClass.fields[1].type) && IsVoidPointer(cppClass.fields[2].type) && IsInt32(cppClass.fields[3].type) && IsInt32(cppClass.fields[4].type);
     }
 
     private static CppType Unwrap(CppType type)
     {
         while (type is CppTypedef typedef)
-            type = typedef.ElementType;
+            type = typedef.elementType;
         while (type is CppQualifiedType qualified)
-            type = qualified.ElementType;
+            type = qualified.elementType;
         return type;
     }
 
     private static bool IsVoidPointer(CppType type)
     {
         type = Unwrap(type);
-        return type is CppPointerType pointer &&
-            Unwrap(pointer.ElementType) is CppPrimitiveType { Kind: CppPrimitiveKind.Void };
+        return type is CppPointerType pointer && Unwrap(pointer.elementType) is CppPrimitiveType { kind: CppPrimitiveKind.Void };
     }
 
     private static bool IsInt32(CppType type)
     {
         type = Unwrap(type);
-        return type is CppPrimitiveType { Kind: CppPrimitiveKind.Int, SizeOf: 4 };
+        return type is CppPrimitiveType { kind: CppPrimitiveKind.Int, sizeOf: 4 };
     }
 }

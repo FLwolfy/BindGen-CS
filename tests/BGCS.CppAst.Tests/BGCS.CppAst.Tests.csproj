@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/BGCS.CppAst/BGCS.CppAst.csproj" />
+    <ProjectReference Include="../fixtures/ParserLibraryHost/ParserLibraryHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

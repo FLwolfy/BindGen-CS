@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using BGCS.Tool.Commands;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -25,7 +24,7 @@ public sealed class ExplainCommandTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("Cause:", result.Output, StringComparison.Ordinal);
-        Assert.Contains("LengthParameter", result.Output, StringComparison.Ordinal);
+        Assert.Contains("lengthParameter", result.Output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -34,8 +33,8 @@ public sealed class ExplainCommandTests
         CommandResult result = Run("BGCSCPP001", "--json");
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("\"Code\": \"BGCSCPP001\"", result.Output, StringComparison.Ordinal);
-        Assert.Contains("\"Resolution\"", result.Output, StringComparison.Ordinal);
+        Assert.Contains("\"code\": \"BGCSCPP001\"", result.Output, StringComparison.Ordinal);
+        Assert.Contains("\"resolution\"", result.Output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -47,11 +46,20 @@ public sealed class ExplainCommandTests
         Assert.Contains("Unknown diagnostic", result.Error, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Run_OutputFailure_DescribesPublicationAndPreservedOutput()
+    {
+        CommandResult result = Run("BGCSIO001");
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("file-system", result.Output, StringComparison.Ordinal);
+        Assert.Contains("preserves prior output", result.Output, StringComparison.Ordinal);
+    }
+
     private static CommandResult Run(params string[] args)
     {
         using StringWriter output = new();
         using StringWriter error = new();
-        int exitCode = ExplainCommand.Run(args, output, error);
+        int exitCode = CliInvocation.Run(["explain", .. args], Environment.CurrentDirectory, output, error);
         return new(exitCode, output.ToString(), error.ToString());
     }
 

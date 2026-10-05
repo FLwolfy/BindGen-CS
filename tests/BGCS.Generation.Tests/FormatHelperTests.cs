@@ -1,11 +1,12 @@
-using Xunit;
-using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Types;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Parsing;
 using System;
 using System.IO;
-using System.Linq;
+using BGCS.Configuration;
+using BGCS.Conversion;
+using BGCS.CppAst.Model.Declarations;
+using BGCS.CppAst.Model.Metadata;
+using BGCS.CppAst.Model.Types;
+using BGCS.CppAst.Parsing;
+using Xunit;
 
 namespace BGCS.Tests;
 
@@ -41,9 +42,9 @@ public class FormatHelperTests
     [Fact]
     public void PointerHelpers_ShouldDetectDepthAndElementType()
     {
-        CppType intType = CppPrimitiveType.Int;
-        CppType ptr = new CppPointerType(default, intType);
-        CppType ptrPtr = new CppPointerType(default, ptr);
+        CppType intType = CppPrimitiveType.@int;
+        CppType ptr = new CppPointerType(default, intType, System.IntPtr.Size);
+        CppType ptrPtr = new CppPointerType(default, ptr, System.IntPtr.Size);
 
         int depth = 0;
         bool isPointer = ptrPtr.IsPointer(ref depth, out CppType pointerType);
@@ -57,7 +58,7 @@ public class FormatHelperTests
         Assert.Equal(2, depth);
 
         CppTypedef alias = new(default, "AliasInt", intType);
-        CppType aliasPointer = new CppPointerType(default, alias);
+        CppType aliasPointer = new CppPointerType(default, alias, System.IntPtr.Size);
         Assert.True(intType.IsPointerOf(aliasPointer));
         Assert.True(alias.IsPointerOf(ptr));
     }
@@ -65,13 +66,13 @@ public class FormatHelperTests
     [Fact]
     public void PrimitiveHelpers_ShouldResolveThroughTypedefAndPointer()
     {
-        CppTypedef alias = new(default, "AliasInt", CppPrimitiveType.Int);
-        CppPointerType pointer = new(default, alias);
+        CppTypedef alias = new(default, "AliasInt", CppPrimitiveType.@int);
+        CppPointerType pointer = new(default, alias, System.IntPtr.Size);
 
         Assert.True(pointer.IsPrimitive(out var primitive));
-        Assert.Equal(CppPrimitiveKind.Int, primitive!.Kind);
-        Assert.True(CppPrimitiveType.Void.IsVoid());
-        Assert.False(CppPrimitiveType.Int.IsVoid());
+        Assert.Equal(CppPrimitiveKind.Int, primitive!.kind);
+        Assert.True(CppPrimitiveType.@void.IsVoid());
+        Assert.False(CppPrimitiveType.@int.IsVoid());
     }
 
     [Theory]
@@ -126,12 +127,12 @@ public class FormatHelperTests
     {
         CsCodeGeneratorConfig cfg = new();
 
-        CppType charPtr = new CppPointerType(default, CppPrimitiveType.Char);
+        CppType charPtr = new CppPointerType(default, CppPrimitiveType.@char, System.IntPtr.Size);
         Assert.True(charPtr.IsString(cfg, out var charKind));
         Assert.Equal(CppPrimitiveKind.Char, charKind);
 
-        CppTypedef typedef = new(default, "Utf8String", CppPrimitiveType.Int);
-        cfg.TypeMappings["Utf8String"] = "byte*";
+        CppTypedef typedef = new(default, "Utf8String", CppPrimitiveType.@int);
+        cfg.typeMappings["Utf8String"] = "byte*";
         Assert.True(typedef.IsString(cfg, out var mappedKind));
         Assert.Equal(CppPrimitiveKind.Char, mappedKind);
     }
@@ -141,9 +142,9 @@ public class FormatHelperTests
     {
         CppUnexposedType templateParam = new(default, "T");
         CppFunction function = new(default, "Foo");
-        function.TemplateParameters.Add(templateParam);
+        function.templateParameters.Add(templateParam);
 
-        CppType paramType = new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, templateParam));
+        CppType paramType = new CppPointerType(default, new CppQualifiedType(default, CppTypeQualifier.Const, templateParam), System.IntPtr.Size);
 
         Assert.True(paramType.IsTemplateParameter(function));
         Assert.Equal("T*", paramType.GetTemplateParameterCsName("T"));
@@ -152,9 +153,9 @@ public class FormatHelperTests
     [Fact]
     public void GetPrimitiveKind_ShouldReportDirectAndPointerUnderlyingPrimitive()
     {
-        CppType array = new CppArrayType(default, new CppPointerType(default, CppPrimitiveType.WChar), 3);
+        CppType array = new CppArrayType(default, new CppPointerType(default, CppPrimitiveType.wChar, System.IntPtr.Size), 3);
 
-        CppPrimitiveKind directKind = CppPrimitiveType.Int.GetPrimitiveKind();
+        CppPrimitiveKind directKind = CppPrimitiveType.@int.GetPrimitiveKind();
         CppPrimitiveKind nestedKind = array.GetPrimitiveKind();
 
         Assert.Equal(CppPrimitiveKind.Int, directKind);
@@ -176,9 +177,9 @@ public class FormatHelperTests
 
         try
         {
-            CppParserOptions options = new() { ParseMacros = false, ParseSystemIncludes = false, ParserKind = CppParserKind.C };
+            CppParserOptions options = new() { parseMacros = false, parseSystemIncludes = false, parserKind = CppParserKind.C };
             CppCompilation compilation = CppParser.ParseFile(header, options);
-            CppClass objClass = Assert.Single(compilation.Classes, c => c.Name == "Obj");
+            CppClass objClass = Assert.Single(compilation.classes, c => c.name == "Obj");
 
             bool usedAsPointer = objClass.IsUsedAsPointer(compilation, out var depths);
 

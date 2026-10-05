@@ -2,11 +2,15 @@
 
 [English](README.md) | [简体中文](README.cn.md) | [Repository README](../README.md)
 
+The completed local refactor is documented in the [acceptance record](architecture-refactor-acceptance.cn.md).
+The [requirement audit](architecture-plan-audit.cn.md) maps the approved plan to the current boundaries and independent evidence.
+Other host and release execution states are reported separately.
+
 ## First use
 
 1. [Getting started](getting-started.md): go from a header to compilable bindings.
 2. [Capabilities and boundaries](capabilities.md): verify that the target ABI/C++ feature is in scope.
-3. [Compatibility and deprecation policy](compatibility-policy.md): configuration versions, public contracts, deprecation windows, and supply-chain evidence.
+3. [Current contracts and release evidence](compatibility-policy.md): configuration, public APIs, target support, and supply-chain evidence.
 4. [Configuration guide](configuration-guide.md): choose presets, targets, import modes, and marshalling policies.
 5. [Diagnostics guide](diagnostics.md): resolve parser, ownership, buffer, callback, and C++ lowering issues.
 
@@ -29,6 +33,9 @@
 | Publish packages | [Publishing](publish.md) |
 
 ## Design and quality
+
+[Platform extension and solution layout (Chinese)](platform-extension.cn.md) explains host/target separation,
+the current iOS target descriptor API, provider composition and the cleaned solution structure.
 
 - [Architecture](architecture.md): layers, dependency rules, and the IR-native data flow.
 - [C++ extension cookbook](cpp-extension-cookbook.md): advanced extensions from configuration through real native/C# invocation.

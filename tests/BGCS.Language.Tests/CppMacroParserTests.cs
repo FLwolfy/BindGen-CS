@@ -1,6 +1,8 @@
-using BGCS.Language;
+using BGCS.Core.Text;
 using BGCS.Language.Cpp;
-using BGCS.Language.Cpp.Analysers;
+using BGCS.Language.Cpp.Nodes;
+using BGCS.Language.Lexing;
+using BGCS.Language.Syntax;
 using Xunit;
 
 namespace BGCS.Language.Tests;
@@ -14,8 +16,8 @@ public class CppMacroParserTests
         CppMacroParser parser = new();
         var result = parser.Parse(input, "");
 
-        Assert.NotNull(result.SyntaxTree);
-        Assert.False(result.Diagnostics.HasErrors, result.Diagnostics.ToString());
+        Assert.NotNull(result.syntaxTree);
+        Assert.False(result.diagnostics.hasErrors, result.diagnostics.ToString());
 
         FunctionCallNode bar = new("BAR");
         bar.AddChild(new ValueNode("2", LiteralType.Number, NumberType.Int));
@@ -30,7 +32,7 @@ public class CppMacroParserTests
 
         SyntaxTree expected = new(new RootNode(new() { expr }));
 
-        Assert.Equal(expected.BuildDebugTree(), result.SyntaxTree!.BuildDebugTree());
+        Assert.Equal(expected.BuildDebugTree(), result.syntaxTree!.BuildDebugTree());
     }
 
     [Fact]
@@ -40,8 +42,8 @@ public class CppMacroParserTests
         CppMacroParser parser = new();
         var result = parser.Parse(input, "");
 
-        Assert.NotNull(result.SyntaxTree);
-        Assert.False(result.Diagnostics.HasErrors, result.Diagnostics.ToString());
+        Assert.NotNull(result.syntaxTree);
+        Assert.False(result.diagnostics.hasErrors, result.diagnostics.ToString());
 
         OperatorNode or = new("|");
         or.AddChild(new VariableNode("A"));
@@ -66,7 +68,7 @@ public class CppMacroParserTests
 
         SyntaxTree expected = new(new RootNode(new() { expr }));
 
-        Assert.Equal(expected.BuildDebugTree(), result.SyntaxTree!.BuildDebugTree());
+        Assert.Equal(expected.BuildDebugTree(), result.syntaxTree!.BuildDebugTree());
     }
 
     [Theory]
@@ -79,8 +81,8 @@ public class CppMacroParserTests
         CppMacroParser parser = new();
         var result = parser.Parse(input, "");
 
-        Assert.NotNull(result.SyntaxTree);
-        Assert.False(result.Diagnostics.HasErrors, result.Diagnostics.ToString());
+        Assert.NotNull(result.syntaxTree);
+        Assert.False(result.diagnostics.hasErrors, result.diagnostics.ToString());
     }
 
     [Theory]
@@ -92,7 +94,7 @@ public class CppMacroParserTests
         CppMacroParser parser = new();
         var result = parser.Parse(input, "");
 
-        Assert.True(result.Diagnostics.HasErrors);
-        Assert.Null(result.SyntaxTree);
+        Assert.True(result.diagnostics.hasErrors);
+        Assert.Null(result.syntaxTree);
     }
 }

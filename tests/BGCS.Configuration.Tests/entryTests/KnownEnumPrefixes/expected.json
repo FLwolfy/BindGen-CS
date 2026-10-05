@@ -1,5 +1,5 @@
 {
-  "Property": "KnownEnumPrefixes",
+  "Property": "knownEnumPrefixes",
   "Expected": {
     "strange_enum": "MY_PREFIX"
   }

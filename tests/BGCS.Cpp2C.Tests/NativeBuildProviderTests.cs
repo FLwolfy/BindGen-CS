@@ -3,6 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using BGCS.Cpp2C.Build;
+using BGCS.Cpp2C.Build.Providers;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
 using Xunit;
@@ -34,9 +37,9 @@ public sealed class NativeBuildProviderTests
         File.WriteAllText(header, "class CMakeDemo { public: int Twice(int value) { return value * 2; } };\n");
         try
         {
-            Cpp2CCodeGenerator generator = new(new() { NativeLibraryName = "provider_cmake" });
+            Cpp2CCodeGenerator generator = new(new() { nativeLibraryName = "provider_cmake" });
             generator.Generate(header, output);
-            Assert.True(generator.LastResult?.Success);
+            Assert.True(generator.lastResult?.success);
 
             string manifestPath = Path.Combine(output, "bridge.manifest.json");
             CppBridgeBuildManifest manifest = CppBridgeBuildManifestSerializer.Load(manifestPath);
@@ -44,10 +47,10 @@ public sealed class NativeBuildProviderTests
                 .CreatePipeline(manifest, manifestPath);
             NativeBuildPipelineResult result = NativeBuildExecutor.Execute(pipeline, TimeSpan.FromMinutes(2));
 
-            Assert.True(result.Success, string.Join(Environment.NewLine, result.Steps.Select(step => step.StandardError)));
-            NativeExportInspectionResult exports = NativeExportInspector.Inspect(manifest, manifestPath, result.OutputFile);
-            Assert.True(exports.Success, string.Join(", ", exports.Missing));
-            Assert.Contains("CMakeDemo_Twice", exports.Actual);
+            Assert.True(result.success, string.Join(Environment.NewLine, result.steps.Select(step => step.standardError)));
+            NativeExportInspectionResult exports = NativeExportInspector.Inspect(manifest, manifestPath, result.outputFile);
+            Assert.True(exports.success, string.Join(", ", exports.missing));
+            Assert.Contains("CMakeDemo_Twice", exports.actual);
         }
         finally
         {
@@ -67,22 +70,22 @@ public sealed class NativeBuildProviderTests
         File.WriteAllText(header, "class Demo { public: int Add(int value) { return value + 1; } };\n");
         try
         {
-            Cpp2CGeneratorConfig config = new() { NativeLibraryName = "provider_sample" };
+            Cpp2CGeneratorConfig config = new() { nativeLibraryName = "provider_sample" };
             Cpp2CCodeGenerator generator = new(config);
             generator.Generate(header, output);
-            Assert.True(generator.LastResult?.Success);
+            Assert.True(generator.lastResult?.success);
 
             string manifestPath = Path.Combine(output, "bridge.manifest.json");
             CppBridgeBuildManifest manifest = CppBridgeBuildManifestSerializer.Load(manifestPath);
             NativeBuildPlan plan = new ClangNativeBuildProvider(compiler).CreatePlan(manifest, manifestPath);
             NativeBuildResult result = NativeBuildExecutor.Execute(plan, TimeSpan.FromMinutes(2));
 
-            Assert.True(result.Success, result.StandardOutput + Environment.NewLine + result.StandardError);
-            Assert.True(File.Exists(result.OutputFile));
-            NativeExportInspectionResult exports = NativeExportInspector.Inspect(manifest, manifestPath, result.OutputFile);
-            Assert.True(exports.Success, string.Join(", ", exports.Missing));
-            Assert.Contains("DemoCreate", exports.Expected);
-            Assert.Contains("Demo_Add", exports.Actual);
+            Assert.True(result.success, result.standardOutput + Environment.NewLine + result.standardError);
+            Assert.True(File.Exists(result.outputFile));
+            NativeExportInspectionResult exports = NativeExportInspector.Inspect(manifest, manifestPath, result.outputFile);
+            Assert.True(exports.success, string.Join(", ", exports.missing));
+            Assert.Contains("DemoCreate", exports.expected);
+            Assert.Contains("Demo_Add", exports.actual);
         }
         finally
         {
@@ -97,13 +100,13 @@ public sealed class NativeBuildProviderTests
         string manifestPath = Path.Combine(root, "bridge.manifest.json");
         CppBridgeBuildManifest unix = CreateManifest("linux-x64-gnu") with
         {
-            TargetTriple = "x86_64-linux-gnu",
-            TargetSysRoot = "toolchains/linux-sysroot",
-            CompilerPath = "clang++"
+            targetTriple = "x86_64-linux-gnu",
+            targetSysRoot = "toolchains/linux-sysroot",
+            compilerPath = "clang++"
         };
         CppBridgeBuildManifest windows = CreateManifest("windows-x64-msvc") with
         {
-            LinkerArguments = ["/DEBUG:NONE"]
+            linkerArguments = ["/DEBUG:NONE"]
         };
 
         NativeBuildPipeline cmake = new CMakeNativeBuildProvider("cmake").CreatePipeline(unix, manifestPath);
@@ -111,24 +114,24 @@ public sealed class NativeBuildProviderTests
         NativeBuildPipeline clangCl = new ClangClNativeBuildProvider("clang-cl").CreatePipeline(windows, manifestPath);
         NativeBuildPipeline msbuild = new MSBuildNativeBuildProvider("msbuild").CreatePipeline(windows, manifestPath);
 
-        Assert.Equal(new[] { "configure", "build" }, cmake.Steps.Select(step => step.Name));
-        Assert.Contains("add_library(bgcs_bridge SHARED", Assert.Single(cmake.InputFiles).Content, StringComparison.Ordinal);
-        Assert.Contains("-DCMAKE_CXX_COMPILER=clang++", cmake.Steps[0].Arguments);
-        Assert.Contains("-DCMAKE_CXX_COMPILER_TARGET=x86_64-linux-gnu", cmake.Steps[0].Arguments);
-        Assert.Contains(cmake.Steps[0].Arguments, argument => argument.StartsWith("-DCMAKE_SYSROOT=", StringComparison.Ordinal));
-        Assert.Equal(new[] { "setup", "compile", "install" }, meson.Steps.Select(step => step.Name));
-        Assert.Contains("shared_library(", meson.InputFiles.Single(input => input.Path.EndsWith("meson.build", StringComparison.Ordinal)).Content, StringComparison.Ordinal);
-        Assert.Contains("cpp = 'clang++'", meson.InputFiles.Single(input => input.Path.EndsWith("bgcs-native.ini", StringComparison.Ordinal)).Content, StringComparison.Ordinal);
-        Assert.Contains("--native-file", meson.Steps[0].Arguments);
-        Assert.Contains("--target=x86_64-linux-gnu", meson.InputFiles.Single(input => input.Path.EndsWith("meson.build", StringComparison.Ordinal)).Content, StringComparison.Ordinal);
-        Assert.Contains("/LD", Assert.Single(clangCl.Steps).Arguments);
-        Assert.Contains("DynamicLibrary", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
-        Assert.Contains("-p:PlatformToolset=v143", Assert.Single(msbuild.Steps).Arguments);
-        Assert.Contains("/DEBUG:NONE", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
-        Assert.Contains("<LinkDLL>true</LinkDLL>", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
-        Assert.Contains("/DLL", Assert.Single(msbuild.InputFiles).Content, StringComparison.Ordinal);
-        Assert.All(cmake.Steps.Concat(meson.Steps).Concat(clangCl.Steps).Concat(msbuild.Steps),
-            step => Assert.DoesNotContain("sh -c", step.Executable + string.Join(' ', step.Arguments), StringComparison.Ordinal));
+        Assert.Equal(new[] { "configure", "build" }, cmake.steps.Select(step => step.name));
+        Assert.Contains("add_library(bgcs_bridge SHARED", Assert.Single(cmake.inputFiles).content, StringComparison.Ordinal);
+        Assert.Contains("-DCMAKE_CXX_COMPILER=clang++", cmake.steps[0].arguments);
+        Assert.Contains("-DCMAKE_CXX_COMPILER_TARGET=x86_64-linux-gnu", cmake.steps[0].arguments);
+        Assert.Contains(cmake.steps[0].arguments, argument => argument.StartsWith("-DCMAKE_SYSROOT=", StringComparison.Ordinal));
+        Assert.Equal(new[] { "setup", "compile", "install" }, meson.steps.Select(step => step.name));
+        Assert.Contains("shared_library(", meson.inputFiles.Single(input => input.path.EndsWith("meson.build", StringComparison.Ordinal)).content, StringComparison.Ordinal);
+        Assert.Contains("cpp = 'clang++'", meson.inputFiles.Single(input => input.path.EndsWith("bgcs-native.ini", StringComparison.Ordinal)).content, StringComparison.Ordinal);
+        Assert.Contains("--native-file", meson.steps[0].arguments);
+        Assert.Contains("--target=x86_64-linux-gnu", meson.inputFiles.Single(input => input.path.EndsWith("meson.build", StringComparison.Ordinal)).content, StringComparison.Ordinal);
+        Assert.Contains("/LD", Assert.Single(clangCl.steps).arguments);
+        Assert.Contains("DynamicLibrary", Assert.Single(msbuild.inputFiles).content, StringComparison.Ordinal);
+        Assert.Contains("-p:PlatformToolset=v143", Assert.Single(msbuild.steps).arguments);
+        Assert.Contains("/DEBUG:NONE", Assert.Single(msbuild.inputFiles).content, StringComparison.Ordinal);
+        Assert.Contains("<LinkDLL>true</LinkDLL>", Assert.Single(msbuild.inputFiles).content, StringComparison.Ordinal);
+        Assert.Contains("/DLL", Assert.Single(msbuild.inputFiles).content, StringComparison.Ordinal);
+        Assert.All(cmake.steps.Concat(meson.steps).Concat(clangCl.steps).Concat(msbuild.steps),
+            step => Assert.DoesNotContain("sh -c", step.executable + string.Join(' ', step.arguments), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -137,16 +140,16 @@ public sealed class NativeBuildProviderTests
         string manifestPath = Path.Combine(Path.GetTempPath(), "bgcs-gnu-driver", "bridge.manifest.json");
         CppBridgeBuildManifest manifest = CreateManifest("linux-x64-gnu") with
         {
-            TargetTriple = "x86_64-unknown-linux-gnu"
+            targetTriple = "x86_64-unknown-linux-gnu"
         };
 
         NativeBuildPlan direct = new ClangNativeBuildProvider("g++").CreatePlan(manifest, manifestPath);
         NativeBuildPipeline cmake = new CMakeNativeBuildProvider("cmake", "g++").CreatePipeline(manifest, manifestPath);
         NativeBuildPipeline meson = new MesonNativeBuildProvider("meson", "g++").CreatePipeline(manifest, manifestPath);
 
-        Assert.DoesNotContain(direct.Arguments, argument => argument.StartsWith("--target=", StringComparison.Ordinal));
-        Assert.DoesNotContain(cmake.Steps[0].Arguments, argument => argument.StartsWith("-DCMAKE_CXX_COMPILER_TARGET=", StringComparison.Ordinal));
-        Assert.DoesNotContain("--target=", meson.InputFiles.Single(file => file.Path.EndsWith("meson.build", StringComparison.Ordinal)).Content,
+        Assert.DoesNotContain(direct.arguments, argument => argument.StartsWith("--target=", StringComparison.Ordinal));
+        Assert.DoesNotContain(cmake.steps[0].arguments, argument => argument.StartsWith("-DCMAKE_CXX_COMPILER_TARGET=", StringComparison.Ordinal));
+        Assert.DoesNotContain("--target=", meson.inputFiles.Single(file => file.path.EndsWith("meson.build", StringComparison.Ordinal)).content,
             StringComparison.Ordinal);
     }
 
@@ -156,16 +159,16 @@ public sealed class NativeBuildProviderTests
         string manifestPath = Path.Combine(Path.GetTempPath(), "bgcs-unspecified-driver", "bridge.manifest.json");
         CppBridgeBuildManifest manifest = CreateManifest("linux-x64-gnu") with
         {
-            TargetTriple = "x86_64-unknown-linux-gnu",
-            CompilerPath = null
+            targetTriple = "x86_64-unknown-linux-gnu",
+            compilerPath = null
         };
 
         NativeBuildPipeline cmake = new CMakeNativeBuildProvider("cmake").CreatePipeline(manifest, manifestPath);
         NativeBuildPipeline meson = new MesonNativeBuildProvider("meson").CreatePipeline(manifest, manifestPath);
 
-        Assert.DoesNotContain(cmake.Steps[0].Arguments,
+        Assert.DoesNotContain(cmake.steps[0].arguments,
             argument => argument.StartsWith("-DCMAKE_CXX_COMPILER_TARGET=", StringComparison.Ordinal));
-        Assert.DoesNotContain("--target=", meson.InputFiles.Single(file => file.Path.EndsWith("meson.build", StringComparison.Ordinal)).Content,
+        Assert.DoesNotContain("--target=", meson.inputFiles.Single(file => file.path.EndsWith("meson.build", StringComparison.Ordinal)).content,
             StringComparison.Ordinal);
     }
 
@@ -212,7 +215,6 @@ public sealed class NativeBuildProviderTests
     }
 
     private static CppBridgeBuildManifest CreateManifest(string target) => new(
-        1,
         target,
         null,
         null,
@@ -244,7 +246,7 @@ public sealed class NativeBuildProviderTests
 
     private static void ExecuteWindowsProvider(INativeBuildPipelineProvider provider)
     {
-        string temp = Path.Combine(Path.GetTempPath(), "bgcs-windows-provider-" + provider.Name + "-" + Guid.NewGuid().ToString("N"));
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-windows-provider-" + provider.name + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         string header = Path.Combine(temp, "sample.hpp");
         string output = Path.Combine(temp, "GeneratedBridge");
@@ -253,15 +255,13 @@ public sealed class NativeBuildProviderTests
         {
             Cpp2CGeneratorConfig config = new()
             {
-                NativeLibraryName = "provider_" + provider.Name.Replace("-", "_", StringComparison.Ordinal),
-                TargetPlatform = CppTargetPlatform.Windows,
-                TargetArchitecture = CppTargetArchitecture.X64,
-                TargetAbi = CppTargetAbi.Msvc
+                nativeLibraryName = "provider_" + provider.name.Replace("-", "_", StringComparison.Ordinal),
+                targetId = "windows-x64-msvc"
             };
             Cpp2CCodeGenerator generator = new(config);
             generator.Generate(header, output);
-            Assert.True(generator.LastResult?.Success,
-                string.Join(Environment.NewLine, generator.LastResult?.Diagnostics.Select(diagnostic => diagnostic.Message) ?? []));
+            Assert.True(generator.lastResult?.success,
+                string.Join(Environment.NewLine, generator.lastResult?.diagnostics.Select(diagnostic => diagnostic.message) ?? []));
 
             string manifestPath = Path.Combine(output, "bridge.manifest.json");
             CppBridgeBuildManifest manifest = CppBridgeBuildManifestSerializer.Load(manifestPath);
@@ -269,13 +269,13 @@ public sealed class NativeBuildProviderTests
                 provider.CreatePipeline(manifest, manifestPath),
                 TimeSpan.FromMinutes(3));
 
-            Assert.True(result.Success, string.Join(Environment.NewLine,
-                result.Steps.Select(step => step.StandardOutput + Environment.NewLine + step.StandardError)));
-            Assert.True(File.Exists(result.OutputFile));
-            NativeExportInspectionResult exports = NativeExportInspector.Inspect(manifest, manifestPath, result.OutputFile);
-            Assert.True(exports.Success, "Missing exports: " + string.Join(", ", exports.Missing));
+            Assert.True(result.success, string.Join(Environment.NewLine,
+                result.steps.Select(step => step.standardOutput + Environment.NewLine + step.standardError)));
+            Assert.True(File.Exists(result.outputFile));
+            NativeExportInspectionResult exports = NativeExportInspector.Inspect(manifest, manifestPath, result.outputFile);
+            Assert.True(exports.success, "Missing exports: " + string.Join(", ", exports.missing));
 
-            nint library = NativeLibrary.Load(result.OutputFile);
+            nint library = NativeLibrary.Load(result.outputFile);
             try
             {
                 CreateDemo create = Load<CreateDemo>(library, "ProviderDemoCreate");

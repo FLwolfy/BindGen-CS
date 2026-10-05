@@ -7,21 +7,18 @@ namespace BGCS.Runtime;
 /// <summary>
 /// Owns multiple native callback leases keyed by a stable managed registration identifier.
 /// </summary>
-/// <typeparam name="TKey">Registration key type.</typeparam>
-/// <typeparam name="TDelegate">Managed callback delegate type.</typeparam>
-public sealed class NativeCallbackRegistry<TKey, TDelegate> : IDisposable
-    where TKey : notnull
-    where TDelegate : Delegate
+/// <typeparam name = "TKey">Registration key type.</typeparam>
+/// <typeparam name = "TDelegate">Managed callback delegate type.</typeparam>
+public sealed class NativeCallbackRegistry<TKey, TDelegate> : IDisposable where TKey : notnull where TDelegate : Delegate
 {
     private readonly object m_sync = new();
     private readonly Dictionary<TKey, NativeCallback<TDelegate>> m_callbacks = [];
     private readonly List<NativeCallback<TDelegate>> m_retired = [];
     private bool m_disposed;
-
     /// <summary>
     /// Gets the number of active callback leases.
     /// </summary>
-    public int Count
+    public int count
     {
         get
         {
@@ -33,13 +30,15 @@ public sealed class NativeCallbackRegistry<TKey, TDelegate> : IDisposable
     /// <summary>
     /// Registers or replaces a callback and returns its unmanaged function pointer.
     /// </summary>
-    /// <param name="key">Stable registration key.</param>
-    /// <param name="callback">Callback retained until replacement, removal, or registry disposal.</param>
+    /// <param name = "key">Stable registration key.</param>
+    /// <param name = "callback">Callback retained until replacement, removal, or registry disposal.</param>
     /// <returns>The unmanaged callback pointer.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="callback"/> is null.</exception>
-    /// <exception cref="ObjectDisposedException">Thrown after the registry has been disposed.</exception>
-    public nint Register(TKey key, TDelegate callback)
-    {
+    /// <exception cref = "ArgumentNullException">Thrown when <paramref name = "callback"/> is null.</exception>
+    /// <exception cref = "ObjectDisposedException">Thrown after the registry has been disposed.</exception>
+    public nint Register(
+        TKey key,
+        TDelegate callback
+    ) {
         ArgumentNullException.ThrowIfNull(callback);
         NativeCallback<TDelegate> replacement = new(callback);
         lock (m_sync)
@@ -55,7 +54,7 @@ public sealed class NativeCallbackRegistry<TKey, TDelegate> : IDisposable
     /// <summary>
     /// Removes a callback lease if the key is registered.
     /// </summary>
-    /// <param name="key">Registration key to remove.</param>
+    /// <param name = "key">Registration key to remove.</param>
     /// <returns><see langword="true"/> when a callback was removed.</returns>
     public bool Unregister(TKey key)
     {
@@ -85,18 +84,21 @@ public sealed class NativeCallbackRegistry<TKey, TDelegate> : IDisposable
     /// <summary>
     /// Attempts to retrieve a currently registered managed callback.
     /// </summary>
-    /// <param name="key">Registration key.</param>
-    /// <param name="callback">Receives the callback when registered.</param>
+    /// <param name = "key">Registration key.</param>
+    /// <param name = "callback">Receives the callback when registered.</param>
     /// <returns><see langword="true"/> when the key is registered.</returns>
-    public bool TryGet(TKey key, out TDelegate? callback)
-    {
+    public bool TryGet(
+        TKey key,
+        out TDelegate? callback
+    ) {
         lock (m_sync)
         {
             if (m_callbacks.TryGetValue(key, out NativeCallback<TDelegate> lease))
             {
-                callback = lease.Callback;
+                callback = lease.callback;
                 return callback != null;
             }
+
             callback = null;
             return false;
         }

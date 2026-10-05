@@ -1,4 +1,4 @@
 {
-  "Property": "OneFilePerType",
+  "Property": "oneFilePerType",
   "Expected": true
 }

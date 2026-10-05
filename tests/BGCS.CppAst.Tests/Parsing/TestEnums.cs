@@ -1,17 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
 using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Model.Types;
-using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
 using Xunit;
 namespace BGCS.CppAst.Tests
 {
@@ -44,59 +32,59 @@ enum class Enum2 : short
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    Assert.Equal(3, compilation.Enums.Count);
+                    Assert.Equal(3, compilation.enums.Count);
 
                     {
-                        var cppEnum = compilation.Enums[0];
-                        Assert.Equal("Enum0", cppEnum.Name);
-                        Assert.Equal(CppTypeKind.Primitive, cppEnum.IntegerType.TypeKind);
-                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppEnum.IntegerType).Kind);
-                        Assert.Equal(3, cppEnum.Items.Count);
-                        Assert.Equal(sizeof(int), cppEnum.SizeOf);
-                        Assert.False(cppEnum.IsScoped);
-                        Assert.Equal("Enum0_item0", cppEnum.Items[0].Name);
-                        Assert.Equal("Enum0_item1", cppEnum.Items[1].Name);
-                        Assert.Equal("Enum0_item2", cppEnum.Items[2].Name);
-                        Assert.Equal(0, cppEnum.Items[0].Value);
-                        Assert.Equal(1, cppEnum.Items[1].Value);
-                        Assert.Equal(2, cppEnum.Items[2].Value);
+                        var cppEnum = compilation.enums[0];
+                        Assert.Equal("Enum0", cppEnum.name);
+                        Assert.Equal(CppTypeKind.Primitive, cppEnum.integerType.typeKind);
+                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppEnum.integerType).kind);
+                        Assert.Equal(3, cppEnum.items.Count);
+                        Assert.Equal(sizeof(int), cppEnum.sizeOf);
+                        Assert.False(cppEnum.isScoped);
+                        Assert.Equal("Enum0_item0", cppEnum.items[0].name);
+                        Assert.Equal("Enum0_item1", cppEnum.items[1].name);
+                        Assert.Equal("Enum0_item2", cppEnum.items[2].name);
+                        Assert.Equal(0, cppEnum.items[0].value);
+                        Assert.Equal(1, cppEnum.items[1].value);
+                        Assert.Equal(2, cppEnum.items[2].value);
 
                         var cppEnum1 = compilation.FindByName<CppEnum>("Enum0");
                         Assert.Equal(cppEnum, cppEnum1);
                     }
 
                     {
-                        var cppEnum = compilation.Enums[1];
-                        Assert.Equal("Enum1", cppEnum.Name);
-                        Assert.Equal(CppTypeKind.Primitive, cppEnum.IntegerType.TypeKind);
-                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppEnum.IntegerType).Kind);
-                        Assert.Equal(3, cppEnum.Items.Count);
-                        Assert.Equal(sizeof(int), cppEnum.SizeOf);
-                        Assert.True(cppEnum.IsScoped);
-                        Assert.Equal("item0", cppEnum.Items[0].Name);
-                        Assert.Equal("item1", cppEnum.Items[1].Name);
-                        Assert.Equal("item2", cppEnum.Items[2].Name);
-                        Assert.Equal(0, cppEnum.Items[0].Value);
-                        Assert.Equal(1, cppEnum.Items[1].Value);
-                        Assert.Equal(2, cppEnum.Items[2].Value);
+                        var cppEnum = compilation.enums[1];
+                        Assert.Equal("Enum1", cppEnum.name);
+                        Assert.Equal(CppTypeKind.Primitive, cppEnum.integerType.typeKind);
+                        Assert.Equal(CppPrimitiveKind.Int, ((CppPrimitiveType)cppEnum.integerType).kind);
+                        Assert.Equal(3, cppEnum.items.Count);
+                        Assert.Equal(sizeof(int), cppEnum.sizeOf);
+                        Assert.True(cppEnum.isScoped);
+                        Assert.Equal("item0", cppEnum.items[0].name);
+                        Assert.Equal("item1", cppEnum.items[1].name);
+                        Assert.Equal("item2", cppEnum.items[2].name);
+                        Assert.Equal(0, cppEnum.items[0].value);
+                        Assert.Equal(1, cppEnum.items[1].value);
+                        Assert.Equal(2, cppEnum.items[2].value);
                     }
 
                     {
-                        var cppEnum = compilation.Enums[2];
-                        Assert.Equal("Enum2", cppEnum.Name);
-                        Assert.Equal(CppTypeKind.Primitive, cppEnum.IntegerType.TypeKind);
-                        Assert.Equal(CppPrimitiveKind.Short, ((CppPrimitiveType)cppEnum.IntegerType).Kind);
-                        Assert.Equal(3, cppEnum.Items.Count);
-                        Assert.Equal(sizeof(short), cppEnum.SizeOf);
-                        Assert.True(cppEnum.IsScoped);
-                        Assert.Equal("item0", cppEnum.Items[0].Name);
-                        Assert.Equal("item1", cppEnum.Items[1].Name);
-                        Assert.Equal("item2", cppEnum.Items[2].Name);
-                        Assert.Equal(3, cppEnum.Items[0].Value);
-                        Assert.Equal(4, cppEnum.Items[1].Value);
-                        Assert.Equal(5, cppEnum.Items[2].Value);
+                        var cppEnum = compilation.enums[2];
+                        Assert.Equal("Enum2", cppEnum.name);
+                        Assert.Equal(CppTypeKind.Primitive, cppEnum.integerType.typeKind);
+                        Assert.Equal(CppPrimitiveKind.Short, ((CppPrimitiveType)cppEnum.integerType).kind);
+                        Assert.Equal(3, cppEnum.items.Count);
+                        Assert.Equal(sizeof(short), cppEnum.sizeOf);
+                        Assert.True(cppEnum.isScoped);
+                        Assert.Equal("item0", cppEnum.items[0].name);
+                        Assert.Equal("item1", cppEnum.items[1].name);
+                        Assert.Equal("item2", cppEnum.items[2].name);
+                        Assert.Equal(3, cppEnum.items[0].value);
+                        Assert.Equal(4, cppEnum.items[1].value);
+                        Assert.Equal(5, cppEnum.items[2].value);
                     }
                 }
             );

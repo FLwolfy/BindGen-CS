@@ -1,11 +1,10 @@
-using System;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 namespace BGCS.CppAst.Model.Declarations;
+
 /// <summary>
-/// Type of a <see cref="CppClass"/> (class, struct or union)
+/// Type of a <see cref = "CppClass"/> (class, struct or union)
 /// </summary>
 public enum CppClassKind
 {

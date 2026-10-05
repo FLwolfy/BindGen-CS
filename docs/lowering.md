@@ -11,16 +11,16 @@ BindGen-CS uses one lowering pipeline for built-in STL semantics, declarative pr
 | Level | Use it for | Executes code |
 | --- | --- | --- |
 | Built-in lowering | Standard strings, containers, smart pointers, paths, and chrono values | BGCS-owned code |
-| `TypeLowerings` / `CallableLowerings` | Project types, parameter expansion, naming, and call wrappers expressible as deterministic templates | Controlled templates only |
+| `typeLowerings` / `callableLowerings` | Project types, parameter expansion, naming, and call wrappers expressible as deterministic templates | Controlled templates only |
 | Typed lowering plugin | AST matching, target branches, and additional native/managed artifacts | Trusted .NET plugin code |
-| `NativeShims` | Compiler-private ABI, complex templates, coroutines, or semantics only project C++ can interpret | Project-owned C/C++ shim |
+| `nativeShims` | Compiler-private ABI, complex templates, coroutines, or semantics only project C++ can interpret | Project-owned C/C++ shim |
 
 ## Declarative type lowering
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "TypeLowerings": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "typeLowerings": [
     {
       "Name": "engine.entity-id",
       "TypePattern": "Engine::EntityId",
@@ -44,7 +44,7 @@ BindGen-CS uses one lowering pipeline for built-in STL semantics, declarative pr
 
 ## Callable lowering
 
-`CallableLowerings` match fully-qualified function patterns, rename or exclude exports, and wrap calls through an expression containing `{invocation}`. They suit error wrappers, context dispatch, and project tracing; they must not hide an invalid ABI type.
+`callableLowerings` match fully-qualified function patterns, rename or exclude exports, and wrap calls through an expression containing `{invocation}`. They suit error wrappers, context dispatch, and project tracing; they must not hide an invalid ABI type.
 
 ## Typed lowering plugins
 
@@ -60,12 +60,16 @@ Extensions resolve by descending priority and stable name order; duplicate names
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "NativeShims": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "nativeShims": [
     {
       "Name": "engine-coroutine",
-      "PublicHeaders": ["shims/coroutine_c.h"],
-      "SourceFiles": ["shims/coroutine_c.cpp"],
+      "PublicHeaders": [
+        "shims/coroutine_c.h"
+      ],
+      "SourceFiles": [
+        "shims/coroutine_c.cpp"
+      ],
       "Safety": "UserAsserted"
     }
   ]
@@ -76,10 +80,10 @@ BGCS copies these files into transactional output, includes public headers from 
 
 ## Safety policy and bypass
 
-`LoweringSafetyPolicy` has three levels:
+`loweringSafetyPolicy` has three levels:
 
 - `VerifiedOnly`: the default; accept only BGCS-verified lowerings;
 - `AllowUserAsserted`: accept reviewed project recipes, plugins, and shims;
 - `AllowUnsafe`: explicitly bypass the lowering safety gate while emitting the auditable `BGCS-SAFETY-LOWERING-BYPASS` diagnostic.
 
-The C binding side retains `StrictSafetySeverity=Error|SuppressFriendly|Warning`; `StrictSafety=false` explicitly disables inferred ownership/lifetime checks. Project-supplied managed value carriers use `ExternalTypeContracts` with `Reject`, `RequireLayoutMatch`, or `BypassLayoutValidation`, and every accepted by-value carrier is recorded in IR with `BGCS-SAFETY-EXTERNAL-TYPE`. A bypass transfers risk to the project. It cannot make a syntactically unrepresentable ABI valid; provide a lowering or C shim for that case.
+The C binding side retains `strictSafetySeverity=Error|SuppressFriendly|Warning`; `strictSafety=false` explicitly disables inferred ownership/lifetime checks. Project-supplied managed value carriers use `externalTypeContracts` with `Reject`, `RequireLayoutMatch`, or `BypassLayoutValidation`, and every accepted by-value carrier is recorded in IR with `BGCS-SAFETY-EXTERNAL-TYPE`. A bypass transfers risk to the project. It cannot make a syntactically unrepresentable ABI valid; provide a lowering or C shim for that case.

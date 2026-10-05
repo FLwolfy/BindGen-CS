@@ -1,10 +1,10 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using BGCS.Core.Targeting;
 using BGCS.Cpp2C.Build;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
-using BGCS.Tool.Commands;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -23,10 +23,10 @@ public sealed class NativeBuildCommandTests
 
         Assert.Equal(0, result.ExitCode);
         using JsonDocument plan = JsonDocument.Parse(result.Output);
-        Assert.Equal("clang-gnu-driver", plan.RootElement.GetProperty("Provider").GetString());
-        Assert.Equal(compiler, plan.RootElement.GetProperty("Executable").GetString());
-        Assert.Contains("-shared", plan.RootElement.GetProperty("Arguments").ToString(), StringComparison.Ordinal);
-        Assert.Contains("sample.cpp", plan.RootElement.GetProperty("Arguments").ToString(), StringComparison.Ordinal);
+        Assert.Equal("clang-gnu-driver", plan.RootElement.GetProperty("provider").GetString());
+        Assert.Equal(compiler, plan.RootElement.GetProperty("executable").GetString());
+        Assert.Contains("-shared", plan.RootElement.GetProperty("arguments").ToString(), StringComparison.Ordinal);
+        Assert.Contains("sample.cpp", plan.RootElement.GetProperty("arguments").ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -42,20 +42,20 @@ public sealed class NativeBuildCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument plan = JsonDocument.Parse(result.Output);
         Assert.Equal(System.IO.Path.Combine(directory.Path, "Consumer", "native", "sample.so"),
-            plan.RootElement.GetProperty("OutputFile").GetString());
+            plan.RootElement.GetProperty("outputFile").GetString());
     }
 
     [Fact]
-    public void Run_UnsupportedManifestVersion_FailsBeforeCompilerExecution()
+    public void Run_IncompleteManifest_FailsBeforeCompilerExecution()
     {
         using TestDirectory directory = new();
-        CppBridgeBuildManifest manifest = CreateManifest() with { ManifestVersion = 999 };
+        CppBridgeBuildManifest manifest = CreateManifest() with { libraryName = string.Empty };
         directory.WriteJson("bridge.manifest.json", manifest);
 
         CommandResult result = Run(directory, "bridge.manifest.json", "--dry-run");
 
         Assert.Equal(2, result.ExitCode);
-        Assert.Contains("version 999", result.Error, StringComparison.Ordinal);
+        Assert.Contains("libraryName", result.Error, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -64,8 +64,8 @@ public sealed class NativeBuildCommandTests
         using TestDirectory directory = new();
         CppBridgeBuildManifest manifest = CreateManifest() with
         {
-            TargetIdentifier = "windows-x64-msvc",
-            TargetTriple = "x86_64-pc-windows-msvc"
+            targetIdentifier = "windows-x64-msvc",
+            targetTriple = "x86_64-pc-windows-msvc"
         };
         directory.WriteJson("bridge.manifest.json", manifest);
         string compiler = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp)
@@ -75,7 +75,7 @@ public sealed class NativeBuildCommandTests
 
         Assert.Equal(0, result.ExitCode);
         using JsonDocument plan = JsonDocument.Parse(result.Output);
-        Assert.Equal("clang-gnu-driver", plan.RootElement.GetProperty("Provider").GetString());
+        Assert.Equal("clang-gnu-driver", plan.RootElement.GetProperty("provider").GetString());
     }
 
     [Fact]
@@ -84,16 +84,16 @@ public sealed class NativeBuildCommandTests
         using TestDirectory directory = new();
         string compiler = CppToolchainDiscovery.FindCompiler(CppParserKind.Cpp)
             ?? throw new InvalidOperationException("A host C++ compiler is required for the native-build CLI test.");
-        CppTarget target = CppTarget.Resolve();
+        NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));
         CppBridgeBuildManifest manifest = CreateManifest() with
         {
-            TargetIdentifier = target.Identifier,
-            TargetTriple = target.Triple,
-            SourceFiles = ["sample.cpp"],
-            PublicHeaderFiles = [],
-            OriginalHeaderFiles = [],
-            IncludeDirectories = [],
-            Defines = []
+            targetIdentifier = target.targetId.value,
+            targetTriple = target.triple,
+            sourceFiles = ["sample.cpp"],
+            publicHeaderFiles = [],
+            originalHeaderFiles = [],
+            includeDirectories = [],
+            defines = []
         };
         directory.Write("sample.cpp", "extern \"C\" int bgcs_sample(void) { return 42; }\n");
         directory.WriteJson("bridge.manifest.json", manifest);
@@ -104,16 +104,15 @@ public sealed class NativeBuildCommandTests
 
         Assert.Equal(0, result.ExitCode);
         using JsonDocument buildResult = JsonDocument.Parse(result.Output);
-        Assert.True(buildResult.RootElement.GetProperty("Success").GetBoolean());
-        Assert.True(File.Exists(buildResult.RootElement.GetProperty("OutputFile").GetString()));
-        JsonElement packagedAsset = buildResult.RootElement.GetProperty("PackagedAsset");
-        Assert.Equal(NativeAssetLayout.GetRuntimeIdentifier(target.Identifier),
-            packagedAsset.GetProperty("RuntimeIdentifier").GetString());
-        Assert.True(File.Exists(packagedAsset.GetProperty("AssetPath").GetString()));
+        Assert.True(buildResult.RootElement.GetProperty("success").GetBoolean());
+        Assert.True(File.Exists(buildResult.RootElement.GetProperty("outputFile").GetString()));
+        JsonElement packagedAsset = buildResult.RootElement.GetProperty("packagedAsset");
+        Assert.Equal(NativeAssetLayout.GetRuntimeIdentifier(target.targetId.value),
+            packagedAsset.GetProperty("runtimeIdentifier").GetString());
+        Assert.True(File.Exists(packagedAsset.GetProperty("assetPath").GetString()));
     }
 
     private static CppBridgeBuildManifest CreateManifest() => new(
-        1,
         "linux-x64-gnu",
         "x86_64-unknown-linux-gnu",
         null,
@@ -135,7 +134,7 @@ public sealed class NativeBuildCommandTests
     {
         using StringWriter output = new();
         using StringWriter error = new();
-        int exitCode = NativeBuildCommand.Run(args, directory.Path, output, error);
+        int exitCode = CliInvocation.Run(["native-build", .. args], directory.Path, output, error);
         return new(exitCode, output.ToString(), error.ToString());
     }
 

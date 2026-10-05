@@ -1,4 +1,4 @@
 {
-  "Property": "LogLevel",
+  "Property": "logLevel",
   "Expected": "Information"
 }

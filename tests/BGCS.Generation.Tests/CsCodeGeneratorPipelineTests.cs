@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using BGCS.Configuration;
 using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Parsing;
+using BGCS.Facade;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -14,11 +16,11 @@ public class CsCodeGeneratorPipelineTests
         ProbeGenerator generator = new(new CsCodeGeneratorConfig());
 
         generator.InvokeConfigureCore();
-        int firstPreCount = generator.PreProcessSteps.Count;
+        int firstPreCount = generator.preProcessSteps.Count;
 
         generator.InvokeConfigureCore();
 
-        Assert.Equal(firstPreCount, generator.PreProcessSteps.Count);
+        Assert.Equal(firstPreCount, generator.preProcessSteps.Count);
     }
 
     [Fact]
@@ -27,10 +29,10 @@ public class CsCodeGeneratorPipelineTests
         ProbeGenerator generator = new(new CsCodeGeneratorConfig());
         CppParserOptions options = new()
         {
-            ParseMacros = false,
-            ParseComments = false,
-            ParseSystemIncludes = false,
-            ParserKind = CppParserKind.C
+            parseMacros = false,
+            parseComments = false,
+            parseSystemIncludes = false,
+            parserKind = CppParserKind.C
         };
 
         ProbeParseException ex = Assert.Throws<ProbeParseException>(

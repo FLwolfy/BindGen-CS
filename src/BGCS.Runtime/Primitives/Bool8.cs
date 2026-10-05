@@ -1,4 +1,4 @@
-﻿namespace BGCS.Runtime
+namespace BGCS.Runtime
 {
     using System;
 
@@ -10,24 +10,23 @@
         /// <summary>
         /// Raw underlying value.
         /// </summary>
-        public byte Value;
-
+        public byte value;
         /// <summary>
         /// Initializes from a raw byte.
         /// </summary>
-        /// <param name="value">Underlying byte value.</param>
+        /// <param name = "value">Underlying byte value.</param>
         public Bool8(byte value)
         {
-            Value = value;
+            this.value = value;
         }
 
         /// <summary>
         /// Initializes from a managed boolean.
         /// </summary>
-        /// <param name="value">Managed boolean value.</param>
+        /// <param name = "value">Managed boolean value.</param>
         public Bool8(bool value)
         {
-            Value = value ? (byte)1 : (byte)0;
+            this.value = value ? (byte)1 : (byte)0;
         }
 
         /// <inheritdoc/>
@@ -37,73 +36,128 @@
         }
 
         /// <summary>
-        /// Compares this instance to another <see cref="Bool8"/> by raw value.
+        /// Compares the complete stored representation rather than normalizing nonzero values to true.
         /// </summary>
+        /// <param name="other">
+        /// The native boolean representation to compare.
+        /// </param>
+        /// <returns>
+        /// True when both stored values are identical; distinct nonzero representations are unequal.
+        /// </returns>
         public readonly bool Equals(Bool8 other)
         {
-            return Value == other.Value;
+            return this.value == other.value;
         }
 
         /// <inheritdoc/>
         public override readonly int GetHashCode()
         {
-            return Value;
+            return this.value;
         }
 
         /// <summary>
-        /// Compares two <see cref="Bool8"/> values.
+        /// Compares raw native boolean representations without normalization.
         /// </summary>
-        public static bool operator ==(Bool8 left, Bool8 right)
-        {
+        /// <param name="left">
+        /// The first stored representation.
+        /// </param>
+        /// <param name="right">
+        /// The second stored representation.
+        /// </param>
+        /// <returns>
+        /// True when the raw values are identical; otherwise false.
+        /// </returns>
+        public static bool operator ==(
+            Bool8 left,
+            Bool8 right
+        ) {
             return left.Equals(right);
         }
 
         /// <summary>
-        /// Compares two <see cref="Bool8"/> values for inequality.
+        /// Compares raw native boolean representations without normalization.
         /// </summary>
-        public static bool operator !=(Bool8 left, Bool8 right)
-        {
+        /// <param name="left">
+        /// The first stored representation.
+        /// </param>
+        /// <param name="right">
+        /// The second stored representation.
+        /// </param>
+        /// <returns>
+        /// True when the raw values are different; otherwise false.
+        /// </returns>
+        public static bool operator !=(
+            Bool8 left,
+            Bool8 right
+        ) {
             return !(left == right);
         }
 
         /// <summary>
-        /// Converts <see cref="Bool8"/> to managed <see cref="bool"/>.
+        /// Interprets zero as false and every nonzero native representation as true.
         /// </summary>
+        /// <param name="b">
+        /// The native boolean representation.
+        /// </param>
+        /// <returns>
+        /// False for zero; true for any nonzero stored value.
+        /// </returns>
         public static implicit operator bool(Bool8 b)
         {
-            return b.Value != 0;
+            return b.value != 0;
         }
 
         /// <summary>
-        /// Converts <see cref="Bool8"/> to its raw byte value.
+        /// Returns the complete stored native representation without normalization.
         /// </summary>
+        /// <param name="b">
+        /// The native boolean representation.
+        /// </param>
+        /// <returns>
+        /// The raw stored value, which may be a noncanonical true representation.
+        /// </returns>
         public static implicit operator byte(Bool8 b)
         {
-            return b.Value;
+            return b.value;
         }
 
         /// <summary>
-        /// Converts a raw byte value to <see cref="Bool8"/>.
+        /// Retains a native boolean representation without normalizing it.
         /// </summary>
+        /// <param name="b">
+        /// The raw value; zero means false and any nonzero value means true.
+        /// </param>
+        /// <returns>
+        /// A wrapper retaining the exact supplied representation.
+        /// </returns>
         public static implicit operator Bool8(byte b)
         {
             return new(b);
         }
 
         /// <summary>
-        /// Converts a managed boolean to <see cref="Bool8"/>.
+        /// Converts a managed boolean into the canonical native representation.
         /// </summary>
+        /// <param name="b">
+        /// The managed boolean to encode.
+        /// </param>
+        /// <returns>
+        /// A wrapper storing one for true or zero for false.
+        /// </returns>
         public static implicit operator Bool8(bool b)
         {
             return new(b);
         }
 
         /// <summary>
-        /// Returns a managed boolean string representation.
+        /// Formats the logical interpretation of the stored native representation.
         /// </summary>
+        /// <returns>
+        /// The lowercase text false for zero or true for any nonzero representation.
+        /// </returns>
         public override readonly string ToString()
         {
-            return Value == 0 ? "false" : "true";
+            return this.value == 0 ? "false" : "true";
         }
     }
 }

@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using BGCS.Core.Targeting;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
@@ -10,30 +10,30 @@ namespace BGCS.CppAst.Tests;
 public sealed class ClangResourceHeaderTests
 {
     [Theory]
-    [InlineData(CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc, 24)]
-    [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Gnu, 24)]
-    [InlineData(CppTargetPlatform.Emscripten, CppTargetArchitecture.Wasm32, CppTargetAbi.Emscripten, 12)]
+    [InlineData("windows", "x64", "msvc", 24)]
+    [InlineData("linux", "arm64", "gnu", 24)]
+    [InlineData("emscripten", "wasm32", "emscripten", 12)]
     public void BuiltinHeadersRemainAvailableWithoutAHostCompilerOrSdk(
-        CppTargetPlatform platform,
-        CppTargetArchitecture architecture,
-        CppTargetAbi abi,
+        string platform,
+        string architecture,
+        string abi,
         int expectedSize
     ) {
         var options = new CppParserOptions
         {
-            ParserKind = CppParserKind.C,
-            ParseSystemIncludes = false,
-            ParseMacros = false
+            parserKind = CppParserKind.C,
+            parseSystemIncludes = false,
+            parseMacros = false
         };
-        options.ConfigureForTarget(CppTarget.Resolve(platform, architecture, abi), discoverHostToolchain: false);
+        options.ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId(string.Join("-", platform, architecture, abi)))), discoverHostToolchain: false);
 
         var compilation = CppParser.Parse(
             "#include <stddef.h>\nstruct HeaderLayout { size_t size; ptrdiff_t offset; void* handle; };", options);
 
-        Assert.False(compilation.HasErrors, string.Join(Environment.NewLine, compilation.Diagnostics.Messages));
-        CppClass declaration = Assert.Single(compilation.Classes, type => type.Name == "HeaderLayout");
-        Assert.Equal(expectedSize, declaration.SizeOf);
-        Assert.Empty(options.SystemIncludeFolders);
+        Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
+        CppClass declaration = Assert.Single(compilation.classes, type => type.name == "HeaderLayout");
+        Assert.Equal(expectedSize, declaration.sizeOf);
+        Assert.Empty(options.systemIncludeFolders);
     }
 
     [Fact]

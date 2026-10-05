@@ -53,7 +53,11 @@ project/
 dotnet add package BGCS.Runtime
 ```
 
-如果启用了 `GenerateRuntimeSource`，应编译生成的 `Runtime.cs`，不要同时引用重复 Runtime 类型。
+如果启用了 `generateRuntimeSource`，应编译生成的 `Runtime.cs`，不要同时引用重复 Runtime 类型。
+
+在消费项目的 `PropertyGroup` 中设置 `<DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>`。
+BGCS wrapper 已负责 ABI 转换；.NET 按声明的 carrier 直接调用，而不再套用默认封送。
+此设置与目标平台无关。枚举的底层宽度、句柄和回调需要用实际原生调用验收。
 
 `init` 会写入相对于生成配置的可移植路径。对于语义不明确的 `.h`，可以显式选择工作流；使用 `--config` 可以把配置放在其他目录：
 
@@ -68,20 +72,24 @@ SDL3 的 `SDL.h` 一类入口需要：
 
 ```json
 {
-  "EntryFiles": ["include/SDL3/SDL.h"],
-  "IncludeFolders": ["include"],
-  "AllowedHeaders": [],
-  "IncludeTransitivelyReferencedHeaders": true
+  "entryFiles": [
+    "include/SDL3/SDL.h"
+  ],
+  "includeFolders": [
+    "include"
+  ],
+  "allowedHeaders": [],
+  "includeTransitivelyReferencedHeaders": true
 }
 ```
 
-只有 entry 目录和 IncludeFolders 下的用户声明会进入结果。除非开启 `ParseSystemIncludes`，编译器系统头不会被绑定。
+只有 entry 目录和 IncludeFolders 下的用户声明会进入结果。除非开启 `parseSystemIncludes`，编译器系统头不会被绑定。
 
 ## 选择 C 或 C++
 
 ```json
 {
-  "ParserKind": "C"
+  "parserKind": "C"
 }
 ```
 
@@ -90,7 +98,8 @@ C 库使用 `C`；C++ 声明或需要 C++ extension 的头使用 `Cpp`。没有 
 ## 嵌入式 Facade
 
 ```csharp
-using BGCS;
+using BGCS.Configuration;
+using BGCS.Facade;
 
 CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
 generator.LogToConsole();
@@ -114,12 +123,15 @@ bindgen-cs init include/library.hpp
 
 ```json
 {
-  "ConfigVersion": 1,
-  "EntryFiles": ["include/library.hpp"],
-  "AllowedHeaders": ["include/library.hpp"],
-  "OutputPath": "GeneratedBridge",
-  "LanguageStandard": "c++23",
-  "GenerateBuildManifest": true
+  "entryFiles": [
+    "include/library.hpp"
+  ],
+  "allowedHeaders": [
+    "include/library.hpp"
+  ],
+  "outputPath": "GeneratedBridge",
+  "languageStandard": "c++23",
+  "generateBuildManifest": true
 }
 ```
 
@@ -130,12 +142,13 @@ bindgen-cs bridge bridge.json
 bindgen-cs native-build GeneratedBridge/bridge.manifest.json
 ```
 
-设置 `GenerateCSharpBindings=true`，并提供 `CSharpNamespace`、`CSharpApiName`、`NativeLibraryName`、`CSharpOutputPath`，即可在这一条命令中同时生成 native C Bridge 和 C# bindings。可选 C# 输出默认采用 `CSharpStrictSafetySeverity=SuppressFriendly`：ownership/lifetime 未证明时保留 raw ABI，但抑制推断的 friendly 方法。项目独立审计这些契约后才能显式选择 `Warning`；`Error` 则在补充配置前拒绝生成。
+设置 `generateCSharpBindings=true`，并提供 `cSharpNamespace`、`cSharpApiName`、`nativeLibraryName`、`cSharpOutputPath`，即可在这一条命令中同时生成 native C Bridge 和 C# bindings。可选 C# 输出默认采用 `cSharpStrictSafetySeverity=SuppressFriendly`：ownership/lifetime 未证明时保留 raw ABI，但抑制推断的 friendly 方法。项目独立审计这些契约后才能显式选择 `Warning`；`Error` 则在补充配置前拒绝生成。
 
 嵌入式 API：
 
 ```csharp
-using BGCS.Cpp2C;
+using BGCS.Cpp2C.Configuration;
+using BGCS.Cpp2C.Facade;
 
 Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load("bridge.json");
 Cpp2CCodeGenerator generator = new(config);
@@ -144,7 +157,7 @@ generator.Generate("include/library.hpp", "GeneratedBridge");
 
 把生成的 `src/Classes.cpp`、`include` 和原库 include path 编译成 DLL，再让 BGCS 读取生成的 C 头。自动 native linking 仍取决于原库构建，是独立验收项。
 
-生成的 `bridge.manifest.json` 是交给 native build 自动化的确定性契约。路径尽量相对于 manifest，内容包括 target、C++ standard、generated/original files、include directories、defines、compiler/linker arguments、library search path 和 libraries。`LanguageStandard` 默认 `c++23`；`AdditionalArguments` 中已有的 `-std=` 仍作为显式兼容覆盖。
+生成的 `bridge.manifest.json` 是交给 native build 自动化的确定性契约。路径尽量相对于 manifest，内容包括 target、C++ standard、generated/original files、include directories、defines、compiler/linker arguments、library search path 和 libraries。`languageStandard` 默认 `c++23`；`additionalArguments` 中已有的 `-std=` 仍作为显式兼容覆盖。
 
 可以只检查计划、覆盖 compiler，或指定明确 artifact path：
 
@@ -187,9 +200,9 @@ CI 通常运行 `workspace diff`，确保配置与 checked-in bindings 一致。
 
 ## 常见问题
 
-- **没有声明：** 检查 `AllowedHeaders`；umbrella header 应开启 transitive user headers。
+- **没有声明：** 检查 `allowedHeaders`；umbrella header 应开启 transitive user headers。
 - **解析过慢：** 不需要时关闭宏和注释，并把对应头作为性能回归；真实库预算是强制验收项。
-- **未知类型：** 添加 `TypeMappings` 或生成 C++ bridge specialization；禁止把非平凡 C++ value type 直接映射成 blittable C# struct。
+- **未知类型：** 添加 `typeMappings` 或生成 C++ bridge specialization；禁止把非平凡 C++ value type 直接映射成 blittable C# struct。
 - **Runtime 重复：** 使用 `BGCS.Runtime` 或生成 `Runtime.cs`，不要无保护地同时使用。
 - **找不到原生编译器：** 把 `BGCS_CC` 与 `BGCS_CPP2C_CXX`（或 `CC`/`CXX`）指向对应 compiler driver。
 - **需要完整配置属性列表：** 运行 `bindgen-cs schema bindgen.schema.json`；`docs/config.md` 只列出具备专门 entry regression test 的属性。

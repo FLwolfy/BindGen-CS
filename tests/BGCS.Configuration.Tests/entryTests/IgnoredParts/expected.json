@@ -1,5 +1,5 @@
 {
-  "Property": "IgnoredParts",
+  "Property": "ignoredParts",
   "Expected": [
     "Entry"
   ]

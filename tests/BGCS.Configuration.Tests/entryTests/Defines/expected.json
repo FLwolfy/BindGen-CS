@@ -1,5 +1,5 @@
 {
-  "Property": "Defines",
+  "Property": "defines",
   "Expected": [
     "MY_DEF=1"
   ]

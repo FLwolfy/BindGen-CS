@@ -1,0 +1,10 @@
+{
+  "namespace": "QuickStart.Generated",
+  "apiName": "NativeApi",
+  "libName": "quickstart",
+  "entryFiles": ["native.h"],
+  "outputPath": "Generated",
+  "generateExtensions": false,
+  "mergeGeneratedFilesToSingleFile": true,
+  "enableIncrementalCache": false
+}

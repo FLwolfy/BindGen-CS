@@ -1,4 +1,4 @@
 {
-  "Property": "GenerateConstructorsForStructs",
+  "Property": "generateConstructorsForStructs",
   "Expected": false
 }

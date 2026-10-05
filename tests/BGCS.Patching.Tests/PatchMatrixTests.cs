@@ -23,7 +23,7 @@ public class PatchMatrixTests
 
         try
         {
-            PatchEngine engine = new(stages);
+            PatchEngine engine = new();
             engine.RegisterPostPatch(new ReplacePostPatch("Functions/Functions.cs", "alpha", "beta"));
             engine.RegisterPostPatch(new AppendPostPatch("Functions/Functions.cs", "-gamma"));
             engine.RegisterPostPatch(new CreateFilePostPatch("Diagnostics/patch.log", "ok"));
@@ -43,34 +43,31 @@ public class PatchMatrixTests
     }
 
     [Fact]
-    public void ApplyPrePatches_MultiStage_ShouldPreservePreviousStageOutputs()
+    public void FailingPostPatchPreservesTheCompletePreviousTree()
     {
-        string temp = Path.Combine(Path.GetTempPath(), "bgcs-patch-matrix-pre-" + Guid.NewGuid().ToString("N"));
-        string inputRoot = Path.Combine(temp, "input");
-        string stages = Path.Combine(temp, "stages");
-        Directory.CreateDirectory(inputRoot);
-
-        string input = Path.Combine(inputRoot, "header.h");
-        File.WriteAllText(input, "base");
-
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-patch-rollback-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string target = Path.Combine(root, "Bindings.cs");
+        string unselected = Path.Combine(root, "notes.txt");
+        File.WriteAllText(target, "original");
+        File.WriteAllText(unselected, "retained");
         try
         {
-            PatchEngine engine = new(stages);
-            engine.RegisterPrePatch(new AppendPrePatch("header.h", "-p1"));
-            engine.RegisterPrePatch(new AppendPrePatch("header.h", "-p2"));
-            engine.RegisterPrePatch(new CreateFilePrePatch("generated/pre.txt", "pre-generated"));
-
-            engine.ApplyPrePatches(new CsCodeGeneratorConfig(), inputRoot, [input], null!);
-
-            Assert.Equal("base-p1-p2", File.ReadAllText(input));
-            Assert.Equal("pre-generated", File.ReadAllText(Path.Combine(inputRoot, "generated", "pre.txt")));
+            PatchEngine engine = new();
+            engine.RegisterPostPatch(new AppendPostPatch("Bindings.cs", "-candidate"));
+            engine.RegisterPostPatch(new ThrowingPostPatch());
+            Assert.Throws<InvalidOperationException>(() => engine.ApplyPostPatches(new CsCodeGeneratorMetadata(), root, [target]));
+            Assert.Equal("original", File.ReadAllText(target));
+            Assert.Equal("retained", File.ReadAllText(unselected));
+            PatchEngine success = new();
+            success.RegisterPostPatch(new AppendPostPatch("Bindings.cs", "-complete"));
+            success.ApplyPostPatches(new CsCodeGeneratorMetadata(), root, [target]);
+            Assert.Equal("original-complete", File.ReadAllText(target));
+            Assert.Equal("retained", File.ReadAllText(unselected));
         }
         finally
         {
-            if (Directory.Exists(temp))
-            {
-                Directory.Delete(temp, true);
-            }
+            Directory.Delete(root, recursive: true);
         }
     }
 
@@ -86,7 +83,7 @@ public class PatchMatrixTests
 
         try
         {
-            PatchEngine engine = new(Path.Combine(temp, "stages"));
+            PatchEngine engine = new();
             engine.ApplyPostPatches(new CsCodeGeneratorMetadata(), outputRoot, [target]);
             Assert.Equal("stable", File.ReadAllText(target));
         }
@@ -99,39 +96,13 @@ public class PatchMatrixTests
         }
     }
 
-    private sealed class AppendPrePatch : IPrePatch
+    private sealed class ThrowingPostPatch : IPostPatch
     {
-        private readonly string path;
-        private readonly string suffix;
-
-        public AppendPrePatch(string path, string suffix)
-        {
-            this.path = path;
-            this.suffix = suffix;
-        }
-
-        public void Apply(PatchContext context, CsCodeGeneratorConfig settings, List<string> files, ParseResult compilation)
-        {
-            string text = context.ReadFile(path);
-            context.WriteFile(path, text + suffix);
-        }
-    }
-
-    private sealed class CreateFilePrePatch : IPrePatch
-    {
-        private readonly string path;
-        private readonly string content;
-
-        public CreateFilePrePatch(string path, string content)
-        {
-            this.path = path;
-            this.content = content;
-        }
-
-        public void Apply(PatchContext context, CsCodeGeneratorConfig settings, List<string> files, ParseResult compilation)
-        {
-            context.WriteFile(path, content);
-        }
+        public void Apply(
+            PatchContext context,
+            CsCodeGeneratorMetadata metadata,
+            List<string> files
+        ) => throw new InvalidOperationException("Candidate transformation failed.");
     }
 
     private sealed class ReplacePostPatch : IPostPatch

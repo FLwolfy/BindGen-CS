@@ -1,4 +1,4 @@
 {
-  "Property": "ParameterNamingConvention",
+  "Property": "parameterNamingConvention",
   "Expected": "PascalCase"
 }

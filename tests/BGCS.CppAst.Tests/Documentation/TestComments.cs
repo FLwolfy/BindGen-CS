@@ -1,15 +1,3 @@
-using System.IO;
-using BGCS.CppAst.Model;
-using BGCS.CppAst.Model.Attributes;
-using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Expressions;
-using BGCS.CppAst.Model.Interfaces;
-using BGCS.CppAst.Model.Metadata;
-using BGCS.CppAst.Model.Templates;
-using BGCS.CppAst.Model.Types;
-using BGCS.CppAst.Parsing;
-using BGCS.CppAst.Extensions;
-using Xunit;
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
@@ -17,6 +5,9 @@ using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BGCS.CppAst.Model.Declarations;
+using BGCS.CppAst.Parsing;
+using Xunit;
 
 namespace BGCS.CppAst.Tests
 {
@@ -50,18 +41,18 @@ enum Enum0
 ",
                 compilation =>
                 {
-                    Assert.False(compilation.HasErrors);
+                    Assert.False(compilation.hasErrors);
 
-                    var cppElements = compilation.Children.ToList();
+                    var cppElements = compilation.children.ToList();
                     Assert.Equal(4, cppElements.Count);
-                    Assert.All(cppElements, element => Assert.NotNull(element.Comment));
+                    Assert.All(cppElements, element => Assert.NotNull(element.comment));
 
-                    var results = cppElements.Select(x => (x.Comment!.ToString(), x.GetType())).ToList();
+                    var results = cppElements.Select(x => (x.comment!.ToString(), x.GetType())).ToList();
 
-                    Assert.Single(compilation.Enums);
+                    Assert.Single(compilation.enums);
 
-                    Assert.All(compilation.Enums[0].Children, element => Assert.NotNull(element.Comment));
-                    results.AddRange(compilation.Enums[0].Children.Select(x => (x.Comment!.ToString(), x.GetType())));
+                    Assert.All(compilation.enums[0].children, element => Assert.NotNull(element.comment));
+                    results.AddRange(compilation.enums[0].children.Select(x => (x.comment!.ToString(), x.GetType())));
 
                     var expectedResults = new List<(string, Type)>()
                     {
@@ -102,7 +93,7 @@ int function1(int a, int b);
 
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
                 var expectedText = @"This is a comment of function1.
 With more `details` in the <b>comment</b>.
@@ -120,8 +111,8 @@ And another line with @a x and @a y in italics
 
 @exception FileNotFoundException if file does not exist.";
 
-                Assert.Single(compilation.Functions);
-                var resultText = compilation.Functions[0].Comment?.ToString();
+                Assert.Single(compilation.functions);
+                var resultText = compilation.functions[0].comment?.ToString();
 
                 expectedText = expectedText.Replace("\r\n", "\n");
                 resultText = resultText?.Replace("\r\n", "\n");
@@ -137,18 +128,18 @@ And another line with @a x and @a y in italics
 int function1(int a, int b);
 ", compilation =>
             {
-                Assert.False(compilation.HasErrors);
+                Assert.False(compilation.hasErrors);
 
                 var expectedText = @"[infinite loop)";
 
-                Assert.Single(compilation.Functions);
-                var resultText = compilation.Functions[0].Comment?.ToString();
+                Assert.Single(compilation.functions);
+                var resultText = compilation.functions[0].comment?.ToString();
 
                 expectedText = expectedText.Replace("\r\n", "\n");
                 resultText = resultText?.Replace("\r\n", "\n");
                 Assert.Equal(expectedText, resultText);
             },
-            new CppParserOptions() { ParseTokenAttributes = true });
+            new CppParserOptions() { parseTokenAttributes = true });
         }
     }
 }

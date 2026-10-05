@@ -159,7 +159,7 @@ cat > "${CONSUMER_DIR}/PackageConsumer.csproj" <<EOF
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -172,19 +172,20 @@ cat > "${CONSUMER_DIR}/PackageConsumer.csproj" <<EOF
 EOF
 
 cat > "${CONSUMER_DIR}/Program.cs" <<'EOF'
-using BGCS;
-using BGCS.Cpp2C;
+using System;
+using BGCS.Configuration;
+using BGCS.Cpp2C.Configuration;
 using BGCS.CppAst.Parsing;
 using BGCS.Runtime;
 
 var config = new CsCodeGeneratorConfig();
 var bridgeConfig = new Cpp2CGeneratorConfig();
 var parserOptions = new CppParserOptions();
-var parsed = CppParser.Parse("int bgcs_package_probe(void);", parserOptions);
-if (parsed.HasErrors)
+using var parsed = CppParser.Parse("int bgcs_package_probe(void);", parserOptions);
+if (parsed.hasErrors)
     throw new InvalidOperationException("The clean NuGet consumer could not load its native Clang runtime.");
 using var context = new NativeLibraryContext(IntPtr.Zero);
-Console.WriteLine($"{config.ImportType}:{bridgeConfig.NamePrefix}:{parserOptions.ParserKind}:{context.IsExtensionSupported(string.Empty)}");
+Console.WriteLine($"{config.importType}:{bridgeConfig.namePrefix}:{parserOptions.parserKind}:{context.IsExtensionSupported(string.Empty)}");
 EOF
 
 "${DOTNET_CMD}" restore "${CONSUMER_DIR}/PackageConsumer.csproj" \
@@ -225,10 +226,10 @@ class Demo { public: int Add(int value) { return value + 17; } };
 EOF
 cat > "${TOOL_SMOKE_DIR}/bridge.json" <<'EOF'
 {
-  "EntryFiles": ["sample.hpp"],
-  "AllowedHeaders": ["sample.hpp"],
-  "OutputPath": "GeneratedBridge",
-  "NativeLibraryName": "bgcs_package_probe"
+  "entryFiles": ["sample.hpp"],
+  "allowedHeaders": ["sample.hpp"],
+  "outputPath": "GeneratedBridge",
+  "nativeLibraryName": "bgcs_package_probe"
 }
 EOF
 pushd "${TOOL_SMOKE_DIR}" > /dev/null
@@ -278,7 +279,7 @@ cat > "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" <<EOF
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -288,6 +289,7 @@ cat > "${NATIVE_PACKAGE_CONSUMER}/NativePackageConsumer.csproj" <<EOF
 </Project>
 EOF
 cat > "${NATIVE_PACKAGE_CONSUMER}/Program.cs" <<'EOF'
+using System;
 using System.Runtime.InteropServices;
 
 nint instance = NativeProbe.Create();

@@ -28,21 +28,24 @@ Schemas are derived from the installed C or C++ configuration type, include nest
 | Language boundary | C header → C# | Use a C bridge for C++ classes/templates |
 | Target | `host-c` | Select an explicit target/triple/sysroot for a non-host ABI |
 | Import | `DllImport` | Use `LibraryImport` for source generation or `FunctionTable` for runtime loading |
-| Runtime | Reference `BGCS.Runtime` | Enable `GenerateRuntimeSource` for standalone source distribution |
+| Runtime | Reference `BGCS.Runtime` | Enable `generateRuntimeSource` for standalone source distribution |
 
 ## Minimal configuration
 
 ```json
 {
-  "ConfigVersion": 1,
-  "Namespace": "MyCompany.Native.Library",
-  "ApiName": "LibraryApi",
-  "LibName": "library",
-  "Preset": "host-c,c-library",
-  "EntryFiles": ["include/library.h"],
-  "IncludeFolders": ["include"],
-  "ImportType": "DllImport",
-  "OutputPath": "Generated"
+  "namespace": "MyCompany.Native.Library",
+  "apiName": "LibraryApi",
+  "libName": "library",
+  "preset": "host-c,c-library",
+  "entryFiles": [
+    "include/library.h"
+  ],
+  "includeFolders": [
+    "include"
+  ],
+  "importType": "DllImport",
+  "outputPath": "Generated"
 }
 ```
 
@@ -54,22 +57,22 @@ This configuration follows the host ABI. Reproducible release configurations sho
 
 | Property | Purpose | Guidance |
 | --- | --- | --- |
-| `EntryFiles` | Root headers | Prefer one stable umbrella header when available |
-| `AllowedHeaders` | Explicit emission whitelist | Empty plus transitive mode is easier for umbrella headers |
-| `IncludeTransitivelyReferencedHeaders` | Include user headers below entry/include roots | Recommended for SDL-style APIs |
-| `IncludeFolders` | User include roots | Declarations can be emitted in transitive mode |
-| `SystemIncludeFolders` | Compiler/system include roots | Normally not emitted |
-| `Defines` | Preprocessor defines | Match the native library build exactly |
-| `AdditionalArguments` | Raw Clang arguments | Use only when a typed setting is unavailable |
-| `ParserKind` | `C`, `Cpp`, or `ObjC` | Match the actual header language |
-| `ParseMacros` | Build macro AST | Disable for macro-heavy libraries if constants are unnecessary |
-| `ParseComments` | Build documentation AST | Disable for speed only when docs are unnecessary |
-| `ParseSystemIncludes` | Include system declarations | Keep false unless deliberately binding them |
-| `AutoSquashTypedef` | Collapse typedef chains | Disable when public aliases must be preserved |
+| `entryFiles` | Root headers | Prefer one stable umbrella header when available |
+| `allowedHeaders` | Explicit emission whitelist | Empty plus transitive mode is easier for umbrella headers |
+| `includeTransitivelyReferencedHeaders` | Include user headers below entry/include roots | Recommended for SDL-style APIs |
+| `includeFolders` | User include roots | Declarations can be emitted in transitive mode |
+| `systemIncludeFolders` | Compiler/system include roots | Normally not emitted |
+| `defines` | Preprocessor defines | Match the native library build exactly |
+| `additionalArguments` | Raw Clang arguments | Use only when a typed setting is unavailable |
+| `parserKind` | `C`, `Cpp`, or `ObjC` | Match the actual header language |
+| `parseMacros` | Build macro AST | Disable for macro-heavy libraries if constants are unnecessary |
+| `parseComments` | Build documentation AST | Disable for speed only when docs are unnecessary |
+| `parseSystemIncludes` | Include system declarations | Keep false unless deliberately binding them |
+| `autoSquashTypedef` | Collapse typedef chains | Disable when public aliases must be preserved |
 
 ## Target settings
 
-`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, FreeBSD, and Emscripten wasm32 with their valid architecture combinations. `TargetTriple`, `TargetSysRoot`, and `CompilerPath` provide controlled overrides. C# and C++ configuration paths expand environment variables before deciding whether a compiler value is a command name or a configuration-relative path; both absolute and relative path values are supported. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK. For Emscripten, provide the matching SDK sysroot explicitly.
+`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, FreeBSD, and Emscripten wasm32 with their valid architecture combinations. `targetTriple`, `targetSysRoot`, and `compilerPath` provide controlled overrides. C# and C++ configuration paths expand environment variables before deciding whether a compiler value is a command name or a configuration-relative path; both absolute and relative path values are supported. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK. For Emscripten, provide the matching SDK sysroot explicitly.
 
 Model support is not the same as completed host acceptance. See the [target evidence matrix](capabilities.md#target-evidence) and the current generated acceptance report.
 
@@ -87,18 +90,18 @@ Opaque handle wrappers retain their managed API while native imports carry point
 
 ## Output and Runtime
 
-- `OutputPath` is resolved relative to the config file by `GenerateConfigured`.
-- `MergeGeneratedFilesToSingleFile=true` combines generated bindings into one C# file per target. `OneFilePerType` is independent; set it to `false` if you also want to avoid per-type files before composition. The `c-library` preset already sets both for one `Bindings.cs`.
-- `SingleFileOutputName` must be a file name ending in `.cs`; paths are rejected.
-- `GenerateRuntimeSource=false` expects a `BGCS.Runtime` reference.
-- `GenerateRuntimeSource=true` emits guarded standalone `Runtime.cs` separately, even with single-file bindings.
+- `outputPath` is resolved relative to the config file by `GenerateConfigured`.
+- `mergeGeneratedFilesToSingleFile=true` combines generated bindings into one C# file per target. `oneFilePerType` is independent; set it to `false` if you also want to avoid per-type files before composition. The `c-library` preset already sets both for one `Bindings.cs`.
+- `singleFileOutputName` must be a file name ending in `.cs`; paths are rejected.
+- `generateRuntimeSource=false` expects a `BGCS.Runtime` reference.
+- `generateRuntimeSource=true` emits guarded standalone `Runtime.cs` separately, even with single-file bindings.
 - Output is transactional; failed parsing/generation does not delete previous successful output.
 
 ## Incremental cache and plugins
 
-`EnableIncrementalCache` defaults to `true`; `CacheDirectory` defaults to `.bindgen-cache` relative to the configuration file. A key contains the installed generator identity, complete serialized configuration, parser arguments, resolved compiler identity/version, plugin/lowering fingerprints, and exact contents of discovered C/C++ inputs. Restore and publication are transactional. Changing a header, target, toolchain, define, include, mapping, plugin binary, shim, or generator binary creates a different key. Programmatic generators with unfingerprinted custom state bypass cache hits rather than risk stale output.
+`enableIncrementalCache` defaults to `true`; `cacheDirectory` defaults to `.bindgen-cache` relative to the configuration file. A key contains the installed generator identity, complete serialized configuration, parser arguments, resolved compiler identity/version, plugin/lowering fingerprints, and exact contents of discovered C/C++ inputs. Restore and publication are transactional. Changing a header, target, toolchain, define, include, mapping, plugin binary, shim, or generator binary creates a different key. Programmatic generators with unfingerprinted custom state bypass cache hits rather than risk stale output.
 
-`PluginAssemblies` lists explicit assembly paths relative to the configuration file. Each assembly must expose a public parameterless `IBindingPlugin` and return `BindingPluginContract.CurrentVersion` from its `ContractVersion` property; mismatches and duplicate IDs fail before generation. The revision is a load-time compatibility guard, not a marketed plugin generation. Loading uses an isolated dependency resolver and atomic batch registration. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, or `ICppArtifactContributor`; C# post-analysis output can register `IBindingEmitter`. Stateful lowerings must implement `ICacheFingerprintProvider`. See the [final lowering architecture](lowering.md) for recipes, plugins, shims, and safety policy.
+`pluginAssemblies` lists explicit assembly paths relative to the configuration file. Each assembly must expose a public parameterless `IBindingPlugin` and return `BindingPluginContract.C_CURRENT_VERSION` from its `contractVersion` property; mismatches and duplicate IDs fail before generation. The revision is a load-time compatibility guard, not a marketed plugin generation. Loading uses an isolated dependency resolver and atomic batch registration. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, or `ICppArtifactContributor`; C# post-analysis output can register `IBindingEmitter`. Stateful lowerings must implement `ICacheFingerprintProvider`. See the [final lowering architecture](lowering.md) for recipes, plugins, shims, and safety policy.
 
 ## Mappings and policies
 
@@ -113,22 +116,30 @@ Use mappings only for facts that cannot be inferred safely:
 
 A mapping must not hide ABI uncertainty. If a non-trivial C++ type crosses a boundary, generate a C bridge instead.
 
-BGCS's default C# mappings contain C/C++ standard type names only. Native-SDK aliases and constructor expressions belong in the consuming project's config, not in BGCS core. For example, use `"TypeMappings": { "Uint8": "byte" }` for a project typedef and `"KnownDefaultValueNames": { "ExternalPoint(1,2)": "new Point2(1, 2)" }` for its default expression. The latter is an exact expression mapping; it does not infer the ABI or layout of `ExternalPoint`.
+BGCS's default C# mappings contain C/C++ standard type names only. Native-SDK aliases and constructor expressions belong in the consuming project's config, not in BGCS core. For example, use `"typeMappings": { "Uint8": "byte" }` for a project typedef and `"knownDefaultValueNames": { "ExternalPoint(1,2)": "new Point2(1, 2)" }` for its default expression. The latter is an exact expression mapping; it does not infer the ABI or layout of `ExternalPoint`.
 
 ## Strict safety diagnostics
 
-`StrictSafety` defaults to `true`, and `StrictSafetySeverity` defaults to `SuppressFriendly`: unresolved semantics keep the raw ABI but remove that function's inferred friendly overloads. `Warning` deliberately keeps those overloads while reporting risk; `Error` makes validate/generate/build fail before commit. Diagnostics use `BGCS-SAFETY-*` codes and include the exact minimum `MarshallingMappings` path. Set `StrictSafety=false` only when an external audit owns those semantics.
+`strictSafety` defaults to `true`, and `strictSafetySeverity` defaults to `SuppressFriendly`: unresolved semantics keep the raw ABI but remove that function's inferred friendly overloads. `Warning` deliberately keeps those overloads while reporting risk; `Error` makes validate/generate/build fail before commit. Diagnostics use `BGCS-SAFETY-*` codes and include the exact minimum `marshallingMappings` path. Set `strictSafety=false` only when an external audit owns those semantics.
 
-When `TypeMappings` redirects a native record to a project-supplied managed value type, add an `ExternalTypeContracts` entry. `NativeTypes` and `ManagedTypes` are ordinal selectors that accept `*` and `?`, so one audited contract can cover closed generic carriers such as `NativeVector_*` to `NativeVector<*>`. Every selected `TypeMappings` pair is validated and overlapping contracts are rejected. `ByValuePolicy=Reject` permits pointer-only use, `RequireLayoutMatch` accepts by-value use only when parsed native size/alignment match the declared carrier, and `BypassLayoutValidation` explicitly continues without that proof. Accepted by-value carriers remain visible in Binding IR and emit `BGCS-SAFETY-EXTERNAL-TYPE`; the project must keep managed-layout and native-invocation tests.
+When `typeMappings` redirects a native record to a project-supplied managed value type, add an `externalTypeContracts` entry. `NativeTypes` and `ManagedTypes` are ordinal selectors that accept `*` and `?`, so one audited contract can cover closed generic carriers such as `NativeVector_*` to `NativeVector<*>`. Every selected `typeMappings` pair is validated and overlapping contracts are rejected. `ByValuePolicy=Reject` permits pointer-only use, `RequireLayoutMatch` accepts by-value use only when parsed native size/alignment match the declared carrier, and `BypassLayoutValidation` explicitly continues without that proof. Accepted by-value carriers remain visible in Binding IR and emit `BGCS-SAFETY-EXTERNAL-TYPE`; the project must keep managed-layout and native-invocation tests.
 
 ```json
 {
-  "TypeMappings": { "NativeVec2": "Vector2" },
-  "Usings": ["System.Numerics"],
-  "ExternalTypeContracts": [
+  "typeMappings": {
+    "NativeVec2": "Vector2"
+  },
+  "usings": [
+    "System.Numerics"
+  ],
+  "externalTypeContracts": [
     {
-      "NativeTypes": ["NativeVec2"],
-      "ManagedTypes": ["Vector2"],
+      "NativeTypes": [
+        "NativeVec2"
+      ],
+      "ManagedTypes": [
+        "Vector2"
+      ],
       "Size": 8,
       "Alignment": 4,
       "ByValuePolicy": "RequireLayoutMatch"
@@ -137,15 +148,15 @@ When `TypeMappings` redirects a native record to a project-supplied managed valu
 }
 ```
 
-For C++ bridges, `LoweringSafetyPolicy` defaults to `VerifiedOnly`. Use `AllowUserAsserted` for reviewed project recipes/plugins/shims, and `AllowUnsafe` only when the project explicitly owns ABI and lifetime risk. The latter continues generation but emits the auditable `BGCS-SAFETY-LOWERING-BYPASS` diagnostic.
+For C++ bridges, `loweringSafetyPolicy` defaults to `VerifiedOnly`. Use `AllowUserAsserted` for reviewed project recipes/plugins/shims, and `AllowUnsafe` only when the project explicitly owns ABI and lifetime risk. The latter continues generation but emits the auditable `BGCS-SAFETY-LOWERING-BYPASS` diagnostic.
 
 ## Ownership and buffer marshalling
 
-Use `MarshallingMappings` when pointer syntax cannot express ownership or buffer relationships:
+Use `marshallingMappings` when pointer syntax cannot express ownership or buffer relationships:
 
 ```json
 {
-  "MarshallingMappings": {
+  "marshallingMappings": {
     "library_create_name": {
       "Return": {
         "Strategy": "String",
@@ -179,12 +190,18 @@ Unconfigured `...` functions are skipped with a diagnostic because silently drop
 
 ```json
 {
-  "VariadicFunctionVariants": {
+  "variadicFunctionVariants": {
     "native_log": [
       {
         "Suffix": "IntString",
-        "ParameterTypes": ["int", "byte*"],
-        "ParameterNames": ["value", "text"]
+        "ParameterTypes": [
+          "int",
+          "byte*"
+        ],
+        "ParameterNames": [
+          "value",
+          "text"
+        ]
       }
     ]
   }
@@ -197,9 +214,12 @@ C default argument promotion must already be reflected in the configured types: 
 
 ```json
 {
-  "BaseConfig": {
+  "baseConfig": {
     "Url": "file://shared.windows-x64.json",
-    "IgnoredProperties": ["EntryFiles", "OutputPath"]
+    "IgnoredProperties": [
+      "EntryFiles",
+      "OutputPath"
+    ]
   }
 }
 ```
@@ -212,9 +232,13 @@ Presets are composable and generic: choose one target preset (`host-c`, `host-cp
 
 ```json
 {
-  "Preset": "host-c,c-library,opaque-callbacks",
-  "EntryFiles": ["vendor/SDL/include/SDL3/SDL.h"],
-  "IncludeFolders": ["vendor/SDL/include"]
+  "preset": "host-c,c-library,opaque-callbacks",
+  "entryFiles": [
+    "vendor/SDL/include/SDL3/SDL.h"
+  ],
+  "includeFolders": [
+    "vendor/SDL/include"
+  ]
 }
 ```
 
@@ -226,7 +250,11 @@ A workspace stores multiple configuration paths for repository-level automation:
 
 ```json
 {
-  "Configs": ["cimgui.json", "sdl3.json", "bgfx.json"]
+  "Configs": [
+    "cimgui.json",
+    "sdl3.json",
+    "bgfx.json"
+  ]
 }
 ```
 
@@ -236,7 +264,7 @@ bindgen-cs workspace generate native/bindings/workspace.json
 bindgen-cs workspace diff native/bindings/workspace.json
 ```
 
-`generate` uses each config's `OutputPath`; `diff` checks that same path without replacing the checked-in output. With single-file output enabled, a workspace does not introduce target-specific source directories.
+`generate` uses each config's `outputPath`; `diff` checks that same path without replacing the checked-in output. With single-file output enabled, a workspace does not introduce target-specific source directories.
 
 The generated header records the `ABI reference target` used for native parsing. This is a marker, not a cross-platform certification: native headers may expose different declarations or layouts after target-specific preprocessing. Run ABI and native-consumer tests on every intended target before sharing one binding source.
 

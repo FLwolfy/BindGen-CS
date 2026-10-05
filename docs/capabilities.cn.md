@@ -30,7 +30,7 @@
 | 能力 | 状态 | 证据或边界 |
 | --- | --- | --- |
 | naming、type、field、function mapping | 实机验收/自动测试 | 配置 entry tests 与真实 API snapshot |
-| string encoding 与 ownership | 配置支持 | 声明未表达 lifetime 时必须使用 `MarshallingMappings` |
+| string encoding 与 ownership | 配置支持 | 声明未表达 lifetime 时必须使用 `marshallingMappings` |
 | pointer/count、capacity/written-count、Span | 配置支持/自动测试 | 保守推断加显式 mapping；严格模式可删除高风险 friendly overload |
 | cleanup function 与 owned return | 配置支持 | allocator/cleanup 必须来自项目配置 |
 | callback lifetime | 配置支持 | 未声明 lifetime 时产生 `BGCS-SAFETY-CALLBACK` |
@@ -43,7 +43,7 @@
 | class、构造、析构、instance/static method | 实机验收/自动测试 | native bridge compile/invocation gate |
 | overload、namespace function、异常边界 | 实机验收/自动测试 | 生成 symbol 与 exception channel 测试 |
 | 继承 cast 与 pointer adjustment | 自动测试 | 不使用不安全的简单 reinterpret cast |
-| class/function template | 配置支持/自动测试 | 只生成 `TemplateInstantiations` / `FunctionTemplateInstantiations` 明确列出的实例 |
+| class/function template | 配置支持/自动测试 | 只生成 `templateInstantiations` / `functionTemplateInstantiations` 明确列出的实例 |
 | `std::string` | 自动测试 | UTF-8 borrowed/return lowering 的已验证范围 |
 | `std::vector`、`std::span` | 自动测试 | pointer/count view；ownership 仍由配置决定 |
 | `std::optional<T>` | 自动测试 | blittable presence/value 与 non-blittable owned-handle protocol 均有 native compile test |
@@ -51,7 +51,7 @@
 | `std::variant/expected` | native invocation test | alternative/value/error holder 实际创建、读取、销毁 |
 | `std::filesystem::path`、`std::chrono` | native invocation test | UTF-8 path 与纳秒 duration/time-point 转换实际执行 |
 | `std::unique_ptr`、`std::shared_ptr` | 自动测试 | 已建模 ownership transfer/retention 的支持路径 |
-| pure-virtual managed callback proxy | 自动测试 | 必须显式列入 `VirtualCallbackInterfaces` |
+| pure-virtual managed callback proxy | 自动测试 | 必须显式列入 `virtualCallbackInterfaces` |
 | 任意 STL/container/template/metaprogramming | 明确拒绝 | 未知 specialization 产生 `BGCSCPP001`，不会伪装成 blittable 类型 |
 
 ## 工作流与工程化
@@ -73,19 +73,20 @@
 
 ## Target 证据
 
-状态：完整验证 ✅；正式支持目标、实现或实机验收待完成 ⚠️。
+当前重构的证据以[独立验收报告](architecture-refactor-acceptance.cn.md)为准。
+旧架构下的实机报告保留为历史证据，不能自动证明当前源码通过。
 
 | Target | 状态 | 当前证据 |
 | --- | :---: | --- |
-| macOS arm64 Darwin | ✅ | 当前源码完整报告已通过；十个强制分类全部达到 9.0/10 |
-| Windows x64 MSVC/clang-cl | ⚠️ | 已配置独立 runner 与真实 clang-cl/MSBuild tests；完整报告待产出 |
+| macOS arm64 Darwin | 历史证据 | 当前重构需要在 macOS 主机复验 |
+| Windows x64 MSVC/clang-cl | 本次验收范围 | 独立 C/C++ 调用、clang-cl/MSBuild、NativeAOT 和干净包消费者；见本次报告 |
 | Linux x64 GNU/Clang | ⚠️ | 已配置独立 runner；完整报告待产出 |
 | macOS x64 Darwin | ⚠️ | 已配置 Intel runner；完整报告待产出 |
 | Windows/Linux arm64 | ⚠️ | target 与 desktop RID model 已有；完整 provider/runtime/package 报告待产出 |
 | Android | ⚠️ | 正式支持目标；target model 已有，NDK/sysroot、包布局和 device/emulator 报告待完成 |
 | iOS | ⚠️ | 正式支持目标；target model 已有，Xcode SDK、framework 布局和 device/simulator 报告待完成 |
 | FreeBSD | ⚠️ | 正式支持目标；target model 已有，toolchain、包布局和独立报告待完成 |
-| Emscripten wasm32 | 部分范围已验收 | BGCS 自有 triple / layout / emitter 测试，以及 Windows x64 / Edge 下 DllImport、LibraryImport、FunctionTable 的 26 项独立浏览器检查通过；其他主机 / 浏览器、C++ Wasm 语义、AOT、发布打包仍需独立验收；[报告](wasm-acceptance-2026-10-03.cn.md) |
+| Emscripten wasm32 | 本次验收范围 | BGCS 自有 C/C++ fixture，三种 import mode，解释执行及 AOT 的实际调用；其他作者主机和浏览器仍需分别验收 |
 
 ## 成熟度判断
 
@@ -93,16 +94,16 @@ BindGen-CS 已经是强大的工程化 binding toolkit，而不是简单的 head
 
 但“对所有 C++ 自动通吃”和“所有 target 都已生产验证”目前都不成立。主要差距是：
 
-- Windows 与 x64 宿主还缺同等级的完整 target-specific acceptance artifact；
+- Linux x64、macOS 与其他设备仍需当前重构的目标实机报告；
 - 配置模型能力很强但仍较扁平，大型库需要理解 mapping 与 safety policy；
-- clang-cl/MSBuild 仍需所属 Windows target 的真实执行证据；桌面 multi-RID packaging 已实现，但 Windows runtime 仍未实机证明；
+- 桌面 multi-RID packaging 不等同于每个 RID 已执行验收；每个非本机目标仍需自己的调用和包消费报告；
 - 任意 metaprogramming、custom allocator 与超出内置协议的类型需要声明式 lowering、版本化 plugin 或显式 C ABI shim。
 
 因此，准确定位是：**在经过验收的 C ABI 与明确支持的 C++ 子集内非常优秀；作为“任意 C++、任意平台、零配置”的万能工具仍有清晰距离。**
 
 ## 下一阶段最高价值工作
 
-1. 在 Windows x64、Linux x64 与 macOS x64 运行同级真实库、native invocation 和包验收并生成独立报告。
+1. 在 Linux x64 与 macOS 主机复验当前架构的真实库、native invocation 和包消费者。
 2. 持续增加 IR-native public-API snapshot；当前不存在预发布 legacy 路径。
 3. 在各自 target 上执行全部 provider，并保留 multi-RID consumer 证据。
 4. 在授权 GitHub release 环境真实执行 OIDC/Sigstore 签名发布。

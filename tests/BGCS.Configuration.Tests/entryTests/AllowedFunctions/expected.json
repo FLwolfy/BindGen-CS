@@ -1,5 +1,5 @@
 {
-  "Property": "AllowedFunctions",
+  "Property": "allowedFunctions",
   "Expected": [
     "keep_fn"
   ]

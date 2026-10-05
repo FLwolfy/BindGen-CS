@@ -37,7 +37,7 @@ Command-line users can install the `BindGen-CS` .NET tool and run `bindgen-cs br
 ```
 
 ```csharp
-using BGCS.Cpp2C;
+using BGCS.Cpp2C.Configuration; using BGCS.Cpp2C.Facade;
 
 Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load("bridge.json");
 Cpp2CCodeGenerator generator = new(config);
@@ -50,7 +50,7 @@ if (generator.LastResult is { Success: false } result)
 }
 ```
 
-Configuration paths are resolved relative to `bridge.json`. The bridge output contains C-facing headers, `src/Classes.cpp`, and a deterministic `bridge.manifest.json` with target, source, include, definition, compiler/linker, language-standard, and library inputs. The `BindGen-CS` tool can compile this manifest with `native-build`; embedded consumers can use `ClangNativeBuildProvider` and `NativeBuildExecutor` directly.
+Configuration paths are resolved relative to `bridge.json`. The bridge output contains C-facing headers, `src/Classes.cpp`, and a deterministic `bridge.manifest.json` with target, source, include, definition, compiler/linker, language-standard, and library inputs. The `BindGen-CS` tool can compile this manifest with `native-build`; embedded consumers can use `BGCS.Cpp2C.Build.Providers.ClangNativeBuildProvider` and `BGCS.Cpp2C.Build.NativeBuildExecutor` directly.
 
 ## Verified bridge scope
 

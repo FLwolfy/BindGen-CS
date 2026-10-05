@@ -1,5 +1,5 @@
 {
-  "Property": "KnownEnumValueNames",
+  "Property": "knownEnumValueNames",
   "Expected": {
     "MY_PREFIX_ON": "Enabled"
   }

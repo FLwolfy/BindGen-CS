@@ -1,6 +1,7 @@
-using BGCS.Language;
 using BGCS.Language.CSharp;
 using BGCS.Language.CSharp.Nodes;
+using BGCS.Language.Lexing;
+using BGCS.Language.Syntax;
 using Xunit;
 
 namespace BGCS.Language.Tests;
@@ -14,14 +15,14 @@ public class CSharpParserTests
         CSharpParser parser = new(new());
 
         var result = parser.Parse(input, "test.cs");
-        Assert.False(result.Diagnostics.HasErrors, result.Diagnostics.ToString());
+        Assert.False(result.diagnostics.hasErrors, result.diagnostics.ToString());
 
         SyntaxTree expected = new(new RootNode(new()
         {
             new NamespaceNode("TestNamespace")
         }));
 
-        Assert.Equal(expected.BuildDebugTree(), result.SyntaxTree?.BuildDebugTree());
+        Assert.Equal(expected.BuildDebugTree(), result.syntaxTree?.BuildDebugTree());
     }
 
     [Fact]
@@ -31,7 +32,7 @@ public class CSharpParserTests
         CSharpParser parser = new(new());
 
         var result = parser.Parse(input, "test.cs");
-        Assert.False(result.Diagnostics.HasErrors, result.Diagnostics.ToString());
+        Assert.False(result.diagnostics.hasErrors, result.diagnostics.ToString());
 
         SyntaxTree expected = new(new RootNode(new()
         {
@@ -44,7 +45,7 @@ public class CSharpParserTests
             })
         }));
 
-        Assert.Equal(expected.BuildDebugTree(), result.SyntaxTree?.BuildDebugTree());
+        Assert.Equal(expected.BuildDebugTree(), result.syntaxTree?.BuildDebugTree());
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public class CSharpParserTests
         CSharpParser parser = new(new());
 
         var result = parser.Parse(input, "test.cs");
-        Assert.False(result.Diagnostics.HasErrors, result.Diagnostics.ToString());
+        Assert.False(result.diagnostics.hasErrors, result.diagnostics.ToString());
 
         SyntaxTree expected = new(new RootNode(new()
         {
@@ -69,7 +70,7 @@ public class CSharpParserTests
             })
         }));
 
-        Assert.Equal(expected.BuildDebugTree(), result.SyntaxTree?.BuildDebugTree());
+        Assert.Equal(expected.BuildDebugTree(), result.syntaxTree?.BuildDebugTree());
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public class CSharpParserTests
 
         var result = parser.Parse(input, "broken.cs");
 
-        Assert.True(result.Diagnostics.HasErrors);
-        Assert.Null(result.SyntaxTree);
+        Assert.True(result.diagnostics.hasErrors);
+        Assert.Null(result.syntaxTree);
     }
 }

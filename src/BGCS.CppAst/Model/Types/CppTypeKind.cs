@@ -1,9 +1,8 @@
-using System;
 // Portions of this file are modified from original work by Alexandre Mutel.
 // Modified by BGCS contributors.
 // Licensed under the MIT License.
-
 namespace BGCS.CppAst.Model.Types;
+
 /// <summary>
 /// Kinds of a C++ type (e.g primitive, pointer...)
 /// </summary>
@@ -49,26 +48,26 @@ public enum CppTypeKind
     /// A template parameter type.
     /// </summary>
     TemplateParameterType,
-	/// <summary>
-	/// A none type template parameter type.
-	/// </summary>
-	TemplateParameterNonType,
-	/// <summary>
-	/// A template specialized argument type.
-	/// </summary>
-	TemplateArgumentType,
-	/// <summary>
-	/// An unexposed type.
-	/// </summary>
-	Unexposed,
-	/// <summary>
-	/// An Objective-C block function type.
-	/// </summary>
-	ObjCBlockFunction,
-	/// <summary>
-	/// A generic type (e.g. Objective-C `MyType&lt;TArg&gt;`)
-	/// </summary>
-	GenericType,
+    /// <summary>
+    /// A none type template parameter type.
+    /// </summary>
+    TemplateParameterNonType,
+    /// <summary>
+    /// A template specialized argument type.
+    /// </summary>
+    TemplateArgumentType,
+    /// <summary>
+    /// An unexposed type.
+    /// </summary>
+    Unexposed,
+    /// <summary>
+    /// An Objective-C block function type.
+    /// </summary>
+    ObjCBlockFunction,
+    /// <summary>
+    /// A generic type (e.g. Objective-C `MyType&lt;TArg&gt;`)
+    /// </summary>
+    GenericType,
     /// <summary>
     /// An Objective-C interface with a category.
     /// </summary>

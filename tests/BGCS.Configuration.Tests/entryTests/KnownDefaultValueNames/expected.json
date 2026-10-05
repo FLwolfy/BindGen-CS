@@ -1,5 +1,5 @@
 {
-  "Property": "KnownDefaultValueNames",
+  "Property": "knownDefaultValueNames",
   "Expected": {
     "42": "7"
   }

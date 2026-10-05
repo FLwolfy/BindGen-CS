@@ -7,8 +7,12 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading.Tasks;
+using BGCS.Configuration;
+using BGCS.Configuration.Mapping;
+using BGCS.Configuration.Naming;
 using BGCS.Core.Logging;
 using BGCS.CppAst.Parsing;
+using BGCS.Facade;
 using BGCS.Intermediate;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -77,12 +81,12 @@ public class GeneratedCodeCompilationMatrixTests
         File.WriteAllText(headerPath, "int bgcs_valid(void);");
         CsCodeGeneratorConfig config = new()
         {
-            ApiName = "TransactionApi",
-            Namespace = "Transaction.Generated",
-            LibName = "transaction",
-            ImportType = ImportType.DllImport,
-            GenerateExtensions = false,
-            MergeGeneratedFilesToSingleFile = true
+            apiName = "TransactionApi",
+            @namespace = "Transaction.Generated",
+            libName = "transaction",
+            importType = ImportType.DllImport,
+            generateExtensions = false,
+            mergeGeneratedFilesToSingleFile = true
         };
         CsCodeGenerator generator = new(config);
 
@@ -130,23 +134,23 @@ public class GeneratedCodeCompilationMatrixTests
             RunProcess(linker, temp, ["/dll", "/noentry", "/out:" + dll, objectFile]);
             CsCodeGeneratorConfig config = new()
             {
-                Namespace = "BGCS.NativeAbi.Generated",
-                ApiName = "NativeAbi",
-                LibName = libraryName,
-                ImportType = ImportType.DllImport,
-                GenerateExtensions = false,
-                MergeGeneratedFilesToSingleFile = true,
-                ParserKind = CppParserKind.C
+                @namespace = "BGCS.NativeAbi.Generated",
+                apiName = "NativeAbi",
+                libName = libraryName,
+                importType = ImportType.DllImport,
+                generateExtensions = false,
+                mergeGeneratedFilesToSingleFile = true,
+                parserKind = CppParserKind.C
             };
-            config.MarshallingMappings["bgcs_call_callback"] = new FunctionMarshallingMapping
+            config.marshallingMappings["bgcs_call_callback"] = new FunctionMarshallingMapping
             {
-                Parameters =
+                parameters =
                 {
                     ["callback"] = new MarshallingMapping
                     {
-                        Strategy = MarshallingStrategy.Callback,
-                        CallbackLifetime = BindingCallbackLifetime.CallOnly,
-                        CallbackThreading = BindingCallbackThreading.CallerThread
+                        strategy = MarshallingStrategy.Callback,
+                        callbackLifetime = BindingCallbackLifetime.CallOnly,
+                        callbackThreading = BindingCallbackThreading.CallerThread
                     }
                 }
             };
@@ -307,7 +311,7 @@ public class GeneratedCodeCompilationMatrixTests
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsCallback"],
                 ExpectedMethodNames = ["BgcsSetCallbackNative", "BgcsSetCallback"],
-                Configure = cfg => cfg.AutoWrapCallbacks = true
+                Configure = cfg => cfg.autoWrapCallbacks = true
             },
             new()
             {
@@ -356,7 +360,7 @@ public class GeneratedCodeCompilationMatrixTests
                 ,
                 Configure = cfg =>
                 {
-                    cfg.UseCustomContext = true;
+                    cfg.useCustomContext = true;
                 }
             },
             new()
@@ -375,8 +379,8 @@ public class GeneratedCodeCompilationMatrixTests
                 ExpectSingleFileOutput = true,
                 Configure = cfg =>
                 {
-                    cfg.MergeGeneratedFilesToSingleFile = true;
-                    cfg.GenerateRuntimeSource = false;
+                    cfg.mergeGeneratedFilesToSingleFile = true;
+                    cfg.generateRuntimeSource = false;
                 }
             },
             new()
@@ -433,7 +437,7 @@ public class GeneratedCodeCompilationMatrixTests
                     """,
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsThreadPool"],
-                Configure = cfg => cfg.AutoSquashTypedef = false,
+                Configure = cfg => cfg.autoSquashTypedef = false,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Type pool = assembly.GetType("Compile.Generated.BgcsThreadPool")!;
@@ -462,8 +466,8 @@ public class GeneratedCodeCompilationMatrixTests
                 ExpectedTypeNames = ["BgcsHolder", "BgcsHolderPtr"],
                 Configure = cfg =>
                 {
-                    cfg.AutoSquashTypedef = false;
-                    cfg.WrapPointersAsHandle = true;
+                    cfg.autoSquashTypedef = false;
+                    cfg.wrapPointersAsHandle = true;
                 },
                 VerifyAssembly = (assembly, _) =>
                 {
@@ -494,7 +498,7 @@ public class GeneratedCodeCompilationMatrixTests
                     """,
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsOwner", "BgcsOwnerPtr", "BgcsTarget", "BgcsTargetPtr"],
-                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                Configure = cfg => cfg.wrapPointersAsHandle = true,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Type ownerPointer = assembly.GetType("Compile.Generated.BgcsOwnerPtr")!;
@@ -513,7 +517,7 @@ public class GeneratedCodeCompilationMatrixTests
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsHandle"],
                 ExpectedMethodNames = ["BgcsCreateHandleNative", "BgcsDestroyHandleNative"],
-                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                Configure = cfg => cfg.wrapPointersAsHandle = true,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Assert.Null(assembly.GetType("Compile.Generated.BgcsOpaqueStatePtr"));
@@ -540,7 +544,7 @@ public class GeneratedCodeCompilationMatrixTests
                     """,
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsPlatforms", "BgcsPlatformsPtr"],
-                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                Configure = cfg => cfg.wrapPointersAsHandle = true,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Type platforms = assembly.GetType("Compile.Generated.BgcsPlatforms")!;
@@ -568,7 +572,7 @@ public class GeneratedCodeCompilationMatrixTests
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsFlags", "BgcsPrivate"],
                 ExpectedMethodNames = ["BgcsUseFlagsNative"],
-                Configure = cfg => cfg.AutoSquashTypedef = false
+                Configure = cfg => cfg.autoSquashTypedef = false
             },
             new()
             {
@@ -576,13 +580,13 @@ public class GeneratedCodeCompilationMatrixTests
                 Header = "int bgcs_log(const char* format, ...);",
                 ImportType = ImportType.DllImport,
                 ExpectedMethodNames = ["BgcsLogIntsNative", "BgcsLogInts"],
-                Configure = cfg => cfg.VariadicFunctionVariants["bgcs_log"] =
+                Configure = cfg => cfg.variadicFunctionVariants["bgcs_log"] =
                 [
                     new VariadicFunctionVariant
                     {
-                        Suffix = "Ints",
-                        ParameterTypes = ["int", "int"],
-                        ParameterNames = ["first", "second"]
+                        suffix = "Ints",
+                        parameterTypes = ["int", "int"],
+                        parameterNames = ["first", "second"]
                     }
                 ]
             },
@@ -598,7 +602,7 @@ public class GeneratedCodeCompilationMatrixTests
                     """,
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsCallbackTable"],
-                Configure = cfg => cfg.DelegatesAsVoidPointer = true
+                Configure = cfg => cfg.delegatesAsVoidPointer = true
             },
             new()
             {
@@ -617,9 +621,9 @@ public class GeneratedCodeCompilationMatrixTests
                 ExpectedMethodNames = ["BgcsSetPredicate", "BgcsGetPredicate"],
                 Configure = cfg =>
                 {
-                    cfg.AutoSquashTypedef = false;
-                    cfg.BoolType = BoolType.Byte;
-                    cfg.DelegatesAsVoidPointer = false;
+                    cfg.autoSquashTypedef = false;
+                    cfg.boolType = BoolType.Byte;
+                    cfg.delegatesAsVoidPointer = false;
                 },
                 VerifyAssembly = (assembly, _) =>
                 {
@@ -642,9 +646,9 @@ public class GeneratedCodeCompilationMatrixTests
                 ExpectedMethodNames = ["BgcsApply"],
                 Configure = cfg =>
                 {
-                    cfg.AutoSquashTypedef = false;
-                    cfg.NestGeneratedTypesInApi = true;
-                    cfg.DelegatesAsVoidPointer = false;
+                    cfg.autoSquashTypedef = false;
+                    cfg.nestGeneratedTypesInApi = true;
+                    cfg.delegatesAsVoidPointer = false;
                 }
             },
             new()
@@ -657,13 +661,13 @@ public class GeneratedCodeCompilationMatrixTests
                 ExpectedTypeNames = ["BgcsResourceHandle"],
                 Configure = cfg =>
                 {
-                    cfg.MemberNamingConvention = NamingConvention.Unknown;
-                    cfg.ClassMappings.Add(new BGCS.Core.Mapping.TypeMapping(
+                    cfg.memberNamingConvention = NamingConvention.Unknown;
+                    cfg.classMappings.Add(new BGCS.Configuration.Mapping.TypeMapping(
                         "BgcsResourceHandle",
                         "BgcsResourceHandle",
                         null)
                     {
-                        Validity = new BGCS.Core.Mapping.StructValidityMapping(
+                        validity = new BGCS.Configuration.Mapping.StructValidityMapping(
                             "index",
                             "ushort.MaxValue",
                             "Valid")
@@ -693,12 +697,12 @@ public class GeneratedCodeCompilationMatrixTests
                     """,
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsPackedState"],
-                Configure = cfg => cfg.BoolType = BoolType.Byte,
+                Configure = cfg => cfg.boolType = BoolType.Byte,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Type type = assembly.GetType("Compile.Generated.BgcsPackedState")!;
                     object value = Activator.CreateInstance(type)!;
-                    type.GetField("RawBits0")!.SetValue(value, 0b1_1111);
+                    type.GetProperty("Delta")!.SetValue(value, -1);
                     Assert.Equal(-1, type.GetProperty("Delta")!.GetValue(value));
                 }
             },
@@ -759,7 +763,7 @@ public class GeneratedCodeCompilationMatrixTests
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsEncoder", "BgcsBeginCallback", "BgcsEndCallback"],
                 ExpectedMethodNames = ["BgcsEncoderBeginNative", "BgcsEncoderEndNative"],
-                Configure = cfg => cfg.AutoSquashTypedef = false,
+                Configure = cfg => cfg.autoSquashTypedef = false,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Type encoder = assembly.GetType("Compile.Generated.BgcsEncoder")!;
@@ -787,7 +791,7 @@ public class GeneratedCodeCompilationMatrixTests
                 },
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsMutex", "BgcsState"],
-                Configure = cfg => cfg.AutoSquashTypedef = false,
+                Configure = cfg => cfg.autoSquashTypedef = false,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Type mutex = assembly.GetType("Compile.Generated.BgcsMutex")!;
@@ -811,7 +815,7 @@ public class GeneratedCodeCompilationMatrixTests
                 ImportType = ImportType.DllImport,
                 ExpectedTypeNames = ["BgcsSamples", "BgcsSamplesPtr"],
                 ExpectedMethodNames = ["BgcsConsumeSamplesNative"],
-                Configure = cfg => cfg.WrapPointersAsHandle = true,
+                Configure = cfg => cfg.wrapPointersAsHandle = true,
                 VerifyAssembly = (assembly, _) =>
                 {
                     Type samples = assembly.GetType("Compile.Generated.BgcsSamples")!;
@@ -838,8 +842,7 @@ public class GeneratedCodeCompilationMatrixTests
                 {
                     Type bits = assembly.GetType("Compile.Generated.BgcsBits")!;
                     Assert.Equal(4, Marshal.SizeOf(bits));
-                    Assert.Equal(0, Marshal.OffsetOf(bits, "RawBits0").ToInt32());
-                    Assert.Equal(0, Marshal.OffsetOf(bits, "RawBits1").ToInt32());
+                    Assert.Equal(0, Marshal.OffsetOf(bits, "RawBits0_0").ToInt32());
                     object value = Activator.CreateInstance(bits)!;
                     PropertyInfo signedValue = bits.GetProperty("SignedValue")!;
                     signedValue.SetValue(value, -1);
@@ -914,7 +917,7 @@ public class GeneratedCodeCompilationMatrixTests
     {
         string diagnostics = string.Join(Environment.NewLine, messages.Select(message => message.ToString()));
         Assert.True(ok, $"Generation failed for scenario '{scenarioName}'.{Environment.NewLine}{diagnostics}");
-        Assert.DoesNotContain(messages, x => x.Severtiy is LogSeverity.Error or LogSeverity.Critical);
+        Assert.DoesNotContain(messages, x => x.severity is LogSeverity.Error or LogSeverity.Critical);
     }
 
     private static RunResult RunGenerator(CompileScenario scenario)
@@ -930,29 +933,29 @@ public class GeneratedCodeCompilationMatrixTests
 
         CsCodeGeneratorConfig cfg = new()
         {
-            ApiName = "CompileApi",
-            Namespace = scenario.Namespace,
-            LibName = "compiletest",
-            GenerateExtensions = false,
-            ImportType = scenario.ImportType,
-            DelegatesAsVoidPointer = false
+            apiName = "CompileApi",
+            @namespace = scenario.Namespace,
+            libName = "compiletest",
+            generateExtensions = false,
+            importType = scenario.ImportType,
+            delegatesAsVoidPointer = false
         };
         scenario.Configure?.Invoke(cfg);
 
         CppParserOptions parserOptions = new()
         {
-            ParseMacros = true,
-            ParseComments = true,
-            ParseSystemIncludes = false,
-            ParseCommentAttribute = true,
-            ParserKind = CppParserKind.Cpp,
-            AutoSquashTypedef = false
+            parseMacros = true,
+            parseComments = true,
+            parseSystemIncludes = false,
+            parseCommentAttribute = true,
+            parserKind = CppParserKind.Cpp,
+            autoSquashTypedef = false
         };
-        parserOptions.AdditionalArguments.Add("-undef");
+        parserOptions.additionalArguments.Add("-undef");
 
         CsCodeGenerator gen = new(cfg);
         bool ok = gen.Generate(parserOptions, headerPath, outputPath);
-        return new(ok, temp, outputPath, gen.Messages);
+        return new(ok, temp, outputPath, gen.messages);
     }
 
     private static void Cleanup(string directory)

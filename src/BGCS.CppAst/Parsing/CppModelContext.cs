@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+
 namespace BGCS.CppAst.Parsing;
-using ClangSharp.Interop;
+
+using System.Runtime.CompilerServices;
 using BGCS.CppAst.Collections;
 using BGCS.CppAst.Model;
 using BGCS.CppAst.Model.Declarations;
@@ -9,99 +11,86 @@ using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Model.Templates;
 using BGCS.CppAst.Utilities;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>CppModelContext</c>.
 /// </summary>
-public unsafe partial class CppModelContext
+internal unsafe partial class CppModelContext
 {
-    private readonly Dictionary<CursorKey, CppContainerContext> containers;
-    private readonly CppContainerContext userRootContainerContext;
-    private readonly CppContainerContext systemRootContainerContext;
-    private CppContainerContext rootContainerContext = null!;
-    private readonly TypedefResolver typedefResolver = new();
-    private readonly Dictionary<CursorKey, CppTemplateParameterType> objCTemplateParameterTypes;
-    private readonly Dictionary<(ResolverScope Scope, uint Hash, CXCursorKind Kind), List<CursorKey>> cursorKeys;
-
+    private readonly Dictionary<CursorKey, CppContainerContext> m_containers;
+    internal DeclContainerVisitorRegistry declVisitors { get; } = new();
+    internal MemberVisitorRegistry memberVisitors { get; } = new();
+    private readonly CppContainerContext m_userRootContainerContext;
+    private readonly CppContainerContext m_systemRootContainerContext;
+    private CppContainerContext m_rootContainerContext = null!;
+    private readonly TypedefResolver m_typedefResolver = new();
+    private readonly Dictionary<CursorKey, CppTemplateParameterType> m_objCTemplateParameterTypes;
+    private readonly Dictionary<(ResolverScope Scope, uint Hash, CXCursorKind Kind), List<CursorKey>> m_cursorKeys;
     /// <summary>
-    /// Initializes a new instance of <see cref="CppModelContext"/>.
+    /// Initializes a new instance of <see cref = "CppModelContext"/>.
     /// </summary>
-    public CppModelContext(CppModelBuilder builder, CXTranslationUnit translationUnit)
-    {
-        Builder = builder;
-        containers = [];
-        RootCompilation = new(translationUnit);
-        objCTemplateParameterTypes = [];
-        cursorKeys = [];
-        userRootContainerContext = new(RootCompilation, CppContainerContextType.User, CppVisibility.Default);
-        systemRootContainerContext = new(RootCompilation.System, CppContainerContextType.System, CppVisibility.Default);
+    public CppModelContext(
+        CppModelBuilder builder,
+        CXTranslationUnit translationUnit
+    ) {
+        this.builder = builder;
+        this.m_containers = [];
+        this.rootCompilation = new(translationUnit);
+        this.m_objCTemplateParameterTypes = [];
+        this.m_cursorKeys = [];
+        this.m_userRootContainerContext = new(this.rootCompilation, CppContainerContextType.User, CppVisibility.Default);
+        this.m_systemRootContainerContext = new(this.rootCompilation.system, CppContainerContextType.System, CppVisibility.Default);
     }
 
     /// <summary>
     /// Gets <c>RootCompilation</c>.
     /// </summary>
-    public CppCompilation RootCompilation { get; }
-
+    public CppCompilation rootCompilation { get; }
     /// <summary>
     /// Exposes public member <c>CurrentRootContainer</c>.
     /// </summary>
-    public CppContainerContext CurrentRootContainer
-    {
-        get => rootContainerContext;
-        set => rootContainerContext = value;
-    }
-
+    public CppContainerContext currentRootContainer { get => this.m_rootContainerContext; set => this.m_rootContainerContext = value; }
     /// <summary>
     /// Exposes public member <c>userRootContainerContext</c>.
     /// </summary>
-    public CppContainerContext UserRootContainerContext => userRootContainerContext;
-
+    public CppContainerContext userRootContainerContext => this.m_userRootContainerContext;
     /// <summary>
     /// Exposes public member <c>systemRootContainerContext</c>.
     /// </summary>
-    public CppContainerContext SystemRootContainerContext => systemRootContainerContext;
-
+    public CppContainerContext systemRootContainerContext => this.m_systemRootContainerContext;
     /// <summary>
     /// Executes public operation <c>Member</c>.
     /// </summary>
-    public CppGlobalDeclarationContainer GlobalDeclarationContainer => (CppGlobalDeclarationContainer)rootContainerContext.Container;
-
+    public CppGlobalDeclarationContainer globalDeclarationContainer => (CppGlobalDeclarationContainer)this.m_rootContainerContext.container;
     /// <summary>
     /// Gets <c>Builder</c>.
     /// </summary>
-    public CppModelBuilder Builder { get; }
-
+    public CppModelBuilder builder { get; }
     /// <summary>
     /// Exposes public member <c>typedefResolver</c>.
     /// </summary>
-    public TypedefResolver TypedefResolver => typedefResolver;
-
+    public TypedefResolver typedefResolver => this.m_typedefResolver;
     /// <summary>
     /// Exposes public member <c>objCTemplateParameterTypes</c>.
     /// </summary>
-    public Dictionary<CursorKey, CppTemplateParameterType> ObjCTemplateParameterTypes => objCTemplateParameterTypes;
-
+    public Dictionary<CursorKey, CppTemplateParameterType> objCTemplateParameterTypes => this.m_objCTemplateParameterTypes;
     /// <summary>
     /// Exposes public member <c>containers</c>.
     /// </summary>
-    public Dictionary<CursorKey, CppContainerContext> Containers => containers;
-
+    public Dictionary<CursorKey, CppContainerContext> containers => this.m_containers;
     /// <summary>
     /// Gets or sets <c>CurrentClassBeingVisited</c>.
     /// </summary>
-    public CppClass? CurrentClassBeingVisited { get; set; }
-
+    public CppClass? currentClassBeingVisited { get; set; }
     /// <summary>
     /// Gets <c>MapTemplateParameterTypeToTypedefKeys</c>.
     /// </summary>
-    public Dictionary<CppTemplateParameterType, HashSet<CursorKey>> MapTemplateParameterTypeToTypedefKeys { get; } = [];
-
+    public Dictionary<CppTemplateParameterType, HashSet<CursorKey>> mapTemplateParameterTypeToTypedefKeys { get; } = [];
     /// <summary>
     /// Gets or sets <c>CurrentTypedefKey</c>.
     /// </summary>
-    public CursorKey CurrentTypedefKey { get; set; }
+    public CursorKey currentTypedefKey { get; set; }
 
     /// <summary>
     /// Returns computed data from <c>GetOrCreateDeclContainer</c>.
@@ -114,45 +103,49 @@ public unsafe partial class CppModelContext
         }
 
         var typeKey = GetCursorKey(cursor);
-        if (Containers.TryGetValue(typeKey, out var containerContext))
+        if (this.containers.TryGetValue(typeKey, out var containerContext))
         {
             return containerContext;
         }
 
-        var visitor = DeclContainerVisitorRegistry.GetVisitor(cursor.Kind);
+        var visitor = declVisitors.GetVisitor(cursor.Kind);
         containerContext = visitor.Visit(this, cursor, cursor.SemanticParent);
-        Containers.TryAdd(typeKey, containerContext);
+        this.containers.TryAdd(typeKey, containerContext);
         return containerContext;
     }
 
     /// <summary>
     /// Returns computed data from <c>GetOrCreateDeclContainer</c>.
     /// </summary>
-    public TCppElement GetOrCreateDeclContainer<TCppElement>(CXCursor cursor, out CppContainerContext context) where TCppElement : CppElement, ICppContainer
+    public TCppElement GetOrCreateDeclContainer<TCppElement>(
+        CXCursor cursor,
+        out CppContainerContext context
+    )
+        where TCppElement : CppElement, ICppContainer
     {
         context = GetOrCreateDeclContainer(cursor);
-        if (context.Container is TCppElement typedCppElement)
+        if (context.container is TCppElement typedCppElement)
         {
             return typedCppElement;
         }
-        throw new InvalidOperationException($"The element `{context.Container}` doesn't match the expected type `{typeof(TCppElement)}");
+
+        throw new InvalidOperationException($"The element `{context.container}` doesn't match the expected type `{typeof(TCppElement)}");
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     /// <summary>
     /// Returns computed data from <c>GetCursorKey</c>.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CursorKey GetCursorKey(CXCursor cursor)
     {
         while (cursor.Kind == CXCursorKind.CXCursor_LinkageSpec)
         {
             cursor = cursor.SemanticParent;
         }
-        ResolverScope scope = rootContainerContext.Type == CppContainerContextType.User
-            ? ResolverScope.User
-            : ResolverScope.System;
+
+        ResolverScope scope = this.m_rootContainerContext.type == CppContainerContextType.User ? ResolverScope.User : ResolverScope.System;
         var cacheKey = (scope, cursor.Hash, cursor.Kind);
-        if (cursorKeys.TryGetValue(cacheKey, out List<CursorKey>? bucket))
+        if (this.m_cursorKeys.TryGetValue(cacheKey, out List<CursorKey>? bucket))
         {
             for (int i = 0; i < bucket.Count; i++)
             {
@@ -165,10 +158,10 @@ public unsafe partial class CppModelContext
         else
         {
             bucket = [];
-            cursorKeys.Add(cacheKey, bucket);
+            this.m_cursorKeys.Add(cacheKey, bucket);
         }
 
-        CursorKey key = new(rootContainerContext, cursor);
+        CursorKey key = new(this.m_rootContainerContext, cursor);
         bucket.Add(key);
         return key;
     }
@@ -184,18 +177,13 @@ public unsafe partial class CppModelContext
         }
 
         var key = GetCursorKey(cursor);
-        if (!objCTemplateParameterTypes.TryGetValue(key, out var templateParameterType))
+        if (!this.m_objCTemplateParameterTypes.TryGetValue(key, out var templateParameterType))
         {
             var templateParameterName = CXUtil.GetCursorSpelling(cursor);
             templateParameterType = new(cursor, templateParameterName);
-            objCTemplateParameterTypes.Add(key, templateParameterType);
+            this.m_objCTemplateParameterTypes.Add(key, templateParameterType);
         }
+
         return templateParameterType;
     }
 }
-
-[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-/// <summary>
-/// Declares the callback signature <c>CXCursorBlockVisitor</c>.
-/// </summary>
-public unsafe delegate CXChildVisitResult CXCursorBlockVisitor(CXCursor cursor, CXCursor parent);

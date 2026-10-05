@@ -1,12 +1,23 @@
-﻿namespace BGCS.Patching
-{
-    using System.Collections.Generic;
+using BGCS.Analysis;
+using BGCS.Configuration;
+namespace BGCS.Patching;
 
+/// <summary>
+/// Transforms the attempt-local native analysis model before it is lowered into binding IR.
+/// </summary>
+public interface IPrePatch
+{
     /// <summary>
-    /// Defines the public interface <c>IPrePatch</c>.
+    /// Updates generation policy or borrowed native declarations without rewriting original source files.
     /// </summary>
-    public interface IPrePatch : IPatch
-    {
-        void Apply(PatchContext context, CsCodeGeneratorConfig settings, List<string> files, ParseResult compilation);
-    }
+    /// <param name="settings">
+    /// The active generation policy to update for this attempt.
+    /// </param>
+    /// <param name="result">
+    /// The borrowed parse model; its native objects must not be retained beyond this attempt.
+    /// </param>
+    void Apply(
+        CsCodeGeneratorConfig settings,
+        ParseResult result
+    );
 }

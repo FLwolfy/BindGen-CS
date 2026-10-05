@@ -1,103 +1,165 @@
-﻿namespace BGCS.Metadata
+using System.Collections.Generic;
+using System.Linq;
+using BGCS.Core.Collections;
+
+namespace BGCS.Metadata
 {
-    using BGCS.Core;
     using Newtonsoft.Json;
 
     /// <summary>
-    /// Defines the public class <c>CsEnumMetadata</c>.
+    /// Retains a native enum identity and its mutable managed carrier, item, attribute, and documentation projections.
     /// </summary>
     public class CsEnumMetadata : IHasIdentifier, ICloneable<CsEnumMetadata>
     {
+        /// <summary>
+        /// Retains the enum projection, using int when no explicit carrier is supplied and creating absent item collections as empty.
+        /// </summary>
+        /// <param name="cppName">
+        /// The original native enum identifier.
+        /// </param>
+        /// <param name="name">
+        /// The mapped managed enum identifier.
+        /// </param>
+        /// <param name="attributes">
+        /// Managed attribute fragments; supplied lists are retained, while null creates an empty list.
+        /// </param>
+        /// <param name="comment">
+        /// The emitted documentation fragment, or null when absent.
+        /// </param>
+        /// <param name="baseType">
+        /// The managed integral carrier spelling; blank input selects int.
+        /// </param>
+        /// <param name="items">
+        /// Mapped enum items; supplied lists are retained, while null creates an empty list.
+        /// </param>
         [JsonConstructor]
-        /// <summary>
-        /// Initializes a new instance of <see cref="CsEnumMetadata"/>.
-        /// </summary>
-        public CsEnumMetadata(string cppName, string name, List<string>? attributes, string? comment, string baseType, List<CsEnumItemMetadata>? items)
-        {
-            CppName = cppName;
-            Name = name;
-            Attributes = attributes ?? [];
-            Comment = comment;
-            Items = items ?? [];
-            BaseType = string.IsNullOrWhiteSpace(baseType) ? "int" : baseType;
+        public CsEnumMetadata(
+            string cppName,
+            string name,
+            List<string>? attributes,
+            string? comment,
+            string baseType,
+            List<CsEnumItemMetadata>? items
+        ) {
+            this.cppName = cppName;
+            this.name = name;
+            this.attributes = attributes ?? [];
+            this.comment = comment;
+            this.items = items ?? [];
+            this.baseType = string.IsNullOrWhiteSpace(baseType) ? "int" : baseType;
         }
 
         /// <summary>
-        /// Executes public operation <c>CsEnumMetadata</c>.
+        /// Retains the enum projection, using int when no explicit carrier is supplied and creating absent item collections as empty.
         /// </summary>
-        public CsEnumMetadata(string cppName, string name, List<string> attributes, string? comment, List<CsEnumItemMetadata> items)
-        {
-            CppName = cppName;
-            Name = name;
-            Attributes = attributes;
-            Comment = comment;
-            Items = items;
-            BaseType = "int";
+        /// <param name="cppName">
+        /// The original native enum identifier.
+        /// </param>
+        /// <param name="name">
+        /// The mapped managed enum identifier.
+        /// </param>
+        /// <param name="attributes">
+        /// Managed attribute fragments; supplied lists are retained, while null creates an empty list.
+        /// </param>
+        /// <param name="comment">
+        /// The emitted documentation fragment, or null when absent.
+        /// </param>
+        /// <param name="items">
+        /// Mapped enum items; supplied lists are retained, while null creates an empty list.
+        /// </param>
+        public CsEnumMetadata(
+            string cppName,
+            string name,
+            List<string> attributes,
+            string? comment,
+            List<CsEnumItemMetadata> items
+        ) {
+            this.cppName = cppName;
+            this.name = name;
+            this.attributes = attributes;
+            this.comment = comment;
+            this.items = items;
+            this.baseType = "int";
         }
 
         /// <summary>
-        /// Executes public operation <c>CsEnumMetadata</c>.
+        /// Retains the enum projection, using int when no explicit carrier is supplied and creating absent item collections as empty.
         /// </summary>
-        public CsEnumMetadata(string cppName, string name, List<string> attributes, string? comment)
-        {
-            CppName = cppName;
-            Name = name;
-            Attributes = attributes;
-            Comment = comment;
-            Items = new();
-            BaseType = "int";
+        /// <param name="cppName">
+        /// The original native enum identifier.
+        /// </param>
+        /// <param name="name">
+        /// The mapped managed enum identifier.
+        /// </param>
+        /// <param name="attributes">
+        /// Managed attribute fragments; supplied lists are retained, while null creates an empty list.
+        /// </param>
+        /// <param name="comment">
+        /// The emitted documentation fragment, or null when absent.
+        /// </param>
+        public CsEnumMetadata(
+            string cppName,
+            string name,
+            List<string> attributes,
+            string? comment
+        ) {
+            this.cppName = cppName;
+            this.name = name;
+            this.attributes = attributes;
+            this.comment = comment;
+            this.items = new();
+            this.baseType = "int";
         }
 
         /// <summary>
-        /// Exposes public member <c>CppName</c>.
+        /// Gets the original native enum identifier used for metadata matching.
         /// </summary>
-        public string Identifier => CppName;
+        public string identifier => this.cppName;
+        /// <summary>
+        /// Gets or sets the original native enum identifier.
+        /// </summary>
+        public string cppName { get; set; }
+        /// <summary>
+        /// Gets or sets the mapped managed enum identifier.
+        /// </summary>
+        public string name { get; set; }
+        /// <summary>
+        /// Gets or sets managed enum attribute fragments in emission order.
+        /// </summary>
+        public List<string> attributes { get; set; }
+        /// <summary>
+        /// Gets or sets the emitted enum documentation fragment, or null when absent.
+        /// </summary>
+        public string? comment { get; set; }
+        /// <summary>
+        /// Gets or sets the managed integral carrier spelling.
+        /// </summary>
+        public string baseType { get; set; }
+        /// <summary>
+        /// Gets or sets the mutable mapped enum items in declaration order.
+        /// </summary>
+        public List<CsEnumItemMetadata> items { get; set; } = new();
 
         /// <summary>
-        /// Gets or sets <c>CppName</c>.
+        /// Hashes the original native enum identifier for in-process metadata lookup.
         /// </summary>
-        public string CppName { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Name</c>.
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Attributes</c>.
-        /// </summary>
-        public List<string> Attributes { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Comment</c>.
-        /// </summary>
-        public string? Comment { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>BaseType</c>.
-        /// </summary>
-        public string BaseType { get; set; }
-
-        /// <summary>
-        /// Gets or sets <c>Items</c>.
-        /// </summary>
-        public List<CsEnumItemMetadata> Items { get; set; } = new();
-
-        /// <summary>
-        /// Returns computed data from <c>GetHashCode</c>.
-        /// </summary>
+        /// <returns>
+        /// The current identifier hash; changing cppName changes this value.
+        /// </returns>
         public override int GetHashCode()
         {
-            return Identifier.GetHashCode();
+            return this.identifier.GetHashCode();
         }
 
         /// <summary>
-        /// Executes public operation <c>Clone</c>.
+        /// Copies attribute and item collections, cloning each mapped item and preserving the managed carrier spelling.
         /// </summary>
+        /// <returns>
+        /// A separately mutable enum projection retaining the same immutable text values.
+        /// </returns>
         public CsEnumMetadata Clone()
         {
-            return new CsEnumMetadata(CppName, Name, new List<string>(Attributes), Comment, BaseType, Items.Select(item => item.Clone()).ToList()
-            );
+            return new CsEnumMetadata(this.cppName, this.name, new List<string>(this.attributes), this.comment, this.baseType, this.items.Select(item => item.Clone()).ToList());
         }
     }
 }

@@ -1,17 +1,10 @@
-using System.IO;
 using ClangSharp.Interop;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace BGCS.CppAst.Utilities;
+
 internal static unsafe class CXUtil
 {
     #region Cursor
-
     public static string GetCursorSpelling(CXCursor cursor)
     {
         var cursorSpelling = cursor.Spelling;
@@ -37,9 +30,7 @@ internal static unsafe class CXUtil
     }
 
     #endregion Cursor
-
     #region Comment
-
     public static string GetComment_TextComment_Text(CXComment comment)
     {
         var textComment_Text = comment.TextComment_Text;
@@ -56,8 +47,10 @@ internal static unsafe class CXUtil
         return inlineCommandComment_CommandNameStr;
     }
 
-    public static string GetComment_InlineCommandComment_ArgText(CXComment comment, uint index)
-    {
+    public static string GetComment_InlineCommandComment_ArgText(
+        CXComment comment,
+        uint index
+    ) {
         var inlineCommandComment_ArgText = comment.InlineCommandComment_GetArgText(index);
         string inlineCommandComment_ArgTextStr = inlineCommandComment_ArgText.ToString();
         inlineCommandComment_ArgText.Dispose();
@@ -72,16 +65,20 @@ internal static unsafe class CXUtil
         return htmlTagComment_TagNameStr;
     }
 
-    public static string GetComment_HtmlStartTag_AttrName(CXComment comment, uint index)
-    {
+    public static string GetComment_HtmlStartTag_AttrName(
+        CXComment comment,
+        uint index
+    ) {
         var htmlStartTag_AttrName = comment.HtmlStartTag_GetAttrName(index);
         string htmlStartTag_AttrNameStr = htmlStartTag_AttrName.ToString();
         htmlStartTag_AttrName.Dispose();
         return htmlStartTag_AttrNameStr;
     }
 
-    public static string GetComment_HtmlStartTag_AttrValue(CXComment comment, uint index)
-    {
+    public static string GetComment_HtmlStartTag_AttrValue(
+        CXComment comment,
+        uint index
+    ) {
         var htmlStartTag_AttrValue = comment.HtmlStartTag_GetAttrValue(index);
         string htmlStartTag_AttrValueStr = htmlStartTag_AttrValue.ToString();
         htmlStartTag_AttrValue.Dispose();
@@ -96,8 +93,10 @@ internal static unsafe class CXUtil
         return blockCommandComment_CommandNameStr;
     }
 
-    public static string GetComment_BlockCommandComment_ArgText(CXComment comment, uint index)
-    {
+    public static string GetComment_BlockCommandComment_ArgText(
+        CXComment comment,
+        uint index
+    ) {
         var blockCommandComment_ArgText = comment.BlockCommandComment_GetArgText(index);
         string blockCommandComment_ArgTextStr = blockCommandComment_ArgText.ToString();
         blockCommandComment_ArgText.Dispose();
@@ -137,11 +136,11 @@ internal static unsafe class CXUtil
     }
 
     #endregion Comment
-
     #region Token
-
-    public static string GetTokenSpelling(CXToken token, CXTranslationUnit tu)
-    {
+    public static string GetTokenSpelling(
+        CXToken token,
+        CXTranslationUnit tu
+    ) {
         var tokenSpelling = token.GetSpelling(tu);
         string tokenSpellingStr = tokenSpelling.ToString();
         tokenSpelling.Dispose();
@@ -149,9 +148,7 @@ internal static unsafe class CXUtil
     }
 
     #endregion Token
-
     #region File
-
     public static string GetFileName(CXFile file)
     {
         var fileName = file.Name;
@@ -161,9 +158,7 @@ internal static unsafe class CXUtil
     }
 
     #endregion File
-
     #region Type
-
     public static string GetTypeKindSpelling(CXType type)
     {
         var kindSpelling = type.KindSpelling;
@@ -179,6 +174,5 @@ internal static unsafe class CXUtil
         spelling.Dispose();
         return spellingStr;
     }
-
     #endregion Type
 }

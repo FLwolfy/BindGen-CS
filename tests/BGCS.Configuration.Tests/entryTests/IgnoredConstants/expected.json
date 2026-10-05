@@ -1,5 +1,5 @@
 {
-  "Property": "IgnoredConstants",
+  "Property": "ignoredConstants",
   "Expected": [
     "MY_CONST"
   ]

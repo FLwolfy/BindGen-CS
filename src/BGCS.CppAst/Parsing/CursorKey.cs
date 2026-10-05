@@ -1,129 +1,68 @@
 using System;
-using System.Runtime.CompilerServices;
+using BGCS.CppAst.Utilities;
 using ClangSharp.Interop;
 
 namespace BGCS.CppAst.Parsing;
 
 /// <summary>
-/// Defines the public struct <c>CursorKey</c>.
+/// Identifies a declaration within one translation unit using its complete decoded Clang name.
 /// </summary>
-public struct CursorKey : IEquatable<CursorKey>
+internal readonly struct CursorKey : IEquatable<CursorKey>
 {
-    /// <summary>
-    /// Exposes public member <c>scope</c>.
-    /// </summary>
-    public ResolverScope scope;
-    /// <summary>
-    /// Exposes public member <c>cursor</c>.
-    /// </summary>
-    public CXCursor cursor;
-    /// <summary>
-    /// Exposes public member <c>name</c>.
-    /// </summary>
-    public CString name;
+    private readonly string m_name;
+    private readonly bool m_isAnonymous;
+    private readonly uint m_anonymousHash;
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="CursorKey"/>.
-    /// </summary>
-    public unsafe CursorKey(CppContainerContext context, CXCursor cursor)
-    {
-        scope = context.Type switch
-        {
-            CppContainerContextType.Unspecified => ResolverScope.System,
-            CppContainerContextType.System => ResolverScope.System,
-            CppContainerContextType.User => ResolverScope.User,
-            _ => ResolverScope.System,
-        };
-
+    internal CursorKey(
+        CppContainerContext context,
+        CXCursor cursor
+    ) {
+        scope = context.type == CppContainerContextType.User ? ResolverScope.User : ResolverScope.System;
         while (cursor.Kind == CXCursorKind.CXCursor_LinkageSpec)
-        {
             cursor = cursor.SemanticParent;
-        }
+
         this.cursor = cursor;
-
-        using var usr = cursor.Usr;
-        var usrCstr = (byte*)clang.getCString(usr);
-        var usrLen = MbStrLen(usrCstr);
-        if (usrLen == -1) throw new Exception();
-        if (usrLen == 0)
-        {
-            using var displayName = cursor.DisplayName;
-            var displayNameCstr = (byte*)clang.getCString(displayName);
-            var displayNameLen = MbStrLen(displayNameCstr);
-            if (displayNameLen == -1) throw new Exception();
-            name = new(BumpAllocator.Shared.Alloc((nuint)displayNameLen + 1), displayNameLen);
-            Buffer.MemoryCopy(displayNameCstr, name.CStr, displayNameLen + 1, displayNameLen + 1);
-        }
-        else
-        {
-            name = new(BumpAllocator.Shared.Alloc((nuint)usrLen + 1), usrLen);
-            Buffer.MemoryCopy(usrCstr, name.CStr, usrLen + 1, usrLen + 1);
-        }
+        string name = CXUtil.GetCursorUsrString(cursor);
+        m_name = name.Length == 0 ? CXUtil.GetCursorDisplayName(cursor) : name;
+        m_isAnonymous = cursor.IsAnonymous;
+        m_anonymousHash = m_isAnonymous ? cursor.Hash : 0;
     }
 
-    /// <summary>
-    /// Executes public operation <c>Equals</c>.
-    /// </summary>
-    public override readonly bool Equals(object? obj) => obj is CursorKey key && Equals(key);
+    internal ResolverScope scope { get; }
+    internal CXCursor cursor { get; }
 
-    /// <summary>
-    /// Executes public operation <c>Equals</c>.
-    /// </summary>
-    public readonly bool Equals(CursorKey other)
+    private CursorKey(
+        CursorKey key,
+        ResolverScope scope
+    ) {
+        this.scope = scope;
+        cursor = key.cursor;
+        m_name = key.m_name;
+        m_isAnonymous = key.m_isAnonymous;
+        m_anonymousHash = key.m_anonymousHash;
+    }
+
+    internal CursorKey WithScope(ResolverScope scope) => new(this, scope);
+
+    public override bool Equals(object? obj) => obj is CursorKey other && Equals(other);
+
+    public bool Equals(CursorKey other)
     {
-        return other.scope == scope && other.name == name && other.cursor.IsAnonymous == cursor.IsAnonymous &&
-            !(cursor.IsAnonymous && cursor.Hash != other.cursor.Hash);
+        return scope == other.scope
+            && m_isAnonymous == other.m_isAnonymous
+            && m_anonymousHash == other.m_anonymousHash
+            && StringComparer.Ordinal.Equals(m_name, other.m_name);
     }
 
-    /// <summary>
-    /// Returns computed data from <c>GetHashCode</c>.
-    /// </summary>
-    public override readonly int GetHashCode()
-    {
-        return HashCode.Combine(scope, name.GetHashCode(), cursor.IsAnonymous, cursor.IsAnonymous ? cursor.Hash : 0);
-    }
+    public override int GetHashCode() => HashCode.Combine(scope, m_name, m_isAnonymous, m_anonymousHash);
 
-    /// <summary>
-    /// Executes public operation <c>Member</c>.
-    /// </summary>
-    public static bool operator ==(CursorKey left, CursorKey right) => left.Equals(right);
+    public static bool operator ==(
+        CursorKey left,
+        CursorKey right
+    ) => left.Equals(right);
 
-    /// <summary>
-    /// Executes public operation <c>Member</c>.
-    /// </summary>
-    public static bool operator !=(CursorKey left, CursorKey right) => !left.Equals(right);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe int MbStrLen(byte* ptr)
-    {
-        if ((IntPtr)ptr == IntPtr.Zero)
-            return 0;
-        int num1 = 0;
-        while (*ptr != 0)
-        {
-            byte num2 = *ptr;
-            if ((num2 & 128) == 0)
-                ++ptr;
-            else if ((num2 & 224) == 192)
-            {
-                if ((ptr[1] & 192) != 128)
-                    return -1;
-                ptr += 2;
-            }
-            else if ((num2 & 240) == 224)
-            {
-                if ((ptr[1] & 192) != 128 || (ptr[2] & 192) != 128)
-                    return -1;
-                ptr += 3;
-            }
-            else
-            {
-                if ((num2 & 248) != 240 || (ptr[1] & 192) != 128 || (ptr[2] & 192) != 128 || (ptr[3] & 192) != 128)
-                    return -1;
-                ptr += 4;
-            }
-            ++num1;
-        }
-        return num1;
-    }
+    public static bool operator !=(
+        CursorKey left,
+        CursorKey right
+    ) => !left.Equals(right);
 }

@@ -23,13 +23,13 @@ bindgen-cs explain --json
 
 ## StrictSafety modes
 
-| `StrictSafetySeverity` | Behavior |
+| `strictSafetySeverity` | Behavior |
 | --- | --- |
 | `Warning` | Keep the raw ABI and current friendly API while reporting risk |
 | `SuppressFriendly` (default) | Keep the raw ABI but remove inferred friendly overloads for the affected function |
 | `Error` | Promote the risk to an error and fail before committing final output |
 
-Use `StrictSafety=false` only when an external process completely audits these semantics. It does not make unknown ownership correct.
+Use `strictSafety=false` only when an external process completely audits these semantics. It does not make unknown ownership correct.
 
 ## Diagnostic codes
 
@@ -40,7 +40,7 @@ Use `StrictSafety=false` only when an external process completely audits these s
 | `BGCS-SAFETY-LENGTH` | A buffer pointer has no proven length/capacity relationship | Set `LengthParameter`, `CapacityParameter`, and optionally `WrittenCountParameter` |
 | `BGCS-SAFETY-ALLOCATOR` | An output string has no cleanup allocator | Set `CleanupFunction`, ownership, encoding, and cleanup requirement |
 | `BGCSCS001` | The IR-native C# emitter cannot preserve a declaration without semantic loss | Implement a general, tested IR lowering or explicitly exclude the declaration; emission fails before writing output |
-| `BGCSCPP-INSTANTIATION` | A primary template was found without a requested concrete instance | Add the required full specialization to `TemplateInstantiations` or `FunctionTemplateInstantiations` |
+| `BGCSCPP-INSTANTIATION` | A primary template was found without a requested concrete instance | Add the required full specialization to `templateInstantiations` or `functionTemplateInstantiations` |
 | `BGCSCPP001` | A C++ declaration has no accepted lowering | Configure a built-in type list, request a concrete template instance, add a declarative lowering/typed plugin/explicit C shim, or choose an auditable safety policy |
 | `BGCS-SAFETY-LOWERING-BYPASS` | An `Unsafe` lowering was explicitly allowed | Keep project-owned ABI, native invocation, allocator, and lifetime tests; promote the lowering to `UserAsserted` or `Verified` when evidence exists |
 | `BGCS-SAFETY-EXTERNAL-TYPE` | A project-supplied managed value carrier crosses the ABI | Declare matching target size/alignment with `RequireLayoutMatch`, use pointer-only semantics, or explicitly bypass and retain native invocation tests |
@@ -49,9 +49,9 @@ Use `StrictSafety=false` only when an external process completely audits these s
 
 ```json
 {
-  "StrictSafety": true,
-  "StrictSafetySeverity": "Error",
-  "MarshallingMappings": {
+  "strictSafety": true,
+  "strictSafetySeverity": "Error",
+  "marshallingMappings": {
     "library_get_items": {
       "Parameters": {
         "items": {
@@ -78,15 +78,15 @@ Use `StrictSafety=false` only when an external process completely audits these s
 
 ## Parser and target problems
 
-- Header not found: paths resolve from the configuration directory; check `EntryFiles`, `IncludeFolders`, and filename casing.
-- An umbrella header emits no declarations: enable `IncludeTransitivelyReferencedHeaders` and keep user headers under the entry directory or `IncludeFolders`.
-- Platform types do not match: do not copy another platform's `Defines`; inspect `TargetPlatform`, `TargetArchitecture`, `TargetAbi`, `TargetTriple`, and `TargetSysRoot`.
-- macOS standard library/SDK is missing: run `xcrun --show-sdk-path`, then use `doctor`; set `SDKROOT` or `CompilerPath` only when discovery needs an override.
+- Header not found: paths resolve from the configuration directory; check `entryFiles`, `includeFolders`, and filename casing.
+- An umbrella header emits no declarations: enable `includeTransitivelyReferencedHeaders` and keep user headers under the entry directory or `includeFolders`.
+- Platform types do not match: do not copy another platform's `defines`; inspect `TargetPlatform`, `TargetArchitecture`, `TargetAbi`, `targetTriple`, and `targetSysRoot`.
+- macOS standard library/SDK is missing: run `xcrun --show-sdk-path`, then use `doctor`; set `SDKROOT` or `compilerPath` only when discovery needs an override.
 - A C++ symbol cannot be P/Invoked: methods/functions without C linkage belong behind `bridge`; a mangled name is not a stable ABI.
 
 ## What not to do
 
 - Do not map an unknown C++ class to `nint` and pretend its lifetime is handled.
 - Do not hand-edit generated `[DllImport]`, layout, or cleanup code.
-- Do not use `StrictSafety=false` as a substitute for project ownership documentation.
+- Do not use `strictSafety=false` as a substitute for project ownership documentation.
 - Do not let the binding target configuration diverge from the ABI of the native binary.

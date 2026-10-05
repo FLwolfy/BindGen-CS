@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using BGCS.Core.Targeting;
 using BGCS.CppAst.Model.Declarations;
 using BGCS.CppAst.Model.Metadata;
 using BGCS.CppAst.Model.Types;
@@ -12,30 +14,69 @@ namespace BGCS.CppAst.Tests;
 
 public sealed class CppTargetTests
 {
+    [Fact]
+    public void CppSdkWrappersPrecedeCHeadersAndIncludeNextReachesTheCAbi()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-include-order-" + Guid.NewGuid().ToString("N"));
+        string c = Path.Combine(root, "c");
+        string cxx = Path.Combine(root, "cxx");
+        Directory.CreateDirectory(c);
+        Directory.CreateDirectory(cxx);
+        File.WriteAllText(Path.Combine(c, "stdint.h"), "#define BGCS_C_HEADER 1\ntypedef unsigned int bgcs_uint;\n");
+        File.WriteAllText(Path.Combine(cxx, "stdint.h"), "#define BGCS_CXX_HEADER 1\n#include_next <stdint.h>\n");
+        try
+        {
+            NativeToolchainDescriptor toolchain = new(systemIncludeFolders: [c], cxxSystemIncludeFolders: [cxx]);
+            NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(new NativeTargetId("linux-x64-gnu"), toolchain));
+            CppParserOptions options = new() { parserKind = CppParserKind.Cpp, parseSystemIncludes = false };
+            options.ConfigureForTarget(target, discoverHostToolchain: false);
+            CppCompilation compilation = CppParser.Parse("""
+                #include <stdint.h>
+                #ifndef BGCS_CXX_HEADER
+                #error C++ SDK wrappers were bypassed
+                #endif
+                #ifndef BGCS_C_HEADER
+                #error include_next did not reach the C ABI
+                #endif
+                struct AbiValue { bgcs_uint value; };
+                """, options);
+            Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
+            Assert.Equal(4, Assert.Single(compilation.classes, value => value.name == "AbiValue").sizeOf);
+            options.parserKind = CppParserKind.C;
+            options.ConfigureForTarget(target, discoverHostToolchain: false);
+            Assert.DoesNotContain(cxx, options.systemIncludeFolders);
+            Assert.Contains(c, options.systemIncludeFolders);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Theory]
-    [InlineData(CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc, "x86_64-pc-windows-msvc", "windows-x64-msvc")]
-    [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu, "x86_64-unknown-linux-gnu", "linux-x64-gnu")]
-    [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Musl, "aarch64-unknown-linux-musl", "linux-arm64-musl")]
-    [InlineData(CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin, "arm64-apple-darwin", "macos-arm64-darwin")]
-    [InlineData(CppTargetPlatform.Emscripten, CppTargetArchitecture.Wasm32, CppTargetAbi.Emscripten, "wasm32-unknown-emscripten", "emscripten-wasm32-emscripten")]
+    [InlineData("windows", "x64", "msvc", "x86_64-pc-windows-msvc", "windows-x64-msvc")]
+    [InlineData("linux", "x64", "gnu", "x86_64-unknown-linux-gnu", "linux-x64-gnu")]
+    [InlineData("linux", "arm64", "musl", "aarch64-unknown-linux-musl", "linux-arm64-musl")]
+    [InlineData("macos", "arm64", "darwin", "arm64-apple-darwin", "macos-arm64-darwin")]
+    [InlineData("emscripten", "wasm32", "emscripten", "wasm32-unknown-emscripten", "emscripten-wasm32-emscripten")]
     public void Resolve_ExplicitTarget_ShouldProduceStableTripleAndIdentifier(
-        CppTargetPlatform platform,
-        CppTargetArchitecture architecture,
-        CppTargetAbi abi,
+        string platform,
+        string architecture,
+        string abi,
         string triple,
         string identifier)
     {
-        CppTarget target = CppTarget.Resolve(platform, architecture, abi);
+        NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(new NativeTargetId(string.Join("-", platform, architecture, abi))));
 
-        Assert.Equal(triple, target.Triple);
-        Assert.Equal(identifier, target.Identifier);
+        Assert.Equal(triple, target.triple);
+        Assert.Equal(identifier, target.targetId.value);
     }
 
     [Fact]
     public void Resolve_InvalidAbi_ShouldFailClearly()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(() =>
-            CppTarget.Resolve(CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Msvc));
+            new ClangTargetResolver().Resolve(new(new NativeTargetId("macos-arm64-msvc"))));
 
         Assert.Contains("not valid", exception.Message, StringComparison.Ordinal);
     }
@@ -45,46 +86,43 @@ public sealed class CppTargetTests
     {
         CppParserOptions options = new()
         {
-            ParserKind = CppParserKind.C,
-            ParseMacros = false,
-            ParseComments = false,
-            ParseSystemIncludes = false
+            parserKind = CppParserKind.C,
+            parseMacros = false,
+            parseComments = false,
+            parseSystemIncludes = false
         };
         options.ConfigureForTarget(
-            CppTarget.Resolve(
-                CppTargetPlatform.Emscripten,
-                CppTargetArchitecture.Wasm32,
-                CppTargetAbi.Emscripten),
+            new ClangTargetResolver().Resolve(new(new NativeTargetId("emscripten-wasm32-emscripten"))),
             discoverHostToolchain: false);
 
         CppCompilation compilation = CppParser.Parse(
             "struct BrowserAbi { void* handle; unsigned long count; };",
             options);
 
-        Assert.False(compilation.HasErrors, string.Join(Environment.NewLine, compilation.Diagnostics.Messages));
-        CppClass type = Assert.Single(compilation.Classes, value => value.Name == "BrowserAbi");
-        Assert.Equal(8, type.SizeOf);
-        Assert.Equal(4, type.Fields.Single(field => field.Name == "handle").Type.SizeOf);
-        Assert.Equal(4, type.Fields.Single(field => field.Name == "count").Type.SizeOf);
+        Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
+        CppClass type = Assert.Single(compilation.classes, value => value.name == "BrowserAbi");
+        Assert.Equal(8, type.sizeOf);
+        Assert.Equal(4, type.fields.Single(field => field.name == "handle").type.sizeOf);
+        Assert.Equal(4, type.fields.Single(field => field.name == "count").type.sizeOf);
     }
 
     [Fact]
     public void ConfigureForTarget_ReplacesArchitectureMacrosWithoutTouchingUserDefines()
     {
         CppParserOptions options = new();
-        options.Defines.Add("USER_FEATURE=1");
-        CppTarget x64 = CppTarget.Resolve(CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc);
-        CppTarget x86 = CppTarget.Resolve(CppTargetPlatform.Windows, CppTargetArchitecture.X86, CppTargetAbi.Msvc);
+        options.defines.Add("USER_FEATURE=1");
+        NativeTargetDescriptor x64 = new ClangTargetResolver().Resolve(new(new NativeTargetId("windows-x64-msvc")));
+        NativeTargetDescriptor x86 = new ClangTargetResolver().Resolve(new(new NativeTargetId("windows-x86-msvc")));
 
         options.ConfigureForTarget(x64, discoverHostToolchain: false);
         options.ConfigureForTarget(x86, discoverHostToolchain: false);
 
-        Assert.Contains("USER_FEATURE=1", options.Defines);
-        Assert.Contains("_M_IX86=600", options.Defines);
-        Assert.DoesNotContain("_WIN64=1", options.Defines);
-        Assert.DoesNotContain("_M_X64=100", options.Defines);
-        Assert.Equal(1, options.Defines.Count(value => value == "_WIN32=1"));
-        Assert.Equal(1, options.AdditionalArguments.Count(value => value == "-fms-extensions"));
+        Assert.Contains("USER_FEATURE=1", options.defines);
+        Assert.Contains("_M_IX86=600", options.defines);
+        Assert.DoesNotContain("_WIN64=1", options.defines);
+        Assert.DoesNotContain("_M_X64=100", options.defines);
+        Assert.Equal(1, options.defines.Count(value => value == "_WIN32=1"));
+        Assert.Equal(1, options.additionalArguments.Count(value => value == "-fms-extensions"));
     }
 
     [Fact]
@@ -93,55 +131,53 @@ public sealed class CppTargetTests
         CppParserOptions options = new();
         string sysroot = System.IO.Path.GetFullPath(System.IO.Path.GetTempPath());
         options.ConfigureForTarget(
-            CppTarget.Resolve(CppTargetPlatform.MacOS, CppTargetArchitecture.X64, CppTargetAbi.Darwin),
-            sysRoot: sysroot, discoverHostToolchain: false);
-        Assert.Contains("-isysroot", options.AdditionalArguments);
-        Assert.Contains(sysroot, options.AdditionalArguments);
+            new ClangTargetResolver().Resolve(new(new NativeTargetId("macos-x64-darwin"), new(sysRoot: sysroot))),
+            discoverHostToolchain: false);
+        Assert.Contains("--sysroot=" + sysroot, options.additionalArguments);
 
         options.ConfigureForTarget(
-            CppTarget.Resolve(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu),
+            new ClangTargetResolver().Resolve(new(new NativeTargetId("linux-x64-gnu"))),
             discoverHostToolchain: false);
 
-        Assert.DoesNotContain("-isysroot", options.AdditionalArguments);
-        Assert.DoesNotContain(sysroot, options.AdditionalArguments);
-        Assert.Equal("x86_64-unknown-linux-gnu", options.TargetTriple);
+        Assert.DoesNotContain(options.additionalArguments, argument => argument.StartsWith("--sysroot=", StringComparison.Ordinal));
+        Assert.Equal("x86_64-unknown-linux-gnu", options.targetTriple);
     }
 
     [Fact]
     public void ConfigureForTarget_HostCpp_ShouldParseStandardLibrary()
     {
-        CppTarget target = CppTarget.Resolve();
+        NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));
         CppParserOptions options = new()
         {
-            ParserKind = CppParserKind.Cpp,
-            ParseMacros = false,
-            ParseComments = false,
-            ParseSystemIncludes = false
+            parserKind = CppParserKind.Cpp,
+            parseMacros = false,
+            parseComments = false,
+            parseSystemIncludes = false
         };
         options.ConfigureForTarget(target);
 
         var compilation = CppParser.Parse("#include <vector>\nstruct NativeVectorHolder { std::vector<int> values; };", options);
 
-        Assert.False(compilation.HasErrors, string.Join(Environment.NewLine, compilation.Diagnostics.Messages));
-        Assert.Equal(target.Triple, options.TargetTriple);
-        Assert.NotEmpty(options.SystemIncludeFolders);
+        Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
+        Assert.Equal(target.triple, options.targetTriple);
+        Assert.NotEmpty(options.systemIncludeFolders);
     }
 
     [Fact]
     public void Resolve_Host_ShouldMatchProcessArchitecture()
     {
-        CppTarget target = CppTarget.Resolve();
-        CppTargetArchitecture expected = RuntimeInformation.ProcessArchitecture switch
+        NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));
+        string expected = RuntimeInformation.ProcessArchitecture switch
         {
-            Architecture.X86 => CppTargetArchitecture.X86,
-            Architecture.X64 => CppTargetArchitecture.X64,
-            Architecture.Arm => CppTargetArchitecture.Arm,
-            Architecture.Arm64 => CppTargetArchitecture.Arm64,
+            Architecture.X86 => "x86",
+            Architecture.X64 => "x64",
+            Architecture.Arm => "arm",
+            Architecture.Arm64 => "arm64",
             _ => throw new PlatformNotSupportedException()
         };
 
-        Assert.Equal(expected, target.Architecture);
-        Assert.DoesNotContain("host", target.Identifier, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(expected, target.architectureId);
+        Assert.DoesNotContain("host", target.targetId.value, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -160,39 +196,39 @@ public sealed class CppTargetTests
     }
 
     [Theory]
-    [InlineData(CppTargetPlatform.Windows, CppTargetArchitecture.X64, CppTargetAbi.Msvc, 4, 2, 8)]
-    [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.X64, CppTargetAbi.Gnu, 8, 4, 16)]
-    [InlineData(CppTargetPlatform.Linux, CppTargetArchitecture.Arm64, CppTargetAbi.Gnu, 8, 4, 16)]
-    [InlineData(CppTargetPlatform.MacOS, CppTargetArchitecture.Arm64, CppTargetAbi.Darwin, 8, 4, 8)]
-    [InlineData(CppTargetPlatform.Emscripten, CppTargetArchitecture.Wasm32, CppTargetAbi.Emscripten, 4, 4, 16)]
+    [InlineData("windows", "x64", "msvc", 4, 2, 8)]
+    [InlineData("linux", "x64", "gnu", 8, 4, 16)]
+    [InlineData("linux", "arm64", "gnu", 8, 4, 16)]
+    [InlineData("macos", "arm64", "darwin", 8, 4, 8)]
+    [InlineData("emscripten", "wasm32", "emscripten", 4, 4, 16)]
     public void Parse_Primitives_ShouldUseTargetAbiSizes(
-        CppTargetPlatform platform,
-        CppTargetArchitecture architecture,
-        CppTargetAbi abi,
+        string platform,
+        string architecture,
+        string abi,
         int longSize,
         int wcharSize,
         int longDoubleSize)
     {
         CppParserOptions options = new()
         {
-            ParserKind = CppParserKind.Cpp,
-            ParseMacros = false,
-            ParseComments = false,
-            ParseSystemIncludes = false
+            parserKind = CppParserKind.Cpp,
+            parseMacros = false,
+            parseComments = false,
+            parseSystemIncludes = false
         };
-        options.ConfigureForTarget(CppTarget.Resolve(platform, architecture, abi), discoverHostToolchain: false);
+        options.ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId(string.Join("-", platform, architecture, abi)))), discoverHostToolchain: false);
 
         CppCompilation compilation = CppParser.Parse(
             "struct NativeAbiValues { char plainChar; long signedLong; unsigned long unsignedLong; wchar_t wide; long double extendedValue; };",
             options);
 
-        Assert.False(compilation.HasErrors, string.Join(Environment.NewLine, compilation.Diagnostics.Messages));
-        CppClass type = Assert.Single(compilation.Classes, value => value.Name == "NativeAbiValues");
+        Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
+        CppClass type = Assert.Single(compilation.classes, value => value.name == "NativeAbiValues");
         Assert.Equal(CppPrimitiveKind.Char,
-            Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "plainChar").Type).Kind);
-        Assert.Equal(longSize, Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "signedLong").Type).SizeOf);
-        Assert.Equal(longSize, Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "unsignedLong").Type).SizeOf);
-        Assert.Equal(wcharSize, Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "wide").Type).SizeOf);
-        Assert.Equal(longDoubleSize, Assert.IsType<CppPrimitiveType>(type.Fields.Single(field => field.Name == "extendedValue").Type).SizeOf);
+            Assert.IsType<CppPrimitiveType>(type.fields.Single(field => field.name == "plainChar").type).kind);
+        Assert.Equal(longSize, Assert.IsType<CppPrimitiveType>(type.fields.Single(field => field.name == "signedLong").type).sizeOf);
+        Assert.Equal(longSize, Assert.IsType<CppPrimitiveType>(type.fields.Single(field => field.name == "unsignedLong").type).sizeOf);
+        Assert.Equal(wcharSize, Assert.IsType<CppPrimitiveType>(type.fields.Single(field => field.name == "wide").type).sizeOf);
+        Assert.Equal(longDoubleSize, Assert.IsType<CppPrimitiveType>(type.fields.Single(field => field.name == "extendedValue").type).sizeOf);
     }
 }

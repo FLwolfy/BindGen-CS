@@ -1,4 +1,4 @@
 {
-  "Property": "EnableExperimentalOptions",
+  "Property": "enableExperimentalOptions",
   "Expected": false
 }

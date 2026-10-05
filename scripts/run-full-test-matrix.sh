@@ -56,6 +56,15 @@ if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
 fi
 touch "${GATE_DIR}/solution-build"
 
+log "Production source ownership, declaration style and public documentation"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+  --configuration "${CONFIGURATION}" --no-build -- validate architecture "${ROOT_DIR}"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+  --configuration "${CONFIGURATION}" --no-build -- validate style "${ROOT_DIR}/src"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+  --configuration "${CONFIGURATION}" --no-build -- validate documentation "${ROOT_DIR}/src"
+touch "${GATE_DIR}/architecture" "${GATE_DIR}/style" "${GATE_DIR}/documentation"
+
 log "Layer 1: Auto-discovered test projects under tests/"
 TEST_PROJECTS=()
 while IFS= read -r project_path; do
@@ -92,52 +101,26 @@ touch "${GATE_DIR}/native-cpp-bridge"
 "${DOTNET_CMD}" test "${ROOT_DIR}/tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" --configuration "${CONFIGURATION}" --no-build --filter "FullyQualifiedName~Lowering|FullyQualifiedName~VirtualCallback|FullyQualifiedName~TemplateInstantiation|FullyQualifiedName~NonBlittable"
 touch "${GATE_DIR}/modern-cpp"
 
-DEMO_DIR="${ROOT_DIR}/demo/BGCS.Demo"
-DEMO_BIN_DIR="${DEMO_DIR}/bin/${CONFIGURATION}/generated"
-RUNTIME_GENERATED_OUT="${DEMO_BIN_DIR}/OutputRuntimeGenerated"
-RUNTIME_NOTGENERATED_OUT="${DEMO_BIN_DIR}/OutputRuntimeNotGenerated"
+EXAMPLE_DIR="${ROOT_DIR}/examples/QuickStart"
+EXAMPLE_OUT="${ROOT_DIR}/artifacts/examples/QuickStart/${CONFIGURATION}"
+RUNTIME_GENERATED_OUT="${EXAMPLE_OUT}/standalone"
+RUNTIME_NOTGENERATED_OUT="${EXAMPLE_OUT}/packaged-runtime"
 
-log "Layer 2: End-to-end demo generation checks"
-pushd "${DEMO_DIR}" > /dev/null
+log "Layer 2: Public CLI example generation and compilation"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool" --configuration "${CONFIGURATION}" --no-build -- build "${EXAMPLE_DIR}/standalone.json" --output "${RUNTIME_GENERATED_OUT}"
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool" --configuration "${CONFIGURATION}" --no-build -- build "${EXAMPLE_DIR}/bindgen.json" --output "${RUNTIME_NOTGENERATED_OUT}"
 
-rm -rf "${DEMO_BIN_DIR}"
-mkdir -p "${DEMO_BIN_DIR}"
-
-"${DOTNET_CMD}" run --project BGCS.Demo.csproj --configuration "${CONFIGURATION}" --no-build -- config.runtime-generated.json "${RUNTIME_GENERATED_OUT}"
-"${DOTNET_CMD}" run --project BGCS.Demo.csproj --configuration "${CONFIGURATION}" --no-build -- config.runtime-notgenerated.json "${RUNTIME_NOTGENERATED_OUT}"
-
-if [[ ! -f "${RUNTIME_GENERATED_OUT}/Bindings.cs" ]]; then
-  log "Expected ${RUNTIME_GENERATED_OUT}/Bindings.cs to exist"
+for bindings in "${RUNTIME_GENERATED_OUT}/Bindings.cs" "${RUNTIME_NOTGENERATED_OUT}/Bindings.cs"; do
+  if [[ ! -f "${bindings}" ]]; then
+    log "Expected generated binding is missing: ${bindings}"
+    exit 1
+  fi
+done
+if [[ ! -f "${RUNTIME_GENERATED_OUT}/Runtime.cs" || -f "${RUNTIME_NOTGENERATED_OUT}/Runtime.cs" ]]; then
+  log "Runtime source ownership differs from the selected example configuration."
   exit 1
 fi
-
-if [[ ! -f "${RUNTIME_GENERATED_OUT}/Runtime.cs" ]]; then
-  log "Expected runtime-generated scenario to generate Runtime.cs"
-  exit 1
-fi
-
-if [[ ! -f "${RUNTIME_NOTGENERATED_OUT}/Bindings.cs" ]]; then
-  log "Expected runtime-notgenerated output to contain Bindings.cs"
-  exit 1
-fi
-
-if [[ -f "${RUNTIME_NOTGENERATED_OUT}/Runtime.cs" ]]; then
-  log "Runtime-notgenerated scenario must not generate Runtime.cs"
-  exit 1
-fi
-
-if ! grep -q "using BGCS.Runtime;" "${RUNTIME_GENERATED_OUT}/Bindings.cs"; then
-  log "Runtime-generated bindings must contain using BGCS.Runtime;"
-  exit 1
-fi
-
-if ! grep -q "namespace BGCS.Runtime" "${RUNTIME_GENERATED_OUT}/Runtime.cs"; then
-  log "Runtime.cs must contain namespace BGCS.Runtime"
-  exit 1
-fi
-
-popd > /dev/null
-touch "${GATE_DIR}/demo"
+touch "${GATE_DIR}/examples"
 
 log "Layer 3: Pinned upstream real-library regeneration and compilation"
 bash "${ROOT_DIR}/scripts/setup-real-library-corpus.sh"
@@ -157,7 +140,7 @@ else
   snapshot_status=3
 fi
 log "Layer 4: Reviewed public API compatibility baseline"
-bash "${ROOT_DIR}/scripts/test-public-api-compatibility.sh"
+bash "${ROOT_DIR}/scripts/test-public-api-snapshot.sh"
 touch "${GATE_DIR}/api-compatibility"
 
 log "Layer 5: NuGet package, tool, and native RID consumer smoke tests"

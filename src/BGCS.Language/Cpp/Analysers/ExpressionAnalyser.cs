@@ -1,218 +1,27 @@
+using BGCS.Language.Cpp.Nodes;
+using BGCS.Language.Diagnostics;
+using BGCS.Language.Lexing;
+using BGCS.Language.Parsing;
+using BGCS.Language.Syntax;
 namespace BGCS.Language.Cpp.Analysers;
 
 /// <summary>
-/// Defines the public class <c>ExpressionNode</c>.
-/// </summary>
-public class ExpressionNode : SyntaxNode
-{
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return "expr";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>FunctionCallNode</c>.
-/// </summary>
-public class FunctionCallNode : SyntaxNode
-{
-    /// <summary>
-    /// Initializes a new instance of <see cref="FunctionCallNode"/>.
-    /// </summary>
-    public FunctionCallNode(string name)
-    {
-        Name = name;
-    }
-
-    /// <summary>
-    /// Gets <c>Name</c>.
-    /// </summary>
-    public string Name { get; }
-
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return $"call: {Name}";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>CastNode</c>.
-/// </summary>
-public class CastNode : SyntaxNode
-{
-    /// <summary>
-    /// Initializes a new instance of <see cref="CastNode"/>.
-    /// </summary>
-    public CastNode(string name)
-    {
-        Name = name;
-    }
-
-    /// <summary>
-    /// Gets <c>Name</c>.
-    /// </summary>
-    public string Name { get; }
-
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return $"cast: {Name}";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>OperatorNode</c>.
-/// </summary>
-public class OperatorNode : SyntaxNode
-{
-    /// <summary>
-    /// Initializes a new instance of <see cref="OperatorNode"/>.
-    /// </summary>
-    public OperatorNode(string name)
-    {
-        Name = name;
-    }
-
-    /// <summary>
-    /// Gets <c>Name</c>.
-    /// </summary>
-    public string Name { get; }
-
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return $"op: {Name}";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>GroupNode</c>.
-/// </summary>
-public class GroupNode : SyntaxNode
-{
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return "group";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>TypeNode</c>.
-/// </summary>
-public class TypeNode : SyntaxNode
-{
-    /// <summary>
-    /// Initializes a new instance of <see cref="TypeNode"/>.
-    /// </summary>
-    public TypeNode(string name)
-    {
-        Name = name;
-    }
-
-    /// <summary>
-    /// Gets <c>Name</c>.
-    /// </summary>
-    public string Name { get; }
-
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return $"type: {Name}";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>VariableNode</c>.
-/// </summary>
-public class VariableNode : SyntaxNode
-{
-    /// <summary>
-    /// Initializes a new instance of <see cref="VariableNode"/>.
-    /// </summary>
-    public VariableNode(string name)
-    {
-        Name = name;
-    }
-
-    /// <summary>
-    /// Gets <c>Name</c>.
-    /// </summary>
-    public string Name { get; }
-
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return $"var: {Name}";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>ValueNode</c>.
-/// </summary>
-public class ValueNode : SyntaxNode
-{
-    /// <summary>
-    /// Initializes a new instance of <see cref="ValueNode"/>.
-    /// </summary>
-    public ValueNode(string value, LiteralType type, NumberType numberType)
-    {
-        Value = value;
-        Type = type;
-        NumberType = numberType;
-    }
-
-    /// <summary>
-    /// Gets <c>Value</c>.
-    /// </summary>
-    public string Value { get; }
-
-    /// <summary>
-    /// Gets <c>Type</c>.
-    /// </summary>
-    public LiteralType Type { get; }
-
-    /// <summary>
-    /// Gets <c>NumberType</c>.
-    /// </summary>
-    public NumberType NumberType { get; }
-
-    /// <summary>
-    /// Executes public operation <c>ToString</c>.
-    /// </summary>
-    public override string ToString()
-    {
-        return $"value: {Value}";
-    }
-}
-
-/// <summary>
-/// Defines the public class <c>ExpressionAnalyser</c>.
+/// Parses supported macro literals, identifiers, calls, casts, grouping, and unary or binary operators into expression nodes.
 /// </summary>
 public class ExpressionAnalyser : ISyntaxAnalyzer
 {
     /// <summary>
-    /// Executes public operation <c>Analyze</c>.
+    /// Consumes one supported expression at the current cursor and appends its root only after parsing succeeds.
     /// </summary>
+    /// <param name="context">
+    /// The mutable context owned by this parse operation.
+    /// </param>
+    /// <returns>
+    /// Success after consuming and appending an expression, Unrecognised for another declaration, or Error with diagnostics for malformed syntax.
+    /// </returns>
     public AnalyserResult Analyze(ParserContext context)
     {
-        if (context.IsEnd || !IsExpressionStart(context.CurrentToken))
+        if (context.isEnd || !IsExpressionStart(context.currentToken))
         {
             return AnalyserResult.Unrecognised;
         }
@@ -229,32 +38,36 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
         return AnalyserResult.Success;
     }
 
-    private static SyntaxNode? ParseExpression(ParserContext context, int minPrecedence, bool stopAtComma, bool stopAtRightParen)
-    {
+    private static SyntaxNode? ParseExpression(
+        ParserContext context,
+        int minPrecedence,
+        bool stopAtComma,
+        bool stopAtRightParen
+    ) {
         SyntaxNode? left = ParseUnary(context, stopAtComma, stopAtRightParen);
         if (left == null)
         {
             return null;
         }
 
-        while (!context.IsEnd)
+        while (!context.isEnd)
         {
-            if (stopAtComma && context.CurrentToken.IsPunctuation && context.CurrentToken == ',')
+            if (stopAtComma && context.currentToken.isPunctuation && context.currentToken == ',')
             {
                 break;
             }
 
-            if (stopAtRightParen && context.CurrentToken.IsPunctuation && context.CurrentToken == ')')
+            if (stopAtRightParen && context.currentToken.isPunctuation && context.currentToken == ')')
             {
                 break;
             }
 
-            if (!context.CurrentToken.IsOperator)
+            if (!context.currentToken.isOperator)
             {
                 break;
             }
 
-            string op = context.CurrentToken.AsString();
+            string op = context.currentToken.AsString();
             int precedence = GetBinaryPrecedence(op);
             if (precedence < minPrecedence)
             {
@@ -262,7 +75,6 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
             }
 
             context.MoveNext();
-
             int nextMinPrecedence = IsRightAssociative(op) ? precedence : precedence + 1;
             SyntaxNode? right = ParseExpression(context, nextMinPrecedence, stopAtComma, stopAtRightParen);
             if (right == null)
@@ -279,19 +91,21 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
         return left;
     }
 
-    private static SyntaxNode? ParseUnary(ParserContext context, bool stopAtComma, bool stopAtRightParen)
-    {
-        if (context.IsEnd)
+    private static SyntaxNode? ParseUnary(
+        ParserContext context,
+        bool stopAtComma,
+        bool stopAtRightParen
+    ) {
+        if (context.isEnd)
         {
-            context.Diagnostics.Error("Syntax Error: expression expected");
+            context.diagnostics.Error("Syntax Error: expression expected");
             return null;
         }
 
-        if (context.CurrentToken.IsOperator && IsUnaryOperator(context.CurrentToken.AsString()))
+        if (context.currentToken.isOperator && IsUnaryOperator(context.currentToken.AsString()))
         {
-            string op = context.CurrentToken.AsString();
+            string op = context.currentToken.AsString();
             context.MoveNext();
-
             SyntaxNode? operand = ParseUnary(context, stopAtComma, stopAtRightParen);
             if (operand == null)
             {
@@ -306,27 +120,29 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
         return ParsePrimary(context, stopAtComma, stopAtRightParen);
     }
 
-    private static SyntaxNode? ParsePrimary(ParserContext context, bool stopAtComma, bool stopAtRightParen)
-    {
-        if (context.IsEnd)
+    private static SyntaxNode? ParsePrimary(
+        ParserContext context,
+        bool stopAtComma,
+        bool stopAtRightParen
+    ) {
+        if (context.isEnd)
         {
-            context.Diagnostics.Error("Syntax Error: expression expected");
+            context.diagnostics.Error("Syntax Error: expression expected");
             return null;
         }
 
-        if (context.CurrentToken.IsLiteral)
+        if (context.currentToken.isLiteral)
         {
-            ValueNode literal = new(context.CurrentToken.AsString(), context.CurrentToken.LiteralType, context.CurrentToken.NumberType);
+            ValueNode literal = new(context.currentToken.AsString(), context.currentToken.literalType, context.currentToken.numberType);
             context.MoveNext();
             return literal;
         }
 
-        if (context.CurrentToken.IsIdentifier)
+        if (context.currentToken.isIdentifier)
         {
-            string identifier = context.CurrentToken.AsString();
+            string identifier = context.currentToken.AsString();
             context.MoveNext();
-
-            if (!context.IsEnd && context.CurrentToken.IsPunctuation && context.CurrentToken == '(')
+            if (!context.isEnd && context.currentToken.isPunctuation && context.currentToken == '(')
             {
                 return ParseFunctionCall(context, identifier);
             }
@@ -334,7 +150,7 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
             return new VariableNode(identifier);
         }
 
-        if (context.CurrentToken.IsPunctuation && context.CurrentToken == '(')
+        if (context.currentToken.isPunctuation && context.currentToken == '(')
         {
             if (IsCastStart(context))
             {
@@ -348,9 +164,9 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
                 return null;
             }
 
-            if (context.IsEnd || !context.CurrentToken.IsPunctuation || context.CurrentToken != ')')
+            if (context.isEnd || !context.currentToken.isPunctuation || context.currentToken != ')')
             {
-                context.Diagnostics.Error("Syntax Error: ) expected", GetSafeLocation(context));
+                context.diagnostics.Error("Syntax Error: ) expected", GetSafeLocation(context));
                 return null;
             }
 
@@ -360,22 +176,23 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
             return group;
         }
 
-        context.Diagnostics.Error("Syntax Error: expression expected", GetSafeLocation(context));
+        context.diagnostics.Error("Syntax Error: expression expected", GetSafeLocation(context));
         return null;
     }
 
-    private static SyntaxNode? ParseFunctionCall(ParserContext context, string name)
-    {
+    private static SyntaxNode? ParseFunctionCall(
+        ParserContext context,
+        string name
+    ) {
         FunctionCallNode call = new(name);
         context.MoveNext(); // consume '('
-
-        if (!context.IsEnd && context.CurrentToken.IsPunctuation && context.CurrentToken == ')')
+        if (!context.isEnd && context.currentToken.isPunctuation && context.currentToken == ')')
         {
             context.MoveNext();
             return call;
         }
 
-        while (!context.IsEnd)
+        while (!context.isEnd)
         {
             SyntaxNode? argument = ParseExpression(context, minPrecedence: 1, stopAtComma: true, stopAtRightParen: true);
             if (argument == null)
@@ -384,53 +201,53 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
             }
 
             call.AddChild(argument);
-
-            if (context.IsEnd)
+            if (context.isEnd)
             {
-                context.Diagnostics.Error("Syntax Error: ) expected");
+                context.diagnostics.Error("Syntax Error: ) expected");
                 return null;
             }
 
-            if (context.CurrentToken.IsPunctuation && context.CurrentToken == ',')
+            if (context.currentToken.isPunctuation && context.currentToken == ',')
             {
                 context.MoveNext();
                 continue;
             }
 
-            if (context.CurrentToken.IsPunctuation && context.CurrentToken == ')')
+            if (context.currentToken.isPunctuation && context.currentToken == ')')
             {
                 context.MoveNext();
                 return call;
             }
 
-            context.Diagnostics.Error("Syntax Error: , or ) expected", context.CurrentToken.Location);
+            context.diagnostics.Error("Syntax Error: , or ) expected", context.currentToken.location);
             return null;
         }
 
-        context.Diagnostics.Error("Syntax Error: ) expected");
+        context.diagnostics.Error("Syntax Error: ) expected");
         return null;
     }
 
-    private static SyntaxNode? ParseCast(ParserContext context, bool stopAtComma, bool stopAtRightParen)
-    {
+    private static SyntaxNode? ParseCast(
+        ParserContext context,
+        bool stopAtComma,
+        bool stopAtRightParen
+    ) {
         context.MoveNext(); // '('
-        if (context.IsEnd || !context.CurrentToken.IsIdentifier)
+        if (context.isEnd || !context.currentToken.isIdentifier)
         {
-            context.Diagnostics.Error("Syntax Error: type expected", GetSafeLocation(context));
+            context.diagnostics.Error("Syntax Error: type expected", GetSafeLocation(context));
             return null;
         }
 
-        string typeName = context.CurrentToken.AsString();
+        string typeName = context.currentToken.AsString();
         context.MoveNext();
-
-        if (context.IsEnd || !context.CurrentToken.IsPunctuation || context.CurrentToken != ')')
+        if (context.isEnd || !context.currentToken.isPunctuation || context.currentToken != ')')
         {
-            context.Diagnostics.Error("Syntax Error: ) expected", GetSafeLocation(context));
+            context.diagnostics.Error("Syntax Error: ) expected", GetSafeLocation(context));
             return null;
         }
 
         context.MoveNext();
-
         SyntaxNode? operand = ParseUnary(context, stopAtComma, stopAtRightParen);
         if (operand == null)
         {
@@ -451,8 +268,7 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
 
         Token t1 = context.Seek(1);
         Token t2 = context.Seek(2);
-
-        if (!t1.IsIdentifier || !t2.IsPunctuation || t2 != ')')
+        if (!t1.isIdentifier || !t2.isPunctuation || t2 != ')')
         {
             return false;
         }
@@ -468,15 +284,12 @@ public class ExpressionAnalyser : ISyntaxAnalyzer
 
     private static SourceLocation? GetSafeLocation(ParserContext context)
     {
-        return context.IsEnd ? null : context.CurrentToken.Location;
+        return context.isEnd ? null : context.currentToken.location;
     }
 
     private static bool IsExpressionStart(Token token)
     {
-        return token.IsIdentifier ||
-               token.IsLiteral ||
-               (token.IsPunctuation && token == '(') ||
-               (token.IsOperator && IsUnaryOperator(token.AsString()));
+        return token.isIdentifier || token.isLiteral || (token.isPunctuation && token == '(') || (token.isOperator && IsUnaryOperator(token.AsString()));
     }
 
     private static bool IsUnaryOperator(string op)

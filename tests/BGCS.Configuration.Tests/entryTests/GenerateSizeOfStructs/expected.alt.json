@@ -1,4 +1,4 @@
 {
-  "Property": "GenerateSizeOfStructs",
+  "Property": "generateSizeOfStructs",
   "Expected": false
 }

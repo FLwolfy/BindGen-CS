@@ -1,4 +1,4 @@
 {
-  "Property": "TypeNamingConvention",
+  "Property": "typeNamingConvention",
   "Expected": "PascalCase"
 }

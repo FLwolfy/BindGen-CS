@@ -1,82 +1,93 @@
-﻿namespace BGCS.Runtime
+using System;
+
+namespace BGCS.Runtime;
+
+/// <summary>
+/// Owns a dynamically loaded native module and resolves symbols while that module remains alive.
+/// </summary>
+/// <remarks>
+/// Lookup and disposal are serialized. Callers must stop invoking previously returned addresses before
+/// disposing the context; a resolved address does not extend the module lifetime.
+/// </remarks>
+public sealed class NativeLibraryContext : INativeContext
 {
-    using System;
-    using System.Runtime.InteropServices;
+    private readonly object m_gate = new();
+    private nint m_library;
+    private bool m_disposed;
 
     /// <summary>
-    /// Default <see cref="INativeContext"/> backed by a dynamically loaded native library.
+    /// Takes ownership of an already loaded native module handle.
     /// </summary>
-    public class NativeLibraryContext : INativeContext
+    /// <param name="library">
+    /// A handle whose ownership is transferred to this context, or zero for an empty symbol source.
+    /// The original owner must not release a transferred handle.
+    /// </param>
+    public NativeLibraryContext(nint library) => m_library = library;
+
+    /// <summary>
+    /// Loads a native module whose handle will be released by this context.
+    /// </summary>
+    /// <param name="libraryPath">
+    /// The file path or platform-specific module name.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// The module name is empty or whitespace.
+    /// </exception>
+    /// <exception cref="DllNotFoundException">
+    /// The module cannot be loaded.
+    /// </exception>
+    public NativeLibraryContext(string libraryPath)
     {
-        private nint library;
+        m_library = NativeLibrary.Load(libraryPath);
+        if (m_library == 0)
+            throw new DllNotFoundException($"The native module '{libraryPath}' could not be loaded.");
+    }
 
-        /// <summary>
-        /// Wraps an already loaded native library handle.
-        /// </summary>
-        /// <param name="library">Native module handle.</param>
-        public NativeLibraryContext(nint library)
+    /// <inheritdoc/>
+    /// <exception cref="ObjectDisposedException">
+    /// The context has released its module.
+    /// </exception>
+    public nint GetProcAddress(string procName)
+        => TryGetProcAddress(procName, out nint address) ? address : 0;
+
+    /// <inheritdoc/>
+    /// <exception cref="ObjectDisposedException">
+    /// The context has released its module.
+    /// </exception>
+    public bool TryGetProcAddress(
+        string procName,
+        out nint address
+    ) {
+        lock (m_gate)
         {
-            this.library = library;
-        }
-
-        /// <summary>
-        /// Loads a native library and creates a context for symbol resolution.
-        /// </summary>
-        /// <param name="libraryPath">Path or logical name of the library.</param>
-        public NativeLibraryContext(string libraryPath)
-        {
-            library = NativeLibrary.Load(libraryPath);
-        }
-
-        /// <summary>
-        /// Resolves an exported symbol to its native address.
-        /// </summary>
-        /// <param name="procName">Export name.</param>
-        /// <returns>Export address when found; otherwise <c>0</c>.</returns>
-        public nint GetProcAddress(string procName)
-        {
-            if (!NativeLibrary.TryGetExport(library, procName, out var address))
-            {
-                return 0;
-            }
-
-            return address;
-        }
-
-        /// <summary>
-        /// Attempts to resolve an export without throwing.
-        /// </summary>
-        /// <param name="procName">Export name.</param>
-        /// <param name="address">Resolved address, or <c>0</c> when not found.</param>
-        /// <returns><see langword="true"/> when the symbol exists; otherwise <see langword="false"/>.</returns>
-        public bool TryGetProcAddress(string procName, out nint address)
-        {
-            return NativeLibrary.TryGetExport(library, procName, out address);
-        }
-
-        /// <summary>
-        /// Releases the loaded library handle if this context still owns one.
-        /// </summary>
-        public void Dispose()
-        {
-            if (library != 0)
-            {
-                NativeLibrary.Free(library);
-                library = 0;
-            }
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Indicates whether the specified extension is supported by this context.
-        /// </summary>
-        /// <param name="extensionName">Extension token to test.</param>
-        /// <returns>
-        /// Always returns <see langword="false"/> for <see cref="NativeLibraryContext"/>.
-        /// </returns>
-        public bool IsExtensionSupported(string extensionName)
-        {
-            return false;
+            ObjectDisposedException.ThrowIf(m_disposed, this);
+            return NativeLibrary.TryGetExport(m_library, procName, out address);
         }
     }
+
+    /// <summary>
+    /// Releases the owned module exactly once after concurrent lookup has finished.
+    /// </summary>
+    public void Dispose()
+    {
+        lock (m_gate)
+        {
+            if (m_disposed)
+                return;
+            NativeLibrary.Free(m_library);
+            m_library = 0;
+            m_disposed = true;
+        }
+    }
+
+    /// <summary>
+    /// Reports that dynamic library contexts do not provide extension discovery.
+    /// </summary>
+    /// <param name="extensionName">
+    /// The extension token; dynamic modules expose symbols rather than extension capabilities.
+    /// </param>
+    /// <returns>
+    /// Always false.
+    /// </returns>
+    public bool IsExtensionSupported(string extensionName) => false;
 }

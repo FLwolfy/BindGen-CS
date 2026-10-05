@@ -1,5 +1,5 @@
 {
-  "Property": "KnownMemberFunctions",
+  "Property": "knownMemberFunctions",
   "Expected": {
     "my_type": [
       "my_type_inc"

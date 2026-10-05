@@ -11,16 +11,16 @@ BindGen-CS 使用一条统一的 lowering pipeline 处理内置 STL 类型、声
 | 层级 | 适用情况 | 是否执行代码 |
 | --- | --- | --- |
 | 内置 lowering | string、container、smart pointer、path、chrono 等标准语义 | BGCS 内置代码 |
-| `TypeLowerings` / `CallableLowerings` | 可用确定性表达式描述的项目类型、参数展开、命名和调用包装 | 仅受控模板 |
+| `typeLowerings` / `callableLowerings` | 可用确定性表达式描述的项目类型、参数展开、命名和调用包装 | 仅受控模板 |
 | typed lowering plugin | 需要 AST 匹配、target 分支、额外 native/managed artifact 的类型系统 | 执行受信任 .NET plugin |
-| `NativeShims` | 编译器私有 ABI、复杂模板、coroutine 或只能由项目 C++ 代码解释的语义 | 编译项目拥有的 C/C++ shim |
+| `nativeShims` | 编译器私有 ABI、复杂模板、coroutine 或只能由项目 C++ 代码解释的语义 | 编译项目拥有的 C/C++ shim |
 
 ## 声明式类型 lowering
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "TypeLowerings": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "typeLowerings": [
     {
       "Name": "engine.entity-id",
       "TypePattern": "Engine::EntityId",
@@ -44,7 +44,7 @@ BindGen-CS 使用一条统一的 lowering pipeline 处理内置 STL 类型、声
 
 ## Callable lowering
 
-`CallableLowerings` 可以匹配 fully-qualified function pattern、重命名/排除 export，并用包含 `{invocation}` 的表达式包装调用。它适用于 error wrapper、context dispatch 或项目级 tracing；不得用它隐藏错误的 ABI 类型。
+`callableLowerings` 可以匹配 fully-qualified function pattern、重命名/排除 export，并用包含 `{invocation}` 的表达式包装调用。它适用于 error wrapper、context dispatch 或项目级 tracing；不得用它隐藏错误的 ABI 类型。
 
 ## Typed lowering plugin
 
@@ -60,12 +60,16 @@ Plugin 通过 `IBindingPluginHost` 注册：
 
 ```json
 {
-  "LoweringSafetyPolicy": "AllowUserAsserted",
-  "NativeShims": [
+  "loweringSafetyPolicy": "AllowUserAsserted",
+  "nativeShims": [
     {
       "Name": "engine-coroutine",
-      "PublicHeaders": ["shims/coroutine_c.h"],
-      "SourceFiles": ["shims/coroutine_c.cpp"],
+      "PublicHeaders": [
+        "shims/coroutine_c.h"
+      ],
+      "SourceFiles": [
+        "shims/coroutine_c.cpp"
+      ],
       "Safety": "UserAsserted"
     }
   ]
@@ -76,10 +80,10 @@ BGCS 把文件复制到事务性输出，public header 自动进入 `Classes.h`�
 
 ## 安全策略与 bypass
 
-`LoweringSafetyPolicy` 有三个等级：
+`loweringSafetyPolicy` 有三个等级：
 
 - `VerifiedOnly`：默认值，只接受 BGCS 已验证 lowering；
 - `AllowUserAsserted`：接受项目审查过的 recipe/plugin/shim；
 - `AllowUnsafe`：明确 bypass lowering safety gate，仍产生 `BGCS-SAFETY-LOWERING-BYPASS` 审计诊断。
 
-C binding 侧继续使用 `StrictSafetySeverity=Error|SuppressFriendly|Warning`；`StrictSafety=false` 会显式关闭推断的 ownership/lifetime 检查。项目提供的 managed value carrier 使用 `ExternalTypeContracts` 的 `Reject`、`RequireLayoutMatch` 或 `BypassLayoutValidation`，所有被接受的按值 carrier 都写入 IR 并产生 `BGCS-SAFETY-EXTERNAL-TYPE`。Bypass 只允许用户接管风险，不能把语法上无法表达的 ABI 变成有效代码；此时仍须提供 lowering 或 C shim。
+C binding 侧继续使用 `strictSafetySeverity=Error|SuppressFriendly|Warning`；`strictSafety=false` 会显式关闭推断的 ownership/lifetime 检查。项目提供的 managed value carrier 使用 `externalTypeContracts` 的 `Reject`、`RequireLayoutMatch` 或 `BypassLayoutValidation`，所有被接受的按值 carrier 都写入 IR 并产生 `BGCS-SAFETY-EXTERNAL-TYPE`。Bypass 只允许用户接管风险，不能把语法上无法表达的 ABI 变成有效代码；此时仍须提供 lowering 或 C shim。

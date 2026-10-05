@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BGCS.Configuration;
+using BGCS.Facade;
 using BGCS.Intermediate;
-using BGCS.Tool.Commands;
+using BGCS.Tool.Output;
 
 namespace BGCS.Tool;
 
@@ -14,18 +20,15 @@ internal static class WorkspaceCommand
         ReadCommentHandling = JsonCommentHandling.Skip,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
-
     public static int Run(string[] args)
     {
         if (args.Length != 2 || args[0] is not ("validate" or "generate" or "diff"))
             throw new ArgumentException("workspace expects '<validate|generate|diff> <workspace.json>'.");
-
         string operation = args[0];
         string manifestPath = Path.GetFullPath(args[1]);
         BindingWorkspaceManifest manifest = LoadManifest(manifestPath);
         string manifestDirectory = Path.GetDirectoryName(manifestPath)!;
         List<string> configPaths = ResolveConfigs(manifest, manifestDirectory);
-
         return operation switch
         {
             "validate" => Validate(configPaths),
@@ -39,20 +42,19 @@ internal static class WorkspaceCommand
     {
         if (!File.Exists(manifestPath))
             throw new FileNotFoundException($"Workspace manifest does not exist: {manifestPath}", manifestPath);
-
-        BindingWorkspaceManifest? manifest = JsonSerializer.Deserialize<BindingWorkspaceManifest>(
-            File.ReadAllText(manifestPath),
-            JsonOptions);
-        if (manifest?.Configs is not { Count: > 0 })
+        BindingWorkspaceManifest? manifest = JsonSerializer.Deserialize<BindingWorkspaceManifest>(File.ReadAllText(manifestPath), JsonOptions);
+        if (manifest?.configs is not { Count: > 0 })
             throw new InvalidOperationException("Workspace manifest must contain at least one config path in 'Configs'.");
         return manifest;
     }
 
-    private static List<string> ResolveConfigs(BindingWorkspaceManifest manifest, string manifestDirectory)
-    {
+    private static List<string> ResolveConfigs(
+        BindingWorkspaceManifest manifest,
+        string manifestDirectory
+    ) {
         List<string> paths = [];
         HashSet<string> uniquePaths = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string configuredPath in manifest.Configs)
+        foreach (string configuredPath in manifest.configs)
         {
             if (string.IsNullOrWhiteSpace(configuredPath))
                 throw new InvalidOperationException("Workspace config paths cannot be empty.");
@@ -63,6 +65,7 @@ internal static class WorkspaceCommand
                 throw new InvalidOperationException($"Workspace contains duplicate config path: {path}");
             paths.Add(path);
         }
+
         return paths;
     }
 
@@ -72,20 +75,21 @@ internal static class WorkspaceCommand
         {
             Console.WriteLine($"Validating {configPath}");
             CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
-            generator.LogToConsole();
-            BindingGenerationResult result = generator.AnalyzeConfigured();
-            if (!result.Success || result.Module == null)
+            using var logging = GenerationDiagnosticWriter.Attach(generator, Console.Out);
+            BindingGenerationResult<BindingModule> result = generator.AnalyzeConfigured();
+            if (!result.success || result.module == null)
             {
                 GenerationDiagnosticWriter.WriteFailure(result, Console.Error);
                 return 1;
             }
-            if (result.Module.StructuredDiagnostics.Any(diagnostic =>
-                    diagnostic.Severity == BindingDiagnosticSeverity.Error))
+
+            if (result.module.structuredDiagnostics.Any(diagnostic => diagnostic.severity == BindingDiagnosticSeverity.Error))
             {
                 GenerationDiagnosticWriter.WriteFailure(result, Console.Error);
                 return 1;
             }
         }
+
         Console.WriteLine($"Validated {configPaths.Count} binding configurations.");
         return 0;
     }
@@ -95,18 +99,18 @@ internal static class WorkspaceCommand
         // Validate every input before replacing any generated directory.
         if (Validate(configPaths) != 0)
             return 1;
-
         foreach (string configPath in configPaths)
         {
             Console.WriteLine($"Generating {configPath}");
             CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
-            generator.LogToConsole();
+            using var logging = GenerationDiagnosticWriter.Attach(generator, Console.Out);
             if (!generator.GenerateConfigured())
             {
-                GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
+                GenerationDiagnosticWriter.WriteFailure(generator.lastResult, Console.Error);
                 return 1;
             }
         }
+
         Console.WriteLine($"Generated {configPaths.Count} binding projects.");
         return 0;
     }
@@ -117,20 +121,19 @@ internal static class WorkspaceCommand
         foreach (string configPath in configPaths)
         {
             CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(configPath);
-            string expectedOutput = Path.GetFullPath(config.OutputPath, Path.GetDirectoryName(configPath)!);
+            string expectedOutput = Path.GetFullPath(config.outputPath, Path.GetDirectoryName(configPath)!);
             string temporaryOutput = Path.Combine(Path.GetTempPath(), "bindgen-cs-workspace-diff-" + Guid.NewGuid().ToString("N"));
             try
             {
                 CsCodeGenerator generator = new(config);
                 if (!generator.GenerateConfigured(temporaryOutput))
                 {
-                    GenerationDiagnosticWriter.WriteFailure(generator.LastResult, Console.Error);
+                    GenerationDiagnosticWriter.WriteFailure(generator.lastResult, Console.Error);
                     return 2;
                 }
+
                 IReadOnlyDictionary<string, string> expected = ReadDirectory(temporaryOutput);
-                IReadOnlyDictionary<string, string> actual = Directory.Exists(expectedOutput)
-                    ? ReadDirectory(expectedOutput)
-                    : new Dictionary<string, string>();
+                IReadOnlyDictionary<string, string> actual = Directory.Exists(expectedOutput) ? ReadDirectory(expectedOutput) : new Dictionary<string, string>();
                 List<string> changes = Compare(expected, actual);
                 foreach (string change in changes)
                     Console.WriteLine($"{Path.GetFileName(configPath)}: {change}");
@@ -150,16 +153,13 @@ internal static class WorkspaceCommand
 
     private static IReadOnlyDictionary<string, string> ReadDirectory(string directory)
     {
-        return Directory.GetFiles(directory, "*", SearchOption.AllDirectories).ToDictionary(
-            path => Path.GetRelativePath(directory, path).Replace('\\', '/'),
-            File.ReadAllText,
-            StringComparer.OrdinalIgnoreCase);
+        return Directory.GetFiles(directory, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(directory, path).Replace('\\', '/'), File.ReadAllText, StringComparer.OrdinalIgnoreCase);
     }
 
     private static List<string> Compare(
         IReadOnlyDictionary<string, string> expected,
-        IReadOnlyDictionary<string, string> actual)
-    {
+        IReadOnlyDictionary<string, string> actual
+    ) {
         List<string> changes = [];
         foreach (string path in expected.Keys.Except(actual.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(path => path))
             changes.Add($"Added: {path}");
@@ -170,11 +170,12 @@ internal static class WorkspaceCommand
             if (!GeneratedSourceComparison.Equals(path, expected[path], actual[path]))
                 changes.Add($"Changed: {path}");
         }
+
         return changes;
     }
 
     private sealed class BindingWorkspaceManifest
     {
-        public List<string> Configs { get; init; } = [];
+        public List<string> configs { get; init; } = [];
     }
 }

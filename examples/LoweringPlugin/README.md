@@ -10,7 +10,7 @@ Load it from a bridge configuration whose path is relative to this directory:
 
 ```json
 {
-  "PluginAssemblies": [
+  "pluginAssemblies": [
     "bin/Release/net9.0/BGCS.Example.LoweringPlugin.dll"
   ]
 }

@@ -1,56 +1,62 @@
-﻿using System;
+using System;
 
 namespace BGCS.Runtime
 {
     using System.Diagnostics;
 
     /// <summary>
-    /// Strongly typed read-only native pointer wrapper.
+    /// Borrows a typed native address without allocating, freeing, pinning, or validating the pointed-to storage.
     /// </summary>
-    /// <typeparam name="T">Element type pointed to by this pointer.</typeparam>
-    [DebuggerDisplay("{DebuggerDisplay,nq}")]
+    /// <typeparam name="T">
+    /// The unmanaged element whose size controls pointer arithmetic.
+    /// </typeparam>
+    [DebuggerDisplay("{debuggerDisplay,nq}")]
     public readonly unsafe struct ConstPointer<T> : IEquatable<ConstPointer<T>> where T : unmanaged
     {
         /// <summary>
-        /// Raw pointer handle.
+        /// The borrowed native address; its allocation, accessibility, and lifetime remain the caller's responsibility.
         /// </summary>
-        public readonly T* Handle;
-
+        public readonly T* handle;
         /// <summary>
-        /// Creates a pointer wrapper from a raw typed pointer.
+        /// Wraps a borrowed native address without checking its allocation or lifetime.
         /// </summary>
-        /// <param name="handle">Raw pointer value.</param>
+        /// <param name="handle">
+        /// The native address; zero is retained as a null pointer.
+        /// </param>
         public ConstPointer(T* handle)
         {
-            Handle = handle;
+            this.handle = handle;
         }
 
         /// <summary>
-        /// Creates a pointer wrapper from a signed native integer address.
+        /// Wraps a borrowed native address without checking its allocation or lifetime.
         /// </summary>
-        /// <param name="handle">Pointer address.</param>
+        /// <param name="handle">
+        /// The native address; zero is retained as a null pointer.
+        /// </param>
         public ConstPointer(nint handle)
         {
-            Handle = (T*)handle;
+            this.handle = (T*)handle;
         }
 
         /// <summary>
-        /// Creates a pointer wrapper from an unsigned native integer address.
+        /// Wraps a borrowed native address without checking its allocation or lifetime.
         /// </summary>
-        /// <param name="handle">Pointer address.</param>
+        /// <param name="handle">
+        /// The native address; zero is retained as a null pointer.
+        /// </param>
         public ConstPointer(nuint handle)
         {
-            Handle = (T*)handle;
+            this.handle = (T*)handle;
         }
 
         /// <summary>
-        /// Gets an element relative to <see cref="Handle"/>.
+        /// Provides unchecked read access at an element offset; the caller must ensure valid storage for the complete access.
         /// </summary>
-        /// <param name="index">Zero-based element offset.</param>
-        public T this[int index]
-        {
-            get => Handle[index];
-        }
+        /// <param name="index">
+        /// The signed offset in T-sized elements; bounds are not checked.
+        /// </param>
+        public T this[int index] { get => this.handle[index]; }
 
         /// <inheritdoc/>
         public override readonly bool Equals(object? obj)
@@ -59,163 +65,327 @@ namespace BGCS.Runtime
         }
 
         /// <summary>
-        /// Compares this pointer with another pointer by address.
+        /// Compares native addresses without dereferencing either pointer.
         /// </summary>
+        /// <param name="other">
+        /// The borrowed pointer whose address is compared.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are identical, including two null addresses; otherwise false.
+        /// </returns>
         public readonly bool Equals(ConstPointer<T> other)
         {
-            return (nint)Handle == (nint)other.Handle;
+            return (nint)this.handle == (nint)other.handle;
         }
 
         /// <inheritdoc/>
         public override readonly int GetHashCode()
         {
-            return ((nint)Handle).GetHashCode();
+            return ((nint)this.handle).GetHashCode();
         }
 
         /// <summary>
-        /// Compares pointer addresses for equality.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator ==(ConstPointer<T> left, ConstPointer<T> right)
-        {
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The borrowed typed address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are identical; otherwise false.
+        /// </returns>
+        public static bool operator ==(
+            ConstPointer<T> left,
+            ConstPointer<T> right
+        ) {
             return left.Equals(right);
         }
 
         /// <summary>
-        /// Compares pointer addresses for inequality.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator !=(ConstPointer<T> left, ConstPointer<T> right)
-        {
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The borrowed typed address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are different; otherwise false.
+        /// </returns>
+        public static bool operator !=(
+            ConstPointer<T> left,
+            ConstPointer<T> right
+        ) {
             return !(left == right);
         }
 
         /// <summary>
-        /// Compares a pointer wrapper and a native signed address.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator ==(ConstPointer<T> left, nint right)
-        {
-            return (nint)left.Handle == right;
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The native address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are identical; otherwise false.
+        /// </returns>
+        public static bool operator ==(
+            ConstPointer<T> left,
+            nint right
+        ) {
+            return (nint)left.handle == right;
         }
 
         /// <summary>
-        /// Compares a pointer wrapper and a native signed address for inequality.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator !=(ConstPointer<T> left, nint right)
-        {
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The native address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are different; otherwise false.
+        /// </returns>
+        public static bool operator !=(
+            ConstPointer<T> left,
+            nint right
+        ) {
             return !(left == right);
         }
 
         /// <summary>
-        /// Compares a pointer wrapper and a native unsigned address.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator ==(ConstPointer<T> left, nuint right)
-        {
-            return (nuint)left.Handle == right;
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The native address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are identical; otherwise false.
+        /// </returns>
+        public static bool operator ==(
+            ConstPointer<T> left,
+            nuint right
+        ) {
+            return (nuint)left.handle == right;
         }
 
         /// <summary>
-        /// Compares a pointer wrapper and a native unsigned address for inequality.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator !=(ConstPointer<T> left, nuint right)
-        {
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The native address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are different; otherwise false.
+        /// </returns>
+        public static bool operator !=(
+            ConstPointer<T> left,
+            nuint right
+        ) {
             return !(left == right);
         }
 
         /// <summary>
-        /// Compares a pointer wrapper and a raw typed pointer.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator ==(ConstPointer<T> left, T* right)
-        {
-            return left.Handle == right;
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The native address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are identical; otherwise false.
+        /// </returns>
+        public static bool operator ==(
+            ConstPointer<T> left,
+            T* right
+        ) {
+            return left.handle == right;
         }
 
         /// <summary>
-        /// Compares a pointer wrapper and a raw typed pointer for inequality.
+        /// Compares native addresses without dereferencing either operand.
         /// </summary>
-        public static bool operator !=(ConstPointer<T> left, T* right)
-        {
+        /// <param name="left">
+        /// The borrowed typed address.
+        /// </param>
+        /// <param name="right">
+        /// The native address to compare.
+        /// </param>
+        /// <returns>
+        /// True when the addresses are different; otherwise false.
+        /// </returns>
+        public static bool operator !=(
+            ConstPointer<T> left,
+            T* right
+        ) {
             return !(left == right);
         }
 
         /// <summary>
-        /// Converts this wrapper to a raw pointer.
+        /// Returns the borrowed native address without transferring ownership or accessing its storage.
         /// </summary>
+        /// <param name="pointer">
+        /// The borrowed address wrapper.
+        /// </param>
+        /// <returns>
+        /// The same native address, including zero for a null pointer.
+        /// </returns>
         public static implicit operator T*(ConstPointer<T> pointer)
         {
-            return pointer.Handle;
+            return pointer.handle;
         }
 
         /// <summary>
-        /// Converts a raw pointer to a wrapper.
+        /// Wraps a borrowed native address without checking its allocation or lifetime.
         /// </summary>
+        /// <param name="pointer">
+        /// The native address; zero is retained as a null pointer.
+        /// </param>
+        /// <returns>
+        /// A wrapper borrowing the same storage; it does not allocate, free, or pin memory.
+        /// </returns>
         public static implicit operator ConstPointer<T>(T* pointer)
         {
             return new(pointer);
         }
 
         /// <summary>
-        /// Converts this wrapper to a signed native integer address.
+        /// Returns the borrowed native address without transferring ownership or accessing its storage.
         /// </summary>
+        /// <param name="pointer">
+        /// The borrowed address wrapper.
+        /// </param>
+        /// <returns>
+        /// The same native address, including zero for a null pointer.
+        /// </returns>
         public static implicit operator nint(ConstPointer<T> pointer)
         {
-            return (nint)pointer.Handle;
+            return (nint)pointer.handle;
         }
 
         /// <summary>
-        /// Converts a signed native address to a wrapper.
+        /// Wraps a borrowed native address without checking its allocation or lifetime.
         /// </summary>
+        /// <param name="pointer">
+        /// The native address; zero is retained as a null pointer.
+        /// </param>
+        /// <returns>
+        /// A wrapper borrowing the same storage; it does not allocate, free, or pin memory.
+        /// </returns>
         public static implicit operator ConstPointer<T>(nint pointer)
         {
             return new(pointer);
         }
 
         /// <summary>
-        /// Converts this wrapper to an unsigned native integer address.
+        /// Returns the borrowed native address without transferring ownership or accessing its storage.
         /// </summary>
+        /// <param name="pointer">
+        /// The borrowed address wrapper.
+        /// </param>
+        /// <returns>
+        /// The same native address, including zero for a null pointer.
+        /// </returns>
         public static implicit operator nuint(ConstPointer<T> pointer)
         {
-            return (nuint)pointer.Handle;
+            return (nuint)pointer.handle;
         }
 
         /// <summary>
-        /// Converts an unsigned native address to a wrapper.
+        /// Wraps a borrowed native address without checking its allocation or lifetime.
         /// </summary>
+        /// <param name="pointer">
+        /// The native address; zero is retained as a null pointer.
+        /// </param>
+        /// <returns>
+        /// A wrapper borrowing the same storage; it does not allocate, free, or pin memory.
+        /// </returns>
         public static implicit operator ConstPointer<T>(nuint pointer)
         {
             return new(pointer);
         }
 
         /// <summary>
-        /// Returns a new pointer moved forward by an element offset.
+        /// Computes a borrowed address displaced forward in T-sized elements without bounds checking.
         /// </summary>
-        public static ConstPointer<T> operator +(ConstPointer<T> pointer, int offset)
-        {
-            return new(pointer.Handle + offset);
+        /// <param name="pointer">
+        /// The base borrowed address.
+        /// </param>
+        /// <param name="offset">
+        /// The signed displacement in elements.
+        /// </param>
+        /// <returns>
+        /// A wrapper borrowing the computed address; its validity remains the caller's responsibility.
+        /// </returns>
+        public static ConstPointer<T> operator +(
+            ConstPointer<T> pointer,
+            int offset
+        ) {
+            return new(pointer.handle + offset);
         }
 
         /// <summary>
-        /// Returns a new pointer moved backward by an element offset.
+        /// Computes a borrowed address displaced backward in T-sized elements without bounds checking.
         /// </summary>
-        public static ConstPointer<T> operator -(ConstPointer<T> pointer, int offset)
-        {
-            return new(pointer.Handle - offset);
+        /// <param name="pointer">
+        /// The base borrowed address.
+        /// </param>
+        /// <param name="offset">
+        /// The signed displacement in elements.
+        /// </param>
+        /// <returns>
+        /// A wrapper borrowing the computed address; its validity remains the caller's responsibility.
+        /// </returns>
+        public static ConstPointer<T> operator -(
+            ConstPointer<T> pointer,
+            int offset
+        ) {
+            return new(pointer.handle - offset);
         }
 
         /// <summary>
-        /// Returns a new pointer advanced by one element.
+        /// Computes a borrowed address displaced one T-sized element forward without accessing storage.
         /// </summary>
+        /// <param name="pointer">
+        /// The base borrowed address.
+        /// </param>
+        /// <returns>
+        /// A wrapper borrowing the computed address; no allocation or ownership transfer occurs.
+        /// </returns>
         public static ConstPointer<T> operator ++(ConstPointer<T> pointer)
         {
-            return new(pointer.Handle + 1);
+            return new(pointer.handle + 1);
         }
 
         /// <summary>
-        /// Returns a new pointer decremented by one element.
+        /// Computes a borrowed address displaced one T-sized element backward without accessing storage.
         /// </summary>
+        /// <param name="pointer">
+        /// The base borrowed address.
+        /// </param>
+        /// <returns>
+        /// A wrapper borrowing the computed address; no allocation or ownership transfer occurs.
+        /// </returns>
         public static ConstPointer<T> operator --(ConstPointer<T> pointer)
         {
-            return new(pointer.Handle - 1);
+            return new(pointer.handle - 1);
         }
 
-        private readonly string DebuggerDisplay => string.Format("[0x{0}]", ((nint)Handle).ToString("X"));
+        private readonly string debuggerDisplay => string.Format("[0x{0}]", ((nint)this.handle).ToString("X"));
     }
 }

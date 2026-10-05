@@ -1,4 +1,4 @@
 {
-  "Property": "GenerateRuntimeSource",
+  "Property": "generateRuntimeSource",
   "Expected": true
 }

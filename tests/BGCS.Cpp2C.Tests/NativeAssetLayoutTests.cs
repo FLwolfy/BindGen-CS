@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using BGCS.Cpp2C.Build;
 using Xunit;
 
@@ -44,18 +46,18 @@ public sealed class NativeAssetLayoutTests
             NativeAssetLayoutResult macResult = NativeAssetLayout.Stage(
                 CreateManifest("macos-arm64-darwin"), macos, package);
 
-            Assert.Equal("linux-x64", linuxResult.RuntimeIdentifier);
-            Assert.Equal("osx-arm64", macResult.RuntimeIdentifier);
+            Assert.Equal("linux-x64", linuxResult.runtimeIdentifier);
+            Assert.Equal("osx-arm64", macResult.runtimeIdentifier);
             Assert.True(File.Exists(Path.Combine(package, "runtimes", "linux-x64", "native", "libsample.so")));
             Assert.True(File.Exists(Path.Combine(package, "runtimes", "osx-arm64", "native", "libsample.dylib")));
             using JsonDocument index = JsonDocument.Parse(File.ReadAllText(Path.Combine(package,
-                NativeAssetLayout.ManifestFileName)));
-            JsonElement assets = index.RootElement.GetProperty("Assets");
+                NativeAssetLayout.C_MANIFESTFILENAME)));
+            JsonElement assets = index.RootElement.GetProperty("assets");
             Assert.Equal(2, assets.GetArrayLength());
-            Assert.Equal("linux-x64", assets[0].GetProperty("RuntimeIdentifier").GetString());
-            Assert.Equal("osx-arm64", assets[1].GetProperty("RuntimeIdentifier").GetString());
+            Assert.Equal("linux-x64", assets[0].GetProperty("runtimeIdentifier").GetString());
+            Assert.Equal("osx-arm64", assets[1].GetProperty("runtimeIdentifier").GetString());
             Assert.All(assets.EnumerateArray(), asset => Assert.Equal(64,
-                asset.GetProperty("Sha256").GetString()!.Length));
+                asset.GetProperty("sha256").GetString()!.Length));
         }
         finally
         {
@@ -107,7 +109,7 @@ public sealed class NativeAssetLayoutTests
             NativeAssetLayoutResult result = NativeAssetLayout.Stage(
                 CreateManifest("windows-x64-msvc"), library, Path.Combine(temp, "package"));
 
-            Assert.Equal("win-x64", result.RuntimeIdentifier);
+            Assert.Equal("win-x64", result.runtimeIdentifier);
         }
         finally
         {
@@ -128,6 +130,64 @@ public sealed class NativeAssetLayoutTests
         return bytes;
     }
 
+    [Fact]
+    public void Stage_InvalidExistingIndexPreservesInstalledBinary()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-invalid-index-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        try
+        {
+            string source = Path.Combine(temp, "libsample.so");
+            string package = Path.Combine(temp, "package");
+            byte[] original = Elf(62);
+            File.WriteAllBytes(source, original);
+            NativeAssetLayoutResult installed = NativeAssetLayout.Stage(CreateManifest("linux-x64-gnu"), source, package);
+            File.WriteAllText(installed.manifestPath, "{\"assets\":null}");
+            byte[] changed = Elf(62);
+            changed[32] = 99;
+            File.WriteAllBytes(source, changed);
+
+            Assert.Throws<InvalidDataException>(() => NativeAssetLayout.Stage(CreateManifest("linux-x64-gnu"), source, package));
+
+            Assert.Equal(original, File.ReadAllBytes(installed.assetPath));
+            Assert.Equal("{\"assets\":null}", File.ReadAllText(installed.manifestPath));
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
+    [Fact]
+    public async Task Stage_ConcurrentPublishersRetainAllAssetsAndPackageContents()
+    {
+        string temp = Path.Combine(Path.GetTempPath(), "bgcs-concurrent-package-" + Guid.NewGuid().ToString("N"));
+        string package = Path.Combine(temp, "package");
+        Directory.CreateDirectory(package);
+        try
+        {
+            File.WriteAllText(Path.Combine(package, "NOTICE.txt"), "Package notice");
+            string[] binaries = Enumerable.Range(0, 4).Select(index => Path.Combine(temp, $"libsample{index}.so")).ToArray();
+            foreach (string binary in binaries)
+                File.WriteAllBytes(binary, Elf(62));
+
+            await Task.WhenAll(binaries.Select((
+                binary,
+                index
+            ) => Task.Run(() => NativeAssetLayout.Stage(
+                CreateManifest("linux-x64-gnu") with { libraryName = $"sample{index}" }, binary, package))));
+
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(Path.Combine(package, NativeAssetLayout.C_MANIFESTFILENAME)));
+            Assert.Equal(4, document.RootElement.GetProperty("assets").GetArrayLength());
+            Assert.Equal("Package notice", File.ReadAllText(Path.Combine(package, "NOTICE.txt")));
+            Assert.Equal(4, Directory.GetFiles(package, "*.so", SearchOption.AllDirectories).Length);
+        }
+        finally
+        {
+            Directory.Delete(temp, true);
+        }
+    }
+
     private static byte[] MachO(byte cpu)
     {
         byte[] bytes = new byte[64];
@@ -141,5 +201,5 @@ public sealed class NativeAssetLayoutTests
     }
 
     private static CppBridgeBuildManifest CreateManifest(string target) => new(
-        1, target, null, null, null, "c++23", "sample", [], [], [], [], [], [], [], [], [], []);
+        target, null, null, null, "c++23", "sample", [], [], [], [], [], [], [], [], [], []);
 }

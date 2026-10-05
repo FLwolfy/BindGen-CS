@@ -1,4 +1,4 @@
 {
-  "Property": "GetLibraryNameFunctionName",
+  "Property": "getLibraryNameFunctionName",
   "Expected": "GetLibraryNameXAlt"
 }

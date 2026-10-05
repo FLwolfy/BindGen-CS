@@ -1,32 +1,32 @@
-using System;
 namespace BGCS.CppAst.Parsing.Visitors;
-using ClangSharp.Interop;
+
+using System.Collections.Generic;
 using BGCS.CppAst.Model.Declarations;
-using BGCS.CppAst.Model.Interfaces;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Utilities;
-using System.Collections.Generic;
+using ClangSharp.Interop;
 
 /// <summary>
 /// Defines the public class <c>EnumDeclVisitor</c>.
 /// </summary>
-public class EnumDeclVisitor : DeclContainerVisitor
+internal class EnumDeclVisitor : DeclContainerVisitor
 {
     /// <summary>
     /// Gets <c>Kinds</c>.
     /// </summary>
-    public override IEnumerable<CXCursorKind> Kinds { get; } = [CXCursorKind.CXCursor_EnumDecl];
+    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_EnumDecl];
 
-    protected override unsafe CppContainerContext VisitCore(CXCursor cursor, CXCursor parent)
-    {
-        var parentContainer = Context.GetOrCreateDeclContainer(cursor.SemanticParent).DeclarationContainer;
+    protected override unsafe CppContainerContext VisitCore(
+        CXCursor cursor,
+        CXCursor parent
+    ) {
+        var parentContainer = this.context.GetOrCreateDeclContainer(cursor.SemanticParent).declarationContainer;
         CppEnum cppEnum = new(cursor, CXUtil.GetCursorSpelling(cursor))
         {
-            IsAnonymous = cursor.IsAnonymous,
-            Visibility = cursor.GetVisibility()
+            isAnonymous = cursor.IsAnonymous,
+            visibility = cursor.GetVisibility()
         };
-
-        parentContainer.Enums.Add(cppEnum);
+        parentContainer.enums.Add(cppEnum);
         return new(cppEnum);
     }
 }

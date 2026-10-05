@@ -1,165 +1,170 @@
-﻿namespace BGCS.Metadata
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace BGCS.Metadata
 {
-    using BGCS.Core;
-    using BGCS.Core.Collections;
     using System.Collections;
+    using BGCS.Core.Collections;
 
     /// <summary>
-    /// Defines the public class <c>MetadataListEntry</c>.
+    /// Stores mutable generation metadata in an owned ordered list.
     /// </summary>
+    /// <typeparam name="T">The retained metadata element type.</typeparam>
     public class MetadataListEntry<T> : GeneratorMetadataEntry, IList<T>
     {
-        private readonly List<T> values = [];
-
+        private readonly List<T> m_values = [];
         /// <summary>
-        /// Initializes a new instance of <see cref="MetadataListEntry"/>.
+        /// Creates an empty mutable metadata sequence.
         /// </summary>
         public MetadataListEntry()
         {
         }
 
         /// <summary>
-        /// Executes public operation <c>MetadataListEntry</c>.
+        /// Copies the source sequence into an owned container while retaining its elements.
         /// </summary>
+        /// <param name="values">
+        /// The source sequence in enumeration order.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// The source sequence is null.
+        /// </exception>
         public MetadataListEntry(IEnumerable<T> values)
         {
-            this.values.AddRange(values);
+            this.m_values.AddRange(values);
         }
 
-        /// <summary>
-        /// Executes public operation <c>Member</c>.
-        /// </summary>
-        public T this[int index] { get => ((IList<T>)values)[index]; set => ((IList<T>)values)[index] = value; }
+        /// <inheritdoc />
+        public T this[int index] { get => ((IList<T>)this.m_values)[index]; set => ((IList<T>)this.m_values)[index] = value; }
 
+        /// <inheritdoc />
+        public int Count => ((ICollection<T>)this.m_values).Count;
+        /// <inheritdoc />
+        public bool IsReadOnly => ((ICollection<T>)this.m_values).IsReadOnly;
         /// <summary>
-        /// Executes public operation <c>Member</c>.
+        /// Gets the owned mutable sequence used by generator extensions; changes immediately affect this entry.
         /// </summary>
-        public int Count => ((ICollection<T>)values).Count;
+        public List<T> values => this.m_values;
 
-        /// <summary>
-        /// Executes public operation <c>Member</c>.
-        /// </summary>
-        public bool IsReadOnly => ((ICollection<T>)values).IsReadOnly;
-
-        /// <summary>
-        /// Exposes public member <c>values</c>.
-        /// </summary>
-        public List<T> Values => values;
-
-        /// <summary>
-        /// Adds data or behavior through <c>Add</c>.
-        /// </summary>
+        /// <inheritdoc />
         public void Add(T item)
         {
-            ((ICollection<T>)values).Add(item);
+            ((ICollection<T>)this.m_values).Add(item);
         }
 
-        /// <summary>
-        /// Executes public operation <c>Clear</c>.
-        /// </summary>
+        /// <inheritdoc />
         public void Clear()
         {
-            ((ICollection<T>)values).Clear();
+            ((ICollection<T>)this.m_values).Clear();
         }
 
         /// <summary>
-        /// Executes public operation <c>Clone</c>.
+        /// Copies the list container and clones elements implementing the typed cloning contract; other element references and nulls are retained.
         /// </summary>
+        /// <returns>
+        /// An owned metadata sequence following the element type's cloning policy.
+        /// </returns>
         public override GeneratorMetadataEntry Clone()
         {
             if (typeof(T).IsAssignableTo(typeof(ICloneable<T>)))
             {
-                return new MetadataListEntry<T>(values.Select(static x => ((ICloneable<T>)x!).Clone()));
+                return new MetadataListEntry<T>(this.m_values.Select(static value => value is ICloneable<T> cloneable ? cloneable.Clone() : value));
             }
-            return new MetadataListEntry<T>(values);
+
+            return new MetadataListEntry<T>(this.m_values);
         }
 
-        /// <summary>
-        /// Executes public operation <c>Contains</c>.
-        /// </summary>
+        /// <inheritdoc />
         public bool Contains(T item)
         {
-            return ((ICollection<T>)values).Contains(item);
+            return ((ICollection<T>)this.m_values).Contains(item);
+        }
+
+        /// <inheritdoc />
+        public void CopyTo(
+            T[] array,
+            int arrayIndex
+        ) {
+            ((ICollection<T>)this.m_values).CopyTo(array, arrayIndex);
         }
 
         /// <summary>
-        /// Executes public operation <c>CopyTo</c>.
+        /// Appends this entry's elements to an existing list in their current order.
         /// </summary>
-        public void CopyTo(T[] array, int arrayIndex)
-        {
-            ((ICollection<T>)values).CopyTo(array, arrayIndex);
-        }
-
-        /// <summary>
-        /// Executes public operation <c>CopyTo</c>.
-        /// </summary>
+        /// <param name="other">
+        /// The destination list; its existing elements are retained.
+        /// </param>
         public void CopyTo(List<T> other)
         {
-            other.AddRange(values);
+            other.AddRange(this.m_values);
         }
 
         /// <summary>
-        /// Executes public operation <c>CopyTo</c>.
+        /// Adds this entry's elements to a destination set using that set's comparer.
         /// </summary>
+        /// <param name="other">
+        /// The destination set; duplicates are ignored.
+        /// </param>
         public void CopyTo(HashSet<T> other)
         {
-            other.AddRange(values);
+            other.AddRange(this.m_values);
         }
 
-        /// <summary>
-        /// Returns computed data from <c>GetEnumerator</c>.
-        /// </summary>
+        /// <inheritdoc />
         public IEnumerator<T> GetEnumerator()
         {
-            return ((IEnumerable<T>)values).GetEnumerator();
+            return ((IEnumerable<T>)this.m_values).GetEnumerator();
         }
 
-        /// <summary>
-        /// Executes public operation <c>IndexOf</c>.
-        /// </summary>
+        /// <inheritdoc />
         public int IndexOf(T item)
         {
-            return ((IList<T>)values).IndexOf(item);
+            return ((IList<T>)this.m_values).IndexOf(item);
+        }
+
+        /// <inheritdoc />
+        public void Insert(
+            int index,
+            T item
+        ) {
+            ((IList<T>)this.m_values).Insert(index, item);
         }
 
         /// <summary>
-        /// Executes public operation <c>Insert</c>.
+        /// Appends compatible list metadata in source order; incompatible entry types are ignored.
         /// </summary>
-        public void Insert(int index, T item)
-        {
-            ((IList<T>)values).Insert(index, item);
-        }
-
-        /// <summary>
-        /// Merges configuration or metadata via <c>Merge</c>.
-        /// </summary>
-        public override void Merge(GeneratorMetadataEntry from, in MergeOptions options)
-        {
+        /// <param name="from">
+        /// The candidate source metadata.
+        /// </param>
+        /// <param name="options">
+        /// Merge policy; list entries do not use optional function-table settings.
+        /// </param>
+        public override void Merge(
+            GeneratorMetadataEntry from,
+            in MergeOptions options
+        ) {
             if (from is MetadataListEntry<T> list)
             {
-                values.AddRange(list);
+                this.m_values.AddRange(list);
             }
         }
 
-        /// <summary>
-        /// Removes data or behavior through <c>Remove</c>.
-        /// </summary>
+        /// <inheritdoc />
         public bool Remove(T item)
         {
-            return ((ICollection<T>)values).Remove(item);
+            return ((ICollection<T>)this.m_values).Remove(item);
         }
 
-        /// <summary>
-        /// Removes data or behavior through <c>RemoveAt</c>.
-        /// </summary>
+        /// <inheritdoc />
         public void RemoveAt(int index)
         {
-            ((IList<T>)values).RemoveAt(index);
+            ((IList<T>)this.m_values).RemoveAt(index);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable)values).GetEnumerator();
+            return ((IEnumerable)this.m_values).GetEnumerator();
         }
     }
 }
