@@ -112,7 +112,7 @@ public sealed class CppToolchainProcessTests : IDisposable
         File.WriteAllText(Path.Combine(frameworkHeaders, "Value.h"), "struct FrameworkValue { uint32_t value; };\n");
         BuildCompiler(orderedHeaders: true);
         NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(
-            new NativeTargetId("host"), new(compilerPath: m_compiler)));
+            new NativeTargetId("host"), new(compilerPath: m_compiler, sysRoot: m_sdk)));
         CppParserOptions options = new() { parseSystemIncludes = false };
         options.ConfigureForTarget(target);
         Assert.Equal([cxx, m_sdk, frameworks], options.systemIncludeFolders);
