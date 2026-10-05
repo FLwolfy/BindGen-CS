@@ -25,6 +25,7 @@ Driver discovery 保留搜索顺序与 framework 类别；parser 在 driver 的 
 - 验收消费者从 MSBuild 查询 `TargetPath`，不假设 `bin` 的平台目录布局。
 - Windows CI 清除开发者命令行的 MSBuild `Platform` 环境变量；工具链变量仍保留。
 - Wasm workload 在明确选择 .NET 9 的目录安装，独立于仓库的 SDK 10 打包配置。
+- CI 按 workflow 与分支控制并发；新提交取消同分支的旧运行，完整保留最新提交的 15 项检查。
 
 ## 真实库快照审阅
 
