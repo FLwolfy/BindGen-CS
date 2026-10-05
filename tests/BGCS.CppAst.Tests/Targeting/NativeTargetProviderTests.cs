@@ -88,7 +88,8 @@ public sealed class NativeTargetProviderTests {
         Assert.Contains("caller-include", options.systemIncludeFolders);
         Assert.Contains(Path.Combine(sysroot, "include"), options.systemIncludeFolders);
         Assert.Contains("--sysroot=" + sysroot, options.additionalArguments);
-        Assert.DoesNotContain("-isysroot", options.additionalArguments);
+        Assert.Contains("-isysroot", options.additionalArguments);
+        Assert.Contains(sysroot, options.additionalArguments);
         options.ConfigureForTarget(new ClangTargetResolver().Resolve(new(new NativeTargetId("windows-x64-msvc"))),
             discoverHostToolchain: false);
         Assert.DoesNotContain(Path.Combine(sysroot, "include"), options.systemIncludeFolders);

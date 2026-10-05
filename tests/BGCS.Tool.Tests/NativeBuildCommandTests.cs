@@ -34,6 +34,8 @@ public sealed class NativeBuildCommandTests
     {
         using TestDirectory directory = new();
         directory.WriteJson("bridge.manifest.json", CreateManifest());
+        string marker = Guid.NewGuid().ToString("N");
+        directory.Write(marker, "invocation directory");
         string compiler = Environment.ProcessPath ?? throw new InvalidOperationException("Current process path is unavailable.");
 
         CommandResult result = Run(directory, "bridge.manifest.json", "--compiler", compiler,
@@ -41,8 +43,10 @@ public sealed class NativeBuildCommandTests
 
         Assert.Equal(0, result.ExitCode);
         using JsonDocument plan = JsonDocument.Parse(result.Output);
-        Assert.Equal(System.IO.Path.Combine(directory.Path, "Consumer", "native", "sample.so"),
-            plan.RootElement.GetProperty("outputFile").GetString());
+        string workingDirectory = plan.RootElement.GetProperty("workingDirectory").GetString()!;
+        Assert.Equal("invocation directory", File.ReadAllText(System.IO.Path.Combine(workingDirectory, marker)));
+        Assert.Equal(System.IO.Path.Combine("Consumer", "native", "sample.so"),
+            System.IO.Path.GetRelativePath(workingDirectory, plan.RootElement.GetProperty("outputFile").GetString()!));
     }
 
     [Fact]
