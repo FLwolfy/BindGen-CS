@@ -144,6 +144,26 @@ public sealed class CppTargetTests
     }
 
     [Fact]
+    public void ConfigureForTarget_ExplicitCppHeadersReplaceImplicitIncludesAndAreClearedOnRetarget()
+    {
+        CppParserOptions options = new() { parserKind = CppParserKind.Cpp };
+        NativeToolchainDescriptor toolchain = new(cxxSystemIncludeFolders: [Path.GetTempPath()]);
+        options.ConfigureForTarget(
+            new ClangTargetResolver().Resolve(new(new NativeTargetId("linux-x64-gnu"), toolchain)),
+            discoverHostToolchain: false);
+
+        Assert.Contains("-nostdinc++", options.additionalArguments);
+        Assert.Contains(Path.GetTempPath(), options.systemIncludeFolders);
+
+        options.ConfigureForTarget(
+            new ClangTargetResolver().Resolve(new(new NativeTargetId("emscripten-wasm32-emscripten"))),
+            discoverHostToolchain: false);
+
+        Assert.DoesNotContain("-nostdinc++", options.additionalArguments);
+        Assert.DoesNotContain(Path.GetTempPath(), options.systemIncludeFolders);
+    }
+
+    [Fact]
     public void ConfigureForTarget_HostCpp_ShouldParseStandardLibrary()
     {
         NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));

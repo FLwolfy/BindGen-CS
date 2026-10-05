@@ -75,6 +75,19 @@ public sealed class CppToolchainProcessTests : IDisposable
     }
 
     [Fact]
+    public void CompilerIncludeDiscoveryPassesTheSelectedSdkAndSeparatesItsCacheEntry()
+    {
+        string firstSdk = Path.Combine(m_root, "first-sdk");
+        string secondSdk = Path.Combine(m_root, "second-sdk");
+        Directory.CreateDirectory(firstSdk);
+        Directory.CreateDirectory(secondSdk);
+
+        Assert.Equal([firstSdk], CppToolchainDiscovery.DiscoverSystemIncludeFolders(CppParserKind.C, m_compiler, firstSdk));
+        Assert.Equal([secondSdk], CppToolchainDiscovery.DiscoverSystemIncludeFolders(CppParserKind.C, m_compiler, secondSdk));
+        Assert.Equal([m_sdk], CppToolchainDiscovery.DiscoverSystemIncludeFolders(CppParserKind.C, m_compiler));
+    }
+
+    [Fact]
     public async Task TimedOutCompilerQueryRetiresItsProcessBeforeReturning()
     {
         Task<string> query = Task.Run(() => CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.C, m_compiler));
@@ -146,8 +159,12 @@ public sealed class CppToolchainProcessTests : IDisposable
                     puts({{resource}});
                     return 0;
                 }
+                const char* sdk = {{sdk}};
+                for (int i = 1; i < argc; i++) {
+                    if (strncmp(argv[i], "--sysroot=", 10) == 0) sdk = argv[i] + 10;
+                }
                 fputs("#include <...> search starts here:\n", stderr);
-                fputs({{sdk}}, stderr);
+                fputs(sdk, stderr);
                 fputs("\nEnd of search list.\n", stderr);
                 return 0;
             }

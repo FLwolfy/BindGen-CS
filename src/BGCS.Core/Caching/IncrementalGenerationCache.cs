@@ -197,6 +197,7 @@ public sealed class IncrementalGenerationCache
     /// </param>
     /// <param name="includeDirectories">
     /// Header roots searched recursively; nonexistent roots contribute no files.
+    /// Directory links are followed once per resolved directory, including links outside a root.
     /// </param>
     /// <param name="excludedDirectories">
     /// Optional generated or cached subtrees excluded from include-root discovery.
@@ -217,16 +218,30 @@ public sealed class IncrementalGenerationCache
         HashSet<string> extensions = new(StringComparer.OrdinalIgnoreCase)
             { ".h", ".hh", ".hpp", ".hxx", ".inc", ".inl", ".c", ".cc", ".cpp", ".cxx" };
         StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        foreach (string directory in includeDirectories.Select(Path.GetFullPath).Distinct(StringComparer.Ordinal))
+        HashSet<string> visited = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        Stack<string> pending = new(includeDirectories.Select(Path.GetFullPath));
+        while (pending.TryPop(out string? directory))
         {
-            if (!Directory.Exists(directory))
+            if (!Directory.Exists(directory) || IsExcluded(directory))
                 continue;
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
-                if ((extensions.Contains(Path.GetExtension(file)) || !Path.HasExtension(file))
-                    && !exclusions.Any(exclusion => file.StartsWith(exclusion, comparison)))
-                    files.Add(Path.GetFullPath(file));
+            DirectoryInfo info = new(directory);
+            string resolved = (info.ResolveLinkTarget(returnFinalTarget: true) ?? info).FullName;
+            if (IsExcluded(resolved) || !visited.Add(resolved))
+                continue;
+            foreach (FileSystemInfo entry in new DirectoryInfo(resolved).EnumerateFileSystemInfos())
+            {
+                if (IsExcluded(entry.FullName))
+                    continue;
+                if ((entry.Attributes & FileAttributes.Directory) != 0)
+                    pending.Push(entry.FullName);
+                else if (extensions.Contains(entry.Extension) || !Path.HasExtension(entry.FullName))
+                    files.Add(entry.FullName);
+            }
         }
         return files.OrderBy(static path => path, StringComparer.Ordinal).ToArray();
+
+        bool IsExcluded(string path) => exclusions.Any(exclusion =>
+            path.StartsWith(exclusion, comparison) || string.Equals(path, exclusion[..^1], comparison));
     }
 
     private string ResolveOutput(string path)

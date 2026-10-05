@@ -185,6 +185,19 @@ are separate from the focused Wasm test. See [Testing](docs/testing.md) and [Acc
 - [Capabilities and platform evidence](docs/capabilities.md)
 - [C++ extension cookbook](docs/cpp-extension-cookbook.md)
 - [Publishing](docs/publish.md)
+- [Contributing](CONTRIBUTING.md)
+
+## Why does BGCS include `extern/clang-resource`?
+
+The archive contains Clang's builtin C/C++ headers, such as `stddef.h` and architecture intrinsics.
+It is shared by Windows, Linux and macOS parser hosts and is not a macOS SDK.
+The current parser embeds these headers so its libclang runtime has a matching resource directory
+without requiring a separate Clang installation. Keep the archive when building or packaging BGCS.
+
+Builtin headers do not replace a target SDK. Target providers select the target's ABI, sysroot
+and system headers; an Emscripten target, for example, still needs its Emscripten SDK.
+See [Clang's cross-compilation documentation](https://clang.llvm.org/docs/CrossCompilation.html)
+and the [bundled resource provenance](extern/clang-resource/README.md).
 
 ## License
 

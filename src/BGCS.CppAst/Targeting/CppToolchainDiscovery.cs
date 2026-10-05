@@ -40,23 +40,26 @@ public static class CppToolchainDiscovery
     /// </summary>
     /// <param name = "parserKind">Language whose include paths are requested.</param>
     /// <param name = "compilerPath">Optional compiler path or executable name.</param>
+    /// <param name = "sysRoot">Optional SDK root passed to the driver so discovered paths belong to the selected target SDK.</param>
     /// <returns>Existing SDK and standard library directories in compiler search order, excluding Clang builtin headers owned by the parser.</returns>
     public static IReadOnlyList<string> DiscoverSystemIncludeFolders(
         CppParserKind parserKind,
-        string? compilerPath = null
+        string? compilerPath = null,
+        string? sysRoot = null
     ) {
         string? compiler = FindCompiler(parserKind, compilerPath);
         if (compiler == null)
             return [];
         string language = parserKind == CppParserKind.Cpp ? "c++" : parserKind == CppParserKind.ObjC ? "objective-c" : "c";
-        string key = GetCompilerFileIdentity(compiler) + "\0" + language;
+        string? root = string.IsNullOrWhiteSpace(sysRoot) ? null : Path.GetFullPath(sysRoot);
+        string key = GetCompilerFileIdentity(compiler) + "\0" + language + "\0" + root;
         lock (Sync)
         {
             if (IncludeCache.TryGetValue(key, out IReadOnlyList<string>? cached))
                 return cached;
         }
 
-        IReadOnlyList<string> discovered = DiscoverSystemIncludeFoldersCore(compiler, language);
+        IReadOnlyList<string> discovered = DiscoverSystemIncludeFoldersCore(compiler, language, root);
         lock (Sync)
             IncludeCache[key] = discovered;
         return discovered;
@@ -131,14 +134,18 @@ public static class CppToolchainDiscovery
 
     private static IReadOnlyList<string> DiscoverSystemIncludeFoldersCore(
         string compiler,
-        string language
+        string language,
+        string? sysRoot
     ) {
         try
         {
             string? resourceRoot = RunForSingleLine(compiler, ["-print-resource-dir"]);
             string? resourceInclude = string.IsNullOrWhiteSpace(resourceRoot) ? null : Path.GetFullPath(Path.Combine(resourceRoot, "include"));
             StringComparer pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-            var captured = RunForOutput(compiler, ["-E", "-x", language, "-", "-v"], 10_000);
+            List<string> arguments = ["-E", "-x", language, "-", "-v"];
+            if (sysRoot is not null)
+                arguments.Add("--sysroot=" + sysRoot);
+            var captured = RunForOutput(compiler, arguments, 10_000);
             if (captured is not { } result)
                 return [];
             string output = result.error;

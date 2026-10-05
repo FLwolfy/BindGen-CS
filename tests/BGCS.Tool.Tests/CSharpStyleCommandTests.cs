@@ -121,7 +121,7 @@ public sealed class CSharpStyleCommandTests
 
         Assert.Equal(0, directory.Run("--fix"));
         string formatted = directory.Read();
-        Assert.Contains("\"first\", \"second\",\n", formatted);
+        Assert.Contains("\"first\", \"second\",\n", formatted.ReplaceLineEndings("\n"));
         Assert.Contains("null!", formatted);
         Assert.Contains("<see cref=\"string\"/>", formatted);
         Assert.Equal(0, directory.Run());

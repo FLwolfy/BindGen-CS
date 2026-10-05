@@ -176,6 +176,19 @@ Wasm 测试额外需要 **.NET 9 SDK + `wasm-tools` workload**、Python 3.10+ �
 - [能力与平台证据](docs/capabilities.cn.md)
 - [C++ 扩展实战手册](docs/cpp-extension-cookbook.cn.md)
 - [发布说明](docs/publish.cn.md)
+- [开发与贡献规范](CONTRIBUTING.md)
+
+## 为什么有 `extern/clang-resource`？
+
+这个压缩包保存 Clang 内建 C/C++ 头文件，例如 `stddef.h` 和各架构的 intrinsic 声明。
+Windows、Linux、macOS 的解析器共用它；它不是 macOS SDK。
+当前解析器将它嵌入程序集，为随包分发的 libclang 提供匹配的 resource directory，
+因此构建与打包 BGCS 时应保留它，无须额外安装一套 Clang 来提供这些内建头文件。
+
+内建头文件不替代目标 SDK。目标 provider 仍负责目标 ABI、sysroot 和系统头文件；
+例如 Emscripten 目标仍需要 Emscripten SDK。
+详见 [Clang 跨编译文档](https://clang.llvm.org/docs/CrossCompilation.html)
+和[内建资源来源说明](extern/clang-resource/README.md)。
 
 ## License
 

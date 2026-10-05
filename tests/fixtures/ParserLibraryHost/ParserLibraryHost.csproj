@@ -8,4 +8,11 @@
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.12.50" ExcludeAssets="runtime" />
     <ProjectReference Include="../../../src/BGCS.CppAst/BGCS.CppAst.csproj" />
   </ItemGroup>
+
+  <Target Name="StageConfiguredParserRuntime" AfterTargets="Build" Condition="'$(BGCS_CLANG_RUNTIME_DIR)' != ''">
+    <ItemGroup>
+      <_ParserNativeRuntime Include="$(BGCS_CLANG_RUNTIME_DIR)/*.dll;$(BGCS_CLANG_RUNTIME_DIR)/*.so*;$(BGCS_CLANG_RUNTIME_DIR)/*.dylib" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ParserNativeRuntime)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

@@ -140,6 +140,30 @@ public sealed class IncrementalGenerationCacheTests
     }
 
     [Fact]
+    public void InputDiscoveryFollowsDirectoryAliasesWithoutRecursingIntoAncestorLinks()
+    {
+        // Windows directory-link creation requires a privilege unrelated to cache discovery.
+        if (OperatingSystem.IsWindows())
+            return;
+        using TestDirectory directory = new();
+        string root = directory.Create("include");
+        string headers = directory.Create("sdk");
+        string header = directory.Write("sdk/vector", "struct original;\n");
+        Directory.CreateSymbolicLink(directory.PathOf("include/first"), headers);
+        Directory.CreateSymbolicLink(directory.PathOf("include/second"), headers);
+        Directory.CreateSymbolicLink(directory.PathOf("sdk/ancestor"), root);
+        string excluded = directory.Create("sdk/generated");
+        directory.Write("sdk/generated/output.h", "generated");
+
+        var files = IncrementalGenerationCache.DiscoverInputs([], [root, headers], [excluded]);
+
+        Assert.Equal(Path.GetFullPath(header), Assert.Single(files));
+        IncrementalCacheKey first = IncrementalGenerationCache.CreateKey("linked-sdk", files);
+        File.WriteAllText(header, "struct changed;\n");
+        Assert.NotEqual(first.value, IncrementalGenerationCache.CreateKey("linked-sdk", files).value);
+    }
+
+    [Fact]
     public void Cache_RestoresCompleteOutputAndInvalidatesOnInputContentChange()
     {
         using TestDirectory directory = new();

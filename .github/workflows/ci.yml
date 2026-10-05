@@ -41,8 +41,14 @@ jobs:
 
       - name: Install native WebAssembly workload
         # SDK selection is independent of the repository's SDK 10 packaging pin.
-        working-directory: ${{ runner.temp }}
-        run: dotnet workload install wasm-tools
+        shell: bash
+        run: |
+          sdk_directory="${RUNNER_TEMP}/bgcs-wasm-sdk"
+          mkdir -p "${sdk_directory}"
+          printf '%s\n' '{"sdk":{"version":"9.0.100","rollForward":"latestFeature"}}' > "${sdk_directory}/global.json"
+          cd "${sdk_directory}"
+          dotnet --version
+          dotnet workload install wasm-tools
 
       - name: Generate, link, and invoke all import modes in a browser
         if: matrix.deployment == 'interpreter'
@@ -192,13 +198,22 @@ jobs:
           echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
 
       - name: Restore
-        run: dotnet restore BindGen-CS.sln
+        shell: bash
+        run: |
+          unset Platform PLATFORM platform
+          dotnet restore BindGen-CS.sln
 
       - name: Build
-        run: dotnet build BindGen-CS.sln --configuration Release --no-restore
+        shell: bash
+        run: |
+          unset Platform PLATFORM platform
+          dotnet build BindGen-CS.sln --configuration Release --no-restore
 
       - name: Test managed and native runtime matrix
-        run: dotnet test BindGen-CS.sln --configuration Release --no-build --logger trx
+        shell: bash
+        run: |
+          unset Platform PLATFORM platform
+          dotnet test BindGen-CS.sln --configuration Release --no-build --logger trx
         env:
           BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
           BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}

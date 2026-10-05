@@ -814,7 +814,7 @@ class BGCS.CppAst.Targeting.ClangTargetResolver
   ctor(System.Collections.Generic.IEnumerable<BGCS.Core.Targeting.INativeTargetProvider> providers)
   method BGCS.Core.Targeting.NativeTargetDescriptor Resolve(BGCS.Core.Targeting.NativeTargetRequest request)
 class BGCS.CppAst.Targeting.CppToolchainDiscovery
-  method System.Collections.Generic.IReadOnlyList<System.String> DiscoverSystemIncludeFolders(BGCS.CppAst.Parsing.CppParserKind parserKind, System.String compilerPath)
+  method System.Collections.Generic.IReadOnlyList<System.String> DiscoverSystemIncludeFolders(BGCS.CppAst.Parsing.CppParserKind parserKind, System.String compilerPath, System.String sysRoot)
   method System.String FindAppleSdkRoot(System.String sdkName)
   method System.String FindCompiler(BGCS.CppAst.Parsing.CppParserKind parserKind, System.String explicitPath)
   method System.String GetCompilerFingerprint(BGCS.CppAst.Parsing.CppParserKind parserKind, System.String compilerPath)

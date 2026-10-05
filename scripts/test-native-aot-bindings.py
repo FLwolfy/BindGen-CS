@@ -48,9 +48,7 @@ def main():
     work.mkdir(parents=True)
     report = {"success": False, "host": platform.platform(), "modes": list(MODES),
               "injectedNativeError": args.inject_native_error}
-    environment = dict(os.environ, DOTNET_ROOT=str(Path(dotnet).parent), DOTNET_HOST_PATH=dotnet,
-                       DOTNET_CLI_UI_LANGUAGE="en")
-    environment.pop("Platform", None)
+    environment = helper.acceptance_environment(dotnet)
     print(f"NativeAOT acceptance evidence: {work}", flush=True)
     try:
         compiler = find_compiler(args.compiler)
@@ -61,14 +59,11 @@ def main():
         if args.inject_native_error:
             source = work / "Native/api.c"
             source.write_text(source.read_text(encoding="utf-8").replace("return left + right;", "return left + right + 1;"), encoding="utf-8")
-        helper.run([dotnet, "build", str(ROOT / "src/BGCS.Tool/BGCS.Tool.csproj"), "-c", "Release",
-                    "--disable-build-servers", "-m:1", "-nodeReuse:false"],
-                   work, work / "generator-build.log", environment)
-        helper.run([dotnet, "build", str(ROOT / "src/BGCS.Runtime/BGCS.Runtime.csproj"), "-c", "Release",
-                    "--disable-build-servers", "-m:1", "-nodeReuse:false"],
-                   work, work / "runtime-build.log", environment)
-        shutil.copyfile(ROOT / "src/BGCS.Runtime/bin/Release/net9.0/BGCS.Runtime.dll", work / "BGCS.Runtime.dll")
-        tool = ROOT / "src/BGCS.Tool/bin/Release/net9.0/BGCS.Tool.dll"
+        tool = helper.build_project(dotnet, ROOT / "src/BGCS.Tool/BGCS.Tool.csproj", work,
+                                    work / "generator-build.log", environment)
+        runtime = helper.build_project(dotnet, ROOT / "src/BGCS.Runtime/BGCS.Runtime.csproj", work,
+                                       work / "runtime-build.log", environment)
+        shutil.copyfile(runtime, work / "BGCS.Runtime.dll")
         bridge_source, _ = cpp_acceptance_fixture.prepare(
             ROOT, work, dotnet, tool, compiler, environment, helper.run)
         architecture = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"

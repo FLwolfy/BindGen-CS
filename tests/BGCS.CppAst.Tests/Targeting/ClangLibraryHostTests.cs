@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,9 @@ public sealed class ClangLibraryHostTests
     public async Task ParserLoadsItsBundledRuntimeFromAnUnrelatedHostAndRejectsIncompleteOverrides(bool invalidOverride)
     {
         string root = FindRepository();
-        string fixture = Path.Combine(root, "tests", "fixtures", "ParserLibraryHost", "bin", "Debug", "net9.0", "ParserLibraryHost.dll");
+        string configuration = typeof(ClangLibraryHostTests).Assembly
+            .GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
+        string fixture = Path.Combine(root, "tests", "fixtures", "ParserLibraryHost", "bin", configuration, "net9.0", "ParserLibraryHost.dll");
         string directory = Path.Combine(Path.GetTempPath(), "BgcsParserHost", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try

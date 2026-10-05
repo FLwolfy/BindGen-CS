@@ -7,7 +7,7 @@
 | 要求 | 实际边界 | 验证 |
 | --- | --- | --- |
 | 八个生产项目和唯一 CLI | Core、CppAst、Intermediate、BGCS、Cpp2C、Language、Runtime、Tool | 架构验证允许依赖图、唯一执行项目、禁止 linked production source |
-| 通用代码规范和最小公开入口 | AGENTS、独立通用规范、`.editorconfig`、style/documentation validator | 零排版违规；3226 个公开声明的 XML 检查通过 |
+| 通用代码规范和最小公开入口 | CONTRIBUTING、独立通用规范、`.editorconfig`、style/documentation validator | 零排版违规；3226 个公开声明的 XML 检查通过 |
 | Core 中立 | target、插件、IO、缓存、集合、写出和进程契约 | 没有 CppAst/ClangSharp 依赖；公开边界测试 |
 | 目标与宿主分开 | `INativeTargetProvider`、target/toolchain descriptor、Clang resolver | Windows/Unix/Apple/Emscripten provider 与 ABI 测试；Wasm 实际 4 字节指针 |
 | builtin headers 与系统 SDK 分开 | 与包内 libclang 匹配的 resource bundle；显式 SDK/sysroot | 独立 parser 和工具链 discovery 回归、真实库解析 |

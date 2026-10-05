@@ -2,6 +2,11 @@
 
 ## 源码与命名空间归属
 
+`CppToolchainDiscovery.DiscoverSystemIncludeFolders` 接收选定的 `sysRoot`，
+把它传给 compiler driver 并纳入缓存身份。宿主 C++ 解析遵循该 driver 的头文件搜索顺序；
+已有显式 C++ 搜索根时关闭隐式搜索，避免不同标准库与 SDK 混用。
+增量输入扫描按符号链接解析后的目录去重：SDK 的有效别名仍参与扫描，祖先循环不会无限展开。
+
 配置属于 `BGCS.Configuration` 与 `BGCS.Cpp2C.Configuration`，公开生成入口属于各自的 `Facade`。
 可变声明与 overload 分析属于 `Analysis`，目标和语言转换属于 `Conversion`，源码写出属于 `Emission`。
 原生构建计划与执行协议属于 `BGCS.Cpp2C.Build`；五个具体 compiler/build-system provider

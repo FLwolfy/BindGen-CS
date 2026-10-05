@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -142,7 +143,9 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
         string acquired = Path.Combine(m_root, "acquired");
         string release = Path.Combine(m_root, "release");
         string repository = FindRepository();
-        string fixture = Path.Combine(repository, "tests", "fixtures", "OutputPublisher", "bin", "Debug", "net9.0", "OutputPublisher.dll");
+        string configuration = typeof(OutputDirectoryTransactionTests).Assembly
+            .GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
+        string fixture = Path.Combine(repository, "tests", "fixtures", "OutputPublisher", "bin", configuration, "net9.0", "OutputPublisher.dll");
         string dotnet = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet";
         using var childCancellation = new CancellationTokenSource();
         Task<ProcessExecutionResult> child = ProcessExecutor.ExecuteAsync(

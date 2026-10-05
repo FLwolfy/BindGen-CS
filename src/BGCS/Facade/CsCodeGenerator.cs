@@ -487,16 +487,11 @@ namespace BGCS.Facade
                 sources.Add(Path.GetFullPath(headerFile));
             }
 
-            foreach (string root in roots)
+            foreach (string candidate in IncrementalGenerationCache.DiscoverInputs([], roots))
             {
-                if (!Directory.Exists(root))
-                    continue;
-                foreach (string candidate in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
-                {
-                    string extension = Path.GetExtension(candidate);
-                    if (extension is ".h" or ".hh" or ".hpp" or ".hxx" or ".inc")
-                        sources.Add(Path.GetFullPath(candidate));
-                }
+                string extension = Path.GetExtension(candidate);
+                if (extension is ".h" or ".hh" or ".hpp" or ".hxx" or ".inc")
+                    sources.Add(candidate);
             }
 
             foreach (CppMacro macro in compilation.macros)

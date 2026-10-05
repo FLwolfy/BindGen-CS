@@ -60,6 +60,7 @@ internal static class DirectoryPublicationLease
     private static bool IsSharingViolation(IOException exception)
     {
         int code = exception.HResult & 0xffff;
-        return code is 11 or 32 or 33;
+        // Unix FileShare.None exposes the native flock errno, which differs by host.
+        return code is 32 or 33 || code == (OperatingSystem.IsMacOS() ? 35 : 11);
     }
 }

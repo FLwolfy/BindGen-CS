@@ -44,7 +44,7 @@ public sealed class ProcessExecutorTests
         try
         {
             Task<ProcessExecutionResult> execution = ProcessExecutor.ExecuteAsync(
-                executable, arguments, directory, cancel ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(2), cancellation.Token);
+                executable, arguments, directory, cancel ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(10), cancellation.Token);
             if (cancel)
             {
                 Stopwatch wait = Stopwatch.StartNew();

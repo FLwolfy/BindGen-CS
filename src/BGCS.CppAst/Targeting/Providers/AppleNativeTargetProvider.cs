@@ -42,7 +42,9 @@ public sealed class AppleNativeTargetProvider : INativeTargetProvider
                 toolchain.compilerPath, CppToolchainDiscovery.FindAppleSdkRoot(sdk),
                 toolchain.systemIncludeFolders, toolchain.defines, toolchain.arguments, toolchain.cxxSystemIncludeFolders);
         }
-        if (!string.IsNullOrWhiteSpace(toolchain.sysRoot))
+        // The selected host driver owns its C++ library. Cross targets use the requested SDK.
+        if (!string.IsNullOrWhiteSpace(toolchain.sysRoot)
+            && (!OperatingSystem.IsMacOS() || resolved.platform != "macos" || !string.IsNullOrWhiteSpace(request.toolchain.sysRoot)))
         {
             string headers = Path.Combine(Path.GetFullPath(toolchain.sysRoot), "usr", "include", "c++", "v1");
             if (Directory.Exists(headers))

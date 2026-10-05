@@ -63,6 +63,26 @@ def find_browser(requested):
     raise RuntimeError("A Chromium browser is required. Pass --browser with its executable path.")
 
 
+def acceptance_environment(dotnet):
+    # Environment dictionaries are case-sensitive even when MSBuild's Windows input is not.
+    environment = {key: value for key, value in os.environ.items() if key.casefold() != "platform"}
+    environment.update(DOTNET_ROOT=str(Path(dotnet).parent), DOTNET_HOST_PATH=dotnet,
+                       DOTNET_CLI_UI_LANGUAGE="en")
+    return environment
+
+
+def build_project(dotnet, project, work, evidence, environment):
+    run([dotnet, "build", str(project), "-c", "Release", "--disable-build-servers",
+         "-m:1", "-nodeReuse:false"], work, evidence, environment)
+    output = run([dotnet, "msbuild", str(project), "-nologo", "-nodeReuse:false",
+                  "-p:Configuration=Release", "-getProperty:TargetPath"],
+                 work, evidence.with_suffix(".target-path.log"), environment).strip()
+    target = Path(output)
+    if not target.is_file():
+        raise RuntimeError(f"MSBuild did not produce the reported target: {target}")
+    return target
+
+
 class ResultHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/result?token=" + self.server.token:
@@ -139,9 +159,7 @@ def main():
     print(f"Wasm acceptance evidence: {work}", flush=True)
     report = {"success": False, "target": "emscripten-wasm32-emscripten",
               "host": platform.platform(), "browser": browser, "modes": list(MODES)}
-    environment = dict(os.environ, DOTNET_ROOT=str(Path(dotnet).parent), DOTNET_HOST_PATH=dotnet,
-                       DOTNET_CLI_UI_LANGUAGE="en")
-    environment.pop("Platform", None)
+    environment = acceptance_environment(dotnet)
     try:
         # Scope SDK selection to the fixture. Repository packaging still uses its own global.json.
         (work / "global.json").write_text(json.dumps({"sdk": {
@@ -153,11 +171,11 @@ def main():
             native_source.write_text(native_source.read_text(encoding="utf-8").replace("return left + right;", "return left + right + 1;"), encoding="utf-8")
         shutil.copytree(fixture / "wwwroot", work / "wwwroot")
         shutil.copyfile(fixture / "Consumer.project.xml", work / "Consumer.csproj")
-        run([dotnet, "build", str(ROOT / "src/BGCS.Tool/BGCS.Tool.csproj"), "-c", "Release",
-             "--disable-build-servers", "-m:1", "-nodeReuse:false"], work, work / "generator-build.log", environment)
-        run([dotnet, "build", str(ROOT / "src/BGCS.Runtime/BGCS.Runtime.csproj"), "-c", "Release",
-             "--disable-build-servers", "-m:1", "-nodeReuse:false"], work, work / "runtime-build.log", environment)
-        shutil.copyfile(ROOT / "src/BGCS.Runtime/bin/Release/net9.0/BGCS.Runtime.dll", work / "BGCS.Runtime.dll")
+        tool = build_project(dotnet, ROOT / "src/BGCS.Tool/BGCS.Tool.csproj", work,
+                             work / "generator-build.log", environment)
+        runtime = build_project(dotnet, ROOT / "src/BGCS.Runtime/BGCS.Runtime.csproj", work,
+                                work / "runtime-build.log", environment)
+        shutil.copyfile(runtime, work / "BGCS.Runtime.dll")
         raw = run([dotnet, "msbuild", "Consumer.csproj", "-nologo", "-nodeReuse:false",
                    "-getProperty:EmscriptenSdkToolsPath,EmscriptenCacheSdkCacheDir"],
                   work, work / "sdk-query.log", environment)
@@ -167,7 +185,6 @@ def main():
         if not sysroot.is_dir() or not compiler.is_file():
             raise RuntimeError("The selected .NET SDK does not have a complete .NET 9 wasm-tools workload.")
         report["sdk"] = sdk
-        tool = ROOT / "src/BGCS.Tool/bin/Release/net9.0/BGCS.Tool.dll"
         cpp_acceptance_fixture.prepare(ROOT, work, dotnet, tool, compiler, environment, run, sysroot)
         for mode in MODES:
             config = {"preset": "emscripten-c", "apiName": "NativeApi",

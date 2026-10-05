@@ -11,7 +11,7 @@ SKIP_RESTORE_BUILD="${SKIP_RESTORE_BUILD:-0}"
 # setting Platform=AnyCPU breaks solution restore (the solution spells it
 # "Any CPU"). Let each solution/project use its own default instead.
 if [[ "$(detect_snapshot_platform)" == "windows-x64" ]]; then
-  unset Platform
+  unset Platform PLATFORM platform
 fi
 GATE_DIR="${ROOT_DIR}/artifacts/acceptance/gates"
 rm -rf "${GATE_DIR}"

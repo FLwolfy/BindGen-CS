@@ -12,7 +12,7 @@
 ```text
 C:\Dev\GameEngineDev\BindGen-CS\
 ├─ BindGen-CS.sln
-├─ AGENTS.md                                       [新增] 独立开发规范入口
+├─ CONTRIBUTING.md                                 独立开发规范入口
 ├─ .editorconfig                                   [新增]
 ├─ Directory.Build.props                           [新增] 共同编译及 XML 约束
 ├─ global.json                                     生成器工程 SDK 选择
@@ -375,7 +375,7 @@ artifacts/
    └─ logs/
 ```
 
-BGCS 使用自身 fixture 和消费者验证能力，报告与 InnoEngine 联调报告独立。
+BGCS 使用自身 fixture 和消费者验证能力，报告与下游消费者的联调报告独立。
 
 
 ## 执行状态

@@ -22,6 +22,13 @@ Compiler discovery drains stdout and stderr concurrently for resource, include a
 fingerprint queries. Timed-out processes are terminated and observed before a query
 returns; an unsuccessful probe remains explicitly unavailable.
 
+`CppToolchainDiscovery.DiscoverSystemIncludeFolders` accepts the selected `sysRoot`
+and includes it in the discovery cache identity. Host C++ parsing uses the selected
+driver's header search order and disables implicit C++ roots when explicit roots
+are available, keeping one standard library and one SDK in the parse.
+Incremental input discovery follows directory links once per resolved directory;
+SDK aliases remain inputs and ancestor cycles cannot expand into duplicate paths.
+
 `BGCS.Core.Execution.ProcessExecutor` owns the same process lifecycle for parser discovery,
 native build steps, export inspection and generated C# compilation. Output pipes are drained
 concurrently, standard input is closed, and timeout or cancellation retires the process tree

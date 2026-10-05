@@ -165,11 +165,15 @@ public class CppParserOptions
             NativeTargetDescriptor host = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));
             if (target.targetId == host.targetId)
             {
-                discoveredIncludes = CppToolchainDiscovery.DiscoverSystemIncludeFolders(this.parserKind, effectiveCompiler);
+                discoveredIncludes = CppToolchainDiscovery.DiscoverSystemIncludeFolders(this.parserKind, effectiveCompiler, effectiveSysRoot);
                 foreach (string include in discoveredIncludes)
                     AddTargetSystemInclude(include);
             }
         }
+
+        if (this.parserKind == CppParserKind.Cpp
+            && (target.toolchain.cxxSystemIncludeFolders.Count > 0 || discoveredIncludes.Count > 0))
+            AddTargetArgument("-nostdinc++");
 
         if (!string.IsNullOrWhiteSpace(effectiveSysRoot))
         {
