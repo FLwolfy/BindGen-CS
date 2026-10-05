@@ -16,7 +16,9 @@ permissions:
 jobs:
   wasm-invocation:
     name: Independent Wasm invocation (${{ matrix.os }}, ${{ matrix.deployment }})
+    timeout-minutes: 45
     strategy:
+      max-parallel: 2
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-2022, macos-15-intel]
@@ -99,7 +101,9 @@ jobs:
 
   native-aot-invocation:
     name: Independent NativeAOT invocation (${{ matrix.os }})
+    timeout-minutes: 30
     strategy:
+      max-parallel: 2
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-2022, macos-15-intel]
@@ -154,7 +158,9 @@ jobs:
 
   build-and-test:
     name: Build and test (${{ matrix.target }})
+    timeout-minutes: 30
     strategy:
+      max-parallel: 2
       fail-fast: false
       matrix:
         include:
@@ -231,7 +237,9 @@ jobs:
 
   acceptance:
     name: BGCS acceptance (${{ matrix.target }})
+    timeout-minutes: 60
     strategy:
+      max-parallel: 2
       fail-fast: false
       matrix:
         include:
