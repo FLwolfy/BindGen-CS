@@ -22,7 +22,7 @@ public sealed class CppTargetTests
         string cxx = Path.Combine(root, "cxx");
         Directory.CreateDirectory(c);
         Directory.CreateDirectory(cxx);
-        File.WriteAllText(Path.Combine(c, "stdint.h"), "#define BGCS_C_HEADER 1\ntypedef unsigned int bgcs_uint;\n");
+        File.WriteAllText(Path.Combine(c, "stdint.h"), "#ifndef __CLANG_STDINT_H\n#error Parser builtin headers were bypassed\n#endif\n#define BGCS_C_HEADER 1\ntypedef unsigned int bgcs_uint;\n");
         File.WriteAllText(Path.Combine(cxx, "stdint.h"), "#define BGCS_CXX_HEADER 1\n#include_next <stdint.h>\n");
         try
         {
@@ -167,8 +167,10 @@ public sealed class CppTargetTests
         Assert.DoesNotContain(Path.GetTempPath(), options.systemIncludeFolders);
     }
 
-    [Fact]
-    public void ConfigureForTarget_HostCpp_ShouldParseStandardLibrary()
+    [Theory]
+    [InlineData("c++17")]
+    [InlineData("c++23")]
+    public void ConfigureForTarget_HostCpp_ShouldParseStandardLibrary(string standard)
     {
         NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));
         CppParserOptions options = new()
@@ -179,8 +181,9 @@ public sealed class CppTargetTests
             parseSystemIncludes = false
         };
         options.ConfigureForTarget(target);
+        options.additionalArguments.Add("-std=" + standard);
 
-        var compilation = CppParser.Parse(
+        using var compilation = CppParser.Parse(
             "#include <cstddef>\n#include <cstdio>\n#include <string>\n#include <vector>\n"
             + "struct NativeVectorHolder { std::vector<std::string> values; std::size_t size; FILE* file; };", options);
 

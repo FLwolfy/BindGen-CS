@@ -3,6 +3,8 @@
 // Licensed under the MIT License.
 using System;
 using System.Collections.Generic;
+using System.IO;
+using BGCS.CppAst.Interop;
 using BGCS.Core.Targeting;
 using BGCS.CppAst.Targeting;
 
@@ -16,6 +18,8 @@ public class CppParserOptions
     private List<string> m_targetSystemIncludeFolders = [];
     private List<string> m_targetAdditionalArguments = [];
     private List<string> m_targetDefines = [];
+    private HashSet<string> m_afterBuiltinIncludes = [];
+    private HashSet<string> m_frameworkIncludes = [];
     /// <summary>
     /// Default constructor.
     /// </summary>
@@ -122,6 +126,8 @@ public class CppParserOptions
         newOptions.m_targetSystemIncludeFolders = new List<string>(this.m_targetSystemIncludeFolders);
         newOptions.m_targetAdditionalArguments = new List<string>(this.m_targetAdditionalArguments);
         newOptions.m_targetDefines = new List<string>(m_targetDefines);
+        newOptions.m_afterBuiltinIncludes = new HashSet<string>(m_afterBuiltinIncludes);
+        newOptions.m_frameworkIncludes = new HashSet<string>(m_frameworkIncludes);
         return newOptions;
     }
 
@@ -155,20 +161,35 @@ public class CppParserOptions
             foreach (string include in target.toolchain.cxxSystemIncludeFolders)
                 AddTargetSystemInclude(include);
         }
-        foreach (string include in target.toolchain.systemIncludeFolders)
-            AddTargetSystemInclude(include);
         string? effectiveSysRoot = target.toolchain.sysRoot;
         string? effectiveCompiler = target.toolchain.compilerPath;
-        IReadOnlyList<string> discoveredIncludes = [];
+        IReadOnlyList<ClangHeaderSearchPath> discoveredIncludes = [];
         if (discoverHostToolchain)
         {
             NativeTargetDescriptor host = new ClangTargetResolver().Resolve(new(new NativeTargetId("host")));
             if (target.targetId == host.targetId)
+                discoveredIncludes = CppToolchainDiscovery.DiscoverHeaderSearchPaths(this.parserKind, effectiveCompiler, effectiveSysRoot);
+        }
+
+        // Keep the driver's builtin position: C++ wrappers -> parser builtins -> SDK C headers.
+        int builtinIndex = -1;
+        for (int index = 0; index < discoveredIncludes.Count; index++)
+        {
+            if (discoveredIncludes[index].isBuiltin)
             {
-                discoveredIncludes = CppToolchainDiscovery.DiscoverSystemIncludeFolders(this.parserKind, effectiveCompiler, effectiveSysRoot);
-                foreach (string include in discoveredIncludes)
-                    AddTargetSystemInclude(include);
+                builtinIndex = index;
+                break;
             }
+        }
+        for (int index = 0; index < builtinIndex; index++)
+            AddTargetSystemInclude(discoveredIncludes[index].path, isFramework: discoveredIncludes[index].isFramework);
+        foreach (string include in target.toolchain.systemIncludeFolders)
+            AddTargetSystemInclude(include, afterBuiltin: true);
+        for (int index = builtinIndex + 1; index < discoveredIncludes.Count; index++)
+        {
+            ClangHeaderSearchPath entry = discoveredIncludes[index];
+            if (!entry.isBuiltin)
+                AddTargetSystemInclude(entry.path, afterBuiltin: builtinIndex >= 0, isFramework: entry.isFramework);
         }
 
         if (this.parserKind == CppParserKind.Cpp
@@ -191,6 +212,8 @@ public class CppParserOptions
         foreach (string include in this.m_targetSystemIncludeFolders)
             this.systemIncludeFolders.Remove(include);
         this.m_targetSystemIncludeFolders.Clear();
+        m_afterBuiltinIncludes.Clear();
+        m_frameworkIncludes.Clear();
         foreach (string argument in this.m_targetAdditionalArguments)
         {
             int index = this.additionalArguments.LastIndexOf(argument);
@@ -204,13 +227,35 @@ public class CppParserOptions
         m_targetDefines.Clear();
     }
 
-    private void AddTargetSystemInclude(string include)
+    internal void AppendSystemIncludeArguments(List<string> arguments)
     {
+        bool builtinAdded = false;
+        foreach (string include in systemIncludeFolders)
+        {
+            if (!builtinAdded && m_afterBuiltinIncludes.Contains(include))
+            {
+                arguments.Add("-isystem" + Path.Combine(ClangResourceHeaders.directory, "include"));
+                builtinAdded = true;
+            }
+            string option = m_frameworkIncludes.Contains(include) ? "-iframework" : "-isystem";
+            arguments.Add(option + Path.GetFullPath(include));
+        }
+    }
+
+    private void AddTargetSystemInclude(
+        string include,
+        bool afterBuiltin = false,
+        bool isFramework = false
+    ) {
         if (!this.systemIncludeFolders.Contains(include))
         {
             this.systemIncludeFolders.Add(include);
             this.m_targetSystemIncludeFolders.Add(include);
         }
+        if (afterBuiltin)
+            m_afterBuiltinIncludes.Add(include);
+        if (isFramework)
+            m_frameworkIncludes.Add(include);
     }
 
     private void AddTargetArgument(string argument)

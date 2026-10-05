@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using BGCS.Core.Targeting;
 using BGCS.CppAst.Parsing;
 using BGCS.CppAst.Targeting;
 using Xunit;
@@ -88,6 +89,42 @@ public sealed class CppToolchainProcessTests : IDisposable
     }
 
     [Fact]
+    public void DriverSearchOrderUsesParserBuiltinsBetweenCppWrappersAndSdkHeaders()
+    {
+        string cxx = Path.Combine(m_root, "cxx");
+        string resource = Path.Combine(m_root, "resource", "include");
+        string frameworks = Path.Combine(m_root, "frameworks");
+        string frameworkHeaders = Path.Combine(frameworks, "BGCSFixture.framework", "Headers");
+        Directory.CreateDirectory(cxx);
+        Directory.CreateDirectory(resource);
+        Directory.CreateDirectory(frameworkHeaders);
+        File.WriteAllText(Path.Combine(cxx, "stdint.h"), "#define BGCS_WRAPPER 1\n#include_next <stdint.h>\n");
+        File.WriteAllText(Path.Combine(resource, "stdint.h"), "#error Foreign compiler builtins must not be used\n");
+        File.WriteAllText(Path.Combine(m_sdk, "stdint.h"), """
+            #ifndef BGCS_WRAPPER
+            #error The C++ wrapper must precede SDK headers
+            #endif
+            #ifndef __CLANG_STDINT_H
+            #error Parser builtin headers must precede SDK headers
+            #endif
+            typedef __UINT32_TYPE__ uint32_t;
+            """);
+        File.WriteAllText(Path.Combine(frameworkHeaders, "Value.h"), "struct FrameworkValue { uint32_t value; };\n");
+        BuildCompiler(orderedHeaders: true);
+        NativeTargetDescriptor target = new ClangTargetResolver().Resolve(new(
+            new NativeTargetId("host"), new(compilerPath: m_compiler)));
+        CppParserOptions options = new() { parseSystemIncludes = false };
+        options.ConfigureForTarget(target);
+        Assert.Equal([cxx, m_sdk, frameworks], options.systemIncludeFolders);
+        Assert.DoesNotContain(resource, options.systemIncludeFolders);
+
+        using var compilation = CppParser.Parse(
+            "#include <stdint.h>\n#include <BGCSFixture/Value.h>\nstruct SdkValue { uint32_t value; };", options.Clone());
+        Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
+        Assert.Contains(compilation.classes, value => value.name == "SdkValue" && value.sizeOf == 4);
+    }
+
+    [Fact]
     public async Task TimedOutCompilerQueryRetiresItsProcessBeforeReturning()
     {
         Task<string> query = Task.Run(() => CppToolchainDiscovery.GetCompilerFingerprint(CppParserKind.C, m_compiler));
@@ -123,8 +160,10 @@ public sealed class CppToolchainProcessTests : IDisposable
         Directory.Delete(m_root, recursive: true);
     }
 
-    private string BuildCompiler(bool versionTimesOut = true)
-    {
+    private string BuildCompiler(
+        bool versionTimesOut = true,
+        bool orderedHeaders = false
+    ) {
         string driver = CppToolchainDiscovery.FindCompiler(CppParserKind.C)
             ?? throw new InvalidOperationException("A C compiler is required for process-boundary tests.");
         string executable = Path.Combine(m_root, OperatingSystem.IsWindows() ? "query.exe" : "query");
@@ -132,6 +171,14 @@ public sealed class CppToolchainProcessTests : IDisposable
         string processFile = QuoteCString(m_processFile);
         string sdk = QuoteCString(m_sdk);
         string resource = QuoteCString(Path.Combine(m_root, "resource"));
+        string orderedSearch = orderedHeaders
+            ? "fputs(" + QuoteCString(Path.Combine(m_root, "cxx")) + ", stderr); fputs(\"\\n\", stderr); "
+                + "fputs(" + QuoteCString(Path.Combine(m_root, "resource", "include")) + ", stderr); fputs(\"\\n\", stderr);"
+            : "";
+        string frameworkSearch = orderedHeaders
+            ? "fputs(\"\\n\", stderr); fputs(" + QuoteCString(Path.Combine(m_root, "frameworks"))
+                + ", stderr); fputs(\" (framework directory)\", stderr);"
+            : "";
         string versionAction = versionTimesOut ? "WAIT_FOR_TIMEOUT;" : "puts(\"fixture compiler\");";
         File.WriteAllText(source, $$"""
             #include <stdio.h>
@@ -164,7 +211,9 @@ public sealed class CppToolchainProcessTests : IDisposable
                     if (strncmp(argv[i], "--sysroot=", 10) == 0) sdk = argv[i] + 10;
                 }
                 fputs("#include <...> search starts here:\n", stderr);
+                {{orderedSearch}}
                 fputs(sdk, stderr);
+                {{frameworkSearch}}
                 fputs("\nEnd of search list.\n", stderr);
                 return 0;
             }

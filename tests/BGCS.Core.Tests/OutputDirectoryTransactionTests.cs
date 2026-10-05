@@ -59,11 +59,21 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
         File.WriteAllText(Path.Combine(publication.stagingPath, "value.txt"), "candidate");
         string blocked = Path.Combine(blockCandidate ? publication.stagingPath : output, "value.txt");
         using var reader = new FileStream(blocked, FileMode.Open, FileAccess.Read, FileShare.Read);
-        Task commit = Task.Run(publication.Commit);
-        await Task.Delay(80);
-        Assert.False(commit.IsCompleted);
-        reader.Dispose();
+        Task commit = Task.Factory.StartNew(
+            publication.Commit, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        bool completedWhileBlocked;
+        try
+        {
+            // Keep release on this thread; a pool continuation can miss the bounded retry window.
+            Thread.Sleep(80);
+            completedWhileBlocked = commit.IsCompleted;
+        }
+        finally
+        {
+            reader.Dispose();
+        }
         await commit.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(completedWhileBlocked);
         Assert.Equal("candidate", File.ReadAllText(Path.Combine(output, "value.txt")));
         Assert.Empty(Directory.GetDirectories(m_root, ".bgcs-backup-*"));
     }

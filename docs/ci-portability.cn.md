@@ -12,6 +12,10 @@
 Darwin 的 SDK 搜索优先读取 `-isysroot`；只提供 `--sysroot` 时，环境或编译器默认 SDK
 可能参与头文件搜索。具体语义见 [LLVM Darwin driver](https://github.com/llvm/llvm-project/blob/llvmorg-20.1.8/clang/lib/Driver/ToolChains/Darwin.cpp)。
 有显式 C++ 搜索根时使用 `-nostdinc++`，避免 libclang 再注入另一套标准库。
+Driver discovery 保留搜索顺序与 framework 类别；parser 在 driver 的 builtin 位置放入自己的
+资源头文件，保持 **C++ wrapper → parser builtin → SDK C headers**。
+不能把全部 SDK 路径提前改为 `-isystem`，否则 `include_next` 会绕过基础类型定义。
+该规则通用于工具链发现，不依赖 macOS 的某个安装路径；framework 根使用 `-iframework`。
 
 ## 输入、锁与产物
 

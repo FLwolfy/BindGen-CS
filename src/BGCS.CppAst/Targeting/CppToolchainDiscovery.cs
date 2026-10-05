@@ -13,7 +13,7 @@ namespace BGCS.CppAst.Targeting;
 public static class CppToolchainDiscovery
 {
     private static readonly object Sync = new();
-    private static readonly Dictionary<string, IReadOnlyList<string>> IncludeCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, IReadOnlyList<ClangHeaderSearchPath>> IncludeCache = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, string> FingerprintCache = new(StringComparer.Ordinal);
     /// <summary>
     /// Locates a compiler driver for the requested language on the current host.
@@ -47,6 +47,15 @@ public static class CppToolchainDiscovery
         string? compilerPath = null,
         string? sysRoot = null
     ) {
+        return DiscoverHeaderSearchPaths(parserKind, compilerPath, sysRoot)
+            .Where(entry => !entry.isBuiltin).Select(entry => entry.path).ToArray();
+    }
+
+    internal static IReadOnlyList<ClangHeaderSearchPath> DiscoverHeaderSearchPaths(
+        CppParserKind parserKind,
+        string? compilerPath,
+        string? sysRoot
+    ) {
         string? compiler = FindCompiler(parserKind, compilerPath);
         if (compiler == null)
             return [];
@@ -55,11 +64,11 @@ public static class CppToolchainDiscovery
         string key = GetCompilerFileIdentity(compiler) + "\0" + language + "\0" + root;
         lock (Sync)
         {
-            if (IncludeCache.TryGetValue(key, out IReadOnlyList<string>? cached))
+            if (IncludeCache.TryGetValue(key, out IReadOnlyList<ClangHeaderSearchPath>? cached))
                 return cached;
         }
 
-        IReadOnlyList<string> discovered = DiscoverSystemIncludeFoldersCore(compiler, language, root);
+        IReadOnlyList<ClangHeaderSearchPath> discovered = DiscoverSystemIncludeFoldersCore(compiler, language, root);
         lock (Sync)
             IncludeCache[key] = discovered;
         return discovered;
@@ -132,7 +141,7 @@ public static class CppToolchainDiscovery
         return sdkName == "macosx" && Directory.Exists(commandLineToolsSdk) ? commandLineToolsSdk : null;
     }
 
-    private static IReadOnlyList<string> DiscoverSystemIncludeFoldersCore(
+    private static IReadOnlyList<ClangHeaderSearchPath> DiscoverSystemIncludeFoldersCore(
         string compiler,
         string language,
         string? sysRoot
@@ -154,7 +163,8 @@ public static class CppToolchainDiscovery
                 return [];
             string output = result.error;
             bool capture = false;
-            List<string> paths = [];
+            List<ClangHeaderSearchPath> paths = [];
+            HashSet<string> visited = new(pathComparer);
             foreach (string rawLine in output.Split('\n'))
             {
                 string line = rawLine.Trim();
@@ -169,16 +179,17 @@ public static class CppToolchainDiscovery
                 if (!capture || line.Length == 0)
                     continue;
                 const string frameworkSuffix = " (framework directory)";
-                if (line.EndsWith(frameworkSuffix, StringComparison.Ordinal))
+                bool isFramework = line.EndsWith(frameworkSuffix, StringComparison.Ordinal);
+                if (isFramework)
                     line = line[..^frameworkSuffix.Length].TrimEnd();
                 if (!Directory.Exists(line))
                     continue;
                 string fullPath = Path.GetFullPath(line);
-                if (!pathComparer.Equals(fullPath, resourceInclude) && !paths.Contains(fullPath, pathComparer))
-                    paths.Add(fullPath);
+                if (visited.Add(fullPath))
+                    paths.Add(new(fullPath, pathComparer.Equals(fullPath, resourceInclude), isFramework));
             }
 
-            return paths;
+            return paths.ToArray();
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {

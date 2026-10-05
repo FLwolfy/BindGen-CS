@@ -106,12 +106,10 @@ public static class CppParser
         // Make sure that paths are absolute
         var normalizedIncludePaths = new List<string>();
         normalizedIncludePaths.AddRange(options.includeFolders.Select(x => Path.Combine(Environment.CurrentDirectory, x)));
-        var normalizedSystemIncludePaths = new List<string>();
-        normalizedSystemIncludePaths.AddRange(options.systemIncludeFolders.Select(x => Path.Combine(Environment.CurrentDirectory, x)));
         arguments.AddRange(options.additionalArguments);
         arguments.Add("-resource-dir=" + ClangResourceHeaders.directory);
         arguments.AddRange(normalizedIncludePaths.Select(x => $"-I{x}"));
-        arguments.AddRange(normalizedSystemIncludePaths.Select(x => $"-isystem{x}"));
+        options.AppendSystemIncludeArguments(arguments);
         arguments.AddRange(options.defines.Select(x => $"-D{x}"));
         arguments.Add("-dM");
         arguments.Add("-E");
