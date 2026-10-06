@@ -122,6 +122,14 @@ must have identical hashes before a retry can reuse them. Historical packages
 record their original dependencies and actual build commits, including missing
 exact dependency versions; the archive does not claim a successful modern rebuild.
 
+Drafts are resolved through the authenticated release list and verified by release
+ID before publication. Retries resume the same draft and retain matching assets.
+If a new archival tag targets a historical commit that changes workflow files,
+[GitHub requires workflow authorization](https://docs.github.com/en/rest/releases/releases#create-a-release),
+which the built-in Actions token cannot hold. An authorized repository owner must
+first create that alpha tag at the exact source commit in the reviewed manifest;
+the archive workflow then verifies the tag and completes the release.
+
 ## Publishing credentials
 
 Publishing uses [nuget.org trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) instead of a stored API key.

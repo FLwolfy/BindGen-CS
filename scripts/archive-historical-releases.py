@@ -227,6 +227,21 @@ def remote_tag(repository, tag):
     return target["sha"]
 
 
+def find_release(repository, tag):
+    # The tag endpoint excludes drafts; the authenticated list includes them.
+    page = 1
+    while True:
+        releases = github_api(repository, "releases?per_page=100&page=" + str(page))
+        matches = [release for release in releases if release["tag_name"] == tag]
+        if len(matches) > 1:
+            raise ValueError("Multiple releases use the archival tag: " + tag)
+        if matches:
+            return matches[0]
+        if len(releases) < 100:
+            return None
+        page += 1
+
+
 def publish(plan, output):
     verify(plan, output)
     repository = plan["repository"]
@@ -241,7 +256,7 @@ def publish(plan, output):
         if existing_tag is not None and existing_tag != release["commit"]:
             raise ValueError("The archival tag already points to another commit.")
         notes = ROOT / release["notes"]
-        value = github_api(repository, "releases/tags/" + release["tag"], allow_missing=True)
+        value = find_release(repository, release["tag"])
         if value is None:
             command = ["gh", "release", "create", release["tag"], "--repo", repository,
                        "--title", release["title"],
@@ -253,7 +268,9 @@ def publish(plan, output):
             if release["prerelease"]:
                 command.append("--prerelease")
             run(command)
-            value = github_api(repository, "releases/tags/" + release["tag"])
+            value = find_release(repository, release["tag"])
+            if value is None:
+                raise ValueError("The created release draft is unavailable: " + release["tag"])
         directory = output / release["tag"]
         expected = {path.name: "sha256:" + digest(path) for path in directory.iterdir()}
         assets = {asset["name"]: asset for asset in value["assets"]}
@@ -268,7 +285,7 @@ def publish(plan, output):
                 missing.append(str(directory / filename))
         if missing:
             run(["gh", "release", "upload", release["tag"], "--repo", repository] + sorted(missing))
-        uploaded = github_api(repository, "releases/tags/" + release["tag"])
+        uploaded = github_api(repository, "releases/" + str(value["id"]))
         actual = {asset["name"]: asset.get("digest") for asset in uploaded["assets"]}
         if actual != expected:
             raise ValueError("Uploaded release hashes or file set differ: " + release["tag"])
