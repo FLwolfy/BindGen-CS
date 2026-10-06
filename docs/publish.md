@@ -124,8 +124,10 @@ must have identical hashes before a retry can reuse them. Historical packages
 record their original dependencies and actual build commits, including missing
 exact dependency versions; the archive does not claim a successful modern rebuild.
 
-Drafts are resolved through the authenticated release list and verified by release
-ID before publication. Retries resume the same draft and retain matching assets.
+Existing drafts are resolved through the authenticated release list. New drafts
+use the ID returned by their creation request, since release-list indexing can lag.
+Assets are uploaded and verified by that ID before publication. Retries resume the
+same draft and retain matching assets.
 If a new archival tag targets a historical commit that changes workflow files,
 [GitHub requires workflow authorization](https://docs.github.com/en/rest/releases/releases#create-a-release),
 which the built-in Actions token cannot hold. An authorized repository owner must

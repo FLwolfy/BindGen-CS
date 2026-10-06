@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
@@ -204,17 +205,27 @@ def verify(plan, output):
     print("All historical archives verified.", flush=True)
 
 
-def github_api(repository, endpoint, payload=None, allow_missing=False):
+def github_api(repository, endpoint, payload=None, allow_missing=False, method="GET"):
     command = ["gh", "api", "repos/" + repository + "/" + endpoint,
-               "-H", "X-GitHub-Api-Version: 2022-11-28"]
+               "--method", method, "-H", "X-GitHub-Api-Version: 2022-11-28"]
     if payload is not None:
-        command += ["--method", "PATCH", "--input", "-"]
+        command += ["--input", "-"]
     try:
         return json.loads(run(command, json.dumps(payload) if payload is not None else None))
     except RuntimeError as error:
         if allow_missing and "HTTP 404" in str(error):
             return None
-        raise
+        raise RuntimeError(endpoint + ": " + str(error)) from error
+
+
+def upload_release_asset(repository, release_id, path):
+    endpoint = ("https://uploads.github.com/repos/" + repository + "/releases/"
+                + str(release_id) + "/assets?name=" + urllib.parse.quote(path.name, safe=""))
+    command = ["gh", "api", endpoint, "--method", "POST", "--input", str(path),
+               "-H", "Content-Type: application/octet-stream",
+               "-H", "Content-Length: " + str(path.stat().st_size),
+               "-H", "X-GitHub-Api-Version: 2022-11-28"]
+    return json.loads(run(command))
 
 
 def remote_tag(repository, tag):
@@ -263,19 +274,15 @@ def publish(plan, output):
         notes = ROOT / release["notes"]
         value = find_release(repository, release["tag"])
         if value is None:
-            command = ["gh", "release", "create", release["tag"], "--repo", repository,
-                       "--title", release["title"],
-                       "--notes-file", str(notes), "--draft", "--latest=false"]
+            request = {"tag_name": release["tag"], "name": release["title"],
+                       "body": notes.read_text(encoding="utf-8"), "draft": True,
+                       "prerelease": release["prerelease"], "make_latest": "false"}
             if existing_tag is None:
-                command += ["--target", release["commit"]]
-            else:
-                command.append("--verify-tag")
-            if release["prerelease"]:
-                command.append("--prerelease")
-            run(command)
-            value = find_release(repository, release["tag"])
-            if value is None:
-                raise ValueError("The created release draft is unavailable: " + release["tag"])
+                request["target_commitish"] = release["commit"]
+            # The creation response owns the draft ID; release-list indexing can lag.
+            value = github_api(repository, "releases", request, method="POST")
+            if value["tag_name"] != release["tag"] or not value["draft"]:
+                raise ValueError("The created release draft has the wrong identity.")
         directory = output / release["tag"]
         expected = {path.name: "sha256:" + digest(path) for path in directory.iterdir()}
         assets = {asset["name"]: asset for asset in value["assets"]}
@@ -287,9 +294,11 @@ def publish(plan, output):
                 if assets[filename].get("digest") != checksum:
                     raise ValueError("Existing release bytes differ: " + filename)
             else:
-                missing.append(str(directory / filename))
-        if missing:
-            run(["gh", "release", "upload", release["tag"], "--repo", repository] + sorted(missing))
+                missing.append(directory / filename)
+        for path in sorted(missing):
+            uploaded = upload_release_asset(repository, value["id"], path)
+            if uploaded["name"] != path.name or uploaded.get("digest") != expected[path.name]:
+                raise ValueError("The uploaded asset differs from its archive: " + path.name)
         uploaded = github_api(repository, "releases/" + str(value["id"]))
         actual = {asset["name"]: asset.get("digest") for asset in uploaded["assets"]}
         if actual != expected:
@@ -297,7 +306,7 @@ def publish(plan, output):
         published = github_api(repository, "releases/" + str(value["id"]), {
             "name": release["title"], "body": notes.read_text(encoding="utf-8"),
             "prerelease": release["prerelease"], "draft": False, "make_latest": "false",
-        })
+        }, method="PATCH")
         if published["draft"] or remote_tag(repository, release["tag"]) != release["commit"]:
             raise ValueError("Published archive has the wrong tag or draft state.")
         results.append({"tag": release["tag"], "url": published["html_url"],
@@ -307,7 +316,7 @@ def publish(plan, output):
         raise ValueError("The current release tag changed.")
     github_api(repository, "releases/" + str(latest["id"]), {
         "body": (ROOT / plan["latest"]["notes"]).read_text(encoding="utf-8"),
-    })
+    }, method="PATCH")
     if github_api(repository, "releases/latest")["tag_name"] != plan["latest"]["tag"]:
         raise ValueError("Historical archives unexpectedly changed the latest release.")
     write_json(output / "publication-report.json", {"releases": results, "latest": plan["latest"]["tag"]})
