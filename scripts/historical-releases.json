@@ -1,0 +1,158 @@
+{
+  "repository": "FLwolfy/BindGen-CS",
+  "latest": {
+    "tag": "v2.1.0",
+    "commit": "6ea129b0bb6085e0575635bd3558f427ec397939",
+    "notes": "docs/releases/2.1.0.md"
+  },
+  "releases": [
+    {
+      "tag": "runtime-v0.1.0",
+      "sourceTag": "runtime-v0.1.0",
+      "packageVersion": "0.1.0",
+      "title": "BGCS.Runtime 0.1.0",
+      "commit": "f38c44fd460ab825933dab625764021792dfe7dd",
+      "prerelease": false,
+      "notes": "docs/releases/runtime-0.1.0.md",
+      "packages": [
+        "BGCS.Runtime"
+      ],
+      "packageCommits": [
+        "f38c44fd460ab825933dab625764021792dfe7dd"
+      ]
+    },
+    {
+      "tag": "v1.0.0-alpha.1",
+      "sourceTag": "v1.0.0-alpha.1",
+      "packageVersion": "1.0.0-alpha.1",
+      "title": "BGCS 1.0.0-alpha.1",
+      "commit": "0d3340f2b3c6779246959c221060a8c6b20b3984",
+      "prerelease": true,
+      "notes": "docs/releases/1.0.0-alpha.1.md",
+      "packages": [
+        "BGCS",
+        "BGCS.Cpp2C",
+        "BGCS.Runtime"
+      ],
+      "packageCommits": [
+        "0d3340f2b3c6779246959c221060a8c6b20b3984"
+      ]
+    },
+    {
+      "tag": "v1.0.0",
+      "sourceTag": "v1.0.0",
+      "packageVersion": "1.0.0",
+      "title": "BGCS 1.0.0",
+      "commit": "9286f44d2ea4a409f3431a3613a838eeea0a152e",
+      "prerelease": false,
+      "notes": "docs/releases/1.0.0.md",
+      "packages": [
+        "BGCS",
+        "BGCS.Cpp2C",
+        "BGCS.Runtime"
+      ],
+      "packageCommits": [
+        "9286f44d2ea4a409f3431a3613a838eeea0a152e"
+      ]
+    },
+    {
+      "tag": "v1.0.1",
+      "sourceTag": "v1.0.1",
+      "packageVersion": "1.0.1",
+      "title": "BGCS 1.0.1",
+      "commit": "3e4bf6a3939f092f75fbd157934d3869b8aa3695",
+      "prerelease": false,
+      "notes": "docs/releases/1.0.1.md",
+      "packages": [
+        "BGCS",
+        "BGCS.Cpp2C",
+        "BGCS.Runtime"
+      ],
+      "packageCommits": [
+        "3e4bf6a3939f092f75fbd157934d3869b8aa3695"
+      ]
+    },
+    {
+      "tag": "v2.0.0-alpha.1",
+      "sourceTag": "v2.0.0",
+      "packageVersion": "2.0.0",
+      "title": "BGCS 2.0.0-alpha.1",
+      "commit": "3191602e8d2a14d9b761dee3aedb9afe5fe4439c",
+      "prerelease": true,
+      "notes": "docs/releases/2.0.0-alpha.1.md",
+      "packages": [],
+      "packageCommits": []
+    },
+    {
+      "tag": "v2.0.1-alpha.1",
+      "sourceTag": "v2.0.1",
+      "packageVersion": "2.0.1",
+      "title": "BGCS 2.0.1-alpha.1",
+      "commit": "8807bae3d7c98dd36cbd4ffadca2940e3575b21a",
+      "prerelease": true,
+      "notes": "docs/releases/2.0.1-alpha.1.md",
+      "packages": [],
+      "packageCommits": []
+    },
+    {
+      "tag": "v2.0.2-alpha.1",
+      "sourceTag": "v2.0.2",
+      "packageVersion": "2.0.2",
+      "title": "BGCS 2.0.2-alpha.1",
+      "commit": "0614a2b1d8e4860d45aa207effa4f6d6b1ad18ff",
+      "prerelease": true,
+      "notes": "docs/releases/2.0.2-alpha.1.md",
+      "packages": [],
+      "packageCommits": []
+    },
+    {
+      "tag": "v2.0.3",
+      "sourceTag": "v2.0.3",
+      "packageVersion": "2.0.3",
+      "title": "BGCS 2.0.3",
+      "commit": "895a309f49f09e924976ad716404d4731107be73",
+      "prerelease": false,
+      "notes": "docs/releases/2.0.3.md",
+      "packages": [
+        "BGCS",
+        "BGCS.Cpp2C",
+        "BGCS.Runtime",
+        "BGCS.Intermediate",
+        "BGCS.CppAst",
+        "BGCS.Core",
+        "BGCS.Language"
+      ],
+      "packageCommits": [
+        "895a309f49f09e924976ad716404d4731107be73"
+      ]
+    },
+    {
+      "tag": "v2.0.4",
+      "sourceTag": "v2.0.4",
+      "packageVersion": "2.0.4",
+      "title": "BGCS 2.0.4",
+      "commit": "d36b780f4a17d87c33dfb1e876e161f0550351cf",
+      "prerelease": false,
+      "notes": "docs/releases/2.0.4.md",
+      "packages": [
+        "BGCS",
+        "BGCS.Cpp2C",
+        "BGCS.Runtime",
+        "BGCS.Intermediate",
+        "BGCS.CppAst",
+        "BGCS.Core",
+        "BGCS.Language",
+        "BindGen-CS",
+        "BindGen-CS.win-x64",
+        "BindGen-CS.win-arm64",
+        "BindGen-CS.linux-x64",
+        "BindGen-CS.linux-arm64",
+        "BindGen-CS.osx-arm64"
+      ],
+      "packageCommits": [
+        "5dcda7c4bb8a99d1fa273541aad8a2b9efc97c88",
+        "d36b780f4a17d87c33dfb1e876e161f0550351cf"
+      ]
+    }
+  ]
+}

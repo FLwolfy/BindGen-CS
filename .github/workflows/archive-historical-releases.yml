@@ -1,0 +1,124 @@
+name: Archive historical releases
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: bgcs-historical-release-archives
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Validate original historical packages
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      requested: ${{ steps.acceptance.outputs.requested }}
+      revision: ${{ steps.acceptance.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Require accepted archive changes on main
+        id: acceptance
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = JSON.parse(fs.readFileSync('scripts/historical-releases.json', 'utf8'));
+            const revision = context.payload.workflow_run?.head_sha || context.sha;
+            const main = await github.rest.git.getRef({...context.repo, ref: 'heads/main'});
+            if (main.data.object.sha !== revision) {
+              core.setOutput('requested', 'false');
+              return;
+            }
+            if (context.eventName !== 'workflow_dispatch') {
+              const commit = await github.rest.repos.getCommit({...context.repo, ref: revision});
+              const paths = new Set([
+                '.github/workflows/archive-historical-releases.yml',
+                'scripts/archive-historical-releases.py', 'scripts/historical-releases.json',
+                plan.latest.notes, ...plan.releases.map(release => release.notes)
+              ]);
+              if (!commit.data.files.some(file => paths.has(file.filename))) {
+                core.setOutput('requested', 'false');
+                return;
+              }
+            }
+            const runs = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: 'ci.yml', head_sha: revision,
+              event: 'push', branch: 'main', per_page: 100
+            });
+            const accepted = runs.data.workflow_runs.find(run =>
+              run.head_sha === revision && run.status === 'completed' &&
+              run.conclusion === 'success');
+            if (!accepted) throw new Error('Historical release changes require accepted CI.');
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              ...context.repo, run_id: accepted.id, filter: 'latest', per_page: 100
+            });
+            if (jobs.length !== 15 || jobs.some(job => job.conclusion !== 'success')) {
+              throw new Error('All fifteen CI jobs must pass before historical publication.');
+            }
+            core.setOutput('requested', 'true');
+            core.setOutput('revision', revision);
+
+      - name: Retrieve and validate original packages
+        if: steps.acceptance.outputs.requested == 'true'
+        run: python3 scripts/archive-historical-releases.py prepare
+
+      - name: Upload verified historical archives
+        if: steps.acceptance.outputs.requested == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-release-archives
+          path: artifacts/historical-release-archives
+          compression-level: 0
+          if-no-files-found: error
+
+  publish:
+    name: Publish verified historical releases
+    needs: prepare
+    if: needs.prepare.outputs.requested == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: historical-release-archives
+          path: artifacts/historical-release-archives
+
+      - name: Publish archive drafts after checksum verification
+        run: python3 scripts/archive-historical-releases.py publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload historical publication evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-release-publication
+          path: artifacts/historical-release-archives/publication-report.json
+          if-no-files-found: warn

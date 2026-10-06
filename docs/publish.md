@@ -96,6 +96,32 @@ nuget.org, retry upload failures without changing its contents. Changes to relea
 code require a new version; deleting and replacing published packages is not a
 recovery mechanism.
 
+## Historical GitHub archives
+
+The independent `Archive historical releases` workflow maintains the reviewed
+entries in `scripts/historical-releases.json` and the [release history](releases/README.md).
+It runs after accepted CI when those entries, their release notes, or the archive
+workflow change; it also supports a manual run against accepted main.
+
+It downloads the original NuGet packages, checks their identities, source commits,
+ZIP integrity and hashes, then publishes GitHub drafts only after their uploaded
+hashes match. It never repushes historical NuGet versions. Missing NuGet releases
+are source-only alpha prereleases; their original source tags are preserved.
+The current latest release and its existing assets are retained.
+
+The CLI supports `prepare`, `verify` and `publish`:
+
+```bash
+python3 scripts/archive-historical-releases.py prepare
+python3 scripts/archive-historical-releases.py verify
+```
+
+Publication requires the job's GitHub token with `contents: write`; local
+preparation and verification do not require credentials. Already uploaded assets
+must have identical hashes before a retry can reuse them. Historical packages
+record their original dependencies and actual build commits, including missing
+exact dependency versions; the archive does not claim a successful modern rebuild.
+
 ## Publishing credentials
 
 Publishing uses [nuget.org trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) instead of a stored API key.

@@ -32,6 +32,7 @@
 | 运行测试与验收 | [测试说明](testing.md)、[验收规范](acceptance.cn.md) |
 | Clang 资源与跨宿主 CI | [CI 宿主与目标边界](ci-portability.cn.md) |
 | 发布包 | [发布说明](publish.cn.md) |
+| 版本记录与历史包可用性 | [Release 历史](releases/README.md) |
 
 ## 设计与质量
 

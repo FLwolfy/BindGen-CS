@@ -33,6 +33,7 @@ Other host and release execution states are reported separately.
 | Verify native calls in Wasm | [Standalone workflow](testing.md#independent-webassembly-invocation), [local report](wasm-acceptance-2026-10-03.md) |
 | Publish packages | [Publishing](publish.md) |
 | BGCS 2.1.0 release changes | [Release notes](releases/2.1.0.md) |
+| Historical releases and package availability | [Release history](releases/README.md) |
 
 ## Design and quality
 
