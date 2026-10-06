@@ -248,13 +248,18 @@ def publish(plan, output):
     latest = github_api(repository, "releases/latest")
     if latest["tag_name"] != plan["latest"]["tag"]:
         raise ValueError("The current latest release differs from the reviewed archive plan.")
-    results = []
+    tagged = []
     for release in plan["releases"]:
         if remote_tag(repository, release["sourceTag"]) != release["commit"]:
             raise ValueError("The original remote tag changed: " + release["sourceTag"])
         existing_tag = remote_tag(repository, release["tag"])
         if existing_tag is not None and existing_tag != release["commit"]:
             raise ValueError("The archival tag already points to another commit.")
+        tagged.append((release, existing_tag))
+
+    results = []
+    # Finish existing source tags before provisioning new archival aliases.
+    for release, existing_tag in sorted(tagged, key=lambda item: item[1] is None):
         notes = ROOT / release["notes"]
         value = find_release(repository, release["tag"])
         if value is None:
