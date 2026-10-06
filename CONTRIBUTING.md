@@ -17,6 +17,8 @@ and the [architecture](docs/architecture.md) when changing handwritten code.
 - Keep private fields prefixed with `m_`, properties and parameters in camelCase, and types and methods in PascalCase.
 - Separate formatting changes from behavior changes. Do not edit generated output or third-party sources.
 - Keep solution folders purposeful and project files readable. Preserve MSBuild conditions, metadata and evaluation order during cleanup.
+- Keep project-owned embedded third-party resources and their license notices under that project's `Resources/` directory. Use a root `extern/` only for actual shared external sources.
+- Group project files by compilation, package metadata, project dependencies, package dependencies, resources and package content. Common compiler settings belong in `Directory.Build.props`.
 - Update consumers, configuration, documentation and reviewed snapshots with API changes.
 
 ## Validation

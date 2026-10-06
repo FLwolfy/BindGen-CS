@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+  <PropertyGroup Label="Compilation">
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>true</IsPackable>
+  </PropertyGroup>
 
+  <PropertyGroup Label="NuGet package">
     <PackageId>BGCS.CppAst</PackageId>
     <Authors>FLwolfy</Authors>
     <Description>C/C++ AST parsing infrastructure for BindGen-CS.</Description>
@@ -20,24 +20,24 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Package dependencies">
     <PackageReference Include="ClangSharp" Version="20.1.2.4" />
     <PackageReference Include="Irony" Version="1.5.3" />
   </ItemGroup>
 
   <!-- A published parser package must carry the full native RID dependency closure,
        regardless of the OS used to pack it. NuGet selects the matching runtime asset. -->
-  <ItemGroup>
+  <ItemGroup Label="Native runtime dependencies: win-x64">
     <PackageReference Include="libclang.runtime.win-x64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.win-x64" Version="20.1.2" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Native runtime dependencies: win-arm64">
     <PackageReference Include="libclang.runtime.win-arm64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.win-arm64" Version="20.1.2" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Native runtime dependencies: osx-arm64">
     <PackageReference Include="libclang.runtime.osx-arm64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.osx-arm64" Version="20.1.2" />
   </ItemGroup>
@@ -45,7 +45,7 @@
   <!-- Upstream ClangSharp 20.1.2 has no osx-x64 runtime packages. A same-major
        runtime built by scripts/setup-macos-x64-clang-runtime.sh is staged for CI
        and may be included in a package without changing the managed parser API. -->
-  <ItemGroup Condition="'$(BGCS_OSX_X64_PACKAGE_RUNTIME_DIR)' != ''">
+  <ItemGroup Label="Optional macOS Intel runtime" Condition="'$(BGCS_OSX_X64_PACKAGE_RUNTIME_DIR)' != ''">
     <None
       Include="$(BGCS_OSX_X64_PACKAGE_RUNTIME_DIR)/*.dylib"
       Pack="true"
@@ -58,24 +58,30 @@
       Visible="false" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Native runtime dependencies: linux-x64">
     <PackageReference Include="libclang.runtime.linux-x64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.linux-x64" Version="20.1.2" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Native runtime dependencies: linux-arm64">
     <PackageReference Include="libclang.runtime.linux-arm64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.linux-arm64" Version="20.1.2" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Package content">
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-    <EmbeddedResource Include="../../extern/clang-resource/Headers.zip" LogicalName="BGCS.CppAst.Clang.Headers.zip" />
-    <None Include="../../extern/clang-resource/LICENSE.txt" Pack="true" PackagePath="licenses/clang-resource/" />
-    <None Include="../../extern/clang-resource/README.md" Pack="true" PackagePath="licenses/clang-resource/" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Parser resources">
+    <EmbeddedResource Include="Resources/Clang/Headers.zip" LogicalName="BGCS.CppAst.Clang.Headers.zip" />
+  </ItemGroup>
+
+  <ItemGroup Label="Third-party notices">
+    <None Update="Resources/Clang/LICENSE.txt" Pack="true" PackagePath="licenses/clang-resource/LICENSE.txt" />
+    <None Update="Resources/Clang/README.md" Pack="true" PackagePath="licenses/clang-resource/README.md" />
   </ItemGroup>
 </Project>

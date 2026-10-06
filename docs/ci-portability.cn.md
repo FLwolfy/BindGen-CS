@@ -4,9 +4,9 @@
 
 ## Clang 内建头文件与 SDK
 
-`extern/clang-resource/Headers.zip` 是 LLVM 20 系列的内建头文件，嵌入解析器程序集。
+`src/BGCS.CppAst/Resources/Clang/Headers.zip` 是 LLVM 20 系列的内建头文件，嵌入解析器程序集。
 它不是宿主 SDK，也不是 macOS 专用资源。目标 SDK、C++ 标准库、ABI 和工具链由目标边界配置。
-资源的来源、SHA-256 和许可证见[资源说明](../extern/clang-resource/README.md)。
+资源的来源、SHA-256 和许可证见[资源说明](../src/BGCS.CppAst/Resources/Clang/README.md)。
 
 解析器和 compiler discovery 同时传入 `--sysroot` 与 `-isysroot`，使链接根与头文件根一致。
 Darwin 的 SDK 搜索优先读取 `-isysroot`；只提供 `--sysroot` 时，环境或编译器默认 SDK

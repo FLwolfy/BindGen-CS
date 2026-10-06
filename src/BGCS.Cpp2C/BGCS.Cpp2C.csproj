@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+  <PropertyGroup Label="Compilation">
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
+  <PropertyGroup Label="NuGet package">
     <PackageId>BGCS.Cpp2C</PackageId>
     <Authors>FLwolfy</Authors>
     <Description>C++ to C bridge code generation support for BindGen-CS.</Description>
@@ -19,16 +19,13 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../BGCS.CppAst/BGCS.CppAst.csproj" />
     <ProjectReference Include="../BGCS.Intermediate/BGCS.Intermediate.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Package content">
     <None Include="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../BGCS.CppAst/BGCS.CppAst.csproj" />
   </ItemGroup>
 </Project>

@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+  <PropertyGroup Label="Compilation">
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>$(DefinedConstants);CPPAST_15_OR_GREATER</DefineConstants>
+  </PropertyGroup>
 
+  <PropertyGroup Label="NuGet package">
     <PackageId>BGCS</PackageId>
     <Authors>FLwolfy</Authors>
     <Description>BindGen-CS core package for generating C# interop bindings from C headers.</Description>
@@ -20,27 +20,24 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Package dependencies">
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../BGCS.CppAst/BGCS.CppAst.csproj" />
     <ProjectReference Include="../BGCS.Intermediate/BGCS.Intermediate.csproj" />
     <ProjectReference Include="../BGCS.Language/BGCS.Language.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Embedded resources">
     <EmbeddedResource Include="..\BGCS.Runtime\**\*.cs" Exclude="..\BGCS.Runtime\bin\**\*;..\BGCS.Runtime\obj\**\*">
       <LogicalName>BGCS.RuntimeSources.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Package content">
     <None Include="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../BGCS.CppAst/BGCS.CppAst.csproj" />
   </ItemGroup>
 </Project>

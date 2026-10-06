@@ -1,6 +1,10 @@
 name: Publish BGCS NuGet
 
 on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
   push:
     tags:
       - "v*"
@@ -11,10 +15,130 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: bgcs-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
+  release-preflight:
+    name: Verify accepted release revision
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      publish: ${{ steps.acceptance.outputs.publish }}
+      version: ${{ steps.version.outputs.version }}
+      revision: ${{ steps.version.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Read the declared release and its notes
+        id: version
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import xml.etree.ElementTree as ET
+
+          version = ET.parse('Directory.Build.props').findtext('./PropertyGroup/Version')
+          if not version or not re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?', version):
+              raise SystemExit('Directory.Build.props must declare a valid release version.')
+          requested = os.environ.get('REQUESTED_VERSION', '')
+          if os.environ['GITHUB_EVENT_NAME'] == 'push':
+              requested = os.environ['GITHUB_REF_NAME'].removeprefix('v')
+          if requested and requested != version:
+              raise SystemExit('Requested version differs from the checked-out source version.')
+          if not Path(f'docs/releases/{version}.md').is_file():
+              raise SystemExit('The declared release must include reviewed release notes.')
+          revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'version={version}\nrevision={revision}\n')
+          PY
+
+      - name: Require the full CI matrix for this exact commit
+        id: acceptance
+        uses: actions/github-script@v7
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_REVISION: ${{ steps.version.outputs.revision }}
+        with:
+          script: |
+            const repository = context.repo;
+            const revision = process.env.RELEASE_REVISION;
+            const tag = `v${process.env.RELEASE_VERSION}`;
+            if (context.eventName === 'workflow_run') {
+              const main = await github.rest.git.getRef({...repository, ref: 'heads/main'});
+              if (main.data.object.sha !== revision) {
+                core.info('A newer main revision exists; wait for its CI before releasing.');
+                core.setOutput('publish', 'false');
+                return;
+              }
+            }
+            const runs = await github.rest.actions.listWorkflowRuns({
+              ...repository, workflow_id: 'ci.yml', head_sha: revision,
+              event: 'push', branch: 'main', per_page: 100
+            });
+            const accepted = runs.data.workflow_runs.find(run =>
+              run.head_sha === revision && run.status === 'completed' &&
+              run.conclusion === 'success');
+            if (!accepted) {
+              throw new Error('No successful main-branch CI exists for the release commit.');
+            }
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              ...repository, run_id: accepted.id, filter: 'latest', per_page: 100
+            });
+            if (jobs.length !== 15 || jobs.some(job => job.conclusion !== 'success')) {
+              throw new Error('The complete 15-job CI matrix must pass before publishing.');
+            }
+            try {
+              const release = await github.rest.repos.getReleaseByTag({...repository, tag});
+              if (!release.data.draft) {
+                core.info(`${tag} is already published; this commit does not request another release.`);
+                core.setOutput('publish', 'false');
+                return;
+              }
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            try {
+              const existing = await github.rest.git.getRef({...repository, ref: `tags/${tag}`});
+              let object = existing.data.object;
+              while (object.type === 'tag') {
+                object = (await github.rest.git.getTag({...repository, tag_sha: object.sha})).data.object;
+              }
+              if (object.sha !== revision) {
+                throw new Error('An existing release tag points to a different commit.');
+              }
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            core.info(`Accepted ${revision} in CI run ${accepted.id}.`);
+            core.setOutput('publish', 'true');
+
   release-candidate:
     name: Release candidate (${{ matrix.target }})
+    needs: release-preflight
+    if: needs.release-preflight.outputs.publish == 'true'
+    timeout-minutes: 60
     strategy:
+      max-parallel: 2
       fail-fast: false
       matrix:
         include:
@@ -36,6 +160,8 @@ jobs:
     steps:
       - name: Checkout BindGen-CS
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-preflight.outputs.revision }}
 
       - name: Initialize MSVC and Windows SDK
         if: runner.os == 'Windows'
@@ -101,12 +227,13 @@ jobs:
           if-no-files-found: error
 
   validate-pack-and-publish:
-    needs: release-candidate
+    needs: [release-preflight, release-candidate]
+    timeout-minutes: 45
     runs-on: ubuntu-24.04
     env:
       BGCS_CPP2C_CXX: g++
     permissions:
-      contents: read
+      contents: write
       id-token: write
       attestations: write
       artifact-metadata: write
@@ -114,6 +241,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-preflight.outputs.revision }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -131,16 +260,9 @@ jobs:
       - name: Resolve release version
         id: release
         shell: bash
+        env:
+          VERSION: ${{ needs.release-preflight.outputs.version }}
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF_NAME#v}"
-          fi
-          if [[ -z "${VERSION}" ]]; then
-            echo "Version is empty."
-            exit 1
-          fi
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Restore
@@ -205,8 +327,14 @@ jobs:
         run: >-
           dotnet run --project src/BGCS.Tool/BGCS.Tool.csproj --configuration Release --no-build --
           supply-chain artifacts/nuget --output artifacts/supply-chain
-          --revision "${GITHUB_SHA}"
-          --timestamp "$(git show -s --format=%cI "${GITHUB_SHA}")"
+          --revision "${{ needs.release-preflight.outputs.revision }}"
+          --timestamp "$(git show -s --format=%cI HEAD)"
+
+      - name: Write the release package checksums
+        shell: bash
+        run: |
+          cd artifacts/nuget
+          sha256sum *.nupkg *.snupkg > ../supply-chain/SHA256SUMS
 
       - name: Sign build provenance with GitHub OIDC
         id: provenance-attestation
@@ -259,3 +387,36 @@ jobs:
             dotnet nuget push "artifacts/nuget/BindGen-CS.${rid}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
           done
           dotnet nuget push "artifacts/nuget/BindGen-CS.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
+      - name: Publish GitHub release and its verified package set
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          REVISION: ${{ needs.release-preflight.outputs.revision }}
+          PROVENANCE_BUNDLE: ${{ steps.provenance-attestation.outputs.bundle-path }}
+          SBOM_BUNDLE: ${{ steps.sbom-attestation.outputs.bundle-path }}
+        run: |
+          releases="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate)"
+          if ! jq -e --arg tag "v${VERSION}" '.[] | select(.tag_name == $tag)' <<< "${releases}" > /dev/null; then
+            gh release create "v${VERSION}" \
+              --target "${REVISION}" \
+              --title "BGCS ${VERSION}" \
+              --notes-file "docs/releases/${VERSION}.md" \
+              --draft
+          fi
+          cp "${PROVENANCE_BUNDLE}" artifacts/supply-chain/provenance-attestation.json
+          cp "${SBOM_BUNDLE}" artifacts/supply-chain/sbom-attestation.json
+          gh release upload "v${VERSION}" \
+            --clobber \
+            artifacts/nuget/*.nupkg artifacts/nuget/*.snupkg \
+            artifacts/supply-chain/sbom.spdx.json \
+            artifacts/supply-chain/provenance.slsa.json \
+            artifacts/supply-chain/SHA256SUMS \
+            artifacts/supply-chain/provenance-attestation.json \
+            artifacts/supply-chain/sbom-attestation.json
+          if [[ "${VERSION}" == *-* ]]; then
+            gh release edit "v${VERSION}" --draft=false --prerelease
+          else
+            gh release edit "v${VERSION}" --draft=false --latest
+          fi

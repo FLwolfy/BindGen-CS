@@ -16,7 +16,7 @@ excluding that driver's Clang resource directory. This prevents a newer system
 LLVM installation from supplying builtin headers that the packaged native parser
 cannot understand. Target sysroots and compiler selection remain explicit; Web
 SDK selection belongs to the caller's toolchain. See the
-[resource bundle provenance and license](../extern/clang-resource/README.md).
+[resource bundle provenance and license](../src/BGCS.CppAst/Resources/Clang/README.md).
 
 Compiler discovery drains stdout and stderr concurrently for resource, include and
 fingerprint queries. Timed-out processes are terminated and observed before a query

@@ -39,12 +39,28 @@ The release workflow is `.github/workflows/publish-bgcs-runtime-nuget.yml`.
 
 It runs restore, build, all tests, package-closure validation, generates `artifacts/supply-chain/sbom.spdx.json` and `provenance.slsa.json`, uploads that evidence, and only then pushes packages and symbol packages. Every package and symbol package is covered by SHA-256. Publishing is triggered by either:
 
-- a unified `v*` tag, such as `v1.2.3`; or
+- successful main-branch CI for an unpublished version declared in `Directory.Build.props`, with reviewed `docs/releases/<version>.md` notes;
+- a unified `v*` tag matching that declared version; or
 - the manual workflow with a release version.
 
 The package-closure test keeps its `BGCS.NativeAsset.Probe` package outside the release artifact directory. The seven library packages each have a `.nupkg` and `.snupkg`; the tool contributes the pointer `.nupkg` and five RID `.nupkg` files, for twenty release files in total. The workflow validates that exact set, and that no tool package exceeds the nuget.org size limit, before signing or uploading anything. RID packages are pushed before the pointer package, which cannot install until they are available.
 
-A normal branch commit or push does **not** publish packages. It may run ordinary CI, but this release workflow starts only for a matching tag or a manual dispatch.
+The release preflight checks the exact source revision against all fifteen CI jobs,
+including the independent NativeAOT and Wasm interpreter/AOT consumers. It rejects
+missing, failed or skipped jobs. Candidate and packaging jobs check out that same
+revision rather than the moving branch head. The three release candidates have
+explicit deadlines and at most two run concurrently.
+
+On main, an unpublished declared version with release notes requests publication
+after CI succeeds. A version already present as a published GitHub release is
+skipped; ordinary subsequent commits do not republish it. A completed CI run for
+an older main revision cannot start a release after main has moved forward.
+
+After package validation, attestations and the complete NuGet upload succeed, the
+workflow creates a draft GitHub release targeting the accepted commit, uploads the
+twenty package files, checksums, SBOM, provenance and attestations, then publishes
+the draft. Upload failures leave the draft unpublished; rerunning the failed job
+resumes its asset upload. Existing release tags are never moved to another commit.
 
 ## What GitHub OIDC does
 
@@ -54,15 +70,22 @@ OIDC also authorizes the upload. `NuGet/login` exchanges the same job identity f
 
 The release publishes automatically only when all of these conditions are true:
 
-1. GitHub Actions is enabled and the workflow is present on the tagged commit.
-2. A `v*` tag is pushed, or an authorized user manually dispatches the workflow.
+1. GitHub Actions is enabled and the workflow is present on the default branch and release commit.
+2. The declared source version has reviewed release notes, and its exact commit has passed all fifteen ordinary CI jobs.
 3. Linux x64, Windows x64, and macOS x64 release-candidate jobs all pass.
 4. Build, tests, public API, license/vulnerability, package-closure, and supply-chain steps pass.
 5. The repository permits `id-token: write` and artifact attestations for this workflow.
 6. A nuget.org trusted publishing policy matches this repository and workflow file, and `NUGET_USER` is set.
 7. Any branch/tag protection, environment approval, or organization policy has been satisfied.
 
-If any prerequisite or gate fails, the package push step is not reached. A successful ordinary CI run alone is therefore not a release.
+If a prerequisite or gate fails, publication does not proceed. A successful CI run
+is the prerequisite for a requested release; publication is complete only when
+the release workflow succeeds and the package set and GitHub release exist.
+
+NuGet package versions are immutable. After any package has been accepted by
+nuget.org, retry upload failures without changing its contents. Changes to released
+code require a new version; deleting and replacing published packages is not a
+recovery mechanism.
 
 ## Publishing credentials
 
@@ -75,7 +98,11 @@ The policy owner must be able to push all thirteen package IDs listed above, inc
 
 ## Release
 
+Set the unified version in `Directory.Build.props`, add reviewed release notes at
+`docs/releases/<version>.md`, and push to main. CI completes before the release
+workflow starts. Tags and manual dispatch remain available, with the same CI gate:
+
 ```bash
-git tag v1.2.3
-git push origin v1.2.3
+git tag v2.1.0
+git push origin v2.1.0
 ```

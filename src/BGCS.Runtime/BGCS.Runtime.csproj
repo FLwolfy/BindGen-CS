@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+  <PropertyGroup Label="Compilation">
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
+  <PropertyGroup Label="NuGet package">
     <PackageId>BGCS.Runtime</PackageId>
     <Authors>FLwolfy</Authors>
     <Description>Runtime support library for generated BindGen-CS interop bindings.</Description>
@@ -19,7 +19,7 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Package content">
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

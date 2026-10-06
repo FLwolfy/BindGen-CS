@@ -12,6 +12,8 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!docs/releases/
+!docs/releases/*.md
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -96,10 +98,3 @@ lcov.info
 
 # Generated package lock for local tool restore caches (if any)
 packages/
-
-# External library for referencing
-extern/*
-!extern/clang-resource/
-!extern/clang-resource/Headers.zip
-!extern/clang-resource/LICENSE.txt
-!extern/clang-resource/README.md

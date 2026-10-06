@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+  <PropertyGroup Label="Compilation">
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>true</IsPackable>
+  </PropertyGroup>
 
+  <PropertyGroup Label="NuGet package">
     <PackageId>BGCS.Language</PackageId>
     <Authors>FLwolfy</Authors>
     <Description>Language processing infrastructure for BindGen-CS.</Description>
@@ -20,12 +20,15 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Package dependencies">
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Package content">
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

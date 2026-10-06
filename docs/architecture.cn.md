@@ -40,7 +40,7 @@ Roslyn 处理 C# 条件编译，禁用代码和 directive 替换为空格，保�
 BGCS.CppAst 自带 Clang 20 系列内置 resource headers；编译器发现只提供宿主 SDK 与标准库，
 排除系统 clang 自己的 resource include。系统 LLVM 升级后不会把新内置语法交给包内旧主版本解析器。
 目标 sysroot 与编译器选择仍是显式输入，Web SDK 选择属于调用方工具链；
-来源、校验和与第三方许可见 [resource bundle](../extern/clang-resource/README.md)。
+来源、校验和与第三方许可见 [resource bundle](../src/BGCS.CppAst/Resources/Clang/README.md)。
 
 编译器的 resource、include 和 fingerprint 查询同时排空 stdout/stderr；超时会终止并观察进程退出，
 失败查询仍明确标记为不可用。opaque handle 的 managed API 保持类型化包装，DllImport、LibraryImport

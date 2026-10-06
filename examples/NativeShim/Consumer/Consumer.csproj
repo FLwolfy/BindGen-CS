@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+  <PropertyGroup Label="Compilation">
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="../Generated/**/*.cs" LinkBase="Generated" />
+  <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../../../src/BGCS.Runtime/BGCS.Runtime.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Generated source inputs">
+    <Compile Include="../Generated/**/*.cs" LinkBase="Generated" />
   </ItemGroup>
 </Project>

@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+  <PropertyGroup Label="Compilation">
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-  <ItemGroup>
+
+  <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../../../src/BGCS.Core/BGCS.Core.csproj" />
   </ItemGroup>
 </Project>

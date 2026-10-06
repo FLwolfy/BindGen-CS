@@ -1,19 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Compilation">
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Test inputs">
     <None Remove="test_indirect.h" />
     <None Remove="test_pragma.h" />
     <None Remove="test_pragma_root.h" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Test inputs">
     <Content Include="test_indirect.h">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -25,16 +22,15 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.2"/>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0"/>
-    <PackageReference Include="xunit" Version="2.9.2"/>
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2"/>
+  <ItemGroup Label="Package dependencies">
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../../src/BGCS.CppAst/BGCS.CppAst.csproj" />
     <ProjectReference Include="../fixtures/ParserLibraryHost/ParserLibraryHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
-
 </Project>

@@ -178,7 +178,7 @@ Wasm 测试额外需要 **.NET 9 SDK + `wasm-tools` workload**、Python 3.10+ �
 - [发布说明](docs/publish.cn.md)
 - [开发与贡献规范](CONTRIBUTING.md)
 
-## 为什么有 `extern/clang-resource`？
+## 为什么有 `src/BGCS.CppAst/Resources/Clang`？
 
 这个压缩包保存 Clang 内建 C/C++ 头文件，例如 `stddef.h` 和各架构的 intrinsic 声明。
 Windows、Linux、macOS 的解析器共用它；它不是 macOS SDK。
@@ -188,13 +188,13 @@ Windows、Linux、macOS 的解析器共用它；它不是 macOS SDK。
 内建头文件不替代目标 SDK。目标 provider 仍负责目标 ABI、sysroot 和系统头文件；
 例如 Emscripten 目标仍需要 Emscripten SDK。
 详见 [Clang 跨编译文档](https://clang.llvm.org/docs/CrossCompilation.html)
-和[内建资源来源说明](extern/clang-resource/README.md)。
+和[内建资源来源说明](src/BGCS.CppAst/Resources/Clang/README.md)。
 
 ## License
 
 BGCS 使用 [MIT License](LICENSE)，派生自 CppAst / HexaGen 的部分保留原始声明。
 随解析器提供的 Clang builtin headers 使用 Apache-2.0 WITH LLVM-exception，
-其[来源、校验值与许可](extern/clang-resource/README.md)包含在 parser 包中。
+其[来源、校验值与许可](src/BGCS.CppAst/Resources/Clang/README.md)包含在 parser 包中。
 
 ### 独立原生调用验证
 

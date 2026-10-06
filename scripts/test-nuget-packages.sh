@@ -85,6 +85,15 @@ for rid in win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64; do
 done
 printf '[nuget] Parser package declares the complete published desktop native RID dependency closure.\n'
 
+for notice in LICENSE.txt README.md; do
+  if ! cmp -s <(unzip -p "${parser_package}" "licenses/clang-resource/${notice}") \
+    "${ROOT_DIR}/src/BGCS.CppAst/Resources/Clang/${notice}"; then
+    printf 'Parser package does not preserve its Clang %s notice.\n' "${notice}" >&2
+    exit 1
+  fi
+done
+printf '[nuget] Parser package preserves its embedded-resource license and provenance notices.\n'
+
 # nuget.org rejects any single package above 250 MB, so the tool ships as a small
 # pointer package plus one package per runtime identifier.
 TOOL_PACKAGE_RIDS=(win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64)

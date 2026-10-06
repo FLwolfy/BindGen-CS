@@ -187,7 +187,7 @@ are separate from the focused Wasm test. See [Testing](docs/testing.md) and [Acc
 - [Publishing](docs/publish.md)
 - [Contributing](CONTRIBUTING.md)
 
-## Why does BGCS include `extern/clang-resource`?
+## Why does BGCS include `src/BGCS.CppAst/Resources/Clang`?
 
 The archive contains Clang's builtin C/C++ headers, such as `stddef.h` and architecture intrinsics.
 It is shared by Windows, Linux and macOS parser hosts and is not a macOS SDK.
@@ -197,10 +197,10 @@ without requiring a separate Clang installation. Keep the archive when building 
 Builtin headers do not replace a target SDK. Target providers select the target's ABI, sysroot
 and system headers; an Emscripten target, for example, still needs its Emscripten SDK.
 See [Clang's cross-compilation documentation](https://clang.llvm.org/docs/CrossCompilation.html)
-and the [bundled resource provenance](extern/clang-resource/README.md).
+and the [bundled resource provenance](src/BGCS.CppAst/Resources/Clang/README.md).
 
 ## License
 
 BGCS uses the [MIT License](LICENSE). Derived CppAst/HexaGen portions retain their notices.
 Bundled Clang builtin headers use Apache-2.0 WITH LLVM-exception; their
-[source, checksum, and license](extern/clang-resource/README.md) are included with the parser.
+[source, checksum, and license](src/BGCS.CppAst/Resources/Clang/README.md) are included with the parser.

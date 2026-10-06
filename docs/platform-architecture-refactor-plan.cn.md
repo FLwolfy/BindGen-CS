@@ -31,7 +31,6 @@ C:\Dev\GameEngineDev\BindGen-CS\
 ├─ examples/
 ├─ scripts/
 ├─ docs/
-├─ extern/                                         解析器资源及第三方内容
 ├─ .github/workflows/
 └─ artifacts/                                      [产物] 构建和独立验收
 ```
@@ -118,6 +117,11 @@ src/BGCS.CppAst/
 │     ├─ UnixNativeTargetProvider.cs               [新增]
 │     ├─ AppleNativeTargetProvider.cs              [新增]
 │     └─ EmscriptenNativeTargetProvider.cs          [新增]
+├─ Resources/
+│  └─ Clang/                                       解析器独占的第三方资源
+│     ├─ Headers.zip
+│     ├─ LICENSE.txt
+│     └─ README.md
 ├─ Interop/
 │  ├─ ClangNativeRuntime.cs
 │  └─ ClangResourceHeaders.cs
