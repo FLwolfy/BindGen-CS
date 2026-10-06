@@ -39,6 +39,7 @@ jobs:
       publish: ${{ steps.acceptance.outputs.publish }}
       version: ${{ steps.version.outputs.version }}
       revision: ${{ steps.version.outputs.revision }}
+      ci-run-id: ${{ steps.acceptance.outputs.ci-run-id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -130,110 +131,19 @@ jobs:
               if (error.status !== 404) throw error;
             }
             core.info(`Accepted ${revision} in CI run ${accepted.id}.`);
+            core.setOutput('ci-run-id', accepted.id);
             core.setOutput('publish', 'true');
 
-  release-candidate:
-    name: Release candidate (${{ matrix.target }})
+  validate-pack-and-publish:
     needs: release-preflight
     if: needs.release-preflight.outputs.publish == 'true'
-    timeout-minutes: 60
-    strategy:
-      max-parallel: 2
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            target: linux-x64-gnu
-            require-windows-providers: "0"
-            cpp-compiler: g++
-          - os: windows-2022
-            target: windows-x64-msvc
-            require-windows-providers: "1"
-            cpp-compiler: ""
-          - os: macos-15-intel
-            target: macos-x64-darwin
-            require-windows-providers: "0"
-            cpp-compiler: clang++
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout BindGen-CS
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.release-preflight.outputs.revision }}
-
-      - name: Initialize MSVC and Windows SDK
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          # The SDK 10 packs RID-specific tool packages; net9.0 assemblies need the 9 runtime.
-          dotnet-version: |
-            9.0.x
-            10.0.x
-
-      - name: Build missing ClangSharp 20 runtime for macOS Intel
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
-          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
-          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "BGCS_OSX_X64_PACKAGE_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
-
-      - name: Run complete BGCS acceptance
-        shell: bash
-        run: bash ./scripts/run-full-test-matrix.sh
-        env:
-          CONFIGURATION: Release
-          BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
-          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
-
-      - name: Upload release-candidate evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-candidate-${{ matrix.target }}
-          path: artifacts/acceptance
-
-      - name: Upload unreviewed host snapshot inputs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: snapshot-inputs-${{ matrix.target }}
-          if-no-files-found: ignore
-          path: |
-            artifacts/acceptance/candidate-snapshots
-            artifacts/real-libraries/*/Generated/Bindings.cs
-            artifacts/real-libraries/*/public-api.txt
-            artifacts/real-cpp-libraries/bimg/Bridge/include/Classes.h
-            artifacts/real-cpp-libraries/bimg/Bridge/src/Classes.cpp
-            artifacts/real-cpp-libraries/bimg/GeneratedOneStep/Bindings.cs
-            artifacts/real-cpp-libraries/bimg/public-api.txt
-
-      - name: Upload relocatable macOS Intel parser runtime
-        if: matrix.target == 'macos-x64-darwin'
-        uses: actions/upload-artifact@v4
-        with:
-          name: parser-runtime-osx-x64
-          path: artifacts/clang-runtime/osx-x64
-          if-no-files-found: error
-
-  validate-pack-and-publish:
-    needs: [release-preflight, release-candidate]
     timeout-minutes: 45
     runs-on: ubuntu-24.04
     env:
       BGCS_CPP2C_CXX: g++
     permissions:
       contents: write
+      actions: read
       id-token: write
       attestations: write
       artifact-metadata: write
@@ -256,6 +166,14 @@ jobs:
         with:
           name: parser-runtime-osx-x64
           path: artifacts/clang-runtime/osx-x64
+          run-id: ${{ needs.release-preflight.outputs.ci-run-id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify the accepted parser runtime checksums
+        shell: bash
+        run: |
+          cd artifacts/clang-runtime/osx-x64
+          sha256sum --check --strict SHA256SUMS
 
       - name: Resolve release version
         id: release
@@ -275,13 +193,13 @@ jobs:
         run: dotnet test BindGen-CS.sln --configuration Release --no-build
 
       - name: Public API compatibility gate
-        run: ./scripts/test-public-api-snapshot.sh
+        run: bash ./scripts/test-public-api-snapshot.sh
 
       - name: Dependency license and vulnerability gate
-        run: ./scripts/test-supply-chain-policy.sh
+        run: bash ./scripts/test-supply-chain-policy.sh
 
       - name: Pack and test package closure
-        run: ./scripts/test-nuget-packages.sh
+        run: bash ./scripts/test-nuget-packages.sh
         env:
           CONFIGURATION: Release
           PACKAGE_TEST_VERSION: ${{ steps.release.outputs.version }}

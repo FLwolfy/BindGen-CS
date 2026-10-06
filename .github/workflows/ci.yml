@@ -300,6 +300,32 @@ jobs:
           name: acceptance-${{ matrix.target }}
           path: artifacts/acceptance
 
+      - name: Seal accepted macOS Intel parser runtime
+        if: matrix.target == 'macos-x64-darwin'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root = Path('artifacts/clang-runtime/osx-x64')
+          for name in ('libclang.dylib', 'libClangSharp.dylib'):
+              if not (root / name).is_file():
+                  raise SystemExit(f'Accepted parser runtime is missing {name}.')
+          files = sorted(path for path in root.rglob('*')
+                         if path.is_file() and path.name != 'SHA256SUMS')
+          (root / 'SHA256SUMS').write_text(''.join(
+              f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(root).as_posix()}\n'
+              for path in files), encoding='utf-8', newline='\n')
+          PY
+
+      - name: Upload accepted macOS Intel parser runtime
+        if: matrix.target == 'macos-x64-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: parser-runtime-osx-x64
+          path: artifacts/clang-runtime/osx-x64
+          if-no-files-found: error
+
       - name: Upload unreviewed host snapshot inputs
         if: failure()
         uses: actions/upload-artifact@v4

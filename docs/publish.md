@@ -48,8 +48,10 @@ The package-closure test keeps its `BGCS.NativeAsset.Probe` package outside the 
 The release preflight checks the exact source revision against all fifteen CI jobs,
 including the independent NativeAOT and Wasm interpreter/AOT consumers. It rejects
 missing, failed or skipped jobs. Candidate and packaging jobs check out that same
-revision rather than the moving branch head. The three release candidates have
-explicit deadlines and at most two run concurrently.
+revision rather than the moving branch head. CI completes the full acceptance on
+all three hosts before publication. Its successful macOS Intel acceptance seals
+the tested parser runtime and license files with a SHA-256 manifest and uploads
+them as an immutable run artifact.
 
 On main, an unpublished declared version with release notes requests publication
 after CI succeeds. A version already present as a published GitHub release is
@@ -62,6 +64,13 @@ twenty package files, checksums, SBOM, provenance and attestations, then publish
 the draft. Upload failures leave the draft unpublished; rerunning the failed job
 resumes its asset upload. Existing release tags are never moved to another commit.
 
+The publisher downloads the parser artifact by the accepted CI run ID and verifies
+every checksum before packing. It never selects artifacts from the latest branch
+or a different revision. The CI acceptance is reused instead of repeating the same
+three-host candidate jobs. Final build, tests, API, supply-chain and package-consumer
+checks still run on the actual versioned release package set. Shell entry points
+are invoked explicitly with `bash`, independently of checkout execute bits.
+
 ## What GitHub OIDC does
 
 `actions/attest` asks the GitHub-hosted release job for a short-lived OIDC identity bound to the repository, workflow, commit, and run. GitHub uses that identity to produce verifiable provenance and SBOM attestations for the package files. No long-lived Sigstore signing key is stored in the repository.
@@ -72,7 +81,7 @@ The release publishes automatically only when all of these conditions are true:
 
 1. GitHub Actions is enabled and the workflow is present on the default branch and release commit.
 2. The declared source version has reviewed release notes, and its exact commit has passed all fifteen ordinary CI jobs.
-3. Linux x64, Windows x64, and macOS x64 release-candidate jobs all pass.
+3. Linux x64, Windows x64, and macOS x64 CI acceptance jobs all pass, and the accepted parser runtime artifact passes checksum verification.
 4. Build, tests, public API, license/vulnerability, package-closure, and supply-chain steps pass.
 5. The repository permits `id-token: write` and artifact attestations for this workflow.
 6. A nuget.org trusted publishing policy matches this repository and workflow file, and `NUGET_USER` is set.
