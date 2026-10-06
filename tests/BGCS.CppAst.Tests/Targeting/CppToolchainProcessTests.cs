@@ -15,6 +15,8 @@ namespace BGCS.CppAst.Tests;
 /// </summary>
 public sealed class CppToolchainProcessTests : IDisposable
 {
+    private const int C_COMPILER_BUILD_TIMEOUT_MS = 120000;
+
     private readonly string m_root = Path.Combine(Path.GetTempPath(), "bgcs-query-" + Guid.NewGuid().ToString("N"));
     private readonly string m_compiler;
     private readonly string m_processFile;
@@ -231,12 +233,18 @@ public sealed class CppToolchainProcessTests : IDisposable
         using Process process = Process.Start(start)!;
         Task<string> standardOutput = process.StandardOutput.ReadToEndAsync();
         Task<string> standardError = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(30000))
+        // Building the fixture shares hosted runner resources with the solution tests.
+        // Its budget is independent of the compiler-query timeout under test.
+        bool completed = process.WaitForExit(C_COMPILER_BUILD_TIMEOUT_MS);
+        if (!completed)
         {
             process.Kill(entireProcessTree: true);
             process.WaitForExit();
         }
         Task.WaitAll(standardOutput, standardError);
+        Assert.True(
+            completed,
+            "Building the compiler-query fixture timed out.\n" + standardOutput.Result + standardError.Result);
         Assert.True(process.ExitCode == 0, standardOutput.Result + standardError.Result);
         return executable;
     }

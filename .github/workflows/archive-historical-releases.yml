@@ -57,8 +57,15 @@ jobs:
                 plan.latest.notes, ...plan.releases.map(release => release.notes)
               ]);
               if (!commit.data.files.some(file => paths.has(file.filename))) {
-                core.setOutput('requested', 'false');
-                return;
+                const releases = await github.paginate(github.rest.repos.listReleases, {
+                  ...context.repo, per_page: 100
+                });
+                const pending = plan.releases.some(archive => !releases.some(release =>
+                  release.tag_name === archive.tag && !release.draft));
+                if (!pending) {
+                  core.setOutput('requested', 'false');
+                  return;
+                }
               }
             }
             const runs = await github.rest.actions.listWorkflowRuns({

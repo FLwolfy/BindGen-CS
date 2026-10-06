@@ -101,7 +101,9 @@ recovery mechanism.
 The independent `Archive historical releases` workflow maintains the reviewed
 entries in `scripts/historical-releases.json` and the [release history](releases/README.md).
 It runs after accepted CI when those entries, their release notes, or the archive
-workflow change; it also supports a manual run against accepted main.
+workflow change, or while a reviewed archive remains unpublished. This resumes
+interrupted archival work after a later CI fix. It also supports a manual run
+against accepted main.
 
 It downloads the original NuGet packages, checks their identities, source commits,
 ZIP integrity and hashes, then publishes GitHub drafts only after their uploaded
