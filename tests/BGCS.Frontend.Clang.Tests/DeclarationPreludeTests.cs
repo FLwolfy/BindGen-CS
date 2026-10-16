@@ -168,6 +168,52 @@ public sealed class DeclarationPreludeTests
     }
 
     [Fact]
+    public async Task ReferencedSdkAliasChainsPreserveCompilerAccessBeforeLexicalMemberTraversal()
+    {
+        using Fixture fixture = new();
+        await File.WriteAllTextAsync(fixture.header, """
+            namespace sdk_alias_access {
+            template<class T> class Owner {
+            private:
+                typedef T HiddenTypedef;
+                using HiddenUsing = T;
+            protected:
+                typedef T ProtectedTypedef;
+                using ProtectedUsing = T;
+            public:
+                typedef HiddenTypedef PublicTypedef;
+                using PublicUsing = HiddenUsing;
+                typedef ProtectedTypedef PublicProtectedTypedef;
+                using PublicProtectedUsing = ProtectedUsing;
+            };
+            }
+            """);
+        await File.WriteAllTextAsync(fixture.entry, """
+            sdk_alias_access::Owner<int>::PublicTypedef typedef_value(sdk_alias_access::Owner<int>::PublicTypedef value);
+            sdk_alias_access::Owner<int>::PublicUsing using_value(sdk_alias_access::Owner<int>::PublicUsing value);
+            sdk_alias_access::Owner<int>::PublicProtectedTypedef protected_typedef_value(sdk_alias_access::Owner<int>::PublicProtectedTypedef value);
+            sdk_alias_access::Owner<int>::PublicProtectedUsing protected_using_value(sdk_alias_access::Owner<int>::PublicProtectedUsing value);
+            """);
+        FrontendResult result = await new ClangFrontend().ParseAsync(fixture.Request(), CancellationToken.None);
+        Assert.DoesNotContain(result.module.diagnostics, diagnostic => diagnostic.isFailure);
+        foreach ((string name, string access) in new[]
+        {
+            ("HiddenTypedef", "Private"), ("HiddenUsing", "Private"),
+            ("ProtectedTypedef", "Protected"), ("ProtectedUsing", "Protected"),
+            ("PublicTypedef", "Public"), ("PublicUsing", "Public"),
+            ("PublicProtectedTypedef", "Public"), ("PublicProtectedUsing", "Public")
+        })
+        {
+            NativeDeclaration alias = Assert.Single(result.module.declarations, declaration => declaration.kind == "Typedef" && declaration.name == name);
+            Assert.Equal(access, alias.visibility);
+            Assert.True(alias.isSystemDeclaration);
+            Assert.Equal("sdk_alias_access::Owner<int>", result.module.GetDeclaration(alias.parent!.Value).qualifiedName);
+        }
+        Assert.Contains(result.snapshot.files, input => input.path == fixture.header);
+        Assert.True(SourceSnapshotVerifier.Matches(result.snapshot));
+    }
+
+    [Fact]
     public async Task OwnedPchReplayPreservesCompilerTraitsExceptionsAddressabilityAndLiteralUnits()
     {
         using Fixture fixture = new();

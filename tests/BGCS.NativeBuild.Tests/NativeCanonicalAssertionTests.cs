@@ -2,11 +2,14 @@ using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Common;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Native;
+using BGCS.Contracts.Requests;
 using BGCS.Infrastructure.Execution;
+using BGCS.Infrastructure.Workers;
 using BGCS.NativeBuild.Planning;
 using BGCS.Platforms.Targeting;
 using BGCS.Platforms.Toolchains;
@@ -16,6 +19,78 @@ namespace BGCS.NativeBuild.Tests;
 
 public sealed class NativeCanonicalAssertionTests
 {
+    [Fact]
+    public async Task PrivateSdkAliasFactsStayPrivateWhileReachablePublicAliasesKeepIndependentCanonicalProofs()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-canonical-sdk-alias-" + Guid.NewGuid().ToString("N"));
+        string sdk = Path.Combine(root, "sdk");
+        Directory.CreateDirectory(sdk);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(sdk, "aliases.hpp"), """
+                namespace SDK {
+                template<class T> class Box {
+                #ifdef BGCS_PRIVATE_ALIAS_FLOAT
+                    typedef float HiddenTypedef;
+                #else
+                    typedef T HiddenTypedef;
+                #endif
+                    using HiddenUsing = HiddenTypedef;
+                    HiddenUsing hidden;
+                public:
+                    using Value = HiddenUsing;
+                    using Independent = T;
+                };
+                }
+                """);
+            string header = Path.Combine(root, "entry.hpp");
+            await File.WriteAllTextAsync(header, """
+                #include <aliases.hpp>
+                static_assert(sizeof(SDK::Box<int>) > 0);
+                using PublicType = SDK::Box<int>::Value;
+                using OtherType = SDK::Box<int>::Independent;
+                PublicType read_value();
+                OtherType read_other();
+                """);
+            var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp, "clang");
+            FrontendRequest request = new(target, SourceLanguage.Cpp, [header])
+            { pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false };
+            NativeModule module = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"))
+                .ParseAsync(request, CancellationToken.None)).module;
+            Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
+            foreach (string name in new[] { "HiddenTypedef", "HiddenUsing" })
+            {
+                NativeDeclaration alias = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "SDK::Box<int>::" + name);
+                Assert.True(alias.isSystemDeclaration);
+                Assert.Equal("Private", alias.visibility);
+                Assert.Equal(NativeTypeCategory.Alias, module.GetType(alias.type!.Value).category);
+            }
+            NativeDeclaration value = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "SDK::Box<int>::Value");
+            Assert.True(value.isSystemDeclaration);
+            Assert.Equal("Public", value.visibility);
+            string proof = new NativeCanonicalAssertionEmitter().Emit(module, [header]);
+            Assert.DoesNotContain("::HiddenTypedef", proof);
+            Assert.DoesNotContain("::HiddenUsing", proof);
+            Assert.Contains("std::is_same<::SDK::Box<int>::Value,", proof);
+            Assert.Contains("std::is_same<::SDK::Box<int>::Independent,", proof);
+            Assert.Contains("std::is_same<::PublicType,", proof);
+            string source = Path.Combine(root, "proof.cpp");
+            await File.WriteAllTextAsync(source, proof);
+            ImmutableArray<string> arguments = ["--no-default-config", "--target=" + target.triple, "-std=c++23", "-fsyntax-only", "-Werror", source,
+                .. target.toolchain.arguments,
+                .. (target.toolchain.sysRoot is string sysroot ? new[] { "--sysroot=" + sysroot } : []), "-isystem", sdk,
+                .. target.toolchain.systemIncludeFolders.Concat(target.toolchain.cxxSystemIncludeFolders).SelectMany(directory => new[] { "-isystem", directory })];
+            var compiled = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments, root, TimeSpan.FromSeconds(60));
+            Assert.False(compiled.timedOut);
+            Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);
+            var drift = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments.Add("-DBGCS_PRIVATE_ALIAS_FLOAT=1"), root, TimeSpan.FromSeconds(60));
+            Assert.False(drift.timedOut);
+            Assert.NotEqual(0, drift.exitCode);
+            Assert.Contains("alias canonical type differs", drift.standardOutput + drift.standardError);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Theory]
     [InlineData(null, null)]
     [InlineData("support-header", null)]
@@ -159,6 +234,14 @@ public sealed class NativeCanonicalAssertionTests
 
         NativeDeclaration Macro(string name, NativeScalarConstant value) => new(new("macro:" + name), "Macro", name, name, null, source)
             { constantValue = value, macro = new(false, [], true) };
+    }
+
+    private static string WorkerRoot()
+    {
+        DirectoryInfo? repository = new(AppContext.BaseDirectory);
+        while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
+        string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
+        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 
     private const string Header = """

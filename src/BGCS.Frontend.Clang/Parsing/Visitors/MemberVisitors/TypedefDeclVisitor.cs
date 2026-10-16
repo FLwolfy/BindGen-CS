@@ -43,9 +43,10 @@ internal unsafe class TypedefDeclVisitor : MemberVisitor
         }
         else
         {
+            CppVisibility declaredAccess = cursor.GetVisibility();
             CppTypedef typedef = new(cursor, typedefName, underlyingTypeDefType)
             {
-                visibility = contextContainer.currentVisibility
+                visibility = declaredAccess == CppVisibility.Default ? contextContainer.currentVisibility : declaredAccess
             };
             container = contextContainer.declarationContainer;
             type = typedef;
