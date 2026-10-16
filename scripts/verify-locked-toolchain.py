@@ -22,10 +22,15 @@ def host_rid() -> str:
 
 
 def verify_workloads(dotnet_root: Path, lock: dict, rid: str) -> dict:
+    if lock.get("schemaVersion") != 2 or rid not in lock.get("sourceSdkArchives", {}):
+        raise RuntimeError("The workload lock has no verified raw manifest bytes for this host: " + rid)
     workloads, packs, inputs = {}, {}, []
     for entry in lock["manifests"]:
         directory = dotnet_root / "sdk-manifests" / entry["manifestFeatureBand"] / entry["id"] / entry["version"]
-        for name, expected in entry["files"].items():
+        files = entry.get("filesByHost", {}).get(rid)
+        if not files or set(files) != {"WorkloadManifest.json", "WorkloadManifest.targets"}:
+            raise RuntimeError("A required workload manifest has no raw file lock for this host: " + rid + "/" + entry["id"])
+        for name, expected in files.items():
             source = directory / name
             if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != expected:
                 raise RuntimeError("The installed workload manifest differs from the tested lock: " + str(source))
@@ -62,6 +67,14 @@ def verify_workloads(dotnet_root: Path, lock: dict, rid: str) -> dict:
     return {"manifestInputs": inputs, "resolvedRequiredPacks": resolved}
 
 
+def verify_workload_archive_provenance(workload_lock: dict, sdk_lock: dict, rid: str) -> None:
+    archive = workload_lock.get("sourceSdkArchives", {}).get(rid)
+    if (workload_lock.get("schemaVersion") != 2 or workload_lock["sdkVersion"] != sdk_lock["sdkVersion"]
+            or workload_lock["runtimePackVersion"] != sdk_lock["managedRuntimeVersion"]
+            or not archive or archive != sdk_lock["sdkArchives"].get(rid)):
+        raise RuntimeError("The workload raw-manifest lock has no matching locked SDK archive provenance for this host: " + rid)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default=os.environ.get("DOTNET_HOST_PATH", "dotnet"))
@@ -85,8 +98,7 @@ def main() -> None:
               "runtimeVersion": lock["managedRuntimeVersion"], "dotnet": str(tool)}
     if args.workloads or args.install_workloads:
         workload_lock = json.loads((ROOT / "eng/toolchains/workloads.lock.json").read_text(encoding="utf-8"))
-        if workload_lock["sdkVersion"] != version:
-            raise RuntimeError("The workload lock and selected SDK disagree.")
+        verify_workload_archive_provenance(workload_lock, lock, report["hostRid"])
         if args.install_workloads:
             subprocess.run([str(tool), "workload", "install", workload_lock["requiredWorkload"],
                             "--skip-manifest-update", "--disable-parallel"], cwd=ROOT, env=environment, check=True)

@@ -232,6 +232,7 @@ jobs:
       - name: Restore
         shell: bash
         run: |
+          python scripts/source_ownership.py
           unset Platform PLATFORM platform
           dotnet restore BindGen-CS.slnx
 
@@ -274,6 +275,9 @@ jobs:
 
       - name: Verify locked SDK archive bootstrap and workflow ordering
         run: python scripts/test-locked-dotnet-bootstrap.py
+
+      - name: Verify locked workload manifests across all launch hosts
+        run: python scripts/test-locked-workload-manifests.py
 
       - name: Verify trusted release trigger and immutable tag controls
         run: node --test scripts/test-release-workflow.js

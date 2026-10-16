@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from acceptance_evidence import source_identity as repository_source_identity
 import parser_runtime_provenance
 from disk_budget import check_free_space, wait_for_process
+from source_ownership import verify_source_ownership
 
 MANIFEST = json.loads((ROOT / "distribution/manifests/product-packages.json").read_text(encoding="utf-8"))
 RIDS = MANIFEST["toolRuntimeIdentifiers"]
@@ -524,6 +525,7 @@ def main() -> None:
     parser.add_argument("--verify-repeat-content", action="store_true", help="Repack the same binaries and require identical complete archive entry names/content, including symbols and metadata.")
     args = parser.parse_args()
     check_free_space(ROOT)
+    verify_source_ownership(ROOT)
     source = source_identity()
     version = args.version or ET.parse(ROOT / "Directory.Build.props").findtext("./PropertyGroup/Version")
     output = args.output.resolve()

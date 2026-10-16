@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "sdkVersion": "10.0.401",
   "runtimePackVersion": "10.0.12",
   "requiredWorkload": "wasm-tools",
@@ -10,19 +10,54 @@
       "id": "microsoft.net.workload.mono.toolchain.current",
       "version": "10.0.112",
       "manifestFeatureBand": "10.0.100",
-      "files": {
-        "WorkloadManifest.json": "a7eba7e77238cdf7d9cadaadd248114a02aacea19434e2ab3a86a74a64625277",
-        "WorkloadManifest.targets": "0eccecd7a49def2ea47072723a98c47bd686890fb32d0442f77474d8e517b51b"
+      "filesByHost": {
+        "win-x64": {
+          "WorkloadManifest.json": "a7eba7e77238cdf7d9cadaadd248114a02aacea19434e2ab3a86a74a64625277",
+          "WorkloadManifest.targets": "0eccecd7a49def2ea47072723a98c47bd686890fb32d0442f77474d8e517b51b"
+        },
+        "linux-x64": {
+          "WorkloadManifest.json": "43fd0cac90ae0a2f073b898ba3db7ef61209a5abf23d2bb10375a35f80f704d0",
+          "WorkloadManifest.targets": "ca1b2fc1f51f8dd5d1609bf667dbeaac4b936d4da1665f0372dd94de4be2dcd3"
+        },
+        "osx-x64": {
+          "WorkloadManifest.json": "43fd0cac90ae0a2f073b898ba3db7ef61209a5abf23d2bb10375a35f80f704d0",
+          "WorkloadManifest.targets": "ca1b2fc1f51f8dd5d1609bf667dbeaac4b936d4da1665f0372dd94de4be2dcd3"
+        }
       }
     },
     {
       "id": "microsoft.net.workload.emscripten.current",
       "version": "10.0.112",
       "manifestFeatureBand": "10.0.100",
-      "files": {
-        "WorkloadManifest.json": "068731f332c023e60b9ff5a954b6ba0e09394656edc04f83e9b80bc58fca67a4",
-        "WorkloadManifest.targets": "33c47f1130a7e22aa5a9edde6579fa7166273ea991bad22eb17738456c881281"
+      "filesByHost": {
+        "win-x64": {
+          "WorkloadManifest.json": "068731f332c023e60b9ff5a954b6ba0e09394656edc04f83e9b80bc58fca67a4",
+          "WorkloadManifest.targets": "33c47f1130a7e22aa5a9edde6579fa7166273ea991bad22eb17738456c881281"
+        },
+        "linux-x64": {
+          "WorkloadManifest.json": "229f0b9e24b8645b65e528cde67444c795d3b753b033004457f9b0847e3683a1",
+          "WorkloadManifest.targets": "fdb968488afb9f50e880d2a461476aaba48f0f0aefe1a4f829d96008766a22ca"
+        },
+        "osx-x64": {
+          "WorkloadManifest.json": "229f0b9e24b8645b65e528cde67444c795d3b753b033004457f9b0847e3683a1",
+          "WorkloadManifest.targets": "fdb968488afb9f50e880d2a461476aaba48f0f0aefe1a4f829d96008766a22ca"
+        }
       }
     }
-  ]
+  ],
+  "manifestHashPolicy": "Exact raw bytes selected by verified host RID; no line-ending or JSON normalization.",
+  "sourceSdkArchives": {
+    "win-x64": {
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.401/dotnet-sdk-10.0.401-win-x64.zip",
+      "sha512": "24b670ad3d923bfcf47df6c3b034152398b42f6dbc388e10d783aee1cfb5e5817d399fc0ae2a12cfa822a55e61d34830ccb15c50ef6efee437ab874bb7c79430"
+    },
+    "linux-x64": {
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.401/dotnet-sdk-10.0.401-linux-x64.tar.gz",
+      "sha512": "51c8b999af9e8dd9998c9edc5944e19a90788862068acd38694e098889054ce8c23d4f0c5cccfa16bf187d044562359e5ee69a9f8ad0bbe913ba90311fbce25b"
+    },
+    "osx-x64": {
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.401/dotnet-sdk-10.0.401-osx-x64.tar.gz",
+      "sha512": "33401b4a2da8554e3306db6072ea8569d9fcc608509c271e0aa4b39e7cc432da3631f14e7e1e2445d67d72550d18ce44a8bbd2382a756867ad2edab6b1c963c0"
+    }
+  }
 }
