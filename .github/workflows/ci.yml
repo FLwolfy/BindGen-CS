@@ -300,7 +300,7 @@ jobs:
         shell: bash
         run: |
           unset Platform PLATFORM platform
-          python scripts/compiler_test_environment.py -- dotnet test BindGen-CS.slnx --configuration Release --no-build -m:1 -nr:false --logger trx --filter "FullyQualifiedName!~BGCS.Tests."
+          python scripts/compiler_test_environment.py -- dotnet test BindGen-CS.slnx --configuration Release --no-build -m:1 -nr:false --logger trx --logger "console;verbosity=normal" --filter "FullyQualifiedName!~BGCS.Tests."
         env:
           BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
           BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
