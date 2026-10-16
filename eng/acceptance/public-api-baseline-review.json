@@ -25,9 +25,9 @@
     {
       "assembly": "BGCS.Contracts",
       "baseline": "tests/public-api/BGCS.Contracts.txt",
-      "sha256": "9fc3636f69e989990fce2fe581d49cf3b5211be57b030d82fcdcfefdafaf81e8",
-      "lines": 3857,
-      "exportedTypes": 297
+      "sha256": "59bb4d5bbbdf2da489fd7551b6df2110db71f3809f4b952c3236eb9773674f8e",
+      "lines": 3871,
+      "exportedTypes": 298
     },
     {
       "assembly": "BGCS.Runtime",
@@ -81,9 +81,9 @@
     {
       "assembly": "BGCS.NativeBuild",
       "baseline": "tests/public-api/BGCS.NativeBuild.txt",
-      "sha256": "ee1f3f364a41e5d1e5d0b6b0011fb8e031f6cad6aece9716802b27a171f6d8fc",
-      "lines": 131,
-      "exportedTypes": 26
+      "sha256": "af9ed8b216d0233b1a1b9ef093cf236b4a5c26d2a71065793c7477c8e6d2f1a2",
+      "lines": 180,
+      "exportedTypes": 30
     },
     {
       "assembly": "BGCS.Frontend.Clang",
@@ -99,6 +99,8 @@
     "SourceSnapshotBatch.GetMismatch shares exact-record file and complete directory-query verification within one fence across Host and NativeBuild. Each later fence remains fresh; contradictory records, ordered exclusions, absence and cancellation remain independent. No legacy alias or production friend access is added.",
     "TemplateInstantiationPlan.preamble carries planner-owned C++ support includes separately from post-header instantiation declarations. Host retains user preamble order and places support headers before original headers and the first parse; exact source, snapshots and native proofs use that composition.",
     "VirtualCallbackPlanner.preamble exposes the fixed support includes required before original interface headers. Proxy source contains declarations only; native bridge emission and repeated fact parsing retain the same dependency and lifetime contracts.",
-    "Synchronize the review hashes with the already committed c7a787a prelude and selected-compiler proof API review: neutral NativeDeclarationPrelude, propagated requiresNativeCompilerProof, canonical assertion emitter and the effective-source prelude result. This is metadata for previously reviewed snapshots, not additional runtime API changes."
+    "Synchronize the review hashes with the already committed c7a787a prelude and selected-compiler proof API review: neutral NativeDeclarationPrelude, propagated requiresNativeCompilerProof, canonical assertion emitter and the effective-source prelude result. This is metadata for previously reviewed snapshots, not additional runtime API changes.",
+    "NativeSourceViewCompilation and optional NativeSourceViewResult.compilation preserve the completed selected-native plan, operation and exact raw-output digest without parser handles, callbacks or re-preprocessing under a different source basename.",
+    "NativeRecordTraitObserver and its immutable fact/observation/evidence records acquire three selected-native constexpr traits from validated ELF object symbol sizes without target execution. Unsupported formats and LTO fail explicitly; query identity is combined with complete source-view identity, external inputs retain final fences, and existing layout/canonical/bridge assertions remain required."
   ]
 }

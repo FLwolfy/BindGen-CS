@@ -21,6 +21,111 @@ namespace BGCS.Tests;
 
 public sealed class NativeSourceViewCacheTests
 {
+    [Fact]
+    public async Task GnuRecordTraitsAreReacquiredBeforeWarmReuseAndRemainStableWithDebugObjects()
+    {
+        if (OperatingSystem.IsWindows() || !OperatingSystem.IsLinux()
+            && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BGCS_GNU_CXX")))
+        {
+            Assert.NotEqual("1", Environment.GetEnvironmentVariable("BGCS_REQUIRE_GNU_SOURCE_VIEW"));
+            Assert.NotEqual("1", Environment.GetEnvironmentVariable("BGCS_REQUIRE_GNU"));
+            return;
+        }
+        NativeTargetDescriptor compiler = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new NativeTargetId("host"))), SourceLanguage.Cpp, "gnu");
+        Assert.NotNull(compiler.toolchain.compilerPath);
+        string root = Path.Combine(Path.GetTempPath(), "bgcs gnu trait cache " + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            const string original = """
+                #include <memory>
+                namespace trait_cache {
+                class Holder {
+                    std::unique_ptr<int> m_value;
+                public:
+                    Holder() = default;
+                    ~Holder() noexcept = default;
+                    int Read() const { return m_value ? *m_value : 42; }
+                };
+                }
+                """;
+            string header = Path.Combine(root, "native.hpp");
+            await File.WriteAllTextAsync(header, original);
+            BindingConfiguration configuration = new()
+            {
+                schemaVersion = 1,
+                library = new() { id = "gnu_trait_cache", nativeName = "gnu_trait_cache" },
+                source = new() { language = SourceLanguage.Cpp, languageStandard = "c++23", headers = ["native.hpp"], parseMacros = false, arguments = ["-g"] },
+                targets = [new() { settings = new() { compilerPath = compiler.toolchain.compilerPath } }],
+                nativeBuild = new() { provider = "gnu", mode = "none" },
+                cache = new() { enabled = true },
+                api = new() { @namespace = "Generated.GnuTraitCache", name = "TraitApi" }
+            };
+            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(PrepareWorker(root)).Build();
+            GenerationRequest request = new(configuration, root);
+            GenerationResult first = await host.GenerateAsync(request);
+            Assert.True(first.success, first.GetDiagnosticSummary());
+            ExpectStage(first, "primaryFrontend", "miss");
+            ExpectStage(first, "csharpEmission", "miss");
+            await AssertTraits(first, true);
+            string managed = Managed(first);
+            var generatedSources = first.artifacts.Where(artifact => artifact.mediaType.StartsWith("text/", StringComparison.Ordinal))
+                .ToDictionary(artifact => artifact.relativePath, artifact => File.ReadAllBytes(Path.Combine(first.outputRoot, artifact.relativePath)));
+            GenerationResult warm = await host.GenerateAsync(request);
+            Assert.True(warm.success, warm.GetDiagnosticSummary());
+            ExpectStage(warm, "primaryFrontend", "hit");
+            ExpectStage(warm, "csharpEmission", "hit");
+            await AssertTraits(warm, true);
+            Assert.Equal(managed, Managed(warm));
+            foreach ((string path, byte[] bytes) in generatedSources) Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(warm.outputRoot, path)));
+            var before = Directory.GetFiles(warm.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes);
+            GenerationDiffResult unchanged = await host.DiffAsync(request);
+            Assert.True(unchanged.success, string.Join(Environment.NewLine, unchanged.diagnostics.Select(diagnostic => diagnostic.message)));
+            Assert.Empty(unchanged.changes);
+            Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(warm.outputRoot, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal));
+            foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(path));
+
+            string changedSource = original.Replace("~Holder()", "virtual ~Holder()", StringComparison.Ordinal);
+            Assert.NotEqual(original, changedSource);
+            await File.WriteAllTextAsync(header, changedSource);
+            GenerationResult changed = await host.GenerateAsync(request);
+            Assert.True(changed.success, changed.GetDiagnosticSummary());
+            ExpectStage(changed, "primaryFrontend", "miss");
+            ExpectStage(changed, "csharpEmission", "miss");
+            await AssertTraits(changed, false);
+
+            async Task AssertTraits(
+                GenerationResult result,
+                bool standardLayout
+            ) {
+                TargetInspection target = Assert.Single(result.targetModels);
+                Assert.Equal(compiler.toolchain.compilerPath, target.resolvedTarget!.toolchain.compilerPath);
+                var holder = Assert.Single(target.native.declarations, declaration => declaration.kind == "Class" && declaration.qualifiedName == "trait_cache::Holder");
+                Assert.Equal(standardLayout, holder.isStandardLayout);
+                Assert.True(holder.isDefaultConstructible);
+                Assert.False(holder.isTriviallyCopyable);
+                string targetRoot = Path.Combine(result.outputRoot, target.targetId);
+                string assertions = await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "src", "storage.assertions.cpp"));
+                Assert.Contains("trait_cache::Holder>::value == " + (standardLayout ? "1" : "0"), assertions);
+                using JsonDocument verification = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(targetRoot, "metadata", "verification.json")));
+                Assert.True(verification.RootElement.GetProperty("nativeFactProofRequired").GetBoolean());
+                JsonElement proof = verification.RootElement.GetProperty("nativeFactProof");
+                Assert.True(proof.GetProperty("compiled").GetBoolean());
+                Assert.False(proof.GetProperty("finalLinked").GetBoolean());
+                Assert.Contains(proof.GetProperty("sourceIdentity").GetProperty("arguments").EnumerateArray(), argument => argument.GetString() == "-g");
+                JsonElement[] observations = verification.RootElement.GetProperty("nativeSourceInputs").EnumerateArray()
+                    .Where(observation => observation.TryGetProperty("kind", out JsonElement kind) && kind.GetString() == "nativeRecordTraits").ToArray();
+                Assert.NotEmpty(observations);
+                Assert.Contains(observations.SelectMany(observation => observation.GetProperty("facts").EnumerateArray()), fact =>
+                    fact.GetProperty("declaration").GetProperty("value").GetString() == holder.id.value
+                    && fact.GetProperty("isStandardLayout").GetBoolean() == standardLayout
+                    && fact.GetProperty("isDefaultConstructible").GetBoolean()
+                    && !fact.GetProperty("isTriviallyCopyable").GetBoolean());
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Theory]
     [InlineData("clang")]
     [InlineData("msvc")]

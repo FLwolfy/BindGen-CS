@@ -32,6 +32,16 @@ public sealed record NativeSourceMacro(
     bool isSystem
 );
 
+/// <summary>Authenticates a completed selected-native preprocessing operation while its caller-owned output remains available.</summary>
+/// <param name="plan">The exact executed native compiler plan.</param>
+/// <param name="operation">The completed raw preprocessing operation, before any parser adaptation.</param>
+/// <param name="preprocessedDigest">The byte digest captured from that operation's successful output.</param>
+public sealed record NativeSourceViewCompilation(
+    NativeBuildPlan plan,
+    NativePreprocessingOperation operation,
+    ContentDigest preprocessedDigest
+);
+
 /// <summary>Returns native-expanded source tokens and the actual compiler's final macro state.</summary>
 /// <param name="expandedSource">Preprocessed source with comments and original source line metadata, without final macro dump directives.</param>
 /// <param name="macros">Final active macro definitions, preserving unknown origins explicitly.</param>
@@ -48,6 +58,8 @@ public sealed record NativeSourceViewResult(
     public string compilerIdentity { get; init; } = string.Empty;
     /// <summary>Gets isolated dependency declarations for a bounded leading native SDK expansion; their resulting facts require native compiler proof.</summary>
     public NativeDeclarationPrelude? declarationPrelude { get; init; }
+    /// <summary>Gets the authenticated raw compiler context for selected-native fact acquisition before the caller releases its source-view directory.</summary>
+    public NativeSourceViewCompilation? compilation { get; init; }
     /// <summary>Gets the expanded-source, final-macro, declared macro argv, diagnostic locale and compiler diagnostic identity with only private filename metadata and explicit Host-owned source origins mapped to portable identities.</summary>
     public ContentDigest observationFingerprint { get; init; }
 

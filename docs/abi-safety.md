@@ -227,6 +227,16 @@ construction can involve relocatable linking; these checks do not certify final
 library linking, invocation or every ABI. Unsupported exposed types fail rather
 than treating private opaque implementation types as publicly nameable.
 
+## Selected native record traits
+
+Clang and GCC can classify the same C++ library declarations differently. Before lowering a GNU declaration-prelude view, BGCS acquires default-constructible, standard-layout and trivially-copyable facts for nameable, concrete, accessible records from the selected native compiler. The query consumes the exact authenticated output of the completed native preprocessing operation; it does not reinclude headers under a different `__BASE_FILE__` context.
+
+Each constexpr boolean becomes an independent data symbol of size 1 or 2. After validating the target object identity, the observer reads exact symbol sizes with a pinned `llvm-nm` or `nm`, without executing target code. This capability currently requires ELF data-symbol sizes. COFF, Mach-O, LTO, missing or duplicate symbols and unsupported sizes fail explicitly; adjacent symbol addresses are never used to guess sizes.
+
+The raw Clang parse cache is unchanged. Cold parses, cache restores and effective-source verification apply the current native observations before consuming traits. Complete source-view identity is combined with query recipe, facts and tool inputs for cache and final input verification. Raw source and object hashes containing private paths or capability nonces remain per-execution evidence rather than stable output identity. Only the three queried traits change: type identities, sizes, alignment, fields and independent canonical/layout/bridge compilation assertions remain required. An object probe does not certify final linking or invocation.
+
+This mechanism does not rewrite arbitrary user `static_assert` expressions, template branches or declarations based on compiler-specific traits. User tokens that Clang cannot parse, or declarations that disagree with the selected native compiler, still fail explicitly and require a matching frontend or an explicit native shim.
+
 ## Callback addresses with unsupported invocation signatures
 
 Complete supported fixed callback prototypes use exact unmanaged function

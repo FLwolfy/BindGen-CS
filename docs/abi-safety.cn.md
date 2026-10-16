@@ -100,6 +100,16 @@ Processor 在最终源码契约验证前运行，缓存命中也复核实际 imp
 
 浏览器 wasm32 使用类型化静态模块能力。只有已验证 browser static profile 的 Cdecl LibraryImport 可省略冗余显式 convention metadata；不同约定或 profile 改动被拒绝。其他 import 保留显式策略。该有限选择由同一真实浏览器 AOT fixture 验证，不修改生成输出绕过测试。
 
+## 所选编译器的记录属性
+
+Clang 与 GCC 对同一套 C++ 标准库声明的 `standard-layout` 等属性可能给出不同结果。GNU 声明前导路径因此在 lowering 前，用实际选择的原生编译器取得可命名、具体、可访问记录的默认可构造、标准布局和可平凡复制属性。查询复用已经完成的原生预处理操作及其精确字节，不重新包含头文件或改变 `__BASE_FILE__` 的求值上下文。
+
+这些 constexpr 布尔值编译成大小分别为 1 或 2 的独立符号。观察器验证对象的目标身份，再用已锁定的 `llvm-nm` 或 `nm` 读取精确符号大小，不运行目标程序。当前只接受可验证独立数据符号大小的 ELF 对象；COFF、Mach-O、LTO、缺失或重复符号及不支持的大小明确失败，不从相邻地址猜测值。
+
+原始 Clang 解析缓存保持原样；冷解析、缓存恢复和最终有效源码复核都在消费记录属性前应用当前原生观察。完整源码观察身份与查询规则、事实及工具输入身份共同参与缓存和发布前复核。带有私有路径或能力 nonce 的原始源码、对象 hash 是单次执行证据，不冒充稳定输出身份。这里只更新三个已查询属性，类型、大小、对齐、字段及独立 canonical/layout/bridge 编译断言仍然必需；对象探针不证明最终链接或实际调用。
+
+此机制不会重写用户基于编译器特有 trait 的任意 `static_assert`、模板分支或声明。如果这些用户 token 在 Clang 中不可解析，或产生与所选原生编译器不同的声明，仍然明确失败；需要匹配的 frontend 或显式原生 shim。
+
 ## 验收证据
 
 独立 NativeAOT、浏览器解释/AOT fixture 保留三种 import 的全部 74 项检查，包括 scalar、UInt64 高位 enum、原生 long/bool、layout/bitfield 指针、bounds/capacity、ref/ref、in/out、记录字段与 Span/ref 的原地址别名、handle、callback/null/release、生成托管 callback 的状态捕获与原始异常返回、C++ 对象/继承，以及不完整/借用/缺失导出函数表。失败注入改变原生返回结果，必须在真实调用失败，不能仅因无关构建失败而通过。

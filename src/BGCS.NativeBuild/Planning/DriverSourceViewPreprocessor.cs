@@ -117,7 +117,11 @@ internal static class DriverSourceViewPreprocessor
         if (!SourceSnapshotVerifier.Matches(driverBefore, cancellationToken)) throw new IOException("The selected native driver changed during component discovery.");
         NativeBuildExecutionResult executed = await new PlannedNativeBuildExecutor().PreprocessWithDependenciesAsync(plan,
             TimeSpan.FromSeconds(request.timeoutSeconds), cancellationToken).ConfigureAwait(false);
-        string tokens = await File.ReadAllTextAsync(original.outputFile, cancellationToken).ConfigureAwait(false);
+        byte[] preprocessedBytes = await File.ReadAllBytesAsync(original.outputFile, cancellationToken).ConfigureAwait(false);
+        ContentDigest preprocessedDigest = new(Convert.ToHexStringLower(SHA256.HashData(preprocessedBytes)));
+        string tokens;
+        using (StreamReader reader = new(new MemoryStream(preprocessedBytes), Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+            tokens = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         string dump = await File.ReadAllTextAsync(macroOutput, cancellationToken).ConfigureAwait(false);
         ImmutableArray<NativeMacroDirectiveReader.Definition> definitions = NativeMacroDirectiveReader.Read(dump, rawStrings: source.language == SourceLanguage.Cpp);
         if (!definitions.Any(definition => definition.name == marker && !definition.functionLike && definition.replacement == "1"))
@@ -168,6 +172,7 @@ internal static class DriverSourceViewPreprocessor
             compilerFamily = family,
             compilerIdentity = identity,
             declarationPrelude = declarationPrelude,
+            compilation = declarationPrelude is null ? null : new(plan, plan.preprocessingOperations[0], preprocessedDigest),
             diagnostics = diagnostics,
             observationFingerprint = new(Convert.ToHexStringLower(SHA256.HashData(observation)))
         };

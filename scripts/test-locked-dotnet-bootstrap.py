@@ -190,8 +190,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         self.assertIn('if: always()', job)
         self.assertIn('path: artifacts/gnu-smoke', job)
         expression = gnu_smoke.filter_expression()
-        self.assertEqual(15, len(gnu_smoke.METHODS))
-        self.assertEqual(37, len(gnu_smoke.REQUIRED_CASES))
+        self.assertEqual(16, len(gnu_smoke.METHODS))
+        self.assertEqual(38, len(gnu_smoke.REQUIRED_CASES))
         self.assertIn('FullyQualifiedName=' + gnu_smoke.BRANCH + '&DisplayName~gnu', expression)
         for method in gnu_smoke.METHODS:
             self.assertIn('FullyQualifiedName=' + method, expression)
@@ -220,7 +220,7 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         path = self.root / 'gnu.trx'
         ET.ElementTree(original).write(path, encoding='utf-8')
         verified = gnu_smoke.verify(path)
-        self.assertEqual(37, len(verified['cases']))
+        self.assertEqual(38, len(verified['cases']))
         self.assertFalse(verified['releaseCertification'])
         for fault in ('missing', 'duplicate', 'skipped', 'foreign-branch', 'wrong-fqn', 'extra-definition', 'failed-counter', 'run-error'):
             with self.subTest(fault=fault):

@@ -109,6 +109,37 @@ internal sealed class GenerationInputTracker(
         m_fingerprints.Add(new("BGCS.NativeSourceView", Convert.ToHexStringLower(SHA256.HashData(implementation)), targetId, observation));
     }
 
+    internal void CaptureNativeRecordTraits(
+        string targetId,
+        BGCS.NativeBuild.Validation.NativeRecordTraitObservation observation,
+        string ownedScratchDirectory,
+        IReadOnlyDictionary<string, string> sourcePathMappings,
+        ContentDigest? sourceObservation = null
+    ) {
+        if (observation.inputs.IsDefault || observation.facts.IsDefault)
+            throw new InvalidDataException("The native record-trait observation omitted its frozen facts or execution inputs.");
+        _ = new ContentDigest(observation.observationFingerprint.value);
+        byte[] identity = JsonSerializer.SerializeToUtf8Bytes(new { sourceObservation, observation.observationFingerprint });
+        ContentDigest state = new(Convert.ToHexStringLower(SHA256.HashData(identity)));
+        object[] keys = observation.inputs.Select(snapshot => NativeSourceInputIdentity.Create(snapshot, sourcePathMappings)).ToArray();
+        StringComparer paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        string scratch = Path.GetFullPath(ownedScratchDirectory);
+        object[] evidence = observation.inputs.Select(snapshot => (object)NativeSourceInputIdentity.Evidence(snapshot, sourcePathMappings,
+            snapshot.excludedDirectories.Select(directory => paths.Equals(Path.GetFullPath(directory), scratch)
+                ? "native-record-traits:/source-scratch" : directory))).ToArray();
+        m_nativeSourceSnapshots.AddRange(observation.inputs);
+        m_nativeSourceKeys.Add(new { kind = "nativeRecordTraits", state, inputs = keys });
+        m_nativeSourceEvidence.Add(new { kind = "nativeRecordTraits", state, observation.facts, inputs = evidence });
+        string location = typeof(BGCS.NativeBuild.Validation.NativeRecordTraitObserver).Assembly.Location;
+        if (string.IsNullOrEmpty(location))
+        {
+            m_cacheIneligibilityReasons.Add("The native record-trait observer has no hashable assembly file.");
+            return;
+        }
+        using FileStream implementation = File.OpenRead(location);
+        m_fingerprints.Add(new("BGCS.NativeRecordTraits", Convert.ToHexStringLower(SHA256.HashData(implementation)), targetId, state));
+    }
+
     internal void DisableCaching(IEnumerable<string> reasons)
     {
         foreach (string reason in reasons)

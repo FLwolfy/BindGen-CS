@@ -3595,6 +3595,19 @@ class BGCS.Contracts.Requests.NativeSourceMacro [sealed; interfaces=System.IEqua
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
   method System.Void Deconstruct(out System.String name, out System.String replacement, out System.Boolean isFunctionLike, out System.Collections.Immutable.ImmutableArray<System.String> parameters, out System.Nullable<BGCS.Contracts.Common.SourceLocation> location, out System.Boolean isSystem)
+class BGCS.Contracts.Requests.NativeSourceViewCompilation [sealed; interfaces=System.IEquatable<BGCS.Contracts.Requests.NativeSourceViewCompilation>]
+  ctor(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, BGCS.Contracts.Common.ContentDigest preprocessedDigest)
+  property BGCS.Contracts.Requests.NativePreprocessingOperation operation { get; init }
+  property BGCS.Contracts.Requests.NativeBuildPlan plan { get; init }
+  property BGCS.Contracts.Common.ContentDigest preprocessedDigest { get; init }
+  method BGCS.Contracts.Requests.NativeSourceViewCompilation <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Requests.NativeSourceViewCompilation other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Requests.NativeSourceViewCompilation left, BGCS.Contracts.Requests.NativeSourceViewCompilation right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Requests.NativeSourceViewCompilation left, BGCS.Contracts.Requests.NativeSourceViewCompilation right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Requests.NativeBuildPlan plan, out BGCS.Contracts.Requests.NativePreprocessingOperation operation, out BGCS.Contracts.Common.ContentDigest preprocessedDigest)
 class BGCS.Contracts.Requests.NativeSourceViewRequest [sealed; interfaces=System.IEquatable<BGCS.Contracts.Requests.NativeSourceViewRequest>]
   ctor(BGCS.Contracts.Requests.FrontendRequest source, System.String workingDirectory)
   property BGCS.Contracts.Requests.FrontendRequest source { get; init }
@@ -3610,6 +3623,7 @@ class BGCS.Contracts.Requests.NativeSourceViewRequest [sealed; interfaces=System
   method System.Void Deconstruct(out BGCS.Contracts.Requests.FrontendRequest source, out System.String workingDirectory)
 class BGCS.Contracts.Requests.NativeSourceViewResult [sealed; interfaces=System.IEquatable<BGCS.Contracts.Requests.NativeSourceViewResult>]
   ctor(System.String expandedSource, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeSourceMacro> macros, BGCS.Contracts.Inputs.SourceSnapshot inputs)
+  property BGCS.Contracts.Requests.NativeSourceViewCompilation compilation { get; init }
   property System.String compilerFamily { get; init }
   property System.String compilerIdentity { get; init }
   property BGCS.Contracts.Requests.NativeDeclarationPrelude declarationPrelude { get; init }

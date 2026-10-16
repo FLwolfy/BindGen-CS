@@ -3,8 +3,18 @@ using System.Diagnostics;
 using System.IO;
 using System.Globalization;
 using System.Text;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
+if (args[0] == "--format=posix")
+{
+    // A real target object must have been produced before the public native
+    // observer reaches these deliberately invalid inspector-output controls.
+    string objectFile = args[^1];
+    File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "object-observed"), Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(objectFile))));
+    Console.Write(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "symbols.txt")));
+    return;
+}
 if (args[0] == "raw-utf8")
 {
     using Stream output = Console.OpenStandardOutput();

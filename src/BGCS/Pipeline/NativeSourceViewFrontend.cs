@@ -46,7 +46,7 @@ internal static class NativeSourceViewFrontend
             inputs.CaptureObservation(Replay, view.inputs);
             FrontendGenerationCache.Attempt? cached = frontendCache?.Prepare(source, frontend, linked.Token, view);
             if (cached?.result is FrontendResult restored)
-                return restored with { requiresNativeCompilerProof = view.declarationPrelude is not null || restored.requiresNativeCompilerProof };
+                return await ObserveTraits(restored with { requiresNativeCompilerProof = view.declarationPrelude is not null || restored.requiresNativeCompilerProof }).ConfigureAwait(false);
             string parserRoot = Path.Combine(root, "parser");
             Directory.CreateDirectory(parserRoot);
             string input = Path.Combine(parserRoot, "primary.preprocessed." + (source.language == SourceLanguage.C ? "h" : "hpp"));
@@ -121,7 +121,23 @@ internal static class NativeSourceViewFrontend
             if (cached is not null && !module.diagnostics.Any(diagnostic => diagnostic.isFailure)
                 && !new NativeModuleVerifier().Validate(module).Any(diagnostic => diagnostic.isFailure))
                 frontendCache!.Capture(cached, source, result, linked.Token);
-            return result;
+            return await ObserveTraits(result).ConfigureAwait(false);
+
+            async ValueTask<FrontendResult> ObserveTraits(FrontendResult raw)
+            {
+                if (view.compilerFamily != "gnu" || source.language != SourceLanguage.Cpp || view.declarationPrelude is null
+                    || raw.module.diagnostics.Any(diagnostic => diagnostic.isFailure)) return raw;
+                NativeSourceViewCompilation compilation = view.compilation
+                    ?? throw new InvalidDataException("The GNU declaration prelude omitted its authenticated native preprocessing context.");
+                string scratch = compilation.plan.scratchDirectory
+                    ?? throw new InvalidDataException("The GNU record-trait observation omitted its native source-view directory.");
+                NativeRecordTraitObservation observation = await new NativeRecordTraitObserver().ObserveAsync(compilation.plan, compilation.operation,
+                    compilation.preprocessedDigest, raw.module, Path.Combine(PhysicalPathResolver.Resolve(root), "record-traits"), timeout, linked.Token,
+                    sourcePathMappings: source.sourcePathMappings).ConfigureAwait(false);
+                NativeModule observed = NativeRecordTraitApplication.Apply(raw.module, observation);
+                inputs.CaptureNativeRecordTraits(source.target.targetId.value, observation, scratch, source.sourcePathMappings, view.observationFingerprint);
+                return raw with { module = observed };
+            }
 
             async ValueTask Replay(CancellationToken token)
             {

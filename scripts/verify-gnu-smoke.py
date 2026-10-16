@@ -25,8 +25,9 @@ EXTENDED_DRIFT = PREFIX + 'NativeConfiguredExtendedFamilyTests.IncompatibleOwner
 BITFIELD = PREFIX + 'ManifestNativeBuildTests.FinalNativeNonAddressableStorageCannotDriftWhileSizeAndPublicSignaturesStayEqual'
 ENUM_DRIFT = PREFIX + 'ManifestNativeBuildTests.NativeEnumUnderlyingSignednessDriftCannotReplaceVerifiedOutputWhenTheEnumNameAndSizeMatch'
 SEQUENCES = PREFIX + 'NativeCppSequenceTests.TypedSequences_PreserveRawExports_CopyValuesAndPinBorrowedCalls'
+NATIVE_TRAITS = PREFIX + 'NativeSourceViewCacheTests.GnuRecordTraitsAreReacquiredBeforeWarmReuseAndRemainStableWithDebugObjects'
 METHODS = (STANDARD, BRANCH, DTO, DRIFT, TYPEDEF, C_BUILD, TEMPLATES, FAMILIES, FAMILY_DRIFT,
-           VIRTUAL_CALLBACKS, EXTENDED_FAMILIES, EXTENDED_DRIFT, BITFIELD, ENUM_DRIFT, SEQUENCES)
+           VIRTUAL_CALLBACKS, EXTENDED_FAMILIES, EXTENDED_DRIFT, BITFIELD, ENUM_DRIFT, SEQUENCES, NATIVE_TRAITS)
 REQUIRED_CASES = {
     STANDARD: STANDARD,
     BRANCH + '(family: "gnu")': BRANCH,
@@ -49,6 +50,7 @@ REQUIRED_CASES = {
     **{BITFIELD + '(privateField: ' + value + ')': BITFIELD for value in ('False', 'True')},
     ENUM_DRIFT: ENUM_DRIFT,
     **{SEQUENCES + '(runtimeMode: "' + mode + '")': SEQUENCES for mode in ('package', 'source')},
+    NATIVE_TRAITS: NATIVE_TRAITS,
 }
 
 

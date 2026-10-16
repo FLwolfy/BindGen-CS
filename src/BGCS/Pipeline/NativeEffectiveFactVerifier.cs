@@ -2,9 +2,12 @@ using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Composition;
+using BGCS.Contracts.Common;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Native;
 using BGCS.Contracts.Ports;
@@ -42,6 +45,14 @@ internal sealed class NativeEffectiveFactVerifier(
         NativeTargetDescriptor target = plan.target;
         ImmutableArray<string> arguments = NativeEffectiveFactArguments.Resolve(plan, operation, cancellationToken);
         var effectiveSource = await NativeEffectiveSourceAdapter.PrepareAsync(plan, operation, cancellationToken).ConfigureAwait(false);
+        bool observeTraits = (plan.compilerFamily ?? plan.providerId) == "gnu" && operation.language == SourceLanguage.Cpp
+            && effectiveSource.declarationPrelude is not null;
+        ContentDigest? preprocessedDigest = null;
+        if (observeTraits)
+        {
+            using FileStream raw = File.OpenRead(operation.outputFile);
+            preprocessedDigest = new(Convert.ToHexStringLower(await SHA256.HashDataAsync(raw, cancellationToken).ConfigureAwait(false)));
+        }
         string? compilerPath = target.toolchain.compilerPath;
         if (effectiveSource.declarationPrelude is not null)
         {
@@ -89,8 +100,23 @@ internal sealed class NativeEffectiveFactVerifier(
             if (parsed.snapshot.excludedDirectories.Any(directory => !exclusions.Contains(directory, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)))
                 throw new InvalidOperationException("The effective-source frontend excluded an undeclared search directory.");
             if (!SourceSnapshotVerifier.Matches(parsed.snapshot, cancellationToken)) throw new IOException("Effective native source inputs changed during fact parsing.");
-            new NativeSourceFactComparer().Verify(sourceFacts, parsed.module, cancellationToken);
-            NativeStringProofReceipt? literalProof = await new NativeStringCompilerVerifier().VerifyAsync(plan, operation, sourceFacts, parsed.module, cancellationToken).ConfigureAwait(false);
+            NativeModule observedModule = parsed.module;
+            if (observeTraits)
+            {
+                string traitScratch = plan.scratchDirectory
+                    ?? throw new InvalidDataException("The GNU effective-source record-trait observation omitted its native working directory.");
+                NativeRecordTraitObservation observation = await new NativeRecordTraitObserver().ObserveAsync(plan, operation, preprocessedDigest!.Value,
+                    parsed.module, Path.Combine(PhysicalPathResolver.Resolve(traitScratch), "record-traits-" + Guid.NewGuid().ToString("N")), TimeSpan.FromSeconds(300), cancellationToken,
+                    sourcePathMappings: sourcePathMappings).ConfigureAwait(false);
+                observedModule = NativeRecordTraitApplication.Apply(parsed.module, observation);
+                tracked ??= new(JsonSerializer.SerializeToElement(new { plan.target, purpose = "nativeRecordTraits" }), pathBase);
+                tracked.CaptureNativeRecordTraits(target.targetId.value, observation, traitScratch,
+                    sourcePathMappings ?? ImmutableDictionary<string, string>.Empty);
+                if (captureVerificationInputs is not null)
+                    foreach (SourceSnapshot snapshot in observation.inputs) captureVerificationInputs(snapshot);
+            }
+            new NativeSourceFactComparer().Verify(sourceFacts, observedModule, cancellationToken);
+            NativeStringProofReceipt? literalProof = await new NativeStringCompilerVerifier().VerifyAsync(plan, operation, sourceFacts, observedModule, cancellationToken).ConfigureAwait(false);
             if (literalProof is not null) m_literalProofs.Add(literalProof);
             SourceSnapshot retained = parsed.snapshot with
             {

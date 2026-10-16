@@ -106,6 +106,55 @@ class BGCS.NativeBuild.Validation.NativeEffectiveSourceAdapter [abstract; sealed
   method System.String ParserPreamble(System.String compilerFamily, BGCS.Contracts.Inputs.SourceLanguage language) [static]
   method System.String PreserveSystemHeaderMarkers(System.String source, System.Collections.Immutable.ImmutableArray<System.String> systemDirectories) [static]
   method System.Threading.Tasks.ValueTask<System.ValueTuple<System.String,System.String,BGCS.Contracts.Requests.NativeDeclarationPrelude>> PrepareAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+class BGCS.NativeBuild.Validation.NativeRecordTraitEvidence [sealed; interfaces=System.IEquatable<BGCS.NativeBuild.Validation.NativeRecordTraitEvidence>]
+  ctor(System.Int32 recipeRevision, System.String source, BGCS.Contracts.Common.ContentDigest sourceDigest, BGCS.Contracts.Common.ContentDigest objectDigest, BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.NativeBuild.Execution.NativeBuildExecutionResult execution, BGCS.Contracts.Requests.NativeBuildCommand inspectionCommand, BGCS.Infrastructure.Execution.ProcessExecutionResult inspection)
+  property BGCS.NativeBuild.Execution.NativeBuildExecutionResult execution { get; init }
+  property BGCS.Infrastructure.Execution.ProcessExecutionResult inspection { get; init }
+  property BGCS.Contracts.Requests.NativeBuildCommand inspectionCommand { get; init }
+  property BGCS.Contracts.Common.ContentDigest objectDigest { get; init }
+  property BGCS.Contracts.Requests.NativeBuildPlan plan { get; init }
+  property System.Int32 recipeRevision { get; init }
+  property System.String source { get; init }
+  property BGCS.Contracts.Common.ContentDigest sourceDigest { get; init }
+  method BGCS.NativeBuild.Validation.NativeRecordTraitEvidence <Clone>$()
+  method System.Boolean Equals(BGCS.NativeBuild.Validation.NativeRecordTraitEvidence other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.NativeBuild.Validation.NativeRecordTraitEvidence left, BGCS.NativeBuild.Validation.NativeRecordTraitEvidence right) [static]
+  method System.Boolean op_Inequality(BGCS.NativeBuild.Validation.NativeRecordTraitEvidence left, BGCS.NativeBuild.Validation.NativeRecordTraitEvidence right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 recipeRevision, out System.String source, out BGCS.Contracts.Common.ContentDigest sourceDigest, out BGCS.Contracts.Common.ContentDigest objectDigest, out BGCS.Contracts.Requests.NativeBuildPlan plan, out BGCS.NativeBuild.Execution.NativeBuildExecutionResult execution, out BGCS.Contracts.Requests.NativeBuildCommand inspectionCommand, out BGCS.Infrastructure.Execution.ProcessExecutionResult inspection)
+class BGCS.NativeBuild.Validation.NativeRecordTraitFact [sealed; interfaces=System.IEquatable<BGCS.NativeBuild.Validation.NativeRecordTraitFact>]
+  ctor(BGCS.Contracts.Common.StableId declaration, System.Boolean isDefaultConstructible, System.Boolean isStandardLayout, System.Boolean isTriviallyCopyable)
+  property BGCS.Contracts.Common.StableId declaration { get; init }
+  property System.Boolean isDefaultConstructible { get; init }
+  property System.Boolean isStandardLayout { get; init }
+  property System.Boolean isTriviallyCopyable { get; init }
+  method BGCS.NativeBuild.Validation.NativeRecordTraitFact <Clone>$()
+  method System.Boolean Equals(BGCS.NativeBuild.Validation.NativeRecordTraitFact other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.NativeBuild.Validation.NativeRecordTraitFact left, BGCS.NativeBuild.Validation.NativeRecordTraitFact right) [static]
+  method System.Boolean op_Inequality(BGCS.NativeBuild.Validation.NativeRecordTraitFact left, BGCS.NativeBuild.Validation.NativeRecordTraitFact right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId declaration, out System.Boolean isDefaultConstructible, out System.Boolean isStandardLayout, out System.Boolean isTriviallyCopyable)
+class BGCS.NativeBuild.Validation.NativeRecordTraitObservation [sealed; interfaces=System.IEquatable<BGCS.NativeBuild.Validation.NativeRecordTraitObservation>]
+  ctor(System.Collections.Immutable.ImmutableArray<BGCS.NativeBuild.Validation.NativeRecordTraitFact> facts, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.SourceSnapshot> inputs, BGCS.Contracts.Common.ContentDigest observationFingerprint, BGCS.NativeBuild.Validation.NativeRecordTraitEvidence evidence)
+  property BGCS.NativeBuild.Validation.NativeRecordTraitEvidence evidence { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.NativeBuild.Validation.NativeRecordTraitFact> facts { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.SourceSnapshot> inputs { get; init }
+  property BGCS.Contracts.Common.ContentDigest observationFingerprint { get; init }
+  method BGCS.NativeBuild.Validation.NativeRecordTraitObservation <Clone>$()
+  method System.Boolean Equals(BGCS.NativeBuild.Validation.NativeRecordTraitObservation other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.NativeBuild.Validation.NativeRecordTraitObservation left, BGCS.NativeBuild.Validation.NativeRecordTraitObservation right) [static]
+  method System.Boolean op_Inequality(BGCS.NativeBuild.Validation.NativeRecordTraitObservation left, BGCS.NativeBuild.Validation.NativeRecordTraitObservation right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Collections.Immutable.ImmutableArray<BGCS.NativeBuild.Validation.NativeRecordTraitFact> facts, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.SourceSnapshot> inputs, out BGCS.Contracts.Common.ContentDigest observationFingerprint, out BGCS.NativeBuild.Validation.NativeRecordTraitEvidence evidence)
+class BGCS.NativeBuild.Validation.NativeRecordTraitObserver [sealed]
+  ctor()
+  method System.Threading.Tasks.ValueTask<BGCS.NativeBuild.Validation.NativeRecordTraitObservation> ObserveAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, BGCS.Contracts.Common.ContentDigest preprocessedDigest, BGCS.Contracts.Native.NativeModule module, System.String workingDirectory, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken [optional; default=null], System.String symbolToolPath [optional; default=null], System.Collections.Immutable.ImmutableDictionary<System.String,System.String> sourcePathMappings [optional; default=null])
 class BGCS.NativeBuild.Validation.NativeSourceFactComparer [sealed]
   ctor()
   method System.Boolean RequiresVerification(BGCS.Contracts.Native.NativeModule module) [static]
