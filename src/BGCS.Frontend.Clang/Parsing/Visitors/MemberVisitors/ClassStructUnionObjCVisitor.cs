@@ -20,6 +20,8 @@ internal unsafe class ClassStructUnionObjCVisitor : MemberVisitor
         CXCursor cursor,
         CXCursor parent
     ) {
+        // The injected self name is represented by its existing semantic owner.
+        if (cursor.IsInjectedClassName) return null;
         bool isAnonymous = cursor.IsAnonymous;
         var cppClass = this.builder.VisitClassDecl(cursor);
         var containerContext = this.context.GetOrCreateDeclContainer(parent);
@@ -52,7 +54,10 @@ internal unsafe class ClassStructUnionObjCVisitor : MemberVisitor
         }
         else
         {
-            cppClass.visibility = containerContext.currentVisibility;
+            // Instantiated cursors can be enumerated without their lexical access
+            // markers. Keep the access already established by the native cursor.
+            if (cppClass.visibility == CppVisibility.Default)
+                cppClass.visibility = containerContext.currentVisibility;
             return cppClass;
         }
     }

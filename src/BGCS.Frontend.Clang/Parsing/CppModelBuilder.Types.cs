@@ -355,6 +355,16 @@ internal unsafe partial class CppModelBuilder
     /// </summary>
     public unsafe CppClass VisitClassDecl(CXCursor cursor)
     {
+        // An injected class name denotes its enclosing class, not another nested
+        // record. Normalize type references before creating a container identity.
+        if (cursor.IsInjectedClassName)
+        {
+            CXCursor owner = cursor.SemanticParent;
+            if (owner.IsInjectedClassName || owner.Kind is not (CXCursorKind.CXCursor_ClassDecl or CXCursorKind.CXCursor_StructDecl
+                or CXCursorKind.CXCursor_UnionDecl or CXCursorKind.CXCursor_ClassTemplate or CXCursorKind.CXCursor_ClassTemplatePartialSpecialization))
+                throw new InvalidOperationException("An injected class name has no native enclosing class identity.");
+            cursor = owner;
+        }
         CppContainerContext previousRoot = this.m_context.currentRootContainer;
         bool requiredSystemRecord = cursor.Location.IsInSystemHeader && !this.parseSystemIncludes;
         if (cursor.Location.IsInSystemHeader) this.m_context.currentRootContainer = this.m_context.systemRootContainerContext;

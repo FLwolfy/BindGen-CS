@@ -90,6 +90,83 @@ public sealed class DeclarationPreludeTests
         Assert.False(SourceSnapshotVerifier.Matches(result.snapshot));
     }
 
+    [Theory]
+    [InlineData("protected", "Protected")]
+    [InlineData("private", "Private")]
+    [InlineData("public", "Public")]
+    public async Task InstantiatedNestedSdkTemplatePreservesItsDeclaredProtectedAccess(string access, string expected)
+    {
+        using Fixture fixture = new();
+        await File.WriteAllTextAsync(fixture.header, $$"""
+            namespace sdk_access {
+            template<class T> struct Owner {
+            {{access}}:
+                template<class U> struct Hidden { U value; };
+            public:
+                Hidden<T> data;
+            };
+            }
+            """);
+        await File.WriteAllTextAsync(fixture.entry, """
+            using SelectedOwner = sdk_access::Owner<int>;
+            static_assert(sizeof(SelectedOwner) == sizeof(int));
+            SelectedOwner transform(SelectedOwner value);
+            """);
+        FrontendResult result = await new ClangFrontend().ParseAsync(fixture.Request(), CancellationToken.None);
+        Assert.DoesNotContain(result.module.diagnostics, diagnostic => diagnostic.isFailure);
+        NativeDeclaration owner = Assert.Single(result.module.declarations,
+            declaration => declaration.qualifiedName == "sdk_access::Owner<int>");
+        NativeDeclaration data = Assert.Single(owner.children.Select(result.module.GetDeclaration), declaration => declaration.name == "data");
+        NativeType hiddenType = result.module.GetType(data.type!.Value);
+        NativeDeclaration hidden = result.module.GetDeclaration(hiddenType.declaration!.Value);
+        Assert.True(hidden.isSystemDeclaration);
+        Assert.True(hidden.isCompleteDefinition);
+        Assert.Equal(expected, hidden.visibility);
+        Assert.Equal(4, hiddenType.size);
+        Assert.Contains(result.snapshot.files, input => input.path == fixture.header);
+        Assert.True(SourceSnapshotVerifier.Matches(result.snapshot));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExplicitTemplateSelfNamesResolveToTheirOwnersWithoutDuplicateNestedRecords(bool usePrelude)
+    {
+        using Fixture fixture = new();
+        await File.WriteAllTextAsync(fixture.entry, """
+            namespace Demo {
+            template<class T> class Selector {
+            public: Selector() = default; Selector* Self() { return this; }
+            };
+            template<class T> class Selector<T*> {
+            public: Selector() = default; Selector* Self() { return this; }
+            };
+            template<> class Selector<int> {
+            public: Selector() = default; Selector* Self() { return this; }
+            };
+            }
+            """);
+        FrontendRequest request = fixture.Request() with
+        {
+            declarationPrelude = usePrelude ? fixture.Request().declarationPrelude : null,
+            postamble = "template class Demo::Selector<int>;\ntemplate class Demo::Selector<float*>;\n"
+        };
+        NativeModule module = (await new ClangFrontend().ParseAsync(request, CancellationToken.None)).module;
+        Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
+        Assert.DoesNotContain(module.declarations, declaration => declaration.kind == "Class" && declaration.qualifiedName == "Demo::Selector::Selector");
+        foreach (string name in new[] { "Demo::Selector<int>", "Demo::Selector<float *>" })
+        {
+            NativeDeclaration owner = Assert.Single(module.declarations, declaration => declaration.kind == "Class" && declaration.qualifiedName == name);
+            NativeType type = Assert.Single(module.types, type => type.category == NativeTypeCategory.Record && type.declaration == owner.id);
+            Assert.Equal(owner.type, type.id);
+            NativeDeclaration self = Assert.Single(owner.children.Select(module.GetDeclaration), declaration => declaration.name == "Self");
+            NativeType pointer = module.GetType(self.returnType!.Value);
+            Assert.Equal(NativeTypeCategory.Pointer, pointer.category);
+            Assert.Equal(type.id, pointer.elementType);
+            Assert.DoesNotContain(owner.children.Select(module.GetDeclaration), declaration => declaration.kind == "Class" && declaration.name == "Selector");
+        }
+    }
+
     [Fact]
     public async Task OwnedPchReplayPreservesCompilerTraitsExceptionsAddressabilityAndLiteralUnits()
     {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 using BGCS.Contracts.Inputs;
@@ -19,6 +20,7 @@ public sealed class NativeStorageAssertionEmitter
     /// <param name="preamble">Explicit source input placed before original headers.</param>
     /// <param name="postamble">Explicit source input placed after original headers.</param>
     /// <returns>A C or C++ compilation unit containing no exported symbols.</returns>
+    /// <exception cref="NotSupportedException">A publicly exposed native type contains a context-dependent template value that cannot be independently named from its frozen declaration evidence.</exception>
     public string Emit(
         NativeModule module,
         ImmutableArray<string> headers,
@@ -44,7 +46,7 @@ public sealed class NativeStorageAssertionEmitter
             "__builtin_offsetof", "BGCS_NATIVE_FIELD_OFFSET"];
         foreach (string token in commonProofTokens.Concat(module.language == SourceLanguage.C
             ? new[] { "_Static_assert", "_Generic", "_Alignof", "_Bool" }
-            : new[] { "static_assert", "alignof", "decltype", "static_cast", "typename", "nullptr", "bool", "std", "is_same", "underlying_type", "type" }))
+            : new[] { "static_assert", "alignof", "decltype", "static_cast", "typename", "nullptr", "bool", "std", "is_same", "is_signed", "remove_cv", "underlying_type", "type" }))
             text.Append("#if defined(").Append(token).AppendLine(")\n#error BGCS native storage proof token is shadowed by a macro\n#endif");
         // The ordinary offsetof macro belongs to the source environment and may
         // legitimately be customized by a public header. Verification must use
@@ -71,8 +73,25 @@ public sealed class NativeStorageAssertionEmitter
         HashSet<string> emitted = new(StringComparer.Ordinal);
         Dictionary<BGCS.Contracts.Common.StableId, bool> accessibleDeclarations = [];
         Dictionary<BGCS.Contracts.Common.StableId, bool> nameableTypes = [];
+        Dictionary<BGCS.Contracts.Common.StableId, bool> visibleDeclarations = [];
         HashSet<BGCS.Contracts.Common.StableId> pendingDeclarations = [];
         HashSet<BGCS.Contracts.Common.StableId> pendingTypes = [];
+        HashSet<BGCS.Contracts.Common.StableId> exposedTypes = [], exposedDeclarations = [];
+        ILookup<string, NativeDeclaration> variables = module.declarations.Where(declaration => declaration.kind == "Field" && declaration.role == "Variable")
+            .ToLookup(declaration => declaration.qualifiedName, StringComparer.Ordinal);
+        Dictionary<string, NativeScalarConstant> valueAssertions = new(StringComparer.Ordinal);
+        if (module.language == SourceLanguage.Cpp)
+        {
+            foreach (NativeDeclaration declaration in module.declarations.Where(declaration => !declaration.isSystemDeclaration && Visible(declaration) && ConcreteOwners(declaration)))
+                ExposeDeclaration(declaration);
+            foreach (BGCS.Contracts.Common.StableId identity in exposedTypes)
+            {
+                NativeType exposed = module.GetType(identity);
+                if (exposed.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration && exposed.declaration is { } exposedId
+                    && !ControlledValueOwners(module.GetDeclaration(exposedId)))
+                    throw new NotSupportedException("A publicly exposed native type has a context-dependent non-type template spelling without independent declaration evidence: " + exposed.spelling);
+            }
+        }
         foreach (NativeType type in module.types)
         {
             if (type.size is not > 0 || type.alignment is not > 0) continue;
@@ -81,7 +100,7 @@ public sealed class NativeStorageAssertionEmitter
             if (type.category == NativeTypeCategory.Primitive) spelling = module.language == SourceLanguage.C && type.primitiveKind == "Bool" ? "_Bool" : type.spelling;
             else if (type.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration && declaration is not null
                 && declaration.name.Length != 0 && ConcreteOwners(declaration) && Accessible(declaration))
-                spelling = module.language == SourceLanguage.C ? callableAssertions.RenderStorageType(type.id, string.Empty) : declaration.qualifiedName;
+                spelling = callableAssertions.RenderStorageType(type.id, string.Empty);
             if (spelling is null || !Regex.IsMatch(spelling, "^[A-Za-z_][A-Za-z0-9_: <>*,]*$", RegexOptions.CultureInvariant) || !emitted.Add(spelling)) continue;
             Check("sizeof(" + spelling + ")", type.size.Value, "native storage size");
             Check(alignment + "(" + spelling + ")", type.alignment.Value, "native storage alignment");
@@ -153,6 +172,15 @@ public sealed class NativeStorageAssertionEmitter
                             .AppendLine(": 1, default: 0), \"BGCS native field type differs from parsed facts\");");
                 }
         }
+        foreach (var value in valueAssertions)
+        {
+            Check("sizeof(" + value.Key + ")", value.Value.width, "native template constant width");
+            Check("std::is_signed<typename std::remove_cv<decltype(" + value.Key + ")>::type>::value", value.Value.isSigned == true ? 1 : 0, "native template constant signedness");
+            string literal = value.Value.value == "-9223372036854775808" ? "(-9223372036854775807LL - 1LL)"
+                : value.Value.value + (value.Value.isSigned == true ? "LL" : "ULL");
+            text.Append("static_assert((").Append(value.Key).Append(") == (").Append(literal)
+                .AppendLine("), \"BGCS native template constant differs from parsed facts\");");
+        }
         // Callable convention definitions precede field typedefs, including embedded callback pointer types.
         text.Append(callableAssertions.Emit()).Append(fieldChecks);
         if (intrinsicProof) text.AppendLine("#if defined(_MSC_VER)\n#pragma warning(pop)\n#endif");
@@ -176,6 +204,7 @@ public sealed class NativeStorageAssertionEmitter
             {
                 accessible = declaration.visibility is not ("Private" or "Protected")
                     && (declaration.parent is null || Accessible(module.GetDeclaration(declaration.parent.Value)))
+                    && (module.language != SourceLanguage.Cpp || ControlledValues(declaration))
                     && declaration.templateArguments.All(argument => argument.type is not { } type || Nameable(type));
                 accessibleDeclarations.Add(declaration.id, accessible);
                 return accessible;
@@ -210,6 +239,116 @@ public sealed class NativeStorageAssertionEmitter
                 if (!declaration.templateParameters.IsEmpty || declaration.templateKind is "TemplateClass" or "PartialTemplateClass" or "FunctionTemplate" or "ObjCGenericClass") return false;
                 if (declaration.parent is not { } parent) return true;
                 declaration = module.GetDeclaration(parent);
+            }
+        }
+        bool Visible(NativeDeclaration declaration)
+        {
+            if (visibleDeclarations.TryGetValue(declaration.id, out bool visible)) return visible;
+            HashSet<BGCS.Contracts.Common.StableId> owners = [];
+            NativeDeclaration current = declaration;
+            while (true)
+            {
+                if (!owners.Add(current.id)) throw new InvalidOperationException("Native storage verification encountered a cyclic declaration visibility graph.");
+                if (current.visibility is "Private" or "Protected") return visibleDeclarations[declaration.id] = false;
+                if (current.parent is not { } parent) return visibleDeclarations[declaration.id] = true;
+                current = module.GetDeclaration(parent);
+            }
+        }
+        void ExposeDeclaration(NativeDeclaration declaration)
+        {
+            if (!Visible(declaration) || !ConcreteOwners(declaration) || !exposedDeclarations.Add(declaration.id)) return;
+            if (declaration.type is { } type) ExposeType(type);
+            if (declaration.returnType is { } result) ExposeType(result);
+            foreach (NativeDeclaration child in declaration.children.Select(module.GetDeclaration))
+                if (child.kind is "Parameter" or "Field" or "Function" or "Class" or "Typedef" or "Enum") ExposeDeclaration(child);
+        }
+        void ExposeType(BGCS.Contracts.Common.StableId identity)
+        {
+            if (!exposedTypes.Add(identity)) return;
+            NativeType type = module.GetType(identity);
+            if (type.elementType is { } element) ExposeType(element);
+            if (type.returnType is { } result) ExposeType(result);
+            foreach (BGCS.Contracts.Common.StableId parameter in type.parameterTypes) ExposeType(parameter);
+            if (type.category is not (NativeTypeCategory.Record or NativeTypeCategory.Enumeration) || type.declaration is not { } declared) return;
+            NativeDeclaration declaration = module.GetDeclaration(declared);
+            if (declaration.parent is { } parent && module.GetDeclaration(parent) is { kind: "Class", type: { } ownerType }) ExposeType(ownerType);
+            foreach (NativeTemplateArgument argument in declaration.templateArguments)
+                if (argument.type is { } argumentType) ExposeType(argumentType);
+            foreach (NativeBaseClass baseClass in declaration.baseClasses.Where(baseClass => baseClass.visibility is not ("Private" or "Protected"))) ExposeType(baseClass.type);
+            ExposeDeclaration(declaration);
+        }
+        bool ControlledValueOwners(NativeDeclaration declaration)
+        {
+            HashSet<BGCS.Contracts.Common.StableId> owners = [];
+            while (true)
+            {
+                if (!owners.Add(declaration.id)) throw new InvalidOperationException("Native storage verification encountered a cyclic template owner graph.");
+                if (!ControlledValues(declaration)) return false;
+                if (declaration.parent is not { } parent) return true;
+                declaration = module.GetDeclaration(parent);
+            }
+        }
+        bool ControlledValues(NativeDeclaration declaration)
+        {
+            if (declaration.templateArguments.All(argument => argument.type is not null) || declaration.type is not { } identity) return true;
+            string spelling = module.GetType(identity).spelling.Trim();
+            if (!spelling.EndsWith('>')) return false;
+            int depth = 0, opening = -1;
+            for (int index = spelling.Length - 1; index >= 0; index--)
+            {
+                if (spelling[index] == '>') depth++;
+                else if (spelling[index] == '<' && --depth == 0) { opening = index; break; }
+            }
+            if (opening < 0) return false;
+            List<string> arguments = [];
+            int start = opening + 1;
+            depth = 0;
+            for (int index = start; index < spelling.Length - 1; index++)
+            {
+                if (spelling[index] == '<') depth++;
+                else if (spelling[index] == '>') depth--;
+                else if (spelling[index] == ',' && depth == 0) { arguments.Add(spelling[start..index].Trim()); start = index + 1; }
+            }
+            arguments.Add(spelling[start..^1].Trim());
+            if (arguments.Count > declaration.templateArguments.Length) return false;
+            for (int index = 0; index < arguments.Count; index++)
+                if (declaration.templateArguments[index].type is null
+                    && !Regex.IsMatch(arguments[index], "^(?:true|false|[0-9]+[uUlLzZ]*)$", RegexOptions.CultureInvariant)
+                    && !DeclaredValue(arguments[index], declaration.templateArguments[index])) return false;
+            return true;
+        }
+        bool DeclaredValue(
+            string expression,
+            NativeTemplateArgument argument
+        ) {
+            // Never invent qualification for a context-relative SDK name. A
+            // qualified reference needs an exact immutable declaration witness.
+            if (!Regex.IsMatch(expression, "^(?:::)?(?:[A-Za-z_][A-Za-z0-9_]*::)+[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)) return false;
+            NativeDeclaration[] matches = variables[expression.StartsWith("::", StringComparison.Ordinal) ? expression[2..] : expression].ToArray();
+            if (matches.Length != 1 || !Visible(matches[0]) || matches[0].constantValue is not { kind: NativeScalarConstantKind.Integer, width: > 0 and <= 8, isSigned: not null } constant
+                || constant.evidence.level is not (BGCS.Contracts.Common.EvidenceLevel.Declared or BGCS.Contracts.Common.EvidenceLevel.Verified)
+                || string.IsNullOrWhiteSpace(constant.evidence.origin) || matches[0].type is not { } type
+                || !BigInteger.TryParse(constant.value, NumberStyles.Integer, CultureInfo.InvariantCulture, out BigInteger actual)
+                || !BigInteger.TryParse(argument.spelling, NumberStyles.Integer, CultureInfo.InvariantCulture, out BigInteger expected) || actual != expected) return false;
+            HashSet<BGCS.Contracts.Common.StableId> visited = [];
+            bool immutable = false;
+            while (true)
+            {
+                if (!visited.Add(type)) throw new InvalidOperationException("Native template constant verification encountered a cyclic type graph.");
+                NativeType native = module.GetType(type);
+                if (native.category == NativeTypeCategory.Qualified)
+                {
+                    if (native.qualifier != "Const") return false;
+                    immutable = true;
+                }
+                else if (native.category != NativeTypeCategory.Alias)
+                {
+                    if (!immutable || native.category != NativeTypeCategory.Primitive || native.isSigned != constant.isSigned || native.size != constant.width) return false;
+                    valueAssertions.TryAdd(expression, constant);
+                    return true;
+                }
+                if (native.elementType is not { } element) return false;
+                type = element;
             }
         }
         void Check(

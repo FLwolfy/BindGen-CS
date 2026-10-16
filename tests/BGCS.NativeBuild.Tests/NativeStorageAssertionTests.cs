@@ -2,13 +2,17 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Common;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Native;
+using BGCS.Contracts.Requests;
 using BGCS.NativeBuild.Planning;
 using BGCS.NativeBuild.Validation;
 using BGCS.Infrastructure.Execution;
+using BGCS.Infrastructure.Workers;
+using BGCS.Platforms.Targeting;
 using BGCS.Platforms.Toolchains;
 using Xunit;
 
@@ -16,6 +20,124 @@ namespace BGCS.NativeBuild.Tests;
 
 public sealed class NativeStorageAssertionTests
 {
+    [Theory]
+    [InlineData("private-sdk")]
+    [InlineData("alias")]
+    [InlineData("signature")]
+    [InlineData("field")]
+    [InlineData("base")]
+    [InlineData("template-argument")]
+    [InlineData("qualified")]
+    public async Task ContextRelativeSdkTemplateValuesRequireAnExternallyNameablePublicContract(string exposure)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-template-storage-proof-" + Guid.NewGuid().ToString("N"));
+        string sdk = Path.Combine(root, "sdk");
+        Directory.CreateDirectory(sdk);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(sdk, "storage.hpp"), """
+                namespace SDK {
+                inline constexpr unsigned extent = 3;
+                template<unsigned N> struct ExtentStorage { int values[N]; };
+                template<> struct ExtentStorage<extent> { int hidden_value; };
+                template<class T> class Outer {
+                    ExtentStorage<extent> hidden;
+                protected:
+                    template<class U> struct ProtectedImpl { U value; };
+                    ProtectedImpl<T> protected_storage;
+                public:
+                #ifdef BGCS_PUBLIC_FLOAT
+                    float value;
+                #else
+                    T value;
+                #endif
+                };
+                }
+                """);
+            string exposed = exposure switch
+            {
+                "private-sdk" => string.Empty,
+                "alias" => "using Exposed = SDK::ExtentStorage<SDK::extent>; Exposed* read_exposed();",
+                "signature" => "SDK::ExtentStorage<SDK::extent>* read_exposed();",
+                "field" => "struct Exposed { SDK::ExtentStorage<SDK::extent> value; }; Exposed* read_exposed();",
+                "base" => "struct Exposed : SDK::ExtentStorage<SDK::extent> {}; Exposed* read_exposed();",
+                "template-argument" => "template<class T> struct UserHolder { T value; }; UserHolder<SDK::ExtentStorage<SDK::extent>>* read_exposed();",
+                "qualified" => """
+                    namespace Public {
+                    #ifdef BGCS_LIMIT_DRIFT
+                    inline constexpr unsigned extent = 4;
+                    #else
+                    inline constexpr unsigned extent = 3;
+                    #endif
+                    template<unsigned N> struct ExtentStorage { int value; };
+                    template<> struct ExtentStorage<Public::extent> { int value; };
+                    }
+                    Public::ExtentStorage<Public::extent>* read_exposed();
+                    """,
+                _ => throw new ArgumentOutOfRangeException(nameof(exposure))
+            };
+            string header = Path.Combine(root, "entry.hpp");
+            await File.WriteAllTextAsync(header, "#include <storage.hpp>\nstatic_assert(sizeof(SDK::Outer<int>) > 0);\nSDK::Outer<int>* read_outer();\n" + exposed);
+            var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp, "clang");
+            FrontendRequest request = new(target, SourceLanguage.Cpp, [header])
+            { pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false };
+            NativeModule module = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"))
+                .ParseAsync(request, CancellationToken.None)).module;
+            Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
+            NativeType relative = Assert.Single(module.types, type => type.category == NativeTypeCategory.Record
+                && type.declaration is { } declaration && module.GetDeclaration(declaration).qualifiedName == "SDK::ExtentStorage<extent>");
+            Assert.True(module.GetDeclaration(relative.declaration!.Value).isSystemDeclaration);
+            Assert.Contains(module.declarations, declaration => declaration.name == "ProtectedImpl" && declaration.isCompleteDefinition && declaration.visibility == "Protected");
+            if (exposure is not ("private-sdk" or "qualified"))
+            {
+                NotSupportedException failure = Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(module, [header]));
+                Assert.Contains("publicly exposed native type", failure.Message);
+                Assert.Contains(relative.spelling, failure.Message);
+                return;
+            }
+            string proof = new NativeStorageAssertionEmitter().Emit(module, [header]);
+            Assert.Contains("sizeof(SDK::Outer<int>)", proof);
+            Assert.Contains("alignof(SDK::Outer<int>)", proof);
+            NativeDeclaration outer = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "SDK::Outer<int>" && declaration.isCompleteDefinition);
+            if (outer.isStandardLayout is bool standardLayout)
+                Assert.Contains("std::is_standard_layout<SDK::Outer<int>>::value == " + (standardLayout ? "1" : "0"), proof);
+            else Assert.DoesNotContain("std::is_standard_layout<SDK::Outer<int>>", proof);
+            Assert.Contains("decltype(((SDK::Outer<int>*)nullptr)->value)", proof);
+            Assert.DoesNotContain("sizeof(" + relative.spelling + ")", proof);
+            Assert.DoesNotContain("ProtectedImpl", proof);
+            string source = Path.Combine(root, "proof.cpp");
+            await File.WriteAllTextAsync(source, proof);
+            ImmutableArray<string> arguments = ["--no-default-config", "--target=" + target.triple, "-std=c++23", "-fsyntax-only", source,
+                .. target.toolchain.arguments,
+                .. (target.toolchain.sysRoot is string sysroot ? new[] { "--sysroot=" + sysroot } : []), "-isystem", sdk,
+                .. target.toolchain.systemIncludeFolders.Concat(target.toolchain.cxxSystemIncludeFolders).SelectMany(directory => new[] { "-isystem", directory })];
+            var compiled = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments, root, TimeSpan.FromSeconds(60));
+            Assert.False(compiled.timedOut);
+            Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);
+            var drift = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments.Add("-DBGCS_PUBLIC_FLOAT=1"), root, TimeSpan.FromSeconds(60));
+            Assert.False(drift.timedOut);
+            Assert.NotEqual(0, drift.exitCode);
+            Assert.Contains("BGCS native field type differs", drift.standardOutput + drift.standardError);
+            if (exposure == "qualified")
+            {
+                NativeDeclaration witness = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "Public::extent");
+                Assert.Equal("Variable", witness.role);
+                Assert.Equal("3", witness.constantValue!.value);
+                Assert.Equal(EvidenceLevel.Declared, witness.constantValue.evidence.level);
+                Assert.Contains("static_assert((Public::extent) == (3ULL)", proof);
+                var valueDrift = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments.Add("-DBGCS_LIMIT_DRIFT=1"), root, TimeSpan.FromSeconds(60));
+                Assert.False(valueDrift.timedOut);
+                Assert.NotEqual(0, valueDrift.exitCode);
+                Assert.Contains("BGCS native template constant differs", valueDrift.standardOutput + valueDrift.standardError);
+                NativeModule unproved = new(module.targetId, module.triple, module.pointerSize, module.types,
+                    module.declarations.Select(declaration => declaration.id == witness.id ? declaration with { constantValue = null } : declaration).ToImmutableArray(), module.diagnostics)
+                    { language = module.language, byteOrder = module.byteOrder };
+                Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(unproved, [header]));
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -98,5 +220,13 @@ public sealed class NativeStorageAssertionTests
              new(parameter, NativeTypeCategory.Template, "T", null, null),
              new(nestedType, NativeTypeCategory.Record, record.qualifiedName, 4, 4) { declaration = nested }],
             [container, record, member], []) { language = SourceLanguage.Cpp };
+    }
+
+    private static string WorkerRoot()
+    {
+        DirectoryInfo? repository = new(AppContext.BaseDirectory);
+        while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
+        string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
+        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

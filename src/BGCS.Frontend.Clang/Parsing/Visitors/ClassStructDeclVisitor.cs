@@ -28,7 +28,11 @@ internal class ClassStructDeclVisitor : DeclContainerVisitor
         ICppDeclarationContainer parentContainer = this.context.GetOrCreateDeclContainer(cursor.SemanticParent).declarationContainer;
         // Referenced SDK records can be materialized directly from a type,
         // without the enclosing member visitor assigning lexical visibility.
-        CppClass cppClass = new(cursor, CXUtil.GetCursorSpelling(cursor)) { visibility = cursor.GetVisibility() };
+        CppVisibility declaredAccess = cursor.GetVisibility();
+        if (cursor.CXXAccessSpecifier == CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier
+            && cursor.DeclKind is CX_DeclKind.CX_DeclKind_ClassTemplateSpecialization or CX_DeclKind.CX_DeclKind_ClassTemplatePartialSpecialization)
+            declaredAccess = cursor.SpecializedCursorTemplate.GetVisibility();
+        CppClass cppClass = new(cursor, CXUtil.GetCursorSpelling(cursor)) { visibility = declaredAccess };
         parentContainer.classes.Add(cppClass);
         cppClass.isAnonymous = cursor.IsAnonymous;
         switch (cursor.Kind)
