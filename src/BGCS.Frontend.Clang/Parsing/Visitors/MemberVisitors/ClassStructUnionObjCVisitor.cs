@@ -41,9 +41,10 @@ internal unsafe class ClassStructUnionObjCVisitor : MemberVisitor
             }
 
             // Create an anonymous field for the type
+            CppVisibility declaredAccess = cursor.GetVisibility();
             var cppField = new CppField(cursor, cppClass, string.Empty)
             {
-                visibility = containerContext.currentVisibility,
+                visibility = declaredAccess == CppVisibility.Default ? containerContext.currentVisibility : declaredAccess,
                 storageQualifier = cursor.GetStorageQualifier(),
                 isAnonymous = true,
                 bitOffset = offset * 8,

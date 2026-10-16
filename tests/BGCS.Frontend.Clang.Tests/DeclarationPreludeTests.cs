@@ -213,6 +213,50 @@ public sealed class DeclarationPreludeTests
         Assert.True(SourceSnapshotVerifier.Matches(result.snapshot));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnonymousAggregateFieldsPreserveCompilerAccessInPrimaryAndInstantiatedTemplates(bool usePrelude)
+    {
+        using Fixture fixture = new();
+        await File.WriteAllTextAsync(fixture.header, """
+            namespace aggregate_access {
+            template<class T> class Owner {
+                union { T member; };
+            public: int Read() const { return 0; }
+            };
+            template<class T> class PublicOwner {
+            public: union { T member; };
+            private: int Read() const { return 0; }
+            };
+            }
+            """);
+        string originalInclude = usePrelude ? string.Empty : "#include \"" + fixture.header.Replace('\\', '/') + "\"\n";
+        await File.WriteAllTextAsync(fixture.entry, originalInclude + """
+            static_assert(sizeof(aggregate_access::Owner<int>) == sizeof(int));
+            static_assert(sizeof(aggregate_access::PublicOwner<int>) == sizeof(int));
+            void use(aggregate_access::Owner<int> hidden, aggregate_access::PublicOwner<int> visible);
+            """);
+        FrontendRequest request = fixture.Request() with { declarationPrelude = usePrelude ? fixture.Request().declarationPrelude : null };
+        FrontendResult result = await new ClangFrontend().ParseAsync(request, CancellationToken.None);
+        Assert.DoesNotContain(result.module.diagnostics, diagnostic => diagnostic.isFailure);
+        foreach ((string name, string access) in new[] { ("Owner", "Private"), ("PublicOwner", "Public") })
+        {
+            Check(name + "<int>", access);
+            if (!usePrelude) Check(name + "<T>", access);
+        }
+        Assert.Contains(result.snapshot.files, input => input.path == fixture.header);
+        Assert.True(SourceSnapshotVerifier.Matches(result.snapshot));
+
+        void Check(string name, string access)
+        {
+            NativeDeclaration owner = Assert.Single(result.module.declarations,
+                declaration => declaration.kind == "Class" && declaration.qualifiedName == "aggregate_access::" + name);
+            NativeDeclaration field = Assert.Single(owner.children.Select(result.module.GetDeclaration), declaration => declaration.kind == "Field");
+            Assert.Equal(access, field.visibility);
+        }
+    }
+
     [Fact]
     public async Task OwnedPchReplayPreservesCompilerTraitsExceptionsAddressabilityAndLiteralUnits()
     {
