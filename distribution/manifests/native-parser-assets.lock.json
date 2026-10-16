@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "parserIdentity": "ClangSharp/20.1.2.4;LLVM/20",
+  "clangSharpVersion": "20.1.2.4",
+  "llvmMajor": 20,
+  "upstreamRuntimeVersion": "20.1.2",
+  "builtinHeaders": {
+    "llvmVersion": "20.1.8",
+    "path": "src/BGCS.Frontend.Clang/Resources/Clang/Headers.zip",
+    "sha256": "16927be0948f2e287d2f20e34e8f8ce0ee287b833ee04cb7cd671fdf4a7c2b84",
+    "sourcePackageSha256": "8e2b5e6530df9835c571db4c12a278f43863d3401ae7008dd9739e4b9c62bc2e"
+  },
+  "upstreamRuntimes": {
+    "win-x64": {
+      "packages": [
+        {
+          "id": "libClangSharp.runtime.win-x64",
+          "version": "20.1.2",
+          "sha512": "osf1ilTVVN4B19zs4ovT5yPKrYX9eAqMl+CNQGAZDaq6F0hN4fWQLi/wi0pVP9+mKPaaUtd7PC8iW/3ySDCgzg=="
+        },
+        {
+          "id": "libclang.runtime.win-x64",
+          "version": "20.1.2",
+          "sha512": "aGk3iDW9nAMDb3PftNX8+j7q8QmBoa0w3RK662RzNALTCAZKtrB6LcC8qYXVXZbcYgwelJYthtAlOJR0PBHLwA=="
+        }
+      ],
+      "files": [
+        {
+          "name": "libClangSharp.dll",
+          "bytes": 5626368,
+          "sha256": "efd880899c74276203f95565ec205801c9fc46e9a225079a283cdec5e3e5620b"
+        },
+        {
+          "name": "libclang.dll",
+          "bytes": 114247168,
+          "sha256": "971b30adaa478b5f7ade1883f9b341918108343cafb37f57860bd6a9085b5163"
+        }
+      ]
+    },
+    "win-arm64": {
+      "packages": [
+        {
+          "id": "libClangSharp.runtime.win-arm64",
+          "version": "20.1.2",
+          "sha512": "uOke32KST6sO1oRazsA7ZeOoSnO6DuPpT5+TTDyK7Y0fvh1yBaMRQlhbd5M7nsAsbUk/uP8ctHack7/TgmMDQQ=="
+        },
+        {
+          "id": "libclang.runtime.win-arm64",
+          "version": "20.1.2",
+          "sha512": "bF4Ziyuzk5o9v6hn636sdYtz2OA0Bsi7IsWln38ku3QdPLo6Qm9ZliQo63EvM8FoRL8aKh1uFjTI9RA7RgTq8g=="
+        }
+      ],
+      "files": [
+        {
+          "name": "libClangSharp.dll",
+          "bytes": 5568000,
+          "sha256": "a3b1e20e8f151d80f75ce90f3dd5ec0a64cda7daca1a41be8bd71b5834a0f245"
+        },
+        {
+          "name": "libclang.dll",
+          "bytes": 110836224,
+          "sha256": "99c7bafd0eb8e28914e915db84ab782699b3c0b186fc6d489e7471d09b46f422"
+        }
+      ]
+    },
+    "linux-x64": {
+      "packages": [
+        {
+          "id": "libClangSharp.runtime.linux-x64",
+          "version": "20.1.2",
+          "sha512": "oxucHzVToB46VtOS9VzWrhBbFzChc28EgK+68nQNP+gxJyuyf4ccte9FNe6E+qmdUFvtATYLt004ZDQXuTuksw=="
+        },
+        {
+          "id": "libclang.runtime.linux-x64",
+          "version": "20.1.2",
+          "sha512": "TslnqZKmXE17oqUSG70eJdRlI18MgxlYCu0VUTbklHJfS/WZ5PZqi3T5UlrBM/Wdavq6UpY/uN+cQc1Z0KRuHw=="
+        }
+      ],
+      "files": [
+        {
+          "name": "libClangSharp.so",
+          "bytes": 77489960,
+          "sha256": "1931bf783d826d0f9db5a0a8951a9f73c18207b4d98bc23e089b7e84340251e4"
+        },
+        {
+          "name": "libclang.so",
+          "bytes": 170306984,
+          "sha256": "861c4a2e31fa718e6bd54691ffa832e6d6467ba174656b8ce20fa5d50ee67f67"
+        }
+      ]
+    },
+    "linux-arm64": {
+      "packages": [
+        {
+          "id": "libClangSharp.runtime.linux-arm64",
+          "version": "20.1.2",
+          "sha512": "6/AlP+iaDXgpg1ZizN/gL89FuOlYJ2dWD/9ZttgTP99C31KhMuKQ0fTJpl0A6uUsNAQaWQWIbwSAVvtHfYwOZA=="
+        },
+        {
+          "id": "libclang.runtime.linux-arm64",
+          "version": "20.1.2",
+          "sha512": "vkH+IYU5YAJli5/W/sOL9DqUH6CIrlg5zUQJUrJ9pqC5+bCp91DCNQcA+pxlxDsnliCeCiDlaSj3PAFBs9ogmA=="
+        }
+      ],
+      "files": [
+        {
+          "name": "libClangSharp.so",
+          "bytes": 73661152,
+          "sha256": "e881c409dadbc941397b3d6e78742b6e1cc0e434ded55544fd8a19f5818a9e79"
+        },
+        {
+          "name": "libclang.so",
+          "bytes": 161248000,
+          "sha256": "9d33fc8e1f115e93cfa6ea4a19a677a938d5b0e526c6a5d2f90804d8c682c448"
+        }
+      ]
+    },
+    "osx-arm64": {
+      "packages": [
+        {
+          "id": "libClangSharp.runtime.osx-arm64",
+          "version": "20.1.2",
+          "sha512": "Ag4DUZXbYanLin51oN+SCG3JJ//+Wfp5aS8oPTGuJSPwIYeIBI3zqASIPoaxarG5hHCDG3h4lTAf1LYcnDQZoQ=="
+        },
+        {
+          "id": "libclang.runtime.osx-arm64",
+          "version": "20.1.2",
+          "sha512": "rwxuSQtoxWejatmqjprV63dGZwzEsrA8UxCSeYeryZpncNvSjFo7gfoN9MaePGaUbuqrXnw21v1WQWiB1Upjsg=="
+        }
+      ],
+      "files": [
+        {
+          "name": "libClangSharp.dylib",
+          "bytes": 49805288,
+          "sha256": "9d6c788fed29401aae5d9b55e8e64d23f38ca1da3b82fd9f70d0e74d4feaf210"
+        },
+        {
+          "name": "libclang.dylib",
+          "bytes": 125274912,
+          "sha256": "fdb1977da51fd3fa036ea0c4b1fb4e7c4e62abab4afdbee7aa62f8ade4088a7d"
+        }
+      ]
+    }
+  },
+  "supplementalRuntime": {
+    "rid": "osx-x64",
+    "state": "requires-same-revision-intel-build-and-invocation-evidence",
+    "clangSharp": {
+      "repository": "https://github.com/dotnet/ClangSharp.git",
+      "tag": "v20.1.2.4",
+      "commit": "92e8c558d915b9ba116da9cdd63d345f2ebc25e0"
+    },
+    "llvm": {
+      "version": "20.1.8",
+      "repository": "https://github.com/llvm/llvm-project.git",
+      "tag": "llvmorg-20.1.8",
+      "commit": "87f0227cb60147a26a1eeb4fb06e3b505e9c7261",
+      "sourceArchiveUrl": "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/llvm-project-20.1.8.src.tar.xz",
+      "sourceArchiveSha256": "6898f963c8e938981e6c4a302e83ec5beb4630147c7311183cf61069af16333d",
+      "homebrewFormula": "llvm@20"
+    },
+    "binaryHashPolicy": "Record actual relocated, ad-hoc-signed Intel dylib bytes in runtime-provenance.json; verify all bytes and host architecture before consumption. No binary hash is invented before the first accepted build."
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "scope": "complete selected corpus API; every source exclusion is explicit and locked",
+  "libraries": {
+    "bgfx": {
+      "excludedDeclarations": [
+        "bgfx_dbg_text_printf"
+      ],
+      "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+    },
+    "bimg": {
+      "excludedDeclarations": [
+        "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)"
+      ],
+      "reason": "One exact overload is declared but has no implementation in the locked upstream repository; this is an upstream library limitation, not a BGCS parsing or lowering limitation.",
+      "upstreamLimitations": [
+        {
+          "id": "bimg-image-convert-source-bytes-unimplemented",
+          "repository": "bimg",
+          "revision": "6c13a0c8a8908243df475dfcab276554458dcd13",
+          "header": "include/bimg/bimg.h",
+          "line": 460,
+          "lastLine": 465,
+          "sourceSignature": "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)",
+          "headerSha256": "d3c82fdf973eda2f1dedeb7f3104c87184fcf1a5c5cf80be191bb95f5633fc99",
+          "declaration": "ImageContainer* imageConvert(\n\t\t  bx::AllocatorI* _allocator\n\t\t, TextureFormat::Enum _dstFormat\n\t\t, const void* _src\n\t\t, uint32_t _size\n\t\t);",
+          "diagnosticEvidence": "Complete locked source search finds only the declaration. Linking the full generated bridge against upstream core, astc, bx and image_decode emits one unresolved imageConvert(AllocatorI*,Enum,const void*,uint32_t) symbol. The gate selects this exact overload in a separate negative build and requires failure without replacing its prior owned publication."
+        }
+      ]
+    },
+    "cimgui": {
+      "excludedDeclarations": [
+        "igText",
+        "igTextColored",
+        "igTextDisabled",
+        "igTextWrapped",
+        "igLabelText",
+        "igBulletText",
+        "igTreeNode_StrStr",
+        "igTreeNode_Ptr",
+        "igTreeNodeEx_StrStr",
+        "igTreeNodeEx_Ptr",
+        "igSetTooltip",
+        "igSetItemTooltip",
+        "igLogText",
+        "igDebugLog",
+        "igImFormatString",
+        "igImFormatStringToTempBuffer",
+        "igTextAligned",
+        "ImGuiTextBuffer_appendf"
+      ],
+      "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+    },
+    "cimguizmo": {
+      "excludedDeclarations": [
+        "igText",
+        "igTextColored",
+        "igTextDisabled",
+        "igTextWrapped",
+        "igLabelText",
+        "igBulletText",
+        "igTreeNode_StrStr",
+        "igTreeNode_Ptr",
+        "igTreeNodeEx_StrStr",
+        "igTreeNodeEx_Ptr",
+        "igSetTooltip",
+        "igSetItemTooltip",
+        "igLogText",
+        "igDebugLog",
+        "igImFormatString",
+        "igImFormatStringToTempBuffer",
+        "igTextAligned",
+        "ImGuiTextBuffer_appendf"
+      ],
+      "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+    },
+    "miniaudio": {
+      "excludedDeclarations": [
+        "ma_log_postf"
+      ],
+      "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+    },
+    "sdl3": {
+      "excludedDeclarations": [
+        "SDL_sscanf",
+        "SDL_snprintf",
+        "SDL_swprintf",
+        "SDL_asprintf",
+        "SDL_SetError",
+        "SDL_IOprintf",
+        "SDL_Log",
+        "SDL_LogTrace",
+        "SDL_LogVerbose",
+        "SDL_LogDebug",
+        "SDL_LogInfo",
+        "SDL_LogWarn",
+        "SDL_LogError",
+        "SDL_LogCritical",
+        "SDL_LogMessage",
+        "SDL_RenderDebugTextFormat"
+      ],
+      "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+    }
+  }
+}

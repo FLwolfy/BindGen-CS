@@ -1,0 +1,37 @@
+{
+  "legacyFixture": "entryTests/KnownEnumPrefixes",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/naming/enumerationValues/strange_enum/removePrefixes": [
+      "MY_PREFIX_"
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.StrangeEnum",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "Off",
+      "value": 0
+    },
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "On",
+      "value": 1
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "MyPrefixOff"
+    },
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "MyPrefixOn"
+    }
+  ]
+}

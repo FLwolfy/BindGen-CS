@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "library": {
+    "id": "configuration_selection",
+    "nativeName": "entry-lib"
+  },
+  "source": {
+    "language": "c",
+    "headers": [
+      "header.h"
+    ],
+    "parseMacros": true,
+    "includeTransitivelyReferencedHeaders": false,
+    "selection": {
+      "categories": [
+        {
+          "category": "constants",
+          "excludeDeclarations": [
+            "MY_CONST"
+          ]
+        }
+      ]
+    }
+  },
+  "api": {
+    "namespace": "EntryTests.Generated",
+    "name": "EntryApi",
+    "importMode": "dllImport",
+    "naming": {
+      "constants": {
+        "casing": "preserve"
+      }
+    }
+  },
+  "runtime": {
+    "mode": "package"
+  },
+  "nativeBuild": {
+    "mode": "none"
+  },
+  "output": {
+    "root": "Generated",
+    "layout": "singleFile"
+  },
+  "cache": {
+    "enabled": false
+  }
+}

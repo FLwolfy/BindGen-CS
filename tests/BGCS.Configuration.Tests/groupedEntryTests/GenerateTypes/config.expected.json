@@ -1,0 +1,27 @@
+{
+  "legacyFixture": "entryTests/GenerateTypes",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/excludeCategories": [
+      "records"
+    ]
+  },
+  "absentTypes": [
+    "EntryTests.Generated.SamplePointType"
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ]
+}

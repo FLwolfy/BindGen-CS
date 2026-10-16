@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "declarations": 10000,
+  "hosts": {
+    "windows-x64": { "coldSeconds": 60, "warmSeconds": 10, "requiredForFirstRelease": true },
+    "linux-x64": { "coldSeconds": 60, "warmSeconds": 10, "requiredForFirstRelease": true },
+    "macos-x64": { "coldSeconds": 120, "warmSeconds": 30, "requiredForFirstRelease": true },
+    "arm64": { "certification": "pending", "requiredForFirstRelease": false }
+  },
+  "workerPeakResidentBytes": 2147483648,
+  "sessionPeakResidentBytes": 4294967296,
+  "memorySamplingSeconds": 0.05,
+  "restoration": "Verify every managed artifact and its byte digest after removing the complete UUID-owned publication.",
+  "completeCacheCertification": "An emission-stage hit does not certify parser or whole-pipeline caching."
+}

@@ -93,15 +93,15 @@ public class NativeCallbackAndAtomicTests
     }
 
     [Fact]
-    public async Task NativeCallbackRegistration_DisposeShouldUnregisterThenDrainInFlightInvocation()
+    public async Task CallbackRegistration_DisposeShouldUnregisterThenDrainInFlightInvocation()
     {
         using ManualResetEventSlim entered = new();
         using ManualResetEventSlim release = new();
         int unregisterCalls = 0;
-        NativeCallbackRegistration<RegistryCallback> registration = new(_ => { }, () => Interlocked.Increment(ref unregisterCalls));
+        CallbackRegistration<RegistryCallback> registration = new(_ => { }, () => Interlocked.Increment(ref unregisterCalls));
         Task callback = Task.Run(() =>
         {
-            Assert.True(registration.TryEnterInvocation(out NativeCallbackRegistration<RegistryCallback>.InvocationLease? lease));
+            Assert.True(registration.TryEnterInvocation(out CallbackRegistration<RegistryCallback>.InvocationLease? lease));
             using (lease)
             {
                 entered.Set();
@@ -123,11 +123,11 @@ public class NativeCallbackAndAtomicTests
     }
 
     [Fact]
-    public async Task NativeAsyncOperation_ShouldRetainResourcesUntilExactlyOneTerminalSignal()
+    public async Task NativeOperation_ShouldRetainResourcesUntilExactlyOneTerminalSignal()
     {
         CountingDisposable first = new();
         CountingDisposable second = new();
-        using NativeAsyncOperation<int> operation = new([first, second]);
+        using NativeOperation<int> operation = new([first, second]);
 
         Assert.Equal(0, first.DisposeCount);
         Assert.True(operation.TrySetResult(42));
@@ -140,9 +140,9 @@ public class NativeCallbackAndAtomicTests
     }
 
     [Fact]
-    public async Task NativeAsyncOperation_CleanupFailureShouldFaultTerminalTaskWithoutLosingCompletion()
+    public async Task NativeOperation_CleanupFailureShouldFaultTerminalTaskWithoutLosingCompletion()
     {
-        using NativeAsyncOperation<int> operation = new([new ThrowingDisposable()]);
+        using NativeOperation<int> operation = new([new ThrowingDisposable()]);
 
         Assert.True(operation.TrySetResult(42));
         AggregateException exception = await Assert.ThrowsAsync<AggregateException>(async () => await operation.task);
@@ -151,10 +151,10 @@ public class NativeCallbackAndAtomicTests
     }
 
     [Fact]
-    public void NativeCallbackRegistration_UnregisterFailureShouldRemainRetainedAndPermitRetry()
+    public void CallbackRegistration_UnregisterFailureShouldRemainRetainedAndPermitRetry()
     {
         int attempts = 0;
-        NativeCallbackRegistration<RegistryCallback> registration = new(_ => { }, () =>
+        CallbackRegistration<RegistryCallback> registration = new(_ => { }, () =>
         {
             if (Interlocked.Increment(ref attempts) == 1)
                 throw new InvalidOperationException("temporary unregister failure");
@@ -180,14 +180,15 @@ public class NativeCallbackAndAtomicTests
     }
 
     [Fact]
-    public void NativeCallbackExceptionBoundary_ShouldCaptureAndReturnFallback()
+    public void CallbackExceptionBoundary_ShouldCaptureAndReturnFallback()
     {
-        int result = NativeCallbackExceptionBoundary.Invoke<int>(() => throw new InvalidOperationException("callback failed"), -1);
+        CallbackExceptionBoundary boundary = new();
+        int result = boundary.Invoke<int>(() => throw new InvalidOperationException("callback failed"), -1);
 
         Assert.Equal(-1, result);
-        InvalidOperationException exception = Assert.IsType<InvalidOperationException>(NativeCallbackExceptionBoundary.TakeLastException());
+        InvalidOperationException exception = Assert.IsType<InvalidOperationException>(boundary.TakeException());
         Assert.Equal("callback failed", exception.Message);
-        Assert.Null(NativeCallbackExceptionBoundary.TakeLastException());
+        Assert.Null(boundary.TakeException());
     }
 
     [Fact]

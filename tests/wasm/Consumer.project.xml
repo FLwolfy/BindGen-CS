@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0-browser</TargetFramework>
+    <TargetFramework>net10.0-browser</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <AssemblyName>BGCS.Wasm.Acceptance</AssemblyName>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -11,7 +11,9 @@
     <WasmBuildNative>true</WasmBuildNative>
     <PublishTrimmed>false</PublishTrimmed>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <EmccExtraCFlags>-fexceptions -DBUILD_SHARED=1 -I&quot;$(MSBuildProjectDirectory)/Bridge/include&quot; -I&quot;$(MSBuildProjectDirectory)/CppFacade&quot;</EmccExtraCFlags>
+    <DisableParallelAot>true</DisableParallelAot>
+    <DisableParallelEmccCompile>true</DisableParallelEmccCompile>
+    <EmccExtraCFlags>-DBUILD_SHARED=1 -I&quot;$(MSBuildProjectDirectory)/CppFacade&quot;</EmccExtraCFlags>
     <EmccExtraLDFlags>$(EmccExtraCFlags)</EmccExtraLDFlags>
   </PropertyGroup>
   <ItemGroup>
@@ -19,6 +21,7 @@
       <HintPath>BGCS.Runtime.dll</HintPath>
     </Reference>
     <NativeFileReference Include="Native/api.c" />
-    <NativeFileReference Include="Bridge/src/Classes.cpp" />
+    <NativeFileReference Include="__BRIDGE_SOURCE__" />
+    <NativeFileReference Include="Generated/FunctionTable/**/native/src/export.table.c" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,158 @@
+using System;
+using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using BGCS.Configuration;
+using BGCS.Contracts.Inputs;
+using BGCS.Contracts.Native;
+using BGCS.Contracts.Ports;
+using BGCS.Contracts.Requests;
+using Xunit;
+
+namespace BGCS.Tests;
+
+public sealed class InspectionAndDiffTests
+{
+    [Fact]
+    public async Task RealHeaderDiff_KeepsLogicalOutputAndInputMembershipIdenticalToGeneration()
+    {
+        using Scratch scratch = new();
+        string? repository = AppContext.BaseDirectory;
+        while (repository is not null && !File.Exists(Path.Combine(repository, "BindGen-CS.slnx"))) repository = Path.GetDirectoryName(repository);
+        Assert.NotNull(repository);
+        string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
+        string worker = Path.Combine(repository!, "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0");
+        File.WriteAllText(Path.Combine(scratch.root, "native.h"), "int native_add(int a, int b);");
+        BindingConfiguration input = Configuration() with { targets = [new() { id = "host" }] };
+        GenerationRequest request = new(input, scratch.root);
+        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
+        GenerationResult result = await host.GenerateAsync(request);
+        Assert.True(result.success, result.GetDiagnosticSummary());
+        var before = Directory.GetFiles(result.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes);
+        GenerationDiffResult diff = await host.DiffAsync(request);
+        Assert.True(diff.success, string.Join(Environment.NewLine, diff.diagnostics.Select(diagnostic => diagnostic.message)));
+        Assert.Empty(diff.changes);
+        foreach ((string path, byte[] content) in before) Assert.Equal(content, File.ReadAllBytes(path));
+    }
+
+    [Fact]
+    public async Task Inspection_UsesTheUnifiedProjectionWithoutCreatingFormalOutput()
+    {
+        using Scratch scratch = new();
+        await using BindingHost host = Host();
+        InspectionResult result = await host.InspectAsync(new(Configuration(), scratch.root));
+        Assert.True(result.success, string.Join(Environment.NewLine, result.diagnostics.Select(diagnostic => diagnostic.message)));
+        TargetInspection target = Assert.Single(result.targets);
+        Assert.Equal("emscripten-wasm32-emscripten", target.targetId);
+        Assert.Null(target.bridge);
+        Assert.NotNull(target.managed);
+        Assert.Same(target.interop, target.managed!.interop);
+        Assert.Single(target.interop.functions);
+        Assert.False(Directory.Exists(Path.Combine(scratch.root, "Generated")));
+    }
+
+    [Fact]
+    public async Task Diff_ReportsFullAddRemoveAndChangeIdentitiesWithoutChangingOutput()
+    {
+        using Scratch scratch = new();
+        await using BindingHost host = Host();
+        GenerationRequest request = new(Configuration(), scratch.root);
+        GenerationDiffResult first = await host.DiffAsync(request);
+        Assert.True(first.success);
+        Assert.True(first.hasChanges);
+        Assert.All(first.changes, change => Assert.Equal(ArtifactChangeKind.Added, change.kind));
+        Assert.False(Directory.Exists(first.outputRoot));
+        GenerationResult published = await host.GenerateAsync(request);
+        Assert.True(published.success, published.GetDiagnosticSummary());
+        var before = Directory.GetFiles(published.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes, StringComparer.Ordinal);
+        GenerationRequest renamed = request.WithConfiguration(request.configuration with { api = request.configuration.api with { name = "RenamedApi" } });
+        GenerationDiffResult difference = await host.DiffAsync(renamed);
+        Assert.True(difference.success, string.Join(Environment.NewLine, difference.diagnostics.Select(diagnostic => diagnostic.message)));
+        Assert.Contains(difference.changes, change => change.kind == ArtifactChangeKind.Added && change.relativePath.EndsWith("RenamedApi.g.cs", StringComparison.Ordinal));
+        Assert.Contains(difference.changes, change => change.kind == ArtifactChangeKind.Removed && change.relativePath.EndsWith("NativeApi.g.cs", StringComparison.Ordinal));
+        GenerationRequest renamedMethod = request.WithConfiguration(request.configuration with
+        { api = request.configuration.api with { names = ImmutableDictionary<string, string>.Empty.Add("echo", "EchoRenamed") } });
+        GenerationDiffResult changed = await host.DiffAsync(renamedMethod);
+        Assert.True(changed.success);
+        Assert.Contains(changed.changes, change => change.kind == ArtifactChangeKind.Changed && change.relativePath.EndsWith("NativeApi.Methods.g.cs", StringComparison.Ordinal));
+        Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(published.outputRoot, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal));
+        foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(path));
+    }
+
+    [Fact]
+    public async Task Diff_RejectsCorruptOrUnownedPreviousOutput()
+    {
+        using Scratch scratch = new();
+        await using BindingHost host = Host();
+        GenerationRequest request = new(Configuration(), scratch.root);
+        GenerationResult generated = await host.GenerateAsync(request);
+        Assert.True(generated.success, generated.GetDiagnosticSummary());
+        string managed = Path.Combine(generated.outputRoot, generated.artifacts.First(artifact => artifact.mediaType == "text/x-csharp").relativePath);
+        File.AppendAllText(managed, "\n// corruption");
+        byte[] corrupt = File.ReadAllBytes(managed);
+        GenerationDiffResult result = await host.DiffAsync(request);
+        Assert.False(result.success);
+        Assert.Empty(result.changes);
+        Assert.Contains(result.diagnostics, diagnostic => diagnostic.code == "BGCS-DIFF-OUTPUT");
+        Assert.Equal(corrupt, File.ReadAllBytes(managed));
+        File.Delete(Path.Combine(generated.outputRoot, ".bgcs-artifacts.json"));
+        GenerationDiffResult unowned = await host.DiffAsync(request);
+        Assert.False(unowned.success);
+        Assert.Contains(unowned.diagnostics, diagnostic => diagnostic.message.Contains("ownership", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task BridgeOnly_DoesNotActivateManagedProjectionOrBackend()
+    {
+        using Scratch scratch = new();
+        string? repository = AppContext.BaseDirectory;
+        while (repository is not null && !File.Exists(Path.Combine(repository, "BindGen-CS.slnx"))) repository = Path.GetDirectoryName(repository);
+        Assert.NotNull(repository);
+        string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
+        string worker = Path.Combine(repository!, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        File.WriteAllText(Path.Combine(scratch.root, "native.hpp"), "inline int add(int a, int b) { return a+b; }");
+        BindingConfiguration input = Configuration() with { source = new() { language = SourceLanguage.Cpp, headers = ["native.hpp"], parseMacros = false }, targets = [new() { id = "host" }] };
+        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker)
+            .WithManagedProjectionFactory(() => throw new InvalidOperationException("The bridge must not project managed APIs."))
+            .WithBackendFactory(() => throw new InvalidOperationException("The bridge must not emit managed source.")).Build();
+        GenerationResult result = await host.BridgeAsync(new(input, scratch.root));
+        Assert.True(result.success, result.GetDiagnosticSummary());
+        Assert.Contains(result.artifacts, artifact => artifact.mediaType == "text/x-c++");
+        Assert.DoesNotContain(result.artifacts, artifact => artifact.mediaType == "text/x-csharp");
+        TargetInspection inspected = Assert.Single(result.targetModels);
+        Assert.NotNull(inspected.bridge);
+        Assert.Null(inspected.managed);
+        Assert.NotEmpty(inspected.interop.functions);
+        Assert.All(result.artifacts.Where(artifact => artifact.mediaType == "application/json"), artifact =>
+            Assert.DoesNotContain(".bgcs-staging-", File.ReadAllText(Path.Combine(result.outputRoot, artifact.relativePath))));
+    }
+
+    private static BindingHost Host() => BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build();
+    private static BindingConfiguration Configuration() => new()
+    {
+        schemaVersion = 1, library = new() { id = "example", nativeName = "example" },
+        source = new() { headers = ["native.h"] }, targets = [new() { id = "emscripten-wasm32-emscripten" }],
+        api = new() { @namespace = "Example", name = "NativeApi" }, cache = new() { enabled = false }
+    };
+    private sealed class ScalarFrontend : IFrontend
+    {
+        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
+            NativeDeclaration function = new(new("function"), "Function", "echo", "echo", null, new(request.headers[0], 1, 1)) { returnType = integer.id, callingConvention = "C" };
+            return ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple, 4, [integer], [function], []) { language = SourceLanguage.C, byteOrder = request.target.byteOrder }, new([], [])));
+        }
+    }
+    private sealed class Scratch : IDisposable
+    {
+        internal readonly string root = Path.Combine(Path.GetTempPath(), "bgcs-inspection-test-" + Guid.NewGuid().ToString("N"));
+        internal Scratch()
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "native.h"), "int echo(void);");
+        }
+        public void Dispose() => Directory.Delete(root, recursive: true);
+    }
+}

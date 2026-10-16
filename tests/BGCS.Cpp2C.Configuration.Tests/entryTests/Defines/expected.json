@@ -1,6 +1,0 @@
-{
-  "Property": "defines",
-  "Expected": [
-    "FROM_DEFINES=1"
-  ]
-}

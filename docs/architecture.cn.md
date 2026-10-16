@@ -1,224 +1,160 @@
-# 架构说明
+# BGCS 3.0 架构
 
-## 源码与命名空间归属
+[English](architecture.md) | [文档索引](README.cn.md) | [实施状态](implementation-status.cn.md)
 
-`CppToolchainDiscovery.DiscoverSystemIncludeFolders` 接收选定的 `sysRoot`，
-把它传给 compiler driver 并纳入缓存身份。宿主 C++ 解析遵循该 driver 的头文件搜索顺序；
-已有显式 C++ 搜索根时关闭隐式搜索，避免不同标准库与 SDK 混用。
-增量输入扫描按符号链接解析后的目录去重：SDK 的有效别名仍参与扫描，祖先循环不会无限展开。
+3.0 的公开入口是 `BindingHost`，使用分组配置与中立模型流水线。本文定义发布必须满足的边界，并解释新的主要实现，不等于验收通过收据。完成状态由[工程依赖规则](../eng/architecture/project-dependencies.json)、[功能清单](../eng/acceptance/feature-inventory.json)、真实测试收据与同 revision 的 CI 决定。旧公开生成器或禁止的工程引用仍然存在时，即使新 Host 路径可用，也不能关闭架构重构。
 
-配置属于 `BGCS.Configuration` 与 `BGCS.Cpp2C.Configuration`，公开生成入口属于各自的 `Facade`。
-可变声明与 overload 分析属于 `Analysis`，目标和语言转换属于 `Conversion`，源码写出属于 `Emission`。
-原生构建计划与执行协议属于 `BGCS.Cpp2C.Build`；五个具体 compiler/build-system provider
-属于 `BGCS.Cpp2C.Build.Providers`，源码位于 `Build/Providers`。CLI 只在组合入口选择 provider。
-`BGCS.Core` 提供通用集合、文本、IO、配置组合和进程执行；冻结模型的实际源码属于
-`BGCS.Intermediate`，没有反向链接其他项目源码。
+## 十三个实现工程与四个产品
 
-`BGCS.Runtime` 使用程序集级命名空间作为统一消费者入口，`Primitives`、`Interop`、`Utilities`
-只组织源码职责。这是项目级命名空间约定，与原生目标和托管部署无关。
+工程边界负责源码归属；产品包负责交付。普通用户安装完整 `BGCS` SDK 或 `BindGen-CS` 工具，插件作者可以只引用 `BGCS.Contracts`，生成代码的消费者可以只引用 `BGCS.Runtime`。用户不需要手工拼装内部模块。
 
-指针宽度来自 `CppCompilation` 和分析图。canonical alias 及配置的 variadic carrier 保留目标宽度，
-不会使用生成器宿主的指针宽度。C++ template argument pack 由 Parser 展开为类型与整型参数；
-bridge lowering 使用其实际布局，不按类型拼写猜测 ABI。分析成功或失败时都会清除配置中的临时 AST
-引用；冻结结果不保留 compilation、Clang cursor 或 lowering service。
+| 工程 | 主要职责 |
+| --- | --- |
+| `BGCS.Contracts` | 不可变原生/桥接/interop/托管模型、证据、诊断与扩展端口 |
+| `BGCS.Infrastructure` | 文件、进程、序列化、worker 通信、插件加载、缓存与发布 |
+| `BGCS.Frontend.Clang` | 从 Clang 提取声明、类型图、来源与布局事实 |
+| `BGCS.Frontend.Clang.Worker` | 独立进程解析与版本化通信协议 |
+| `BGCS.Platforms` | 解析宿主、目标、SDK、工具链、托管运行环境与资产能力 |
+| `BGCS.Analysis` | 声明闭包、ABI/存储分析、语义证据与安全资格 |
+| `BGCS.Cpp2C` | 规划 C++ lowering 与 C 头文件辅助导出，生成类型化桥接操作 |
+| `BGCS.CSharp` | 托管 API 投影、导入/转换/清理规划与 C# 输出 |
+| `BGCS.NativeBuild` | 原生构建计划、执行、导出检查与资产包装 |
+| `BGCS.Runtime` | 独立消费者的模块会话、lease、句柄、缓冲区、编码与回调 |
+| `BGCS` | 默认组合、配置、扩展、会话、工作区与公开 Host |
+| `BGCS.Tool` | 将 CLI 参数与取消映射为 Host 请求，呈现结果 |
+| `BGCS.MSBuild` | 显式启用的构建任务、解析资源部署与精确 manifest item 集成 |
 
-`BGCS.Core.Execution.ProcessExecutor` 统一负责 Parser 探测、原生构建、导出检查及生成 C# 编译检查的进程生命周期。它并行读取 stdout/stderr、关闭 stdin，并在超时或取消后结束进程树、观察退出、完成输出读取才返回。原生 pipeline 使用单调时钟计算剩余期限。
+发布要求的工程引用图如下。实线为工程引用，虚线为 worker 进程协议。
 
-`bindgen-cs validate architecture <repository-root>` 验证八个生产项目、允许依赖、唯一 CLI、源码归属与中立层禁止 Parser 类型的规则。`bindgen-cs validate style <source-root> [--fix]` 保留调用排版，并在写入前验证语法 token 与 raw string 内容未变化。
-
-Language 的预处理实现是 `BGCS.Language.CSharp.Preprocessing.CSharpPreprocessor`：
-Roslyn 处理 C# 条件编译，禁用代码和 directive 替换为空格，保留 offset 与换行。
-原来只返回原文的通用 Preprocessor 已删除。C/C++ 预处理继续属于 Clang，
-生成器、Runtime 和目标 provider 不承担该语言语义。
-
-[Wiki](README.cn.md) | [English](architecture.md) | [能力矩阵](capabilities.cn.md)
-
-主 C# 生成只使用共享 Binding IR。预发布 compatibility emitter 与旧配置迁移已经删除；架构结论以真实数据流为准。
-
-## 当前真实数据流
-
-BGCS.CppAst 自带 Clang 20 系列内置 resource headers；编译器发现只提供宿主 SDK 与标准库，
-排除系统 clang 自己的 resource include。系统 LLVM 升级后不会把新内置语法交给包内旧主版本解析器。
-目标 sysroot 与编译器选择仍是显式输入，Web SDK 选择属于调用方工具链；
-来源、校验和与第三方许可见 [resource bundle](../src/BGCS.CppAst/Resources/Clang/README.md)。
-
-编译器的 resource、include 和 fingerprint 查询同时排空 stdout/stderr；超时会终止并观察进程退出，
-失败查询仍明确标记为不可用。opaque handle 的 managed API 保持类型化包装，DllImport、LibraryImport
-和 FunctionTable 的标量 handle 参数/返回值统一使用指针宽度的 `nint` 原生载体，再经同一类型化 adapter 转换。
-这是所有目标和库共用的 ABI 规则，不在生成的调用包装中加入浏览器判断。
-
-```text
-CLI / CsCodeGenerator / BindingGenerator
-                 ↓
-      Config load + composition + validation
-                 ↓
-       C/C++ parse → CppCompilation
-                 ↓
-        BindingGenerationPipeline
-          ├─ preprocess / pre-patch
-          ├─ DeclarationGraph
-          ├─ BindingModuleAnalyzer → BindingModule
-          ├─ StrictSafetyAnalyzer
-          ├─ CSharpEmitter(BindingModule)
-          ├─ post-patch / SingleFile / optional Runtime
-          └─ OutputDirectoryTransaction.Commit
+```mermaid
+flowchart TB
+    Tool[BGCS.Tool] --> Host[BGCS]
+    Tool --> Contracts[BGCS.Contracts]
+    MSBuild[BGCS.MSBuild] --> Host
+    MSBuild --> Contracts
+    Host --> Contracts
+    Host --> Infrastructure[BGCS.Infrastructure]
+    Host --> Platforms[BGCS.Platforms]
+    Host --> Analysis[BGCS.Analysis]
+    Host --> Cpp[BGCS.Cpp2C]
+    Host --> CSharp[BGCS.CSharp]
+    Host --> NativeBuild[BGCS.NativeBuild]
+    Host --> Runtime[BGCS.Runtime]
+    Infrastructure --> Contracts
+    Platforms --> Contracts
+    Platforms --> Infrastructure
+    Analysis --> Contracts
+    Cpp --> Contracts
+    Cpp --> Analysis
+    CSharp --> Contracts
+    CSharp --> Analysis
+    NativeBuild --> Contracts
+    NativeBuild --> Infrastructure
+    NativeBuild --> Platforms
+    Worker[BGCS.Frontend.Clang.Worker] --> Contracts
+    Worker --> Infrastructure
+    Worker --> Frontend[BGCS.Frontend.Clang]
+    Frontend --> Contracts
+    Frontend --> Infrastructure
+    Host -. 版本化解析请求 .-> Worker
 ```
 
-关键事实：
+`Contracts` 与 `Runtime` 不依赖其他 BGCS 工程。普通 lowering 与托管 backend 不引用 Clang。Host 通过 worker 通信，不能把原生解析放进 SDK 应用进程。每份生产源码只有一个归属工程，不能用跨工程链接源码或可见性绕过替代契约。
 
-- `BindingModule` 是真实分析结果，用于 structured result、安全诊断和新 emitter API。
-- `CSharpEmitter` 只消费 IR，并且是唯一 configured C# 输出路径。
-- IR-native 路径承载 constant、alias、delegate、opaque handle、enum underlying type、匿名/嵌套 record、bitfield、全部 import mode，以及 public raw/string/span/ref/out friendly overload。
-- IR-native C# emitter 会在写文件前验证能否无损表达全部语义；配置生成对暂不支持的语义返回结构化 `BGCSCS001`，绝不隐式回退，失败时保留 last-good output。缺少字段定义的 opaque storage 可以通过 pointer 使用，但按值调用会被拒绝，因为仅凭 size/alignment 无法证明 target ABI classification。
-- C++ Bridge 使用唯一的 `CppBridgeGenerationPipeline`：analyzer 将 AST 降低为冻结的 `CppBridgeModule` facts 和源码操作，`ICppBridgeEmitter` 只消费该结果。原先的直接 AST emitter 已删除。生成的 C header 随后进入同一条 C → Binding IR → C# 链。
-- C++ Bridge 生成当前格式的 build manifest；`INativeBuildPipelineProvider` 将其转换为不依赖 shell 的多步骤计划。内置 direct Clang/GNU、clang-cl、CMake、Meson、MSBuild provider，并通过 `nm` / `dumpbin` 检查实际 export。
-- CLI `build` 在 pipeline 成功后另建临时 .NET 项目做 warning-as-error 编译；编译验证不属于 `BindingGenerationPipeline` 自身。
+## 五层模型与完整流水线
 
-## 目标数据流
+| 模型 | 内容 |
+| --- | --- |
+| `NativeModule` | 原生声明、精确类型/布局、模板、继承、来源与目标事实 |
+| `CppBridgeModule` | 类型化原生操作、导出、转换、异常与生命周期协议 |
+| `InteropModule` | 最终 C ABI，以及 ownership、allocator、字符串、buffer、callback 与错误契约 |
+| `ManagedApiModel` | 托管类型、成员、公开投影与 Runtime 需求 |
+| `CSharpEmissionPlan` | C# 导入、载体、布局、转换、固定、清理与文件决定 |
 
-```text
-Configuration → Parsing → Analysis → immutable BindingModule
-                                         ↓
-                  C# / Runtime / C Bridge / custom emitters
-                                         ↓
-                            Transactional Output
+模型保留稳定 ID 和源码来源。未知事实保持未知；大小相同不能证明字段、对齐或调用约定一致。发布模型不保留 Clang cursor、原生句柄、可变配置或运行服务。
+
+```mermaid
+flowchart TD
+    Input[SDK / CLI / 工作区 / MSBuild 请求] --> Bootstrap[读取根配置、插件与扩展 schema]
+    Bootstrap --> Freeze[验证并冻结配置与注册表]
+    Freeze --> Environment[解析宿主、目标、SDK、工具链与运行环境]
+    Environment --> Snapshot[捕获输入与阶段指纹]
+    Snapshot --> Parse[隔离 Clang worker]
+    Parse --> Native[NativeModule]
+    Native --> C[C 声明与头文件辅助导出规划]
+    Native --> Cpp[C++ 类型化 lowering]
+    Cpp --> Bridge[输出 C header 与 C++ bridge]
+    Bridge --> Reparse[重解析 C ABI 并合并桥接语义]
+    C --> Interop[InteropModule]
+    Reparse --> Interop
+    Interop --> Safety[ABI、语义证据、安全分析与变换]
+    Safety --> Managed[ManagedApiModel]
+    Managed --> Plan[CSharpEmissionPlan]
+    Plan --> Emit[候选源码与元数据]
+    Emit --> Process[产物处理与最终契约复核]
+    Process --> Validate[请求的编译、原生链接与实际调用]
+    Validate --> Publish[拥有型发布与收据]
 ```
 
-C# 与 C++ bridge 分别使用冻结 Binding IR 和 Bridge IR；AST 与 C++ lowering 只存在于对应分析阶段。
+C++ 与 C 使用相同配置入口和 Host。C++ operation 表达构造、析构、调用、参数/结果转换、所有权、继承转换、回调和异常边界。C++ 异常在 C 边界转换。重新解析的 C 声明提供实际导出 ABI，再通过稳定导出身份合并 lowering 的生命周期语义。
 
-## 依赖规则
+C 的 inline/内部链接函数不自动成为动态导出。生成的辅助 header/source 必须编译进配置的原生模块，prebuilt 模式检查实际适配导出。Windows 的辅助 DLL 不会继承依赖 DLL 的其他导出；源码构建计划与独立原生 manifest 必须明确携带辅助输入。
 
-依赖应当向内：
+`generate` 完成本次要求的模型、安全与源码契约检查后发布源码。`build` 还在候选目录完成托管编译与已配置原生输入验证，再替换正式输出。`nativeBuild.mode=none` 必须明确记录原生构建未验证。生成成功不代表已经完成原生链接或调用。
 
-```text
-BGCS.Tool
-  → BGCS facade/application
-  → configuration + analysis + emission
-  → BGCS.Intermediate
-  → BGCS.Core + BGCS.CppAst + BGCS.Language
+## 宿主、目标、SDK 与运行环境分离
 
-BGCS.Runtime 独立于生成器程序集
-BGCS.Intermediate 不依赖其他 BGCS assembly
+运行 BGCS 的宿主决定解析 worker 与原生解析器资源；原生目标决定 CPU/OS/ABI；SDK/sysroot 提供头文件与库；原生 compiler/linker 完成构建；托管运行环境与 import mode 决定支持的调用机制。
+
+例如 Windows x64 使用 `win-x64` 解析器，却可以用 Android NDK sysroot 生成 ARM64 声明。不能按输出目标选择解析器宿主资源。NuGet RID 也只是资产选择身份，不是完整 ABI；GNU 与 musl 不能共用误导性的资产路径。
+
+默认使用 Clang，是为了利用成熟的 C/C++ 解析能力，不要求最终库也用 Clang 编译。实际编译器的预处理、头文件、布局与调用 ABI 仍然必须相容；无法在目标编译器复现的条件声明应验证失败，不能视为无差异。
+
+嵌入的 Clang builtin headers 与系统 SDK/C/C++ headers 分开管理，[资源来源、hash 与许可证](../src/BGCS.Frontend.Clang/Resources/Clang/README.md)必须明确。其他 LLVM 安装不能静默替换解析资源。
+
+浏览器 Wasm 使用静态模块/adapter、原生构建引用和适合 AOT 的回调机制。桌面动态加载是一种能力。Emscripten 与 WASI 是不同目标。新增平台家族应提供能力与工具链事实，不应让各 emitter 分散判断平台名称。
+
+## ABI 与托管规划
+
+原生存储布局、托管分配对齐和按值调用分类分别验证。过度对齐记录、特殊数值、packed aggregate、union 与 callback 都需要自己的证据。不支持的按值签名需要指针/native bridge；能保存某类型字节不等于能够按值调用它。
+
+Raw API 提供可正确表达的 ABI。friendly string、Span、拥有型对象和异步 API 需要充分的生命周期、分配器、长度与编码证据。`char*` 不天然等于 UTF-8，`wchar_t` 来自目标事实。推断、声明、用户断言与独立验证是不同证据等级。
+
+FunctionTable、DllImport 与 LibraryImport 使用同一份 interop 语义。先规划导入载体、公开类型、固定、分配、转换、错误与清理，再由 emitter 输出。默认实例上下文；显式静态 API 具有需要说明的共享模块生命周期。
+
+## Runtime 生命周期
+
+```mermaid
+flowchart TD
+    Api[生成 API 上下文] --> Session[NativeModuleSession]
+    Session --> Module[动态模块 / 静态模块 / 外部表]
+    Call[活动调用 lease] --> Session
+    Handle[拥有句柄释放 lease] --> Session
+    Callback[注册与调用 lease] --> Session
+    Async[原生异步资源] --> Session
+    Dispose[Context.Dispose] --> Closing[拒绝新公共调用]
+    Closing --> Drain[保留活动操作与清理能力]
+    Drain --> Unload[最后一个 lease 后卸载]
 ```
 
-`Analysis` 和 `Intermediate` 不引用 CLI。语义 facts 不携带 Roslyn syntax、Clang cursor、服务或回调。Bridge lowering 输出冻结的目标源码单元；实际输出根由 emission request 管理。
+Context 关闭时，原生库仍可能被活动调用、析构、回调或异步任务使用。取消请求不等于 native 已停止访问 buffer。长期 callback 需要 unregister/结束协议，在自己的回调中关闭时不能等待自己而死锁。
 
-消费者应用应在自己的仓库维护 binding 配置、native 源码、自定义 shim、生成产物和集成测试。BGCS 仓库只负责通用生成器/Runtime 和独立固定版本的上游测试语料；BGCS CI 不需要检出任何相邻应用仓库。
+Runtime 包独立于生成器与解析器依赖。源码模式使用版本化闭包并通过语法改写 namespace/引用，使多套库共存。package/source 与 split/single-file 都必须真实编译消费与调用。
 
-## 分层职责
+## 扩展、配置、缓存与发布
 
-### Facade
+普通插件只引用 `BGCS.Contracts`，注册类型化端口。SDK、CLI、工作区与 MSBuild 共用冻结注册表，服务具有稳定 ID、顺序、冲突规则和生命周期。Clang 专有事实扩展仅在 worker 中执行；普通 lowering 使用中立模型。参见[扩展指南](extensibility.cn.md)与[C++ cookbook](cpp-extension-cookbook.cn.md)。
 
-`CsCodeGenerator` 是可嵌入 generator API；`BGCS.Facade.BindingGenerator` 返回 `BindingGenerationResult`。Facade 负责参数和用例入口，不应增加 AST 遍历或 output composition。
+配置组合保留显式 false、零值和列表语义，每个本地文件使用自己的路径基准。HTTPS 基础配置必须显式提供 URL、SHA-256 和本地 `pathBase`，远程来源与本地依赖分别记录。请求创建与工作区加载在生成前就传递取消。读取声明的配置不会安装 SDK 或编译器。
 
-`BindingGenerationPipeline` 是非公开应用编排，所有入口共用它。
-Facade 返回实际完成结果；编排未发布结果时明确失败，不合成成功或空模块结果。
-`IncrementalGenerationCache` 对源与缓存条目按稳定顺序取得文件发布锁，校验精确文件集合和 SHA-256 后恢复。
-损坏缓存视为 miss；输出与缓存树重叠被拒绝。目录事务使用 `stagingPath`，缓存身份使用 `value/inputFileCount`。
+阶段缓存复用当前主要用于原始 frontend 结果与符合条件的 C# emission。Key 包括实现、worker、资源、目标/工具链、冻结配置、源码/include 成员关系及扩展输入。未知指纹禁用受影响复用；变换、产物处理器与请求的验证仍执行。缓存命中不能跳过原生构建或调用，也不能把源码复用描述为已经完成 native-build cache。
 
-目录安装及回滚共用 Core 的内部 rename 边界。Windows 的短期访问或共享拒绝最多重试两秒；
-持续拒绝保留原异常，并恢复尚未完成提交的旧树。提交阶段不因临时读者跳过文件、删除锁 inode，
-也不把部分输出视为成功。所有平台仍使用同一组公开目录事务契约。
+缓存条目为不可变完整文件集合，损坏时作为 miss。候选产物经过拥有权检查、稳定锁和恢复 journal 后发布，必需验证失败时保留上一次完整输出。输入/输出/缓存重叠、路径逃逸和产物冲突失败。多个目录的发布需要锁与 manifest 协议，普通文件系统不提供任意跨目录天然原子事务。
 
-### Configuration
+## 集成与验收
 
-- `ConfigLoader`：配置读取与相对路径上下文。
-- `ConfigComposer`：BaseConfig merge 和循环检测。
-- `ConfigValidator`：写输出前验证 target、path、mapping 和 output invariants。
-- `PresetResolver`：通用 target/API/output 默认值，不包含库特定硬编码。
+CLI 映射请求并呈现诊断。MSBuild 是独立实现工程，随 SDK 分发，生成显式启用，使用独立 .NET TaskHost，默认跳过设计时生成，并按 manifest 精确导入每个隔离 inner build 的文件。取消覆盖配置读取、worker 与构建，不复制另一套生成业务。
 
-### Parsing
+发布需要架构/源码归属门禁、完整功能对应、桌面/native/AOT/browser 真实调用、干净包安装、审核过的源码/API 快照、性能边界与供应链证据。NativeAOT 要求 113 项检查与独立 aggregate 比较；浏览器解释/AOT 保留各自的 74 项矩阵。语料的有限 CPU 调用不能认证整个上游库或 bgfx GPU 渲染。
 
-`BGCS.CppAst` 使用 Clang 构建 declaration/type/comment/token model；`ClangTargetResolver` 通过中立 `INativeTargetProvider` 契约解析目标，`CppToolchainDiscovery` 提供显式主机工具链探测。
-
-### Target 与 Runtime 可移植性
-
-- `BGCS.CppAst` 优先选择并预加载上游已提供的 RID 专用 Clang/ClangSharp runtime。ClangSharp 20.1.2 没有发布 macOS x64 native 包：Intel CI 通过 `scripts/setup-macos-x64-clang-runtime.sh` 构建同版本 companion 与 LLVM 20 runtime，并设置 `BGCS_CLANG_RUNTIME_DIR`。缺失资产会明确报错，不会暗中降低 parser 版本。
-- ABI classifier 集中处理 target-dependent primitive 和 compiler carrier。Linux Arm64 的 unsigned plain `char` 与 AAPCS64 `va_list` 已显式建模；SysV x64 的 array-decayed `va_list` 保持独立规则。
-- `BGCS.Runtime.NativeLibrary` 使用 .NET 跨平台 loader 处理 module 与 export，避免 `libdl.so` 等平台 soname 假设。
-- Workspace target 子目录与 target-specific snapshot/report 防止一个宿主生成的 ABI 被另一个宿主误编译或误验收。
-
-### Analysis
-
-- `DeclarationGraph`：声明及其 ABI 依赖排序。
-- `TypeAnalyzer`：native type → `BindingTypeReference`。
-- `AbiLayoutAnalyzer`：size、alignment、field、array、union 和 bitfield facts。
-
-位域使用 Clang 的绝对 bit offset 和声明宽度，边界检查不把声明整数类型的完整大小当作每个位域的存储大小。
-IR emitter 为相邻位域生成精确的重叠字节存储；`Bitfield` 的 Span API 读取和更新指定范围，保留邻接位并按声明宽度进行符号扩展。
-因此 signed、unsigned 和 enum 可以共享同一原生存储，packed record 也不需要猜测整数分配单元。
-当前提供的原生目标均为 little-endian；新增其他字节序目标必须补充相应 ABI lowering 和真实调用验收。
-- `OwnershipAnalyzer`：保守 marshalling/ownership 默认值与显式 mapping merge。
-- `OverloadPlanner`：pointer/count、capacity 和 written-count 关系。
-- `StrictSafetyAnalyzer`：无法证明的 ownership、allocator、length 和 callback lifetime。
-
-Analyzer 不创建正式输出文件。
-
-### Intermediate
-
-`BGCS.Intermediate` 是零依赖 contract 包，包含 `BindingModule`、type/function/field/parameter、`MarshallingPlan`、diagnostics、`IBindingEmitter` 和 `EmissionContext`。
-
-Binding IR 是 C# emission 的唯一输入；`Bridges` 中的冻结 Bridge IR 是 C++ bridge emitter 的唯一输入。所有 IR 源码实际属于本项目，不通过 `Compile Link` 反向共享源码。
-
-### Emission
-
-- `CSharpEmitter`：唯一 configured C# emitter，包含 IR-native `Emit`、friendly lowering 与 lossless capability validation。
-- `RuntimeEmitter`：从 module 生成 standalone runtime contract。
-- `SingleFileComposer`：通过 Roslyn syntax tree 做确定性合并。
-- `CBridgeEmitter`：根据冻结 `CppBridgeModule` 写出 C header / C++ bridge，不读取 AST 或重新执行 lowering。
-
-### Native build
-
-- `CppBridgeBuildManifest`：版本化、确定性、相对配置目录的 source、target、toolchain 与 link input 描述。
-- `INativeBuildPipelineProvider`：不通过 shell quoting，把 manifest 转换为确定性的 build input 与 argument-list 多步骤计划。
-- Provider：direct Clang/GNU、clang-cl、CMake、Meson 与 MSBuild。
-- `NativeBuildExecutor`：带 timeout、stdout/stderr 捕获的多步骤进程执行器，不修改全局 current directory。
-- `NativeExportInspector`：通过 `nm` 或 `dumpbin` 对比生成的公开 C symbol 与实际 artifact export table。
-
-配置驱动的 C++ 生成也从显式 configuration directory 解析 header、include、sysroot、compiler path、output、lowering recipe、native shim 和文件型 `baseConfig` 链；它不会修改 `Environment.CurrentDirectory`，因此并发 generator 不会争用进程级路径状态。
-
-## 原生调用载体
-
-生成的 C# 调用接口保留语义类型；真正的 import 或函数指针签名使用明确的 ABI 载体。
-不透明对象使用 `nint`，按值传递的枚举使用冻结 IR 中记录的整数基础类型；枚举指针保留指针形式。
-转换集中在生成的调用适配方法，三种 import mode 使用同一规则，不按浏览器或桌面分支。
-自定义枚举的 IR 宽度跟随其声明的基础类型，不再固定为四字节。
-
-独立调用 fixture 同时传入并返回超过 32 位的整数和枚举值，验证实际调用保留高位。
-这能够发现仅检查 `sizeof` 无法发现的运行时调用签名错误。
-
-## Cache 与 Plugin
-
-C 与 C++ 配置生成使用 immutable SHA-256 output cache。Key 包含 generator identity、序列化配置、parser arguments、解析后的 compiler identity/version、plugin/lowering/shim fingerprint，以及发现到的全部 C/C++ 输入精确内容。Entry 原子发布，并通过同一个 output transaction 恢复；无法稳定 fingerprint 的自定义状态会关闭 cache hit。
-
-`BindingPluginContract.C_CURRENT_VERSION` 提供加载时 revision 握手、显式 assembly entry point 和确定性 typed registration；不会加载更早的 plugin contract。C++ plugin 注册 `ICppTypeLowering`、`ICppCallableLowering` 和 `ICppArtifactContributor`；同一 registry 同时承载 built-in、声明式 recipe 与 plugin lowering。Plugin assembly 使用隔离 dependency resolver 并原子注册，assembly 内容 hash、plugin version 和 lowering fingerprint 进入 cache key。
-
-### Output
-
-`GeneratedOutputTransaction` / `OutputDirectoryTransaction` 在 staging 目录生成。只有 generation 与 patch 全部成功后才替换正式目录，因此失败保留 last-good bindings。
-
-## 完成条件
-
-C# 路径完成条件是：`BindingGenerationPipeline` 调用 `CSharpEmitter.Emit(BindingModule, ...)`；metadata/patch 行为要么是 IR transform，要么是明确 source post-processing；新增功能的 source/API/compile tests 与完整真实库矩阵全部通过。configured output 中不存在 compatibility emitter。
-
-C++ Bridge 的对应完成条件是：C Bridge emitter 只消费完整 IR，AST 只存在于 analysis 阶段。
-
-## 扩展模型
-
-新扩展优先接收 immutable config/request、Binding IR 和 scoped diagnostics。不要依赖 CLI、修改全局 current directory，或把单一 native library 的名称/布局硬编码进 core。库特定事实应留在声明式 lowering、typed lowering plugin 或显式 C ABI shim 中。详见[最终 lowering 架构](lowering.cn.md)。
-
-## 使用方独立性与 WebAssembly 目标
-
-BGCS 负责解析、ABI 分析、lowering、binding 生成及自己的测试 fixture 和验收报告。使用方负责 native facade、SDK 选择、应用链接、部署和运行时集成。使用方应用构建成功属于使用方的证据，不能替代 BGCS 的独立目标验收。本文及能力矩阵只采用 BGCS 自有证据。
-
-`emscripten-wasm32-emscripten` 选择 Clang triple `wasm32-unknown-emscripten` 及对应的 C/C++ ABI。它复用桌面目标使用的 target/configuration/IR/emitter 契约，不为每个库建立另一套生成器。BGCS 不负责安装 SDK，也不实现浏览器渲染、输入或应用启动。
-
-作者主机与输出目标是独立的：Emscripten 支持 Windows、macOS、Linux 作者主机，输出 WebAssembly；`wasm32` 表示目标的 32 位指针地址模型。WASI 等其他 WebAssembly 环境是不同目标，不能当作 Emscripten 的别名。参见 [Emscripten 安装说明](https://emscripten.org/docs/getting_started/downloads.html)、[WebAssembly 输出](https://emscripten.org/docs/compiling/WebAssembly.html)及 [Clang 交叉编译](https://clang.llvm.org/docs/CrossCompilation.html)。
-
-BGCS 自有 target 测试覆盖 triple 与 record 布局，emitter 测试覆盖三种 import mode 的 opaque handle。独立 fixture 通过生成的 DllImport、LibraryImport、FunctionTable 调用 BGCS 自有 C API 和 C++ bridge。2026-10-04 Windows x64 NativeAOT 与 Edge/Wasm 解释执行各通过 47 项检查；managed Wasm AOT、其他作者主机 / 浏览器及发布打包按各自证据验收。详见[调用流程](testing.md#independent-webassembly-invocation)、[本次验收](wasm-acceptance-2026-10-03.cn.md)和[目标证据](capabilities.cn.md#目标证据)。
-
-## 开放目标与工具链
-
-`BGCS.Core.Targeting` 管理开放目标 ID、请求、不可变目标与工具链描述和 provider 契约；Core 不引用 Parser。Parser 的 resolver 拒绝未支持或重复认领的目标；空 provider 集合不会隐式恢复默认实现。
-
-目标 SDK headers 与 libclang builtin headers 分开管理。Emscripten provider 从显式选择的 sysroot 提供 libc include，不猜测 Windows 路径或消费方 runtime。Apple 设备与模拟器保持独立目标身份。输入与生成缓存按具体工具链、目标 ABI 和源内容指纹隔离。
+平台能力分阶段记录：目标解析、头文件解析、生成、托管编译、原生链接、调用、包消费。本地有改动的检查点和历史成功版本不能认证当前 revision。[发布门禁清单](../eng/acceptance/required-release-gates.json)是要求来源，详见[测试](testing.cn.md)、[产品包](packages.cn.md)与[ABI 安全](abi-safety.cn.md)。

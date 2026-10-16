@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Compilation">
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup Label="Package dependencies">
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup Label="Project dependencies">
+    <ProjectReference Include="../../src/BGCS.CSharp/BGCS.CSharp.csproj" />
+    <ProjectReference Include="../../src/BGCS/BGCS.csproj" />
+    <ProjectReference Include="../../src/BGCS.Runtime/BGCS.Runtime.csproj" />
+  </ItemGroup>
+</Project>

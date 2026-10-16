@@ -1,0 +1,46 @@
+{
+  "legacyFixture": "entryTests/GenerateConstructorsForStructs",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/records": [
+      {
+        "nativeType": "sample_vec2",
+        "constructorFields": [],
+        "name": null,
+        "documentation": null,
+        "fields": [],
+        "emitSizeConstant": false,
+        "validity": null
+      }
+    ],
+    "/api/naming/fields/casing": "pascal"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.SampleVec2",
+      "kind": "Struct"
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "public int X;",
+    "public int Y;"
+  ],
+  "notContains": [
+    "public SampleVec2("
+  ]
+}

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Label="Compilation">
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Generated source inputs">
-    <Compile Include="../Generated/**/*.cs" LinkBase="Generated" />
+    <Compile Include="../Generated/*/managed/**/*.cs" LinkBase="Generated" />
+    <None Include="../Generated/*/native/bin/*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

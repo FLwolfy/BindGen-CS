@@ -2,168 +2,143 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BGCS.Runtime;
+__BROWSER_USING__
 
-namespace WasmAcceptance;
+namespace __NAMESPACE__;
 
 internal static unsafe partial class Program
 {
     private static readonly List<string> m_checks = [];
+    private static readonly Dictionary<string, string> m_aggregateSignatures = [];
     private static string m_report = "{}";
+    private static string[] m_lifecycleChecks = [];
     private static nint m_expectedCounter;
     private static int m_callbacks;
 
-    private static int Main()
+    __ENTRY_POINT__
+
+    private static int RunBaseline()
     {
         try
         {
-            Assert(sizeof(nint) == 4, "The consumer must execute inside wasm32.");
-            RunDllImport();
-            RunLibraryImport();
-            WasmSymbolContext context = new();
-            Assert(!context.TryGetProcAddress("missing_symbol", out nint missing) && missing == 0,
-                "A missing symbol must remain unresolved.");
+            __MAIN_ASSERTION__
+            using DllImport.NativeApi dll = DllImport.NativeApi.Create();
+            using LibraryImport.NativeApi library = LibraryImport.NativeApi.Create();
+            RunDllImport(dll);
+            RunLibraryImport(library);
+            __AGGREGATE_DIRECT_CHECKS__
+            SymbolProvider context = new();
+            Assert(!context.TryGetExport("missing_symbol", out nint missing) && missing == 0, "A missing symbol must remain unresolved.");
             m_checks.Add("missing-symbol");
-            FunctionTable.NativeApi.InitApi(context);
-            WasmSymbolContext failing = new("bgcs_add");
+            FunctionTable.NativeApi api = FunctionTable.NativeApi.FromProvider(context);
+            SymbolProvider failing = new("bgcs_add");
             bool rejected = false;
-            try {
-                FunctionTable.NativeApi.InitApi(failing);
-            }
-            catch (EntryPointNotFoundException) {
-                rejected = true;
-            }
-            Assert(rejected && failing.disposeCount == 1 && context.disposeCount == 0 &&
-                FunctionTable.NativeApi.BgcsAdd(3, 4) == 7,
-                "A failed table candidate must release its context and preserve the current table.");
+            try { using var failed = FunctionTable.NativeApi.FromProvider(failing); }
+            catch (EntryPointNotFoundException) { rejected = true; }
+            Assert(rejected && failing.disposeCount == 1 && context.disposeCount == 0 && api.Raw.BgcsAdd(3, 4) == 7,
+                "A failed table candidate must release its provider and preserve the existing instance.");
             m_checks.Add("failed-initialization");
-            try
-            {
-                RunFunctionTable();
-            }
-            finally
-            {
-                FunctionTable.NativeApi.FreeApi();
-                FunctionTable.NativeApi.FreeApi();
-            }
-            Assert(context.disposeCount == 1, "The generated table must dispose its context once.");
+            try { RunFunctionTable(api); __AGGREGATE_TABLE_CHECKS__ __STATIC_ADAPTER_CHECK__ }
+            finally { api.Dispose(); api.Dispose(); }
+            Assert(context.disposeCount == 1, "The generated context must dispose its owned provider once.");
+            bool closed = false;
+            try { api.Raw.BgcsAdd(1, 2); }
+            catch (ObjectDisposedException) { closed = true; }
+            Assert(closed, "A disposed API must reject new calls.");
             m_checks.Add("function-table-context");
             VerifyBorrowedResources();
             m_report = SerializeReport(true, null);
-            Console.WriteLine(m_report);
+            __BASELINE_PRINT__
             return 0;
         }
         catch (Exception exception)
         {
             m_report = SerializeReport(false, exception.ToString());
-            Console.Error.WriteLine(m_report);
+            __BASELINE_PRINT__
             return 1;
         }
     }
 
-    /// <summary>
-    /// Returns the completed invocation report to the fixture's JavaScript host.
-    /// </summary>
-    /// <returns>
-    /// JSON containing the executed checks and any failure, or an empty object before Main completes.
-    /// </returns>
-    [JSExport]
-    public static string GetReport() => m_report;
+    __BROWSER_EXPORT__
 
-    private static string SerializeReport(
-        bool success,
-        string? error
-    ) => JsonSerializer.Serialize(new InvocationReport(success, sizeof(nint), m_checks.ToArray(), error),
-        ReportContext.Default.InvocationReport);
+    __BROWSER_LIFECYCLE_REPORT__
 
-    private static void VerifyBorrowedResources() {
-        WasmSymbolContext borrowedContext = new();
-        using (BGCS.Runtime.FunctionTable table = new(borrowedContext, 1, ownsContext: false)) {
-            table.LoadRequired(0, "bgcs_add");
-            Assert(((delegate* unmanaged[Cdecl]<int, int, int>)table[0])(2, 5) == 7,
-                "Borrowed context invocation.");
+    private static string SerializeReport(bool success, string? error) => JsonSerializer.Serialize(
+        new InvocationReport(success, sizeof(nint), m_checks.ToArray(), error, m_aggregateSignatures, m_lifecycleChecks), ReportContext.Default.InvocationReport);
+
+    private static void VerifyBorrowedResources()
+    {
+        SymbolProvider external = new();
+        using (NativeModuleSession session = new(new BorrowedProvider(external)))
+        {
+            var symbols = session.ResolveRequiredSymbols(["bgcs_add"]);
+            Assert(((delegate* unmanaged[Cdecl]<int, int, int>)symbols["bgcs_add"])(2, 5) == 7, "Borrowed provider invocation.");
         }
-        Assert(borrowedContext.disposeCount == 0, "Disposing a table must preserve its borrowed context.");
+        Assert(external.disposeCount == 0, "Disposing a session must preserve the external owner of a borrowed provider.");
         m_checks.Add("borrowed-context");
-        void** slots = stackalloc void*[1];
-        slots[0] = (void*)borrowedContext.GetProcAddress("bgcs_add");
-        using (BGCS.Runtime.FunctionTable table = new(slots, 1))
-            Assert(((delegate* unmanaged[Cdecl]<int, int, int>)table[0])(1, 8) == 9, "Borrowed storage invocation.");
-        Assert(((delegate* unmanaged[Cdecl]<int, int, int>)slots[0])(4, 5) == 9,
-            "Disposing a table must preserve its borrowed pointer storage.");
-        borrowedContext.Dispose();
-        Assert(borrowedContext.disposeCount == 1, "The external owner releases its context.");
+        Assert(external.TryGetExport("bgcs_add", out nint add), "The external owner still supplies its native export.");
+        nint* slots = stackalloc nint[1] { add };
+        ReleaseLease lease = new();
+        const string identity = "fixture:bgcs_add:cdecl:i32(i32,i32)";
+        using (ExternalFunctionTableProvider table = new(identity, identity, ["bgcs_add"], new ReadOnlySpan<nint>(slots, 1), lease))
+        {
+            Assert(table.TryGetExport("bgcs_add", out nint address) &&
+                ((delegate* unmanaged[Cdecl]<int, int, int>)address)(1, 8) == 9, "Borrowed pointer storage invocation.");
+        }
+        Assert(slots[0] == add && ((delegate* unmanaged[Cdecl]<int, int, int>)slots[0])(4, 5) == 9 && lease.disposeCount == 1,
+            "External table disposal releases its lease once and preserves caller-owned pointer storage.");
+        Assert(external.disposeCount == 0, "Borrowed pointer storage must preserve its external module.");
+        external.Dispose();
+        Assert(external.disposeCount == 1, "The external owner releases its provider.");
         m_checks.Add("borrowed-storage");
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static int Callback(
-        nint counter,
-        int value,
-        void* state
-    ) {
+    private static int Callback(void* counter, int value, void* state)
+    {
         m_callbacks++;
-        return counter == m_expectedCounter ? value + *(int*)state : int.MinValue;
+        return (nint)counter == m_expectedCounter ? value + *(int*)state : int.MinValue;
     }
 
-    private static void Assert(
-        bool condition,
-        string message
-    ) {
-        if (!condition)
-            throw new InvalidOperationException(message);
+    private static void Assert(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
     }
 
 __RUNNERS__
 
-    private sealed class WasmSymbolContext : INativeContext
+    private sealed class SymbolProvider(string? missingExport = null) : INativeModuleProvider
     {
-        private readonly string? m_missingExport;
-
-        internal WasmSymbolContext(string? missingExport = null) => m_missingExport = missingExport;
-
-        /// <summary>
-        /// Gets the number of ownership releases performed by the generated function table.
-        /// </summary>
-        public int disposeCount { get; private set; }
-
-        /// <inheritdoc />
-        public nint GetProcAddress(string procName)
+        internal int disposeCount { get; private set; }
+        public bool TryGetExport(string name, out nint address)
         {
-            if (procName == m_missingExport)
-                return 0;
-            byte[] name = Encoding.UTF8.GetBytes(procName + "\0");
-            fixed (byte* pointer = name)
-                return (nint)DllImport.NativeApi.BgcsResolve(pointer);
+            ObjectDisposedException.ThrowIf(disposeCount != 0, this);
+            if (name == missingExport) { address = 0; return false; }
+            byte[] encoded = Encoding.UTF8.GetBytes(name + "\0");
+            using DllImport.NativeApi resolver = DllImport.NativeApi.Create();
+            fixed (byte* pointer = encoded) address = (nint)resolver.Raw.BgcsResolve((sbyte*)pointer);
+            return address != 0;
         }
+        public void Dispose() => disposeCount++;
+    }
 
-        /// <inheritdoc />
-        public bool TryGetProcAddress(
-            string procName,
-            out nint procAddress
-        ) {
-            procAddress = GetProcAddress(procName);
-            return procAddress != 0;
-        }
+    private sealed class BorrowedProvider(INativeModuleProvider external) : INativeModuleProvider
+    {
+        public bool TryGetExport(string name, out nint address) => external.TryGetExport(name, out address);
+        public void Dispose() { }
+    }
 
-        /// <inheritdoc />
-        public bool IsExtensionSupported(string extensionName) => false;
-
-        /// <inheritdoc />
+    private sealed class ReleaseLease : IDisposable
+    {
+        internal int disposeCount { get; private set; }
         public void Dispose() => disposeCount++;
     }
 }
 
-internal sealed record InvocationReport(
-    bool success,
-    int pointerSize,
-    string[] checks,
-    string? error
-);
-
+internal sealed record InvocationReport(bool success, int pointerSize, string[] checks, string? error, Dictionary<string, string> aggregateSignatures, string[] lifecycleChecks);
 [JsonSerializable(typeof(InvocationReport))]
 internal partial class ReportContext : JsonSerializerContext { }

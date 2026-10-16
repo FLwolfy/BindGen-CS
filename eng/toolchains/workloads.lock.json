@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "sdkVersion": "10.0.401",
+  "runtimePackVersion": "10.0.12",
+  "requiredWorkload": "wasm-tools",
+  "mode": "pinned-sdk-manifests; install with --skip-manifest-update, then verify exact manifest bytes and pack versions",
+  "emscriptenVersion": "3.1.56",
+  "manifests": [
+    {
+      "id": "microsoft.net.workload.mono.toolchain.current",
+      "version": "10.0.112",
+      "manifestFeatureBand": "10.0.100",
+      "files": {
+        "WorkloadManifest.json": "a7eba7e77238cdf7d9cadaadd248114a02aacea19434e2ab3a86a74a64625277",
+        "WorkloadManifest.targets": "0eccecd7a49def2ea47072723a98c47bd686890fb32d0442f77474d8e517b51b"
+      }
+    },
+    {
+      "id": "microsoft.net.workload.emscripten.current",
+      "version": "10.0.112",
+      "manifestFeatureBand": "10.0.100",
+      "files": {
+        "WorkloadManifest.json": "068731f332c023e60b9ff5a954b6ba0e09394656edc04f83e9b80bc58fca67a4",
+        "WorkloadManifest.targets": "33c47f1130a7e22aa5a9edde6579fa7166273ea991bad22eb17738456c881281"
+      }
+    }
+  ]
+}

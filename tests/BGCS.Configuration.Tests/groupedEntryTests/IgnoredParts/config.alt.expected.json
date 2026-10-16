@@ -1,0 +1,31 @@
+{
+  "legacyFixture": "entryTests/IgnoredParts",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/naming/replacements": []
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "EntrySampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd"
+    }
+  ],
+  "contains": [
+    "EntryPoint = \"entry_sample_add\""
+  ]
+}

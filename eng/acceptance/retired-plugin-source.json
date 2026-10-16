@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "state": "sourceRemovedParityPending",
+  "releaseCertification": false,
+  "featureParityCertified": false,
+  "configurationParityCertified": false,
+  "reason": "Remove unused old Extensions plugin API after primary facade retirement. Contracts-only new manifest/session fixtures replace old mutable registry, without an adapter. Exact replacements are source-ready and must be executed before acceptance.",
+  "files": [
+    {
+      "path": "src/BGCS.Infrastructure/Plugins/BindingPluginLoader.cs",
+      "category": "production",
+      "sha256": "4de7663ccdab99df0f9a9539f36c01a613cdfd23a1664b2c7f2ab15e926de3a3"
+    },
+    {
+      "path": "src/BGCS.Infrastructure/Plugins/BindingPluginRegistry.cs",
+      "category": "production",
+      "sha256": "055f52a31406869f06fce4432db3bbe3b595c3793b91dd0abceb924ce72027a7"
+    },
+    {
+      "path": "src/BGCS.Contracts/Extensions/BindingPluginContract.cs",
+      "category": "production",
+      "sha256": "1c069396b27640e27eb86e25e4fc3b5dafe0bbe9178172bc1c852fb52f1501a3"
+    },
+    {
+      "path": "src/BGCS.Contracts/Extensions/BindingPluginService.cs",
+      "category": "production",
+      "sha256": "7b46d85e18523d6a42259eef4a570fd6cb0d45031fa231b5bcd0682d7c8be1d9"
+    },
+    {
+      "path": "src/BGCS.Contracts/Extensions/IBindingPlugin.cs",
+      "category": "production",
+      "sha256": "aa80cedbb4a4203e3443c396b44a053a7c35e31977835578dfa93cced1934dec"
+    },
+    {
+      "path": "src/BGCS.Contracts/Extensions/IBindingPluginHost.cs",
+      "category": "production",
+      "sha256": "fa98a5188d1b38848a4114239f7b2f8c93cb10edb6abe3b7a757c453d6996f87"
+    },
+    {
+      "path": "src/BGCS.Contracts/Extensions/ICacheFingerprintProvider.cs",
+      "category": "production",
+      "sha256": "956033c979cb6a884785d48295332b0e853f5192a423621469b2ae68347f9552"
+    },
+    {
+      "path": "tests/BGCS.Infrastructure.Tests/BindingPluginContractTests.cs",
+      "category": "obsoleteTest",
+      "sha256": "4a2792467b668fb3783011247a41d60a9e0289642b2551600b080f39b52896e8"
+    },
+    {
+      "path": "tests/BGCS.Infrastructure.Tests/DirectServiceFingerprintTests.cs",
+      "category": "obsoleteTest",
+      "sha256": "9a9fd22911438eba749ec62bc022e06788cd66564e9725aad82c1a732db27e96"
+    }
+  ],
+  "retainedFixture": "tests/fixtures/FailingFingerprintPlugin/FailingFingerprintPlugin.csproj",
+  "fixtureCurrentContract": "BGCS.Contracts.Plugins.IBindingPlugin; Contracts-only reference",
+  "replacementTests": {
+    "tests/BGCS.Infrastructure.Tests/NeutralPluginLoaderTests.cs": [
+      "PublicContractUsesFrozenDescriptorsTypedFactoriesAndCompleteFingerprintInputs",
+      "ExternalEntrySharesExactContractsAndSamePathBytesRemainIndependentPerSession",
+      "LoaderSharesTheCallingHostsContractsIdentityInsideAnIsolatedInfrastructureContext",
+      "ConstructorFailureDoesNotPoisonLaterIndependentActivationAtTheSameAssemblyPath"
+    ],
+    "tests/BGCS.Tests/PluginRegistryRetirementParityTests.cs": [
+      "IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory",
+      "RejectedConflictingPluginDoesNotReserveItsOtherServiceOrPublishAnyFactory",
+      "ChangedDirectServiceStateInvalidatesAFormerEmissionCacheEntry",
+      "MissingDirectServiceFingerprintRunsTheServiceAndDisablesEmissionCaching",
+      "ExactNeutralPortIdentityChangesCacheKeysEvenWithTheSameClassIdAndState",
+      "ThrowingPluginFingerprintDisposesTheSessionAndPreservesTheCompletePreviousPublication"
+    ]
+  },
+  "replacementProofStatus": "focusedPassedDirtyCheckpoint",
+  "existingAdditionalCoverage": [
+    "tests/BGCS.Tests/PluginManifestTests.cs",
+    "tests/BGCS.Tests/PluginSessionTests.cs",
+    "tests/BGCS.Tests/ManagedTransformTests.cs",
+    "tests/BGCS.Tests/WorkerPluginHostTests.cs"
+  ],
+  "localFocusedEvidence": [
+    {
+      "receipt": "artifacts/implementation/test-results/neutral-plugin-loader-four.trx",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "receipt": "artifacts/implementation/test-results/neutral-plugin-registry-enum-ten.trx",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "Nine plugin replacement cases plus one managed enum configuration case."
+    }
+  ]
+}

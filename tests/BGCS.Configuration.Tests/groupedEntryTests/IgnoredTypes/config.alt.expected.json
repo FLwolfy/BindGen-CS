@@ -1,0 +1,37 @@
+{
+  "legacyFixture": "entryTests/IgnoredTypes",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "records",
+        "excludeDeclarations": [],
+        "includeDeclarations": []
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.KeepType",
+      "kind": "Struct"
+    },
+    {
+      "name": "EntryTests.Generated.MyType",
+      "kind": "Struct"
+    }
+  ],
+  "absentTypes": [],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi+RawApi",
+      "name": "UseTypes",
+      "parameters": [
+        "KeepType*"
+      ],
+      "parameterNames": [
+        "b"
+      ],
+      "returns": "void"
+    }
+  ]
+}

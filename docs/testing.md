@@ -1,190 +1,146 @@
-# BindGen-CS Testing Workflow
+# BGCS 3.0 Testing Workflow
 
-The test system separates fast managed feedback from target-specific release evidence. A passing unit test on one host is not treated as proof for another native ABI.
+[中文](testing.cn.md)
+
+Tests distinguish model and generation regressions from native execution and installed
+product evidence. A managed build on one host cannot certify another ABI, browser
+deployment or package layout. Current completion is recorded in
+[implementation status](implementation-status.cn.md); mandatory release jobs come from
+`eng/acceptance/required-release-gates.json`.
 
 ## Prerequisites
 
-- .NET SDK 10.0 and the .NET 9 runtime (`dotnet --version`, `dotnet --list-runtimes`)
-- Clang/LibClang available for parser-dependent tests
+- .NET 10 SDK/runtime; generated consumers use .NET 10 / C# 14.
+- The locked host parser and worker closure. Target headers and native compilers are
+  separate prerequisites.
+- Python 3.10 or newer, a C++23 compiler and matching standard library.
+- CMake 3.24 or newer and Ninja for CMake execution; CI locks Meson to 1.8.3.
+- For browser execution, the selected .NET 10 SDK's `wasm-tools` and Chromium, Chrome
+  or Edge. For desktop NativeAOT, the host compiler/linker prerequisites.
 
-On macOS Intel, ClangSharp 20.1.2 has no published native runtime package. Run `bash scripts/setup-macos-x64-clang-runtime.sh` on that host. Set `BGCS_CLANG_RUNTIME_DIR` to the printed directory for parser tests and `BGCS_OSX_X64_PACKAGE_RUNTIME_DIR` to that directory for packaging. The script checks that its LLVM 20 compiler can compile C++23 `std::expected`; the CI workflow performs the same bootstrap. On Linux, the CI matrix selects `g++` for the C++23 bridge tests because the runner's default Clang driver may use a standard library without `std::expected`.
+macOS Intel needs the matched supplement from `scripts/setup-macos-x64-clang-runtime.sh`.
+Resource hashes participate in closure checks. An unrelated global LLVM installation
+does not substitute for the locked parser. Native providers use compiler/SDK facts
+compatible with the parsed target.
 
-## Choose the right test level
+## Commands and evidence
 
-| Level | Command | Use it for |
+| Scope | Command | Required evidence |
 | --- | --- | --- |
-| Fast managed loop | `dotnet test BindGen-CS.sln -c Release` | Parser, configuration, analysis, emission, Runtime, and bridge regressions |
-| Independent Wasm invocation | `python scripts/test-wasm-bindings.py` | Generate all three import modes, link BGCS-owned native C, and execute it in a browser |
-| Real C libraries | `./scripts/test-real-libraries.sh` | Deterministic snapshots plus warning-free IR-native generation/compilation |
-| Real C++ bridge | `./scripts/test-real-cpp-libraries.sh` | Bridge generation, native compiler validation, C# rebound, snapshots |
-| NuGet/tool/native asset | `./scripts/test-nuget-packages.sh` | Deterministic pack, clean restore, tool install, RID asset load and native invocation |
-| API compatibility | `./scripts/test-public-api-snapshot.sh` | Reviewed pre-release assembly baselines |
-| Dependency policy | `./scripts/test-supply-chain-policy.sh` | NuGet advisory query and license inventory/deny policy |
-| Performance | `./scripts/test-performance-budget.sh` | 10,000 declarations, cold generation and warm cache budgets |
-| Release acceptance | `./scripts/run-full-test-matrix.sh` | Every mandatory gate and machine-readable report |
+| Regression suite | `dotnet test BindGen-CS.slnx -c Release` | All relevant tests, including failure/concurrency cases |
+| Schema documentation | `python scripts/generate-config-docs.py --configuration Release --check` | Repository schema and both language catalogs match the built CLI |
+| Browser interpreter | `python scripts/test-wasm-bindings.py` | All 74 actual checks across three import modes |
+| Browser AOT | `python scripts/test-wasm-bindings.py --aot` | The same 74 checks after AOT publication |
+| Desktop NativeAOT | `python scripts/test-native-aot-bindings.py` | All 113 checks, including independent aggregate oracles, in a published native executable |
+| Installed products | `python eng/verify-packages.py --help` | Exact product set, installed consumers and complete invocation matrices |
+| Performance | `scripts/test-performance-budget.sh` | Controlled 10,000-declaration cold/hot timings and memory budgets |
+| Release inventory | `eng/acceptance/required-release-gates.json` | Every mandatory job from the same revision |
 
-## One-command full matrix
+Fixture scripts normally build the necessary repository projects. In a shared checkout,
+finish a serialized solution/Tool/worker build, then use `--no-build --configuration Release`
+to stage closed outputs. `--tool-path` and `--runtime-path` select an exact installed set
+together. Never overwrite assemblies while another consumer is using them.
 
-```bash
-./scripts/run-full-test-matrix.sh
-```
+Clean product verification restores the newly packed local NuGet products. It checks
+embedded C/C++ generation, Contracts-only plugins, Runtime-only/package/source/single-file
+consumers, exact worker/TaskHost closures, all six tool host resources, MSBuild opt-in and
+default-off, owned clean/rebuild, multi-TFM and static project graphs. The Visual Studio
+2026 job verifies `msbuild.exe` major 18 instead of substituting SDK-hosted MSBuild.
+Full installed certification additionally runs NativeAOT smokes, the 113-call NativeAOT
+matrix and both browser matrices. Explicit subsets retain `completeProductSet=false`.
 
-Run the standalone commands from the table when iterating on one layer. Run the full matrix before treating the target as accepted.
+## Independent invocation fixture
 
-The restore gates intentionally evaluate the MSBuild project graph on one node. This keeps `obj/project.assets.json` deterministic when the same checkout is mounted by different operating systems or architectures; compilation and native-library builds retain their normal parallelism.
+`tests/fixtures/NativeApi` supplies portable C17 source; `tests/fixtures/CppFacade` supplies
+the independent C++23 header. The public unified CLI emits a typed bridge, reparses it
+and generates three instance APIs: DllImport, LibraryImport and FunctionTable. The
+consumer compiles exact managed artifacts; the harness never repairs generated source.
 
-The real-library matrix uses pinned upstream repositories fetched by `./scripts/setup-real-library-corpus.sh` into `artifacts/real-library-corpus/`. Set `BGCS_REAL_LIBRARY_ROOT` to an existing corpus at the same revisions if needed. For miniaudio, SDL3, cimgui, cimguizmo, and bgfx it regenerates the sole IR-native surface and checks target-specific deterministic source plus reflection public-API snapshots. These pinned API fixtures explicitly choose `strictSafetySeverity=Warning` to preserve their reviewed broad-surface snapshots; the normal product default remains `SuppressFriendly`, which has separate regression tests. The full matrix prepares and requires these headers; the standalone script may set `REQUIRE_REAL_LIBRARIES=1` to make absence fatal. Generation times are reported but do not fail functional CI due to runner load or wall-clock changes. On a controlled performance runner, set `BGCS_ENFORCE_GENERATION_BUDGETS=1` to enforce the per-library limits in [acceptance](acceptance.md). The real C++ matrix additionally generates a bimg C bridge, validates it with the discovered C++ driver, feeds the generated C header back into BGCS, compiles the C# consumer, and verifies target-specific bridge/source/public-API snapshots.
-
-For a host without a reviewed snapshot manifest, or whose generated output differs from one, real-library tests exit nonzero and write candidate SHA-256 files to `artifacts/acceptance/candidate-snapshots/`. CI also uploads the underlying generated files as `snapshot-inputs-<target>`. Review the files and public API before adding or changing the matching target-specific manifests under `tests/real-libraries/`; a candidate is never automatically promoted. The runner continues independent downstream gates to collect evidence, but emits no passing acceptance report until all snapshots match. A passing Arm64 baseline cannot stand in for x64 or another operating system. `bash scripts/test-snapshot-manifest.sh` tests LF/CRLF manifest handling and both fail-closed candidate paths.
-
-These libraries are test inputs, not product-specific generation logic. Consumer repositories own their own configuration, generation workflow, generated files, and integration tests.
-
-The full script runs all major BGCS capabilities in ordered layers:
-
-1. Core libraries (`BGCS.Core`, `BGCS.CppAst`, `BGCS.Language`, `BGCS.Runtime`)
-2. BGCS base/unit/parser logic (`BGCS.Tests`)
-3. Patch-specific behavior (`BGCS.Patching.Tests`)
-4. Generated output compile/runtime semantics (`BGCS.Generation.Tests`)
-5. `BGCS.Cpp2C` generation, deterministic build manifests, native build-provider plans, C++ syntax validation, DLL linking, and runtime invocation
-6. CLI behavior (`init`, JSON Schema, diagnostic catalog, and native-build plans)
-7. Public CLI example generation and compilation (`runtime-generated` + `runtime-notgenerated`)
-8. NuGet dependency-closure restore, deterministic pack, tool installation, and native-RID consumer invocation
-9. Public API baseline plus dependency license/vulnerability policy
-
-On success it writes `artifacts/acceptance/report.json` and `report.md`, and retains target-specific copies under `artifacts/acceptance/reports/<target>/`. Report generation fails if any mandatory marker is missing. Windows x64, Linux x64, and macOS x64 reports must be generated from the same revision before maintenance status. See [Acceptance](acceptance.md) for the scoring contract.
-
-QuickStart examples use `bindgen-cs build` for actual generated C# compilation.
-The full matrix writes their outputs to `artifacts/examples/QuickStart/<Configuration>/`:
-
-- `standalone`: `Bindings.cs` and `Runtime.cs` (`generateRuntimeSource=true`).
-- `packaged-runtime`: `Bindings.cs` referencing `BGCS.Runtime` (`generateRuntimeSource=false`).
-
-No separate demonstration executable or configuration reader is involved.
-
-## Independent WebAssembly invocation
-
-This test is owned entirely by BGCS. `tests/fixtures/NativeApi` and `tests/fixtures/CppFacade` supply the C and C++ APIs;
-the runner generates bindings, builds a standalone .NET browser consumer, links the C
-implementation through `NativeFileReference`, and invokes it in a headless Chromium browser.
-No consumer repository, game engine, generated bindings committed elsewhere, or application
-runtime is required.
-
-Prerequisites:
-
-- Python 3.10 or newer.
-- .NET 9 SDK with its `wasm-tools` workload. Install the workload outside this checkout's
-  SDK 10 selection, or explicitly select SDK 9 before `dotnet workload install wasm-tools`.
-- Chrome, Chromium, or Edge. The browser runs with an isolated test profile.
-- A working BGCS parser runtime for the authoring host. macOS Intel needs the bootstrap above.
-
-```bash
-python scripts/test-wasm-bindings.py
-# For installations outside PATH:
-python scripts/test-wasm-bindings.py --dotnet /path/to/dotnet --browser /path/to/chromium
-```
-
-The runner scopes SDK 9 to its generated consumer directory and queries the installed workload
-for compiler and sysroot paths. Repository packaging keeps its existing SDK 10 selection.
-`WasmBuildNative` compiles and links the C API and generated C++ bridge. Pass `--aot` to compile managed code ahead of time; the default consumer uses interpretation.
-The generated `libName` is `api`, matching the fixture's native input module. A different
-consumer must use the module names required by its own linker/runtime; static linking does
-not imply that the special name `__Internal` is supported everywhere. See the
-[.NET native dependency workflow](https://learn.microsoft.com/en-us/aspnet/core/blazor/webassembly-native-dependencies?view=aspnetcore-9.0).
-
-| Check, repeated for each import mode | Required result |
+| Checks repeated for each import | Required result |
 | --- | --- |
-| Scalar parameters and return value | Exact signed arithmetic result |
-| Record round trip | Matching size/offset, 32-bit pointer and `size_t`, preserved context pointer |
-| Input/output buffers | Exact values and output count |
-| Insufficient capacity | Failure with no writes and zero output count |
-| Opaque handle | Typed create/invoke/destroy, tracked native ownership |
-| Native-to-managed callback | Exact handle, arguments, state pointer, result, and invocation count |
-| Null callback | Explicit failure without a callback |
-| Release and null handles | Zero live native allocations; null release is safe |
+| Scalar/64-bit integer calls | Signed arithmetic and preserved high bits |
+| Wide enum presentation | Fixed-width presentation and independently invoked native carrier |
+| Native `long`/bool | Target width, signed arithmetic and boolean byte values |
+| Record layout | Native size/offsets/pointer width and preserved context pointer |
+| Mixed bitfields | Signed, unsigned and enum fields survive native mutation |
+| Buffers and insufficient capacity | Exact values/count, and failure without writes |
+| Original-address aliases | Native pointer equality and ordered ref/ref, in/out, record-field and Span/ref mutation |
+| Opaque handles | Typed create/invoke/destroy and native allocation count |
+| Native/null callbacks | Exact pointer/state/result/count, and explicit null rejection |
+| Generated managed callbacks | Captured state through static userdata thunks, unchanged unsafe object pointers and original managed exception propagation |
+| Release/null handles | No live allocations and null-safe destruction |
+| C++ construction/methods | Status/error boundary and object state |
+| Multiple inheritance | Adjusted base address, restored owner, rejected unrelated downcast |
+| C++ destruction | Released owner and null-safe cleanup |
 
-`DllImport`, `LibraryImport`, and custom-context `FunctionTable` each execute fourteen
-checks. They include native `long`, bool, C++ construction/method calls, multiple-inheritance
-pointer adjustment, and destruction. Five shared checks verify missing symbols, owned context
-disposal, failed initialization, borrowed context ownership, and borrowed storage, for **47 total**. Function-table resolution is fixture-owned through the public
-`INativeContext`; BGCS Runtime does not acquire a browser-specific symbol registry.
+Each mode contributes 23 actual check labels. Five shared checks cover missing symbols,
+owned provider disposal, failed table installation, borrowed provider ownership and
+external pointer storage, giving **74 required checks**. A receipt must contain the
+complete exact set after actual calls and assertions. NativeAOT adds 39 aggregate
+checks across the three imports, for 113 total; each mode must match the independent
+native C probe's 13 result shapes.
 
-Each run retains its configuration, generated sources, native input, build logs, and
-`report.json` under `artifacts/wasm-acceptance/<run-id>/`. Missing prerequisites, generation
-or link failures, timeout, wrong pointer size, native exceptions, and incomplete check lists
-fail the run. There is no dependency-driven skip or success fallback.
+The original C++ header's implicit default constructor remains part of the test. No
+explicit constructor is inserted to avoid unsupported generation. C source stays C17;
+an unsupported managed presentation must be reported separately instead of changing
+the native typedef into a compiler-specific enum extension.
 
-The CI `wasm-invocation` job repeats this test on Windows, Linux, and Intel macOS independently
-of the desktop release matrix. Configured jobs are not evidence of completed runs. The
-[local acceptance report](wasm-acceptance-2026-10-03.md) records the actual Windows/Edge result.
-This fixture establishes C ABI and a BGCS-generated C++ bridge invocation scope. It covers
-construction, methods, inheritance, and destruction. Additional STL lowerings, browser engines,
-mobile devices, and distribution packaging require their own acceptance. Interpretation and
-managed AOT are separate runs of the same fixture; configured jobs are not execution evidence.
+The current fixture explicitly configures `api.enums` and `api.enumMappings`
+for `WideFlags`, then checks the generated friendly enum and unchanged raw
+`ulong` ABI. Bits 59/60/63 and the full UInt64 range round-trip through the
+independent C17 implementation; no handwritten enum substitutes for generation.
 
-## Feature Coverage Mapping
+FunctionTable uses `INativeModuleProvider`, `NativeModuleSession` and
+`ExternalFunctionTableProvider`. Browser tests additionally invoke `FromStatic()`.
+Leases preserve native cleanup and reject calls after context closure.
 
-`tests/BGCS.Tests` covers:
+## Browser linking and execution
 
-- Core unit and parser-interop behavior for BGCS
-
-`tests/BGCS.Patching.Tests` covers:
-
-- Patch infrastructure (`PatchEngine`) behavior
-- Multi-stage patch matrix (pre/post, file create/modify, chaining)
-- Single-file merge compatibility with post-patch behavior
-
-`tests/BGCS.Generation.Tests` covers:
-
-- Function generation pipeline and regression matrix
-- Generated source compile correctness under matrix configurations
-- Function-table/custom-context runtime behavior of generated code
-
-`tests/BGCS.Cpp2C.Tests` covers:
-
-- C++ to C bridge generation semantics and metadata flow
-- deterministic, portable bridge build manifests and manifest validation
-- shell-independent Clang/GNU build plans and actual host shared-library compilation
-- configured STL lowerings for string, vector, span, array, map, set, optional, variant, expected, path, chrono, unique_ptr, and shared_ptr
-- managed virtual callback proxy generation
-- multiple-inheritance cast adjustment
-- clang++ bridge DLL linking and Create/Invoke/Destroy/error-channel runtime calls
-- retained callback unregister/dispose races and async exactly-once cleanup
-
-`tests/BGCS.Tool.Tests` covers:
-
-- portable, config-relative `init` output and C/C++ language selection
-- strict C/C++ JSON Schema generation for the current configuration contract
-- stable diagnostic lookup through `explain`
-- current manifest validation and shell-independent `native-build --dry-run` plans
-
-## CI usage
-
-The repository workflow runs the managed solution and complete acceptance jobs for Windows x64, Linux x64, and Intel macOS x64. A target is accepted only after its job emits its own report; a configured job or managed-only pass is not a target acceptance report.
-
-The refactor-era all-red CI causes, fixes, local checks, and remaining runner evidence are recorded in [CI remediation (2026-09-24)](ci-remediation-2026-09-24.md).
-
-CI can invoke:
+The harness queries the selected workload's real compiler/sysroot, links C and generated
+C++ through `NativeFileReference`, publishes the browser app and invokes an owned
+headless profile. Native module identity follows the declared filename: `api.c` registers
+`api`, while `libapi.a` registers `libapi`. Static linking cannot assume `__Internal`
+is correct for every managed runtime.
 
 ```bash
-SKIP_RESTORE_BUILD=1 ./scripts/run-full-test-matrix.sh
-```
-
-when restore/build are already completed in earlier steps.
-
-## Independent NativeAOT invocation
-
-```bash
-python scripts/test-native-aot-bindings.py --dotnet /path/to/dotnet --compiler /path/to/clang
+python scripts/test-wasm-bindings.py --dotnet /path/to/dotnet --browser /path/to/chromium
 python scripts/test-wasm-bindings.py --aot --dotnet /path/to/dotnet
 ```
 
-The NativeAOT consumer compiles the same BGCS-owned C API and C++ facade into a host native
-library and publishes a standalone executable. It requires no game engine checkout. The
-three import modes must complete all 47 checks. `LibraryImport` with unmanaged wrapper
-structs uses `<DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>` in these consumers;
-this is a .NET interop contract, shared by desktop AOT and Wasm.
+Receipts record actual browser/SDK/workload versions. Interpreter and AOT execute
+separately on Windows x64, Linux x64 and Intel macOS. The neutral native-provider gate
+independently verifies mixed C17/C++23 archives and relocatable objects; it sets exact
+workload paths plus `BGCS_REQUIRE_WASM_NATIVE=1`, making missing prerequisites fail.
 
-Both runners accept `--inject-native-error`. They corrupt a scalar result in isolated native
-staging and must exit unsuccessfully, preserving the failing invocation in `report.json`.
-No authoring fixture source is changed. Build, browser, and owned process cleanup run on
-success, failure, and timeout.
+## Desktop NativeAOT and failure injection
+
+```bash
+python scripts/test-native-aot-bindings.py --dotnet /path/to/dotnet --compiler /path/to/clang
+python scripts/test-native-aot-bindings.py --inject-native-error
+python scripts/test-wasm-bindings.py --inject-native-error
+```
+
+NativeAOT builds the fixture library, publishes a standalone native consumer and executes
+it. Both runners use `DisableRuntimeMarshalling` and the same unsafe ABI assertions.
+Injection changes a copied scalar implementation; the real call must fail its assertion
+and the gate. A compile failure cannot substitute for that required invocation failure.
+
+Missing prerequisites, parse/native link failure, AOT compiler crashes, timeouts, wrong
+pointer width and incomplete checks all fail. No dependency-based success fallback is
+allowed. Compiler workarounds retain all 74 browser or 113 NativeAOT assertions and exact toolchain identity;
+a successful diagnostic probe is not certification of the complete fixture.
+
+## Receipts, cleanup and release truth
+
+Each owned run retains grouped configs, native inputs, generated source, logs and
+`report.json`. Receipts include revision, dirty state and actual tool/worker/runtime
+hashes. Large owned `bin`, `obj`, published output, generator staging and browser profiles
+are cleared on success/failure; `--keep-build-output` explicitly retains a diagnostic
+scene. Cleanup never touches unrelated user input.
+
+Semantic/ABI/cache, worker crash, publication recovery, path and Runtime lifetime cases
+remain regression gates. Real-library corpus inputs use locked revisions and independent
+source/API snapshots. Candidates require review rather than automatic promotion.
+Historical 2.x reports and legacy test names do not constitute 3.0 receipts. Configured
+CI jobs, local dirty-tree subsets and managed-only passes cannot establish release
+readiness without the complete same-revision inventory.

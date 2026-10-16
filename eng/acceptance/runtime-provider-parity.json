@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "claim": "Exact old Runtime assertion crosswalk with local executed replacement evidence. This does not certify installed products, additional platforms or release readiness.",
+  "baselineMethods": 19,
+  "retirementComplete": true,
+  "productionRetirement": [
+    "src/BGCS.Runtime/Interop/NativeLibrary.cs",
+    "src/BGCS.Runtime/Interop/NativeLibraryContext.cs",
+    "src/BGCS.Runtime/Interop/LibraryLoader.cs",
+    "src/BGCS.Runtime/Interop/INativeContext.cs",
+    "src/BGCS.Runtime/Interop/FunctionTable.cs"
+  ],
+  "intentionalMajorVersionChanges": [
+    "Per-session provider composition replaces process-global name, module and context interceptor events. No aliases or global-hook compatibility surface remain.",
+    "StaticModuleProvider with an empty export set replaces a zero-handle dynamic context. Dynamic handle adoption rejects zero before ownership transfer.",
+    "NativeModuleSession exposes complete immutable required-symbol sets. Missing required addresses cannot become callable zero slots. Changed table layouts are constructed and validated as a new provider; live callable tables are never partially resized.",
+    "Native array allocation and reserved-slot layouts remain available through BCL native memory and the explicit Runtime-only external table adapter. Borrowing does not free caller storage.",
+    "BCL path and native-loader conventions replace loader-only path/extension helpers. The old IsExtensionSupported assertion always returned false and represented no implemented native extension discovery."
+  ],
+  "files": [
+    {
+      "baselineFile": "tests/BGCS.Runtime.Tests/NativeLibraryTests.cs",
+      "methods": [
+        {
+          "baselineMethod": "LoadAndResolveExport_UsesTheHostNativeLoader",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#DynamicProviderResolvesActualSystemSymbolsWithTheSelectedAssemblyScope"
+          ]
+        }
+      ]
+    },
+    {
+      "baselineFile": "tests/BGCS.Runtime.Tests/NativeLibraryContextTests.cs",
+      "methods": [
+        {
+          "baselineMethod": "EmptyContext_RejectsLookupAfterDisposal",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#EmptySymbolSourcesCloseIdempotentlyWithoutInventingExtensionDiscovery"
+          ]
+        },
+        {
+          "baselineMethod": "ConcurrentDisposal_ReleasesTheOwnedSystemModuleOnce",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleLeaseTests.cs#ConcurrentDisposal_UnloadsOnce",
+            "tests/BGCS.Tests/NativeDynamicModuleProviderTests.cs#AdoptedHandlesActuallyUnloadWhileBorrowedHandlesStayWithTheirOwnerAndLookupCloseIsSerialized"
+          ]
+        },
+        {
+          "baselineMethod": "MissingModule_IsRejectedAtConstruction",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#MissingDynamicModuleFailsBeforeAProviderIsExposed"
+          ]
+        },
+        {
+          "baselineMethod": "Dispose_WithZeroHandle_ShouldBeIdempotent",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#EmptySymbolSourcesCloseIdempotentlyWithoutInventingExtensionDiscovery",
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#EmptyNativeHandlesNeverTransferOwnership"
+          ]
+        },
+        {
+          "baselineMethod": "IsExtensionSupported_ShouldAlwaysReturnFalse",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#EmptySymbolSourcesCloseIdempotentlyWithoutInventingExtensionDiscovery"
+          ],
+          "policy": "A constant-false extension API is retired; exact required-symbol validation represents actual module requirements."
+        }
+      ]
+    },
+    {
+      "baselineFile": "tests/BGCS.Runtime.Tests/LibraryLoaderFlowTests.cs",
+      "methods": [
+        {
+          "baselineMethod": "LoadLibrary_WithNameAndLoadInterceptors_ShouldUseInterceptedNameAndReturnPointer",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#NameResolutionAndCustomProvidersBelongToEachSession",
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#BorrowingAndAdoptingLoadedHandlesHaveIndependentProviderLifetimes"
+          ]
+        },
+        {
+          "baselineMethod": "LoadFrom_ShouldResolveRegisteredLibraryName",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#NameResolutionAndCustomProvidersBelongToEachSession",
+            "tests/BGCS.Tests/NativeDynamicModuleProviderTests.cs#AdoptedHandlesActuallyUnloadWhileBorrowedHandlesStayWithTheirOwnerAndLookupCloseIsSerialized"
+          ]
+        },
+        {
+          "baselineMethod": "LoadLibraryEx_WithNativeContextInterceptor_ShouldReturnInjectedContext",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#NameResolutionAndCustomProvidersBelongToEachSession",
+            "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs#RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns"
+          ]
+        },
+        {
+          "baselineMethod": "IsPathFullyQualified_ShouldMatchRuntimePlatformConventions",
+          "coverage": [
+            "System.IO.Path.IsPathFullyQualified"
+          ],
+          "policy": "Use the .NET 10 BCL operation directly; no BGCS path convention wrapper is retained."
+        },
+        {
+          "baselineMethod": "GetExtension_ShouldReturnExpectedExtensionForCurrentPlatform",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#DynamicProviderResolvesActualSystemSymbolsWithTheSelectedAssemblyScope"
+          ],
+          "policy": "Platform native loading uses the BCL loader and explicit provider name resolution. Asset filenames belong to target/packaging descriptors."
+        }
+      ]
+    },
+    {
+      "baselineFile": "tests/BGCS.Runtime.Tests/FunctionTableTests.cs",
+      "methods": [
+        {
+          "baselineMethod": "Constructor_WithNativeContext_ShouldSetLength",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ExternalFunctionTableTests.cs#InvalidTable_DoesNotTakeLifetimeOwnership"
+          ]
+        },
+        {
+          "baselineMethod": "Load_ShouldQueryContextForEachExport",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#InProgressSymbolResolutionRetainsTheProviderAcrossConcurrentSessionClosure"
+          ]
+        },
+        {
+          "baselineMethod": "Resize_ShouldUpdateLength",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#RevisedExternalSymbolSetsAreFrozenBeforeExposureAndDoNotMutateExistingCalls"
+          ],
+          "policy": "Rebuild and validate a complete immutable symbol set; never expose partially initialized resized callable storage."
+        },
+        {
+          "baselineMethod": "Free_ShouldDisposeNativeContext",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ExternalFunctionTableTests.cs#CopiedTable_RetainsExternalModuleUntilFinalCallLeaseReleases"
+          ]
+        },
+        {
+          "baselineMethod": "BorrowedTable_DisposePreservesCallerStorageAndRejectsResize",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ExternalFunctionTableTests.cs#CopiedTable_RetainsExternalModuleUntilFinalCallLeaseReleases",
+            "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs#RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns"
+          ]
+        },
+        {
+          "baselineMethod": "OwnedTable_ResizeRetainsEntriesClearsNewSlotsAndDisposesOnce",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleProviderParityTests.cs#RevisedExternalSymbolSetsAreFrozenBeforeExposureAndDoNotMutateExistingCalls",
+            "tests/BGCS.Runtime.Tests/ExternalFunctionTableTests.cs#InvalidTable_DoesNotTakeLifetimeOwnership"
+          ],
+          "policy": "New required slots must all be nonzero before publication; caller-owned reserved slots are handled by the explicit native layout adapter."
+        },
+        {
+          "baselineMethod": "BorrowedContext_DisposeDoesNotReleaseTheExternalOwner",
+          "coverage": [
+            "tests/BGCS.Tests/NativeDynamicModuleProviderTests.cs#AdoptedHandlesActuallyUnloadWhileBorrowedHandlesStayWithTheirOwnerAndLookupCloseIsSerialized"
+          ]
+        },
+        {
+          "baselineMethod": "RequiredExport_MissingSymbolRejectsTheCandidate",
+          "coverage": [
+            "tests/BGCS.Runtime.Tests/ModuleLeaseTests.cs#MissingRequiredExport_DoesNotExposePartialTable",
+            "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs#RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns"
+          ]
+        }
+      ]
+    }
+  ],
+  "pending": [
+    "Installed Runtime-only package and Runtime source consumers must be verified from the final product revision.",
+    "Same-revision platform and release gates remain independently required."
+  ],
+  "receipts": [
+    {
+      "trx": "C:\\Dev\\GameEngineDev\\BindGen-CS\\artifacts\\implementation\\test-results\\runtime-provider-retirement-210.trx",
+      "sha256": "96cde251b6905735bb8505af67b76994e748d2bc77efe3da3b219b903c5070c7",
+      "match": "ModuleProviderParityTests",
+      "passed": 11,
+      "notExecuted": 0,
+      "results": [
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.MissingDynamicModuleFailsBeforeAProviderIsExposed",
+          "outcome": "Passed",
+          "executionId": "9727c5a0-26db-4ded-a929-dcb5f481c466"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.EmptyNativeHandlesNeverTransferOwnership",
+          "outcome": "Passed",
+          "executionId": "6ae0d7f8-3c0e-48c0-a3bc-878edec0e1e7"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.DynamicProviderResolvesActualSystemSymbolsWithTheSelectedAssemblyScope",
+          "outcome": "Passed",
+          "executionId": "9ac2fdc8-a207-4f85-845f-56c533a860d0"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.InProgressSymbolResolutionRetainsTheProviderAcrossConcurrentSessionClosure",
+          "outcome": "Passed",
+          "executionId": "b38cda51-0cd3-4c19-bc8c-6289d8423a7a"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.EmptyNativeHandlesNeverTransferOwnership",
+          "outcome": "Passed",
+          "executionId": "2be8b7ba-aff3-41aa-87bc-418f115b0bda"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.RevisedExternalSymbolSetsAreFrozenBeforeExposureAndDoNotMutateExistingCalls",
+          "outcome": "Passed",
+          "executionId": "5d874e04-8cce-47d9-a595-8e7264de3398"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.DynamicProviderResolvesActualSystemSymbolsWithTheSelectedAssemblyScope",
+          "outcome": "Passed",
+          "executionId": "7aca7132-efb7-408a-8afb-9845cd273f0b"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.NameResolutionAndCustomProvidersBelongToEachSession",
+          "outcome": "Passed",
+          "executionId": "af73a599-b5a9-442f-a6da-1c6f469f98ee"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.BorrowingAndAdoptingLoadedHandlesHaveIndependentProviderLifetimes",
+          "outcome": "Passed",
+          "executionId": "922be125-2b59-4840-b386-020f036957f2"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.BorrowingAndAdoptingLoadedHandlesHaveIndependentProviderLifetimes",
+          "outcome": "Passed",
+          "executionId": "0eff0ee7-e816-4146-980b-89359970f6d1"
+        },
+        {
+          "name": "BGCS.Runtime.Tests.ModuleProviderParityTests.EmptySymbolSourcesCloseIdempotentlyWithoutInventingExtensionDiscovery",
+          "outcome": "Passed",
+          "executionId": "7695443f-bbe4-46e5-a74a-7f2ebe26b9f8"
+        }
+      ]
+    },
+    {
+      "trx": "C:\\Dev\\GameEngineDev\\BindGen-CS\\artifacts\\implementation\\test-results\\host-native-dynamic-provider-retirement-one.trx",
+      "sha256": "61f56dbd4aa191f689830c025667c850f0dd440e2f93cd0b6447d309cf25fd07",
+      "match": "NativeDynamicModuleProviderTests",
+      "passed": 1,
+      "notExecuted": 0,
+      "results": [
+        {
+          "name": "BGCS.Tests.NativeDynamicModuleProviderTests.AdoptedHandlesActuallyUnloadWhileBorrowedHandlesStayWithTheirOwnerAndLookupCloseIsSerialized",
+          "outcome": "Passed",
+          "executionId": "107aad82-5f9b-44de-acaf-37d123af4b4e"
+        }
+      ]
+    }
+  ],
+  "retiredFileSha256": {
+    "src/BGCS.Runtime/Interop/NativeLibrary.cs": "0a2d767a7c7208038501ded6d9eeb8e53192a67a10e30ba77844ba4355289b48",
+    "src/BGCS.Runtime/Interop/NativeLibraryContext.cs": "ebcdeed511dbdc8113efcc7e36bede7367c7a01c20a8582f8104caa305648728",
+    "src/BGCS.Runtime/Interop/LibraryLoader.cs": "b31294efdc2d2406ab48838cdfa7cc7c4f3b27e93f516a548c2689e1111b4834",
+    "src/BGCS.Runtime/Interop/INativeContext.cs": "ac4389ef00aec9a84e535b7c7d9c5483026934a96f4467174fe83e3aebbc726b",
+    "src/BGCS.Runtime/Interop/FunctionTable.cs": "2ca617af4d5033d653bc7855cd75dfc333842ff980e07c01df4e7dd3efa88c47",
+    "tests/BGCS.Runtime.Tests/NativeLibraryTests.cs": "45ab5a512010b09a2f9eb014f3f51491f931a2994940a2b5795c2fd1387bff90",
+    "tests/BGCS.Runtime.Tests/NativeLibraryContextTests.cs": "6c3e8d776183ef297868c585b5ca62e55fac74207e955e23079e9a31e4b2faf2",
+    "tests/BGCS.Runtime.Tests/LibraryLoaderFlowTests.cs": "0ab6527c632a9fa88a10ebb7d8174e2a85c58e002ebd68621e132ea86a726d68",
+    "tests/BGCS.Runtime.Tests/FunctionTableTests.cs": "4f0168f60c3a020bfc3b3041461f007a8491a16f2a1285de39de6781198b9d54"
+  },
+  "retirementSourceAudit": {
+    "checkedAtUtc": "2026-10-15T19:00:20.2046749Z",
+    "scope": "Exact legacy-type constructor and named-type source reference scan across src/integrations/tests/examples after primary Host retirement. Full semantic build still required.",
+    "productionAndTestFiles": 9,
+    "compiledAfterRetirement": true,
+    "compiledCheckpoint": "production79372/test8076"
+  },
+  "retirementSourceRemoved": true,
+  "fullRuntimeReceipt": {
+    "path": "artifacts/implementation/test-results/runtime-provider-retirement-210.trx",
+    "sha256": "96cde251b6905735bb8505af67b76994e748d2bc77efe3da3b219b903c5070c7",
+    "passed": 210,
+    "notExecuted": 0
+  },
+  "runtimeAssemblySha256": "b18e813228b9604fb6d6061af01b1392ccd3dc8154827229a5a7cf7b03eb2388",
+  "updatedAtUtc": "2026-10-15T19:23:10.853341+00:00"
+}

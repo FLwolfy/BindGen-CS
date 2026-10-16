@@ -1,0 +1,26 @@
+{
+  "legacyFixture": "entryTests/Usings",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/usings": []
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [],
+  "notContains": [
+    "using global::System.Text;"
+  ]
+}

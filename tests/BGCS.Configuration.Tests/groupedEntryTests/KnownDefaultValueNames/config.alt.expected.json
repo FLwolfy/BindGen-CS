@@ -1,0 +1,52 @@
+{
+  "legacyFixture": "entryTests/KnownDefaultValueNames",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/functions": [
+      {
+        "function": "set_mode",
+        "defaults": [
+          {
+            "parameter": "mode",
+            "value": {
+              "kind": "integer",
+              "value": "42"
+            }
+          }
+        ],
+        "inputVariations": [],
+        "name": null,
+        "documentation": null,
+        "parameters": [],
+        "returns": null
+      }
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SetMode",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "mode"
+      ],
+      "returns": "int"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SetMode",
+      "parameters": [],
+      "parameterNames": [],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "=> this.SetMode((int)(42));",
+    "EntryPoint = \"set_mode\""
+  ],
+  "notContains": [
+    "=> this.SetMode((int)(7));"
+  ]
+}

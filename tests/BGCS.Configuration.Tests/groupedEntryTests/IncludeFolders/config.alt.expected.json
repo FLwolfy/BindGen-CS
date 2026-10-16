@@ -1,0 +1,11 @@
+{
+  "legacyFixture": "entryTests/IncludeFolders",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/source/includeDirectories": []
+  },
+  "success": false,
+  "diagnosticsContain": [
+    "deps.h"
+  ]
+}

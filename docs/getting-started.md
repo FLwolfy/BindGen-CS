@@ -2,207 +2,320 @@
 
 [Wiki](README.md) | [中文](getting-started.cn.md)
 
-## Requirements
+## Requirements and platform evidence
 
-- Windows, Linux, or macOS on a supported x86/x64/Arm/Arm64 target.
-- .NET SDK 10.0 and the .NET 9 runtime. The assemblies target `net9.0`; the SDK 10 is required because the `bindgen-cs` tool is published as RID-specific tool packages.
-- LibClang is restored through BGCS packages.
-- A C/C++ compiler driver is required for system-header discovery and generated C bridges. BindGen-CS discovers Clang/GNU drivers, the Windows LLVM installation, and the active macOS SDK; `BGCS_CC`, `BGCS_CPP2C_CXX`, `CC`, and `CXX` provide explicit overrides.
+Use the .NET 10 SDK. The generator, Runtime, tool and default consumers target
+`net10.0`; C# 14 is the source baseline. The full SDK and tool deploy a matched
+Clang worker and its native parser assets. Parsing runs in that separate process.
+The system SDK, C/C++ headers and native compiler for your target remain necessary;
+BGCS does not download them implicitly.
 
-Choose the workflow before starting: use `bindgen.json` for a C ABI and `bridge.json` for C++ classes/templates. Do not generate direct P/Invoke declarations for C++ symbols without C linkage.
+The parser assets follow the **generator host**, while headers, sysroot, layout and
+native build follow the **requested target**. For example, Windows x64 can use its
+Windows worker to parse an Android ARM64 target with the Android NDK. Clang parsing
+can precede an MSVC or GNU native build when their target and SDK facts agree.
+Selecting MSVC additionally requires its installed compiler for the initial native
+source view, including when native building is disabled. `doctor` describes the
+`/Zc:preprocessor`, `/PD` and `/C` prerequisites; generation verifies them with
+actual preprocessing. See [native build](native-build.md).
 
-## Run the tool
+Platform resolution, generation, linking and actual invocation are separate evidence
+stages. Consult the [capability matrix](capabilities.md) and its current receipts before
+claiming a feature is certified. A project that resolves a target has not thereby
+proved all of its ABI, runtime or import combinations.
 
-The repository's copy-paste quick start in [README](../README.md#getting-started) uses `dotnet run --project src/BGCS.Tool --` and the checked-in `examples/QuickStart/native.h`. This works before the first public tool release. In the commands below, replace `bindgen-cs` with that source command when running from the repository root.
+## Install or run from the repository
 
-Once the `BindGen-CS` tool package is publicly released, install it with:
+After the 3.0.0 release is published:
 
 ```bash
-dotnet tool install --global BindGen-CS
+dotnet tool install --global BindGen-CS --version 3.0.0
 bindgen-cs --help
 ```
 
-After publication, use `dotnet tool update --global BindGen-CS` to upgrade a global installation. A repository-local pinned tool can use a standard .NET tool manifest.
-
-## Generate a C binding
-
-In a directory containing `native.h`, run:
+Use `dotnet tool update --global BindGen-CS` for a later release, or a repository-local
+.NET tool manifest to pin a tool version. Until publication, run the checked-out tool:
 
 ```bash
-bindgen-cs init native.h
-bindgen-cs doctor
+dotnet run --project src/BGCS.Tool -- version
+```
+
+Replace `bindgen-cs` below with that source command, keeping `--` before tool arguments.
+Only four product packages need to be understood: the complete `BGCS` SDK,
+`BGCS.Contracts` for neutral plugins, `BGCS.Runtime` for consumers and the
+`BindGen-CS` tool. Internal implementation assemblies are delivered by the full SDK
+or tool. RID tool shards and parser runtime packages are distribution details; see
+[packages](packages.md).
+
+## Create a C configuration
+
+In a directory containing the public header:
+
+```bash
+bindgen-cs init native.h --language c
+bindgen-cs doctor bindgen.json
 bindgen-cs validate bindgen.json
-bindgen-cs inspect bindgen.json
+bindgen-cs inspect bindgen.json --json
+bindgen-cs generate bindgen.json
+bindgen-cs diff bindgen.json
+```
+
+Both C and C++ use `bindgen.json`. The grouped versioned format starts with:
+
+```json
+{
+  "schemaVersion": 1,
+  "library": { "id": "example", "nativeName": "example" },
+  "source": { "language": "c", "languageStandard": "c17", "headers": ["native.h"] },
+  "api": { "namespace": "Example.Bindings", "name": "NativeApi" },
+  "output": { "root": "Generated", "layout": "split" }
+}
+```
+
+Defaults select the host target, instance API, FunctionTable imports and package
+Runtime. `init` also writes the actual schema and a `$schema` link. Ambiguous `.h`
+files accept `--language c` or `--language cpp`. To place the configuration elsewhere:
+
+```bash
+bindgen-cs init include/native.h --language c --config bindings/bindgen.json
+```
+
+Each configuration's relative paths are resolved from its own directory. A CLI
+`--output` override is resolved from the invocation directory. Local `extends` inputs
+retain their own path origins; ordinary lists replace inherited lists. Unknown
+fields and old flat configurations are rejected. Create a new configuration with
+`init`; 3.0 contains no legacy reader or migration wrapper.
+
+## Output and native builds
+
+`generate` parses, analyses and emits a complete candidate artifact set. It validates
+models, safety, generated syntax and actual import contracts before publication.
+For C++ it also generates and reparses the C ABI bridge. Native compilation requires
+an explicit build request and declared native inputs:
+
+```json
+{
+  "nativeBuild": {
+    "mode": "sources",
+    "provider": "auto",
+    "sources": ["src/native.c"]
+  }
+}
+```
+
+Add that group to the configuration, then run:
+
+```bash
+bindgen-cs build bindgen.json
+```
+
+`build` validates managed source with warnings treated as errors and runs the
+configured native build or prebuilt verification. `nativeBuild.mode = none` explicitly
+skips native construction. Compilation, export verification and invocation are recorded
+separately; inspect the report to see which validations ran. Failed candidate validation
+does not replace the previously published complete output.
+
+A host-target output has this shape; the target ID is resolved to a concrete ABI:
+
+```text
+Generated/
+├─ .bgcs-artifacts.json    # complete owned artifact paths and digests
+├─ generation.report.json
+└─ windows-x64-msvc/
+   ├─ managed/
+   │  ├─ Imports/
+   │  ├─ Api/
+   │  └─ Types/
+   ├─ native/
+   │  ├─ include/          # C++ bridge, when needed
+   │  ├─ src/              # C++ bridge, when needed
+   │  └─ bin/              # when native build succeeded
+   └─ metadata/
+      ├─ abi.manifest.json
+      └─ verification.json
+```
+
+Use the exact generated files recorded in the root `.bgcs-artifacts.json` ownership
+manifest; `abi.manifest.json` describes ABI/projection metadata. Select one target
+for a consumer rather than compiling sources for several incompatible targets together.
+`diff` compares without replacing formal output: exit 0 means equal, 1 means a change,
+and 2 means an invalid request or a failed comparison, including corrupted owned output.
+
+## Consume the generated bindings
+
+```xml
+<PropertyGroup>
+  <TargetFramework>net10.0</TargetFramework>
+  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+</PropertyGroup>
+<ItemGroup>
+  <PackageReference Include="BGCS.Runtime" Version="3.0.0" />
+</ItemGroup>
+```
+
+Compile the chosen target's managed sources and deploy its native library. For the
+[QuickStart](../examples/QuickStart/README.md) configuration:
+
+```csharp
+using QuickStart.Generated;
+
+using NativeApi api = NativeApi.Load("/absolute/path/to/quickstart/native/library");
+int answer = api.Raw.Add(19, 23);
+```
+
+`Raw` exposes the checked native ABI. Friendly wrappers appear when their string,
+buffer and lifecycle semantics are sufficiently declared. API instances own independent
+module sessions; live calls and resources retain leases until cleanup finishes.
+FunctionTable resolves every required symbol before it installs a callable context.
+
+`Load()` uses the generated context's assembly for native RID probing. A custom
+module provider can be supplied to `FromProvider(...)`. With DllImport or LibraryImport,
+use the generated `Create()` factory; those imports use the runtime's shared loader.
+Do not assume changing the import mode proves an unsupported by-value ABI.
+
+For standalone source delivery, choose:
+
+```json
+{
+  "runtime": { "mode": "source" },
+  "output": { "layout": "singleFile", "singleFileName": "Bindings.cs" }
+}
+```
+
+This emits the selected Runtime closure under an API-local namespace and can compose
+it into `managed/Bindings.cs`. That consumer needs no Runtime package. Use the package
+or the emitted source for a given binding, avoiding duplicate implementations.
+
+## Umbrella headers and parser options
+
+An umbrella such as SDL3's `SDL.h` uses grouped source inputs:
+
+```json
+{
+  "source": {
+    "language": "c",
+    "headers": ["include/SDL3/SDL.h"],
+    "includeDirectories": ["include"],
+    "includeTransitivelyReferencedHeaders": true,
+    "includeSystemDeclarations": false
+  }
+}
+```
+
+`includeDirectories` is an ordered header search input. Keep output and cache roots
+outside explicit include/source roots. An entry header can sit next to its configuration
+without declaring `.` as an include directory. Use `parseMacros` and `parseComments`
+to choose whether those facts are retained. System SDK headers are distinct from the
+worker's bundled Clang builtin headers.
+
+## C++ and advanced native construction
+
+```bash
+bindgen-cs init include/widget.hpp --language cpp
 bindgen-cs generate bindgen.json
 bindgen-cs build bindgen.json
 ```
 
-Output is written to `Generated/Bindings.cs`. A successful run produces:
+C++ defaults to `c++23`. Classes, methods and selected templates pass through typed
+lowering into a C ABI; raw mangled member symbols are not directly imported as C.
+Configure `cpp.typeLowerings`, `cpp.callableLowerings`, `cpp.templateInstantiations`,
+`cpp.nativeShims` or neutral plugins when your source needs explicit representation.
+A native shim can retain a project-specific C ABI while using the same worker, build
+and publication stages. Ownership assertions remain assertions, not verified evidence.
 
-```text
-project/
-├─ native.h
-├─ bindgen.json
-└─ Generated/
-   └─ Bindings.cs
-```
-
-`bindgen-cs build` compiles the generated source with warnings treated as errors, but does not build the upstream native library. `bindgen-cs diff` verifies that checked-in bindings are current without replacing them. Add the Runtime package to the consuming project:
+The native-only bridge entry and standalone manifest build are also available:
 
 ```bash
-dotnet add package BGCS.Runtime
+bindgen-cs bridge bindgen.json
+bindgen-cs native-build Generated/<target>/native/metadata/bridge.manifest.json --dry-run --json
+bindgen-cs native-build Generated/<target>/native/metadata/bridge.manifest.json
 ```
 
-If `generateRuntimeSource` is enabled, compile the generated `Runtime.cs` instead and do not reference duplicate Runtime types.
+Providers are `auto`, `clang`, `gnu`, `msvc`, `clang-cl`, `cmake`, `meson` and `msbuild`.
+Override the compiler or build-system executable with `--compiler`, `--build-tool`
+and `--auxiliary-tool`. `--output` selects the final native file;
+`--package-root` selects a separate verified native asset layout. These overrides
+resolve from the invocation directory. Manifest-contained paths retain their declared
+manifest/artifact base. Compiler execution uses argument lists and no command shell.
+Dry-run reports both the requested final native artifact and the private execution plan.
 
-Set `<DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>` in the consumer project's `PropertyGroup`.
-Generated wrappers already own ABI conversion; .NET should call the declared carriers directly rather than apply default marshalling again.
-This applies across targets. Validate enum widths, handles and callbacks with actual native calls, not only compilation or `sizeof` checks.
+A successful native build must verify required exports unless deliberately disabled
+for an exploratory request. Disabling a check does not satisfy a release gate. musl,
+GNU, static Wasm, Android and Apple native reference layouts remain target-specific;
+consult capability evidence rather than inferring a layout from a short RID.
 
-`init` writes portable paths relative to the generated configuration. For an ambiguous `.h`, select the workflow explicitly; use `--config` to place the configuration in another directory:
-
-```bash
-bindgen-cs init include/native.h --language c --config bindings/bindgen.json
-bindgen-cs init include/library.h --language cpp --config bindings/bridge.json
-```
-
-## Use an umbrella header
-
-For headers such as SDL3's `SDL.h`, use:
-
-```json
-{
-  "entryFiles": [
-    "include/SDL3/SDL.h"
-  ],
-  "includeFolders": [
-    "include"
-  ],
-  "allowedHeaders": [],
-  "includeTransitivelyReferencedHeaders": true
-}
-```
-
-Only declarations under entry-file directories and configured include folders are included. Compiler system headers remain excluded unless `parseSystemIncludes` is enabled.
-
-## Select C or C++ parsing
-
-```json
-{
-  "parserKind": "C"
-}
-```
-
-Use `C` for C libraries and `Cpp` for C++ declarations or C headers requiring C++ extensions. C++ symbols without C linkage normally require `BGCS.Cpp2C`; direct P/Invoke cannot call mangled C++ member functions.
-
-## Embedded facade
+## Embedded SDK, plugins and MSBuild
 
 ```csharp
-using BGCS.Configuration;
-using BGCS.Facade;
+using System;
+using System.Threading;
+using BGCS;
 
-CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
-generator.LogToConsole();
-if (!generator.GenerateConfigured())
-    throw new InvalidOperationException("Binding generation failed.");
+await using BindingHost host = BindingHost.CreateDefault();
+GenerationResult result = await host.GenerateAsync(
+    GenerationRequest.FromFile("bindgen.json"), CancellationToken.None);
+if (!result.success)
+    throw new InvalidOperationException(result.GetDiagnosticSummary());
 ```
 
-The last run exposes `LastResult.Module`, a shared IR used for inspection and future emitters.
+For managed/native candidate builds use `host.BuildAsync(BuildRequest.FromFile(...), ct)`.
+`InspectAsync`, `BridgeAsync`, `DiffAsync` and workspace methods use the same Host.
+A session freezes configuration and extension registrations before parsing begins.
+Ordinary plugins reference `BGCS.Contracts` and operate on detached facts, not Clang AST.
+Their manifest locks the executable asset closure; artifact-affecting state and external
+inputs must be fingerprinted for cache reuse.
 
-## C++ bridge
+[MSBuild integration](msbuild.md) is delivered inside the full SDK and enabled with
+`BGCSGenerateBindings=true`. It uses a separate .NET TaskHost, generates into `obj`,
+and imports exact managed/native items from the manifest. `BGCSBuildNative` controls
+whether declared native inputs are also built. Design-time and outer builds skip
+binding generation by default. Installing the SDK alone does not turn generation on.
 
-Create the recommended configuration from a header:
-
-```bash
-bindgen-cs init include/library.hpp
-```
-
-`.hpp`, `.hh`, and `.hxx` inputs create `bridge.json`. Its core structure is equivalent to the following example.
-
-Create `bridge.json`:
+## Workspaces and customization
 
 ```json
 {
-  "entryFiles": [
-    "include/library.hpp"
-  ],
-  "allowedHeaders": [
-    "include/library.hpp"
-  ],
-  "outputPath": "GeneratedBridge",
-  "languageStandard": "c++23",
-  "generateBuildManifest": true
+  "schemaVersion": 1,
+  "parallelism": 2,
+  "projects": [
+    { "id": "core", "configuration": "core/bindgen.json", "dependencies": [] },
+    { "id": "extension", "configuration": "extension/bindgen.json", "dependencies": ["core"] }
+  ]
 }
 ```
 
-Generate through the unified tool:
-
 ```bash
-bindgen-cs bridge bridge.json
-bindgen-cs native-build GeneratedBridge/bridge.manifest.json
+bindgen-cs workspace validate workspace.json
+bindgen-cs workspace generate workspace.json
+bindgen-cs workspace build workspace.json
+bindgen-cs workspace diff workspace.json
 ```
 
-Set `generateCSharpBindings=true` plus `cSharpNamespace`, `cSharpApiName`, `nativeLibraryName`, and `cSharpOutputPath` to emit both the native C bridge and C# bindings in this single command. The optional C# output defaults to `cSharpStrictSafetySeverity=SuppressFriendly`: unresolved ownership or lifetime keeps raw ABI but suppresses inferred friendly methods. A project that has independently audited those contracts can explicitly choose `Warning`; `Error` rejects generation until they are configured.
+Workspace project paths are relative to the workspace, while each binding retains its
+own input base. Cycles, overlapping outputs and protected input collisions fail before
+execution. A failed prerequisite blocks its dependants; independent projects can finish.
 
-Embedded API:
-
-```csharp
-using BGCS.Cpp2C.Configuration;
-using BGCS.Cpp2C.Facade;
-
-Cpp2CGeneratorConfig config = Cpp2CGeneratorConfig.Load("bridge.json");
-Cpp2CCodeGenerator generator = new(config);
-generator.Generate("include/library.hpp", "GeneratedBridge");
-```
-
-Compile generated `src/Classes.cpp` as a DLL with the generated `include` directory and original include directories. Then run BGCS against the generated C headers. Automatic native linking remains dependent on the original library build and is a separate acceptance gate.
-
-The generated `bridge.manifest.json` is the deterministic handoff to native build automation. Paths are relative to the manifest when possible; it records the target, C++ standard, generated/original files, include directories, definitions, compiler/linker arguments, search directories, and libraries. `languageStandard` defaults to `c++23`; an existing `-std=` entry in `additionalArguments` remains an explicit compatibility override.
-
-Inspect without executing, override the compiler, or select an explicit artifact path:
-
-```bash
-bindgen-cs native-build GeneratedBridge/bridge.manifest.json --dry-run --json
-bindgen-cs native-build GeneratedBridge/bridge.manifest.json --compiler clang++ --output artifacts/libnative.dylib
-bindgen-cs native-build GeneratedBridge/bridge.manifest.json --package-root artifacts/native-package
-```
-
-`native-build` never invokes a command shell. Select `auto`, direct Clang/GNU, clang-cl, CMake, Meson, or MSBuild; every provider consumes the same manifest library search paths, link libraries, linker arguments, target triple, and sysroot where the backend supports them. Successful builds verify generated declarations against the binary export table by default.
-
-`--output` and `--package-root` resolve relative to the command's working directory; file paths *inside* `bridge.manifest.json` resolve relative to the manifest. `--package-root` stages a binary only after its filename, format, and CPU architecture match the target, under `runtimes/<rid>/native/`. Windows, Linux, and macOS x64/arm64 currently map to NuGet RIDs. Android, iOS, and FreeBSD remain formal targets without accepted package layouts; the helper diagnoses them explicitly. After packing, generate release evidence with `bindgen-cs supply-chain artifacts/nuget --output artifacts/supply-chain --revision <commit> --timestamp <source-date>`.
-
-Do not assume arbitrary template/STL types can be lowered automatically. See [Capabilities](capabilities.md) for explicit instances and built-in lowerings, the [final lowering architecture](lowering.md) for project extensions, and [Diagnostics](diagnostics.md) for rejection guidance.
-
-For complete recipe, plugin, native-shim, ownership, callback, and async examples, continue with the [C++ extension cookbook](cpp-extension-cookbook.md).
-
-## Multi-project workspaces
-
-When a repository owns several native libraries, use a workspace to make configuration entry points and generation order explicit:
-
-```bash
-bindgen-cs workspace validate native/bindings/workspace.json
-bindgen-cs workspace generate native/bindings/workspace.json
-bindgen-cs workspace diff native/bindings/workspace.json
-```
-
-CI normally runs `workspace diff` to prove that configuration and checked-in bindings agree.
-
-## Do not edit generated files
-
-Place custom behavior in:
-
-- naming/type/function mappings;
-- presets and policies;
-- pre/post patches stored outside the output directory;
-- handwritten partial types in a separate source directory.
-
-The output transaction replaces the complete generated directory after success, so direct edits are intentionally not preserved.
+Keep handwritten partial types and plugin/recipe inputs outside owned output roots.
+The publisher replaces a complete manifest-owned set and removes stale generated files.
+Do not modify generated files to make a test pass. Naming belongs in `api.names`,
+semantics in explicit contracts, and custom transforms in their neutral extension ports.
 
 ## Troubleshooting
 
-- **No declarations generated:** inspect `allowedHeaders` and enable transitive user headers for umbrella headers.
-- **Parsing takes too long:** disable macros/comments when not required and report the header as a performance regression; the real-library budgets are mandatory.
-- **Unknown type:** add a `typeMappings` entry or generate a C++ bridge specialization. Never map a non-trivial C++ value type directly to a blittable C# struct.
-- **Duplicate Runtime types:** reference `BGCS.Runtime` or compile generated `Runtime.cs`, not both without `BGCS_RUNTIME_EXTERNAL`.
-- **Native compiler missing:** set `BGCS_CC` and `BGCS_CPP2C_CXX` (or `CC`/`CXX`) to the appropriate compiler drivers.
-- **Need every configuration property:** run `bindgen-cs schema bindgen.schema.json`; `docs/config.md` lists only properties with dedicated entry regression tests.
+- **Missing parser or compiler:** run `doctor bindgen.json`; fix the explicit worker,
+  target SDK or compiler input. BGCS does not silently download a replacement.
+- **No useful declarations:** inspect the retained source model, language, header search
+  order and transitive/system selection.
+- **Unsupported by-value type:** preserve a pointer/raw byte representation or declare a
+  native shim. Equal type sizes do not prove calling-convention compatibility.
+- **Missing friendly wrapper:** declare the actual encoding, bounds, retention, allocator
+  and release protocol. A name such as `Create` does not prove ownership.
+- **Configuration rejected:** run `schema bindgen.schema.json` and create current grouped
+  inputs; plugin settings belong to their plugin namespace.
+- **Unexpected cache miss:** inspect the input and extension report. An extension without
+  complete fingerprints disables affected generation caching rather than returning stale files.
+- **Output rejected:** use a distinct BGCS-owned output root; source, include and cache
+  collisions and unowned nonempty directories are not overwritten.
+
+Release evidence and package installation checks are described in [testing](testing.md)
+and [packages](packages.md). They must come from the actual release revision.

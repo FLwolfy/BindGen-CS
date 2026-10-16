@@ -1,0 +1,32 @@
+{
+  "legacyFixture": "entryTests/LibName",
+  "legacyVariant": "config",
+  "configuration": {
+    "/library/nativeName": "entry-lib-x"
+  },
+  "constants": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "NativeLibraryName",
+      "value": "entry-lib-x"
+    }
+  ],
+  "contains": [
+    "\"entry-lib-x\""
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ]
+}

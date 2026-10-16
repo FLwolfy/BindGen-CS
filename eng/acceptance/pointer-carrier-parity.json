@@ -1,0 +1,48 @@
+{
+  "featureId": "managed.explicit-pointer-addresses",
+  "releaseCertification": false,
+  "sourceRevision": "dirty-worktree; native checkpoint 15164; documentation checkpoint 57238",
+  "scope": "Explicit non-owning address presentation; native imports and ownership evidence are unchanged.",
+  "legacyReferences": [
+    "BindingIntermediateRepresentationTests.Generate_OpaqueRecordsAndPointerFriendlyTransforms_ShouldUseFinalHandleSurface",
+    "GeneratedCodeCompilationMatrixTests.C_Handle_Properties_With_Aliases_And_Nested_Array",
+    "GeneratedCodeCompilationMatrixTests.C_Handle_Properties_Wrap_Later_Declared_Pointers",
+    "GeneratedCodeCompilationMatrixTests.C_Opaque_Pointer_Typedef_Does_Not_Emit_Underlying_Handle",
+    "GeneratedCodeCompilationMatrixTests.C_Handle_Properties_With_Named_Anonymous_Unions"
+  ],
+  "implementation": [
+    "BGCS.Contracts.Managed.ManagedPointerCarrierRequest",
+    "BGCS.Contracts.Managed.ManagedPointerFunctionRequest",
+    "BGCS.Analysis.Safety.NativePointerShapeReader",
+    "BGCS.CSharp.Projection.ManagedPointerProjection",
+    "BGCS.CSharp.Planning.PointerCarrierPlanner",
+    "BGCS.CSharp.Emission.PointerCarrierEmitter",
+    "BGCS.CSharp.Emission.PointerFunctionEmitter",
+    "BGCS.CSharp.Validation.PointerCarrierContractVerifier"
+  ],
+  "evidence": [
+    { "test": "BGCS.CSharp.Tests.PointerCarrierTests", "passed": 20, "failed": 0, "skipped": 0, "receipt": "artifacts/test-results/cpp-pointer-carrier-planning-documentation-twenty.trx" },
+    { "test": "BGCS.Tests.PointerCarrierConfigurationTests", "passed": 3, "failed": 0, "skipped": 0, "receipt": "artifacts/test-results/cpp-pointer-carrier-configuration-current.trx" },
+    { "test": "BGCS.Tests.NativePointerCarrierTests", "passed": 6, "failed": 0, "skipped": 0, "receipt": "artifacts/test-results/cpp-pointer-carrier-native-six.trx", "host": "Windows x64", "managedRuntime": "CoreCLR", "importModes": ["FunctionTable", "DllImport", "LibraryImport"], "runtimeModes": ["package", "source"], "nativeBuildProvider": "auto" }
+  ],
+  "verifiedBehavior": [
+    "Opaque record and named void-pointer aliases with no invented extent or dereference",
+    "Exact pointer indirection and named pointer-alias identity",
+    "Later-declared pointer field carriers and pointer table elements passed by value without wrapper reference reinterpretation",
+    "Nested union arrays accessed through exact native offsets and fixed extents",
+    "Readonly const storage and refusal of multi-level const covariance or whole views that erase nested qualifiers",
+    "Omission of unmodeled volatile convenience views",
+    "Explicit native-address calls composing checked UTF8 input conversion",
+    "Alias and shared-static forwarding, nested types and single-file Runtime source",
+    "Whole carrier and forwarding AST tamper rejection",
+    "Inert user documentation overrides escape XML includes, tags and source declarations without removing lifetime warnings",
+    "Null/alignment checks and module call lease admission after context close"
+  ],
+  "limits": [
+    "Addresses and Dangerous views do not establish ownership, allocation extent, synchronization or native memory lifetime",
+    "Tracked owned, module-borrowed, text, callback, status and async operations cannot be replaced by address presentation",
+    "No arbitrary-size storage or calling ABI is inferred from an address carrier",
+    "Local Windows/CoreCLR evidence does not certify NativeAOT, browser Wasm, Linux, macOS or release package consumption",
+    "Same-revision release matrices and full verification receipts remain required"
+  ]
+}

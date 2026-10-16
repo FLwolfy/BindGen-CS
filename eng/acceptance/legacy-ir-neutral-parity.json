@@ -1,0 +1,1129 @@
+{
+  "schemaVersion": 1,
+  "source": "tests/BGCS.Generation.Tests/BindingIntermediateRepresentationTests.cs",
+  "sourceMethodCount": 33,
+  "scope": "All33 original IR methods have reviewed exact assertion correspondence or an explicitly recorded stricter new-major-version policy replacement. Independent dirty local receipts are not same-revision release certification.",
+  "complete": true,
+  "legacySourceRemoved": true,
+  "sourceWorktreeDirty": true,
+  "releaseCertification": false,
+  "entries": [
+    {
+      "method": "Generate_CallbackWithIncompleteRecordAlias_UsesNativePointerCarrier",
+      "status": "focusedReplacementPassed",
+      "assertions": "An incomplete pointee reached through a typedef must preserve a compilable, exact callback pointer prototype; a typed opaque marker is a valid neutral representation.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs"
+      ],
+      "replacementMethods": [
+        "CallbackThroughIncompleteRecordAliasPreservesItsExactPointerPrototype"
+      ],
+      "note": "Backend two imports passed before partial storage change; source-parser-to-backend assertion still needs consolidated proof. Focused replacement now passed at coherent definition/retention/partial-storage checkpoint; complete source-pipeline retirement remains separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-ir-exact-parity-seven-corrected.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_WindowsCallbackTypedef_EmitsCallableDelegateOverload",
+      "status": "focusedReplacementPassed",
+      "assertions": "Named callback delegates, explicit call lifetime, callable friendly overload and rooted invocation.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
+        "tests/BGCS.CSharp.Tests/CallScopedCallbackTests.cs",
+        "tests/BGCS.Tests/NativeCallScopedCallbackTests.cs"
+      ],
+      "replacementMethods": [
+        "CoreClrCallScopeReusesTheOriginalExactNamedAbiDelegate",
+        "FixedReverseAbiAndStateLifetimeRemainCheckedForEveryImport"
+      ],
+      "note": "The public Host parses a real conditional Windows dllimport/cdecl callback typedef, preserves its exact delegate/type facts and compiles all3 imports with warnings-as-errors. Earlier call-scoped native six-mode evidence independently covers actual invocation; this source-boundary receipt claims managed compilation only. Dirty Windows checkpoint, not release certification.",
+      "sourceBoundaryFile": "tests/BGCS.Tests/NativeIrSourceBoundaryTests.cs",
+      "sourceBoundaryMethod": "ConditionalImportCallbackAndUnknownTextPreserveTheirExactPublicSourceFacts",
+      "receipt": "artifacts/implementation/test-results/host-ir-source-import-unknown-text-three.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_DefaultSafety_KeepsRawAbiButSuppressesUnprovenFriendlyReturn",
+      "status": "focusedReplacementPassed",
+      "assertions": "Unknown ownership/encoding must retain correct raw pointer and omit automatic string ownership.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/OwnedProjectionTests.cs",
+        "tests/BGCS.Tests/NeutralGenerationHostTests.cs"
+      ],
+      "replacementMethods": [
+        "IncompleteOwnershipProof_OmitsAutomaticCleanupButPreservesTheRawAbi",
+        "ExplicitTextConfiguration_BuildsOnlyTheDeclaredNonretainingFriendlyInput"
+      ],
+      "note": "A real header's const char* return remains exactly available in Raw while no string or owning friendly wrapper is invented. All3 imports compile through the public Host with warnings-as-errors. No encoding, ownership or readable extent is inferred. Dirty Windows checkpoint, not release certification.",
+      "sourceBoundaryFile": "tests/BGCS.Tests/NativeIrSourceBoundaryTests.cs",
+      "sourceBoundaryMethod": "ConditionalImportCallbackAndUnknownTextPreserveTheirExactPublicSourceFacts",
+      "receipt": "artifacts/implementation/test-results/host-ir-source-import-unknown-text-three.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_DefaultSafety_DoesNotReintroduceSuppressedInstanceOrHandleMembers",
+      "status": "focusedReplacementPassed",
+      "assertions": "Member presentation cannot recreate a friendly surface whose lifetime contract was rejected.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/ExactIrRetirementSourceTests.cs",
+        "tests/BGCS.CSharp.Tests/DirectCOwnershipTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.ExactIrRetirementSourceTests.RejectedCloneReturnCannotBeReintroducedByTheSameFunctionsMemberPresentation",
+        "BGCS.CSharp.Tests.DirectCOwnershipTests.UnprovenFactoryOmitsConvenienceAndPreservesExactRawSignature",
+        "BGCS.CSharp.Tests.DirectCOwnershipTests.MemberPresentationDoesNotInventBorrowLifetime"
+      ],
+      "note": "focusedReplacementPassed after new exact public-source case; do not keep the stale borrowed-member-feature-incomplete note. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Borrowed member feature itself remains separately incomplete.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.ExactIrRetirementSourceTests.RejectedCloneReturnCannotBeReintroducedByTheSameFunctionsMemberPresentation",
+          "assertions": [
+            "Original combined Clone source and explicit same-function member request",
+            "Return ownership/string stay null; original header ownership warning remains",
+            "Member request is retained in managed model but emitted Clone occurs exactly once under RawApi with NativeThing* return/parameter",
+            "No NativeThingObject or NativeThingPtr type is invented; public BuildAsync compiles WAE"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.DirectCOwnershipTests.UnprovenFactoryOmitsConvenienceAndPreservesExactRawSignature",
+          "assertions": [
+            "Eight independent invalid factory contracts retain the raw method, omit owning factories and record one concrete omission"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.DirectCOwnershipTests.MemberPresentationDoesNotInventBorrowLifetime",
+          "assertions": [
+            "Four missing/unknown/retaining/Owner receiver contracts omit typed members even when an independent valid owned factory exists"
+          ]
+        }
+      ],
+      "policyDifference": "Typed neutral implementation preserves the reviewed behavior; no old frontend-dependent interface is retained.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/host-exact-ir-retirement-source-three.trx",
+          "sha256": "c89b7ff8667c728f937810e34062cab58dedba36b07b7153793fe882ae4670fe",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactIrRetirementSourceTests.RejectedCloneReturnCannotBeReintroducedByTheSameFunctionsMemberPresentation"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 12,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.DirectCOwnershipTests.UnprovenFactoryOmitsConvenienceAndPreservesExactRawSignature",
+            "BGCS.CSharp.Tests.DirectCOwnershipTests.MemberPresentationDoesNotInventBorrowLifetime"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/host-exact-ir-retirement-source-four-corrected.trx",
+          "sha256": "8475d1e5c91f7d6c91699bcd0ce0ea2fbce787392c18c3c33504632346a278d1",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactIrRetirementSourceTests.RejectedCloneReturnCannotBeReintroducedByTheSameFunctionsMemberPresentation"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_DefaultIrBackend_ShouldEmitRawAndFriendlyManagedSurface",
+      "status": "focusedReplacementPassed",
+      "assertions": "Renamed parameters, function containers, explicit text/buffer/value inputs and ordinary raw pointers must coexist.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/BufferValueProtocolTests.cs",
+        "tests/BGCS.CSharp.Tests/BufferProjectionTests.cs",
+        "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+        "tests/BGCS.Tests/NeutralFriendlySurfaceParityTests.cs"
+      ],
+      "replacementMethods": [
+        "ExplicitCapacityAndOutputExtentPreserveEveryNativeChannel",
+        "ExplicitScalarValuePointersCarryCheckedAddressAllocationAndDirection",
+        "RenamedContainersTextSpansDirectedValuesAndUnprovenRawPointersCoexist"
+      ],
+      "note": "Combined public Host builds and invokes all3imports: exact parameter names, context-bound containers/defaults, explicitly declared UTF8 input/result, Span/count, out result and unknown pointer. Undeclared pointer protocols remain exactly available in Raw; no inferred buffer/encoding. Package and source Runtime/single-file included. Dirty Windows checkpoint, not release certification.",
+      "receipt": "artifacts/implementation/test-results/neutral-friendly-composition-three-imports.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_OwnedStringWithoutCleanupCallable_ShouldFailClosed",
+      "status": "focusedPolicyReplacementPassed",
+      "assertions": "A named missing cleanup callable must not produce an owned string wrapper.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/ExactIrRetirementSourceTests.cs",
+        "tests/BGCS.CSharp.Tests/StringResultProjectionTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.ExactIrRetirementSourceTests.NamedMissingStringCleanupRejectsInvalidConfigurationAndPreservesTheCompletePublication",
+        "BGCS.CSharp.Tests.StringResultProjectionTests.UnprovenStringProtocolKeepsRawAbiAndOneConcreteOmission"
+      ],
+      "note": "focusedPolicyReplacementPassed using named-missing configuration rejection plus separate unproved-convenience omission. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "New policy keeps safe raw ABI and records omission; emission need not fail solely because a friendly wrapper is unavailable.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.ExactIrRetirementSourceTests.NamedMissingStringCleanupRejectsInvalidConfigurationAndPreservesTheCompletePublication",
+          "assertions": [
+            "First builds valid explicit owned UTF8 cleanup and observes emitted Utf8 decode",
+            "Changes releaseFunction to an explicitly non-null bgcs_missing_free_name",
+            "Public Generate rejects with exact missing selector and failure diagnostic; published=false; every prior owned output SHA remains identical"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.StringResultProjectionTests.UnprovenStringProtocolKeepsRawAbiAndOneConcreteOmission",
+          "assertions": [
+            "Null release ID, wrong cleanup type/domain and other unproved protocols cannot create a string/owning factory; exact raw method remains",
+            "This null-ID row alone was not equivalent to the original named-missing callable and is not used to claim that exact coverage"
+          ]
+        }
+      ],
+      "policyDifference": "Invalid explicit references are rejected during grouped semantic binding, before emission/publication. A merely incomplete optional convenience can instead preserve safe Raw plus an omission. No nonexistent callable is synthesized.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/host-exact-ir-retirement-source-three.trx",
+          "sha256": "c89b7ff8667c728f937810e34062cab58dedba36b07b7153793fe882ae4670fe",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactIrRetirementSourceTests.NamedMissingStringCleanupRejectsInvalidConfigurationAndPreservesTheCompletePublication"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 17,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.StringResultProjectionTests.UnprovenStringProtocolKeepsRawAbiAndOneConcreteOmission"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/host-exact-ir-retirement-source-four-corrected.trx",
+          "sha256": "8475d1e5c91f7d6c91699bcd0ce0ea2fbce787392c18c3c33504632346a278d1",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactIrRetirementSourceTests.NamedMissingStringCleanupRejectsInvalidConfigurationAndPreservesTheCompletePublication"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_StrictSafety_ShouldRequireAndPreserveCallbackLifetimeThreadingAndAsyncContracts",
+      "status": "focusedReplacementPassed",
+      "assertions": "Missing callback lifetime/threading must be diagnosed; retained registration and async completion preserve declared protocol.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/ExactIrRetirementSourceTests.cs",
+        "tests/BGCS.Analysis.Tests/CallbackSafetyAnalyzerTests.cs",
+        "tests/BGCS.Tests/NativeRegistrationSafetyPolicyTests.cs",
+        "tests/BGCS.CSharp.Tests/CallScopedCallbackTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.ExactIrRetirementSourceTests.MissingCallbackLifetimeAndThreadingWarnIndependentlyAndStrictPolicyPreservesRawPublication",
+        "BGCS.Analysis.Tests.CallbackSafetyAnalyzerTests",
+        "BGCS.Tests.NativeRegistrationSafetyPolicyTests.ExactRegistrationCleanupPassesStrictSafetyWhileIncompleteProtocolsPreserveThePreviousPublication",
+        "BGCS.CSharp.Tests.CallScopedCallbackTests.UnknownOrIncompatibleContractsPreserveRawAndExplainTheMissingManagedWrapper"
+      ],
+      "note": "focusedReplacementPassed including restored absent-contract lifetime/thread diagnostics and strict prior-publication preservation. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Modern retained proof additionally requires stop/quiescence; completion name alone does not prove safety.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.ExactIrRetirementSourceTests.MissingCallbackLifetimeAndThreadingWarnIndependentlyAndStrictPolicyPreservesRawPublication",
+          "assertions": [
+            "Exact absent callback contract through typedef alias/top-level qualifier emits both original stable warning codes, preserves typed Raw",
+            "warningsAsErrors rejects and preserves all prior artifact SHA; explicit Call/CallerThread/retained=false recovers WAE and keeps UserAsserted evidence"
+          ]
+        },
+        {
+          "method": "BGCS.Analysis.Tests.CallbackSafetyAnalyzerTests",
+          "assertions": [
+            "Exact aliases/qualifiers/pointer-to-Function only; void*, data pointers and pointer-to-pointer are not guessed callbacks",
+            "Lifetime/thread missing facts independently warn; known evidence remains unchanged; malformed graphs fail and exact duplicate observations do not repeat"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NativeRegistrationSafetyPolicyTests.ExactRegistrationCleanupPassesStrictSafetyWhileIncompleteProtocolsPreserveThePreviousPublication",
+          "assertions": [
+            "Retained and asynchronous AnyThread callbacks preserve explicit UserAsserted registration contracts under warningsAsErrors",
+            "Independent native active-frame/tail/live/join counts prove full post-callback native-frame cleanup",
+            "Missing join/unregister/null-failure or completion guarantees rejects and preserves every previous file"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.CallScopedCallbackTests.UnknownOrIncompatibleContractsPreserveRawAndExplainTheMissingManagedWrapper",
+          "assertions": [
+            "Unknown lifetime or thread in an existing callback contract cannot produce a checked wrapper"
+          ]
+        }
+      ],
+      "policyDifference": "A completion function name alone does not prove no-active-native-frame quiescence. New complete retained/async protocols require explicit native stop/join and null-failure cleanup; evidence is not promoted to Verified.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/host-native-registration-strict-safety-two-corrected.trx",
+          "sha256": "7a374892881c66c3e6b0d798d96e237ac37324c20cdb45a53634f21a60cc4108",
+          "matchedPassed": 2,
+          "methodPrefixes": [
+            "BGCS.Tests.NativeRegistrationSafetyPolicyTests.ExactRegistrationCleanupPassesStrictSafetyWhileIncompleteProtocolsPreserveThePreviousPublication"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 12,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.CallScopedCallbackTests.UnknownOrIncompatibleContractsPreserveRawAndExplainTheMissingManagedWrapper",
+            "BGCS.CSharp.Tests.RetainedCallbackTests.ReturnedHandleAndFullNativeFrameJoinRemainCheckedAcrossImports",
+            "BGCS.CSharp.Tests.AsyncOperationTests.TerminalSignalSchedulesFullNativeJoinBeforeMemoryPinsAndTaskCompletion"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/host-exact-ir-retirement-source-four-corrected.trx",
+          "sha256": "8475d1e5c91f7d6c91699bcd0ce0ea2fbce787392c18c3c33504632346a278d1",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactIrRetirementSourceTests.MissingCallbackLifetimeAndThreadingWarnIndependentlyAndStrictPolicyPreservesRawPublication"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/analysis-final-callback-safety-full-corrected.trx",
+          "sha256": "5fe816c678f7dc460c9c20edc35f5dfd5ce736d14f11f40aaca82bb46ee3b00b",
+          "matchedPassed": 23,
+          "methodPrefixes": [
+            "BGCS.Analysis.Tests.CallbackSafetyAnalyzerTests"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_StrictSafety_ShouldAcceptExplicitAllocatorDeallocatorPair",
+      "status": "focusedPolicyReplacementPassed",
+      "assertions": "Explicit matching native allocation/release domain is preserved and cleanup executes from that domain.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/NeutralUnifiedModelParityTests.cs",
+        "tests/BGCS.Tests/NativeStringResultTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.NeutralUnifiedModelParityTests.SharedSourceFactsSurviveCompositionAndStrictOwnershipGatesPreservePreviousPublication",
+        "BGCS.Tests.NativeStringResultTests.ExactTextCopiesUseMatchingNativeCleanupAcrossSuccessFailureAndContextClosure"
+      ],
+      "note": "focusedPolicyReplacementPassed with exact owned-string source facts and actual matching native release; generic OwnedNativeHandle-only mapping is insufficient. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Generic arbitrary allocation selection is audited independently; this row concerns an explicit native factory/deallocator pair.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.NeutralUnifiedModelParityTests.SharedSourceFactsSurviveCompositionAndStrictOwnershipGatesPreservePreviousPublication",
+          "assertions": [
+            "Same char* create/free declarations are bound to exact stable release ID and explicit allocation/release domain",
+            "Owned UTF8, zero termination and UserAsserted facts remain in final interop",
+            "The one unknown context-result ownership warning is separate; declared recovery under strict policy succeeds"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NativeStringResultTests.ExactTextCopiesUseMatchingNativeCleanupAcrossSuccessFailureAndContextClosure",
+          "assertions": [
+            "All3 imports/package+source Runtime actually copy native UTF8/16/32 text",
+            "Independent native live/release/wrong-domain counters prove exact cleanup on success, strict decode failure, extent failure and context-close race",
+            "No guessed allocator is used"
+          ]
+        }
+      ],
+      "policyDifference": "Typed owned result/release domain and exact native void(T*) cleanup replace the flat allocatorKind tag. Cleanup is an independent native ABI operation; encoding, domain and release-thread facts remain explicit.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+          "sha256": "ccae997003566a31f78bca652b93702b2ffab735c12e9b8fa4232a3cb83343b3",
+          "matchedPassed": 2,
+          "methodPrefixes": [
+            "BGCS.Tests.NeutralUnifiedModelParityTests.SharedSourceFactsSurviveCompositionAndStrictOwnershipGatesPreservePreviousPublication"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/host-direct-string-result-six.trx",
+          "sha256": "8a717cd6099c8ef148070a77c326199a35579ea36bf3c803cd1740d812361b72",
+          "matchedPassed": 6,
+          "methodPrefixes": [
+            "BGCS.Tests.NativeStringResultTests.ExactTextCopiesUseMatchingNativeCleanupAcrossSuccessFailureAndContextClosure"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "SingleFileComposer_ShouldPreserveNullableContextForGeneratedCode",
+      "status": "focusedReplacementPassed",
+      "assertions": "Composition keeps nullable enable and the property's annotated semantic type with warnings as errors.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/SingleFileScopeTests.cs"
+      ],
+      "replacementMethods": [
+        "NullableAnnotationsKeepTheirEnabledContextAfterComposition"
+      ],
+      "note": "New focused regression, latest coherent build pending. Focused replacement now passed at coherent definition/retention/partial-storage checkpoint; complete source-pipeline retirement remains separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-ir-exact-parity-seven-corrected.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "SingleFileComposer_ShouldAlignHeaderAndNestedSource",
+      "status": "focusedReplacementPassed",
+      "assertions": "Target-labelled header, namespace/type/member indentation and valid compiled output.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/SingleFileScopeTests.cs"
+      ],
+      "replacementMethods": [
+        "HeaderTargetAndNestedDeclarationsRetainDeterministicIndentation"
+      ],
+      "note": "Checks presentation only; target label is not platform invocation certification. Focused replacement now passed at coherent definition/retention/partial-storage checkpoint; complete source-pipeline retirement remains separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-ir-exact-parity-seven-corrected.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_ShouldFormatSingleAndSplitDocuments",
+      "status": "focusedReplacementPassed",
+      "assertions": "Split and single-file raw structs preserve formatting, consumer partial extension and exact storage size.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs"
+      ],
+      "replacementMethods": [
+        "SplitAndSingleFileStorageRetainFormattingAndCompileWithWarningsAsErrors"
+      ],
+      "note": "Both layouts compile a consumer partial method, invoke it and preserve carrier size; all seven focused replacements and complete539 backend suite passed at the prior coherent checkpoint.",
+      "receipt": "artifacts/implementation/test-results/neutral-ir-exact-parity-seven-corrected.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_IntermediateRepresentationBackend_ShouldEmitVoidRecordsAndAnonymousNestedTypes",
+      "status": "focusedReplacementPassed",
+      "assertions": "Void typedef use and nested anonymous struct/union fields retain valid unique carriers.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/NeutralSourceFactParityTests.cs"
+      ],
+      "replacementMethods": [
+        "SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation"
+      ],
+      "note": "Exact source void alias and callback pointer graph, distinct anonymous struct/union carriers and nested offsets compile through public Host for split/single output. Local dirty Windows checkpoint only; complete legacy retirement and cross-platform release certification remain separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_IntermediateRepresentationBackend_ShouldIgnoreInlineImplementationDetails",
+      "status": "focusedReplacementPassed",
+      "assertions": "C static inline implementation helpers are not imported as nonexistent exports unless explicitly adapted.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/NativeCHeaderHelperTests.cs",
+        "tests/BGCS.Tests/NativeCHeaderDefaultPolicyTests.cs"
+      ],
+      "replacementMethods": [
+        "DefaultNoneAndPrebuiltBindingsLoadTheOriginalModuleWithoutHeaderHelperExports"
+      ],
+      "note": "Default C helpers/aliases omitted; original external export/alias actually invoked from unchanged original module under Generate.none and Build.prebuilt for all3imports. Explicit source.includeHeaderHelpers preserves adaptation as a separate capability; no accidental global opt-in.",
+      "receipt": "artifacts/implementation/test-results/host-c-header-default-three-imports-and-config.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_IntermediateRepresentationBackend_ShouldEmitConfiguredSingleFile",
+      "status": "focusedReplacementPassed",
+      "assertions": "One configured managed filename retains records/constants and callback/Runtime closure.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/ExactIrRetirementSourceTests.cs",
+        "tests/BGCS.Tests/NeutralSourceFactParityTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.ExactIrRetirementSourceTests.ConfiguredSingleFileContainsTheExactConstantRecordAndOriginalImportAsCompiledSemantics",
+        "BGCS.Tests.NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation"
+      ],
+      "note": "focusedReplacementPassed with exact configured single-file semantic reflection addendum. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Group fixture filename mapping and exact metadata assertions require final unified receipt.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.ExactIrRetirementSourceTests.ConfiguredSingleFileContainsTheExactConstantRecordAndOriginalImportAsCompiledSemantics",
+          "assertions": [
+            "Same constant/record/import shape with declared value42 and explicit BGCS_LIMIT spelling mapping",
+            "Public WAE Build produces exactly one GeneratedBindings.cs",
+            "Final model constant has integer value42; compiled reflection literal is Int32 42",
+            "Compiled Point extent8/offsets0,4 and original DllImport EntryPoint=bgcs_add/library identity"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation",
+          "assertions": [
+            "Custom SourceFacts.cs filename/single output versus split, aliases and anonymous record/callback Runtime closure pass public Build WAE"
+          ]
+        }
+      ],
+      "policyDifference": "Typed neutral implementation preserves the reviewed behavior; no old frontend-dependent interface is retained.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+          "sha256": "ccae997003566a31f78bca652b93702b2ffab735c12e9b8fa4232a3cb83343b3",
+          "matchedPassed": 2,
+          "methodPrefixes": [
+            "BGCS.Tests.NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/host-exact-ir-retirement-source-four-corrected.trx",
+          "sha256": "8475d1e5c91f7d6c91699bcd0ce0ea2fbce787392c18c3c33504632346a278d1",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactIrRetirementSourceTests.ConfiguredSingleFileContainsTheExactConstantRecordAndOriginalImportAsCompiledSemantics"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_IntermediateRepresentationBackendUnsupportedDeclaration_ShouldPreserveLastGoodOutput",
+      "status": "focusedReplacementPassed",
+      "assertions": "Rejected generation cannot replace the previous complete owned artifact set.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/NeutralGenerationHostTests.cs",
+        "tests/BGCS.Tests/NeutralSourceFactParityTests.cs"
+      ],
+      "replacementMethods": [
+        "UnverifiedInteropSignatureChange_IsRejectedBeforePublication",
+        "BuildAsync_CompilesBeforePublicationAndKeepsThePreviousOutputOnFailure",
+        "AnUnsupportedNativeByValueTypePreservesTheCompletePreviousPublication"
+      ],
+      "note": "Actual unsupported complex by-value source declaration rejects and preserves every prior formal artifact byte. Local dirty Windows checkpoint only; complete legacy retirement and cross-platform release certification remain separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_ImportModes_ShouldBeRepresentedByIr",
+      "status": "focusedReplacementPassed;",
+      "assertions": "All three imports share identical neutral ABI and required runtime contracts.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/CallScopedCallbackTests.cs",
+        "tests/BGCS.Tests/NeutralFriendlySurfaceParityTests.cs",
+        "tests/BGCS.Tests/NativeCallScopedCallbackTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.CSharp.Tests.CallScopedCallbackTests.FixedReverseAbiAndStateLifetimeRemainCheckedForEveryImport",
+        "BGCS.Tests.NeutralFriendlySurfaceParityTests.RenamedContainersTextSpansDirectedValuesAndUnprovenRawPointersCoexist",
+        "BGCS.Tests.NativeCallScopedCallbackTests.NativeCallsRootDelegateAndStaticThunksAndObserveFallbackBeforeManagedRethrow"
+      ],
+      "note": "focusedReplacementPassed; all3 native modes preserve neutral ABI and actual invocation. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Existing six-mode native tests include all imports and both Runtime modes.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.CSharp.Tests.CallScopedCallbackTests.FixedReverseAbiAndStateLifetimeRemainCheckedForEveryImport",
+          "assertions": [
+            "Same neutral callback function/signature plans for all3 imports and both delegate/userdata routes; exact final contract rejects altered lease/fallback/root"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NeutralFriendlySurfaceParityTests.RenamedContainersTextSpansDirectedValuesAndUnprovenRawPointersCoexist",
+          "assertions": [
+            "All3 imports compile and actually invoke scalar add along with checked string/span/out channels in one source fixture"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NativeCallScopedCallbackTests.NativeCallsRootDelegateAndStaticThunksAndObserveFallbackBeforeManagedRethrow",
+          "assertions": [
+            "Real native library is called under each import and both Runtime modes; callback roots/fallback preserve reverse-call ABI"
+          ]
+        }
+      ],
+      "policyDifference": "Explicit per-session providers replace the old global custom-context flag; complete required-symbol tables are immutable and loaded before exposure.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 6,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.CallScopedCallbackTests.FixedReverseAbiAndStateLifetimeRemainCheckedForEveryImport"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/neutral-friendly-composition-three-imports.trx",
+          "sha256": "e051604f14400a7e2625644af2798467e6f17c813fbd001de9daf4ad7b3c9b1e",
+          "matchedPassed": 3,
+          "methodPrefixes": [
+            "BGCS.Tests.NeutralFriendlySurfaceParityTests.RenamedContainersTextSpansDirectedValuesAndUnprovenRawPointersCoexist"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/test-results/cpp-call-scoped-callback-native-composed.trx",
+          "sha256": "59ee76f066ed9cf8ad3cb1546c96916ca0efdc35d556eff669f66c86b1717234",
+          "matchedPassed": 6,
+          "methodPrefixes": [
+            "BGCS.Tests.NativeCallScopedCallbackTests.NativeCallsRootDelegateAndStaticThunksAndObserveFallbackBeforeManagedRethrow"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_OpaqueHandle_UsesPointerSizedNativeCarrier",
+      "status": "focusedReplacementPassed",
+      "assertions": "Native opaque pointer identity, pointer-sized raw storage and explicit friendly handle conversion.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/OpaquePointerCallContractTests.cs",
+        "tests/BGCS.Tests/NativePointerCarrierTests.cs"
+      ],
+      "replacementMethods": [
+        "OpaqueAliasesKeepNativePointerChannelsOutsideTheirAddressWrapper",
+        "ExplicitAddressesPreserveOpaqueAliasesNestedArraysConstAndNativeIndirection"
+      ],
+      "note": "Nine synthetic target/import SDK compile rows preserve pointer-size native alias facts and exact pointer channels, with explicit non-owning wrappers outside the physical ABI. Actual native six-mode pointer-carrier calls are independently green. Typed raw pointers replace old nint spelling without importing wrapper structs. Synthetic wasm32/macOS ARM64 compile is not invocation certification.",
+      "receipt": "artifacts/implementation/test-results/opaque-native-pointer-contract-nine.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_EnumCallsUseIntegralCarriersAndPreservePointerTypes",
+      "status": "focusedReplacementPassed",
+      "assertions": "64-bit signed/unsigned native enum calls and enum pointer channels retain exact widths and type identity.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/NativeEnumCallContractTests.cs"
+      ],
+      "replacementMethods": [
+        "WideNativeEnumsKeepTheirUnderlyingWidthAndExactPointerChannels"
+      ],
+      "note": "Six import/signedness rows preserve exact 64-bit enum storage, high/min values and typed enum-pointer call channels, reject altered underlying width and pass actual SDK WAE compile. Exact typed enum ABI replaces old emitter integral-cast spelling. Synthetic wasm32 facts do not certify browser/32-bit invocation. Dirty Windows checkpoint only.",
+      "receipt": "artifacts/implementation/test-results/external-address-bounds-native-enum-twenty.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_FunctionTableNamespaceDoesNotShadowRuntimeTypes",
+      "status": "focusedReplacementPassed",
+      "assertions": "Generated FunctionTable/API and Runtime-local namespace do not bind to colliding user types.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/FunctionTableNamespaceTests.cs",
+        "tests/BGCS.CSharp.Tests/RuntimeAllocatorSourceTests.cs"
+      ],
+      "replacementMethods": [
+        "ExactFunctionTableNamespaceUsesGlobalRuntimeTypesWithBuiltInAndCustomProviders",
+        "IndependentRuntimeSourceNamespacesCoexistWithConsumerSystemAndBgcsTypes"
+      ],
+      "note": "The exact Example.FunctionTable namespace compiled with warnings as errors and invoked an unmanaged-call boundary returning42 in all four package/source-Runtime and built-in/custom provider combinations. Custom.Runtime source does not reference generator or package Runtime. The old mutable global custom-context choice is replaced by explicit per-session INativeModuleProvider composition. Four cases passed in the focused31 receipt (the separate six receiver fixture assertions there failed and were repaired); no release certification.",
+      "receipt": "artifacts/implementation/test-results/owned-text-array-namespace-focused31.trx",
+      "releaseCertification": false
+    },
+    {
+      "method": "CSharpEmitter_ExternalLibraryNameConstant_ShouldRemainADeclarativeExtensionPoint",
+      "status": "focusedReplacementPassed",
+      "assertions": "Library import identity must be declarative, frozen in consumer compilation inputs, and audited against actual emitted imports.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/ImportLibraryConstantTests.cs",
+        "tests/BGCS.Tests/NativeImportLibraryConstantTests.cs"
+      ],
+      "replacementMethods": [
+        "FrozenConsumerConstantRemainsADeclarativeImportReference",
+        "MissingMutableMismatchedOrInjectedReferencesFailBeforeEmission",
+        "ConsumerLibraryConstantsCompileInvokeAndInvalidateWithoutReplacingGoodOutput"
+      ],
+      "note": "Explicit api.importLibraryNameConstant keeps a fully qualified consumer const string reference in DllImport/LibraryImport, independent of informational constant output. Frozen compiler inputs verify exact resolved native name without executing consumer code; final guard rejects altered reference/shadowing. Sixteen planning/SDK rows and five Host/config rows passed: actual native calls in both modes and Runtime package/source, changed constant invalidates generation and preserves previous complete outputs, restoring input recovers. Consumer declaring type is separate from generated namespace, replacing old partial LibName convention. Dirty Windows/CoreCLR checkpoint only; no release certification.",
+      "receipt": "artifacts/implementation/test-results/metadata-and-external-library-constant-native-eleven.trx",
+      "sourcePipelineRetirementCertified": false,
+      "planningReceipt": "artifacts/implementation/test-results/external-import-library-constant-sixteen.trx"
+    },
+    {
+      "method": "CSharpEmitter_Bitfields_ShouldUseExplicitStorageAndSignedAccessors",
+      "status": "focusedReplacementPassed",
+      "assertions": "Signed and unsigned bit access obey recorded positions without overrunning byte extent.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/BitfieldPlanningTests.cs",
+        "tests/BGCS.Tests/NativeBitfieldTests.cs",
+        "tests/BGCS.CSharp.Tests/ExactIrRetirementPlanningTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.CSharp.Tests.BitfieldPlanningTests.ProcessedBitfieldShape_IsRecheckedAgainstNativePositions",
+        "BGCS.Tests.NativeBitfieldTests.NativeRecords_PreserveSignedCrossByteEnumAndFullWidthBits",
+        "BGCS.CSharp.Tests.ExactIrRetirementPlanningTests.ExactSignedThreeBitAndUnsignedOneBitAccessorsShareFourByteStorageWithoutOverwritingEachOther"
+      ],
+      "note": "focusedReplacementPassed with exact original synthetic signed3@0 and unsigned1@3 reflected byte oracle. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Real native six-mode round trips strengthen the old source-only assertions.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.CSharp.Tests.BitfieldPlanningTests.ProcessedBitfieldShape_IsRecheckedAgainstNativePositions",
+          "assertions": [
+            "Current signed width6 at bit3 in a4byte carrier, exact source positions and byte-storage extent are frozen; final processor changes reject"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NativeBitfieldTests.NativeRecords_PreserveSignedCrossByteEnumAndFullWidthBits",
+          "assertions": [
+            "Independent native fill verifies signed sign-extension and enum/unsigned values; managed setters preserve adjacent bits/padding and native readback verifies changed fields",
+            "Union unsigned64 at bit0 and Bool1 are exercised across allimports/package+source"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.ExactIrRetirementPlanningTests.ExactSignedThreeBitAndUnsignedOneBitAccessorsShareFourByteStorageWithoutOverwritingEachOther",
+          "assertions": [
+            "Exact old Flags size4/alignment4 and signed3@bit0 plus unsigned1@bit3 model",
+            "WAE Roslyn compilation and reflected4byte carrier",
+            "All signed values -4..3 sign-extend correctly while unsigned flag toggles1/0 independently",
+            "Marshal byte oracle equals (value&7)|8 then value&7 with every other byte unchanged"
+          ]
+        }
+      ],
+      "policyDifference": "Typed neutral implementation preserves the reviewed behavior; no old frontend-dependent interface is retained.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.BitfieldPlanningTests.ProcessedBitfieldShape_IsRecheckedAgainstNativePositions"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/callback-bool-native_net10.0_20261015114209.trx",
+          "sha256": "fefc16eee4109d21198c660290354f8d3c620ab87c50ddd37e8d088b5c6548a6",
+          "matchedPassed": 6,
+          "methodPrefixes": [
+            "BGCS.Tests.NativeBitfieldTests.NativeRecords_PreserveSignedCrossByteEnumAndFullWidthBits"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-exact-old-opaque-bitfield-four.trx",
+          "sha256": "f91418317f9a489ab2edb65e125ad6cf048b961379f9db0abcf85fa73ed76998",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.ExactIrRetirementPlanningTests.ExactSignedThreeBitAndUnsignedOneBitAccessorsShareFourByteStorageWithoutOverwritingEachOther"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_PackedStructure_ShouldPreserveNativeSizeAndAlignment",
+      "status": "focusedReplacementPassed",
+      "assertions": "Packed carrier keeps exact field offsets and total byte extent.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/ExactMixedBitfieldSourceTests.cs",
+        "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.ExactMixedBitfieldSourceTests.ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts",
+        "BGCS.CSharp.Tests.NeutralBackendTests.PackedRecord_KeepsTheExactSizeAndUnalignedFieldOffset"
+      ],
+      "note": "focusedReplacementPassed with the exact original5byte source shape now parsed and measured. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Managed size/offset compilation is independent of by-value calling permission.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.ExactMixedBitfieldSourceTests.ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts",
+          "assertions": [
+            "Real Clang parses #pragma pack1 PackedValue{char tag;int value} under both original target triples",
+            "Native facts extent5/alignment1/offsets0,1 are asserted",
+            "All3 imports compile source Runtime with WAE and Marshal size/offsets equal original facts"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.NeutralBackendTests.PackedRecord_KeepsTheExactSizeAndUnalignedFieldOffset",
+          "assertions": [
+            "Separate packed pointer carrier extent9/field offset1 compiles and is measured; this different shape is supplementary"
+          ]
+        }
+      ],
+      "policyDifference": "Typed neutral implementation preserves the reviewed behavior; no old frontend-dependent interface is retained.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/exact-mixed-packed-bitfield-source-two.trx",
+          "sha256": "f312431dc9296548ad9683038ebd55750d8b8e52a443a16a71ec667fb9090399",
+          "matchedPassed": 2,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactMixedBitfieldSourceTests.ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.NeutralBackendTests.PackedRecord_KeepsTheExactSizeAndUnalignedFieldOffset"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_MixedAndPackedBitfields_PreservesNativeByteBounds",
+      "status": "focusedReplacementPassed;",
+      "assertions": "Mixed enum/bool/unsigned bitfields preserve byte boundaries and signed behavior.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/ExactMixedBitfieldSourceTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.ExactMixedBitfieldSourceTests.ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts"
+      ],
+      "note": "focusedReplacementPassed; prior exact source-layout gap is closed by new2row fixture. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Windows actual fixture does not independently certify Linux target execution.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.ExactMixedBitfieldSourceTests.ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts",
+          "assertions": [
+            "Original Mixed source is unchanged; extent4, bit offsets0/8/16 and widths8/8/16 asserted",
+            "Packed7-bit and Bool1-bit facts asserted; Bool carrier extent1",
+            "Both exact triples use the real isolated Clang worker",
+            "Each source model emits all3 imports/source Runtime, compiles WAE and every carrier's Marshal size equals native fact"
+          ]
+        }
+      ],
+      "policyDifference": "Typed neutral implementation preserves the reviewed behavior; no old frontend-dependent interface is retained.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/exact-mixed-packed-bitfield-source-two.trx",
+          "sha256": "f312431dc9296548ad9683038ebd55750d8b8e52a443a16a71ec667fb9090399",
+          "matchedPassed": 2,
+          "methodPrefixes": [
+            "BGCS.Tests.ExactMixedBitfieldSourceTests.ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_EmptyUnion_ShouldEmitExplicitlyPositionedOpaqueStorage",
+      "status": "focusedReplacementPassed",
+      "assertions": "Empty known-size native union has compilable explicit opaque storage at its recorded size.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs"
+      ],
+      "replacementMethods": [
+        "EmptyNativeUnionHasExplicitOpaqueStorageThatCompilesAtItsDeclaredExtent"
+      ],
+      "note": "New regression passed before latest partial-storage product change; consolidated rerun queued. Focused replacement now passed at coherent definition/retention/partial-storage checkpoint; complete source-pipeline retirement remains separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-ir-exact-parity-seven-corrected.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_UnsupportedCallableSemantics_ShouldFailBeforeWritingOutput",
+      "status": "focusedReplacementPassed",
+      "assertions": "Unsupported variadic/unprototyped invocation rejects before writing any artifact.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/NativeFiniteVariadicTests.cs",
+        "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.NativeFiniteVariadicTests.UnconfiguredSelectedVariadicDeclarationsRemainExplicitlyUnsupported",
+        "BGCS.CSharp.Tests.NeutralBackendTests.UnspecifiedCPrototype_RejectsBeforeWritingAnyArtifact"
+      ],
+      "note": "focusedReplacementPassed using exact variadic rejection source rows; do not map solely to the distinct unspecified-prototype test. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "A passable opaque callback address is distinct from claiming a supported invocation.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.NativeFiniteVariadicTests.UnconfiguredSelectedVariadicDeclarationsRemainExplicitlyUnsupported",
+          "assertions": [
+            "Actual selected variadic C and C++ functions without configured finite variants reject",
+            "Reason explicitly names variadic/fixed/vararg restriction",
+            "Generated output directory is absent"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.NeutralBackendTests.UnspecifiedCPrototype_RejectsBeforeWritingAnyArtifact",
+          "assertions": [
+            "Separate hasPrototype=false callable rejects before the candidate sink receives any artifact"
+          ]
+        }
+      ],
+      "policyDifference": "Explicit finite type-checked variadic adapters are supported separately; an unconfigured open-ended callable is still rejected. A passable opaque callback address is not an invocable variadic export.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/test-results/cpp-finite-variadic-native-corrected.trx",
+          "sha256": "9c53960b7dc911a53fc25824b0efc3ae3cd1f306fc7c593290ccbd431804b8c3",
+          "matchedPassed": 2,
+          "methodPrefixes": [
+            "BGCS.Tests.NativeFiniteVariadicTests.UnconfiguredSelectedVariadicDeclarationsRemainExplicitlyUnsupported"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.NeutralBackendTests.UnspecifiedCPrototype_RejectsBeforeWritingAnyArtifact"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "CSharpEmitter_OpaqueStorageByValue_ShouldFailBeforeWritingOutput",
+      "status": "focusedReplacementPassed",
+      "assertions": "Opaque/over-aligned storage cannot gain by-value ABI permission merely from size.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/ExactIrRetirementPlanningTests.cs",
+        "tests/BGCS.CSharp.Tests/ExternalCarrierPlanningTests.cs",
+        "tests/BGCS.Tests/NativeExternalAbiPolicyTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.CSharp.Tests.ExactIrRetirementPlanningTests.AnOpaqueSixteenByteEightAlignedRecordCannotBecomeAByValueImportFromItsExtent",
+        "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.MatchingExternalStorageCannotBypassCallingProofButPointerShimsRemainCompilable",
+        "BGCS.Tests.NativeExternalAbiPolicyTests.AlignedPointerShimRemainsUsableWhileExternalFieldsCannotBypassUnsupportedValueAbi"
+      ],
+      "note": "focusedReplacementPassed with exact original16byte/align8/no-fields import rejection under all3 modes. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "No unsafe size-only by-value fallback.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.CSharp.Tests.ExactIrRetirementPlanningTests.AnOpaqueSixteenByteEightAlignedRecordCannotBecomeAByValueImportFromItsExtent",
+          "assertions": [
+            "Exact old NativeHidden extent16/alignment8/no-fields parameter shape",
+            "All3 imports reject missing calling-ABI and candidate sink stays empty"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.MatchingExternalStorageCannotBypassCallingProofButPointerShimsRemainCompilable",
+          "assertions": [
+            "Independent matching managed field storage does not grant byvalue calling permission; exact typed pointer alternative compiles across allimports"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NativeExternalAbiPolicyTests.AlignedPointerShimRemainsUsableWhileExternalFieldsCannotBypassUnsupportedValueAbi",
+          "assertions": [
+            "Actual aligned native pointer/shim calls succeed; later unsupported byvalue generation rejects and preserves all prior file SHA"
+          ]
+        }
+      ],
+      "policyDifference": "Typed neutral implementation preserves the reviewed behavior; no old frontend-dependent interface is retained.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 5,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.NeutralBackendTests.UnverifiedByValueRecord_RejectsBeforeWritingAnyCandidateArtifact",
+            "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.MatchingStorageDoesNotProduceAnyCallingAbiPermission",
+            "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.MatchingExternalStorageCannotBypassCallingProofButPointerShimsRemainCompilable"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/host-external-abi-policy-three.trx",
+          "sha256": "ddfb0c828677008b9dc0d802e29df86a88abb27abeb8cbb7f83255339525371f",
+          "matchedPassed": 3,
+          "methodPrefixes": [
+            "BGCS.Tests.NativeExternalAbiPolicyTests.AlignedPointerShimRemainsUsableWhileExternalFieldsCannotBypassUnsupportedValueAbi"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-exact-old-opaque-bitfield-four.trx",
+          "sha256": "f91418317f9a489ab2edb65e125ad6cf048b961379f9db0abcf85fa73ed76998",
+          "matchedPassed": 3,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.ExactIrRetirementPlanningTests.AnOpaqueSixteenByteEightAlignedRecordCannotBecomeAByValueImportFromItsExtent"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_ExternalManagedCarrier_WithMatchingLayout_ShouldCompileAndRemainAuditable",
+      "status": "focusedPolicyReplacementPassed;",
+      "assertions": "Consumer external fields/generics are measured and conversions preserve exact native carrier and provenance.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/ManagedExternalTypeProbeTests.cs",
+        "tests/BGCS.Tests/NativeExternalProjectionTests.cs",
+        "tests/BGCS.CSharp.Tests/ExternalCarrierPlanningTests.cs"
+      ],
+      "replacementMethods": [
+        "BGCS.Tests.ManagedExternalTypeProbeTests.ActualClosedGenericAndNumericsFieldsAreMeasuredOutsideTheHost",
+        "BGCS.Tests.NativeExternalProjectionTests.ExistingNumericsAndReorderedClosedGenericTypesCopyThroughTheVerifiedRawAbi",
+        "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.ExternalFieldCopiesComposeWithNamespaceDependentRecipeHelpers"
+      ],
+      "note": "focusedPolicyReplacementPassed; never label field-copy convenience as certification of direct foreign CLR struct imports. Exact source and assertion correspondence reviewed at a dirty local checkpoint; same-revision complete release execution remains separate.",
+      "historicalNote": "Field-copy projection and independent native calling ABI replace direct foreign-struct imports.",
+      "reviewedAssertions": [
+        {
+          "method": "BGCS.Tests.ManagedExternalTypeProbeTests.ActualClosedGenericAndNumericsFieldsAreMeasuredOutsideTheHost",
+          "assertions": [
+            "Real isolated .NET subprocess measures Vector2, Pair<float> and reordered fields; verifies exact primitive kinds,widths,offsets,size/alignment,reference freedom and actual probe identity",
+            "Probe assembly is not loaded into Host; changed source invalidates byte snapshot; TRACE/additional symbols match consumer"
+          ]
+        },
+        {
+          "method": "BGCS.Tests.NativeExternalProjectionTests.ExistingNumericsAndReorderedClosedGenericTypesCopyThroughTheVerifiedRawAbi",
+          "assertions": [
+            "Same two-float native shape independently checked and called byvalue through the generated raw carrier",
+            "Friendly Vector2 and reordered closed generic DTOs copy exact field IDs; raw methods never import Vector2/Pair directly",
+            "All3 imports/package+source Runtime actually transform both fields; final altered-copy guard rejects",
+            "Equal-width incorrect Pair<int> projection rejects and preserves all prior publication SHA"
+          ]
+        },
+        {
+          "method": "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.ExternalFieldCopiesComposeWithNamespaceDependentRecipeHelpers",
+          "assertions": [
+            "External names/generic field-copy projections and explicit recipe namespace helpers compile and execute in split/single output"
+          ]
+        }
+      ],
+      "policyDifference": "Measured storage is separate from runtime/native byvalue calling classification. Friendly field copies keep existing external managed APIs while raw imports retain proven generated carriers; arbitrary matching-size foreign structs are not admitted directly. The old informational warning/unchecked byvalue tag is replaced by an audited frozen probe and explicit projection metadata.",
+      "localReplacementEvidence": [
+        {
+          "receipt": "artifacts/implementation/test-results/host-external-carrier-probe-trace6.trx",
+          "sha256": "fd6ab080338852f96f96c26511db2633cf5ac1819fccee38755461a07efb4fef",
+          "matchedPassed": 1,
+          "methodPrefixes": [
+            "BGCS.Tests.ManagedExternalTypeProbeTests.ActualClosedGenericAndNumericsFieldsAreMeasuredOutsideTheHost"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/native-external-projections-six.trx",
+          "sha256": "ef08e5844812f2e24facd292ad8ad9b20ced2a2ccf94e363b63019219925807a",
+          "matchedPassed": 6,
+          "methodPrefixes": [
+            "BGCS.Tests.NativeExternalProjectionTests.ExistingNumericsAndReorderedClosedGenericTypesCopyThroughTheVerifiedRawAbi"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        },
+        {
+          "receipt": "artifacts/implementation/test-results/csharp-neutral-source-runtime-current-full.trx",
+          "sha256": "2adbbca41699f2e121a062a60538539c5f2154932f740b7297991879e1032638",
+          "matchedPassed": 3,
+          "methodPrefixes": [
+            "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.ExternalFieldCopiesComposeWithNamespaceDependentRecipeHelpers",
+            "BGCS.CSharp.Tests.ExternalCarrierPlanningTests.MatchingStorageDoesNotProduceAnyCallingAbiPermission"
+          ],
+          "scope": "Exact matched passing cases from an independent dirty local run; not whole-revision certification."
+        }
+      ],
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_ExternalManagedCarrier_RejectsMismatchUnlessPreciselyBypassed",
+      "status": "focusedPolicyReplacementPassed",
+      "assertions": "Mismatch and missing storage/ABI proof fail; an explicit unchecked layout bypass must not manufacture ABI verification.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/ExternalCarrierPlanningTests.cs",
+        "tests/BGCS.Tests/NativeExternalAbiPolicyTests.cs"
+      ],
+      "replacementMethods": [
+        "MatchingStorageDoesNotProduceAnyCallingAbiPermission",
+        "InvalidOrUnprovenFieldCopiesAreRejected",
+        "MatchingExternalStorageCannotBypassCallingProofButPointerShimsRemainCompilable",
+        "AlignedPointerShimRemainsUsableWhileExternalFieldsCannotBypassUnsupportedValueAbi"
+      ],
+      "note": "The removed unchecked layout bypass cannot establish calling compatibility. Three import-mode planning/compile regressions and three actual aligned native pointer-shim consumers passed; unsupported by-value generation is rejected and all previous published file digests remain unchanged. These are dirty local receipts, not same-revision release certification.",
+      "receipts": [
+        "artifacts/implementation/test-results/host-external-abi-policy-three.trx"
+      ],
+      "releaseCertification": false
+    },
+    {
+      "method": "Generate_ExternalGenericCarrierSelectors_ShouldCoverClosedTypeMappings",
+      "status": "focusedReplacementPassed",
+      "assertions": "Closed generic consumer carrier mapping and exact native identity remain available without generating invalid generic identifiers.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/ExternalCarrierPlanningTests.cs",
+        "tests/BGCS.Tests/ManagedExternalTypeProbeTests.cs",
+        "tests/BGCS.Tests/NativeExternalAddressFieldTests.cs"
+      ],
+      "replacementMethods": [
+        "ClosedConsumerTypesHaveStableUnambiguousSyntax",
+        "ActualClosedGenericAndNumericsFieldsAreMeasuredOutsideTheHost",
+        "ClosedGenericPointersAndNativeSizedAddressFieldsCopyWithoutChangingRawCallingAbi"
+      ],
+      "note": "Explicit finite exact record selection replaces a wildcard layout-trust declaration. Actual isolated probe +native six-mode calls preserve Consumer.NativeVector<int> pointer fields, reordered offsets, full addresses/null and native-sized signed/unsigned address fields. Incorrect equal-size integer mapping fails and preserves previous outputs. Raw import uses generated carrier; no foreign type by-value ABI inference. Dirty Windows-only checkpoint, no release/platform certification.",
+      "receipt": "artifacts/implementation/test-results/external-native-address-field-six.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_IrPresentation_ShouldDistinguishFactoriesFromInstanceMembersAndHonorDelegateSwitch",
+      "status": "focusedReplacementPassed",
+      "assertions": "Factories, receiver methods, bool/value inputs, fixed-array helpers, callback visibility and literal default overloads coexist.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/DirectCOwnershipTests.cs",
+        "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
+        "tests/BGCS.CSharp.Tests/ManagedRecordPresentationTests.cs"
+      ],
+      "replacementMethods": [
+        "StandaloneDeclarationsCanBeOmittedWithoutChangingRawPointersOrTheCheckedCallScope",
+        "ExplicitRecordConveniencesCompileAndRunWithoutChangingStorage"
+      ],
+      "note": "Exact C17 Bool in/out/ref storage passed16 planning/compile cases and6 actual native modes; fixed primitive array Span-copy constructors passed10 planning cases. A combined MSVC C17 native fixture passes all3 imports: factory/member/refbool/fixed byte[1]/delegate opt-out/string+integer defaults, plus typed NULL-only omitted-pointer overloads, aliases, containers and static facade. Explicit nullable nonretaining Call evidence is required; an unproved general nullable-reference overload is never exposed. Rejected NULL contracts preserve the complete previous publication. The18 focused NULL tests cover final-contract tampering and permitted harmless overloads. Dirty Windows checkpoint, not release certification.",
+      "receipt": "artifacts/implementation/test-results/host-neutral-combined-null-msvc-three.trx",
+      "sourcePipelineRetirementCertified": false,
+      "sourceBoundaryFile": "tests/BGCS.Tests/NativeRecordArrayConstructorTests.cs",
+      "sourceBoundaryMethod": "IndependentArrayCopiesCoexistWithOwnedBooleanMembersDelegateOptOutAndTypedDefaults",
+      "partialReceipts": [
+        "artifacts/implementation/test-results/owned-text-counted-bool-focused33.trx",
+        "artifacts/implementation/test-results/host-native-boolean-value-six.trx",
+        "artifacts/implementation/test-results/owned-text-array-namespace-focused31.trx",
+        "artifacts/implementation/test-results/host-native-record-array-constructor-three.trx",
+        "artifacts/implementation/test-results/null-default-temporary-allocator-focused27.trx",
+        "artifacts/implementation/test-results/host-neutral-combined-null-msvc-three.trx"
+      ]
+    },
+    {
+      "method": "Generate_OpaqueRecordsAndPointerFriendlyTransforms_ShouldUseFinalHandleSurface",
+      "status": "focusedReplacementPassed",
+      "assertions": "Owned opaque factory, explicit release, borrowed typed returns and pointer-to-pointer arrays preserve final handle identity.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/DirectCOwnershipTests.cs",
+        "tests/BGCS.Tests/NativePointerCarrierTests.cs",
+        "tests/BGCS.CSharp.Tests/PointerCarrierTests.cs"
+      ],
+      "replacementMethods": [
+        "SupportedOwnedFactoryWithoutMemberPresentationReturnsGenericOwnedHandle",
+        "AddressViewsPreserveRawAbiConstFieldsArraysAndWholeSurfaceGuards"
+      ],
+      "note": "Explicit non-owning address carrier functions preserve opaque record/void aliases, exact two-level pointers, later target fields, nested union/array views and UTF8 composition; real threeimports xRuntime package/source calls passed. Known Owned and Module-borrowed leases are never downgraded. Address views remain explicitly Dangerous and caller-lifetime-bound; wrapper ref-punning replaced by exact pointer values. Not browser/ARM certification.",
+      "receipt": "artifacts/test-results/cpp-pointer-carrier-native-six.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_StrictSafetyError_ShouldRejectAndPreserveLastGoodOutput",
+      "status": "focusedReplacementPassed",
+      "assertions": "Configured fatal semantic diagnostics prevent publication while retaining previous complete outputs.",
+      "replacementFiles": [
+        "tests/BGCS.Tests/NeutralGenerationHostTests.cs",
+        "tests/BGCS.Tests/NeutralUnifiedModelParityTests.cs"
+      ],
+      "replacementMethods": [
+        "CriticalValidatorDiagnostic_BlocksFormalPublication",
+        "SharedSourceFactsSurviveCompositionAndStrictOwnershipGatesPreservePreviousPublication"
+      ],
+      "note": "Both exact ownership-code and all-warning promotion policies reject before publication. Previous artifact hashes stay intact; explicit UserAsserted Module lifetime recovers with cache enabled. Local dirty Windows checkpoint only; complete legacy retirement and cross-platform release certification remain separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+      "sourcePipelineRetirementCertified": false
+    },
+    {
+      "method": "Generate_ShouldProduceAbiAwareSharedIntermediateRepresentation",
+      "status": "focusedReplacementPassed",
+      "assertions": "Native aliases, constants, callback prototypes, arrays, capacity/written counts, owned string cleanup and actionable evidence survive the complete public pipeline.",
+      "replacementFiles": [
+        "tests/BGCS.CSharp.Tests/BufferValueProtocolTests.cs",
+        "tests/BGCS.Tests/NeutralGenerationHostTests.cs",
+        "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
+        "tests/BGCS.Tests/NeutralUnifiedModelParityTests.cs"
+      ],
+      "replacementMethods": [
+        "ExplicitCapacityAndOutputExtentPreserveEveryNativeChannel",
+        "GenerateAsync_UsesNeutralFactsAndPublishesAccurateStageMetadata",
+        "SharedSourceFactsSurviveCompositionAndStrictOwnershipGatesPreservePreviousPublication"
+      ],
+      "note": "Combined public source-to-model-to-emission fixture preserves typedef identities, constants, exact callbacks, arrays, capacity/written extents and owned UTF-8 cleanup; WAE Build and strict unknown-return policy exercise full pipeline. Local dirty Windows checkpoint only; complete legacy retirement and cross-platform release certification remain separate.",
+      "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+      "sourcePipelineRetirementCertified": false
+    }
+  ],
+  "sourceAssertionCorrespondenceReviewed": true,
+  "sameRevisionReleaseCertified": false,
+  "reviewedAt": "2026-10-16"
+}

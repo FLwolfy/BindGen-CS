@@ -1,112 +1,91 @@
-# NuGet Packages and Public APIs
+# Packages and distribution
 
-[中文](packages.cn.md) | [Wiki](README.md) | [API reference](api.md)
+[中文](packages.cn.md) | [Documentation](README.md)
 
-## Which package should I install?
+BGCS 3.0 exposes four products. Project boundaries do not create additional products that users must assemble.
 
-| Goal | Install | Notes |
+| Use | Product | Contents |
 | --- | --- | --- |
-| Use the command line | `dotnet tool install --global BindGen-CS` | Provides `bindgen-cs`; do not add it to an application project. |
-| Embed C/C++ → C# generation | `BGCS` | Main facade, configuration, analysis, IR-native C# emission, and patching. |
-| Generate a C ABI bridge for C++ | `BGCS.Cpp2C` | Add this when embedding bridge generation; the CLI tool already carries it. |
-| Compile generated bindings | `BGCS.Runtime` | Install in the application that consumes generated code, unless standalone Runtime emission is enabled. |
-| Write an emitter or IR tool | `BGCS.Intermediate` | Dependency-free shared contracts; does not require Clang, Roslyn, or Runtime. |
-| Build parser/tooling extensions | `BGCS.CppAst`, `BGCS.Core`, `BGCS.Language` | Advanced implementation packages; normally restored transitively. |
+| Embedded generation or optional build integration | `BGCS` | Host, grouped configuration, analysis, C++ bridge, C# backend, native build, isolated Clang worker, schemas and MSBuild TaskHost assets |
+| Neutral plugins and model tools | `BGCS.Contracts` | Immutable native/bridge/interop/managed models and extension ports; no generator, parser or Runtime dependency |
+| Generated binding consumers | `BGCS.Runtime` | Module leases, function tables, owned handles, callbacks, buffers, codecs and allocation support; no generator/parser dependency |
+| Command line | `BindGen-CS` | The unified Host pipeline exposed through `bindgen-cs` |
 
-All release packages are version-aligned and validated in a clean NuGet consumer before publishing.
+All products require .NET 10. Internal assemblies such as `BGCS.CSharp` and `BGCS.Cpp2C` are included in the SDK rather than published as separately required feature packages. The SDK package is assembled by `distribution/BGCS.Sdk.Package`; implementation project `src/BGCS` is not independently packed.
 
-## `BindGen-CS` tool
+## Install and generate
 
-Commands exported by the package:
+After version 3.0.0 has actually been published (until then, use the source or local-package instructions below):
 
-```text
-init, doctor, validate, inspect, generate, build, diff, schema, explain, bridge, native-build, supply-chain, version
+```bash
+dotnet tool install --global BindGen-CS --version 3.0.0
+bindgen-cs init include/native.h --language c
+bindgen-cs doctor bindgen.json
+bindgen-cs generate bindgen.json
+bindgen-cs build bindgen.json
 ```
 
-The tool depends on `BGCS` and `BGCS.Cpp2C` inside its isolated tool installation. Generated application code does not depend on the tool package.
+C++ uses the same grouped configuration and `generate` command. `bridge` requests only native bridge artifacts through the Host, so it does not require a managed representation of every selected ABI.
 
-## `BGCS`
+```csharp
+using BGCS;
 
-Primary public APIs:
+await using BindingHost host = BindingHost.CreateDefault();
+GenerationResult result = await host.GenerateAsync(
+    GenerationRequest.FromFile("bindgen.json"));
+if (!result.success)
+    throw new InvalidOperationException(result.GetDiagnosticSummary());
+```
 
-- `BGCS.Facade.CsCodeGenerator`, `BGCS.Configuration.CsCodeGeneratorConfig`;
-- `BGCS.Facade.BindingGenerator`;
-- `BindingGenerationPipeline`;
-- `ConfigLoader`, `ConfigValidator`, `PresetResolver`;
-- `DeclarationGraph`, `BindingModuleAnalyzer`, `TypeAnalyzer`, `AbiLayoutAnalyzer`, `OwnershipAnalyzer`, `OverloadPlanner`;
-- `CSharpEmitter`, `RuntimeEmitter`, `SingleFileComposer`;
-- parsed-input preprocess hooks and Binding IR extension contracts;
-- patching and generator metadata APIs;
-- `VariadicFunctionVariant` for explicit promoted C variadic signatures.
+`BGCS.Contracts` is sufficient for ordinary plugins. Clang-specific fact contributors belong to the worker and require the advanced frontend reference surface provided by the SDK.
 
-Direct dependencies include `BGCS.Intermediate`, `BGCS.Core`, `BGCS.Language`, `BGCS.CppAst`, and Roslyn. `CommandLineParser` is no longer a dependency.
+## Physical packages and native resources
 
-## `BGCS.Cpp2C`
+The four products are delivered through additional technical packages where necessary:
 
-Primary public APIs:
+- The tool has a pointer package plus `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64` implementation packages.
+- Upstream LLVM 20 parser runtime packages provide five host closures.
+- `BGCS.ParserRuntime.osx-x64` supplies the missing Intel macOS parser closure, including its dependent libraries and licenses.
 
-- `Cpp2CCodeGenerator`, `Cpp2CGeneratorConfig`;
-- `CppBridgeBuildManifest`, `CppBridgeBuildManifestEmitter`, `NativeAssetLayout`, and `Cpp2CConfigValidator`;
-- `INativeBuildProvider`, `NativeBuildPlan`, and `NativeBuildExecutor` in `BGCS.Cpp2C.Build`;
-- the Clang, ClangCl, CMake, Meson, and MSBuild providers in `BGCS.Cpp2C.Build.Providers`;
-- `BGCS.Cpp2C.Emission.CBridgeEmitter`;
-- bridge generation-step extension points;
-- C/C++ type lowering helpers and generated-function metadata.
+Parser resources are selected by the generator host, independently of the target being generated. A Windows generator targeting Android still uses the Windows parser closure and Android target SDK. Parser deployment never substitutes builtin Clang headers for the target platform's system SDK or C++ standard library.
 
-Current bridge capabilities include classes, constructors/destructors, instance/static methods, namespace free functions, exception channels, explicit class-template specializations, and pointer-adjusting inheritance casts.
+The SDK contains managed worker files, per-host digest manifests and standalone TaskHost dependencies. Its build integration gathers the restored native package assets, checks the exact manifest and deploys a complete worker directory to the application. An already deployed SDK host does not need the NuGet global cache to run its parser.
 
-## `BGCS.Intermediate`
+The package collector unions the public SDK modules' restored graphs explicitly, so removing the Host-to-frontend project reference cannot remove the advanced Clang extension's compile dependencies. Worker and TaskHost execution closures remain separate. Their complete license inventories are collected independently of the Host graph. `BGCS`, `BGCS.Contracts` and `BGCS.Runtime` each require their declared `.snupkg`; duplicate archive entries or missing symbols fail verification.
 
-This package has no dependency on another BGCS assembly. It exports:
+`distribution/manifests/native-parser-assets.lock.json` pins the five upstream package identities and the actual native file hashes and CPU architectures. It also pins the Intel supplement's ClangSharp source commit and LLVM20.1.8 source archive. The Intel bootstrap records the relocated, signed dylib bytes, licenses and actual Homebrew recipe in `runtime-provenance.json`; packaging verifies the complete file set and current BGCS revision. This provenance records build inputs and bytes. The separate Intel invocation gate must pass before CI seals and distributes that artifact. An absent Intel build is a blocking condition, and an ARM64 library cannot satisfy it.
 
-- `BindingModule`;
-- `BindingType`, `BindingField`, `BindingEnumMember`, `BindingTypeReference`;
-- `BindingFunction`, `BindingParameter`;
-- `MarshallingPlan`;
-- `BindingGenerationResult`, `BindingDiagnostic`;
-- `IBindingEmitter`, `EmissionContext`;
-- supporting type/function/direction/ownership/encoding/marshalling enums.
-- `BindingDiagnosticCodes`, `BindingDiagnosticDescriptor`, and `BindingDiagnosticCatalog`.
+## Runtime package or source
 
-Use it for analyzers, API diff tools, alternate language emitters, and build-system integrations that should not load Clang or Roslyn.
+Generated consumers normally reference only `BGCS.Runtime`. With `runtime.mode = "source"`, the generator emits the required source closure in an API-local namespace; single-file output can combine that closure into `Bindings.cs`. Source and package modes are verified with native invocation consumers. A Runtime-only package graph must not contain Clang or the generator SDK.
 
-## `BGCS.Runtime`
+## Packaging and certification
 
-`FunctionTable` borrows caller-owned pointer arrays or owns allocated storage and an
-`INativeContext`. Borrowed storage cannot be resized and is never freed by the table;
-owned storage retains entries on resize and clears added slots. Disposal is idempotent,
-releases the owned context once, and rejects subsequent table operations.
+`eng/pack.py` builds and collects execution closures from actual `.deps.json` files and restored project graphs. It emits the product set and verifies each physical package against the 250 MiB limit. Full packaging requires explicitly supplied, accepted Intel macOS parser assets:
 
-Primary public runtime surface:
+```bash
+python3 eng/pack.py --parser-osx-x64 artifacts/clang-runtime/osx-x64 --verify-repeat-content
+python3 eng/verify-packages.py --version 3.0.0
+```
 
-- `Bool8`, `Bool32`;
-- `Pointer<T>`, `ConstPointer<T>`;
-- `Atomic<T>`;
-- `NativeCallback<T>`;
-- `NativeCallbackRegistry<TKey,TDelegate>`;
-- `INativeContext`, `NativeLibraryContext`;
-- `NativeLibrary`, `LibraryLoader`, `TargetPlatform`, `ResolvePathHandler`;
-- `NativeNameAttribute`, `SourceLocationAttribute`, `NativeNameType`;
-- `Utils` allocation, UTF-8/UTF-16, pointer, and array helpers.
+`--host-only <rid>` and verifier `--sdk-only` are local partial checks. They are never complete product certification. Full installed-product certification runs on all three launch desktop hosts and a dedicated Visual Studio2026 runner after the same-revision CI matrix succeeds.
 
-Generated bindings normally reference this package. `generateRuntimeSource=true` instead emits a guarded standalone `Runtime.cs`; do not combine embedded Runtime and the package without defining `BGCS_RUNTIME_EXTERNAL`.
+The Visual Studio gate uses the [official `windows-2025-vs2026` runner image](https://github.com/actions/runner-images), discovers the actual VS2026 `MSBuild.exe`, requires major18 and invokes its .NET TaskHost through a native build/call/clean/rebuild consumer. `dotnet msbuild` evidence is recorded separately; it does not substitute for that host.
 
-## Advanced implementation packages
+The installer gate checks embedded C/C++ generation, Contracts-only plugins, actual native calls from Runtime-only/source/single-file consumers, NuGet native RID selection, MSBuild opt-in/off, owned clean/rebuild, separate TFM inner builds, a static project graph and installed CLI commands. The same hashed source-contributor manifest runs through CLI and MSBuild, with generated native headers/source and managed helpers checked by actual calls. Complete certification also publishes and invokes the package/source/single-file consumers with NativeAOT, then runs the complete 113-check ABI, aggregate, C++ and lifetime matrix with the installed tool and Runtime. Browser interpreter and AOT each require the complete 74-call matrix plus a separate 33-check nonblocking retained/async lifecycle subreport across all three import modes, including the generated static adapter. The installer verifies that the invocation and lifecycle subreport agree. Every matrix records its exact receipt hash and must use the same pinned installed generator, complete execution closure and Runtime bytes. These checks require .NET 10 `wasm-tools` and Chromium. CI installs the selected SDK's bundled workload manifests without updating them, and receipts record the SDK and actual workload set.
 
-- `BGCS.CppAst`: ClangSharp-based C/C++ AST model, parser options, visitors, declarations, types, expressions, comments, tokens, and diagnostics.
-- `BGCS.Core`: output transactions, code writers, mappings, metadata helpers, logging, collections, and path/file utilities.
-- `BGCS.Language`: lexer, parser, preprocessor expression infrastructure, syntax nodes, diagnostics, and analyzers.
+The installed-product runner also builds an advanced Clang fact plugin using only the delivered `BGCS` package, then uses its same hashed worker-only manifest in SDK, CLI and MSBuild requests. The plugin reads a live cursor, contributes detached documentation and checks that the live context expires after invocation. The SDK host must not load that plugin assembly. Generated consumers compile against Runtime alone. Adding this gate does not certify it until an actual freshly packaged run passes.
 
-Applications should not install these individually unless they directly consume those extension APIs.
+For a local partial run, `--native-aot` enables the three Add smoke publishes. With `--sdk-only --host-tool`, `--native-feature-matrix` and `--wasm` explicitly enable their complete invocation matrices. A partial product set remains partial after successful calls.
 
-## Current boundaries
+`--verify-repeat-content` repacks the same compiled binaries and compares every archive entry name and uncompressed byte sequence, including metadata and symbols. ZIP container timestamps may differ; the receipt records both archive hashes and the matching payload digest. Temporary consumers and package staging directories are removed when each run ends; verification reports and logs are retained.
 
-- Verified modern C++ lowerings cover `std::string`, vector/span views, optional, array, map, set, variant, expected, filesystem path, chrono duration/time-point, smart pointers, and configured pure-virtual callback proxies. Arbitrary unknown specializations still require an explicit recipe, plugin, or C shim.
-- Ownership and allocator semantics cannot be inferred reliably from pointer syntax alone.
-- Typed C variadic variants currently require `DllImport` and explicit promoted argument types.
-- Five real C-library gates and the bimg C++ bridge compile generated output and check target-specific deterministic API snapshots from an independent pinned upstream test corpus.
-- The complete solution, generated consumers, and package smoke projects compile with warnings treated as errors.
+Package and installed-product receipts record the checked-out source content digest as well as the Git commit and dirty state. Complete certification requires a clean tree, matching source bytes and unchanged package archives. Editing an already dirty file still changes the digest; a commit identifier alone cannot certify those local bytes. The provenance regression gate exercises real temporary Git trees and rejects changed source digests, changes during packaging and modified archive bytes.
 
-Primary C# output is owned exclusively by IR-native `CSharpEmitter`; no pre-release compatibility emitter remains. `native-build --package-root` produces a multi-RID runtime asset tree, and `supply-chain` emits SPDX/SLSA release evidence.
+Installed-product restores use a private NuGet packages directory and HTTP cache inside the disposable consumer workspace. Unique local package versions therefore do not accumulate in the user's permanent global cache, and an earlier installed BGCS package cannot satisfy a fresh product restore. `BGCS_MINIMUM_FREE_BYTES` can impose a stricter positive free-space floor before starting verification.
 
-See [Capabilities and boundaries](capabilities.md) for the complete evidence levels and remaining gaps.
+On a failed installed command, the verifier preserves bounded text reproduction inputs before cleaning consumers: at most 2 MiB per file and 8 MiB total, with omitted files listed and binary/cache trees excluded. Timeout or cancellation terminates the owned process group/tree, retaining the command log before cleanup.
+
+The packaging receipt records the observed source revision, dirty-tree status, build configuration, use of prebuilt outputs and the exact delivered execution-asset hashes. Installed-product checks verify the complete physical package/symbol set against that receipt before restore. Complete certification requires clean packaging from the current revision; a dirty local snapshot remains explicitly partial. These records identify the delivered bytes and do not imply that an arbitrary stale `--no-build` output was rebuilt from the observed source.
+
+Release preflight requires reviewed `implementationReady` source declarations and exact same-revision feature/configuration receipts, then every mandatory CI/product-installation job. Checked-in `releaseReady` remains false; only the aggregate preflight derives a release-ready result. See the [review and certification state flow](release-evidence-state-flow.md). A successful local build or partial SDK package does not satisfy those gates.

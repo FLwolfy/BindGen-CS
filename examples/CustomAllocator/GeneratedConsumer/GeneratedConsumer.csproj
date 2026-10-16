@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <BGCSGeneratedRoot Condition="'$(BGCSGeneratedRoot)' == ''">../Generated</BGCSGeneratedRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(BGCSGeneratedRoot)/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(BGCSRuntimeAssembly)' == ''">
+    <ProjectReference Include="../../../src/BGCS.Runtime/BGCS.Runtime.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(BGCSRuntimeAssembly)' != ''">
+    <Reference Include="BGCS.Runtime"><HintPath>$(BGCSRuntimeAssembly)</HintPath></Reference>
+  </ItemGroup>
+</Project>

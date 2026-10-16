@@ -1,0 +1,202 @@
+using System;
+using System.Buffers;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using BGCS.Runtime;
+
+namespace __NAMESPACE__;
+
+// This class remains safe so every wait yields to the real browser event loop.
+internal static class BrowserLifecycleRunner
+{
+    private static int m_transportValue;
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static unsafe void TransportProbe(int first, int second, void* state)
+        => m_transportValue = state == null ? first + second : -1;
+
+    internal static async Task<int> RunAsync(Func<int> baseline, Action<bool, string?, string[]> report)
+    {
+        List<string> checks = [];
+        Console.WriteLine("BGCS browser lifecycle: baseline starting");
+        if (baseline() != 0) return 1;
+        Console.WriteLine("BGCS browser lifecycle: baseline complete");
+        try
+        {
+            await RunMode("DllImport", CreateDllImport, checks);
+            await RunMode("LibraryImport", CreateLibraryImport, checks);
+            await RunMode("FunctionTable", CreateFunctionTable, checks);
+            report(true, null, checks.ToArray());
+            return 0;
+        }
+        catch (Exception failure)
+        {
+            report(false, failure.ToString(), checks.ToArray());
+            return 1;
+        }
+    }
+
+    private static async Task RunMode(string mode, Func<LifecycleApi> create, List<string> checks)
+    {
+        Console.WriteLine("BGCS browser lifecycle: " + mode);
+        using (LifecycleApi api = create())
+        {
+            Registration normal = api.register(value => value + 3);
+            Check(normal.invoke(39) == 42 && api.live() == 1, "A retained native callback must invoke its rooted delegate.");
+            normal.close();
+            Check(api.live() == 1 && !normal.completion().IsCompleted, "Dispose must request later shutdown without entering native unregister inline.");
+            await normal.closeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+            Check(api.live() == 0 && normal.completion().IsCompletedSuccessfully, "Awaited shutdown must release the registration.");
+            checks.Add(mode + ":retained-close");
+
+            var marker = new ApplicationException("browser-callback-marker");
+            Registration throwing = api.register(_ => throw marker);
+            Check(throwing.invoke(1) == -7 && ReferenceEquals(marker, throwing.exception()), "Managed exceptions must terminate at the declared callback fallback.");
+            await throwing.closeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+            checks.Add(mode + ":retained-exception");
+
+            Action? selfClose = null;
+            Registration self = api.register(value => { selfClose!(); return value + 3; });
+            selfClose = self.close;
+            Check(self.invoke(39) == 42 && api.live() == 1 && api.errors() == 0 && !self.completion().IsCompleted,
+                "Self-disposal must wait until both the callback and its native caller return.");
+            await self.closeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+            Check(api.live() == 0 && api.errors() == 0, "Self-disposal must eventually unregister exactly once.");
+            checks.Add(mode + ":retained-self-close");
+
+            Console.WriteLine("BGCS browser lifecycle: allocating tracked operation memory");
+            using (TrackedMemory memory = new())
+            {
+                Console.WriteLine("BGCS browser lifecycle: tracked memory allocated");
+                Memory<int> view = memory.Memory;
+                Console.WriteLine("BGCS browser lifecycle: memory view created");
+                NativeOperation<int> operation = api.start(view, 0);
+                Console.WriteLine("BGCS browser lifecycle: native operation started");
+                GC.Collect(); GC.WaitForPendingFinalizers();
+                Check(memory.pins == 1 && memory.unpins == 0 && !operation.task.IsCompleted, "Native operation storage must remain pinned before completion.");
+                api.pump(0);
+                Check(memory.unpins == 0 && !operation.task.IsCompleted && memory.Second() == 99 && api.asyncLive() == 1,
+                    "A managed completion callback must not unpin or destroy its still-active native frame.");
+                Check(await operation.task.WaitAsync(TimeSpan.FromSeconds(10)) == 42 && memory.unpins == 1 && api.asyncLive() == 0,
+                    "Terminal publication must follow native stop and pin release.");
+                checks.Add(mode + ":async-native-frame");
+            }
+
+            using (TrackedMemory memory = new())
+            {
+                NativeOperation<int> operation = api.start(memory.Memory, 0);
+                operation.Dispose();
+                // Cancellation is deliberately a request; the native operation still owns the buffer.
+                for (int attempt = 0; attempt < 100 && api.cancelRequested() == 0; attempt++) await Task.Delay(1);
+                Check(operation.isCancellationRequested && api.cancelRequested() == 1 && !operation.task.IsCompleted && memory.unpins == 0 && api.asyncLive() == 1,
+                    "A nonblocking cancellation request must not imply native completion.");
+                checks.Add(mode + ":async-cancel-request");
+                api.pump(1);
+                Check(memory.unpins == 0 && memory.Second() == 99, "Native code may still access the buffer after its cancellation callback.");
+                bool cancelled = false;
+                try { await operation.task.WaitAsync(TimeSpan.FromSeconds(10)); }
+                catch (OperationCanceledException) { cancelled = true; }
+                Check(cancelled && memory.unpins == 1 && api.asyncLive() == 0, "Cancellation acknowledgement must drain native access before pin release.");
+                checks.Add(mode + ":async-cancel-ack");
+            }
+
+            using (TrackedMemory memory = new())
+            {
+                NativeOperation<int> operation = api.start(memory.Memory, 1);
+                Check(!operation.task.IsCompleted && memory.unpins == 0 && memory.Second() == 99,
+                    "Synchronous completion must await publication of the returned native handle.");
+                Check(await operation.task.WaitAsync(TimeSpan.FromSeconds(10)) == 42 && memory.unpins == 1, "Inline completion must close the published handle once.");
+                checks.Add(mode + ":async-inline-completion");
+            }
+
+            using (TrackedMemory memory = new())
+            {
+                NativeOperation<int> operation = api.start(memory.Memory, 2);
+                api.pump(0);
+                Check(await operation.task.WaitAsync(TimeSpan.FromSeconds(10)) == 42 && memory.unpins == 1 && api.asyncLive() == 0,
+                    "Duplicate native completion must preserve the first result and one cleanup.");
+                checks.Add(mode + ":async-duplicate-completion");
+            }
+
+            Registration closing = api.register(value => value);
+            api.context.Dispose();
+            bool closed = false;
+            try { closing.invoke(1); } catch (ObjectDisposedException) { closed = true; }
+            Check(closed && api.live() == 1, "Context closure must reject public use and retain native cleanup capability.");
+            await closing.closeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+            Check(api.live() == 0, "A registration must still close after its API context.");
+            checks.Add(mode + ":retained-context-close");
+            Check(api.errors() == 0 && api.asyncErrors() == 0, "Every native unregister must execute outside active native frames.");
+        }
+
+        using (LifecycleApi api = create())
+        using (TrackedMemory memory = new())
+        {
+            NativeOperation<int> operation = api.start(memory.Memory, 0);
+            api.context.Dispose();
+            api.pump(0);
+            Check(await operation.task.WaitAsync(TimeSpan.FromSeconds(10)) == 42 && memory.unpins == 1 && api.asyncLive() == 0,
+                "A live async operation must retain its native module after context disposal.");
+            checks.Add(mode + ":async-context-close");
+            Check(api.live() == 0 && api.asyncLive() == 0 && api.errors() == 0 && api.asyncErrors() == 0,
+                "The independent native oracle must confirm complete quiescence without active-frame cleanup.");
+            checks.Add(mode + ":native-quiescence");
+        }
+    }
+
+    private static void Check(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+        Console.WriteLine("BGCS browser lifecycle checked: " + message);
+    }
+
+    private sealed record Registration(Func<int, int> invoke, Action close, Func<ValueTask> closeAsync,
+        Func<Task> completion, Func<Exception?> exception);
+
+    private sealed record LifecycleApi(IDisposable context, IDisposable observer, Func<Func<int, int>, Registration> register,
+        Func<Memory<int>, int, NativeOperation<int>> start, Action<int> pump, Func<int> live, Func<int> errors,
+        Func<int> asyncLive, Func<int> asyncErrors, Func<int> cancelRequested) : IDisposable
+    {
+        public void Dispose() { context.Dispose(); observer.Dispose(); }
+    }
+
+    private sealed class TrackedMemory : MemoryManager<int>
+    {
+        private nint m_address;
+        private readonly int m_thread = Environment.CurrentManagedThreadId;
+        internal int pins, unpins;
+        internal unsafe TrackedMemory()
+        {
+            m_address = (nint)NativeMemory.AllocZeroed(2, sizeof(int));
+            if (m_address == 0) throw new OutOfMemoryException();
+            GetSpan()[0] = 20; GetSpan()[1] = 22;
+        }
+        public override unsafe Span<int> GetSpan() => new((void*)m_address, 2);
+        internal int Second() => GetSpan()[1];
+        public override unsafe MemoryHandle Pin(int elementIndex = 0)
+        {
+            Console.WriteLine("BGCS browser lifecycle: tracked memory Pin entered");
+            if (elementIndex is < 0 or > 2 || m_address == 0) throw new ArgumentOutOfRangeException(nameof(elementIndex));
+            if (Environment.CurrentManagedThreadId != m_thread) throw new InvalidOperationException("Pin escaped its event loop.");
+            pins++;
+            Console.WriteLine("BGCS browser lifecycle: tracked memory Pin returning");
+            return new MemoryHandle((int*)m_address + elementIndex, default, this);
+        }
+        public override void Unpin()
+        {
+            if (Environment.CurrentManagedThreadId != m_thread) throw new InvalidOperationException("Unpin escaped its event loop.");
+            unpins++;
+            if (unpins > pins) throw new InvalidOperationException("Pin released more than once.");
+        }
+        protected override unsafe void Dispose(bool disposing)
+        {
+            if (pins != unpins) throw new InvalidOperationException("Storage released before native quiescence.");
+            NativeMemory.Free((void*)m_address); m_address = 0;
+        }
+    }
+
+__MODE_FACTORIES__
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "library": {
+    "id": "configuration_entry",
+    "nativeName": "base-lib"
+  },
+  "source": {
+    "language": "c",
+    "headers": [
+      "header.h"
+    ],
+    "parseMacros": false,
+    "includeTransitivelyReferencedHeaders": false
+  },
+  "api": {
+    "namespace": "Expected.FromBase",
+    "name": "BaseApi",
+    "importMode": "dllImport"
+  },
+  "runtime": {
+    "mode": "package"
+  },
+  "nativeBuild": {
+    "mode": "none"
+  },
+  "output": {
+    "root": "Generated",
+    "layout": "singleFile"
+  },
+  "cache": {
+    "enabled": false
+  }
+}

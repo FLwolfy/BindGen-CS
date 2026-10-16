@@ -1,0 +1,54 @@
+{
+  "$schema": "../../schemas/bindgen.schema.json",
+  "schemaVersion": 1,
+  "library": {
+    "id": "bimg",
+    "nativeName": "bimg_bridge",
+    "bridgeExportPrefix": "Bimg_"
+  },
+  "source": {
+    "language": "cpp",
+    "languageStandard": "c++23",
+    "headers": [
+      "../../artifacts/corpus/headers/bimg/include/bimg/bimg.h"
+    ],
+    "includeDirectories": [
+      "../../artifacts/corpus/headers/bimg/include",
+      "../../artifacts/corpus/headers/bx/include"
+    ],
+    "selection": {
+      "includeHeaders": [
+        "../../artifacts/corpus/headers/bimg/include/bimg/bimg.h"
+      ],
+      "excludeDeclarations": [
+        "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)"
+      ]
+    },
+    "includeTransitivelyReferencedHeaders": true,
+    "parseComments": false
+  },
+  "api": {
+    "namespace": "BGCS.RealLibraries.Bimg",
+    "name": "Bimg",
+    "style": "instance",
+    "importMode": "functionTable",
+    "framework": "net10.0",
+    "names": {
+      "bimg::getFormat": "CorpusFormat",
+      "bimg::getName": "CorpusName",
+      "bimg::getBitsPerPixel": "CorpusBits",
+      "bimg::imageGetNumMips": "CorpusMips",
+      "bimg::imageSolid": "CorpusSolid"
+    }
+  },
+  "runtime": {
+    "mode": "package"
+  },
+  "nativeBuild": {
+    "mode": "none"
+  },
+  "output": {
+    "root": "Generated",
+    "layout": "singleFile"
+  }
+}

@@ -7,17 +7,19 @@ namespace BGCS.Tool.Tests;
 public sealed class DocumentationCommandTests
 {
     [Theory]
-    [InlineData("/// <summary>Executes public operation Find.</summary>", "summary")]
-    [InlineData("/// <summary>Finds the requested value.</summary>", "value")]
-    [InlineData("/// <inheritdoc />", "Inheritdoc")]
-    [InlineData("/// <summary>Performs the operation implemented by Find.</summary>\n/// <param name=\"value\">The lookup value.</param>\n/// <returns>The matching value.</returns>", "summary")]
-    [InlineData("/// <summary>Returns the supplied value.</summary>\n/// <param name=\"wrong\">The lookup value.</param>\n/// <returns>The matching value.</returns>", "declared parameter")]
-    [InlineData("/// <summary>Returns the supplied value.</summary>\n/// <param name=\"value\">The lookup value.</param>\n/// <returns>The result produced by Find.</returns>", "returns contract")]
-    [InlineData("/// <summary>Returns the supplied value.</summary>\n/// <param name=\"value\">The lookup value.</param>\n/// <returns>Result produced by Find.</returns>", "returns contract")]
+    [InlineData("generic-summary", "/// <summary>Executes public operation Find.</summary>", "summary")]
+    [InlineData("missing-param", "/// <summary>Finds the requested value.</summary>", "value")]
+    [InlineData("inheritdoc", "/// <inheritdoc />", "Inheritdoc")]
+    [InlineData("placeholder-summary", "/// <summary>Performs the operation implemented by Find.</summary>\n/// <param name=\"value\">The lookup value.</param>\n/// <returns>The matching value.</returns>", "summary")]
+    [InlineData("wrong-param", "/// <summary>Returns the supplied value.</summary>\n/// <param name=\"wrong\">The lookup value.</param>\n/// <returns>The matching value.</returns>", "declared parameter")]
+    [InlineData("placeholder-return-the", "/// <summary>Returns the supplied value.</summary>\n/// <param name=\"value\">The lookup value.</param>\n/// <returns>The result produced by Find.</returns>", "returns contract")]
+    [InlineData("placeholder-return", "/// <summary>Returns the supplied value.</summary>\n/// <param name=\"value\">The lookup value.</param>\n/// <returns>Result produced by Find.</returns>", "returns contract")]
     public void IncompletePublicContractFailsWithAnActionableLocation(
+        string caseId,
         string documentation,
         string expectedMessage
     ) {
+        Assert.NotEmpty(caseId);
         WithSource("/// <summary>Provides value lookup for a consumer.</summary>\npublic sealed class Lookup {\n"
             + documentation + "\npublic int Find(int value) => value;\n}", (
                 sourceRoot,

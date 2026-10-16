@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "library": { "id": "custom-table", "nativeName": "custom_table" },
+  "source": { "language": "c", "languageStandard": "c17", "headers": ["native.h"], "parseMacros": false },
+  "api": {
+    "namespace": "Generated.CustomFunctionTable",
+    "name": "CustomTableApi",
+    "importMode": "functionTable",
+    "names": { "table_add": "Add", "table_multiply": "Multiply", "table_hold": "Hold" }
+  },
+  "nativeBuild": { "mode": "none" },
+  "runtime": { "mode": "package" },
+  "output": { "root": "Generated" }
+}

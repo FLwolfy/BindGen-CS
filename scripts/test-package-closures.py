@@ -1,0 +1,284 @@
+#!/usr/bin/env python3
+"""Exercise distribution boundaries without building or installing any product."""
+from __future__ import annotations
+
+import importlib.util
+import copy
+import hashlib
+import json
+from pathlib import Path
+import tempfile
+import shutil
+import subprocess
+import sys
+import unittest
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location("bgcs_distribution_closure", ROOT / "eng/pack.py")
+PACK = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(PACK)
+
+
+class PackageClosureTests(unittest.TestCase):
+    def setUp(self):
+        parent = ROOT / "artifacts/temporary"
+        parent.mkdir(parents=True, exist_ok=True)
+        if not parent.resolve().is_relative_to(ROOT):
+            raise RuntimeError("The packaging regression workspace escaped the repository.")
+        self.temporary = tempfile.TemporaryDirectory(prefix="package-closure-", dir=parent)
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.original_root = PACK.ROOT
+        PACK.ROOT = self.root
+        self.addCleanup(setattr, PACK, "ROOT", self.original_root)
+
+    def graph(self, project, *packages):
+        libraries = {}
+        for name, version, checksum in packages:
+            libraries[name + "/" + version] = {"type": "package", "path": name.lower() + "/" + version,
+                "sha512": checksum, "files": ["lib/net10.0/" + name + ".dll", "LICENSE.txt"]}
+        directory = self.root / project / "obj"
+        directory.mkdir(parents=True, exist_ok=True)
+        document = {"libraries": libraries, "packageFolders": {str(self.root / "packages"): {}}}
+        (directory / "project.assets.json").write_text(json.dumps(document), encoding="utf-8")
+        return document
+
+    def test_advanced_frontend_reference_dependency_survives_host_decoupling(self):
+        self.graph("host", ("Roslyn", "1.0.0", "roslyn"))
+        self.graph("frontend", ("ClangSharp", "20.1.2.4", "clang"))
+        merged = PACK.merge_package_graphs(["host", "frontend"], require_single_version=True)
+        self.assertEqual({"Roslyn/1.0.0", "ClangSharp/20.1.2.4"}, set(merged["libraries"]))
+
+    def test_task_host_and_worker_notices_include_independent_closures(self):
+        self.graph("host", ("Roslyn", "1.0.0", "roslyn"))
+        self.graph("worker", ("ClangSharp", "20.1.2.4", "clang"))
+        self.graph("task", ("Microsoft.Build.Utilities.Core", "18.9.6", "msbuild"))
+        public = PACK.merge_package_graphs(["host"])
+        notices = PACK.merge_package_graphs(["host", "worker", "task"])
+        self.assertNotIn("Microsoft.Build.Utilities.Core/18.9.6", public["libraries"])
+        self.assertEqual(3, len(notices["libraries"]))
+        self.assertIn("ClangSharp/20.1.2.4", notices["libraries"])
+
+    def test_separate_execution_versions_are_preserved_but_public_conflicts_fail(self):
+        self.graph("host", ("Shared.Dependency", "1.0.0", "one"))
+        self.graph("task", ("Shared.Dependency", "2.0.0", "two"))
+        self.assertEqual(2, len(PACK.merge_package_graphs(["host", "task"])["libraries"]))
+        with self.assertRaisesRegex(RuntimeError, "incompatible package versions"):
+            PACK.merge_package_graphs(["host", "task"], require_single_version=True)
+
+    def test_same_package_identity_with_different_bytes_or_assets_fails(self):
+        for mismatch in ("checksum", "files"):
+            with self.subTest(mismatch=mismatch):
+                self.graph("host", ("Same", "1.0.0", "one"))
+                other = self.graph("worker", ("Same", "1.0.0", "two" if mismatch == "checksum" else "one"))
+                if mismatch == "files":
+                    other["libraries"]["Same/1.0.0"]["files"].append("unreviewed.dll")
+                    (self.root / "worker/obj/project.assets.json").write_text(json.dumps(other), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "disagree about package content"):
+                    PACK.merge_package_graphs(["host", "worker"])
+
+    def test_restored_identity_is_case_insensitive_without_losing_package_folders(self):
+        self.graph("first", ("Shared", "1.0.0", "one"))
+        second = self.graph("second", ("Shared", "1.0.0", "one"))
+        second["libraries"]["shared/1.0.0"] = second["libraries"].pop("Shared/1.0.0")
+        second["packageFolders"] = {str(self.root / "second-packages"): {}}
+        (self.root / "second/obj/project.assets.json").write_text(json.dumps(second), encoding="utf-8")
+        merged = PACK.merge_package_graphs(["first", "second"])
+        self.assertEqual(1, len(merged["libraries"]))
+        self.assertEqual(2, len(merged["packageFolders"]))
+
+    def test_generic_restore_does_not_count_as_a_host_tool_restore(self):
+        assets = self.graph("src/BGCS.Tool")
+        assets["targets"] = {"net10.0": {}}
+        (self.root / "src/BGCS.Tool/obj/project.assets.json").write_text(json.dumps(assets), encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "win-x64, osx-x64"):
+            PACK.require_tool_restore_rids(["win-x64", "osx-x64"])
+        assets["targets"]["net10.0/win-x64"] = {}
+        (self.root / "src/BGCS.Tool/obj/project.assets.json").write_text(json.dumps(assets), encoding="utf-8")
+        PACK.require_tool_restore_rids(["win-x64"])
+        with self.assertRaisesRegex(RuntimeError, "osx-x64"):
+            PACK.require_tool_restore_rids(["win-x64", "osx-x64"])
+
+    def test_transitive_restore_edges_use_selected_versions_after_unification(self):
+        assets = self.graph("host", ("Alpha", "1.0.0", "one"), ("Beta", "2.0.0", "two"))
+        assets["targets"] = {"net10.0": {
+            "Alpha/1.0.0": {"type": "package", "dependencies": {"Beta": "1.0.0"}},
+            "Beta/2.0.0": {"type": "package"}}}
+        (self.root / "host/obj/project.assets.json").write_text(json.dumps(assets), encoding="utf-8")
+        merged = PACK.merge_package_graphs(["host"])
+        self.assertEqual(["Beta/2.0.0"], merged["resolvedDependencies"]["Alpha/1.0.0"])
+
+    def test_missing_resolved_dependency_node_is_not_an_audited_graph(self):
+        assets = self.graph("host", ("Alpha", "1.0.0", "one"))
+        assets["targets"] = {"net10.0": {"Alpha/1.0.0": {"type": "package", "dependencies": {"Absent": "1.0.0"}}}}
+        (self.root / "host/obj/project.assets.json").write_text(json.dumps(assets), encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "exact resolved library"):
+            PACK.merge_package_graphs(["host"])
+
+    def create_packages(self):
+        output = self.root / "delivered"
+        output.mkdir()
+        for product in PACK.MANIFEST["products"]:
+            if product != "BindGen-CS":
+                with zipfile.ZipFile(output / (product + ".0.0.0-test.nupkg"), "w") as archive:
+                    archive.writestr("lib/net10.0/" + product + ".dll", b"reviewed managed payload")
+        for product in PACK.MANIFEST["symbolProducts"]:
+            with zipfile.ZipFile(output / (product + ".0.0.0-test.snupkg"), "w") as archive:
+                archive.writestr("lib/net10.0/" + product + ".pdb", b"reviewed symbol payload")
+        return output
+
+    def test_declared_symbol_packages_are_mandatory(self):
+        output = self.create_packages()
+        PACK.verify_packages(output, "0.0.0-test", False)
+        (output / "BGCS.Runtime.0.0.0-test.snupkg").unlink()
+        with self.assertRaisesRegex(RuntimeError, "symbol package set"):
+            PACK.verify_packages(output, "0.0.0-test", False)
+
+    def test_duplicate_symbol_entries_are_rejected(self):
+        output = self.create_packages()
+        with zipfile.ZipFile(output / "BGCS.0.0.0-test.snupkg", "a") as archive:
+            with self.assertWarns(UserWarning):
+                archive.writestr("lib/net10.0/BGCS.pdb", b"ambiguous replacement")
+        with self.assertRaisesRegex(RuntimeError, "ambiguous duplicate entries"):
+            PACK.verify_packages(output, "0.0.0-test", False)
+
+    def test_empty_symbol_container_is_not_successful_symbol_delivery(self):
+        output = self.create_packages()
+        with zipfile.ZipFile(output / "BGCS.0.0.0-test.snupkg", "w") as archive:
+            archive.writestr("manifest.txt", b"no actual PDB")
+        with self.assertRaisesRegex(RuntimeError, "contains no debugging symbols"):
+            PACK.verify_packages(output, "0.0.0-test", False)
+
+    def worker_archive(self, rid="win-x64", *, omit=None, extra=None, tamper=None, change_manifest=None, path=None):
+        extension = ".dll" if rid.startswith("win-") else ".dylib" if rid.startswith("osx-") else ".so"
+        payload = {name: name.encode("utf-8") for name in (
+            "BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json",
+            "BGCS.Frontend.Clang.Worker.runtimeconfig.json", "BGCS.Contracts.dll", "BGCS.Infrastructure.dll",
+            "BGCS.Frontend.Clang.dll", "ClangSharp.dll", "ClangSharp.Interop.dll",
+            *(f"runtimes/{rid}/native/{name}{extension}" for name in ("libclang", "libClangSharp")))}
+        manifest = {"schemaVersion": 1, "hostRid": rid, "parserIdentity": "ClangSharp/20.1.2.4;LLVM/20",
+                    "artifacts": [{"relativePath": name, "mediaType": "application/octet-stream",
+                                   "digest": {"value": hashlib.sha256(content).hexdigest()}}
+                                  for name, content in payload.items()]}
+        if change_manifest: change_manifest(manifest)
+        if omit in payload: del payload[omit]
+        if extra: payload.update(extra)
+        if tamper: payload[tamper] = b"replaced executable bytes"
+        prefix = f"tools/net10.0/{rid}/bgcs/worker/"
+        path = path or self.root / "tool.nupkg"
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, content in payload.items(): archive.writestr(prefix + name, content)
+            if omit != "worker-assets.manifest.json":
+                archive.writestr(prefix + "worker-assets.manifest.json", json.dumps(manifest))
+        return path
+
+    def test_every_declared_tool_rid_delivers_an_exact_hash_verified_worker(self):
+        for rid in PACK.RIDS:
+            with self.subTest(rid=rid), zipfile.ZipFile(self.worker_archive(rid)) as archive:
+                PACK.verify_tool_worker_archive(archive, rid)
+
+    def test_retired_dependency_cannot_survive_in_an_archived_worker(self):
+        with zipfile.ZipFile(self.worker_archive(extra={"Newtonsoft.Json.dll": b"stale earlier closure"})) as archive:
+            with self.assertRaisesRegex(RuntimeError, "unexpected=.*Newtonsoft.Json.dll"):
+                PACK.verify_tool_worker_archive(archive, "win-x64")
+
+    def test_missing_worker_artifact_or_manifest_is_rejected(self):
+        for absent in ("worker-assets.manifest.json", "ClangSharp.Interop.dll"):
+            with self.subTest(absent=absent), zipfile.ZipFile(self.worker_archive(omit=absent)) as archive:
+                with self.assertRaises(RuntimeError): PACK.verify_tool_worker_archive(archive, "win-x64")
+
+    def test_changed_worker_executable_bytes_are_rejected(self):
+        with zipfile.ZipFile(self.worker_archive(tamper="BGCS.Contracts.dll")) as archive:
+            with self.assertRaisesRegex(RuntimeError, "content digest differs"):
+                PACK.verify_tool_worker_archive(archive, "win-x64")
+
+    def test_manifest_cannot_erase_a_required_execution_dependency(self):
+        def erase(manifest):
+            manifest["artifacts"] = [item for item in manifest["artifacts"] if item["relativePath"] != "ClangSharp.Interop.dll"]
+        with zipfile.ZipFile(self.worker_archive(omit="ClangSharp.Interop.dll", change_manifest=erase)) as archive:
+            with self.assertRaisesRegex(RuntimeError, "omits required execution assets"):
+                PACK.verify_tool_worker_archive(archive, "win-x64")
+
+    def test_worker_manifest_identity_paths_and_case_collisions_are_rejected(self):
+        def wrong_host(manifest): manifest["hostRid"] = "linux-x64"
+        def traversal(manifest): manifest["artifacts"][0]["relativePath"] = "../escape.dll"
+        def duplicate(manifest): manifest["artifacts"].append(copy.deepcopy(manifest["artifacts"][0]))
+        def bad_digest(manifest): manifest["artifacts"][0]["digest"]["value"] = "unverified"
+        for change in (wrong_host, traversal, duplicate, bad_digest):
+            with self.subTest(change=change.__name__), zipfile.ZipFile(self.worker_archive(change_manifest=change)) as archive:
+                with self.assertRaises(RuntimeError): PACK.verify_tool_worker_archive(archive, "win-x64")
+        with zipfile.ZipFile(self.worker_archive(extra={"bgcs.contracts.dll": b"case alias"})) as archive:
+            with self.assertRaisesRegex(RuntimeError, "case-colliding"):
+                PACK.verify_tool_worker_archive(archive, "win-x64")
+
+    def test_product_verification_rejects_stale_tool_worker_before_success_receipt(self):
+        output = self.create_packages()
+        with zipfile.ZipFile(output / "BindGen-CS.0.0.0-test.nupkg", "w") as archive:
+            archive.writestr("toolsettings.json", "pointer fixture")
+        self.worker_archive(path=output / "BindGen-CS.win-x64.0.0.0-test.nupkg",
+                            extra={"Newtonsoft.Json.dll": b"retired dependency"})
+        with self.assertRaisesRegex(RuntimeError, "locked file set"):
+            PACK.verify_packages(output, "0.0.0-test", False, "win-x64")
+
+    def run_execution_output_fixture(self, exit_code):
+        script = ("import importlib.util,sys; "
+                  f"spec=importlib.util.spec_from_file_location('pack',{str(ROOT / 'eng/pack.py')!r}); "
+                  "pack=importlib.util.module_from_spec(spec); spec.loader.exec_module(pack); "
+                  f"pack.execute(sys.executable,['-c',\"import sys; print('compiler stdout'); "
+                  f"print('compiler stderr',file=sys.stderr); sys.exit({exit_code})\"])" )
+        return subprocess.run([sys.executable, "-c", script], cwd=ROOT, capture_output=True,
+                              text=True, encoding="utf-8", timeout=30)
+
+    def test_successful_child_compiler_output_survives_no_window_execution(self):
+        result = self.run_execution_output_fixture(0)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("compiler stdout", result.stdout)
+        self.assertIn("compiler stderr", result.stderr)
+
+    def test_failed_child_preserves_real_compiler_diagnostics_and_exit_failure(self):
+        result = self.run_execution_output_fixture(7)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("compiler stdout", result.stdout)
+        self.assertIn("compiler stderr", result.stderr)
+        self.assertIn("non-zero exit status 7", result.stderr)
+
+    def prepare_resource_notices(self):
+        source = self.root / 'distribution/third-party/english-words'
+        shutil.copytree(ROOT / 'distribution/third-party/english-words', source)
+        resource = self.root / 'src/BGCS.CSharp/Resources/en_EN.txt'
+        resource.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / 'src/BGCS.CSharp/Resources/en_EN.txt', resource)
+        (self.root / 'src/HexaGen_LICENSE').write_text('fixture original attribution')
+        (self.root / 'THIRD-PARTY-NOTICES.md').write_text('fixture notice index')
+        return source
+
+    def test_resource_distribution_keeps_exact_license_provenance_and_attribution(self):
+        source = self.prepare_resource_notices()
+        output = self.root / 'notices'
+        PACK.copy_resource_notices(output)
+        for name in ('LICENSE.md', 'embedded-resource-provenance.json'):
+            self.assertEqual((source / name).read_bytes(), (output / 'resources/english-words' / name).read_bytes())
+        self.assertEqual('fixture original attribution', (output / 'source/HexaGen_LICENSE').read_text())
+        self.assertTrue((output / 'THIRD-PARTY-NOTICES.md').is_file())
+
+    def test_resource_distribution_rejects_source_transform_license_and_path_drift(self):
+        source = self.prepare_resource_notices()
+        original = json.loads((source / 'embedded-resource-provenance.json').read_text())
+        for fault in ('resource-hash', 'upstream-hash', 'upstream-length', 'transform', 'words', 'license-hash', 'license-path'):
+            value = copy.deepcopy(original)
+            if fault == 'resource-hash': value['sha256'] = '0' * 64
+            elif fault == 'upstream-hash': value['sourceSha256'] = '0' * 64
+            elif fault == 'upstream-length': value['sourceBytes'] += 1
+            elif fault == 'transform': value['transformation'] = 'guessed'
+            elif fault == 'words': value['words'] += 1
+            elif fault == 'license-hash': value['license']['sha256'] = '0' * 64
+            else: value['license']['path'] = '../outside-license'
+            (source / 'embedded-resource-provenance.json').write_text(json.dumps(value))
+            with self.subTest(fault=fault), self.assertRaises(RuntimeError):
+                PACK.copy_resource_notices(self.root / ('rejected-' + fault))
+            self.assertFalse((self.root / ('rejected-' + fault)).exists())
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

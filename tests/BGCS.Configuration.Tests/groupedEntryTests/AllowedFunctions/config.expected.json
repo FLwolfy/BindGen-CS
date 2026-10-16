@@ -1,0 +1,38 @@
+{
+  "legacyFixture": "entryTests/AllowedFunctions",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "callables",
+        "includeDeclarations": [
+          "keep_fn"
+        ],
+        "excludeDeclarations": []
+      }
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "KeepFn",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "a"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "DropFn"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+RawApi",
+      "name": "DropFn"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "legacyFixture": "entryTests/KnownConstantNames",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/names": {}
+  },
+  "constants": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "SAMPLE_CONST",
+      "value": 7
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "KEEP_CONST",
+      "value": 3
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "SpecialConst"
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "ReadConst",
+      "parameters": [],
+      "parameterNames": [],
+      "returns": "int"
+    }
+  ]
+}

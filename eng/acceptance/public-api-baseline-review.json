@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "productVersion": "3.0.0",
+  "scope": "Reviewed initial major-version public API baselines, not platform/package/release certification.",
+  "releaseCertification": false,
+  "sourceWorktreeDirtyAtReview": true,
+  "snapshotEncoding": "UTF-8 without BOM, invariant LF, final newline",
+  "reviewedBoundaries": [
+    "Contracts and Runtime independent",
+    "standard ports expose neutral immutable contracts",
+    "frontend has only one frontend and three explicitly advanced worker types",
+    "old facade/configuration/parser authoring cones absent",
+    "internal implementation APIs are delivered in the SDK but are not extra products"
+  ],
+  "snapshotFacts": [
+    "native function-pointer signatures and calling conventions",
+    "enum widths and full constants",
+    "type inheritance/interfaces and generic constraints",
+    "static/readonly/ref-like/init/operator/indexer/optional/default facts"
+  ],
+  "limitations": [
+    "Not a universal nullable-annotation or custom-attribute compatibility analyzer; review contract/source semantics separately."
+  ],
+  "assemblies": [
+    {
+      "assembly": "BGCS.Contracts",
+      "baseline": "tests/public-api/BGCS.Contracts.txt",
+      "sha256": "0c66e78085f750633c8fdf1dc501e369c2ced1dbbb38addfd88ac48c72824e7f",
+      "lines": 3840,
+      "exportedTypes": 296
+    },
+    {
+      "assembly": "BGCS.Runtime",
+      "baseline": "tests/public-api/BGCS.Runtime.txt",
+      "sha256": "69861fa4d87facec4267259af8d77527affe0b8bdd48c2b01ca9830850f80fbd",
+      "lines": 336,
+      "exportedTypes": 46
+    },
+    {
+      "assembly": "BGCS",
+      "baseline": "tests/public-api/BGCS.txt",
+      "sha256": "7ec316edb6b2693372c97dda5be44321e65aae3bdc13ba72f9da6a256c4aadbc",
+      "lines": 984,
+      "exportedTypes": 69
+    },
+    {
+      "assembly": "BGCS.Infrastructure",
+      "baseline": "tests/public-api/BGCS.Infrastructure.txt",
+      "sha256": "c9ce0da4d13106499aac2b35a63130f928cb5c34a5d9fa94c81e462af29dd0f6",
+      "lines": 338,
+      "exportedTypes": 50
+    },
+    {
+      "assembly": "BGCS.Platforms",
+      "baseline": "tests/public-api/BGCS.Platforms.txt",
+      "sha256": "67cf8c90a76a25185257de53aa85cc71f3426f68c4f5d56edf3d91a1cd7c6466",
+      "lines": 66,
+      "exportedTypes": 17
+    },
+    {
+      "assembly": "BGCS.Analysis",
+      "baseline": "tests/public-api/BGCS.Analysis.txt",
+      "sha256": "eb49d53b21eec0add9295ae15c8b1863ed3d9f76c27a1b9a1b3925cc1a376b20",
+      "lines": 197,
+      "exportedTypes": 43
+    },
+    {
+      "assembly": "BGCS.Cpp2C",
+      "baseline": "tests/public-api/BGCS.Cpp2C.txt",
+      "sha256": "3d759a1d99a132fe720931f7eac9cad5f554225441b7660ef58acdf913e1f2ce",
+      "lines": 59,
+      "exportedTypes": 13
+    },
+    {
+      "assembly": "BGCS.CSharp",
+      "baseline": "tests/public-api/BGCS.CSharp.txt",
+      "sha256": "29eb63609a8246f5cb1778236a002036ba62972e00cf60840ead544c30fa16ea",
+      "lines": 1221,
+      "exportedTypes": 91
+    },
+    {
+      "assembly": "BGCS.NativeBuild",
+      "baseline": "tests/public-api/BGCS.NativeBuild.txt",
+      "sha256": "6b9e0a1eaf184afec857c777c84286606e16a705fec818b15683660e937c145c",
+      "lines": 128,
+      "exportedTypes": 25
+    },
+    {
+      "assembly": "BGCS.Frontend.Clang",
+      "baseline": "tests/public-api/BGCS.Frontend.Clang.txt",
+      "sha256": "5b6978105b3d4e6e3717cfa0930eb79128f4ef933ed918418e933f659a3ff14c",
+      "lines": 13,
+      "exportedTypes": 4
+    }
+  ]
+}

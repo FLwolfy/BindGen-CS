@@ -1,0 +1,37 @@
+{
+  "legacyFixture": "entryTests/ConstantNamingConvention",
+  "legacyVariant": "config.screaming",
+  "configuration": {
+    "/api/naming/constants/casing": "screamingSnake"
+  },
+  "constants": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "MY_FLAG",
+      "value": 1
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "ANOTHER_VALUE",
+      "value": 2
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "AnotherValue"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "MyFlag"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "anotherValue"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "myFlag"
+    }
+  ]
+}

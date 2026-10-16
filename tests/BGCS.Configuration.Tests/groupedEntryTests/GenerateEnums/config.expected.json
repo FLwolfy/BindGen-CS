@@ -1,0 +1,27 @@
+{
+  "legacyFixture": "entryTests/GenerateEnums",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/excludeCategories": [
+      "enumerations"
+    ]
+  },
+  "absentTypes": [
+    "EntryTests.Generated.SampleMode"
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ]
+}

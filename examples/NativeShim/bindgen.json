@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "library": {
+    "id": "widget",
+    "nativeName": "widget_bridge"
+  },
+  "source": {
+    "language": "cpp",
+    "headers": [
+      "native/entry.hpp"
+    ],
+    "includeDirectories": [
+      "native"
+    ]
+  },
+  "api": {
+    "namespace": "BGCS.Examples.NativeShim",
+    "name": "WidgetApi",
+    "names": {
+      "bgcs_widget_create": "CreateWidget",
+      "bgcs_widget_destroy": "DestroyWidget",
+      "bgcs_widget_sum": "Sum"
+    }
+  },
+  "cpp": {
+    "nativeShims": [
+      {
+        "id": "widget",
+        "publicHeaders": [
+          "shims/widget_c.h"
+        ],
+        "sourceFiles": [
+          "shims/widget_c.cpp"
+        ],
+        "exports": [
+          "bgcs_widget_create",
+          "bgcs_widget_destroy",
+          "bgcs_widget_sum"
+        ]
+      }
+    ]
+  },
+  "nativeBuild": {
+    "mode": "sources"
+  },
+  "output": {
+    "root": "Generated"
+  }
+}

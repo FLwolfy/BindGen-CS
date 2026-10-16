@@ -10,6 +10,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNTIME_DIR="${BGCS_CLANG_RUNTIME_DIR:-${ROOT_DIR}/artifacts/clang-runtime/osx-x64}"
 SOURCE_DIR="${ROOT_DIR}/artifacts/clang-runtime/ClangSharp-source"
 BUILD_DIR="${ROOT_DIR}/artifacts/clang-runtime/ClangSharp-build"
+PARSER_LOCK="${ROOT_DIR}/distribution/manifests/native-parser-assets.lock.json"
+EXPECTED_CLANGSHARP_COMMIT="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["supplementalRuntime"]["clangSharp"]["commit"])' "${PARSER_LOCK}")"
+EXPECTED_LLVM_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["supplementalRuntime"]["llvm"]["version"])' "${PARSER_LOCK}")"
 
 if ! command -v brew >/dev/null 2>&1; then
   printf 'Homebrew is required to provide LLVM 20 on macOS x64.\n' >&2
@@ -20,6 +23,11 @@ if [[ -z "$(brew list --versions llvm@20 2>/dev/null)" ]]; then
 fi
 LLVM_PREFIX="$(brew --prefix llvm@20)"
 LLVM_REAL_PREFIX="$(cd "${LLVM_PREFIX}" && pwd -P)"
+llvm_version="$("${LLVM_PREFIX}/bin/llvm-config" --version)"
+if [[ "${llvm_version}" != "${EXPECTED_LLVM_VERSION}" ]]; then
+  printf 'The parser recipe requires LLVM %s; the installed Homebrew keg reports %s.\n' "${EXPECTED_LLVM_VERSION}" "${llvm_version}" >&2
+  exit 1
+fi
 if [[ ! -f "${LLVM_PREFIX}/lib/libclang.dylib" ]]; then
   printf 'LLVM 20 does not provide libclang.dylib at %s.\n' "${LLVM_PREFIX}" >&2
   exit 1
@@ -44,6 +52,11 @@ chmod +x "${COMPILER_BIN}/clang++"
 if [[ ! -d "${SOURCE_DIR}/.git" ]]; then
   git clone --depth 1 --branch v20.1.2.4 https://github.com/dotnet/ClangSharp.git "${SOURCE_DIR}"
 fi
+if [[ "$(git -C "${SOURCE_DIR}" rev-parse HEAD)" != "${EXPECTED_CLANGSHARP_COMMIT}" ]] ||
+   [[ -n "$(git -C "${SOURCE_DIR}" status --porcelain --untracked-files=no)" ]]; then
+  printf 'The ClangSharp checkout differs from the pinned clean source revision %s.\n' "${EXPECTED_CLANGSHARP_COMMIT}" >&2
+  exit 1
+fi
 cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DPATH_TO_LLVM="${LLVM_PREFIX}" \
@@ -51,7 +64,15 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
 cmake --build "${BUILD_DIR}" --target ClangSharp --parallel 2
 
 mkdir -p "${RUNTIME_DIR}"
+if [[ -n "$(find "${RUNTIME_DIR}" -mindepth 1 -print -quit)" ]]; then
+  printf 'Use a fresh empty owned runtime directory; existing parser bytes must not be reused as a new build.\n' >&2
+  exit 1
+fi
 mkdir -p "${RUNTIME_DIR}/licenses"
+mkdir -p "${RUNTIME_DIR}/build-inputs"
+ORIGINS_PATH="${RUNTIME_DIR}/build-inputs/native-source-origins.tsv"
+printf 'libclang.dylib\t%s\nlibClangSharp.dylib\t%s\n' \
+  "$(realpath "${LLVM_PREFIX}/lib/libclang.dylib")" "$(realpath "${BUILD_DIR}/lib/libClangSharp.dylib")" > "${ORIGINS_PATH}"
 cp -L "${LLVM_PREFIX}/lib/libclang.dylib" "${RUNTIME_DIR}/libclang.dylib"
 cp -L "${BUILD_DIR}/lib/libClangSharp.dylib" "${RUNTIME_DIR}/libClangSharp.dylib"
 
@@ -127,6 +148,7 @@ while (( runtime_index < ${#runtime_files[@]} )); do
     if [[ ! -f "${dependency_target}" ]]; then
       record_dependency_license "${dependency_source}"
       cp -L "${dependency_source}" "${dependency_target}"
+      printf '%s\t%s\n' "${dependency_name}" "$(realpath "${dependency_source}")" >> "${ORIGINS_PATH}"
       runtime_files+=("${dependency_target}")
     fi
     chmod u+w "${runtime_file}"
@@ -146,13 +168,19 @@ done
 
 cp "${SOURCE_DIR}/LICENSE.md" "${RUNTIME_DIR}/licenses/ClangSharp-LICENSE.md"
 cp "${SOURCE_DIR}/NOTICE.md" "${RUNTIME_DIR}/licenses/ClangSharp-NOTICE.md"
-llvm_version="$("${LLVM_PREFIX}/bin/llvm-config" --version)"
 curl --fail --location --silent --show-error \
   "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-${llvm_version}/llvm/LICENSE.TXT" \
   --output "${RUNTIME_DIR}/licenses/LLVM-LICENSE.txt"
+
+mkdir -p "${RUNTIME_DIR}/build-inputs"
+brew info --json=v2 llvm@20 > "${RUNTIME_DIR}/build-inputs/homebrew-llvm.json"
+python3 "${ROOT_DIR}/scripts/parser_runtime_provenance.py" create "${RUNTIME_DIR}" \
+  --clang-source "${SOURCE_DIR}" --llvm-version "${llvm_version}" \
+  --llvm-prefix "${LLVM_PREFIX}" --native-origins "${ORIGINS_PATH}" \
+  --homebrew-info "${RUNTIME_DIR}/build-inputs/homebrew-llvm.json"
 
 printf 'ClangSharp source: %s\n' "$(git -C "${SOURCE_DIR}" rev-parse HEAD)"
 printf 'LLVM: %s\n' "$("${LLVM_PREFIX}/bin/llvm-config" --version)"
 printf 'Runtime directory: %s\n' "${RUNTIME_DIR}"
 printf 'Set BGCS_CLANG_RUNTIME_DIR to this directory when running BGCS.\n'
-printf 'Set BGCS_OSX_X64_PACKAGE_RUNTIME_DIR to this directory when packing BGCS.CppAst.\n'
+printf 'Set BGCS_OSX_X64_PACKAGE_RUNTIME_DIR to this directory when packing the full BGCS SDK and tool distribution.\n'

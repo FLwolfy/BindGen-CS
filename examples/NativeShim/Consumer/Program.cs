@@ -1,9 +1,10 @@
 using System;
 using BGCS.Examples.NativeShim;
 
+using WidgetApi api = WidgetApi.Load();
 unsafe
 {
-    void* widget = WidgetNative.BgcsWidgetCreate();
+    void* widget = api.Raw.CreateWidget();
     if (widget == null)
         throw new InvalidOperationException("Unable to allocate the native widget.");
 
@@ -13,7 +14,7 @@ unsafe
         fixed (int* valuesPointer = values)
         {
             int result = 0;
-            int status = WidgetNative.BgcsWidgetSum(widget, valuesPointer, (ulong)values.Length, &result);
+            int status = api.Raw.Sum(widget, valuesPointer, (uint)values.Length, &result);
             if (status != 0)
                 throw new InvalidOperationException($"Native call failed with status {status}.");
             Console.WriteLine(result);
@@ -21,6 +22,6 @@ unsafe
     }
     finally
     {
-        WidgetNative.BgcsWidgetDestroy(widget);
+        api.Raw.DestroyWidget(widget);
     }
 }

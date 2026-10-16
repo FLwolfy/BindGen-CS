@@ -6,7 +6,7 @@ and the [architecture](docs/architecture.md) when changing handwritten code.
 ## Architecture
 
 - Keep BGCS independent of its consumers. Tests, examples and platform evidence belong to this repository.
-- Keep the eight production projects and their declared dependency directions. Core does not depend on CppAst; Intermediate owns the frozen models; Runtime remains independent.
+- Follow the BGCS 3.0 module boundaries: Contracts owns neutral data and ports; Runtime has no generator dependencies; native parsing belongs to the Clang worker. Keep source ownership inside each module and enforce the final dependency matrix before release.
 - Separate the generator host from the native target. Target providers describe the SDK, sysroot and ABI; parser builtin headers remain separate from system headers.
 - Analyze AST and lowering inputs before emission. Emitters consume frozen models.
 - Use public contracts for tests, without internal access or test-only backdoors.

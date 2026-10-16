@@ -1,0 +1,41 @@
+{
+  "legacyFixture": "entryTests/IgnoredFunctions",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "callables",
+        "excludeDeclarations": [],
+        "includeDeclarations": []
+      }
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "KeepFn",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "DropFn",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ]
+}

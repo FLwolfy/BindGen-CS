@@ -1,89 +1,145 @@
 #!/usr/bin/env python3
-"""Render the tested configuration catalog from current source and public-boundary fixtures."""
+"""Render the BGCS 3.0 grouped configuration catalog from the actual CLI schema."""
+from __future__ import annotations
 
+import argparse
+import hashlib
 import json
+import os
 from pathlib import Path
-import re
-
+import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def properties(project: str, prefix: str) -> dict[str, tuple[str, str]]:
-    result = {}
-    declaration = re.compile(
-        r"public\s+([^\r\n]+?)\s+(@?\w+)\s*\{\s*get;\s*set;\s*\}([^\r\n]*)"
-    )
-    for path in sorted((ROOT / "src" / project / "Configuration").glob(prefix + "*.cs")):
-        for match in declaration.finditer(path.read_text(encoding="utf-8-sig")):
-            type_name, name, suffix = match.groups()
-            name = name.lstrip("@")
-            default = suffix.strip().removeprefix("=").strip().removesuffix(";")
-            if not default or default == "null!":
-                if type_name.startswith(("List", "HashSet")):
-                    default = "[]"
-                elif type_name.startswith("Dictionary"):
-                    default = "{}"
-                elif type_name == "bool":
-                    default = "false"
-                elif type_name.endswith("?"):
-                    default = "null"
-                else:
-                    default = "configured during initialization"
-            result[name] = (type_name, default)
-    return result
+def resolve(schema: dict, node: dict) -> dict:
+    reference = node.get("$ref")
+    if not reference:
+        return node
+    if not reference.startswith("#/"):
+        raise ValueError("Configuration documentation requires self-contained local schema references.")
+    target = schema
+    for segment in reference[2:].split("/"):
+        target = target[segment.replace("~1", "/").replace("~0", "~")]
+    return {**target, **{key: value for key, value in node.items() if key != "$ref"}}
 
 
-def first_file(folder: Path, pattern: str, excluded: str = "") -> Path | None:
-    return next((path for path in sorted(folder.glob(pattern))
-                 if not excluded or not path.name.startswith(excluded)), None)
+def rows(schema: dict, node: dict, path: str = "", required: bool = False, ancestors: tuple[str, ...] = (), emit_current: bool = True):
+    if isinstance(node, bool):
+        if path and emit_current:
+            yield path, {"type": "any JSON value" if node else "no accepted value", "description": "Extension settings are validated by their owning registered schema." if node else "The schema rejects this value."}, required
+        return
+    reference = node.get("$ref")
+    if reference in ancestors:
+        return
+    node = resolve(schema, node)
+    next_ancestors = ancestors + ((reference,) if reference else ())
+    if path and emit_current:
+        yield path, node, required
+    mandatory = set(node.get("required", []))
+    for name, child in node.get("properties", {}).items():
+        yield from rows(schema, child, path + "." + name if path else name, name in mandatory, next_ancestors)
+    if isinstance(node.get("items"), dict):
+        yield from rows(schema, node["items"], path + "[]", False, next_ancestors)
+    if isinstance(node.get("additionalProperties"), dict):
+        yield from rows(schema, node["additionalProperties"], path + ".*", False, next_ancestors)
+    for composition in ("oneOf", "anyOf", "allOf"):
+        for alternative in node.get(composition, []):
+            yield from rows(schema, alternative, path, required, next_ancestors, emit_current=False)
 
 
-def generate(project: str, prefix: str, test_project: str, output: str, language: str) -> None:
-    available = properties(project, prefix)
-    parts = [
-        "# Tested Configuration Entries" if language == "csharp" else "# Tested C++ Bridge Configuration Entries",
-        "",
-        f"This catalog is generated from `{test_project}` fixtures and the current `{prefix}` source.",
-        "It describes tested behavior; [Configuration Guide](configuration-guide.md) explains composition,",
-        "targets, ownership, and failure boundaries. Use the CLI `schema` command for the full binding configuration.",
-        "",
-    ]
-    for folder in sorted((ROOT / "tests" / test_project / "entryTests").iterdir()):
-        if not folder.is_dir() or not any(folder.glob("*.cs")):
+def code(value) -> str:
+    return "`" + json.dumps(value, ensure_ascii=False, separators=(",", ":")).replace("|", "\\|").replace("`", "\\`") + "`"
+
+
+def cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+
+
+def render(schema: dict, digest: str, chinese: bool = False, cpp_only: bool = False) -> str:
+    title = "C++ 配置参考" if cpp_only and chinese else "C++ Configuration Reference" if cpp_only else "分组配置参考" if chinese else "Grouped Configuration Reference"
+    lines = ["# " + title, "", "<!-- Generated by scripts/generate-config-docs.py; review schema changes before regenerating. -->", ""]
+    if chinese:
+        lines += ["本目录来自当前编译的 CLI `schema` 输出，包含真实字段、约束与默认值。中英文使用同一份 schema。", "字段为对象 schema 的必填项，并不取代组合后完整配置的语义验证；基础配置可以提供当前文档省略的值。", "`source.languageStandard = null` 在冻结时根据语言选择 `c17` 或 `c++23`。目标、工具链和扩展能力仍须实际验证。", "", "schema SHA-256：`" + digest + "`。", "", "[配置指南](../configuration-guide.cn.md) | [快速开始](../getting-started.cn.md)", "", "| 字段 | 类型/取值 | 默认值或常量 | 对象 schema 必填 | 约束/描述 |", "| --- | --- | --- | --- | --- |"]
+    else:
+        lines += ["Generated from the current compiled CLI `schema` output, including actual fields, constraints and defaults.", "Both languages use the same schema. Object-schema required fields do not replace final composed-configuration validation;", "a base document may supply an omitted value. A null language standard freezes to C17 or C++23 according to the source language.", "Target, toolchain and extension capabilities still require actual evidence.", "", "Schema SHA-256: `" + digest + "`.", "", "[Configuration Guide](../configuration-guide.md) | [Getting Started](../getting-started.md)", "", "| Field | Type / values | Default or constant | Required by object schema | Constraints / description |", "| --- | --- | --- | --- | --- |"]
+    for path, node, required in rows(schema, schema):
+        if cpp_only and not (path == "cpp" or path.startswith("cpp.")):
             continue
-        snapshot = first_file(folder, "expected*.json", "expected.bindings")
-        expected = json.loads(snapshot.read_text(encoding="utf-8-sig")) if snapshot else {}
-        candidate = folder.name[0].lower() + folder.name[1:]
-        selected = candidate if candidate in available else expected.get("Property", candidate)
-        type_name, default = available.get(selected, ("composition behavior", "see the selected configuration"))
-        parts += [f"## {candidate}", ""]
-        if selected != candidate:
-            parts += [f"The `{candidate}` fixture checks composition through the final `{selected}` value.", ""]
-        parts += [
-            f"- Result property: `{selected}`",
-            f"- Type: `{type_name}`",
-            f"- Source default: `{default}`",
-            f"- Expected fixture value: `{json.dumps(expected.get('Expected'), ensure_ascii=False)}`",
-            "",
-            "### Configuration",
-            "",
-            "```json",
-        ]
-        config = first_file(folder, "config*.json")
-        parts += [config.read_text(encoding="utf-8-sig").strip() if config else "{}", "```", ""]
-        bindings = first_file(folder, "expected.bindings*.json")
-        if bindings:
-            markers = json.loads(bindings.read_text(encoding="utf-8-sig"))
-            parts += ["### Generated output assertions", "", f"```{language}", "// Required markers"]
-            parts += markers.get("Contains", [])
-            parts += ["// Excluded markers"] + markers.get("NotContains", []) + ["```", ""]
-    (ROOT / "docs" / output).write_text("\n".join(parts).rstrip() + "\n", encoding="utf-8")
+        alternatives = node.get("oneOf", node.get("anyOf", []))
+        alternative_types = [resolve(schema, value).get("type", "schema alternative") for value in alternatives]
+        type_value = node.get("enum", node.get("type", alternative_types or "specified by referenced schema"))
+        default = code(node["const"]) + ("（常量）" if chinese else " (constant)") if "const" in node else code(node["default"]) if "default" in node else "—"
+        constraints = [key + "=" + json.dumps(node[key], ensure_ascii=False) for key in ("minLength", "maxLength", "minimum", "maximum", "minItems", "maxItems", "pattern", "format") if key in node]
+        if node.get("additionalProperties") is False:
+            constraints.append("additionalProperties=false")
+        if node.get("description"):
+            constraints.append(node["description"])
+        if any(key in node for key in ("anyOf", "oneOf", "allOf", "if")):
+            constraints.append("组合约束见完整 schema" if chinese else "See the complete schema for composition constraints.")
+        lines.append("| `" + cell(path) + "` | " + code(type_value) + " | " + default + " | " + (("是" if required else "否") if chinese else ("yes" if required else "no")) + " | " + cell("; ".join(constraints)) + " |")
+    lines += ["", "## 使用与证据" if chinese else "## Usage and evidence", ""]
+    lines += (["配置 fragment 只允许当前 schema 定义的字段。插件选项 schema 在 bootstrap 时加入其所属 namespace。", "未知字段不能通过全局忽略开关绕过；旧平铺配置不被读取。完整配置的输入、ABI、语义、缓存和发布要求见配置指南。", "本参考证明 schema 的声明，不声称每个目标或特性组合已经完成调用或分发认证。"] if chinese else ["Configuration fragments accept only fields defined by the current schema. Plugin option schemas are registered in their owning namespace during bootstrap.", "Unknown fields cannot bypass validation through a global ignore switch; old flat configuration is not read.", "Input, ABI, semantics, cache and publication requirements are described in the guide. Schema coverage is not invocation or distribution certification."])
+    return "\n".join(lines) + "\n"
 
 
 def main() -> None:
-    generate("BGCS", "CsCodeGeneratorConfig", "BGCS.Configuration.Tests", "config.md", "csharp")
-    generate("BGCS.Cpp2C", "Cpp2CGeneratorConfig", "BGCS.Cpp2C.Configuration.Tests", "cpp2c.config.md", "cpp")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dotnet", default=os.environ.get("DOTNET_HOST_PATH", "dotnet"))
+    parser.add_argument("--configuration", default=os.environ.get("CONFIGURATION", "Release"))
+    parser.add_argument("--tool-path", type=Path, help="An explicit current managed CLI assembly, including an immutable private or installed closure.")
+    parser.add_argument("--schema", type=Path, help="An explicitly exported current CLI schema; avoids a build or CLI invocation.")
+    parser.add_argument("--check", action="store_true", help="Compare without modifying documentation; fail for stale output.")
+    args = parser.parse_args()
+    if args.schema and args.tool_path:
+        parser.error("--schema and --tool-path select different schema sources and cannot be combined.")
+    exported_schemas = {}
+    if args.schema:
+        schema_bytes = args.schema.read_bytes()
+    else:
+        tool = args.tool_path.resolve() if args.tool_path else ROOT / "src/BGCS.Tool/bin" / args.configuration / "net10.0/BGCS.Tool.dll"
+        if not tool.is_file():
+            parser.error("Build the production CLI first, or supply --schema with its exported grouped schema.")
+        parent = ROOT / "artifacts/temporary"
+        parent.mkdir(parents=True, exist_ok=True)
+        if not parent.resolve().is_relative_to(ROOT.resolve()):
+            raise ValueError("The documentation temporary directory escapes the workspace.")
+        with tempfile.TemporaryDirectory(prefix="config-docs-", dir=parent) as directory:
+            target = Path(directory) / "bindgen.schema.json"
+            subprocess.run([args.dotnet, str(tool), "schema", str(target)], cwd=ROOT, check=True)
+            schema_bytes = target.read_bytes()
+            for name, kind in (("workspace.schema.json", "workspace"), ("plugin.schema.json", "plugin")):
+                target = Path(directory) / name
+                subprocess.run([args.dotnet, str(tool), "schema", str(target), "--kind", kind], cwd=ROOT, check=True)
+                exported_schemas[name] = json.loads(target.read_bytes())
+    schema = json.loads(schema_bytes)
+    if schema.get("additionalProperties") is not False or schema.get("properties", {}).get("schemaVersion", {}).get("const") != 1:
+        raise ValueError("Documentation input must be the strict BGCS 3.0 grouped schemaVersion 1.")
+    fingerprint = hashlib.sha256(json.dumps(schema, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+    destinations = {
+        "schemas/bindgen.schema.json": json.dumps(schema, ensure_ascii=False, indent=2) + "\n",
+        "docs/generated/config-reference.md": render(schema, fingerprint),
+        "docs/generated/config-reference.cn.md": render(schema, fingerprint, chinese=True),
+        "docs/generated/cpp-config-reference.md": render(schema, fingerprint, cpp_only=True),
+        "docs/generated/cpp-config-reference.cn.md": render(schema, fingerprint, chinese=True, cpp_only=True),
+        "docs/config.md": "# Configuration Reference\n\nThe BGCS 3.0 format is grouped and versioned. See the [complete generated reference](generated/config-reference.md),\nthe [Chinese reference](generated/config-reference.cn.md), and the [configuration guide](configuration-guide.md).\nExport the installed version's authoritative schema with `bindgen-cs schema bindgen.schema.json`.\n",
+        "docs/cpp2c.config.md": "# C++ Configuration Reference\n\nC and C++ share one grouped `bindgen.json`. See the [generated C++ group reference](generated/cpp-config-reference.md),\nthe [Chinese reference](generated/cpp-config-reference.cn.md), and the [configuration guide](configuration-guide.md).\nThe complete schema also contains source, targets, semantics, managed API, build and output choices.\n"
+    }
+    destinations.update({"schemas/" + name: json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+                         for name, value in exported_schemas.items()})
+    outdated = []
+    for relative, text in destinations.items():
+        path = ROOT / relative
+        if args.check:
+            if not path.is_file() or path.read_text(encoding="utf-8") != text:
+                outdated.append(relative)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+    if outdated:
+        raise SystemExit("Configuration documentation is stale: " + ", ".join(outdated))
+    print("[configuration-docs] " + ("Verified" if args.check else "Generated") + " grouped English/Chinese catalogs from schema " + fingerprint)
 
 
 if __name__ == "__main__":

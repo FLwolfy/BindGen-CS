@@ -1,0 +1,16 @@
+{
+  "legacyFixture": "entryTests/DelegateNamingConvention",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/naming/callbacks/casing": "camel"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.sampleCallback",
+      "kind": "Delegate"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.SampleCallback"
+  ]
+}

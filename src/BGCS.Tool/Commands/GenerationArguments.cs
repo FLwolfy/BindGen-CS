@@ -1,51 +1,77 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BGCS.Tool.Commands;
 
 internal static class GenerationArguments
 {
     private const string C_DEFAULT_CONFIG = "bindgen.json";
-    internal static (string configPath, string? outputPath) Parse(string[] args)
+    internal sealed record Options(
+        string configPath,
+        string? outputPath,
+        string? profile,
+        string? target,
+        bool json
+    )
     {
-        string configPath = C_DEFAULT_CONFIG;
-        string? outputPath = null;
-        bool positionalConfigRead = false;
-        for (int i = 0; i < args.Length; i++)
+        internal DiagnosticPresentation.Options diagnostics { get; init; } = new();
+        internal bool configurationExplicit { get; init; }
+    }
+
+    internal static Options ParseOptions(string[] args)
+    {
+        args = DiagnosticPresentation.Extract(args, out DiagnosticPresentation.Options diagnostics);
+        string config = C_DEFAULT_CONFIG;
+        string? output = null;
+        string? profile = null;
+        string? target = null;
+        bool json = false;
+        bool hasConfig = false;
+        for (int index = 0; index < args.Length; index++)
         {
-            string argument = args[i];
-            if (argument is "-c" or "--config")
+            switch (args[index])
             {
-                configPath = ReadValue(args, ref i, argument);
-            }
-            else if (argument is "-o" or "--output")
-            {
-                outputPath = ReadValue(args, ref i, argument);
-            }
-            else if (!argument.StartsWith('-') && !positionalConfigRead)
-            {
-                configPath = argument;
-                positionalConfigRead = true;
-            }
-            else
-            {
-                throw new ArgumentException($"Unknown generate option '{argument}'.");
+                case "--config" or "-c":
+                    if (hasConfig) throw new ArgumentException("The configuration was supplied more than once.");
+                    config = ReadValue(args, ref index, args[index]);
+                    hasConfig = true;
+                    break;
+                case "--output" or "-o":
+                    output = ReadValue(args, ref index, args[index]);
+                    break;
+                case "--profile":
+                    profile = ReadValue(args, ref index, args[index]);
+                    break;
+                case "--target":
+                    target = ReadValue(args, ref index, args[index]);
+                    break;
+                case "--json": json = true; break;
+                default:
+                    if (args[index].StartsWith('-') || hasConfig) throw new ArgumentException($"Unknown command argument '{args[index]}'.");
+                    config = args[index];
+                    hasConfig = true;
+                    break;
             }
         }
-
-        return (configPath, outputPath);
+        return new(config, output, profile, target, json) { diagnostics = diagnostics, configurationExplicit = hasConfig };
     }
 
-    internal static string ParseConfiguration(string[] args)
-    {
-        if (args.Length == 0)
-            return C_DEFAULT_CONFIG;
-        if (args.Length == 1 && !args[0].StartsWith('-'))
-            return args[0];
-        if (args.Length == 2 && args[0] is "-c" or "--config")
-            return args[1];
-        throw new ArgumentException("Expected an optional config path or '--config <path>'.");
+    internal static async Task<GenerationRequest> CreateRequestAsync(
+        Options options,
+        CancellationToken cancellationToken
+    ) {
+        GenerationRequest request = await GenerationRequest.FromFileAsync(options.configPath, options.profile, cancellationToken).ConfigureAwait(false);
+        BGCS.Configuration.BindingConfiguration configuration = request.configuration;
+        if (options.outputPath is not null)
+            configuration = configuration with { output = configuration.output with { root = System.IO.Path.GetFullPath(options.outputPath) } };
+        if (options.target is not null)
+        {
+            BGCS.Configuration.TargetConfiguration selected = System.Linq.Enumerable.Single(configuration.targets, target => target.id == options.target);
+            configuration = configuration with { targets = [selected] };
+        }
+        return request.WithConfiguration(configuration);
     }
-
     private static string ReadValue(
         string[] args,
         ref int index,

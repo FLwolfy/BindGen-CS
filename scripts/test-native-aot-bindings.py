@@ -11,10 +11,11 @@ import re
 import shutil
 import uuid
 import cpp_acceptance_fixture
+from acceptance_evidence import digest
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MODES = ("DllImport", "LibraryImport", "FunctionTable")
+MODES = cpp_acceptance_fixture.MODES
 
 
 def load_process_helpers():
@@ -33,39 +34,87 @@ def find_compiler(requested):
     raise RuntimeError("Pass --compiler with a C compiler that supports the current host target.")
 
 
+def prepare_aggregates(work):
+    """Add real C ABI transformations to the fixture's explicitly owned export table."""
+    directory = work / "AggregateAbi"
+    shutil.copytree(ROOT / "tests/fixtures/AggregateAbi", directory)
+    header = directory / "aggregates.h"
+    symbols = sorted(set(re.findall(r"\b(bgcs_aggregate_\w+)\s*\(", header.read_text(encoding="utf-8"))))
+    if len(symbols) != len(cpp_acceptance_fixture.AGGREGATE_CHECKS):
+        raise RuntimeError("The complete native aggregate operation fixture was not declared.")
+    native = work / "Native/api.c"
+    source = '#include "' + header.as_posix() + '"\n' + native.read_text(encoding="utf-8")
+    marker = "    #undef BGCS_FIXTURE_SYMBOL"
+    if source.count(marker) != 1:
+        raise RuntimeError("The fixture has no unique owned native export-table insertion point.")
+    source = source.replace(marker, "\n".join("    BGCS_FIXTURE_SYMBOL(" + symbol + ")" for symbol in symbols) + "\n" + marker)
+    native.write_text(source, encoding="utf-8")
+    return {"header": header, "source": directory / "aggregates.c", "probe": directory / "probe.c", "symbols": symbols}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default=os.environ.get("DOTNET_HOST_PATH") or shutil.which("dotnet"))
     parser.add_argument("--compiler")
+    parser.add_argument("--tool-path", type=Path)
+    parser.add_argument("--runtime-path", type=Path)
+    parser.add_argument("--local-checkpoint", action="store_true", help="Mark the selected tool/runtime as private repository binaries rather than installed products.")
+    parser.add_argument("--no-build", action="store_true")
+    parser.add_argument("--configuration", default="Release", choices=("Debug", "Release"))
+    parser.add_argument("--keep-build-output", action="store_true")
     parser.add_argument("--inject-native-error", action="store_true")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/native-aot-acceptance")
     args = parser.parse_args()
     if not args.dotnet or not Path(args.dotnet).is_file():
         parser.error("Pass --dotnet with an SDK that supports NativeAOT for the current host.")
+    if bool(args.tool_path) != bool(args.runtime_path):
+        parser.error("--tool-path and --runtime-path must identify the same installed product set together.")
+    if args.local_checkpoint and not args.tool_path:
+        parser.error("--local-checkpoint requires an explicit private tool/runtime pair.")
     helper = load_process_helpers()
     dotnet = str(Path(args.dotnet).resolve())
     work = args.output.resolve() / uuid.uuid4().hex
     work.mkdir(parents=True)
-    report = {"success": False, "host": platform.platform(), "modes": list(MODES),
-              "injectedNativeError": args.inject_native_error}
+    report = {"success": False, "host": platform.platform(), "managedRuntime": "nativeAot", "modes": list(MODES),
+              "injectedNativeError": args.inject_native_error, "installedProducts": bool(args.tool_path) and not args.local_checkpoint,
+              "privateRepositoryCheckpoint": args.local_checkpoint,
+              "wideEnumPresentation": "generator-configured UInt64 enum; friendly and raw native uint64 typedef round trips"}
     environment = helper.acceptance_environment(dotnet)
     print(f"NativeAOT acceptance evidence: {work}", flush=True)
     try:
+        minimum_free = int(os.environ.get("BGCS_MINIMUM_FREE_BYTES", str(2 * 1024 ** 3)))
+        if minimum_free <= 0 or shutil.disk_usage(ROOT).free < minimum_free:
+            raise RuntimeError("NativeAOT compilation requires its declared positive free-space floor.")
         compiler = find_compiler(args.compiler)
         report["compiler"] = compiler
         (work / "global.json").write_text(json.dumps({"sdk": {
-            "version": "9.0.100", "rollForward": "latestFeature"}}), encoding="utf-8")
+            "version": "10.0.100", "rollForward": "latestFeature"}}), encoding="utf-8")
+        report["dotnetSdkVersion"] = helper.run([dotnet, "--version"], work, work / "dotnet-version.log", environment).strip()
+        if not report["dotnetSdkVersion"].startswith("10."):
+            raise RuntimeError("The native invocation gate requires an actual .NET 10 SDK.")
+        report["nativeCompilerVersion"] = helper.run([compiler, "--version"], work, work / "native-compiler-version.log", environment).strip()
         shutil.copytree(ROOT / "tests/fixtures/NativeApi", work / "Native")
         if args.inject_native_error:
             source = work / "Native/api.c"
             source.write_text(source.read_text(encoding="utf-8").replace("return left + right;", "return left + right + 1;"), encoding="utf-8")
-        tool = helper.build_project(dotnet, ROOT / "src/BGCS.Tool/BGCS.Tool.csproj", work,
-                                    work / "generator-build.log", environment)
-        runtime = helper.build_project(dotnet, ROOT / "src/BGCS.Runtime/BGCS.Runtime.csproj", work,
-                                       work / "runtime-build.log", environment)
+        if args.tool_path:
+            tool, runtime = args.tool_path.resolve(), args.runtime_path.resolve()
+            if not tool.is_file() or not runtime.is_file():
+                raise RuntimeError("The explicitly selected installed tool/runtime product is missing.")
+        else:
+            if not args.no_build:
+                for name in ("BGCS.Tool", "BGCS.Frontend.Clang.Worker", "BGCS.Runtime"):
+                    helper.build_project(dotnet, ROOT / f"src/{name}/{name}.csproj", work,
+                                         work / (name + "-build.log"), environment, args.configuration)
+            tool = cpp_acceptance_fixture.stage_repository_generator(ROOT, work, args.configuration)
+            runtime = ROOT / f"src/BGCS.Runtime/bin/{args.configuration}/net10.0/BGCS.Runtime.dll"
+        report.update(cpp_acceptance_fixture.execution_identity(ROOT, tool, runtime))
         shutil.copyfile(runtime, work / "BGCS.Runtime.dll")
-        bridge_source, _ = cpp_acceptance_fixture.prepare(
+        bridge = cpp_acceptance_fixture.prepare(
             ROOT, work, dotnet, tool, compiler, environment, helper.run)
+        aggregates = prepare_aggregates(work)
+        report["aggregateFixtureInputs"] = {path.name: digest(path) for path in (aggregates["header"], aggregates["source"], aggregates["probe"])}
+        bridge_source = bridge["source"]
         architecture = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
         rid = ("win" if os.name == "nt" else "osx" if platform.system() == "Darwin" else "linux") + "-" + architecture
         library = "api.dll" if os.name == "nt" else "libapi.dylib" if platform.system() == "Darwin" else "libapi.so"
@@ -75,37 +124,54 @@ def main():
         if os.name != "nt":
             c_command.append("-fPIC")
         helper.run(c_command, work, work / "native-c-build.log", environment)
-        command = [cpp_acceptance_fixture.cxx_compiler(compiler), "-std=c++17", "-shared",
-                   str(native_object), str(bridge_source), "-I" + str(work / "Bridge/include"),
+        aggregate_object = work / ("native-aggregates.obj" if os.name == "nt" else "native-aggregates.o")
+        aggregate_command = [compiler, "-std=c17", "-c", str(aggregates["source"]), "-o", str(aggregate_object)]
+        if os.name != "nt":
+            aggregate_command.append("-fPIC")
+        helper.run(aggregate_command, work, work / "native-aggregate-build.log", environment)
+        native_probe = work / ("aggregate-probe.exe" if os.name == "nt" else "aggregate-probe")
+        helper.run([compiler, "-std=c17", str(aggregates["probe"]), str(aggregate_object), "-o", str(native_probe)],
+                   work, work / "native-aggregate-probe-build.log", environment)
+        native_result = json.loads(helper.run([str(native_probe)], work, work / "native-aggregate-probe-invocation.log", environment))
+        if not native_result.get("success") or native_result.get("checks") != len(cpp_acceptance_fixture.AGGREGATE_CHECKS) or not native_result.get("signature"):
+            raise RuntimeError("The independent native aggregate comparison probe did not complete all transformed-value checks.")
+        report["aggregateNativeOracle"] = {**native_result, "probeSha256": digest(native_probe)}
+        command = [cpp_acceptance_fixture.cxx_compiler(compiler), "-std=c++23", "-shared",
+                   str(native_object), str(aggregate_object), str(bridge_source), "-I" + str(bridge["header"].parent),
                    "-I" + str(work / "CppFacade"), "-DBUILD_SHARED=1", "-o", str(work / library)]
         if os.name == "nt":
-            exports = sorted(set(re.findall(r"\b(bgcs_\w+)\s*\(", (work / "Native/api.h").read_text(encoding="utf-8"))))
+            # Export the same active declarations that this compiler sees. The
+            # source header also contains browser-only protocols whose symbols
+            # do not exist in a desktop object.
+            export_input = work / "native-export-declarations.c"
+            export_input.write_text('#include "' + (work / "Native/api.h").as_posix() + '"\n', encoding="utf-8")
+            active_declarations = helper.run(
+                [compiler, "-std=c17", "-DBUILD_SHARED=1", "-E", "-P", str(export_input)],
+                work, work / "native-export-declarations.log", environment)
+            exports = sorted(set(re.findall(r"\b(bgcs_\w+)\s*\(", active_declarations)))
+            if not exports:
+                raise RuntimeError("The native compiler produced no active fixture export declarations.")
+            report["nativeExportDeclarations"] = {
+                "compiler": compiler, "preprocessedSha256": digest(work / "native-export-declarations.log"), "exports": exports}
             command += ["-Wl,/EXPORT:" + symbol for symbol in exports]
         else:
             command.append("-fPIC")
         helper.run(command, work, work / "native-build.log", environment)
         for mode in MODES:
-            config = {"preset": "host-c", "apiName": "NativeApi", "namespace": "NativeAotAcceptance." + mode,
-                      "libName": "api", "entryFiles": ["Native/api.h", "Bridge/include/Classes.h", "Bridge/include/common.h"], "outputPath": "Generated/" + mode,
-                      "compilerPath": compiler, "importType": mode, "useCustomContext": mode == "FunctionTable",
-                      "parseSystemIncludes": False, "parseMacros": False, "parseComments": False,
-                      "generateExtensions": False, "delegatesAsVoidPointer": False, "generateHandles": True,
-                      "generateRuntimeSource": False, "mergeGeneratedFilesToSingleFile": True,
-                      "singleFileOutputName": "Bindings.cs",
-                      "typeMappings": {"BgcsWideFlags": "BgcsWideFlags"},
-                      "ignoredTypedefs": ["BgcsWideFlags"],
-                      "customEnums": [{"cppName": "BgcsWideFlags", "name": "BgcsWideFlags",
-                                       "baseType": "ulong", "items": [
-                                           {"cppName": "BGCS_WIDE_HIGH_BIT", "name": "HighBit",
-                                            "cppValue": "1ULL << 60", "value": "1UL << 60"}]}]}
+            config = cpp_acceptance_fixture.binding_configuration(mode, "NativeAotAcceptance", compiler, bridge)
+            config["source"]["headers"].append(str(aggregates["header"]))
+            config["api"]["names"] = {**config["api"]["names"], **{
+                symbol: "".join(part.capitalize() for part in symbol.removeprefix("bgcs_").split("_"))
+                for symbol in aggregates["symbols"]}}
             path = work / (mode + ".json")
             path.write_text(json.dumps(config, indent=2), encoding="utf-8")
-            helper.run([dotnet, str(tool), "generate", str(path)], work,
+            helper.run(cpp_acceptance_fixture.tool_command(dotnet, tool) + ["generate", str(path)], work,
                        work / (mode + "-generation.log"), environment)
-        template = (ROOT / "tests/native-aot/Program.cs.in").read_text(encoding="utf-8")
-        invocation = (ROOT / "tests/wasm/Invocation.cs.in").read_text(encoding="utf-8")
-        runners = "\n".join(invocation.replace("__MODE__", mode) for mode in MODES)
-        (work / "Program.cs").write_text(template.replace("__RUNNERS__", runners), encoding="utf-8")
+        report["generatedAbiManifests"] = [cpp_acceptance_fixture.generated_abi_identity(work, mode) for mode in MODES]
+        if len({item["nativeTargetId"] for item in report["generatedAbiManifests"]}) != 1 or any(
+                item["nativePointerSize"] != 8 for item in report["generatedAbiManifests"]):
+            raise RuntimeError("NativeAOT import modes must use the same resolved 64-bit native target.")
+        cpp_acceptance_fixture.write_consumer(ROOT, work, "NativeAotAcceptance", 8, aggregates=True)
         shutil.copyfile(ROOT / "tests/native-aot/Consumer.project.xml", work / "Consumer.csproj")
         published = work / "published"
         helper.run([dotnet, "publish", "Consumer.csproj", "-c", "Release", "-r", rid, "-o", str(published),
@@ -127,13 +193,14 @@ def main():
             raise
         invocation_report = json.loads(raw)
         report["invocation"] = invocation_report
-        expected = {mode + ":" + check for mode in MODES for check in (
-            "scalar", "wide-integer", "wide-enum", "native-long", "bool", "layout", "bitfields", "buffer", "capacity", "handle", "callback", "null-callback", "release",
-            "cpp-construction", "cpp-method", "cpp-inheritance", "cpp-release")}
-        expected.update(("missing-symbol", "function-table-context", "failed-initialization", "borrowed-context", "borrowed-storage"))
+        expected = cpp_acceptance_fixture.expected_checks(aggregates=True)
         checks = invocation_report.get("checks", [])
         if not invocation_report.get("success") or len(checks) != len(expected) or set(checks) != expected:
             raise RuntimeError("NativeAOT invocation did not complete every required check.")
+        signatures = invocation_report.get("aggregateSignatures", {})
+        if set(signatures) != set(MODES) or any(value != native_result["signature"] for value in signatures.values()):
+            raise RuntimeError("Every NativeAOT import mode must reproduce the independent native aggregate transformation results.")
+        report["aggregateNativeComparisonPassed"] = True
         report["success"] = True
         print(f"Passed: {len(checks)} checks across {len(MODES)} import modes.", flush=True)
     except Exception as error:
@@ -143,6 +210,8 @@ def main():
         path = work / "report.json"
         path.write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(f"Report: {path}", flush=True)
+        if not args.keep_build_output:
+            cpp_acceptance_fixture.cleanup_build_outputs(work)
     return 0 if report["success"] else 1
 
 

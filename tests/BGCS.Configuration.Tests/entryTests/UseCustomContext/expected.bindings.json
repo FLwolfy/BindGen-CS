@@ -1,6 +1,6 @@
 {
   "Contains": [
-    "internal static global::BGCS.Runtime.FunctionTable funcTable = null !;",
+    "internal static global::BGCS.Runtime.FunctionTable funcTable = null!;",
     "public static void InitApi(global::BGCS.Runtime.INativeContext context)",
     "var candidate = new global::BGCS.Runtime.FunctionTable(context, 1);",
     "candidate.LoadRequired(0, \"sample_add\");"

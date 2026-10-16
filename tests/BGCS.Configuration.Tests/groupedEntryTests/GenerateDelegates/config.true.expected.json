@@ -1,0 +1,16 @@
+{
+  "legacyFixture": "entryTests/GenerateDelegates",
+  "legacyVariant": "config.true",
+  "configuration": {
+    "/api/emitCallbackDelegates": true
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.SampleCb",
+      "kind": "Delegate"
+    }
+  ],
+  "contains": [
+    "SetCallback("
+  ]
+}

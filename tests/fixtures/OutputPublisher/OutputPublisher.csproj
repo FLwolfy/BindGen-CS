@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Label="Compilation">
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup Label="Project dependencies">
-    <ProjectReference Include="../../../src/BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../../../src/BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

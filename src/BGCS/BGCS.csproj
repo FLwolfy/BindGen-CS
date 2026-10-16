@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Label="Compilation">
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DefineConstants>$(DefinedConstants);CPPAST_15_OR_GREATER</DefineConstants>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <PropertyGroup Label="NuGet package">
@@ -21,23 +21,24 @@
   </PropertyGroup>
 
   <ItemGroup Label="Package dependencies">
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
   <ItemGroup Label="Project dependencies">
-    <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
-    <ProjectReference Include="../BGCS.CppAst/BGCS.CppAst.csproj" />
-    <ProjectReference Include="../BGCS.Intermediate/BGCS.Intermediate.csproj" />
-    <ProjectReference Include="../BGCS.Language/BGCS.Language.csproj" />
+    <ProjectReference Include="../BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
+    <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
+    <ProjectReference Include="../BGCS.Cpp2C/BGCS.Cpp2C.csproj" />
+    <ProjectReference Include="../BGCS.CSharp/BGCS.CSharp.csproj" />
   </ItemGroup>
 
-  <ItemGroup Label="Embedded resources">
-    <EmbeddedResource Include="..\BGCS.Runtime\**\*.cs" Exclude="..\BGCS.Runtime\bin\**\*;..\BGCS.Runtime\obj\**\*">
-      <LogicalName>BGCS.RuntimeSources.%(Filename)%(Extension)</LogicalName>
-    </EmbeddedResource>
-  </ItemGroup>
 
   <ItemGroup Label="Package content">
     <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup Label="Module dependencies">
+    <ProjectReference Include="../BGCS.Analysis/BGCS.Analysis.csproj" />
+    <ProjectReference Include="../BGCS.Platforms/BGCS.Platforms.csproj" />
+    <ProjectReference Include="../BGCS.NativeBuild/BGCS.NativeBuild.csproj" />
+    <ProjectReference Include="../BGCS.Runtime/BGCS.Runtime.csproj" />
   </ItemGroup>
 </Project>

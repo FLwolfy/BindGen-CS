@@ -1,9 +1,11 @@
 # BGCS 架构重构执行计划
 
+> 历史计划：本文保留早期八工程方案与当时的实施说明。BGCS 3.0 的当前十三工程边界、实施阶段与发布要求见[当前路线图](roadmap.cn.md)、[架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。历史条目不代表当前实现或已完成认证。
+
 ## 实施中的职责细化
 
 原计划列出的 `Preprocessing/Preprocessor.cs` 被实际的
-`CSharp/Preprocessing/CSharpPreprocessor.cs` 替代：原实现没有执行预处理，
+`Processing/CSharpPreprocessor.cs` 替代：原实现没有执行预处理，
 新的具体 C# 前端处理条件编译并保留源位置。C/C++ 预处理属于 Clang。
 这是语言职责的收口，其他目标、IR 与 Runtime 不承担 C# directive 语义。
 
@@ -11,7 +13,7 @@
 
 ```text
 C:\Dev\GameEngineDev\BindGen-CS\
-├─ BindGen-CS.sln
+├─ BindGen-CS.slnx
 ├─ CONTRIBUTING.md                                 独立开发规范入口
 ├─ .editorconfig                                   [新增]
 ├─ Directory.Build.props                           [新增] 共同编译及 XML 约束
@@ -19,12 +21,12 @@ C:\Dev\GameEngineDev\BindGen-CS\
 ├─ README.md                                       专业、入门友好的英文入口
 ├─ README.cn.md                                    中文入口
 ├─ src/
-│  ├─ BGCS.Core/
-│  ├─ BGCS.CppAst/
-│  ├─ BGCS.Intermediate/
+│  ├─ BGCS.Infrastructure/
+│  ├─ BGCS.Frontend.Clang/
+│  ├─ BGCS.Contracts/
 │  ├─ BGCS/
 │  ├─ BGCS.Cpp2C/
-│  ├─ BGCS.Language/
+│  ├─ BGCS.CSharp/
 │  ├─ BGCS.Runtime/
 │  └─ BGCS.Tool/
 ├─ tests/
@@ -39,20 +41,20 @@ C:\Dev\GameEngineDev\BindGen-CS\
 
 ```text
 BGCS.Tool → BGCS + BGCS.Cpp2C
-BGCS → BGCS.Core + BGCS.CppAst + BGCS.Intermediate + BGCS.Language
-BGCS.Cpp2C → BGCS.Core + BGCS.CppAst + BGCS.Intermediate
-BGCS.CppAst → BGCS.Core
-BGCS.Language → BGCS.Core
+BGCS → BGCS.Infrastructure + BGCS.Frontend.Clang + BGCS.Contracts + BGCS.CSharp
+BGCS.Cpp2C → BGCS.Infrastructure + BGCS.Frontend.Clang + BGCS.Contracts
+BGCS.Frontend.Clang → BGCS.Infrastructure
+BGCS.CSharp → BGCS.Infrastructure
 
-BGCS.Intermediate：不依赖其他 BGCS 项目
+BGCS.Contracts：不依赖其他 BGCS 项目
 BGCS.Runtime：独立互操作库
 ```
 
 ### 2. Core：中立契约与基础能力
 
 ```text
-src/BGCS.Core/
-├─ BGCS.Core.csproj
+src/BGCS.Infrastructure/
+├─ BGCS.Infrastructure.csproj
 ├─ Targeting/                                      [新增]
 │  ├─ NativeTargetId.cs
 │  ├─ NativeTargetRequest.cs
@@ -88,8 +90,8 @@ Core 删除 CppAst 引用。AST 参数、C++ 类型和语言映射迁入对应�
 ### 3. CppAst：解析器及 Clang 边界
 
 ```text
-src/BGCS.CppAst/
-├─ BGCS.CppAst.csproj
+src/BGCS.Frontend.Clang/
+├─ BGCS.Frontend.Clang.csproj
 ├─ Parsing/
 │  ├─ CppParser.cs
 │  ├─ CppParserOptions.cs
@@ -137,8 +139,8 @@ bundled builtin headers 与所用 libclang 匹配。宿主 SDK headers 与 built
 ### 4. Intermediate：真正冻结的生成模型
 
 ```text
-src/BGCS.Intermediate/
-├─ BGCS.Intermediate.csproj
+src/BGCS.Contracts/
+├─ BGCS.Contracts.csproj
 ├─ BindingModule.cs                                [迁入、重构]
 ├─ BindingType.cs
 ├─ BindingFunction.cs
@@ -268,8 +270,8 @@ Bridge IR 覆盖当前支持的构造、销毁、方法、继承、模板实例�
 ### 7. Language、Runtime 与 Tool
 
 ```text
-src/BGCS.Language/
-├─ BGCS.Language.csproj
+src/BGCS.CSharp/
+├─ BGCS.CSharp.csproj
 ├─ Lexing/
 │  ├─ Lexer.cs
 │  ├─ Token.cs

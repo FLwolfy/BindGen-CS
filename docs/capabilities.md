@@ -1,109 +1,97 @@
-# Capabilities and Boundaries
+# BGCS 3.0 capabilities and limits
 
-[简体中文](capabilities.cn.md) | [Documentation index](README.md) | [Acceptance specification](acceptance.md)
+[简体中文](capabilities.cn.md) | [Assessment](assessment.md) | [Acceptance](acceptance.md)
 
-This document answers two questions: what BindGen-CS can reliably do today, and which capabilities still require explicit project semantics or more target evidence. It describes the current implementation rather than a roadmap disguised as a feature list.
+This describes the current 3.0 implementation. Source implementation, a successful
+local test and certification of a released revision are different claims. Neither a
+configured CI job nor a historical report certifies the current source.
 
-## Evidence levels
+## Reading evidence
 
-| Level | Meaning |
+| State | What it establishes |
 | --- | --- |
-| Host acceptance | Exercised on the declared target with real headers, generated-code compilation, native invocation, or integration tests |
-| Automated test | Covered by unit/integration/generated-code tests, without implying full real-library acceptance on every host |
-| Configuration support | The model and diagnostics exist, but the project must supply native semantics |
-| Explicit rejection | Generation fails when safe lowering cannot be established |
+| Implemented source | A model, implementation and validation path exist. |
+| Local proof | The named test or fixture executed on its recorded host and compiled bytes. Dirty local checkpoints remain local evidence. |
+| Certified revision | All required jobs, actual calls and clean installed-product checks passed for the same release revision and declared platform. |
+| Explicit limitation | Missing ABI or lifetime evidence causes rejection, a raw-only API or a reported friendly omission. |
 
-## C and ABI
+Current local work includes Windows/MSVC generated/native calls, CoreCLR import and
+Runtime-mode matrices, NativeAOT, Chromium browser interpretation/AOT, external
+plugins and real-library fixtures. Their receipts record different checkpoints and
+scopes. They do not collectively certify an untested final revision. Release status
+comes from [the required gate manifest](../eng/acceptance/required-release-gates.json),
+feature/configuration inventories and same-revision reports.
 
-| Capability | Status | Evidence or boundary |
-| --- | --- | --- |
-| Functions, enums, constants, typedefs | Host acceptance | Five real C APIs through deterministic snapshots and warning-free IR-native compilation |
-| Structs, unions, packing, fixed arrays, bitfields | Host acceptance / automated test | Layout and native invocation gates |
-| Opaque handles, pointer typedefs, forward declarations | Host acceptance / automated test | SDL3, bgfx, cimgui, and compilation matrix |
-| Callbacks, function pointers, callback registry | Host acceptance / automated test | C ABI callback and Runtime tests |
-| C variadics | Configuration support | Fixed variants must use promoted argument types; currently limited to `DllImport` |
-| Target-dependent `char`, `long`, `wchar_t`, `long double`, `va_list` | Host acceptance / automated test | MSVC/GNU/Darwin mappings; Darwin and GNU Arm64 reports, including the AAPCS64 `va_list` carrier |
-| `DllImport`, `LibraryImport`, FunctionTable | Automated test | Generated compile/runtime coverage for configured import modes and native contexts |
+## C declarations and ABI
 
-## Friendly APIs and safety
+| Capability | Implemented behavior and boundary |
+| --- | --- |
+| Functions, enums, aliases, scalar/string constants and macros | Detached compiler facts preserve identity, signedness, exact values, code units and source. Context-dependent macros are not published as stable probe-site constants. Arbitrary function-like macros need an explicit typed native adapter. |
+| Records, unions, arrays, packing and bitfields | Native layout, managed storage and by-value call compatibility are checked separately. Same size alone never proves safe calling ABI. |
+| Pointer aliases and opaque records | Raw pointers remain available when representable. Explicit address carriers are non-owning; unsafe dereference views retain caller lifetime responsibility. |
+| Strings, buffers and single-value inputs | Friendly string/Span/ref/out projections require encoding, units, bounds, direction and lifetime facts. Unknown pointers do not automatically become strings or spans. |
+| Variadic functions | `source.variadicVariants` creates finite fixed native wrappers with native default argument promotions; their fixed ABI can use all three imports. Arbitrary managed vararg calls are not generated. An uninvoked opaque variadic function address is not a callable generic signature. |
+| Internal/inline C helpers | `source.includeHeaderHelpers` defaults to false. Opt-in adapters must be compiled into the same configured native module; an existing DLL does not gain their exports automatically. Compiler intrinsics require the bounded provider-specific proof. |
+| Special native types | `char`, `long`, `wchar_t`, `char8_t`, `long double` and `va_list` retain target-specific facts. Unsupported by-value forms are refused; pointer or native-shim routes remain explicit. |
+| Import modes | FunctionTable, DllImport and LibraryImport consume the same interop model. Their runtime/profile capabilities still apply; selecting an import does not make an unsupported ABI safe. |
 
-| Capability | Status | Evidence or boundary |
-| --- | --- | --- |
-| Naming, type, field, and function mappings | Host acceptance / automated test | Configuration entry tests and real API snapshots |
-| String encoding and ownership | Configuration support | Use `marshallingMappings` when declarations do not express lifetime |
-| Pointer/count, capacity/written-count, Span | Configuration support / automated test | Conservative inference plus explicit mapping; strict mode can remove unsafe friendly overloads |
-| Cleanup functions and owned returns | Configuration support | Allocator and cleanup contracts must come from project configuration |
-| Callback lifetime | Configuration support | Missing lifetime emits `BGCS-SAFETY-CALLBACK` |
-| Generated API stability | Host acceptance | Deterministic source hashes and reflection public-API snapshots |
+## C++ bridge and managed projection
 
-## C++ bridge
+| Capability | Implemented behavior and boundary |
+| --- | --- |
+| Objects, methods, operators and overloads | Typed bridge operations cover accessible concrete declarations, construction/destruction, status/error boundaries and checked native casts. Deleted, inaccessible or unresolved declarations fail explicitly. |
+| Templates and inheritance | Explicit `cpp.templateInstantiations` selects finite class/function instances. Multiple inheritance uses actual native adjustment; a raw reinterpret cast is not substituted. Arbitrary template metaprogramming is not automatically instantiated. |
+| Standard and configured families | Strings, vector/span/array, map/set, optional/variant/expected, unique/shared pointers, paths, duration and time points use finite typed protocols. `cpp.familyBindings` matches exact compiler-established types or template families with explicit behavioral assertions. Similar names or sizes do not establish compatibility. |
+| Strings and paths | Counted adapters preserve embedded zeros and declared UTF units. Fresh default-standard string/path results can copy to C# string inside a proven synchronous creating-call cleanup scope. Custom allocator/traits/lifetime cases require their own proof or shim. |
+| Other container results | Raw/status holder operations and high-level managed collection returns are separate capabilities. Native container support does not promise an automatic C# array or collection result. |
+| Chrono | Count, representation, ratio and clock identity are preserved. No universal nanosecond conversion or managed date epoch is inferred. |
+| Ownership and exceptions | Owned wrappers need an exact destruction pair and cleanup domain. C++ exceptions are contained at generated C boundaries. Unknown retention or release-thread requirements are not silently invented. |
+| Virtual callback proxies | `cpp.virtualCallbacks` provides exact raw proxy operations and, when admitted, typed managed thunks with explicit full native stop/join coordination. Unknown cleanup retains raw only. Nonblocking profiles, including Browser Wasm, currently omit the owning managed virtual registration; ordinary retained C callbacks/async support does not prove this different protocol. |
+| Custom lowering | Contracts-only type/callable lowerings, finite recipes, controlled fragments and native shims extend the pipeline. Their assertions and external inputs retain their evidence level and cache identity. |
 
-| Capability | Status | Evidence or boundary |
-| --- | --- | --- |
-| Classes, construction, destruction, instance/static methods | Host acceptance / automated test | Native bridge compilation and invocation gates |
-| Overloads, namespace functions, exception boundary | Host acceptance / automated test | Generated symbols and exception-channel tests |
-| Inheritance casts and pointer adjustment | Automated test | Avoids unsafe plain reinterpret casts |
-| Class/function templates | Configuration support / automated test | Only instances listed in `templateInstantiations` / `functionTemplateInstantiations` are emitted |
-| `std::string` | Automated test | Verified UTF-8 borrowed/return lowering scope |
-| `std::vector`, `std::span` | Automated test | Pointer/count views; ownership still comes from configuration |
-| `std::optional<T>` | Automated test | Both blittable presence/value and non-blittable owned-handle protocols have native compile tests |
-| `std::array`, `std::map`, `std::set` | Native invocation test | Fixed extent and owned-holder protocols compile and execute |
-| `std::variant`, `std::expected` | Native invocation test | Alternative/value/error holders compile, invoke, and destroy |
-| `std::filesystem::path`, `std::chrono` | Native invocation test | UTF-8 path and nanosecond duration/time-point conversion execute natively |
-| `std::unique_ptr`, `std::shared_ptr` | Automated test | Supported ownership-transfer/retention paths |
-| Pure-virtual managed callback proxy | Automated test | Interfaces must be listed in `virtualCallbackInterfaces` |
-| Arbitrary STL/container/template metaprogramming | Explicit rejection | Unknown specializations emit `BGCSCPP001` instead of pretending to be blittable |
+See [lowering](lowering.md) and [the cookbook](cpp-extension-cookbook.md) for the actual
+configuration and prerequisites. A returned `char*` does not establish UTF-8 or ownership;
+a method named `Create` does not establish a safe release function.
 
-## Workflow and engineering
+`AnalyzeAsync` also retains typed Objective-C declaration facts through the worker.
+This is [analysis-only support](objective-c-facts.md), not generated message-send,
+ARC or Apple runtime binding support; generation rejects that request.
 
-| Capability | Status | Notes |
-| --- | --- | --- |
-| `init → doctor → validate → generate → build` | Host acceptance | Covered by tool-install and clean-consumer smoke tests |
-| Transactional output | Automated test | Failure preserves the last-good output |
-| Deterministic `diff` | Host acceptance | Real-library and isolated output gates |
-| Multi-project workspaces | Host acceptance | Workspace validation/generation/diff; consumer-specific integration gates remain outside BGCS |
-| C++ native build manifest/providers | Native invocation + plan tests | Direct Clang/GNU and CMake host execution; Windows clang-cl/MSBuild tests build, inspect, and invoke DLLs on the owning runner; Meson plan coverage |
-| Incremental generation | Automated + performance test | SHA-256 input/config/compiler/plugin/lowering/shim fingerprint, atomic immutable entries, concurrent publication, deleted-output restoration, 10k declaration cold/warm budgets |
-| Final lowering extension contract | Native invocation + external-assembly E2E + API-shape test | Isolated plugin loader, deterministic typed services, declarative recipe, explicit shim, managed/native artifact, safety bypass diagnostic, and stable cache fingerprint |
-| BaseConfig and presets | Automated test | Explicit config-directory context, cycle detection, override precedence, no process-CWD mutation |
-| Installed-version C/C++ schemas | Automated test | Strict root properties by default; nested public shapes and core descriptions are generated from the installed types |
-| Portable project initialization | Automated test | Config-relative `/` paths, explicit C/C++ selection, non-overwrite behavior |
-| Deterministic NuGet packages | Host acceptance | Two-pack content comparison, clean restore, tool install |
-| IR-native raw ABI backend | Host acceptance | Five real C libraries generated and compiled with warnings as errors; unsupported/opaque by-value semantics fail before commit |
+## Runtime, extensions and workflow
 
-## Target evidence
+Instance contexts, FunctionTable loading, module/call/resource leases, owned and
+module-borrowed handles, call-scoped callbacks, explicit retained callback protocols
+and finite asynchronous completion projections are implemented. Generated callback
+exceptions are contained. Browser nonblocking retention/completion requires its explicit
+event-loop protocol; desktop blocking stop/join is not transferred to that runtime.
 
-Use the [independent refactor acceptance report](architecture-refactor-acceptance.cn.md) for current-source evidence.
-Reports from the previous architecture remain historical evidence, rather than automatic proof for the current source.
+Standard plugins use only `BGCS.Contracts`: source contribution, target providers,
+native/interop/managed transforms, C++ lowerings, managed projection/backend, artifact
+processors, validators, native providers and asset packaging have typed ports.
+Advanced Clang facts use a parser-pinned, worker-only interface with borrowed handles;
+they are a deliberate separate dependency. See [extensibility](extensibility.md).
 
-| Target | Status | Current evidence |
-| --- | :---: | --- |
-| macOS arm64 Darwin | Historical evidence | The current refactor requires a macOS host rerun |
-| Windows x64 MSVC/clang-cl | Current acceptance scope | Independent C/C++ calls, clang-cl/MSBuild, NativeAOT, and clean package consumers; see the current report |
-| Linux x64 GNU/Clang | ⚠️ | Dedicated runner configured; complete report pending |
-| macOS x64 Darwin | ⚠️ | Dedicated Intel runner configured; complete report pending |
-| Windows/Linux arm64 | ⚠️ | Target and desktop RID model exist; complete provider/runtime/package reports remain |
-| Android | ⚠️ | Formal support target; target model exists, while NDK/sysroot, package layout, and device/emulator reports remain |
-| iOS | ⚠️ | Formal support target; target model exists, while Xcode SDK, framework layout, and device/simulator reports remain |
-| FreeBSD | ⚠️ | Formal support target; target model exists, while toolchain, package layout, and an independent report remain |
-| Emscripten wasm32 | Current acceptance scope | BGCS-owned C/C++ fixtures and actual calls across three import modes under interpretation and AOT; other authoring hosts and browsers require their own runs |
+CLI, embedded SDK, workspaces and opt-in MSBuild use `BindingHost`. Frozen grouped
+configuration, deterministic order, dependency snapshots and extension fingerprints
+control cache reuse. Requested validation still runs on cache hits. Final contract
+checks and owned publication protect the previous complete output on failure.
 
-## Maturity assessment
+Defaults are .NET 10/C# 14, C17 or C++23, instance API, FunctionTable, split managed
+files, package Runtime and no native construction. The single-file default is
+`Bindings.cs`. The same full SDK/tool supplies built-ins; users do not install each
+implementation project separately. Exact current fields/defaults come from
+[the generated configuration reference](generated/config-reference.md).
 
-BindGen-CS is already a strong, engineered binding toolkit rather than a thin header-to-`DllImport` script. On its accepted target it has production-grade C binding, a substantial controlled C++ bridge, reproducible output, package verification, and large-project integration evidence.
+## Platform scope
 
-It cannot honestly claim automatic coverage of every C++ program or production verification on every modeled target. The main gaps are:
+Windows x64, Linux GNU x64, Intel macOS and Browser Wasm are required launch gates;
+NativeAOT and installed SDK/tool/Runtime/plugin/MSBuild consumption have separate
+requirements. Windows local success does not replace Linux or macOS execution.
+A Chromium run does not certify Firefox or Safari. ARM64, musl, Android, iOS and
+FreeBSD have their own resolution, generation, compilation, linking, invocation and
+package-consumption stages; incomplete stages must remain marked as such.
 
-- Linux x64, macOS, and other devices still require current-refactor host reports;
-- the configuration model is powerful but still broad and flat for large libraries;
-- multi-RID desktop packaging does not prove execution on every RID; each non-host target requires its own invocation and package-consumption report;
-- arbitrary metaprogramming, custom allocators, and types beyond built-in protocols require a declarative lowering, versioned plugin, or explicit C ABI shim.
-
-The accurate position is: **excellent within the accepted C ABI and explicitly supported C++ subset; not yet a zero-configuration universal translator for arbitrary C++ on every platform.**
-
-## Highest-value next steps
-
-1. Rerun current-architecture real-library, native-invocation, and package-consumer checks on Linux x64 and macOS hosts.
-2. Execute every provider on its owning target and retain the multi-RID consumer evidence.
-3. Execute a real OIDC/Sigstore signed release in an authorized GitHub release environment.
-4. Continue built-in semantic/schema coverage while routing project-specific semantics through the final lowering architecture.
+The architecture separates host parser, native target, SDK/sysroot, compiler, ABI,
+managed runtime and import strategy. That is substantive cross-platform support
+infrastructure. Full support is established only by completing each platform's actual
+matrix, not by listing a target or successfully cross-parsing one header.

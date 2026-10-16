@@ -1,0 +1,28 @@
+{
+  "legacyFixture": "entryTests/AllowedConstants",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "constants",
+        "includeDeclarations": [
+          "KEEP_CONST"
+        ],
+        "excludeDeclarations": []
+      }
+    ]
+  },
+  "constants": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "KEEP_CONST",
+      "value": 100
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "DROP_CONST"
+    }
+  ]
+}

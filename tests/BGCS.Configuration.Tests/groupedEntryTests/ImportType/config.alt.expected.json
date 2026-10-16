@@ -1,0 +1,27 @@
+{
+  "legacyFixture": "entryTests/ImportType",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/importMode": "dllImport"
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "DllImport(",
+    "EntryPoint = \"sample_add\""
+  ],
+  "sdkBuild": false
+}

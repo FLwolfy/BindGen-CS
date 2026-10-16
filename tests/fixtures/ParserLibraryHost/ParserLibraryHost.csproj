@@ -1,16 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Label="Compilation">
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup Label="Project dependencies">
-    <ProjectReference Include="../../../src/BGCS.CppAst/BGCS.CppAst.csproj" />
+    <ProjectReference Include="../../../src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
+    <ProjectReference Include="../../../src/BGCS.Platforms/BGCS.Platforms.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Package dependencies">
-    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.12.50" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <Target Name="StageConfiguredParserRuntime" AfterTargets="Build" Condition="'$(BGCS_CLANG_RUNTIME_DIR)' != ''">

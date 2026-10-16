@@ -1,0 +1,24 @@
+{
+  "legacyFixture": "entryTests/AllowedDelegates",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "callbacks",
+        "includeDeclarations": [
+          "KeepDelegate"
+        ],
+        "excludeDeclarations": []
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.KeepDelegate",
+      "kind": "Delegate"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.DropDelegate"
+  ]
+}

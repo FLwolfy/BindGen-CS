@@ -1,0 +1,37 @@
+{
+  "legacyFixture": "entryTests/ConstantNamingConvention",
+  "legacyVariant": "config.camel",
+  "configuration": {
+    "/api/naming/constants/casing": "camel"
+  },
+  "constants": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "myFlag",
+      "value": 1
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "anotherValue",
+      "value": 2
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "ANOTHER_VALUE"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "AnotherValue"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "MY_FLAG"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "MyFlag"
+    }
+  ]
+}

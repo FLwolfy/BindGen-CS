@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "state": "sourceRemovedLocalReplacementRegressionsPassed",
+  "releaseCertification": false,
+  "featureParityCertified": false,
+  "reason": "Remove unreferenced old baseConfig/ignoredProperties reader, mutable configuration collection normalizer and separate filesystem generation cache; the new major version uses grouped immutable composition, detached cache artifacts and joint publication. No compatibility wrappers remain.",
+  "files": [
+    {
+      "path": "src/BGCS.Infrastructure/Configuration/JsonConfigurationComposer.cs",
+      "category": "production",
+      "sha256": "bb172adf7531e43f5b583f511eb986b5991d6ba95986a4335ca9aef8e8117ae8"
+    },
+    {
+      "path": "src/BGCS.Infrastructure/Collections/CollectionNormalizer.cs",
+      "category": "production",
+      "sha256": "fa3e6c9c63899735e4b8eb0ae99418e66e92756b31b32a4e92e24a37b49fda89"
+    },
+    {
+      "path": "src/BGCS.Infrastructure/Caching/IncrementalGenerationCache.cs",
+      "category": "production",
+      "sha256": "6a00368213b5ae57f754036d3f11a0df835d3a3427a0ddba1d3120f614ccaf15"
+    },
+    {
+      "path": "src/BGCS.Infrastructure/Caching/IncrementalCacheKey.cs",
+      "category": "production",
+      "sha256": "9376522b55a8e908f40a4160a969f1593f765cc3c75c471094a1cb8ef8074af9"
+    },
+    {
+      "path": "tests/BGCS.Infrastructure.Tests/JsonConfigurationComposerTests.cs",
+      "category": "obsoleteTest",
+      "sha256": "1d261f3d250a1fbd4b84d1a9c95fc7771b206e96fa0188ab2bee30c5ac4af47d"
+    },
+    {
+      "path": "tests/BGCS.Infrastructure.Tests/CollectionNormalizerTests.cs",
+      "category": "obsoleteTest",
+      "sha256": "5278f61e6d2e590c4398c93ea6670f5dcf2ed06a8d01ec21cdb1d95cdf7a04e3"
+    },
+    {
+      "path": "tests/BGCS.Infrastructure.Tests/IncrementalGenerationCacheTests.cs",
+      "category": "obsoleteTest",
+      "sha256": "48e59e21d8352709aa9508cd3e757c5bddba40ee7ada4eae718986e76484d686"
+    },
+    {
+      "sha256": "17dbde770f6008af2d7ddb64212086308dc36bf8320feb6c0e2efb43a32792fb",
+      "category": "production",
+      "path": "src/BGCS.Infrastructure/Text/WordList.cs"
+    },
+    {
+      "sha256": "b48b639d7fb5b83177e347ff7dde6588047674706b8f0be71994b219d59b8696",
+      "category": "production",
+      "path": "src/BGCS.Infrastructure/Text/CharCaseInsensitiveEqualityComparer.cs"
+    },
+    {
+      "sha256": "07bbb3d3798d0c3144b7384238a820eebb9ffb7c25f72cd2fa4ca46a57184473",
+      "category": "production",
+      "path": "src/BGCS.Infrastructure/Collections/TrieStringSet.cs"
+    },
+    {
+      "sha256": "1db7ef79f6007712d6acf49d3e9f288d052b26657a1eaf53be4fb96c3445c5aa",
+      "category": "production",
+      "path": "src/BGCS.Infrastructure/Collections/TrieSet.cs"
+    },
+    {
+      "sha256": "b98509bbe8d8f8f56eb3829de6b7e229772a873a4edb98df94d2d0cef2b12454",
+      "category": "obsoleteTest",
+      "path": "tests/BGCS.Infrastructure.Tests/WordListTests.cs"
+    },
+    {
+      "sha256": "7e94b2a5db84de5a1b7e1c546851f73fad021006c0880466345b72ca9a7e6c9c",
+      "category": "obsoleteTest",
+      "path": "tests/BGCS.Infrastructure.Tests/TrieStringSetTests.cs"
+    },
+    {
+      "sha256": "38d150cc9480cfcfdf17aeede3d4c7ef145c1dce983c2590c46697ee0eaa5a3b",
+      "category": "obsoleteTest",
+      "path": "tests/BGCS.Infrastructure.Tests/TrieSetTests.cs"
+    }
+  ],
+  "replacements": [
+    {
+      "tests": [
+        "BGCS.Tests.GroupedConfigurationCompositionTests",
+        "BGCS.Tests.RemoteConfigurationTests"
+      ],
+      "policy": "Old baseConfig/url/ignoredProperties and array-union behavior is intentionally not accepted; new grouped extends/profile composition retains precise path provenance and explicit false/empty replacement.",
+      "source": [
+        "src/BGCS/Configuration/ConfigurationComposer.cs",
+        "src/BGCS/Configuration/BindingConfigurationLoader.cs",
+        "src/BGCS/Configuration/RemoteConfigurationReader.cs"
+      ],
+      "old": "JsonConfigurationComposer"
+    },
+    {
+      "tests": [
+        "BGCS.Tests.GroupedConfigurationCompositionTests",
+        "BGCS.Contracts.Tests"
+      ],
+      "policy": "Mutable reflection normalization is removed. Typed immutable grouped defaults and frozen configuration validation replace null mutation; supplied configuration objects are not modified.",
+      "source": [
+        "src/BGCS/Configuration/BindingConfiguration.cs",
+        "src/BGCS/Configuration/BindingConfigurationLoader.cs"
+      ],
+      "old": "CollectionNormalizer"
+    },
+    {
+      "tests": [
+        "BGCS.Infrastructure.Tests.GenerationStageCacheTests",
+        "BGCS.Infrastructure.Tests.GenerationStageCacheIntegrityTests",
+        "BGCS.Infrastructure.Tests.ExternalInputSnapshotTests",
+        "BGCS.Infrastructure.Tests.InputSnapshotTests",
+        "BGCS.Infrastructure.Tests.ArtifactSetConcurrencyTests",
+        "BGCS.Tests.GenerationStageCacheIntegrationTests",
+        "BGCS.Tests.PrimaryFrontendCacheTests",
+        "BGCS.Tests.NativeSourceViewCacheTests"
+      ],
+      "policy": "Cache complete detached artifact sets, not mutable formal-output directories. ContentDigest protects key syntax, complete-set seals protect descriptor membership/order, per-artifact hashes protect bytes; the Host owns publication, input closure, overlap checks and revalidation.",
+      "source": [
+        "src/BGCS.Infrastructure/Caching/GenerationStageCache.cs",
+        "src/BGCS/Pipeline/EmissionStageCache.cs",
+        "src/BGCS/Pipeline/FrontendGenerationCache.cs",
+        "src/BGCS.Infrastructure/IO/DirectoryMembershipDigest.cs"
+      ],
+      "old": "IncrementalGenerationCache/IncrementalCacheKey"
+    },
+    {
+      "old": "WordList/CharCaseInsensitiveEqualityComparer/TrieStringSet/TrieSet",
+      "policy": "None remains the new-major default; English opts into the pinned vocabulary, Custom supplies an immutable validated word set. Longest stored prefixes preserve unmatched characters/digit runs. Existing lowercase/mixed-case casing and exact mapping precedence remain unchanged. The old global mutable English singleton and filesystem/compressed-wordlist utility APIs are intentionally retired, not replicated as product features.",
+      "tests": [
+        "BGCS.CSharp.Tests.FlatIdentifierNamingTests",
+        "BGCS.Tests.FlatIdentifierNamingTests"
+      ],
+      "source": [
+        "src/BGCS.CSharp/Projection/FlatIdentifierWordIndex.cs",
+        "src/BGCS.CSharp/Projection/ManagedNamingResolver.cs",
+        "src/BGCS.CSharp/Resources/en_EN.txt"
+      ]
+    }
+  ],
+  "newRegressions": {
+    "limitations": [
+      "Unix directory alias/cycle row returns before execution on Windows; Linux/macOS must execute it",
+      "No release-revision certification or clean package/CI claim"
+    ],
+    "state": "localWindowsPassedBeforeFinalUtilityRetirementBuild",
+    "names": [
+      "GenerationStageCacheIntegrityTests.CompleteSetTamperingIsAMissAndFreshCandidatesRepairEveryByte",
+      "GenerationStageCacheIntegrityTests.ConcurrentStoresAndReadsNeverExposeMixedOrPartialArtifactSets",
+      "ExternalInputSnapshotTests.ExtensionlessSdkInputsAndEqualTimestampByteChangesRemainObserved",
+      "ExternalInputSnapshotTests.DirectoryAliasesAndAncestorCyclesPreserveDependencyBytesWithoutInfiniteTraversal",
+      "WorkerProtocolImmutabilityTests.FreshProtocolOptionsAreFrozenBeforeAnySerializationCanOccur",
+      "WorkerProtocolImmutabilityTests.RejectedOptionMutationCannotRelaxTheActualFramedUnknownMemberCheck",
+      "GenerationStageCacheIntegrityTests.CancelledReadsAndStoresLeaveThePreviousCompleteEntryUntouched",
+      "GenerationStageCacheIntegrityTests.InvalidKeysCannotSelectCacheFilesystemPaths",
+      "GenerationStageCacheIntegrityTests.AnUnreadableEntryIsAMissWithNoPartialArtifactsAndTheOriginalBytesRecover",
+      "GenerationStageCacheIntegrityTests.CancellingContendedOwnershipNeverReplacesTheCompleteEntry"
+    ],
+    "receipts": [
+      {
+        "limitations": "One Unix directory alias/cycle row is platform-gated on Windows.",
+        "passed": 20,
+        "failed": 0,
+        "path": "artifacts/implementation/test-results/infrastructure-retirement-cache-seal-twenty-corrected.trx"
+      },
+      {
+        "limitations": "Includes old utility tests before audited WordList/Trie retirement; current post-retirement build/full suite still required.",
+        "passed": 170,
+        "failed": 0,
+        "path": "artifacts/implementation/test-results/infrastructure-neutral-full-cache-seal-corrected.trx"
+      }
+    ]
+  },
+  "observedReferences": [
+    "No current production consumers beyond the retired definitions",
+    "Only the retired old tests invoked these APIs",
+    "Two historical architecture documents still mention old cache names; they are not runtime consumers and require separate historical-document cleanup",
+    "Old tests/public-api/BGCS.Core.txt is a historical snapshot; Root owns baseline replacement",
+    "Final WordList/Trie scan found only their definitions, their three retired utility test files, historical BGCS.Core API snapshot and separately-owned acceptance notes; no current generator/CLI/SDK/native/Runtime consumers."
+  ],
+  "privateCacheRevision": 2,
+  "methodCorrespondence": [
+    {
+      "old": "JsonConfigurationComposerTests.CompositionPreservesExplicitDefaultsAndRemovesIgnoredScalars",
+      "replacement": "GroupedConfigurationCompositionTests.Composition_PreservesPrecedenceFalseListsAndEveryDeclaringPathBase",
+      "disposition": "New grouped precedence/false/empty replacement retained; ignoredProperties and union-array compatibility intentionally removed"
+    },
+    {
+      "old": "JsonConfigurationComposerTests.CircularAndMissingReferencesFailWithoutChangingTheChild",
+      "replacement": "GroupedConfigurationCompositionTests.CyclesUnknownFieldsAndInvalidProfilesFailWithoutFallback",
+      "disposition": "Strict grouped cycle/missing validation without mutation"
+    },
+    {
+      "old": "CollectionNormalizerTests.Normalize_ShouldInstantiateCommonGenericCollections / Normalize_ShouldNotModifyAlreadyInitializedCollections",
+      "replacement": "BindingConfiguration typed immutable defaults + GroupedConfigurationCompositionTests",
+      "disposition": "No null-normalizing mutation API; obsolete mutable DTO interface removed"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.StoreRequiresCurrentOutputEvenWhenTheEntryIsAlreadyComplete",
+      "replacement": "GenerationStageCacheTests.CompleteSetsAreCopiedVerifiedAndMalformedEntriesAreMisses",
+      "disposition": "API requires complete immutable candidate artifacts, not a mutable formal-output directory"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.DamagedCacheIsAMissPreservesOutputAndCanBeReplaced",
+      "replacement": "GenerationStageCacheIntegrityTests.CompleteSetTamperingIsAMissAndFreshCandidatesRepairEveryByte + GenerationStageCacheIntegrationTests.CorruptCachedBytesAndChangedNativeModelAreRegeneratedBeforePublication",
+      "disposition": "Complete-set and payload corruption misses, actual Host regeneration/publication checks"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.OpposingStoreAndRestoreAcquireDirectoryOwnershipInTheSameOrder / Cache_ConcurrentPublicationProducesOneValidImmutableEntry",
+      "replacement": "GenerationStageCacheIntegrityTests.ConcurrentStoresAndReadsNeverExposeMixedOrPartialArtifactSets + ArtifactSetConcurrencyTests.CompetingPublishersInstallOnlyCompleteUniformOwnedSets",
+      "disposition": "Separate atomic detached cache installation and joint owned publication"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.CacheKeysCannotSelectArbitraryDirectories",
+      "replacement": "GenerationStageCacheIntegrityTests.InvalidKeysCannotSelectCacheFilesystemPaths",
+      "disposition": "Shared normalized ContentDigest is validated before any cache path can be selected"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.OutputCannotOverlapItsCacheTree",
+      "replacement": "WorkspaceExecutionTests.Graph_RejectsNestedOutputsAndCrossProjectSourceOrCacheOverlap + Host candidate/output boundary checks",
+      "disposition": "Cache has no formal-output parameter; Host owns source/output/cache separation"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.InputLengthsSeparateFileContentsFromTheFollowingPath",
+      "replacement": "FrontendGenerationCache immutable SourceSnapshot JSON identity + source byte SHA256",
+      "disposition": "Structured path/resolved-path/length/digest identity replaces ambiguous raw byte concatenation"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.CppSdkHeadersWithoutExtensionsParticipateInInputIdentity",
+      "replacement": "ExternalInputSnapshotTests.ExtensionlessSdkInputsAndEqualTimestampByteChangesRemainObserved",
+      "disposition": "Extension-independent declared directory closure hashes actual bytes"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.InputDiscoveryFollowsDirectoryAliasesWithoutRecursingIntoAncestorLinks",
+      "replacement": "ExternalInputSnapshotTests.DirectoryAliasesAndAncestorCyclesPreserveDependencyBytesWithoutInfiniteTraversal + InputSnapshotTests.PrivateCandidateMembership_IsExcludedButItsReadBytesRemainVerified",
+      "disposition": "Unix actual link/cycle traversal, physical input identity and narrowly owned private exclusions; no Windows link execution claim"
+    },
+    {
+      "old": "IncrementalGenerationCacheTests.Cache_RestoresCompleteOutputAndInvalidatesOnInputContentChange",
+      "replacement": "PrimaryFrontendCacheTests.VerifiedWorkerFactsRestoreAfterOutputDeletionAndDoNotSkipValidators / ChangedHeaderBytesAndNewHigherPriorityHeaderInvalidateDetachedFacts",
+      "disposition": "Actual worker restore and changed dependency identity; required validators/builds still run"
+    }
+  ],
+  "namingRetirement": {
+    "assertions": [
+      "English restores CREATEWINDOW=>CreateWindow, DEPTHBUFFER=>DepthBuffer, GETMOUSEPOS=>GetMousePos",
+      "Custom longest prefixes retain unknown and numeric fragments; invalid vocabularies fail explicitly",
+      "Output casing, exact mappings and lowercase/mixed case preserve their established policies",
+      "Parallel projections use different immutable word sets without global cross-session mutation",
+      "Actual worker cold/warm generation hits unchanged emission, English-to-Custom and changed words invalidate, native export names remain exact",
+      "Standalone mutable trie CRUD/copy/empty-key APIs and compressed vocabulary roundtrip/corruption tests are obsolete utility API tests, not falsely mapped to native binding functionality"
+    ],
+    "policy": "None remains the new-major default; English opts into the pinned vocabulary, Custom supplies an immutable validated word set. Longest stored prefixes preserve unmatched characters/digit runs. Existing lowercase/mixed-case casing and exact mapping precedence remain unchanged. The old global mutable English singleton and filesystem/compressed-wordlist utility APIs are intentionally retired, not replicated as product features.",
+    "state": "sourceRemovedAfterMeaningfulReplacementPassed",
+    "receipts": [
+      {
+        "passed": 33,
+        "failed": 0,
+        "path": "artifacts/test-results/cpp-immutable-flat-naming-thirty-three-corrected.trx"
+      },
+      {
+        "passed": 2,
+        "failed": 0,
+        "path": "artifacts/test-results/cpp-flat-naming-host-schema-cache-two.trx"
+      }
+    ],
+    "source": [
+      "src/BGCS.Contracts/Managed/ManagedNamingPolicy.cs",
+      "src/BGCS.CSharp/Projection/FlatIdentifierWordIndex.cs",
+      "src/BGCS.CSharp/Projection/ManagedNamingResolver.cs",
+      "tests/BGCS.CSharp.Tests/FlatIdentifierNamingTests.cs",
+      "tests/BGCS.Tests/FlatIdentifierNamingTests.cs"
+    ],
+    "reason": "Old mutable global vocabulary, standalone trie collections and compressed vocabulary file codec are removed with the old public utility API. Product flat identifier naming is preserved through an explicit immutable policy; no compatibility aliases or old wordlist binary codec are shipped.",
+    "englishResource": {
+      "distribution": "Single physical resource embedded only in BGCS.CSharp; Infrastructure temporary duplicate data embed removed.",
+      "sha256": "480a91457cb2e2e11226f0f37d91e8bfce2d9c02825e02a0b8d2de2a70a45bcc",
+      "bytes": 3864812,
+      "path": "src/BGCS.CSharp/Resources/en_EN.txt"
+    }
+  }
+}

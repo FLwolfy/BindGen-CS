@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""Generate locked upstream headers and verify exact managed consumers and snapshots.
+
+Upstream native invocation is a distinct required release gate. Compiling headers
+or the generated bridge does not certify a call into an upstream native library.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import shutil
+import sys
+import tempfile
+import time
+import uuid
+import xml.etree.ElementTree as ET
+
+from acceptance_evidence import digest, publication
+from corpus import DEFAULT_LOCK, load_lock, verify
+from corpus_policy import selection_policy
+from cpp_acceptance_fixture import execution_identity, stage_repository_generator, tool_command
+
+ROOT = Path(__file__).resolve().parents[1]
+GROUPS = {"c": ("miniaudio", "sdl3", "cimgui", "cimguizmo", "bgfx"), "cpp": ("bimg",)}
+BUDGETS = {"miniaudio": 60, "sdl3": 45, "cimgui": 30, "cimguizmo": 15, "bgfx": 30, "bimg": 15}
+
+
+def host_platform() -> str:
+    machine = platform.machine().lower()
+    architecture = "x64" if machine in ("amd64", "x86_64") else "arm64" if machine in ("arm64", "aarch64") else None
+    if architecture is None:
+        raise RuntimeError("The corpus snapshot architecture is not recognized: " + machine)
+    return ("windows" if os.name == "nt" else "macos" if platform.system() == "Darwin" else "linux") + "-" + architecture
+
+
+def configuration(library: str, corpus: Path, output: Path, compiler_override: str | None = None) -> dict:
+    template = ROOT / "tests/corpus" / (library + ".bindgen.json")
+    value = json.loads(template.read_text(encoding="utf-8-sig"))
+    default_corpus = (ROOT / "artifacts/corpus/headers").resolve()
+
+    def path(relative: str) -> str:
+        original = (template.parent / relative).resolve()
+        if not original.is_relative_to(default_corpus):
+            raise RuntimeError("A corpus configuration input is outside its locked source tree: " + relative)
+        return str(corpus / original.relative_to(default_corpus))
+
+    source = value["source"]
+    for field in ("headers", "includeDirectories", "systemIncludeDirectories"):
+        if field in source:
+            source[field] = [path(item) for item in source[field]]
+    for field in ("includeHeaders", "excludeHeaders"):
+        if field in source.get("selection", {}):
+            source["selection"][field] = [path(item) for item in source["selection"][field]]
+    value["$schema"] = str(ROOT / "schemas/bindgen.schema.json")
+    value["output"]["root"] = str(output)
+    compiler = compiler_override or os.environ.get("BGCS_CORPUS_CXX") or os.environ.get("BGCS_CPP2C_CXX") or os.environ.get("CXX")
+    if not compiler and os.name == "nt":
+        compiler = shutil.which("cl.exe")
+        if compiler is None:
+            raise RuntimeError("The Windows corpus main matrix requires MSVC; initialize its developer environment or set BGCS_CORPUS_CXX to the exact cl.exe.")
+    if compiler:
+        resolved = shutil.which(compiler) or (compiler if Path(compiler).is_file() else None)
+        if resolved is None:
+            raise RuntimeError("The explicitly configured corpus compiler was not found: " + compiler)
+        value["targets"] = [{"id": "host", "settings": {"compilerPath": str(Path(resolved).resolve())}}]
+    return value
+
+
+def compile_bridge(root: Path, manifest: dict, run) -> dict:
+    sources = [root / item["relativePath"] for item in manifest["artifacts"]
+               if item["mediaType"] in ("text/x-c", "text/x-c++") and Path(item["relativePath"]).suffix in (".c", ".cpp", ".cc", ".cxx")]
+    manifests = [root / item["relativePath"] for item in manifest["artifacts"] if item["relativePath"].endswith("/bridge.manifest.json")]
+    if not sources or len(manifests) != 1:
+        raise RuntimeError("Generated native sources require one exact neutral build manifest.")
+    native = json.loads(manifests[0].read_text(encoding="utf-8-sig"))
+    target = native["target"]
+    toolchain = target["toolchain"]
+    compiler = toolchain["compilerPath"]
+    if not Path(compiler).is_file():
+        raise RuntimeError("The resolved native corpus compiler is missing: " + compiler)
+    def resolve(path: str) -> str:
+        return str(root / path.removeprefix("artifact:/")) if path.startswith("artifact:/") else path
+
+    directories = [resolve(path) for path in native.get("includeDirectories", [])]
+    directories += sorted({str((root / item["relativePath"]).parent) for item in manifest["artifacts"] if item["relativePath"].endswith(".h")})
+    directories += native.get("systemIncludeDirectories", []) + toolchain.get("cxxSystemIncludeFolders", [])
+    is_msvc = Path(compiler).name.casefold() in ("cl.exe", "cl", "clang-cl.exe", "clang-cl")
+    for index, source in enumerate(sources):
+        cpp = source.suffix != ".c"
+        if is_msvc:
+            prefix = [compiler, "/nologo", "/Zs", "/std:c++latest" if cpp else "/std:c17", "/TP" if cpp else "/TC", "/Zc:preprocessor"]
+            if cpp: prefix += ["/EHsc", "/Zc:__cplusplus"]
+        else:
+            prefix = [compiler, "-x", "c++" if cpp else "c", "-std=c++23" if cpp else "-std=c17", "-fsyntax-only"]
+        prefix += [("/I" if is_msvc else "-I") + item for item in directories]
+        prefix += [("/D" if is_msvc else "-D") + item for item in native.get("defines", [])]
+        if not is_msvc:
+            prefix += toolchain.get("arguments", [])
+            if "clang" in Path(compiler).name.casefold(): prefix += ["--target=" + target["triple"]]
+        prefix += native.get("compilerArguments", [])
+        run([*prefix, str(source)], "bridge-syntax-" + str(index))
+    return {"compiler": compiler, "compilerSha256": digest(Path(compiler)), "translationUnits": len(sources),
+            "nativeLinked": False, "upstreamInvoked": False}
+
+
+def snapshot_source_digest(path: Path, media_type: str, corpus_root: Path) -> str:
+    """Compare native source across checkout relocation without rewriting artifacts."""
+    if media_type not in ("text/x-c", "text/x-c++", "text/x-c-header", "text/x-c++-header"):
+        return digest(path)
+    corpus = corpus_root.resolve()
+    content = path.read_bytes().decode("utf-8")
+    def include(match):
+        candidate = Path(match["path"])
+        if not candidate.is_absolute():
+            return match.group(0)
+        resolved = candidate.resolve()
+        if not resolved.is_relative_to(corpus):
+            return match.group(0)
+        return match["prefix"] + "$BGCS_CORPUS/" + resolved.relative_to(corpus).as_posix() + match["suffix"]
+    normalized = re.sub(r'^(?P<prefix>[ \t]*#[ \t]*include[ \t]*")(?P<path>[^"\r\n]+)(?P<suffix>")',
+                        include, content, flags=re.MULTILINE)
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def check_snapshot(library: str, manifest: dict, public_api: Path, output: Path, publication_root: Path, corpus_root: Path, policy: dict) -> bool:
+    source_types = {"text/x-csharp", "text/x-c", "text/x-c++", "text/x-c-header", "text/x-c++-header"}
+    snapshot = {"schemaVersion": 2, "libraryId": library, "platform": host_platform(),
+                "sourceNormalization": "quoted-locked-corpus-include-root-v1",
+                "selectionPolicySha256": policy["policySha256"],
+                "omittedDeclarations": policy["libraries"][library],
+                "sources": {item["relativePath"]: snapshot_source_digest(publication_root / item["relativePath"], item["mediaType"], corpus_root)
+                            for item in sorted(manifest["artifacts"], key=lambda item: item["relativePath"])
+                            if item["mediaType"] in source_types}, "publicApiSha256": digest(public_api)}
+    if not snapshot["sources"]:
+        raise RuntimeError("A corpus snapshot cannot certify an empty source set.")
+    baseline = ROOT / "tests/corpus/snapshots" / (library + "." + host_platform() + ".json")
+    matches = baseline.is_file() and json.loads(baseline.read_text(encoding="utf-8-sig")) == snapshot
+    output.mkdir(parents=True, exist_ok=True)
+    (output / baseline.name).write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+    return matches
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dotnet", required=True)
+    parser.add_argument("--configuration", default="Release")
+    parser.add_argument("--tool-path", type=Path, help="Already closed private CLI execution closure.")
+    parser.add_argument("--runtime-path", type=Path, help="Already closed Runtime assembly for managed consumers.")
+    parser.add_argument("--group", choices=tuple(GROUPS), required=True)
+    parser.add_argument("--library", choices=tuple(library for group in GROUPS.values() for library in group))
+    parser.add_argument("--corpus-root", type=Path, default=Path(os.environ.get("BGCS_REAL_LIBRARY_ROOT", ROOT / "artifacts/corpus/headers")))
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+    libraries = (args.library,) if args.library else GROUPS[args.group]
+    if any(library not in GROUPS[args.group] for library in libraries):
+        parser.error("--library must belong to the selected corpus group.")
+    output = (args.output or ROOT / "artifacts/acceptance" / ("corpus-" + args.group + ".json")).resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    evidence = ROOT / "artifacts/corpus-acceptance" / uuid.uuid4().hex
+    evidence.mkdir(parents=True)
+    report = {"schemaVersion": 1, "success": False, "scope": "locked-upstream-generation-managed-compile-and-reviewed-source-api-snapshots",
+              "upstreamInvoked": False, "upstreamInvocationRequiredForRelease": True,
+              "group": args.group, "platform": host_platform(), "evidence": str(evidence), "libraries": []}
+    spec = importlib.util.spec_from_file_location("corpus_consumer_helpers", ROOT / "eng/verify-packages.py")
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    corpus = args.corpus_root.resolve()
+    dotnet = str(Path(args.dotnet).resolve())
+    failed, unreviewed = False, False
+    try:
+        minimum_free = int(os.environ.get("BGCS_MINIMUM_FREE_BYTES", str(1024 ** 3)))
+        if minimum_free <= 0 or shutil.disk_usage(ROOT).free < minimum_free:
+            raise RuntimeError("The corpus gate requires its declared positive free-space floor.")
+        lock = load_lock(DEFAULT_LOCK)
+        report["corpusLockSha256"] = digest(DEFAULT_LOCK)
+        report["repositories"] = verify(corpus, lock)
+        policy = selection_policy(ROOT, lock, corpus)
+        report["selectedApiPolicy"] = policy
+        temporary = ROOT / "artifacts/temporary"
+        temporary.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="corpus-consumers-", dir=temporary) as directory:
+            work = Path(directory)
+            tool = args.tool_path.resolve() if args.tool_path else stage_repository_generator(ROOT, work, args.configuration)
+            runtime = args.runtime_path.resolve() if args.runtime_path else ROOT / "src/BGCS.Runtime/bin" / args.configuration / "net10.0/BGCS.Runtime.dll"
+            if not tool.is_file() or not runtime.is_file():
+                raise RuntimeError("The corpus generator closure or Runtime assembly is missing.")
+            report["executionIdentity"] = execution_identity(ROOT, tool, runtime)
+            environment = {"DOTNET_ROOT": str(Path(dotnet).parent), "DOTNET_HOST_PATH": dotnet}
+            for library in libraries:
+                item = {"libraryId": library, "success": False, "generated": False, "managedCompiled": False,
+                        "upstreamInvoked": False, "reviewedSnapshots": False,
+                        "omittedDeclarations": policy["libraries"][library]}
+                report["libraries"].append(item)
+                library_evidence = evidence / library
+                library_evidence.mkdir()
+                consumer = work / library
+                consumer.mkdir()
+                request = configuration(library, corpus, library_evidence / "Generated")
+                config = library_evidence / "bindgen.json"
+                config.write_text(json.dumps(request, indent=2) + "\n", encoding="utf-8")
+
+                def run(arguments, name, **options):
+                    return helper.run_process(arguments, consumer, library_evidence, name,
+                                              environment_overrides=environment, **options)
+
+                try:
+                    started = time.monotonic()
+                    generated = json.loads(run([*tool_command(dotnet, tool), "generate", str(config), "--json"],
+                                               "generation", separate_stderr=True))
+                    item["generationSeconds"] = round(time.monotonic() - started, 3)
+                    if not generated.get("success") or not generated.get("published"):
+                        raise RuntimeError("The public corpus request did not publish a validated complete set.")
+                    if os.environ.get("BGCS_ENFORCE_GENERATION_BUDGETS") == "1" and item["generationSeconds"] > BUDGETS[library]:
+                        raise RuntimeError("The existing corpus generation budget was exceeded: " + str(BUDGETS[library]))
+                    root = Path(generated["outputRoot"])
+                    owned = publication(root, library)
+                    sources = [root / entry["relativePath"] for entry in owned["artifacts"] if entry["mediaType"] == "text/x-csharp"]
+                    if len(sources) != 1 or sources[0].name != "Bindings.cs":
+                        raise RuntimeError("The corpus did not obey its complete single-file managed output contract.")
+                    item.update(generated=True, outputRoot=str(root), artifactCount=len(owned["artifacts"]))
+                    native_sources = any(entry["mediaType"] in ("text/x-c", "text/x-c++") for entry in owned["artifacts"])
+                    if args.group == "cpp" or native_sources:
+                        item["nativeBridgeSyntax" if args.group == "cpp" else "nativeSourceSyntax"] = compile_bridge(root, owned, run)
+                    project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
+                    properties = ET.SubElement(project, "PropertyGroup")
+                    for key, value in {"TargetFramework": "net10.0", "AllowUnsafeBlocks": "true", "Nullable": "enable", "ImplicitUsings": "disable",
+                                       "TreatWarningsAsErrors": "true", "EnableDefaultCompileItems": "false", "UseSharedCompilation": "false"}.items():
+                        ET.SubElement(properties, key).text = value
+                    items = ET.SubElement(project, "ItemGroup")
+                    for source in sources:
+                        ET.SubElement(items, "Compile", Include=str(source))
+                    ET.SubElement(ET.SubElement(items, "Reference", Include="BGCS.Runtime"), "HintPath").text = str(runtime)
+                    ET.ElementTree(project).write(consumer / "Corpus.Generated.csproj", encoding="utf-8", xml_declaration=True)
+                    run([dotnet, "build", "Corpus.Generated.csproj", "-c", args.configuration, "-m:1", "-nr:false"], "managed-compile")
+                    item["managedCompiled"] = True
+                    api = library_evidence / "public-api.txt"
+                    run([*tool_command(dotnet, tool), "validate", "api-snapshot", str(consumer / "bin" / args.configuration / "net10.0/Corpus.Generated.dll"), str(api)], "public-api")
+                    item["reviewedSnapshots"] = check_snapshot(library, owned, api, ROOT / "artifacts/acceptance/candidate-snapshots/corpus", root, corpus, policy)
+                    unreviewed = unreviewed or not item["reviewedSnapshots"]
+                    item["success"] = item["reviewedSnapshots"]
+                except Exception as error:
+                    failed = True
+                    item["failure"] = str(error)
+                    print("[corpus] " + library + ": " + str(error), file=sys.stderr)
+        report["repositoriesAfter"] = verify(corpus, lock)
+        report["success"] = not failed and not unreviewed and len(report["libraries"]) == len(libraries)
+        report["failureKind"] = "execution" if failed else "unreviewed-snapshots" if unreviewed else None
+        return 1 if failed else 3 if unreviewed else 0
+    except BaseException as error:
+        report["failure"] = str(error)
+        raise
+    finally:
+        output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,110 +1,84 @@
-# 能力与边界
+# BGCS 3.0 能力与边界
 
-[English](capabilities.md) | [中文文档入口](README.cn.md) | [验收规范](acceptance.cn.md)
+[English](capabilities.md) | [全方位评估](assessment.cn.md) | [验收](acceptance.cn.md)
 
-这份文档回答两个问题：BindGen-CS 现在能可靠完成什么，以及哪些能力仍然需要显式配置或更多 target 证据。它描述当前实现，不是愿景清单。
+本文描述当前 3.0 实现。源码存在、本地测试通过、发布 revision 获得认证是三种不同
+结论。CI 配置存在和旧版本报告都不能自动认证当前源码。
 
-## 证据等级
+## 如何阅读证据
 
-| 等级 | 含义 |
+| 状态 | 能证明什么 |
 | --- | --- |
-| 实机验收 | 在声明 target 上经过真实 header、生成代码编译、native invocation 或集成测试 |
-| 自动测试 | 有单元/集成/生成代码编译测试，但不代表所有宿主都完成真实库验收 |
-| 配置支持 | 具备明确模型和诊断，需要项目提供 native 语义 |
-| 明确拒绝 | 无法安全推导时失败，不生成猜测代码 |
+| 已实现源码 | 存在模型、实现和验证路径。 |
+| 本地证据 | 指定测试或 fixture 在记录的宿主及编译字节上执行通过；未提交工作区仍是本地证据。 |
+| revision 认证 | 同一发布 revision 的所需作业、真实调用和干净安装消费全部通过，且平台范围明确。 |
+| 明确限制 | 缺少 ABI 或生命周期证据时拒绝、保留 Raw，或报告未生成友好 API 的原因。 |
 
-## C 与 ABI
+当前本地工作包含 Windows/MSVC 原生调用、CoreCLR 导入及 Runtime 模式矩阵、NativeAOT、
+Chromium 浏览器解释/AOT、外部插件和真实库 fixture。它们来自不同检查点、证明范围不同，
+不能拼成未经验证的最终 revision 认证。发布状态由[门禁清单](../eng/acceptance/required-release-gates.json)、
+功能/配置 inventory 及同 revision 报告决定。
 
-| 能力 | 状态 | 证据或边界 |
-| --- | --- | --- |
-| function、enum、constant、typedef | 实机验收 | 五个真实 C API 的确定性 snapshot 与 IR-native 零警告编译 |
-| struct、union、packing、fixed array、bitfield | 实机验收/自动测试 | layout 与 native invocation gate |
-| opaque handle、pointer typedef、forward declaration | 实机验收/自动测试 | SDL3、bgfx、cimgui 及生成代码编译矩阵 |
-| callback、function pointer、callback registry | 实机验收/自动测试 | C ABI callback 与 Runtime 测试 |
-| C variadic | 配置支持 | 必须声明完成 default argument promotion 的固定 variant；当前限 `DllImport` |
-| target-dependent `char`、`long`、`wchar_t`、`long double`、`va_list` | 实机验收/自动测试 | MSVC/GNU/Darwin ABI mapping；Darwin/GNU Arm64 报告包含 AAPCS64 `va_list` carrier |
-| `DllImport`、`LibraryImport`、FunctionTable | 自动测试 | 配置化 import mode 与 native context 的生成编译/runtime coverage |
+## C 声明与 ABI
 
-## Friendly API 与安全
+| 能力 | 当前行为与边界 |
+| --- | --- |
+| 函数、枚举、别名、标量/字符串常量和宏 | 中立编译器事实保留身份、符号位、精确值、码元和来源。依赖探测位置的宏不会伪装为稳定常量；任意函数宏需要显式类型化原生适配器。 |
+| 记录、union、数组、packing、位字段 | 原生布局、托管存储、按值调用分别验证；相同大小从来不等于调用安全。 |
+| 指针别名与 opaque 记录 | 可表达的 Raw 指针仍可用。显式地址 carrier 不拥有对象；unsafe 解引用视图仍由调用者负责有效期。 |
+| 字符串、buffer 与单值指针 | string/Span/ref/out 需要编码、单位、边界、方向和生命周期事实；未知指针不会自动成为字符串或 Span。 |
+| 可变参数 | `source.variadicVariants` 生成有限固定原生包装，由原生编译器完成默认参数提升，固定 ABI 可使用三种 import。不会生成任意托管 varargs 调用；仅保存不调用的可变参数函数地址也不代表通用调用签名。 |
+| C internal/inline helper | `source.includeHeaderHelpers` 默认 false；启用后适配器必须编译到同一配置模块，现有 DLL 不会自动增加导出。编译器 intrinsic 需要有限的 provider 专属证明。 |
+| 特殊基础类型 | `char`、`long`、`wchar_t`、`char8_t`、`long double`、`va_list` 保留目标事实；不支持的按值形式被拒绝，指针和 native shim 路径需要显式选择。 |
+| 导入方式 | FunctionTable、DllImport、LibraryImport 共享 interop 模型，但仍受运行时/profile 能力约束；换 import 不能让不支持的 ABI 变安全。 |
 
-| 能力 | 状态 | 证据或边界 |
-| --- | --- | --- |
-| naming、type、field、function mapping | 实机验收/自动测试 | 配置 entry tests 与真实 API snapshot |
-| string encoding 与 ownership | 配置支持 | 声明未表达 lifetime 时必须使用 `marshallingMappings` |
-| pointer/count、capacity/written-count、Span | 配置支持/自动测试 | 保守推断加显式 mapping；严格模式可删除高风险 friendly overload |
-| cleanup function 与 owned return | 配置支持 | allocator/cleanup 必须来自项目配置 |
-| callback lifetime | 配置支持 | 未声明 lifetime 时产生 `BGCS-SAFETY-CALLBACK` |
-| 生成 API 稳定性 | 实机验收 | 确定性 source hash 与 reflection public-API snapshot |
+## C++ 桥接与托管投影
 
-## C++ Bridge
+| 能力 | 当前行为与边界 |
+| --- | --- |
+| 对象、成员、运算符、重载 | 类型化操作覆盖可访问的具体声明、构造/析构、status/error 边界及原生 cast；deleted、不可访问或未解析声明明确失败。 |
+| 模板与继承 | `cpp.templateInstantiations` 显式选择有限的类/函数实例；多继承使用真实原生指针调整，不替换成 reinterpret cast；任意模板元编程不会自动实例化。 |
+| 标准与配置类型家族 | string、vector/span/array、map/set、optional/variant/expected、unique/shared pointer、path、duration/time point 使用有限类型化协议。`cpp.familyBindings` 基于实际编译器类型/模板事实及显式行为断言，名字或大小相似不能证明兼容。 |
+| 字符串与路径 | counted 适配器保留嵌入零及声明的 UTF 码元。新建默认标准 string/path 结果可在证明成立的同步 creating-call 清理作用域内复制成 C# string；自定义 allocator/traits/生命周期需要自己的证明或 shim。 |
+| 其他容器结果 | Raw/status holder 操作与高级托管集合返回是独立能力；原生容器可用不等于自动返回 C# 数组或集合。 |
+| Chrono | 保留实际 count、representation、ratio、clock；不推断统一纳秒换算或托管日期 epoch。 |
+| Ownership 与异常 | 拥有型包装需要精确析构配对与清理线程域；C++ 异常在生成的 C 边界内处理；未知 retention 或释放线程要求不会被编造。 |
+| 虚回调代理 | `cpp.virtualCallbacks` 提供精确 Raw proxy 协议；满足条件时生成托管 thunk，并要求显式完整原生 stop/join。未知清理保留 Raw；Browser Wasm 等不可阻塞 profile 目前不生成拥有型托管虚代理注册，普通 retained C callback/async 不能证明这个不同协议。 |
+| 自定义 lowering | Contracts-only 类型/调用 lowering、有限 recipe、受控片段和 native shim 可扩展流水线；用户断言与外部输入保留其证据等级和缓存身份。 |
 
-| 能力 | 状态 | 证据或边界 |
-| --- | --- | --- |
-| class、构造、析构、instance/static method | 实机验收/自动测试 | native bridge compile/invocation gate |
-| overload、namespace function、异常边界 | 实机验收/自动测试 | 生成 symbol 与 exception channel 测试 |
-| 继承 cast 与 pointer adjustment | 自动测试 | 不使用不安全的简单 reinterpret cast |
-| class/function template | 配置支持/自动测试 | 只生成 `templateInstantiations` / `functionTemplateInstantiations` 明确列出的实例 |
-| `std::string` | 自动测试 | UTF-8 borrowed/return lowering 的已验证范围 |
-| `std::vector`、`std::span` | 自动测试 | pointer/count view；ownership 仍由配置决定 |
-| `std::optional<T>` | 自动测试 | blittable presence/value 与 non-blittable owned-handle protocol 均有 native compile test |
-| `std::array/map/set` | native invocation test | fixed extent 与 owned-holder protocol 实际编译执行 |
-| `std::variant/expected` | native invocation test | alternative/value/error holder 实际创建、读取、销毁 |
-| `std::filesystem::path`、`std::chrono` | native invocation test | UTF-8 path 与纳秒 duration/time-point 转换实际执行 |
-| `std::unique_ptr`、`std::shared_ptr` | 自动测试 | 已建模 ownership transfer/retention 的支持路径 |
-| pure-virtual managed callback proxy | 自动测试 | 必须显式列入 `virtualCallbackInterfaces` |
-| 任意 STL/container/template/metaprogramming | 明确拒绝 | 未知 specialization 产生 `BGCSCPP001`，不会伪装成 blittable 类型 |
+具体配置见 [lowering](lowering.cn.md) 与[实战手册](cpp-extension-cookbook.cn.md)。
+返回 `char*` 并不证明 UTF-8 或 ownership，函数名为 `Create` 也不证明存在安全释放函数。
 
-## 工作流与工程化
+`AnalyzeAsync` 还能经 worker 保留类型化 Objective-C 声明事实；这是[仅分析能力](objective-c-facts.cn.md)，
+不代表 message-send、ARC 或 Apple runtime 绑定，生成入口会拒绝这类请求。
 
-| 能力 | 状态 | 说明 |
-| --- | --- | --- |
-| `init → doctor → validate → generate → build` | 实机验收 | Tool 安装与干净消费 smoke test 覆盖 |
-| transactional output | 自动测试 | 失败不会破坏 last-good output |
-| deterministic `diff` | 实机验收 | 真实库与隔离输出 gate |
-| multi-project workspace | 实机验收 | workspace validate/generate/diff；具体消费者的集成验收不属于 BGCS 仓库 |
-| C++ native build manifest/providers | native invocation + plan test | direct Clang/GNU 与 CMake 宿主执行；Windows clang-cl/MSBuild tests 在所属 runner build/export/invoke DLL；Meson plan coverage |
-| 增量生成 | 自动化 + 性能测试 | SHA-256 input/config/compiler/plugin/lowering/shim fingerprint、原子 immutable entry、并发发布、删除 output 后恢复、10k declaration 冷/热预算 |
-| 最终 lowering 扩展 contract | native invocation + 外部 assembly E2E + API-shape 测试 | 隔离 plugin loader、确定性 typed service、声明式 recipe、显式 shim、managed/native artifact、安全 bypass 诊断与稳定 cache fingerprint |
-| BaseConfig 与 preset | 自动测试 | 显式 config-directory context、循环检测、override precedence，不修改进程 cwd |
-| 当前安装版本 C/C++ schema | 自动测试 | 默认严格 root property；从安装版本生成嵌套 public shape 和核心说明 |
-| 可移植项目初始化 | 自动测试 | config-relative `/` path、显式 C/C++ 选择、拒绝覆盖 |
-| deterministic NuGet packages | 实机验收 | 双次 pack 内容对比、干净 restore、Tool 安装 |
-| IR-native raw ABI backend | 实机验收 | 五个真实 C 库以 warning-as-error 生成编译；unsupported/opaque by-value 语义在提交前失败 |
+## Runtime、扩展与工作流
 
-## Target 证据
+实例上下文、FunctionTable 加载、module/call/resource lease、owned 和 module-borrowed
+handle、call-scoped callback、显式 retained callback 协议及有限异步 completion 投影均有实现。
+回调异常被拦截；浏览器的非阻塞 retention/completion 需要显式 event-loop 协议，不能套用
+桌面阻塞 stop/join。
 
-当前重构的证据以[独立验收报告](architecture-refactor-acceptance.cn.md)为准。
-旧架构下的实机报告保留为历史证据，不能自动证明当前源码通过。
+普通插件只引用 `BGCS.Contracts`。源码贡献、目标、native/interop/managed transform、
+C++ lowering、managed projection/backend、产物处理、验证、原生 provider 和资产布局均有
+类型化端口。高级 Clang fact 插件刻意使用独立的 parser-pinned worker-only 接口与借用句柄，
+见[扩展文档](extensibility.cn.md)。
 
-| Target | 状态 | 当前证据 |
-| --- | :---: | --- |
-| macOS arm64 Darwin | 历史证据 | 当前重构需要在 macOS 主机复验 |
-| Windows x64 MSVC/clang-cl | 本次验收范围 | 独立 C/C++ 调用、clang-cl/MSBuild、NativeAOT 和干净包消费者；见本次报告 |
-| Linux x64 GNU/Clang | ⚠️ | 已配置独立 runner；完整报告待产出 |
-| macOS x64 Darwin | ⚠️ | 已配置 Intel runner；完整报告待产出 |
-| Windows/Linux arm64 | ⚠️ | target 与 desktop RID model 已有；完整 provider/runtime/package 报告待产出 |
-| Android | ⚠️ | 正式支持目标；target model 已有，NDK/sysroot、包布局和 device/emulator 报告待完成 |
-| iOS | ⚠️ | 正式支持目标；target model 已有，Xcode SDK、framework 布局和 device/simulator 报告待完成 |
-| FreeBSD | ⚠️ | 正式支持目标；target model 已有，toolchain、包布局和独立报告待完成 |
-| Emscripten wasm32 | 本次验收范围 | BGCS 自有 C/C++ fixture，三种 import mode，解释执行及 AOT 的实际调用；其他作者主机和浏览器仍需分别验收 |
+CLI、SDK、workspace、显式启用的 MSBuild 使用同一 BindingHost。冻结的分组配置、确定顺序、
+依赖快照与扩展指纹控制缓存；命中缓存仍执行本次所需验证。最终契约检查和所属产物发布保护
+此前完整输出。
 
-## 成熟度判断
+默认值是 .NET 10/C# 14、C17/C++23、实例 API、FunctionTable、分文件、package Runtime、
+不构建原生；单文件默认 `Bindings.cs`。完整 SDK/tool 交付内置功能，用户不必逐个安装实现工程。
+准确字段及默认值来自[生成的配置参考](generated/config-reference.cn.md)。
 
-BindGen-CS 已经是强大的工程化 binding toolkit，而不是简单的 header-to-`DllImport` 脚本。它在当前已验收 target 上具备生产级 C 绑定、很强的受控 C++ Bridge、可重复生成、包验证和大型项目落地证据。
+## 平台范围
 
-但“对所有 C++ 自动通吃”和“所有 target 都已生产验证”目前都不成立。主要差距是：
+Windows x64、Linux GNU x64、Intel macOS、Browser Wasm 是首发强制门禁；NativeAOT、
+干净安装 SDK/tool/Runtime/plugin/MSBuild 另有要求。Windows 本地通过不能替代 Linux/macOS
+执行，Chromium 通过也不认证 Firefox/Safari。ARM64、musl、Android、iOS、FreeBSD 必须分别
+完成解析目标、生成、托管编译、原生链接、实际调用、包消费等阶段，未完成的阶段保持明确状态。
 
-- Linux x64、macOS 与其他设备仍需当前重构的目标实机报告；
-- 配置模型能力很强但仍较扁平，大型库需要理解 mapping 与 safety policy；
-- 桌面 multi-RID packaging 不等同于每个 RID 已执行验收；每个非本机目标仍需自己的调用和包消费报告；
-- 任意 metaprogramming、custom allocator 与超出内置协议的类型需要声明式 lowering、版本化 plugin 或显式 C ABI shim。
-
-因此，准确定位是：**在经过验收的 C ABI 与明确支持的 C++ 子集内非常优秀；作为“任意 C++、任意平台、零配置”的万能工具仍有清晰距离。**
-
-## 下一阶段最高价值工作
-
-1. 在 Linux x64 与 macOS 主机复验当前架构的真实库、native invocation 和包消费者。
-2. 持续增加 IR-native public-API snapshot；当前不存在预发布 legacy 路径。
-3. 在各自 target 上执行全部 provider，并保留 multi-RID consumer 证据。
-4. 在授权 GitHub release 环境真实执行 OIDC/Sigstore 签名发布。
-5. 持续扩展内置语义/schema，并将项目专用语义统一接入最终 lowering 架构。
+架构已实质区分宿主解析器、原生目标、SDK/sysroot、编译器、ABI、托管运行时和导入策略。
+这提供充分的平台扩展基础；完整平台支持仍必须由该平台真实矩阵建立，不能由目标名称或一次
+跨目标解析替代。

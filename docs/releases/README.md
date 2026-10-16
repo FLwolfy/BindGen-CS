@@ -8,7 +8,8 @@ bytes. They do not reconstruct unavailable symbols, attestations, or successful 
 
 | Release | Publication scope |
 | --- | --- |
-| [2.1.0](2.1.0.md) | Current release: seven libraries and six tool packages, with symbols and attestations |
+| [3.0.0](3.0.0.md) | Four-product major-version contents; actual publication and certification require the same-revision release gates |
+| [2.1.0](2.1.0.md) | Earlier product layout: seven libraries and six tool packages, with symbols and attestations |
 | [2.0.4](2.0.4.md) | Original seven libraries and six tool packages |
 | [2.0.3](2.0.3.md) | Original seven library packages |
 | [2.0.2-alpha.1](2.0.2-alpha.1.md) | Source-only alpha archive of the original `v2.0.2` tag |

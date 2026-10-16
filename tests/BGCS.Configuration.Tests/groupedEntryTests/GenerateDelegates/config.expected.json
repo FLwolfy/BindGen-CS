@@ -1,0 +1,13 @@
+{
+  "legacyFixture": "entryTests/GenerateDelegates",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/emitCallbackDelegates": false
+  },
+  "absentTypes": [
+    "EntryTests.Generated.SampleCb"
+  ],
+  "contains": [
+    "SetCallback("
+  ]
+}

@@ -1,0 +1,595 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
+using BGCS.Frontend.Clang.Collections;
+using BGCS.Frontend.Clang.Extensions;
+using BGCS.Frontend.Clang.Model.Attributes;
+using BGCS.Frontend.Clang.Model.Expressions;
+using BGCS.Frontend.Clang.Model.Metadata;
+using BGCS.Frontend.Clang.Parsing;
+// Portions of this file are modified from original work by Alexandre Mutel.
+// Modified by BGCS contributors.
+// Licensed under the MIT License.
+using ClangSharp.Interop;
+
+namespace BGCS.Frontend.Clang.Utilities;
+
+internal static unsafe class CppTokenUtil
+{
+    public static void ParseCursorAttributes(
+        CppGlobalDeclarationContainer globalContainer,
+        CXCursor cursor,
+        ref List<CppAttribute> attributes
+    ) {
+        var tokenizer = new AttributeTokenizer(cursor);
+        var tokenIt = new TokenIterator(tokenizer);
+        // if this is a template then we need to skip that ?
+        if (tokenIt.canPeek && tokenIt.PeekText() == "template")
+            SkipTemplates(tokenIt);
+        while (tokenIt.canPeek)
+        {
+            if (ParseAttributes(globalContainer, tokenIt, ref attributes))
+            {
+                continue;
+            }
+
+            // If we have a keyword, try to skip it and process following elements
+            // for example attribute put right after a struct __declspec(uuid("...")) Test {...}
+            if (tokenIt.Peek()!.kind == CppTokenKind.Keyword)
+            {
+                tokenIt.Next();
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    public static void ParseFunctionAttributes(
+        CppGlobalDeclarationContainer globalContainer,
+        CXCursor cursor,
+        string functionName,
+        ref List<CppAttribute> attributes
+    ) {
+        AttributeTokenizer tokenizer = new(cursor);
+        TokenIterator tokenIt = new(tokenizer);
+        CppSourceLocation nameLocation = cursor.Location.ToSourceLocation();
+        // Clang identifies the declarator's name. Searching by spelling can instead
+        // select a same-named call inside a decltype/function-pointer return type.
+        while (tokenIt.canPeek && !IsNameToken(tokenIt.Peek()!, nameLocation))
+        {
+            if (ParseAttributes(globalContainer, tokenIt, ref attributes))
+                continue;
+            tokenIt.Next();
+        }
+
+        if (!tokenIt.canPeek)
+            return;
+        bool skipOperatorNameParentheses = functionName.StartsWith("operator()", StringComparison.Ordinal);
+        bool foundParameterList = false;
+        int angleDepth = 0;
+        while (tokenIt.canPeek)
+        {
+            string? token = tokenIt.PeekText();
+            if (token == "<" && !functionName.StartsWith("operator", StringComparison.Ordinal))
+                angleDepth++;
+            else if ((token == ">" || token == ">>") && angleDepth > 0)
+                angleDepth = Math.Max(0, angleDepth - (token == ">>" ? 2 : 1));
+            else if (token == "(" && angleDepth == 0)
+            {
+                tokenIt.Next();
+                if (!skipOperatorNameParentheses)
+                {
+                    foundParameterList = true;
+                    break;
+                }
+
+                skipOperatorNameParentheses = false;
+                if (!SkipBalancedParentheses(tokenIt))
+                    return;
+                continue;
+            }
+
+            tokenIt.Next();
+        }
+
+        if (!foundParameterList)
+            return;
+        if (!SkipBalancedParentheses(tokenIt))
+            return;
+        while (tokenIt.canPeek)
+        {
+            if (!ParseAttributes(globalContainer, tokenIt, ref attributes))
+                tokenIt.Next();
+        }
+    }
+
+    private static bool IsNameToken(
+        CppToken token,
+        CppSourceLocation location
+    ) => string.Equals(token.span.start.file, location.file, StringComparison.Ordinal) && token.span.start.offset <= location.offset && token.span.end.offset > location.offset;
+    private static bool SkipBalancedParentheses(TokenIterator tokenIt)
+    {
+        int parentCount = 1;
+        while (parentCount > 0 && tokenIt.canPeek)
+        {
+            var text = tokenIt.PeekText();
+            if (text == "(")
+            {
+                parentCount++;
+            }
+            else if (text == ")")
+            {
+                parentCount--;
+            }
+
+            tokenIt.Next();
+        }
+
+        return parentCount == 0;
+    }
+
+    public static void ParseAttributesInRange(
+        CppGlobalDeclarationContainer globalContainer,
+        CXTranslationUnit tu,
+        CXSourceRange range,
+        ref List<CppAttribute> collectAttributes
+    ) {
+        AttributeTokenizer tokenizer = new(tu, range);
+        TokenIterator tokenIt = new(tokenizer);
+        // if this is a template then we need to skip that ?
+        if (tokenIt.canPeek && tokenIt.PeekText() == "template")
+            SkipTemplates(tokenIt);
+        while (tokenIt.canPeek)
+        {
+            if (ParseAttributes(globalContainer, tokenIt, ref collectAttributes))
+            {
+                continue;
+            }
+
+            // If we have a keyword, try to skip it and process following elements
+            // for example attribute put right after a struct __declspec(uuid("...")) Test {...}
+            if (tokenIt.Peek()!.kind == CppTokenKind.Keyword)
+            {
+                tokenIt.Next();
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    private static int SkipWhiteSpace(
+        ReadOnlySpan<byte> cnt,
+        int cntOffset
+    ) {
+        while (cntOffset > 0)
+        {
+            char ch = (char)cnt[cntOffset];
+            if (ch == ' ' || ch == '\r' || ch == '\n' || ch == '\t')
+            {
+                cntOffset--;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return cntOffset;
+    }
+
+    private static int ToLineStart(
+        ReadOnlySpan<byte> cnt,
+        int cntOffset
+    ) {
+        for (int i = cntOffset; i >= 0; i--)
+        {
+            char ch = (char)cnt[i];
+            if (ch == '\n')
+            {
+                return i + 1;
+            }
+        }
+
+        return 0;
+    }
+
+    private static bool IsAttributeEnd(
+        ReadOnlySpan<byte> cnt,
+        int cntOffset
+    ) {
+        if (cntOffset < 1)
+            return false;
+        char ch0 = (char)cnt[cntOffset];
+        char ch1 = (char)cnt[cntOffset - 1];
+        return ch0 == ch1 && ch0 == ']';
+    }
+
+    private static bool IsAttributeStart(
+        ReadOnlySpan<byte> cnt,
+        int cntOffset
+    ) {
+        if (cntOffset < 1)
+            return false;
+        char ch0 = (char)cnt[cntOffset];
+        char ch1 = (char)cnt[cntOffset - 1];
+        return ch0 == ch1 && ch0 == '[';
+    }
+
+    private static bool SeekAttributeStartSingleChar(
+        ReadOnlySpan<byte> cnt,
+        int cntOffset,
+        out int outSeekOffset
+    ) {
+        outSeekOffset = cntOffset;
+        while (cntOffset > 0)
+        {
+            char ch = (char)cnt[cntOffset];
+            if (ch == '[')
+            {
+                outSeekOffset = cntOffset;
+                return true;
+            }
+
+            cntOffset--;
+        }
+
+        return false;
+    }
+
+    private static int SkipAttributeStartOrEnd(
+        ReadOnlySpan<byte> cnt,
+        int cntOffset
+    ) {
+        cntOffset -= 2;
+        return cntOffset;
+    }
+
+    private static string QueryLineContent(
+        ReadOnlySpan<byte> cnt,
+        int startOffset,
+        int endOffset
+    ) {
+        StringBuilder sb = new();
+        for (int i = startOffset; i <= endOffset; i++)
+        {
+            sb.Append((char)cnt[i]);
+        }
+
+        return sb.ToString();
+    }
+
+    public static bool TryToSeekOnlineAttributes(
+        CXCursor cursor,
+        out CXSourceRange range
+    ) {
+        CXSourceLocation location = cursor.Extent.Start;
+        location.GetFileLocation(out var file, out var line, out var column, out var offset);
+        var contents = cursor.TranslationUnit.GetFileContents(file, out var fileSize);
+        AttributeLexerParseStatus status = AttributeLexerParseStatus.SeekAttributeEnd;
+        int offsetStart = (int)offset - 1; //Try to ignore start char here
+        int lastSeekOffset = offsetStart;
+        int curOffset = offsetStart;
+        while (curOffset > 0)
+        {
+            curOffset = SkipWhiteSpace(contents, curOffset);
+            switch (status)
+            {
+                case AttributeLexerParseStatus.SeekAttributeEnd:
+                    {
+                        if (!IsAttributeEnd(contents, curOffset))
+                        {
+                            status = AttributeLexerParseStatus.Error;
+                        }
+                        else
+                        {
+                            curOffset = SkipAttributeStartOrEnd(contents, curOffset);
+                            status = AttributeLexerParseStatus.SeekAttributeStart;
+                        }
+                    }
+
+                    break;
+                case AttributeLexerParseStatus.SeekAttributeStart:
+                    {
+                        if (!SeekAttributeStartSingleChar(contents, curOffset, out var queryOffset))
+                        {
+                            status = AttributeLexerParseStatus.Error;
+                        }
+                        else
+                        {
+                            if (IsAttributeStart(contents, queryOffset))
+                            {
+                                curOffset = SkipAttributeStartOrEnd(contents, queryOffset);
+                                lastSeekOffset = curOffset + 1;
+                                status = AttributeLexerParseStatus.SeekAttributeEnd;
+                            }
+                            else
+                            {
+                                status = AttributeLexerParseStatus.Error;
+                            }
+                        }
+                    }
+
+                    break;
+            }
+
+            if (status == AttributeLexerParseStatus.Error)
+            {
+                break;
+            }
+        }
+
+        if (lastSeekOffset == offsetStart)
+        {
+            range = new CXSourceRange();
+            return false;
+        }
+        else
+        {
+            var startLoc = cursor.TranslationUnit.GetLocationForOffset(file, (uint)lastSeekOffset);
+            var endLoc = cursor.TranslationUnit.GetLocationForOffset(file, (uint)offsetStart);
+            range = clang.getRange(startLoc, endLoc);
+            return true;
+        }
+    }
+
+    #region "Private Functions"
+    private static void SkipTemplates(TokenIterator iter)
+    {
+        if (iter.canPeek)
+        {
+            if (iter.Skip("template"))
+            {
+                iter.Next(); // skip the first >
+                int parentCount = 1;
+                while (parentCount > 0 && iter.canPeek)
+                {
+                    var text = iter.PeekText();
+                    if (text == ">")
+                    {
+                        parentCount--;
+                    }
+
+                    iter.Next();
+                }
+            }
+        }
+    }
+
+    private enum AttributeLexerParseStatus
+    {
+        SeekAttributeEnd,
+        SeekAttributeStart,
+        Error,
+    }
+
+    private static (string? Scope, string Name) GetNameSpaceAndAttribute(string fullAttribute)
+    {
+        string[] colons =
+        {
+            "::"
+        };
+        string[] tokens = fullAttribute.Split(colons, StringSplitOptions.None);
+        if (tokens.Length == 2)
+        {
+            return (tokens[0], tokens[1]);
+        }
+        else
+        {
+            return (null, tokens[0]);
+        }
+    }
+
+    private static (string Name, string? Arguments) GetNameAndArguments(string name)
+    {
+        if (name.Contains("("))
+        {
+            char[] seperator =
+            {
+                '('
+            };
+            var argumentTokens = name.Split(seperator, 2);
+            var length = argumentTokens[1].LastIndexOf(')');
+            string? argument = null;
+            if (length > 0)
+            {
+                argument = argumentTokens[1].Substring(0, length);
+            }
+
+            return (argumentTokens[0], argument);
+        }
+        else
+        {
+            return (name, null);
+        }
+    }
+
+    private static bool ParseAttributes(
+        CppGlobalDeclarationContainer globalContainer,
+        TokenIterator tokenIt,
+        ref List<CppAttribute> attributes
+    ) {
+        // Parse C++ attributes
+        // [[<attribute>]]
+        if (tokenIt.Skip("[", "["))
+        {
+            while (ParseAttribute(tokenIt, out var attribute))
+            {
+                if (attributes == null)
+                {
+                    attributes = [];
+                }
+
+                attributes.Add(attribute);
+                tokenIt.Skip(",");
+            }
+
+            return tokenIt.Skip("]", "]");
+        }
+
+        // Parse GCC or clang attributes
+        // __attribute__((<attribute>))
+        if (tokenIt.Skip("__attribute__", "(", "("))
+        {
+            while (ParseAttribute(tokenIt, out var attribute))
+            {
+                if (attributes == null)
+                {
+                    attributes = [];
+                }
+
+                attributes.Add(attribute);
+                tokenIt.Skip(",");
+            }
+
+            return tokenIt.Skip(")", ")");
+        }
+
+        // Parse MSVC attributes
+        // __declspec(<attribute>)
+        if (tokenIt.Skip("__declspec", "("))
+        {
+            while (ParseAttribute(tokenIt, out var attribute))
+            {
+                if (attributes == null)
+                {
+                    attributes = [];
+                }
+
+                attributes.Add(attribute);
+                tokenIt.Skip(",");
+            }
+
+            return tokenIt.Skip(")");
+        }
+
+        // Parse C++11 alignas attribute
+        // alignas(expression)
+        if (tokenIt.PeekText() == "alignas")
+        {
+            while (ParseAttribute(tokenIt, out var attribute))
+            {
+                if (attributes == null)
+                {
+                    attributes = [];
+                }
+
+                attributes.Add(attribute);
+                break;
+            }
+
+            return tokenIt.Skip(")");
+            ;
+        }
+
+        // See if we have a macro
+        var value = tokenIt.PeekText();
+        var macro = globalContainer.macros.Find(v => v.name == value);
+        if (macro != null)
+        {
+            if (macro.value.StartsWith("[[") && macro.value.EndsWith("]]"))
+            {
+                var fullAttribute = macro.value.Substring(2, macro.value.Length - 4);
+                var (scope, name) = GetNameSpaceAndAttribute(fullAttribute);
+                var (attributeName, arguments) = GetNameAndArguments(name);
+                CppAttribute attribute = new(tokenIt.cursor, attributeName, AttributeKind.TokenAttribute)
+                {
+                    scope = scope,
+                    arguments = arguments,
+                };
+                if (attributes == null)
+                {
+                    attributes = [];
+                }
+
+                attributes.Add(attribute);
+                tokenIt.Next();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ParseAttribute(
+        TokenIterator tokenIt,
+        [NotNullWhen(true)] out CppAttribute? attribute
+    ) {
+        // (identifier ::)? identifier ('(' tokens ')' )? (...)?
+        attribute = null;
+        var token = tokenIt.Peek();
+        if (token == null || !token.kind.IsIdentifierOrKeyword())
+        {
+            return false;
+        }
+
+        if (!tokenIt.Next(out token))
+        {
+            return false;
+        }
+
+        var firstToken = token;
+        // try (identifier ::)?
+        string? scope = null;
+        if (tokenIt.Skip("::"))
+        {
+            scope = token.text;
+            token = tokenIt.Peek();
+            if (token == null || !token.kind.IsIdentifierOrKeyword())
+            {
+                return false;
+            }
+
+            if (!tokenIt.Next(out token))
+            {
+                return false;
+            }
+        }
+
+        // identifier
+        string tokenIdentifier = token.text;
+        string? arguments = null;
+        // ('(' tokens ')' )?
+        if (tokenIt.Skip("("))
+        {
+            var builder = new StringBuilder();
+            var previousTokenKind = CppTokenKind.Punctuation;
+            while (tokenIt.PeekText() != ")" && tokenIt.Next(out token))
+            {
+                if (token.kind.IsIdentifierOrKeyword() && previousTokenKind.IsIdentifierOrKeyword())
+                {
+                    builder.Append(' ');
+                }
+
+                previousTokenKind = token.kind;
+                builder.Append(token.text);
+            }
+
+            if (!tokenIt.Skip(")"))
+            {
+                return false;
+            }
+
+            arguments = builder.ToString();
+        }
+
+        var isVariadic = tokenIt.Skip("...");
+        var previousToken = tokenIt.PreviousToken();
+        if (previousToken is null)
+        {
+            return false;
+        }
+
+        attribute = new CppAttribute(tokenIt.cursor, tokenIdentifier, AttributeKind.TokenAttribute)
+        {
+            span = new CppSourceSpan(firstToken.span.start, previousToken.span.end),
+            scope = scope,
+            arguments = arguments,
+            isVariadic = isVariadic,
+        };
+        return true;
+    }
+    #endregion "Private Functions"
+}

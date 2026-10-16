@@ -1,0 +1,128 @@
+class BGCS.NativeBuild.Execution.BuildDependencyCollector [abstract; sealed]
+  method System.Collections.Immutable.ImmutableArray<System.String> ParseMake(System.String text) [static]
+  method System.Collections.Immutable.ImmutableArray<System.String> Read(System.Collections.Generic.IEnumerable<BGCS.Contracts.Requests.NativeDependencyFile> files, System.String workingDirectory, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.Collections.Immutable.ImmutableArray<System.String> ReadLinkTrace(System.String text, BGCS.Contracts.Requests.NativeLinkTraceFormat format, System.String workingDirectory) [static]
+class BGCS.NativeBuild.Execution.NativeBuildExecutionResult [sealed; interfaces=System.IEquatable<BGCS.NativeBuild.Execution.NativeBuildExecutionResult>]
+  ctor(System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Execution.ProcessExecutionResult> executions, BGCS.Contracts.Inputs.SourceSnapshot inputSnapshot)
+  property BGCS.Contracts.Inputs.SourceSnapshot argumentInputs { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Execution.ProcessExecutionResult> executions { get; init }
+  property BGCS.Contracts.Inputs.SourceSnapshot inputSnapshot { get; init }
+  method BGCS.NativeBuild.Execution.NativeBuildExecutionResult <Clone>$()
+  method System.Boolean Equals(BGCS.NativeBuild.Execution.NativeBuildExecutionResult other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.NativeBuild.Execution.NativeBuildExecutionResult left, BGCS.NativeBuild.Execution.NativeBuildExecutionResult right) [static]
+  method System.Boolean op_Inequality(BGCS.NativeBuild.Execution.NativeBuildExecutionResult left, BGCS.NativeBuild.Execution.NativeBuildExecutionResult right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Execution.ProcessExecutionResult> executions, out BGCS.Contracts.Inputs.SourceSnapshot inputSnapshot)
+class BGCS.NativeBuild.Execution.PlannedNativeBuildExecutor [sealed]
+  ctor()
+  method System.Threading.Tasks.Task<BGCS.NativeBuild.Execution.NativeBuildExecutionResult> ExecuteWithDependenciesAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken [optional; default=null], System.Func<BGCS.Contracts.Requests.NativePreprocessingOperation,System.Threading.CancellationToken,System.Threading.Tasks.ValueTask> sourceVerifier [optional; default=null], System.Collections.Immutable.ImmutableArray<System.String> verificationSources [optional; default=null])
+  method System.Threading.Tasks.Task<BGCS.NativeBuild.Execution.NativeBuildExecutionResult> PreprocessWithDependenciesAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Execution.ProcessExecutionResult>> ExecuteAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.NativeBuild.NativeBuildToolDiscovery [abstract; sealed]
+  method System.String FindCMake(System.String explicitPath [optional; default=null]) [static]
+  method System.String FindClangCl(System.String explicitPath [optional; default=null]) [static]
+  method System.String FindDumpBin(System.String explicitPath [optional; default=null]) [static]
+  method System.String FindExecutable(System.String executable, System.String explicitPath [optional; default=null]) [static]
+  method System.String FindMSBuild(System.String explicitPath [optional; default=null]) [static]
+  method System.String FindNinja(System.String explicitPath [optional; default=null]) [static]
+class BGCS.NativeBuild.NativeExportInspector [abstract; sealed]
+  method System.Threading.Tasks.Task<BGCS.Contracts.Artifacts.NativeExportInspectionResult> InspectAsync(BGCS.Contracts.Targets.NativeTargetDescriptor target, System.String libraryPath, System.Collections.Generic.IEnumerable<System.String> requiredExports, System.Threading.CancellationToken cancellationToken [optional; default=null], System.String toolPath [optional; default=null], BGCS.Contracts.Requests.NativeOutputKind outputKind [optional; default=0]) [static]
+  method System.Threading.Tasks.Task<BGCS.Contracts.Artifacts.NativeExportInspectionResult> InspectAsync(System.String targetIdentifier, System.String libraryPath, System.Collections.Generic.IEnumerable<System.String> requiredExports, System.Threading.CancellationToken cancellationToken [optional; default=null], System.String toolPath [optional; default=null], BGCS.Contracts.Requests.NativeOutputKind outputKind [optional; default=0]) [static]
+class BGCS.NativeBuild.Packaging.NativeAssetPackager [sealed; interfaces=BGCS.Contracts.Ports.INativeArtifactPackager]
+  ctor()
+  property System.String id { get } [virtual; final]
+  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Requests.NativeAssetPackageResult> PackageAsync(BGCS.Contracts.Requests.NativeArtifactPackagingRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.NativeBuild.Planning.CMakeBuildProvider [sealed; interfaces=BGCS.Contracts.Ports.INativeBuildPrerequisiteProvider|BGCS.Contracts.Ports.INativeBuildProvider]
+  ctor(BGCS.Contracts.Ports.INativeBuildProvider compiler, System.String cmake, System.String ninja)
+  property System.String id { get } [virtual; final]
+  method BGCS.Contracts.Requests.NativeBuildPlan Plan(BGCS.Contracts.Requests.NativeBuildRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeToolPrerequisite> DescribePrerequisites() [virtual; final]
+class BGCS.NativeBuild.Planning.ClangClBuildProvider [sealed; interfaces=BGCS.Contracts.Ports.INativeBuildPrerequisiteProvider|BGCS.Contracts.Ports.INativeBuildProvider]
+  ctor(System.String compiler, BGCS.Platforms.Toolchains.MsvcToolchainInfo sdk, System.String archiver [optional; default=null])
+  property System.String id { get } [virtual; final]
+  method BGCS.Contracts.Requests.NativeBuildPlan Plan(BGCS.Contracts.Requests.NativeBuildRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeToolPrerequisite> DescribePrerequisites() [virtual; final]
+class BGCS.NativeBuild.Planning.CompilerBuildProvider [sealed; interfaces=BGCS.Contracts.Ports.INativeBuildPrerequisiteProvider|BGCS.Contracts.Ports.INativeBuildProvider]
+  ctor(System.String id, System.String compiler, System.String archiver [optional; default=null], System.String linker [optional; default=null])
+  property System.String id { get } [virtual; final]
+  method BGCS.Contracts.Requests.NativeBuildPlan Plan(BGCS.Contracts.Requests.NativeBuildRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeToolPrerequisite> DescribePrerequisites() [virtual; final]
+class BGCS.NativeBuild.Planning.MesonBuildProvider [sealed; interfaces=BGCS.Contracts.Ports.INativeBuildPrerequisiteProvider|BGCS.Contracts.Ports.INativeBuildProvider]
+  ctor(BGCS.Contracts.Ports.INativeBuildProvider compiler, System.String meson, System.String ninja)
+  property System.String id { get } [virtual; final]
+  method BGCS.Contracts.Requests.NativeBuildPlan Plan(BGCS.Contracts.Requests.NativeBuildRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeToolPrerequisite> DescribePrerequisites() [virtual; final]
+class BGCS.NativeBuild.Planning.MsBuildNativeProvider [sealed; interfaces=BGCS.Contracts.Ports.INativeBuildPrerequisiteProvider|BGCS.Contracts.Ports.INativeBuildProvider]
+  ctor(System.String msbuild, BGCS.Platforms.Toolchains.MsvcToolchainInfo sdk, System.String archiver [optional; default=null])
+  property System.String id { get } [virtual; final]
+  method BGCS.Contracts.Requests.NativeBuildPlan Plan(BGCS.Contracts.Requests.NativeBuildRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeToolPrerequisite> DescribePrerequisites() [virtual; final]
+class BGCS.NativeBuild.Planning.MsvcBuildProvider [sealed; interfaces=BGCS.Contracts.Ports.INativeBuildPrerequisiteProvider|BGCS.Contracts.Ports.INativeBuildProvider]
+  ctor(BGCS.Platforms.Toolchains.MsvcToolchainInfo toolchain, System.String archiver [optional; default=null])
+  property System.String id { get } [virtual; final]
+  method BGCS.Contracts.Requests.NativeBuildPlan Plan(BGCS.Contracts.Requests.NativeBuildRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeToolPrerequisite> DescribePrerequisites() [virtual; final]
+class BGCS.NativeBuild.Planning.NativeBuildProviderResolver [sealed]
+  ctor()
+  method BGCS.Contracts.Ports.INativeBuildProvider Resolve(BGCS.Contracts.Targets.NativeTargetDescriptor target, System.String providerId, System.String buildToolPath [optional; default=null], System.String auxiliaryToolPath [optional; default=null])
+class BGCS.NativeBuild.Planning.NativeEffectiveFactArguments [abstract; sealed]
+  method System.Collections.Immutable.ImmutableArray<System.String> Resolve(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+class BGCS.NativeBuild.Planning.NativeFactInputEmitter [sealed]
+  ctor()
+  method System.String Emit(System.Collections.Immutable.ImmutableArray<System.String> headers, System.String preamble [optional; default=""], System.String postamble [optional; default=""], BGCS.Contracts.Native.NativeModule module [optional; default=null])
+class BGCS.NativeBuild.Planning.NativeSourceViewPreprocessor [sealed]
+  ctor()
+  method System.Boolean IsSupported(BGCS.Contracts.Requests.FrontendRequest source) [static]
+  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Requests.NativeSourceViewResult> PrepareAsync(BGCS.Contracts.Requests.NativeSourceViewRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.NativeBuild.Planning.NativeStorageAssertionEmitter [sealed]
+  ctor()
+  method System.String Emit(BGCS.Contracts.Native.NativeModule module, System.Collections.Immutable.ImmutableArray<System.String> headers, System.String preamble [optional; default=""], System.String postamble [optional; default=""])
+class BGCS.NativeBuild.Planning.NativeStringAssertionEmitter [sealed]
+  ctor()
+  method System.String Emit(BGCS.Contracts.Native.NativeModule expected, BGCS.Contracts.Native.NativeModule actual)
+class BGCS.NativeBuild.Planning.StaticExportTableEmitter [abstract; sealed]
+  method BGCS.NativeBuild.Planning.StaticExportTableSource Emit(BGCS.Contracts.Interop.InteropModule module, System.Collections.Immutable.ImmutableArray<System.String> headers) [static]
+class BGCS.NativeBuild.Planning.StaticExportTableSource [sealed; interfaces=System.IEquatable<BGCS.NativeBuild.Planning.StaticExportTableSource>]
+  ctor(System.String source, BGCS.Contracts.Requests.StaticExportTableDescriptor descriptor)
+  property BGCS.Contracts.Requests.StaticExportTableDescriptor descriptor { get; init }
+  property System.String source { get; init }
+  method BGCS.NativeBuild.Planning.StaticExportTableSource <Clone>$()
+  method System.Boolean Equals(BGCS.NativeBuild.Planning.StaticExportTableSource other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.NativeBuild.Planning.StaticExportTableSource left, BGCS.NativeBuild.Planning.StaticExportTableSource right) [static]
+  method System.Boolean op_Inequality(BGCS.NativeBuild.Planning.StaticExportTableSource left, BGCS.NativeBuild.Planning.StaticExportTableSource right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String source, out BGCS.Contracts.Requests.StaticExportTableDescriptor descriptor)
+class BGCS.NativeBuild.Validation.NativeArtifactVerifier [abstract; sealed]
+  method System.Void Verify(System.String path, BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Requests.NativeOutputKind outputKind) [static]
+  method System.Void Verify(System.String path, System.String targetId, BGCS.Contracts.Requests.NativeOutputKind outputKind) [static]
+class BGCS.NativeBuild.Validation.NativeEffectiveSourceAdapter [abstract; sealed]
+  method System.String ParserPreamble(System.String compilerFamily, BGCS.Contracts.Inputs.SourceLanguage language) [static]
+  method System.String PreserveSystemHeaderMarkers(System.String source, System.Collections.Immutable.ImmutableArray<System.String> systemDirectories) [static]
+  method System.Threading.Tasks.ValueTask<System.ValueTuple<System.String,System.String>> PrepareAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+class BGCS.NativeBuild.Validation.NativeSourceFactComparer [sealed]
+  ctor()
+  method System.Boolean RequiresVerification(BGCS.Contracts.Native.NativeModule module) [static]
+  method System.Void Verify(BGCS.Contracts.Native.NativeModule expected, BGCS.Contracts.Native.NativeModule actual, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.NativeBuild.Validation.NativeStringCompilerVerifier [sealed]
+  ctor()
+  method System.Threading.Tasks.ValueTask<BGCS.NativeBuild.Validation.NativeStringProofReceipt> VerifyAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, BGCS.Contracts.Native.NativeModule expected, BGCS.Contracts.Native.NativeModule actual, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.NativeBuild.Validation.NativeStringProofReceipt [sealed; interfaces=System.IEquatable<BGCS.NativeBuild.Validation.NativeStringProofReceipt>]
+  ctor(BGCS.Contracts.Requests.NativeBuildCommand command, System.String source, BGCS.Contracts.Common.ContentDigest sourceDigest, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> verifiedConstants, BGCS.Contracts.Inputs.SourceSnapshot argumentInputs, BGCS.Infrastructure.Execution.ProcessExecutionResult execution)
+  property BGCS.Contracts.Inputs.SourceSnapshot argumentInputs { get; init }
+  property BGCS.Contracts.Requests.NativeBuildCommand command { get; init }
+  property BGCS.Infrastructure.Execution.ProcessExecutionResult execution { get; init }
+  property System.String source { get; init }
+  property BGCS.Contracts.Common.ContentDigest sourceDigest { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> verifiedConstants { get; init }
+  method BGCS.NativeBuild.Validation.NativeStringProofReceipt <Clone>$()
+  method System.Boolean Equals(BGCS.NativeBuild.Validation.NativeStringProofReceipt other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.NativeBuild.Validation.NativeStringProofReceipt left, BGCS.NativeBuild.Validation.NativeStringProofReceipt right) [static]
+  method System.Boolean op_Inequality(BGCS.NativeBuild.Validation.NativeStringProofReceipt left, BGCS.NativeBuild.Validation.NativeStringProofReceipt right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Requests.NativeBuildCommand command, out System.String source, out BGCS.Contracts.Common.ContentDigest sourceDigest, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> verifiedConstants, out BGCS.Contracts.Inputs.SourceSnapshot argumentInputs, out BGCS.Infrastructure.Execution.ProcessExecutionResult execution)

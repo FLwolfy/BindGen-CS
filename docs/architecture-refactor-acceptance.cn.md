@@ -1,5 +1,7 @@
 # BGCS 架构重构验收
 
+> 历史验收记录：本文保留 2026-10-04 旧架构与当时检查点的原始结果，不代表 BGCS 3.0 当前源码或发布认证。3.0 的十三工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
+
 [文档索引](README.cn.md) · [架构](architecture.cn.md) · [完整计划](platform-architecture-refactor-plan.cn.md) · [C# 规范](csharp-development-standard.cn.md)
 
 ## 状态和范围
@@ -62,10 +64,10 @@
 BGCS.Tool          唯一生产 CLI，组合命令与验证
 BGCS               C 到 C# 应用流程、配置、分析、Binding IR 和输出
 BGCS.Cpp2C         C++ 分析/lowering、Bridge IR、C 桥输出、原生构建
-BGCS.CppAst        Clang 解析、AST、目标 provider 和 SDK/builtin headers
-BGCS.Intermediate  实际拥有冻结的 Binding/Bridge IR，不依赖其他 BGCS 项目
-BGCS.Core          目标契约、插件、缓存、IO、集合、文本和写出基础能力
-BGCS.Language      具体语言的词法、语法及 C# 条件编译
+BGCS.Frontend.Clang        Clang 解析、AST、目标 provider 和 SDK/builtin headers
+BGCS.Contracts  实际拥有冻结的 Binding/Bridge IR，不依赖其他 BGCS 项目
+BGCS.Infrastructure          目标契约、插件、缓存、IO、集合、文本和写出基础能力
+BGCS.CSharp      具体语言的词法、语法及 C# 条件编译
 BGCS.Runtime       独立的互操作基础库
 ```
 
@@ -101,7 +103,7 @@ bimg 的 C header 与 C++ implementation 内容保持一致；managed API 使用
 
 ### Windows 目录发布回归
 
-实际生成发现短期文件读者可能拒绝 staging rename。安装与回滚统一进入 BGCS.Core 自己的
+实际生成发现短期文件读者可能拒绝 staging rename。安装与回滚统一进入 BGCS.Infrastructure 自己的
 内部目录发布边界，访问/共享拒绝最多重试两秒；持续拒绝保留原异常和旧输出。
 没有引入消费方依赖、删文件绕过占用或无限等待。
 
@@ -115,7 +117,7 @@ bimg 的 C header 与 C++ implementation 内容保持一致；managed API 使用
 
 ### 最终 provider 归属核对
 
-五个具体原生构建 provider 位于 `Build/Providers`，namespace 为 `BGCS.Cpp2C.Build.Providers`。
+五个具体原生构建 provider 位于 `Build/Providers`，namespace 为 `BGCS.NativeBuild.Providers`。
 CLI、测试和文档同步；没有旧 namespace alias。公开 API 门禁先明确拒绝旧基线，随后逐项比对
 五个类型的构造函数、方法和属性完全一致，再更新当前基线。
 `results/provider-api-review.json` 保存该比对，首次拒绝日志保留为历史证据。

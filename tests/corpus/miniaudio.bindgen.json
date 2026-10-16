@@ -1,0 +1,46 @@
+{
+  "$schema": "../../schemas/bindgen.schema.json",
+  "schemaVersion": 1,
+  "library": {
+    "id": "miniaudio",
+    "nativeName": "miniaudio"
+  },
+  "source": {
+    "language": "c",
+    "languageStandard": "c17",
+    "headers": [
+      "../../artifacts/corpus/headers/miniaudio/extras/miniaudio_split/miniaudio.h"
+    ],
+    "includeDirectories": [
+      "../../artifacts/corpus/headers/miniaudio/extras/miniaudio_split"
+    ],
+    "includeTransitivelyReferencedHeaders": true,
+    "selection": {
+      "excludeDeclarations": [
+        "ma_log_postf"
+      ]
+    },
+    "defines": []
+  },
+  "api": {
+    "namespace": "BGCS.RealLibraries.MiniAudio",
+    "name": "MiniAudio",
+    "style": "instance",
+    "importMode": "functionTable",
+    "framework": "net10.0",
+    "names": {
+      "ma_version": "CorpusVersion",
+      "ma_version_string": "CorpusVersionString"
+    }
+  },
+  "runtime": {
+    "mode": "package"
+  },
+  "nativeBuild": {
+    "mode": "none"
+  },
+  "output": {
+    "root": "Generated",
+    "layout": "singleFile"
+  }
+}

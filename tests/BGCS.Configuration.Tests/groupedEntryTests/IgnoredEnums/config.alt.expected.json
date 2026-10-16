@@ -1,0 +1,37 @@
+{
+  "legacyFixture": "entryTests/IgnoredEnums",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "enumerations",
+        "excludeDeclarations": [],
+        "includeDeclarations": []
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.KeepEnum",
+      "kind": "Enum"
+    },
+    {
+      "name": "EntryTests.Generated.MyEnum",
+      "kind": "Enum"
+    }
+  ],
+  "absentTypes": [],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "UseEnum",
+      "parameters": [
+        "KeepEnum"
+      ],
+      "parameterNames": [
+        "mode"
+      ],
+      "returns": "int"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "legacyFixture": "entryTests/AdditionalArguments",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/arguments": [
+      "-DFROM_ADDITIONAL_ARGUMENTS=1"
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "ArgsOk",
+      "parameters": [],
+      "parameterNames": [],
+      "returns": "int"
+    }
+  ]
+}

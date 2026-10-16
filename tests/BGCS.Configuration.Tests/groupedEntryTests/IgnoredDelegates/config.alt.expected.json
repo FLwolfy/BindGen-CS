@@ -1,0 +1,27 @@
+{
+  "legacyFixture": "entryTests/IgnoredDelegates",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "callbacks",
+        "excludeDeclarations": [],
+        "includeDeclarations": []
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.KeepDelegate",
+      "kind": "Delegate"
+    },
+    {
+      "name": "EntryTests.Generated.MyDelegate",
+      "kind": "Delegate"
+    }
+  ],
+  "absentTypes": [],
+  "contains": [
+    "SetKeepDelegate("
+  ]
+}

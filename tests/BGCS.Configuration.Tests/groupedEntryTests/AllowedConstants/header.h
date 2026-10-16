@@ -1,0 +1,2 @@
+#define KEEP_CONST 100
+#define DROP_CONST 200

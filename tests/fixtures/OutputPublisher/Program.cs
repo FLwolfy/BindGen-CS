@@ -1,7 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 
-using BGCS.Core.IO;
+using BGCS.Infrastructure.IO;
 
 string destination = Path.GetFullPath(args[0]);
 string acquired = Path.GetFullPath(args[1]);

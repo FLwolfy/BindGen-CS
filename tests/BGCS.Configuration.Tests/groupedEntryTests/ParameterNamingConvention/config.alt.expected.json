@@ -1,0 +1,22 @@
+{
+  "legacyFixture": "entryTests/ParameterNamingConvention",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/naming/parameters/casing": "camel"
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "inputValue",
+        "maxCount"
+      ],
+      "returns": "int"
+    }
+  ]
+}

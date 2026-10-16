@@ -1,248 +1,336 @@
-struct BGCS.Runtime.Aapcs64VaList
+struct BGCS.Runtime.Aapcs64VaList [sealed]
   field System.Int32 generalRegisterOffset
   field System.IntPtr generalRegisterTop
   field System.IntPtr stack
   field System.Int32 vectorRegisterOffset
   field System.IntPtr vectorRegisterTop
-struct BGCS.Runtime.Atomic`1
+struct BGCS.Runtime.Atomic`1 [sealed; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.Numerics.IBinaryInteger<T>|System.ValueType; unmanaged T]
   ctor(T value)
   property T value { get; set }
   method System.Boolean CompareAndSwap(T expected, T newValue)
   method T Add(T amount)
   method T Decrement()
   method T Increment()
-class BGCS.Runtime.Bitfield
-  method System.Int64 GetSigned(System.ReadOnlySpan<System.Byte> raw, System.Int32 offset, System.Int32 bitWidth)
-  method T GetSigned(T raw, System.Int32 offset, System.Int32 bitWidth)
-  method T Get(T raw, System.Int32 offset, System.Int32 bitWidth)
-  method System.UInt64 Get(System.ReadOnlySpan<System.Byte> raw, System.Int32 offset, System.Int32 bitWidth)
-  method System.UInt64 ToULong(T value)
-  method System.Void Set(System.Span<System.Byte> raw, System.UInt64 value, System.Int32 offset, System.Int32 bitWidth)
-  method System.Void Set(ref T raw, T value, System.Int32 offset, System.Int32 bitWidth)
-struct BGCS.Runtime.Bool32
+class BGCS.Runtime.Bitfield [abstract; sealed]
+  method System.Int64 GetSigned(System.ReadOnlySpan<System.Byte> raw, System.Int32 offset, System.Int32 bitWidth) [static]
+  method T GetSigned(T raw, System.Int32 offset, System.Int32 bitWidth) [static; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+  method T Get(T raw, System.Int32 offset, System.Int32 bitWidth) [static; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+  method System.UInt64 Get(System.ReadOnlySpan<System.Byte> raw, System.Int32 offset, System.Int32 bitWidth) [static]
+  method System.UInt64 ToULong(T value) [static; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+  method System.Void Set(System.Span<System.Byte> raw, System.UInt64 value, System.Int32 offset, System.Int32 bitWidth) [static]
+  method System.Void Set(ref T raw, T value, System.Int32 offset, System.Int32 bitWidth) [static; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+struct BGCS.Runtime.Bool32 [sealed; interfaces=System.IEquatable<BGCS.Runtime.Bool32>]
   field System.Int32 value
   ctor(System.Boolean value)
   ctor(System.Int32 value)
-  method System.Boolean Equals(BGCS.Runtime.Bool32 other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-struct BGCS.Runtime.Bool8
+  method BGCS.Runtime.Bool32 op_Implicit(System.Boolean b) [static]
+  method BGCS.Runtime.Bool32 op_Implicit(System.Int32 b) [static]
+  method System.Boolean Equals(BGCS.Runtime.Bool32 other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Runtime.Bool32 left, BGCS.Runtime.Bool32 right) [static]
+  method System.Boolean op_Implicit(BGCS.Runtime.Bool32 b) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.Bool32 left, BGCS.Runtime.Bool32 right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.Int32 op_Implicit(BGCS.Runtime.Bool32 b) [static]
+  method System.String ToString() [virtual]
+struct BGCS.Runtime.Bool8 [sealed; interfaces=System.IEquatable<BGCS.Runtime.Bool8>]
   field System.Byte value
   ctor(System.Boolean value)
   ctor(System.Byte value)
-  method System.Boolean Equals(BGCS.Runtime.Bool8 other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-struct BGCS.Runtime.ConstPointer`1
-  field T* handle
+  method BGCS.Runtime.Bool8 op_Implicit(System.Boolean b) [static]
+  method BGCS.Runtime.Bool8 op_Implicit(System.Byte b) [static]
+  method System.Boolean Equals(BGCS.Runtime.Bool8 other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Runtime.Bool8 left, BGCS.Runtime.Bool8 right) [static]
+  method System.Boolean op_Implicit(BGCS.Runtime.Bool8 b) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.Bool8 left, BGCS.Runtime.Bool8 right) [static]
+  method System.Byte op_Implicit(BGCS.Runtime.Bool8 b) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+struct BGCS.Runtime.BorrowedNativeHandle [sealed; readonly]
+  method TResult Invoke(System.Func<System.IntPtr,TResult> operation)
+class BGCS.Runtime.CallbackExceptionBoundary [sealed]
+  ctor(System.Int32 capacity [optional; default=64])
+  property System.Int64 droppedErrorCount { get }
+  method System.Boolean Invoke(System.Action callback)
+  method System.Exception TakeException()
+  method T Invoke(System.Func<T> callback, T fallback [optional; default=null])
+  method System.Void Capture(System.Exception exception)
+class BGCS.Runtime.CallbackRegistration [interfaces=System.IAsyncDisposable|System.IDisposable]
+  ctor(System.IntPtr functionPointer, System.Action unregister, System.IDisposable retainedState [optional; default=null], BGCS.Runtime.NativeModuleLease module [optional; default=null], BGCS.Runtime.CallbackShutdownOrder shutdownOrder [optional; default=0])
+  ctor(System.IntPtr functionPointer, System.Func<System.Threading.Tasks.ValueTask> unregisterAsync, BGCS.Runtime.NativeCallbackDispatcher dispatcher, System.IDisposable retainedState [optional; default=null], BGCS.Runtime.NativeModuleLease module [optional; default=null], BGCS.Runtime.CallbackShutdownOrder shutdownOrder [optional; default=0])
+  property System.Exception closeFailure { get }
+  property System.Threading.Tasks.Task completion { get }
+  property System.IntPtr functionPointer { get }
+  property System.Boolean isClosing { get }
+  method System.Boolean TryEnterInvocation(out BGCS.Runtime.CallbackRegistration+InvocationLease lease)
+  method System.Threading.Tasks.ValueTask DisposeAsync() [virtual; final]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.CallbackRegistration+InvocationLease [sealed; interfaces=System.IDisposable]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.CallbackRegistration`1 [sealed; base=BGCS.Runtime.CallbackRegistration; interfaces=System.IAsyncDisposable|System.IDisposable; generic TDelegate=None:System.Delegate]
+  ctor(TDelegate callback, System.Action unregister, BGCS.Runtime.NativeModuleLease module [optional; default=null], BGCS.Runtime.CallbackShutdownOrder shutdownOrder [optional; default=0])
+class BGCS.Runtime.CallbackRegistry`1 [abstract; sealed; generic TState=ReferenceTypeConstraint]
+  method System.Boolean TryGet(System.IntPtr token, out TState state) [static]
+  method BGCS.Runtime.CallbackRegistry+Registration<TState> Register(TState state) [static]
+class BGCS.Runtime.CallbackRegistry`1+Registration [sealed; interfaces=System.IDisposable; generic TState=ReferenceTypeConstraint]
+  property System.IntPtr token { get }
+  method System.Void Dispose() [virtual; final]
+enum BGCS.Runtime.CallbackShutdownOrder [sealed; underlying=System.Int32; interfaces=System.IComparable|System.IConvertible|System.IFormattable|System.ISpanFormattable]
+  field BGCS.Runtime.CallbackShutdownOrder CloseBeforeUnregister [static; const=0]
+  field BGCS.Runtime.CallbackShutdownOrder KeepOpenUntilUnregistered [static; const=1]
+  field System.Int32 value__
+struct BGCS.Runtime.ConstPointer`1 [sealed; readonly; interfaces=System.IEquatable<BGCS.Runtime.ConstPointer<T>>; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+  field T* handle [readonly]
   ctor(System.IntPtr handle)
   ctor(T* handle)
   ctor(System.UIntPtr handle)
-  property T Item { get }
-  method System.Boolean Equals(BGCS.Runtime.ConstPointer<T> other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-class BGCS.Runtime.FunctionTable
-  ctor(BGCS.Runtime.INativeContext context, System.Int32 length, System.Boolean ownsContext)
-  ctor(System.IntPtr library, System.Int32 length)
-  ctor(System.String libraryPath, System.Int32 length)
-  ctor(System.Void** vtable, System.Int32 length)
-  property System.Void* Item { get; set }
-  property System.Int32 length { get }
-  method System.Void Dispose()
-  method System.Void Free()
-  method System.Void Load(System.Int32 index, System.String export)
-  method System.Void LoadRequired(System.Int32 index, System.String export)
-  method System.Void Resize(System.Int32 newLength)
-interface BGCS.Runtime.INativeContext
-  method System.Boolean IsExtensionSupported(System.String extensionName)
-  method System.Boolean TryGetProcAddress(System.String procName, out System.IntPtr procAddress)
-  method System.IntPtr GetProcAddress(System.String procName)
-struct BGCS.Runtime.Iterator`1
+  property T Item[System.Int32 index] { get }
+  method BGCS.Runtime.ConstPointer<T> op_Addition(BGCS.Runtime.ConstPointer<T> pointer, System.Int32 offset) [static]
+  method BGCS.Runtime.ConstPointer<T> op_Decrement(BGCS.Runtime.ConstPointer<T> pointer) [static]
+  method BGCS.Runtime.ConstPointer<T> op_Implicit(System.IntPtr pointer) [static]
+  method BGCS.Runtime.ConstPointer<T> op_Implicit(T* pointer) [static]
+  method BGCS.Runtime.ConstPointer<T> op_Implicit(System.UIntPtr pointer) [static]
+  method BGCS.Runtime.ConstPointer<T> op_Increment(BGCS.Runtime.ConstPointer<T> pointer) [static]
+  method BGCS.Runtime.ConstPointer<T> op_Subtraction(BGCS.Runtime.ConstPointer<T> pointer, System.Int32 offset) [static]
+  method System.Boolean Equals(BGCS.Runtime.ConstPointer<T> other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Runtime.ConstPointer<T> left, BGCS.Runtime.ConstPointer<T> right) [static]
+  method System.Boolean op_Equality(BGCS.Runtime.ConstPointer<T> left, System.IntPtr right) [static]
+  method System.Boolean op_Equality(BGCS.Runtime.ConstPointer<T> left, T* right) [static]
+  method System.Boolean op_Equality(BGCS.Runtime.ConstPointer<T> left, System.UIntPtr right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.ConstPointer<T> left, BGCS.Runtime.ConstPointer<T> right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.ConstPointer<T> left, System.IntPtr right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.ConstPointer<T> left, T* right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.ConstPointer<T> left, System.UIntPtr right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.IntPtr op_Implicit(BGCS.Runtime.ConstPointer<T> pointer) [static]
+  method T* op_Implicit(BGCS.Runtime.ConstPointer<T> pointer) [static]
+  method System.UIntPtr op_Implicit(BGCS.Runtime.ConstPointer<T> pointer) [static]
+class BGCS.Runtime.DynamicModuleProvider [sealed; interfaces=BGCS.Runtime.INativeModuleProvider|System.IDisposable]
+  ctor(System.String libraryPath, System.Reflection.Assembly requestingAssembly [optional; default=null], System.Nullable<System.Runtime.InteropServices.DllImportSearchPath> searchPath [optional; default=null])
+  method BGCS.Runtime.DynamicModuleProvider FromHandle(System.IntPtr handle, System.Boolean ownsHandle) [static]
+  method System.Boolean TryGetExport(System.String name, out System.IntPtr address) [virtual; final]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.ExternalFunctionTableProvider [sealed; interfaces=BGCS.Runtime.INativeModuleProvider|System.IDisposable]
+  ctor(System.String expectedAbiIdentity, System.String suppliedAbiIdentity, System.Collections.Generic.IReadOnlyList<System.String> symbols, System.ReadOnlySpan<System.IntPtr> addresses, System.IDisposable lifetime)
+  method System.Boolean TryGetExport(System.String name, out System.IntPtr address) [virtual; final]
+  method System.Void Dispose() [virtual; final]
+interface BGCS.Runtime.INativeModuleProvider [abstract; interfaces=System.IDisposable]
+  method System.Boolean TryGetExport(System.String name, out System.IntPtr address) [abstract; virtual]
+interface BGCS.Runtime.INativeReleaseDispatcher [abstract]
+  method System.Boolean CheckAccess() [abstract; virtual]
+  method System.Void Post(System.Action cleanup) [abstract; virtual]
+struct BGCS.Runtime.Iterator`1 [sealed; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
   field System.UIntPtr index
   field T* ptr
-  ctor(T* ptr, System.UIntPtr index)
+  ctor(T* ptr, System.UIntPtr index [optional; default=0])
   property T* current { get }
   method System.Boolean Equals(BGCS.Runtime.Iterator<T> other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Runtime.Iterator<T> left, BGCS.Runtime.Iterator<T> right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.Iterator<T> left, BGCS.Runtime.Iterator<T> right) [static]
+  method System.Int32 GetHashCode() [virtual]
   method System.Void MoveNext()
-class BGCS.Runtime.LibraryLoadInterceptor
-  ctor(System.Object object, System.IntPtr method)
-  method System.Boolean EndInvoke(out System.IntPtr pointer, System.IAsyncResult result)
-  method System.Boolean Invoke(System.String libraryName, out System.IntPtr pointer)
-  method System.IAsyncResult BeginInvoke(System.String libraryName, out System.IntPtr pointer, System.AsyncCallback callback, System.Object object)
-class BGCS.Runtime.LibraryLoader
-  property System.Runtime.InteropServices.OSPlatform android { get }
-  property System.Runtime.InteropServices.OSPlatform chromeOS { get }
-  property System.Collections.Generic.List<System.String> customLoadFolders { get }
-  property System.Runtime.InteropServices.OSPlatform freeBSD { get }
-  property System.Runtime.InteropServices.OSPlatform ios { get }
-  property System.Runtime.InteropServices.OSPlatform linux { get }
-  property System.Runtime.InteropServices.OSPlatform osx { get }
-  property System.Runtime.InteropServices.OSPlatform solaris { get }
-  property System.Runtime.InteropServices.OSPlatform tizen { get }
-  property System.Runtime.InteropServices.OSPlatform tvos { get }
-  property System.Runtime.InteropServices.OSPlatform watchOS { get }
-  property System.Runtime.InteropServices.OSPlatform webAssembly { get }
-  property System.Runtime.InteropServices.OSPlatform windows { get }
-  event BGCS.Runtime.LibraryLoadInterceptor InterceptLibraryLoad
-  event BGCS.Runtime.LibraryNameInterceptor InterceptLibraryName
-  event BGCS.Runtime.NativeContextInterceptor InterceptNativeContext
-  event BGCS.Runtime.ResolvePathHandler ResolvePath
-  method BGCS.Runtime.INativeContext LoadLibraryEx(BGCS.Runtime.LibraryLoader+LibraryNameCallback libraryNameCallback, BGCS.Runtime.LibraryLoader+LibraryExtensionCallback libraryExtensionCallback)
-  method System.Boolean IsPathFullyQualified(System.String path)
-  method System.IntPtr LoadLibrary(BGCS.Runtime.LibraryLoader+LibraryNameCallback libraryNameCallback, BGCS.Runtime.LibraryLoader+LibraryExtensionCallback libraryExtensionCallback)
-  method System.String GetExtension()
-  method System.Void LoadFrom(System.String targetLibraryName, System.IntPtr address)
-  method System.Void LoadFromMainModule(System.String targetLibraryName)
-class BGCS.Runtime.LibraryLoader+LibraryExtensionCallback
-  ctor(System.Object object, System.IntPtr method)
-  method System.IAsyncResult BeginInvoke(System.AsyncCallback callback, System.Object object)
-  method System.String EndInvoke(System.IAsyncResult result)
-  method System.String Invoke()
-class BGCS.Runtime.LibraryLoader+LibraryNameCallback
-  ctor(System.Object object, System.IntPtr method)
-  method System.IAsyncResult BeginInvoke(System.AsyncCallback callback, System.Object object)
-  method System.String EndInvoke(System.IAsyncResult result)
-  method System.String Invoke()
-class BGCS.Runtime.LibraryNameInterceptor
-  ctor(System.Object object, System.IntPtr method)
-  method System.Boolean EndInvoke(ref System.String libraryName, System.IAsyncResult result)
-  method System.Boolean Invoke(ref System.String libraryName)
-  method System.IAsyncResult BeginInvoke(ref System.String libraryName, System.AsyncCallback callback, System.Object object)
-class BGCS.Runtime.NativeAotCallback
-  method System.IntPtr GetFunctionPointer(System.Void* callback)
-class BGCS.Runtime.NativeAsyncOperation`1
-  ctor(System.Collections.Generic.IEnumerable<System.IDisposable> lifetimes)
-  property System.Threading.Tasks.Task<TResult> task { get }
-  method System.Boolean TrySetCanceled(System.Threading.CancellationToken cancellationToken)
-  method System.Boolean TrySetException(System.Exception exception)
-  method System.Boolean TrySetResult(TResult result)
-  method System.Void Dispose()
-class BGCS.Runtime.NativeCallbackExceptionBoundary
-  method System.Boolean Invoke(System.Action callback)
-  method System.Exception TakeLastException()
-  method T Invoke(System.Func<T> callback, T fallback)
-class BGCS.Runtime.NativeCallbackRegistration`1
-  ctor(TDelegate callback, System.Action unregister)
-  property System.IntPtr functionPointer { get }
-  property System.Boolean isClosing { get }
-  method System.Boolean TryEnterInvocation(out BGCS.Runtime.NativeCallbackRegistration+InvocationLease<TDelegate> lease)
-  method System.Void Dispose()
-class BGCS.Runtime.NativeCallbackRegistration`1+InvocationLease
-  method System.Void Dispose()
-class BGCS.Runtime.NativeCallbackRegistry`2
+class BGCS.Runtime.ModuleBorrowedNativeHandle [sealed; base=System.Runtime.InteropServices.SafeHandle; interfaces=System.IDisposable]
+  ctor(System.IntPtr address, BGCS.Runtime.NativeModuleLease module)
+  property System.Boolean IsInvalid { get } [virtual]
+  method TResult Invoke(System.Func<System.IntPtr,TResult> operation)
+class BGCS.Runtime.NativeAlignedBuffer [sealed; interfaces=System.IDisposable]
+  ctor(System.UIntPtr byteLength, System.UIntPtr alignment)
+  property System.IntPtr address { get }
+  property System.UIntPtr alignment { get }
+  property System.UIntPtr byteLength { get }
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.NativeAllocator [sealed]
+  ctor(System.String allocatorId, System.Func<System.UIntPtr,System.UIntPtr,System.IntPtr> allocate, System.Action<System.IntPtr,System.UIntPtr,System.UIntPtr> release, BGCS.Runtime.NativeAllocatorThreadDomain threadDomain, BGCS.Runtime.NativeModuleSession module [optional; default=null], BGCS.Runtime.INativeReleaseDispatcher dispatcher [optional; default=null])
+  property System.String allocatorId { get }
+  property BGCS.Runtime.NativeAllocatorThreadDomain threadDomain { get }
+  method BGCS.Runtime.NativeAllocator CreateNativeMemory() [static]
+  method BGCS.Runtime.NativeBuffer Allocate(System.UIntPtr byteLength, System.UIntPtr alignment)
+  method System.Boolean IsBoundTo(BGCS.Runtime.NativeModuleSession module)
+enum BGCS.Runtime.NativeAllocatorThreadDomain [sealed; underlying=System.Int32; interfaces=System.IComparable|System.IConvertible|System.IFormattable|System.ISpanFormattable]
+  field BGCS.Runtime.NativeAllocatorThreadDomain AnyThread [static; const=1]
+  field BGCS.Runtime.NativeAllocatorThreadDomain Dispatcher [static; const=2]
+  field BGCS.Runtime.NativeAllocatorThreadDomain Unknown [static; const=0]
+  field System.Int32 value__
+class BGCS.Runtime.NativeAotCallback [abstract; sealed]
+  method System.IntPtr GetFunctionPointer(System.Void* callback) [static]
+class BGCS.Runtime.NativeBuffer [sealed; base=System.Runtime.InteropServices.SafeHandle; interfaces=System.IAsyncDisposable|System.IDisposable]
+  property System.Boolean IsInvalid { get } [virtual]
+  property System.UIntPtr alignment { get }
+  property System.UIntPtr allocatedByteLength { get }
+  property System.String allocatorId { get }
+  property System.UIntPtr byteLength { get }
+  property System.Exception releaseFailure { get }
+  method System.Threading.Tasks.ValueTask DisposeAsync() [virtual; final]
+  method TResult Invoke(System.Func<System.IntPtr,System.UIntPtr,TResult> operation)
+class BGCS.Runtime.NativeCallException [sealed; base=System.Exception; interfaces=System.Runtime.Serialization.ISerializable]
+  ctor(System.Int32 status, System.String exportName)
+  property System.String exportName { get }
+  property System.Int32 status { get }
+class BGCS.Runtime.NativeCallLease [sealed; interfaces=System.IDisposable]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.NativeCallbackDispatcher [sealed]
+  ctor(System.Action<System.Action> enqueue)
+  method BGCS.Runtime.NativeCallbackDispatcher CaptureCurrent() [static]
+  method System.Threading.Tasks.Task ContinueAsync(System.Threading.Tasks.ValueTask prerequisite, System.Action complete, System.Action<System.Exception> failure)
+  method System.Threading.Tasks.Task InvokeAfterAsync(System.Threading.Tasks.Task prerequisite, System.Action operation)
+  method System.Threading.Tasks.ValueTask InvokeAsync(System.Func<System.Threading.Tasks.ValueTask> operation)
+  method System.Void VerifyAccess()
+class BGCS.Runtime.NativeCallbackRegistry`2 [sealed; interfaces=System.IDisposable; generic TDelegate=None:System.Delegate]
   ctor()
   property System.Int32 count { get }
   method System.Boolean TryGet(TKey key, out TDelegate callback)
   method System.Boolean Unregister(TKey key)
   method System.IntPtr Register(TKey key, TDelegate callback)
-  method System.Void Dispose()
+  method System.Void Dispose() [virtual; final]
   method System.Void ReleaseRetired()
-struct BGCS.Runtime.NativeCallback`1
+struct BGCS.Runtime.NativeCallback`1 [sealed; readonly; interfaces=System.IDisposable|System.IEquatable<BGCS.Runtime.NativeCallback<T>>; generic T=None:System.Delegate]
   ctor(T callback)
   property T callback { get }
   property System.Runtime.InteropServices.GCHandle handle { get }
   property System.Boolean isAllocated { get }
   property System.Boolean isDisposed { get }
   property System.Boolean isNull { get }
-  method System.Boolean Equals(BGCS.Runtime.NativeCallback<T> other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.Void Dispose()
-class BGCS.Runtime.NativeContextInterceptor
-  ctor(System.Object object, System.IntPtr method)
-  method System.Boolean EndInvoke(out BGCS.Runtime.INativeContext context, System.IAsyncResult result)
-  method System.Boolean Invoke(System.String libraryName, out BGCS.Runtime.INativeContext context)
-  method System.IAsyncResult BeginInvoke(System.String libraryName, out BGCS.Runtime.INativeContext context, System.AsyncCallback callback, System.Object object)
-class BGCS.Runtime.NativeLibrary
-  ctor()
-  method System.Boolean Free(System.IntPtr libraryHandle)
-  method System.Boolean TryGetExport(System.IntPtr libraryHandle, System.String functionName, out System.IntPtr functionAddress)
-  method System.IntPtr GetExport(System.IntPtr libraryHandle, System.String functionName)
-  method System.IntPtr Load(System.String libraryPath)
-class BGCS.Runtime.NativeLibraryContext
-  ctor(System.IntPtr library)
-  ctor(System.String libraryPath)
-  method System.Boolean IsExtensionSupported(System.String extensionName)
-  method System.Boolean TryGetProcAddress(System.String procName, out System.IntPtr address)
-  method System.IntPtr GetProcAddress(System.String procName)
-  method System.Void Dispose()
-struct BGCS.Runtime.NativeLongDouble12
-struct BGCS.Runtime.NativeLongDouble16
-class BGCS.Runtime.NativeNameAttribute
+  method System.Boolean Equals(BGCS.Runtime.NativeCallback<T> other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Runtime.NativeCallback<T> left, BGCS.Runtime.NativeCallback<T> right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.NativeCallback<T> left, BGCS.Runtime.NativeCallback<T> right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method T op_Implicit(BGCS.Runtime.NativeCallback<T> callback) [static]
+  method System.Void Dispose() [virtual; final]
+struct BGCS.Runtime.NativeLongDouble12 [sealed]
+struct BGCS.Runtime.NativeLongDouble16 [sealed]
+class BGCS.Runtime.NativeModuleLease [sealed; interfaces=System.IDisposable]
+  method BGCS.Runtime.NativeCallLease AcquireCall()
+  method BGCS.Runtime.NativeCallLease AcquireCleanupCall()
+  method System.Void Dispose() [virtual; final]
+  method System.Void RecordUnresolvedCleanup(BGCS.Runtime.NativeCallLease call, System.Exception failure)
+class BGCS.Runtime.NativeModuleSession [sealed; interfaces=System.IAsyncDisposable|System.IDisposable]
+  ctor(BGCS.Runtime.INativeModuleProvider provider)
+  property System.Boolean isClosing { get }
+  property System.Exception unloadFailure { get }
+  method BGCS.Runtime.NativeCallLease AcquireCall()
+  method BGCS.Runtime.NativeModuleLease AcquireResource()
+  method System.Collections.Generic.IReadOnlyDictionary<System.String,System.IntPtr> ResolveRequiredSymbols(System.Collections.Generic.IEnumerable<System.String> names)
+  method System.Threading.Tasks.ValueTask DisposeAsync() [virtual; final]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.NativeNameAttribute [base=System.Attribute]
   ctor(BGCS.Runtime.NativeNameType type, System.String name)
   ctor(System.String name)
   property System.String name { get; set }
   property BGCS.Runtime.NativeNameType type { get }
-enum BGCS.Runtime.NativeNameType
-  field BGCS.Runtime.NativeNameType Const
-  field BGCS.Runtime.NativeNameType Delegate
-  field BGCS.Runtime.NativeNameType Enum
-  field BGCS.Runtime.NativeNameType EnumItem
-  field BGCS.Runtime.NativeNameType Field
-  field BGCS.Runtime.NativeNameType Func
-  field BGCS.Runtime.NativeNameType Param
-  field BGCS.Runtime.NativeNameType StructOrClass
-  field BGCS.Runtime.NativeNameType Type
-  field BGCS.Runtime.NativeNameType Typedef
-  field BGCS.Runtime.NativeNameType Value
+enum BGCS.Runtime.NativeNameType [sealed; underlying=System.Int32; interfaces=System.IComparable|System.IConvertible|System.IFormattable|System.ISpanFormattable]
+  field BGCS.Runtime.NativeNameType Const [static; const=8]
+  field BGCS.Runtime.NativeNameType Delegate [static; const=9]
+  field BGCS.Runtime.NativeNameType Enum [static; const=4]
+  field BGCS.Runtime.NativeNameType EnumItem [static; const=5]
+  field BGCS.Runtime.NativeNameType Field [static; const=1]
+  field BGCS.Runtime.NativeNameType Func [static; const=6]
+  field BGCS.Runtime.NativeNameType Param [static; const=7]
+  field BGCS.Runtime.NativeNameType StructOrClass [static; const=2]
+  field BGCS.Runtime.NativeNameType Type [static; const=0]
+  field BGCS.Runtime.NativeNameType Typedef [static; const=3]
+  field BGCS.Runtime.NativeNameType Value [static; const=10]
   field System.Int32 value__
-struct BGCS.Runtime.Pointer`1
-  field T* handle
+class BGCS.Runtime.NativeOperation`1 [sealed; interfaces=System.IAsyncDisposable|System.IDisposable]
+  ctor(System.Collections.Generic.IEnumerable<System.IDisposable> lifetimes [optional; default=null], System.Action requestCancellation [optional; default=null])
+  property System.Boolean isCancellationRequested { get }
+  property System.Threading.Tasks.Task<TResult> task { get }
+  method System.Boolean TrySetCanceled(System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method System.Boolean TrySetException(System.Exception exception)
+  method System.Boolean TrySetResult(TResult result)
+  method System.Threading.Tasks.ValueTask DisposeAsync() [virtual; final]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.NativeStringLease [sealed; interfaces=System.IAsyncDisposable|System.IDisposable]
+  property System.Int32 encodedCodeUnitCount { get }
+  property System.IntPtr pointer { get }
+  property System.Exception releaseFailure { get }
+  method System.Threading.Tasks.ValueTask DisposeAsync() [virtual; final]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.OwnedNativeHandle [sealed; base=System.Runtime.InteropServices.SafeHandle; interfaces=System.IDisposable]
+  ctor(System.IntPtr address, BGCS.Runtime.NativeModuleLease module, System.Action<System.IntPtr> release, System.String releaseDomain)
+  property System.Boolean IsInvalid { get } [virtual]
+  property System.String releaseDomain { get }
+  property System.Exception releaseFailure { get }
+  method BGCS.Runtime.BorrowedNativeHandle AsBorrowed()
+  method TResult Invoke(System.Func<System.IntPtr,TResult> operation)
+struct BGCS.Runtime.Pointer`1 [sealed; readonly; interfaces=System.IEquatable<BGCS.Runtime.Pointer<T>>; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+  field T* handle [readonly]
   ctor(System.IntPtr handle)
   ctor(T* handle)
   ctor(System.UIntPtr handle)
-  property T Item { get; set }
-  method System.Boolean Equals(BGCS.Runtime.Pointer<T> other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-class BGCS.Runtime.ResolvePathHandler
-  ctor(System.Object object, System.IntPtr method)
-  method System.Boolean EndInvoke(out System.String pathToLibrary, System.IAsyncResult result)
-  method System.Boolean Invoke(System.String libraryName, out System.String pathToLibrary)
-  method System.IAsyncResult BeginInvoke(System.String libraryName, out System.String pathToLibrary, System.AsyncCallback callback, System.Object object)
-class BGCS.Runtime.SourceLocationAttribute
+  property T Item[System.Int32 index] { get; set }
+  method BGCS.Runtime.Pointer<T> op_Addition(BGCS.Runtime.Pointer<T> pointer, System.Int32 offset) [static]
+  method BGCS.Runtime.Pointer<T> op_Decrement(BGCS.Runtime.Pointer<T> pointer) [static]
+  method BGCS.Runtime.Pointer<T> op_Implicit(System.IntPtr pointer) [static]
+  method BGCS.Runtime.Pointer<T> op_Implicit(T* pointer) [static]
+  method BGCS.Runtime.Pointer<T> op_Implicit(System.UIntPtr pointer) [static]
+  method BGCS.Runtime.Pointer<T> op_Increment(BGCS.Runtime.Pointer<T> pointer) [static]
+  method BGCS.Runtime.Pointer<T> op_Subtraction(BGCS.Runtime.Pointer<T> pointer, System.Int32 offset) [static]
+  method System.Boolean Equals(BGCS.Runtime.Pointer<T> other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Runtime.Pointer<T> left, BGCS.Runtime.Pointer<T> right) [static]
+  method System.Boolean op_Equality(BGCS.Runtime.Pointer<T> left, System.IntPtr right) [static]
+  method System.Boolean op_Equality(BGCS.Runtime.Pointer<T> left, T* right) [static]
+  method System.Boolean op_Equality(BGCS.Runtime.Pointer<T> left, System.UIntPtr right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.Pointer<T> left, BGCS.Runtime.Pointer<T> right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.Pointer<T> left, System.IntPtr right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.Pointer<T> left, T* right) [static]
+  method System.Boolean op_Inequality(BGCS.Runtime.Pointer<T> left, System.UIntPtr right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.IntPtr op_Implicit(BGCS.Runtime.Pointer<T> pointer) [static]
+  method T* op_Implicit(BGCS.Runtime.Pointer<T> pointer) [static]
+  method System.UIntPtr op_Implicit(BGCS.Runtime.Pointer<T> pointer) [static]
+class BGCS.Runtime.SourceLocationAttribute [base=System.Attribute]
   ctor(System.String file, System.String start, System.String end)
   property System.String end { get }
   property System.String file { get; set }
   property System.String start { get }
-enum BGCS.Runtime.TargetPlatform
-  field BGCS.Runtime.TargetPlatform Android
-  field BGCS.Runtime.TargetPlatform Any
-  field BGCS.Runtime.TargetPlatform ChromeOS
-  field BGCS.Runtime.TargetPlatform FreeBSD
-  field BGCS.Runtime.TargetPlatform IOS
-  field BGCS.Runtime.TargetPlatform Linux
-  field BGCS.Runtime.TargetPlatform OSX
-  field BGCS.Runtime.TargetPlatform Solaris
-  field BGCS.Runtime.TargetPlatform TVO
-  field BGCS.Runtime.TargetPlatform Tizen
-  field BGCS.Runtime.TargetPlatform Unknown
-  field BGCS.Runtime.TargetPlatform WatchOS
-  field BGCS.Runtime.TargetPlatform WebAssembly
-  field BGCS.Runtime.TargetPlatform Windows
-  field System.Int32 value__
-class BGCS.Runtime.Utils
-  field System.Int32 maxStackallocSize
-  method System.Byte* StringToUTF8Ptr(System.String str)
-  method System.Char* StringToUTF16Ptr(System.String str)
-  method System.Int32 CStringLength(System.Byte* pointer)
-  method System.Int32 CStringLength(System.Char* pointer)
-  method System.Int32 EncodeStringUTF16(System.String str, System.Char* data, System.Int32 size)
-  method System.Int32 EncodeStringUTF8(System.String str, System.Byte* data, System.Int32 size)
-  method System.Int32 GetByteCountArray(T[] array)
-  method System.Int32 GetByteCountUTF16(System.String str)
-  method System.Int32 GetByteCountUTF8(System.String str)
-  method System.IntPtr GetFunctionPointerForDelegate(T d)
-  method System.String DecodeStringBSTR(System.Void* data)
-  method System.String DecodeStringUTF16(System.Char* data)
-  method System.String DecodeStringUTF8(System.Byte* data)
-  method T GetDelegateForFunctionPointer(System.Void* ptr)
-  method T* Alloc(System.Int32 size)
-  method System.Void Free(System.Void* ptr)
-  method System.Void FreeBSTR(System.Void* ptr)
-  method System.Void* StringToBSTR(System.String str)
+class BGCS.Runtime.StaticModuleProvider [sealed; interfaces=BGCS.Runtime.INativeModuleProvider|System.IDisposable]
+  ctor(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.String,System.IntPtr>> exports, System.Action release [optional; default=null])
+  method System.Boolean TryGetExport(System.String name, out System.IntPtr address) [virtual; final]
+  method System.Void Dispose() [virtual; final]
+class BGCS.Runtime.Utf16Codec [abstract; sealed]
+  method BGCS.Runtime.NativeStringLease EncodeCounted(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian, System.UIntPtr requiredAlignment, BGCS.Runtime.NativeAllocator allocator, System.Int32 maximumCodeUnits [optional; default=1048576]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeCounted(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian [optional; default=null], System.UIntPtr requiredAlignment [optional; default=2], System.Int32 maximumCodeUnits [optional; default=1048576]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeNullTerminated(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian [optional; default=null], System.UIntPtr requiredAlignment [optional; default=2]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeNullTerminated(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian, System.UIntPtr requiredAlignment, BGCS.Runtime.NativeAllocator allocator) [static]
+  method System.String Decode(System.IntPtr address, System.Int32 maximumCodeUnits [optional; default=1048576], System.Nullable<System.Boolean> bigEndian [optional; default=null]) [static]
+  method System.String DecodeLength(System.IntPtr address, System.Int32 codeUnitCount, System.Nullable<System.Boolean> bigEndian [optional; default=null]) [static]
+class BGCS.Runtime.Utf32Codec [abstract; sealed]
+  method BGCS.Runtime.NativeStringLease EncodeCounted(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian, System.UIntPtr requiredAlignment, BGCS.Runtime.NativeAllocator allocator, System.Int32 maximumCodeUnits [optional; default=1048576]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeCounted(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian [optional; default=null], System.UIntPtr requiredAlignment [optional; default=4], System.Int32 maximumCodeUnits [optional; default=1048576]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeNullTerminated(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian [optional; default=null], System.UIntPtr requiredAlignment [optional; default=4]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeNullTerminated(System.String value, System.Boolean allowsNull, System.Nullable<System.Boolean> bigEndian, System.UIntPtr requiredAlignment, BGCS.Runtime.NativeAllocator allocator) [static]
+  method System.IntPtr Allocate(System.String value) [static]
+  method System.String Decode(System.IntPtr address, System.Int32 maximumCodeUnits [optional; default=1048576], System.Nullable<System.Boolean> bigEndian [optional; default=null]) [static]
+  method System.String DecodeLength(System.IntPtr address, System.Int32 codeUnitCount, System.Nullable<System.Boolean> bigEndian [optional; default=null]) [static]
+class BGCS.Runtime.Utf8Codec [abstract; sealed]
+  method BGCS.Runtime.NativeStringLease EncodeCounted(System.String value, System.Boolean allowsNull, System.UIntPtr requiredAlignment, BGCS.Runtime.NativeAllocator allocator, System.Int32 maximumCodeUnits [optional; default=1048576]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeCounted(System.String value, System.Boolean allowsNull, System.UIntPtr requiredAlignment [optional; default=1], System.Int32 maximumCodeUnits [optional; default=1048576]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeNullTerminated(System.String value, System.Boolean allowsNull, System.UIntPtr requiredAlignment [optional; default=1]) [static]
+  method BGCS.Runtime.NativeStringLease EncodeNullTerminated(System.String value, System.Boolean allowsNull, System.UIntPtr requiredAlignment, BGCS.Runtime.NativeAllocator allocator) [static]
+  method System.String Decode(System.IntPtr address, System.Int32 maximumCodeUnits [optional; default=1048576]) [static]
+  method System.String DecodeLength(System.IntPtr address, System.Int32 codeUnitCount) [static]
+class BGCS.Runtime.Utils [abstract; sealed]
+  field System.Int32 maxStackallocSize [static]
+  method System.Byte* StringToUTF8Ptr(System.String str) [static]
+  method System.Char* StringToUTF16Ptr(System.String str) [static]
+  method System.Int32 CStringLength(System.Byte* pointer) [static]
+  method System.Int32 CStringLength(System.Char* pointer) [static]
+  method System.Int32 EncodeStringUTF16(System.String str, System.Char* data, System.Int32 size) [static]
+  method System.Int32 EncodeStringUTF8(System.String str, System.Byte* data, System.Int32 size) [static]
+  method System.Int32 GetByteCountArray(T[] array) [static; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+  method System.Int32 GetByteCountUTF16(System.String str) [static]
+  method System.Int32 GetByteCountUTF8(System.String str) [static]
+  method System.IntPtr GetFunctionPointerForDelegate(T d) [static; generic T=None:System.Delegate]
+  method System.String DecodeStringBSTR(System.Void* data) [static]
+  method System.String DecodeStringUTF16(System.Char* data) [static]
+  method System.String DecodeStringUTF8(System.Byte* data) [static]
+  method T GetDelegateForFunctionPointer(System.Void* ptr) [static; generic T=None:System.Delegate]
+  method T* Alloc(System.Int32 size) [static; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
+  method System.Void Free(System.Void* ptr) [static]
+  method System.Void FreeBSTR(System.Void* ptr) [static]
+  method System.Void* StringToBSTR(System.String str) [static]

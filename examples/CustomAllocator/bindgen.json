@@ -1,0 +1,20 @@
+{
+  "$schema": "../../schemas/bindgen.schema.json",
+  "schemaVersion": 1,
+  "library": { "id": "custom_allocator", "nativeName": "custom_allocator" },
+  "source": { "language": "c", "headers": ["native.h"], "parseMacros": false },
+  "api": { "namespace": "Example.CustomAllocator", "name": "AllocatorApi" },
+  "semantics": {
+    "stringParameters": [
+      {
+        "function": "example_utf8_length", "parameter": "text",
+        "encoding": "utf8", "codeUnitWidth": 1, "byteOrder": "native",
+        "lengthUnit": "codeUnits", "direction": "input", "lifetime": "call",
+        "zeroTerminated": true, "retainsPointer": false, "allowsNull": false
+      }
+    ]
+  },
+  "nativeBuild": { "mode": "sources", "sources": ["native.cpp"] },
+  "output": { "root": "Generated" },
+  "cache": { "enabled": false }
+}

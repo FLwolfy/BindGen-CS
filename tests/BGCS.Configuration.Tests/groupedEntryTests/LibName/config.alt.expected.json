@@ -1,0 +1,32 @@
+{
+  "legacyFixture": "entryTests/LibName",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/library/nativeName": "entry-lib-xAlt"
+  },
+  "constants": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "NativeLibraryName",
+      "value": "entry-lib-xAlt"
+    }
+  ],
+  "contains": [
+    "\"entry-lib-xAlt\""
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ]
+}

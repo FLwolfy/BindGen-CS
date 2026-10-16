@@ -1,0 +1,28 @@
+{
+  "legacyFixture": "entryTests/GenerateTypes",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/source/selection/excludeCategories": []
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.SamplePointType",
+      "kind": "Struct"
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ]
+}

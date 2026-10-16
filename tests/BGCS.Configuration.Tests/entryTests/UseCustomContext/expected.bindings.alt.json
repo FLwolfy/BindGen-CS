@@ -1,6 +1,6 @@
 {
   "Contains": [
-    "internal static global::BGCS.Runtime.FunctionTable funcTable = null !;",
+    "internal static global::BGCS.Runtime.FunctionTable funcTable = null!;",
     "private static string GetLibraryName()",
     "public static void InitApi()",
     "var candidate = new global::BGCS.Runtime.FunctionTable(global::BGCS.Runtime.LibraryLoader.LoadLibrary(GetLibraryName, null), 1);",

@@ -1,0 +1,28 @@
+{
+  "legacyFixture": "entryTests/Defines",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/defines": [
+      "MY_DEF=1"
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "DefinedFn",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "a"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "defined_fn"
+  ],
+  "notContains": [
+    "undefined_fn"
+  ]
+}

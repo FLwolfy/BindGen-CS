@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "scope": "Recorded replacements of legacy Host/backend regressions; incomplete retirement ledger, not release certification",
+  "complete": false,
+  "legacyHostRetired": false,
+  "sourceWorktreeDirty": true,
+  "replacements": [
+    {
+      "source": "tests/BGCS.CSharp.Tests/ArtifactSinkTests.cs",
+      "legacyEntryPointsRemovedFromTest": [
+        "BindingModule",
+        "CSharpEmitter",
+        "EmissionContext"
+      ],
+      "neutralEntryPoints": [
+        "InteropModule",
+        "DefaultManagedProjection",
+        "CSharpBackend",
+        "IArtifactSink"
+      ],
+      "preservedOrStrengthenedAssertions": [
+        "The caller owns the only candidate source store in split and single-file modes",
+        "Every returned logical artifact has exactly one source and matching SHA-256",
+        "Sink-specific memory identities do not become portable artifact paths",
+        "A native record remains present in the emitted declarations"
+      ],
+      "passedCases": 2,
+      "receipt": "artifacts/implementation/test-results/retained-callback-qualified-direct-c-csharp-full.trx"
+    },
+    {
+      "source": "tests/BGCS.Generation.Tests/AbiSafetyRegressionTests.cs",
+      "legacyEntryPointsRemovedFromTest": [
+        "BindingModule",
+        "BindingType",
+        "BindingFunction",
+        "CSharpEmitter"
+      ],
+      "neutralEntryPoints": [
+        "InteropModule",
+        "DefaultManagedProjection",
+        "CSharpBackend"
+      ],
+      "preservedOrStrengthenedAssertions": [
+        "Compiled managed Outer size is 96 and nested/suffix offsets are 32/64",
+        "Actual managed source compilation treats warnings as errors",
+        "An over-aligned by-value argument is rejected before any candidate write while its pointer form is emitted",
+        "All three imports reject unproven long double by-value returns before any candidate write",
+        "GNU and musl asset RIDs remain distinct"
+      ],
+      "passedCases": 9,
+      "receipt": "artifacts/implementation/test-results/neutral-priority-abi-cache-eleven.trx",
+      "currentSources": [
+        "tests/BGCS.CSharp.Tests/AbiSafetyRegressionTests.cs",
+        "tests/BGCS.Platforms.Tests/RuntimeIdentifierTests.cs"
+      ],
+      "relocationReverified": false
+    },
+    {
+      "source": "tests/BGCS.Generation.Tests/CacheExtensionRegressionTests.cs",
+      "legacyEntryPointsRemovedFromTest": [
+        "CsCodeGenerator",
+        "IPostPatch",
+        "IBindingEmitter",
+        "CsCodeGeneratorMetadata"
+      ],
+      "neutralEntryPoints": [
+        "BindingHost",
+        "IArtifactProcessor",
+        "IBindingBackend"
+      ],
+      "preservedOrStrengthenedAssertions": [
+        "A real worker-backed initial request creates a generation cache entry and the unchanged request hits it",
+        "A new Host using the same cache and configuration executes a newly registered processor or backend",
+        "An unfingerprinted contribution disables affected generation reuse",
+        "The new contribution is present in the published owned manifest with exact content hash"
+      ],
+      "passedCases": 2,
+      "receipt": "artifacts/implementation/test-results/neutral-priority-abi-cache-eleven.trx",
+      "currentSources": [
+        "tests/BGCS.Tests/CacheExtensionRegressionTests.cs"
+      ],
+      "relocationReverified": false
+    },
+    {
+      "source": "tests/BGCS.Generation.Tests/BindingImmutabilityTests.cs",
+      "legacyEntryPointsRemovedFromTest": [
+        "BindingModule",
+        "BindingField",
+        "BindingType",
+        "BindingFunction",
+        "BindingDelegate",
+        "BindingExternalTypeContract"
+      ],
+      "neutralEntryPoints": [
+        "NativeModule",
+        "NativeType",
+        "NativeDeclaration",
+        "InteropFunction",
+        "InteropType",
+        "ManagedApiModel",
+        "ExternalTypeProjection"
+      ],
+      "preservedOrStrengthenedAssertions": [
+        "Frozen node collections and stable-ID lookup retain the original node after the builder changes",
+        "Callable arguments and declaration children cannot be mutated through IList",
+        "Interop parameter and field snapshots remain independent of caller lists and record replacements",
+        "Managed enum/external field projections retain their snapshots and the identical frozen native ABI"
+      ],
+      "passedCases": 4,
+      "receipt": "artifacts/implementation/test-results/neutral-model-immutability-four.trx",
+      "currentSources": [
+        "tests/BGCS.Contracts.Tests/BindingImmutabilityTests.cs"
+      ],
+      "relocationReverified": false
+    },
+    {
+      "source": "tests/BGCS.Tests/Unit/ArchitectureBoundaryTests.cs",
+      "legacyEntryPointsRemovedFromTest": [
+        "BindingModule"
+      ],
+      "neutralEntryPoints": [
+        "NativeModule",
+        "Bool8"
+      ],
+      "preservedOrStrengthenedAssertions": [
+        "Every exported Contracts namespace is checked, including nested public types",
+        "Public fields, events, base types, interfaces, generic arguments and pointer/byref/array element signatures are inspected",
+        "Contracts and Runtime cannot reference other BGCS implementation assemblies"
+      ],
+      "passedCases": 3,
+      "receipt": "artifacts/implementation/test-results/all-contract-namespaces-architecture-boundary.trx",
+      "currentSources": [
+        "tests/BGCS.Architecture.Tests/ArchitectureBoundaryTests.cs"
+      ],
+      "relocationReverified": false
+    }
+  ],
+  "remainingRetirementGates": [
+    "Map remaining legacy Host/configuration/metadata/formatting capabilities and tests to exact neutral implementations and receipts",
+    "Verify callback plus C++ status/owned results and worker-only advanced Clang extensions",
+    "Verify original-storage ref/Span aliasing and count-copy scope correction with real native calls",
+    "Complete frozen consumer constant/reference inputs through Host cache and publication",
+    "Resolve remaining configuration inventory gaps including borrowed member presentation and external function-table layout",
+    "Delete replaced facade/configuration/metadata/backend surfaces and frontend project reference",
+    "Run actual architecture command with zero violations without exceptions",
+    "Rebuild full current neutral suites and public API snapshots after retirement"
+  ],
+  "currentArchitecture": {
+    "productionProjects": 13,
+    "violations": 29,
+    "passed": false,
+    "receipt": "artifacts/implementation/current-actual-architecture-blockers.log"
+  },
+  "additionalNeutralCapabilities": [
+    {
+      "feature": "Generated type nesting",
+      "configuration": "api.nestGeneratedTypesInApi",
+      "implementation": [
+        "BGCS.Contracts.Managed.ManagedApiModel",
+        "BGCS.CSharp.Planning.CSharpGeneratedTypeScope",
+        "BGCS.CSharp.Validation.EmittedInteropContractReader"
+      ],
+      "unitCases": 19,
+      "unitReceipt": "artifacts/implementation/test-results/nested-types-input-variations-corrected-twentyeight.trx",
+      "nativeCases": 6,
+      "nativeReceipt": "artifacts/implementation/test-results/nested-carrier-input-variations-native-six.trx",
+      "releaseCertification": false
+    },
+    {
+      "feature": "Finite alternate managed value inputs",
+      "configuration": "api.functions[].inputVariations",
+      "implementation": [
+        "BGCS.Contracts.Managed.ManagedInputVariation",
+        "BGCS.CSharp.Planning.InputVariationPlanner",
+        "BGCS.CSharp.Validation.InputVariationContractVerifier"
+      ],
+      "unitCases": 9,
+      "unitReceipt": "artifacts/implementation/test-results/nested-types-input-variations-corrected-twentyeight.trx",
+      "nativeCases": 6,
+      "nativeReceipt": "artifacts/implementation/test-results/nested-carrier-input-variations-native-six.trx",
+      "limitations": [
+        "Converted in/ref/out borrows are rejected",
+        "Requires one existing unambiguous friendly operation",
+        "Variation forwarding is on context and static facade; independent named-view variations are not inferred"
+      ],
+      "releaseCertification": false
+    },
+    {
+      "feature": "Explicit module-lifetime borrowed results and C receiver members",
+      "configuration": [
+        "semantics.borrowedResults",
+        "api.memberFunctions[].kind=moduleBorrowed"
+      ],
+      "runtimeCases": 9,
+      "runtimeReceipt": "artifacts/implementation/test-results/runtime-module-borrowed-nine.trx",
+      "projectionCases": 13,
+      "projectionReceipt": "artifacts/implementation/test-results/module-borrowed-projection-thirteen.trx",
+      "nativeCases": 6,
+      "nativeReceipt": "artifacts/implementation/test-results/module-borrowed-native-six.trx",
+      "scope": "Windows x64/CoreCLR, all three imports and Runtime package/source; source uses static facade and single file",
+      "limits": [
+        "Address validity through actual supplying-module unload is an explicit UserAsserted native protocol.",
+        "Disposal releases a module lease and never frees the borrowed native object.",
+        "Owner/call-bound references, arbitrary mutable native globals and module-borrowed callback composition remain separately unsupported."
+      ],
+      "releaseCertification": false
+    }
+  ]
+}

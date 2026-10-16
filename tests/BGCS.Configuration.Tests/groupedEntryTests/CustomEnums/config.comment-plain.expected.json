@@ -1,0 +1,56 @@
+{
+  "legacyFixture": "entryTests/CustomEnums",
+  "legacyVariant": "config.comment-plain",
+  "configuration": {
+    "/api/enums": [
+      {
+        "name": "CustomMode",
+        "underlyingType": "int32",
+        "isFlags": false,
+        "documentation": "Plain enum comment",
+        "values": [
+          {
+            "name": "One",
+            "value": "1",
+            "documentation": "Plain item comment"
+          }
+        ]
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.CustomMode",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.CustomMode",
+      "name": "One",
+      "value": 1
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.custom_mode"
+  ],
+  "contains": [
+    "/// Plain enum comment",
+    "/// Plain item comment"
+  ]
+}

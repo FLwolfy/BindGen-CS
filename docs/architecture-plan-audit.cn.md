@@ -1,5 +1,7 @@
 # 架构 Plan 逐项核对
 
+> 历史核对记录：下文是早期八工程方案及当时实现/证据的原始映射，不代表 BGCS 3.0 当前完成状态。3.0 的十三工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
+
 [文档索引](README.cn.md) · [完整计划](platform-architecture-refactor-plan.cn.md) · [当前架构](architecture.cn.md) · [独立验收](architecture-refactor-acceptance.cn.md)
 
 ## 当前实现与证据
@@ -29,11 +31,11 @@
 | `IPatch` | Pre/Post patch 的输入和阶段不同，分别使用 `IPrePatch` 与 `IPostPatch`；没有无行为的共同 marker。 |
 | `GeneratedOutputTransaction` | 所有输出共用 Core.IO 的 `OutputDirectoryTransaction`；没有生成器专属转发事务。 |
 | `CppLoweringRecipes` | 类型与 callable recipe 分开为 `CppTypeLoweringRecipe`、`CppCallableLoweringRecipe`，其关联 plan/context 按单类型文件组织。 |
-| 通用 `Preprocessing/Preprocessor` | 实际 C# 条件编译由 `CSharp/Preprocessing/CSharpPreprocessor` 处理；C/C++ 预处理属于 Clang。 |
+| 通用 `Preprocessing/Preprocessor` | 实际 C# 条件编译由 `Processing/CSharpPreprocessor` 处理；C/C++ 预处理属于 Clang。 |
 | `tests/wasm/Native/api.h / api.c` | 桌面、NativeAOT 和 Wasm 使用同一 `tests/fixtures/NativeApi`，避免多份 ABI 向量漂移；CppFacade fixture 同样共用。 |
 
 原生构建 provider 最终已迁入计划中的 `Build/Providers`，namespace 为
-`BGCS.Cpp2C.Build.Providers`。旧 namespace 没有 compatibility alias；当前 CLI、测试和包文档同步。
+`BGCS.NativeBuild.Providers`。旧 namespace 没有 compatibility alias；当前 CLI、测试和包文档同步。
 此归属调整不改变生成算法、原生 ABI 或互操作 Runtime，终版完整矩阵重新验证。
 
 本机报告只证明声明的 Windows 宿主结果。其他宿主、字节序、SDK 和 runtime 必须由自身独立向量验证；

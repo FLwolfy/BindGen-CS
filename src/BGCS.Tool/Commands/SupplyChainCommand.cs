@@ -11,7 +11,7 @@ namespace BGCS.Tool.Commands;
 internal static class SupplyChainCommand
 {
     private const string C_DEFAULTREPOSITORY = "https://github.com/FLwolfy/BindGen-CS";
-    private const string C_DEFAULTBUILDER = "https://github.com/FLwolfy/BindGen-CS/.github/workflows/release";
+    private const string C_DEFAULTBUILDER = "https://github.com/FLwolfy/BindGen-CS/.github/workflows/publish-bgcs-runtime-nuget.yml";
     internal static int Run(
         string[] args,
         string workingDirectory,
@@ -32,17 +32,26 @@ internal static class SupplyChainCommand
                 throw new InvalidDataException($"Artifact directory '{artifactRoot}' contains no files.");
             DateTimeOffset timestamp = ResolveTimestamp(options.timestamp);
             string revision = options.revision ?? Environment.GetEnvironmentVariable("SOURCE_REVISION") ?? "unknown";
+            revision = VerifyAcceptedPackages(artifactRoot, artifacts, revision);
             string repository = options.repository ?? global::BGCS.Tool.Commands.SupplyChainCommand.C_DEFAULTREPOSITORY;
             string aggregate = ComputeAggregateDigest(artifacts);
+            DeliveredDependencyGraph graph = new();
+            foreach (Artifact artifact in artifacts)
+                graph.AddArtifact(Path.Combine(artifactRoot, artifact.name.Replace('/', Path.DirectorySeparatorChar)), artifact.name, artifact.sha256);
+            graph.Complete();
+            foreach (Artifact artifact in artifacts)
+                if (CreateArtifact(artifactRoot, Path.Combine(artifactRoot, artifact.name.Replace('/', Path.DirectorySeparatorChar))).sha256 != artifact.sha256)
+                    throw new InvalidDataException("A delivered artifact changed while its dependency evidence was being read: " + artifact.name);
             Directory.CreateDirectory(outputRoot);
-            WriteJson(sbomPath, CreateSpdx(artifacts, timestamp, aggregate, repository));
-            WriteJson(provenancePath, CreateProvenance(artifacts, timestamp, aggregate, repository, revision, options.builderId ?? global::BGCS.Tool.Commands.SupplyChainCommand.C_DEFAULTBUILDER));
+            WriteJson(sbomPath, CreateSpdx(graph, timestamp, aggregate, repository));
+            WriteJson(provenancePath, CreateProvenance(artifacts, graph, timestamp, aggregate, repository, revision, options.builderId ?? global::BGCS.Tool.Commands.SupplyChainCommand.C_DEFAULTBUILDER));
             output.WriteLine($"SPDX SBOM: {sbomPath}");
             output.WriteLine($"SLSA provenance: {provenancePath}");
             output.WriteLine($"Covered {artifacts.Length} artifact(s); aggregate SHA-256 {aggregate}.");
             return 0;
         }
-        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or FormatException)
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or FormatException
+            or JsonException or KeyNotFoundException or InvalidOperationException or System.Xml.XmlException)
         {
             error.WriteLine($"error: {exception.Message}");
             error.WriteLine("Run 'bindgen-cs --help' for usage.");
@@ -51,7 +60,7 @@ internal static class SupplyChainCommand
     }
 
     private static object CreateSpdx(
-        IReadOnlyList<Artifact> artifacts,
+        DeliveredDependencyGraph graph,
         DateTimeOffset timestamp,
         string aggregate,
         string repository
@@ -71,17 +80,14 @@ internal static class SupplyChainCommand
             },
             licenseListVersion = "3.25"
         },
-        documentDescribes = artifacts.Select((
-            _,
-            index
-        ) => $"SPDXRef-Package-{index + 1}").ToArray(),
-        packages = artifacts.Select((
-            artifact,
-            index
-        ) => new { SPDXID = $"SPDXRef-Package-{index + 1}", name = artifact.name, downloadLocation = "NOASSERTION", filesAnalyzed = false, checksums = new[] { new { algorithm = "SHA256", checksumValue = artifact.sha256 } }, licenseConcluded = "NOASSERTION", licenseDeclared = "NOASSERTION", copyrightText = "NOASSERTION" }).ToArray()
+        packages = graph.Packages,
+        files = graph.Files,
+        relationships = graph.Relationships,
+        hasExtractedLicensingInfos = graph.ExtractedLicenses
     };
     private static object CreateProvenance(
         IReadOnlyList<Artifact> artifacts,
+        DeliveredDependencyGraph graph,
         DateTimeOffset timestamp,
         string aggregate,
         string repository,
@@ -106,7 +112,7 @@ internal static class SupplyChainCommand
                 {
                     aggregateSha256 = aggregate
                 },
-                resolvedDependencies = new[]
+                resolvedDependencies = new object[]
                 {
                     new
                     {
@@ -116,7 +122,7 @@ internal static class SupplyChainCommand
                             gitCommit = revision
                         }
                     }
-                }
+                }.Concat(graph.Materials).ToArray()
             },
             runDetails = new
             {
@@ -143,6 +149,46 @@ internal static class SupplyChainCommand
         return new(name, Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant());
     }
 
+    private static string VerifyAcceptedPackages(
+        string root,
+        IReadOnlyList<Artifact> artifacts,
+        string revision
+    ) {
+        Artifact[] archives = artifacts.Where(artifact => artifact.name.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase)
+            || artifact.name.EndsWith(".snupkg", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (archives.Length == 0)
+            return revision;
+        string manifestPath = Path.Combine(root, "package-verification.json");
+        if (!File.Exists(manifestPath) || new FileInfo(manifestPath).Length > 16 * 1024 * 1024)
+            throw new InvalidDataException("NuGet SBOM generation requires its bounded accepted package-verification.json manifest.");
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestPath));
+        JsonElement manifest = document.RootElement;
+        string acceptedRevision = manifest.GetProperty("sourceRevision").GetString() ?? "";
+        string content = manifest.GetProperty("checkedOutSourceSha256").GetString() ?? "";
+        JsonElement after = manifest.GetProperty("sourceAtCompletion");
+        if (manifest.GetProperty("schemaVersion").GetInt32() != 1 || manifest.GetProperty("completeProductSet").ValueKind != JsonValueKind.True
+            || manifest.GetProperty("sourceRevisionStable").ValueKind != JsonValueKind.True || manifest.GetProperty("sourceBytesStable").ValueKind != JsonValueKind.True
+            || manifest.GetProperty("sourceWorktreeDirty").ValueKind != JsonValueKind.False || after.GetProperty("sourceWorktreeDirty").ValueKind != JsonValueKind.False
+            || acceptedRevision.Length is not (40 or 64) || !acceptedRevision.All(char.IsAsciiHexDigit)
+            || content.Length != 64 || !content.All(char.IsAsciiHexDigit)
+            || after.GetProperty("sourceRevision").GetString() != acceptedRevision || after.GetProperty("checkedOutSourceSha256").GetString() != content
+            || revision != "unknown" && revision != acceptedRevision)
+            throw new InvalidDataException("The accepted package inventory does not describe a complete stable build of this requested source revision.");
+        Dictionary<string, Artifact> actual = archives.ToDictionary(artifact => artifact.name, StringComparer.Ordinal);
+        HashSet<string> matched = new(StringComparer.Ordinal);
+        foreach (JsonElement item in manifest.GetProperty("packages").EnumerateArray())
+        {
+            string name = item.GetProperty("file").GetString() ?? "";
+            if (!matched.Add(name) || !actual.TryGetValue(name, out Artifact? archive)
+                || item.GetProperty("sha256").GetString() != archive.sha256
+                || item.GetProperty("bytes").GetInt64() != new FileInfo(Path.Combine(root, name)).Length)
+                throw new InvalidDataException("The accepted package inventory contradicts the exact delivered archive/hash set: " + name);
+        }
+        if (!matched.SetEquals(actual.Keys))
+            throw new InvalidDataException("The accepted package inventory omits a delivered NuGet archive.");
+        return acceptedRevision;
+    }
+
     private static string ComputeAggregateDigest(IEnumerable<Artifact> artifacts)
     {
         StringBuilder canonical = new();
@@ -162,7 +208,11 @@ internal static class SupplyChainCommand
     private static void WriteJson(
         string path,
         object value
-    ) => File.WriteAllText(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine);
+    ) => File.WriteAllText(path, JsonSerializer.Serialize(value, new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    }) + Environment.NewLine);
     private static Options Parse(string[] args)
     {
         string? artifactRoot = null;

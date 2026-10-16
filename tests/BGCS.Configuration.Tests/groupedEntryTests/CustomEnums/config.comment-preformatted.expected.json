@@ -1,0 +1,56 @@
+{
+  "legacyFixture": "entryTests/CustomEnums",
+  "legacyVariant": "config.comment-preformatted",
+  "configuration": {
+    "/api/enums": [
+      {
+        "name": "CustomMode",
+        "underlyingType": "int32",
+        "isFlags": false,
+        "documentation": "Preformatted enum comment",
+        "values": [
+          {
+            "name": "One",
+            "value": "1",
+            "documentation": "Preformatted item comment"
+          }
+        ]
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.CustomMode",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.CustomMode",
+      "name": "One",
+      "value": 1
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.custom_mode"
+  ],
+  "contains": [
+    "/// Preformatted enum comment",
+    "/// Preformatted item comment"
+  ]
+}

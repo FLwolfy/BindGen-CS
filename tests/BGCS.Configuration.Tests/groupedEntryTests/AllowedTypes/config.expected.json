@@ -1,0 +1,24 @@
+{
+  "legacyFixture": "entryTests/AllowedTypes",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "records",
+        "includeDeclarations": [
+          "KeepType"
+        ],
+        "excludeDeclarations": []
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.KeepType",
+      "kind": "Struct"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.DropType"
+  ]
+}

@@ -1,0 +1,82 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using BGCS.Contracts.Artifacts;
+
+namespace BGCS.Infrastructure.Verification;
+
+/// <summary>Checks the exact artifact collection before it can be published or restored from cache.</summary>
+public sealed class ArtifactDigestVerifier
+{
+    /// <summary>Validates portable identities, links, the complete file collection and each content digest.</summary>
+    /// <param name="root">The owned artifact directory.</param>
+    /// <param name="artifacts">The expected immutable artifact descriptors.</param>
+    /// <param name="additionalFiles">Explicit nonartifact metadata paths, such as an ownership manifest.</param>
+    /// <exception cref="IOException">A file is absent, altered, linked or unlisted.</exception>
+    public void Verify(
+        string root,
+        IEnumerable<ArtifactDescriptor> artifacts,
+        IEnumerable<string>? additionalFiles = null
+    ) {
+        ArgumentNullException.ThrowIfNull(artifacts);
+        string directory = Path.GetFullPath(root);
+        RejectLinkedAncestors(directory);
+        Dictionary<string, ArtifactDescriptor> expected = new(StringComparer.OrdinalIgnoreCase);
+        foreach (ArtifactDescriptor artifact in artifacts)
+        {
+            string path = ValidateRelativePath(artifact.relativePath);
+            if (!expected.TryAdd(path, artifact)) throw new IOException($"Duplicate artifact path '{path}'.");
+        }
+        HashSet<string> additional = new((additionalFiles ?? []).Select(ValidateRelativePath), StringComparer.OrdinalIgnoreCase);
+        if (additional.Overlaps(expected.Keys)) throw new IOException("An artifact path is also reserved as publication metadata.");
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string file in EnumerateFiles(directory))
+        {
+            string path = Path.GetRelativePath(directory, file).Replace('\\', '/');
+            if (!seen.Add(path)) throw new IOException($"Artifact case collision at '{path}'.");
+            if (additional.Contains(path)) continue;
+            if (!expected.TryGetValue(path, out ArtifactDescriptor? artifact)) throw new IOException($"Unlisted artifact '{path}' cannot be published.");
+            using FileStream stream = File.OpenRead(file);
+            string hash = Convert.ToHexStringLower(SHA256.HashData(stream));
+            if (hash != artifact.digest.value) throw new IOException($"Artifact content digest mismatch: '{path}'.");
+        }
+        foreach (string required in expected.Keys.Concat(additional))
+            if (!seen.Contains(required)) throw new IOException($"Required artifact '{required}' is missing.");
+    }
+
+    /// <summary>Validates and normalizes a portable artifact-relative identity without accessing the filesystem.</summary>
+    /// <param name="path">The relative file or directory identity.</param>
+    /// <returns>The normalized forward-slash identity.</returns>
+    /// <exception cref="IOException">The identity is absolute, traverses parents or contains unsupported filename characters.</exception>
+    public static string ValidateRelativePath(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        string normalized = path.Replace('\\', '/');
+        if (Path.IsPathRooted(normalized) || normalized.Split('/').Any(segment => segment is "" or "." or ".." || segment.Contains(':') || segment.IndexOfAny(['\0', '<', '>', '"', '|', '?', '*']) >= 0 || segment.EndsWith(' ') || segment.EndsWith('.')))
+            throw new IOException($"Artifact path '{path}' is not portable and candidate-relative.");
+        return normalized;
+    }
+
+    internal static void RejectLinkedAncestors(string path)
+    {
+        for (string? current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
+            if ((Directory.Exists(current) || File.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new IOException($"Publication cannot traverse a linked path: '{current}'.");
+    }
+
+    private static IEnumerable<string> EnumerateFiles(string directory)
+    {
+        foreach (string entry in Directory.EnumerateFileSystemEntries(directory))
+        {
+            FileAttributes attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.ReparsePoint) != 0) throw new IOException($"Linked artifact '{entry}' is forbidden.");
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                foreach (string nested in EnumerateFiles(entry)) yield return nested;
+            }
+            else yield return entry;
+        }
+    }
+}

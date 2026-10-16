@@ -8,7 +8,7 @@
 例如生成器在 Windows 运行，仍可以在显式提供正确目标 SDK 的情况下解析另一种目标。
 是否能编译、链接、签名和运行对应产物，由可用工具链及实际验收决定。
 
-`BGCS.Core.Targeting` 提供中立请求和描述；`BGCS.CppAst.Targeting` 处理 Clang 及平台 provider。
+`BGCS.Contracts.Targets` 提供中立请求和描述；`BGCS.Platforms.Targeting` 处理 Clang 及平台 provider。
 Binding IR 和 Bridge IR 保存解析所得的布局与 ABI 事实，C# emitter 不依赖消费方引擎的模块清单。
 `BGCS.Runtime` 独立管理互操作，不承担应用平台组合。
 
@@ -18,8 +18,8 @@ Binding IR 和 Bridge IR 保存解析所得的布局与 ABI 事实，C# emitter 
 下面使用当前公开 API 解析描述，调用方必须传入真实 SDK 目录：
 
 ```csharp
-using BGCS.Core.Targeting;
-using BGCS.CppAst.Targeting;
+using BGCS.Contracts.Targets;
+using BGCS.Platforms.Targeting;
 
 internal static class TargetSelection
 {
@@ -54,14 +54,14 @@ internal static class TargetSelection
 ## 当前 Solution 组织
 
 ```text
-BindGen-CS.sln
+BindGen-CS.slnx
   src
-    BGCS.Core
-    BGCS.CppAst
-    BGCS.Intermediate
+    BGCS.Infrastructure
+    BGCS.Frontend.Clang
+    BGCS.Contracts
     BGCS
     BGCS.Cpp2C
-    BGCS.Language
+    BGCS.CSharp
     BGCS.Runtime
     BGCS.Tool
   tests

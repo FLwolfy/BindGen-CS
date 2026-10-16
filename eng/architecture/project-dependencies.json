@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "projects": {
+    "BGCS.Contracts": [],
+    "BGCS.Infrastructure": ["BGCS.Contracts"],
+    "BGCS.Frontend.Clang": ["BGCS.Contracts", "BGCS.Infrastructure"],
+    "BGCS.Frontend.Clang.Worker": ["BGCS.Contracts", "BGCS.Infrastructure", "BGCS.Frontend.Clang"],
+    "BGCS.Platforms": ["BGCS.Contracts", "BGCS.Infrastructure"],
+    "BGCS.Analysis": ["BGCS.Contracts"],
+    "BGCS.Cpp2C": ["BGCS.Contracts", "BGCS.Analysis"],
+    "BGCS.CSharp": ["BGCS.Contracts", "BGCS.Analysis"],
+    "BGCS.NativeBuild": ["BGCS.Contracts", "BGCS.Infrastructure", "BGCS.Platforms"],
+    "BGCS.Runtime": [],
+    "BGCS": ["BGCS.Contracts", "BGCS.Infrastructure", "BGCS.Platforms", "BGCS.Analysis", "BGCS.Cpp2C", "BGCS.CSharp", "BGCS.NativeBuild", "BGCS.Runtime"],
+    "BGCS.Tool": ["BGCS", "BGCS.Contracts"],
+    "BGCS.MSBuild": ["BGCS", "BGCS.Contracts"]
+  },
+  "executables": ["BGCS.Tool", "BGCS.Frontend.Clang.Worker"]
+}

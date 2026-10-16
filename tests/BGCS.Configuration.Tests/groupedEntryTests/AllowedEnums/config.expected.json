@@ -1,0 +1,24 @@
+{
+  "legacyFixture": "entryTests/AllowedEnums",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "enumerations",
+        "includeDeclarations": [
+          "KeepEnum"
+        ],
+        "excludeDeclarations": []
+      }
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.KeepEnum",
+      "kind": "Enum"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.DropEnum"
+  ]
+}

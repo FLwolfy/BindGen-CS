@@ -1,237 +1,362 @@
-# BindGen-CS API reference
+# BGCS 3.0 public API
 
-[Documentation](README.md) · [Architecture](architecture.md) · [Configuration](configuration-guide.md)
+[Documentation](README.md) · [简体中文](api.cn.md) · [Configuration](configuration-guide.md) · [Extensibility](extensibility.md)
 
-This page describes the current source contract. Configuration properties and operation results
-use camelCase; methods, types and enum values use PascalCase. Generated native names follow the
-binding configuration.
+The embedded SDK uses `BGCS.BindingHost` and immutable requests. CLI,
+workspace and MSBuild invoke the same Host pipeline. Generation requires
+.NET 10. Properties use camelCase; types and methods use PascalCase.
+`bindgen-cs version --json` reports separate product, Contracts, model and
+worker protocol identities.
 
-## Generate bindings
-
-`BGCS.Facade.BindingGenerator.Generate(configPath, outputPath?)` loads a composed configuration
-and returns a `BindingGenerationResult<BindingModule>`. Use this entry when no per-instance
-extension or live progress subscription is needed.
-
-`CsCodeGenerator` owns a reusable generation configuration and operation diagnostics:
-
-| Entry | Behavior |
-| --- | --- |
-| `Create(configPath)` | Loads, composes and validates file-backed configuration |
-| `GenerateConfigured(outputPath?)` | Generates the configured entry files; relative paths use the configuration directory |
-| `Generate(...)` | Accepts explicit header lists and, optionally, caller-provided parser options |
-| `AnalyzeConfigured()` | Produces frozen Binding IR and diagnostics without replacing generated output |
-| `lastResult` | Describes the current completed attempt; null before completion or after a preflight exception |
-| `settings` | Exposes the configuration used by subsequent attempts |
-| `patchEngine` | Registers bounded preprocessing or staged source patches |
-| `PostConfigure` | Reports per-attempt configuration before preprocessing; subscribers own their subscription |
-| `GetMetadata()` / `SaveMetadata(path)` | Inspect or write the current attempt's tooling metadata |
-| `Reset()` | Clears attempt state without discarding configuration or subscribers |
-
-Every attempt starts a new diagnostic lifetime. A failed request cannot expose a prior successful
-`lastResult`. Failure before output commit preserves the previous complete output directory.
-The generator runs on one owner thread; do not mutate configuration or start a second request
-on that instance while it is executing.
+## Host composition and ownership
 
 ```csharp
 using System;
-using BGCS.Facade;
-using BGCS.Core.Logging;
+using BGCS;
 
-CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
-generator.LogEvent += Report;
-try
-{
-    if (!generator.GenerateConfigured())
-    {
-        foreach (var diagnostic in generator.lastResult!.diagnostics)
-            Console.Error.WriteLine(diagnostic.message);
-    }
-}
-finally
-{
-    generator.LogEvent -= Report;
-}
-
-static void Report(
-    LogSeverity severity,
-    string message
-) => Console.WriteLine($"{severity}: {message}");
+await using BindingHost host = BindingHost.CreateDefault();
 ```
 
-The library does not attach a console. `logLevel` and `cppLogLevel` control live notifications;
-the immutable result still retains diagnostics below those thresholds. `messages` is a read-only
-view of the current attempt. Copy it when retaining it across requests.
-
-## Configuration and programmatic input
-
-Use `ConfigLoader`, `ConfigValidator` and `PresetResolver` to compose a configuration. Important
-settings include `entryFiles`, `outputPath`, `targetId`, `targetTriple`, `targetSysRoot`,
-`compilerPath`, `parserKind`, `importType`, `marshallingMappings` and `runtimeNamespace`.
-The CLI schema command describes the complete installed configuration contract.
+The default registers built-in implementations, including the isolated Clang
+worker client. Composition freezes when the Host is built; session services
+and plugin instances are independently owned. Factories must not return one
+mutable object to unrelated sessions.
 
 ```csharp
-using BGCS.Configuration;
-using BGCS.Facade;
-using BGCS.CppAst.Parsing;
+await using BindingHost host = BindingHost.CreateBuilder()
+    .AddBuiltIns()
+    .WithWorkerAssetRoot("/absolute/path/to/deployed/worker")
+    .WithParseTimeout(TimeSpan.FromSeconds(300))
+    .AddPlugin<MyPlugin>()
+    .Build();
+```
 
-var config = new CsCodeGeneratorConfig
+`MyPlugin` implements `BGCS.Contracts.Plugins.IBindingPlugin`. Ordinary
+plugins reference Contracts only. Worker root configuration is optional when
+SDK deployment is available. Parser resources match the **generator host**,
+even when the native target differs.
+
+`DisposeAsync()` stops new sessions, cancels active work and waits for session
+services to release. Request cancellation remains independent. The Host owns
+generation; generated library contexts own native invocation.
+
+## Capture configuration and generate
+
+```csharp
+GenerationRequest request = await GenerationRequest.FromFileAsync(
+    "bindings/bindgen.json", cancellationToken: cancellationToken);
+GenerationResult generated = await host.GenerateAsync(request, cancellationToken);
+if (!generated.success)
+    throw new InvalidOperationException(generated.GetDiagnosticSummary());
+```
+
+`FromFileAsync(path, profile: null, cancellationToken: token)` validates grouped versioned configuration and
+captures its input closure. Each declaring document owns its relative paths;
+a later process working-directory change cannot change a captured request.
+The synchronous `FromFile` entry accepts the same optional cancellation and
+configuration-loader arguments. Cancellation covers configuration composition
+as well as later generation when the token is passed to both operations.
+
+Only an explicit HTTPS `extends` object with `url`, pinned `sha256` and a local
+`pathBase` can fetch a remote base. Its URI and content identity are recorded
+separately from filesystem inputs. A caller can supply `configurationLoader:
+new BGCS.Configuration.BindingConfigurationLoader(httpClient)` for its own transport; the caller
+owns that `HttpClient`. See the [composition rules](configuration-guide.md).
+
+SDK-created configuration uses `new GenerationRequest(configuration, baseDirectory)`,
+which validates and defensively freezes input. Immutable overrides retain the
+original configuration provenance:
+
+```csharp
+GenerationRequest alternative = request.WithConfiguration(
+    request.configuration with
+    {
+        output = request.configuration.output with { root = "Generated/Alternative" }
+    });
+```
+
+The groups are `library`, `source`, `targets`, `api`, `semantics`, `cpp`,
+`nativeBuild`, `managedBuild`, `runtime`, `output`, `extensions`, `cache`
+and `execution`, with `extends` and profiles for composition. C/C++ use the
+same request. See the [generated reference](generated/config-reference.md)
+for exact constraints and defaults.
+
+`GenerateAsync` parses/verifies detached facts; C++ additionally lowers a
+bridge, emits and reparses its header, and verifies the bridge contract.
+Semantic and ABI analysis, managed projection, emission, processors and final
+emitted-contract checks precede complete candidate publication. Generation
+alone does not certify native linking or runtime invocation.
+
+## Build and interpret results
+
+```csharp
+BuildResult built = await host.BuildAsync(new BuildRequest(request), cancellationToken);
+if (!built.success)
+    throw new InvalidOperationException(built.GetDiagnosticSummary());
+```
+
+`BuildRequest.FromFileAsync(path, cancellationToken: token)` loads a cancellable
+request; `BuildRequest.FromFile(path)` is the synchronous entry. Build compiles candidate
+managed sources with warnings treated as errors and performs the declared
+native construction or prebuilt-artifact checks. `nativeBuild.mode = none`
+explicitly omits native construction. A required failure prevents formal
+publication and preserves previous owned output. Actual invocation remains
+a separate acceptance stage; receipts identify the work completed.
+
+| Generation result | Meaning |
+| --- | --- |
+| `published` | Complete candidate artifacts were installed. |
+| `success` | Publication succeeded with no Error/Critical diagnostics. |
+| `outputRoot` | Captured formal output location. |
+| `artifacts` | Exact logical paths and content digests. |
+| `nativeReferences` | Typed consumer references from verified target/runtime/output facts, including import-module identity. |
+| `cacheStages` | Decisions for named stages; a hit does not certify a build or invocation. |
+| `targetModels` | Detached SDK models, omitted from routine result JSON. |
+| `diagnostics` | Complete diagnostics, including service-release failures. |
+
+`BuildResult.generation` retains the complete generation result and forwards
+success, publication, artifacts and diagnostics. Console display thresholds
+do not alter Host/JSON diagnostics or success. Error/Critical remain failures.
+
+## Analysis, inspection, comparison and bridge-only output
+
+| Method | Result and purpose |
+| --- | --- |
+| `AnalyzeAsync(AnalysisRequest, token)` | `AnalysisResult`: native module, resolved target, parser dependency and argument-input snapshots, diagnostics. |
+| `InspectAsync(GenerationRequest, token)` | `InspectionResult`: target native, optional bridge, interop and managed models without replacing formal output. |
+| `DiffAsync(GenerationRequest, token)` | `GenerationDiffResult`: Added/Removed/Changed paths and previous/current digests. |
+| `BridgeAsync(GenerationRequest, token)` | `GenerationResult`: native bridge without requiring managed projection of otherwise valid native exports. |
+
+```csharp
+using BGCS.Contracts.Inputs;
+
+AnalysisResult analysis = await host.AnalyzeAsync(
+    AnalysisRequest.FromFiles(["include/native.h"], SourceLanguage.C),
+    cancellationToken);
+GenerationDiffResult difference = await host.DiffAsync(request, cancellationToken);
+```
+
+Analysis supports explicit target/toolchain, standard, header search inputs,
+defines, arguments, preamble/postamble and parse options. Detached models
+contain no Clang handles. Analysis is not a native build.
+
+Each inspected target also retains its `resolvedTarget` descriptor with the
+actual pinned compiler/SDK configuration. Environment inspection uses these
+Host-resolved facts rather than inferring a new toolchain from target-ID text.
+
+Diff verifies owned previous output under a publication lock. Unowned,
+incomplete or tampered sets fail. Formal output remains untouched.
+`hasChanges` describes logical artifacts, rather than operational cache decisions.
+
+## Standalone native construction
+
+Neutral `bridge.manifest.json` locks native build inputs; the typed bridge model
+is the separate `bridge.module.json`.
+
+```csharp
+ManifestNativeBuildRequest nativeRequest = new(
+    "/absolute/path/to/bridge.manifest.json");
+ManifestNativeBuildPlanResult plan = await host.PlanNativeBuildAsync(
+    nativeRequest, cancellationToken);
+if (!plan.success)
+    throw new InvalidOperationException(plan.GetDiagnosticSummary());
+
+ManifestNativeBuildResult native = await host.NativeBuildAsync(
+    nativeRequest, cancellationToken);
+if (!native.success)
+    throw new InvalidOperationException(native.GetDiagnosticSummary());
+```
+
+Overrides include `providerId`, `compilerPath`, `buildToolPath`,
+`auxiliaryToolPath`, `exportToolPath`, `outputFile`, `packageRoot`,
+`verifyExports` and `timeoutSeconds`. Explicit override paths are absolute.
+`auto` retains the manifest provider; stable custom service IDs are supported.
+
+`plan.nativeArtifact` names the final output. Compiler-plan output is a private
+candidate, and planning does not publish. Execution verifies locked inputs,
+required exports and ownership. Success does not claim runtime invocation.
+Portable locked plugin manifests can reactivate; SDK factory-only plugins
+require matching Host registration.
+
+## Workspaces
+
+```csharp
+BindingWorkspace workspace = new WorkspaceLoader().Load("workspace.json");
+WorkspaceResult generated = await host.GenerateWorkspaceAsync(workspace, cancellationToken);
+WorkspaceResult built = await host.BuildWorkspaceAsync(workspace, cancellationToken);
+WorkspaceDiffResult compared = await host.DiffWorkspaceAsync(workspace, cancellationToken);
+```
+
+Each project retains its own configuration base, profile, targets and input
+identity. Graph construction checks unique IDs, prerequisites, cycles and
+output/input conflicts. Default parallelism is two. Results preserve project
+order and Completed/Failed/Skipped status. Failed prerequisites block
+dependents; independent branches retain their results. Overall success
+requires all projects to succeed. Execution does not change the process
+working directory.
+
+## Extension contracts
+
+The builder supports factories for frontend, managed projection and backend,
+and registrations for target providers, native/interop transforms, C++ type
+and callable lowerings, processors, validators, native build providers and
+native artifact packagers.
+
+`AddPlugin<T>()`, `AddPluginFactory(...)` and `AddPluginManifest(...)` configure
+neutral plugins. Metadata declares Contracts compatibility, exact service IDs,
+ports, priorities and settings schema. Discovery and session instances have
+separate ownership. Duplicate IDs and changed activation descriptors fail.
+Settings are independently cloned and validated.
+
+`BGCS.Contracts.Plugins.ICacheFingerprintProvider` captures exact private
+state and external inputs. An extension without complete fingerprints can run,
+but affected caching is disabled. Candidate processors execute on eligible
+emission-cache hits, before final source-contract validation and publication.
+Use controlled candidate artifacts rather than writing into formal output.
+See [extensibility](extensibility.md) and the
+[neutral example](../examples/LoweringPlugin/README.md).
+
+```text
+NativeModule → CppBridgeModule (C++ only) → InteropModule
+→ ManagedApiModel → backend emission plan → candidate artifacts
+```
+
+The C# plan belongs to its backend. Neutral models contain no frontend AST,
+service instance or physical output directory.
+
+## Owned output and worker resources
+
+`BindingArtifactManifest.Read(outputRoot, libraryId, token)` locks and verifies
+the complete owned set before returning descriptors. Integrations use exact
+manifest entries instead of directory globs.
+
+`host.ClearOwnedOutputAsync(request, token)` clears verified owned output,
+protects inputs/cache/plugin assets and retains an empty ownership marker
+for rebuilding. Wrong owners, unlisted files and tampered data fail.
+
+`WorkerAssetDeployment.Deploy(sourceRoot, manifestPath, destinationRoot, token)`
+deploys a locked host parser closure. `Clear(...)` preserves valid ownership
+for redeployment. SDK targets use these APIs; users do not assemble parser
+resources manually. Process isolation is not an untrusted-plugin sandbox.
+
+## Consumer API and Runtime
+
+### Members on value carriers
+
+`api.memberFunctions[].kind = "value"` places an explicitly selected C operation
+on the existing generated record. The receiver is the caller's original value;
+there is no native factory, destructor, hidden context field or global library
+selection. Rename the carrier with `api.records`, rather than `objectName`.
+
+For `int value_add(NativeValue* self, int delta)`, declare both presentation and
+the native one-value borrow:
+
+```json
 {
-    apiName = "NativeApi",
-    @namespace = "Sample.Generated",
-    libName = "sample",
-    parserKind = CppParserKind.C,
-    importType = ImportType.LibraryImport,
-    generateExtensions = false
-};
-var generator = new CsCodeGenerator(config);
-bool success = generator.Generate("include/api.h", "Generated");
+  "api": {
+    "memberFunctions": [
+      { "function": "value_add", "nativeType": "NativeValue", "receiver": "self", "kind": "value", "name": "Add" }
+    ]
+  },
+  "semantics": {
+    "valueParameters": [
+      { "function": "value_add", "parameter": "self", "direction": "inputOutput", "lifetime": "call", "retainsPointer": false, "allowsNull": false }
+    ]
+  }
+}
 ```
 
-## Core collections and text
-
-`TrieSet<T>` owns copied sequence keys and returns read-only sequences. `TrieStringSet`
-uses that implementation for character keys; matching does not expose mutable trie nodes.
-Both support empty keys, shortest/longest prefix lookup, prefix enumeration, removal, and clear.
-An unmatched lookup returns `false`; it never reports a zero-length match unless the empty key exists.
-
-`ConcurrentList<T>` serializes individual operations. Enumeration captures an independent
-snapshot, so a later mutation cannot invalidate it. Use `syncObject` to make a caller's
-compound workflow atomic; enumerators do not retain the lock.
-
-`WordList` reads and writes deterministic UTF-8 text or compressed, length-prefixed UTF-16
-vocabulary. Read operations retain the caller's stream ownership and merge only after the
-complete input passes validation. Writers prepare a sibling candidate and install it after
-flushing. Character comparison is invariant across cultures.
-
-`FileNameHelper.SanitizeFileName` uses the same leaf-name rules on every host: reserved
-characters and Windows device names are normalized, trailing dots/spaces are removed, and
-the result is limited to 255 UTF-16 units and 255 UTF-8 bytes without splitting a scalar.
-An optional directory prefix is preserved; this API does not authorize or contain a path.
-
-## Authoring language processing
-
-`BGCS.Language.CSharp.Preprocessing.CSharpPreprocessor` evaluates C# conditional directives
-using the same Roslyn frontend already used by C# generation. It owns the initial symbol
-snapshot; each source file's `#define` state remains local to that invocation. Removed
-directives and excluded code become spaces, preserving UTF-16 positions and CR/LF characters.
-Invalid/unbalanced directives and active `#error` fail with `FormatException` and a source location.
-It does not perform C/C++ preprocessing, which belongs to the Clang frontend.
-
-`ParserContext.scopeDepth` exposes scope balance without granting access to the mutable stack.
-All analyzer dispatch, including nested scopes, rejects a successful result that does not
-advance the cursor. Syntax-node child lists are owned; their public view cannot mutate storage.
-
-## Frozen analysis and emission
-
-`BGCS.Intermediate` owns the dependency-free semantic contract: `BindingModule`, types, functions,
-delegates, constants, imports, `MarshallingPlan`, diagnostics and `BindingGenerationResult<TModule>`.
-It also owns the frozen `CppBridgeModule` and `ICppBridgeEmitter` contracts.
-
-The configured C# chain is:
-
-```text
-configuration → C/C++ parser → declaration analysis → Binding IR
-→ safety and coverage validation → CSharpEmitter
-→ staged patches → single-file composition / optional Runtime → atomic publication
+```csharp
+NativeValue value = default;
+int result = value.Add(api, 2); // forwards to api.Add(ref value, 2)
 ```
 
-`IBindingEmitter` consumes frozen IR and an `EmissionContext`; it does not receive Clang objects,
-an SDK resolver or mutable generation services. `CSharpEmitter` rejects unsupported ABI semantics
-with `BGCSCS001` before writing output. Alternate emitters depend on Intermediate.
+An input-only receiver produces a `readonly` member forwarding `in this`.
+The context method pins original storage and validates native alignment for the
+complete call, including other `in`/`ref` values and spans that overlap it.
+The same value can use different independent binding contexts; a disposed
+context rejects new calls. In explicit static API mode, a member takes the
+concrete `ApiContext`, while the existing static `Api.Add(ref value, ...)`
+operation remains available. No field, size, offset or raw import changes.
 
-## C++ bridge
+This finite projection requires complete representable record storage, an
+explicit nonretaining call borrow and a supported direct scalar/void result.
+Output-only, volatile/unknown-qualified, opaque, flexible-array and over-aligned
+receivers retain their raw API with a stated projection omission. Status,
+ownership-return, callback and async combinations need their own checked
+projection. A value receiver cannot declare `objectName` or `releaseDomain`.
 
-`Cpp2CCodeGenerator.GenerateConfigured()` and the explicit `Generate(...)` entries produce a
-`BindingGenerationResult<CppBridgeModule>` available through `lastResult`. The C++ chain is:
+Local Windows x64 CoreCLR tests exercise all three imports and Runtime modes,
+including native address identity while a call spans compacting GC. NativeAOT,
+browser Wasm, other systems and final package certification remain separate.
 
-```text
-C++ AST → analysis and registered lowerings → frozen Bridge IR
-→ C header / C++ implementation → C parser → Binding IR → C# bindings
+### Context and runtime
+
+The default generated API is an independent instance with exact raw imports
+and eligible friendly wrappers. Dynamic targets provide `Load(...)`; supported
+static targets provide `FromStatic()`. Custom providers/external tables have
+explicit factories. Factories follow runtime/import capabilities.
+
+Consumers reference Runtime or request Runtime source output. Runtime does
+not require the generator/parser. A generated context retains a
+`NativeModuleSession`; calls, owned objects, callbacks and async operations
+retain leases. Closing stops new public calls while existing resources retain
+native cleanup access. Module unload follows the final lease release.
+
+Friendly strings, buffers, ownership and enums require explicit representable
+semantics. Fixed-width enum configuration changes friendly presentation while
+preserving raw scalar ABI. Unsupported by-value ABI or unknown ownership
+produces diagnostics rather than fabricated safe wrappers.
+
+See [Runtime lifetime](runtime-lifetime.md), [ABI safety](abi-safety.md),
+[MSBuild](msbuild.md) and [testing](testing.md). Local receipts certify named
+targets, runtimes, imports and stages. Release readiness requires every
+mandatory same-revision gate.
+
+## Explicit native addresses
+
+`api.pointerCarriers` names an existing record pointer, opaque record pointer or
+named `void*` alias. `pointerDepth` defaults to `1`; `readOnly: true` selects a
+const first pointee. Use an inspected native pointer identity when a record name
+would match multiple qualified shapes. No pointer facts or storage sizes are
+invented.
+
+An optional `documentation` string replaces the carrier's public description;
+it is escaped as inert XML documentation. It cannot inject declarations, XML
+includes or lifetime facts, and the generated non-owning warning remains.
+
+```json
+{
+  "api": {
+    "pointerCarriers": [
+      { "nativeType": "NativeEngine", "name": "EngineAddress" },
+      { "nativeType": "NativeWindow", "name": "WindowListAddress", "pointerDepth": 2 }
+    ],
+    "pointerFunctions": [
+      { "function": "get_engine", "returns": "EngineAddress" },
+      { "function": "engine_open", "parameters": [{ "parameter": "engine", "carrier": "EngineAddress" }] }
+    ]
+  }
+}
 ```
 
-`ICppBridgeEmitter` consumes the frozen bridge model. AST interpretation and lowering belong to
-analysis. An unsupported declaration reports `BGCSCPP001`; a file-system publication failure
-reports `BGCSIO001`. Unknown declarations are not silently treated as blittable values.
+An address carrier contains one `nint`, exposes `Handle`, null checks and address
+equality, and has no ownership or disposal behavior. Its raw imports retain the
+original pointer ABI. Explicit pointer-function presentation can reuse separately
+proved text, scalar, buffer and value conversions. It cannot replace an owned,
+module-borrowed or managed text result; those use their existing leased API.
 
-`CppBridgeBuildManifest` describes sources, includes, defines, native libraries and the selected
-target. Native build providers turn it into a shell-independent process plan. Export inspection
-and `NativeAssetLayout` validate the actual binary before packaging it under `runtimes/<rid>/native/`.
+Complete native records can expose `DangerousField_<name>()` references and
+`DangerousArray_<name>()` fixed-array views. Pointer fields expose values rather
+than references reinterpreted as wrapper structs. `DangerousGetAddressElement`
+handles an exact lower pointer carrier, including opaque pointer tables.
+Const storage uses readonly references/spans; writable whole-record and typed
+pointer views are omitted when they could expose const storage. Unmodeled volatile
+storage has no convenience view. Opaque addresses have no invented dereference.
 
-## Patches and metadata
-
-### Mutable overload analysis
-
-`CsType`, `CsParameterInfo`, `CsFunctionVariation`, and `CsFunctionOverload` are mutable analysis
-descriptors. Their native AST references belong to the current analysis invocation. They are not the
-frozen emitter input. `Clone()` copies managed descriptors and collection containers while retaining
-the source AST reference. `CsType.Clone()` preserves `in` as well as `ref` and `out` classification.
-
-`ValueVariation` captures independent parameter projections for signature comparison. Its hash does
-not change when the original descriptors change; its `parameters` property returns copies. A
-default-initialized value can be compared and hashed safely. `TryUpdateVariation` rejects an absent
-old variation without adding the replacement. Accepted analysis descriptors should be changed through
-the overload planner's update workflow so the variation collection and signature set remain coherent.
-
-`IPrePatch.Apply(config, result)` operates on the current mutable configuration and borrowed
-`ParseResult` before analysis. It does not rewrite input headers. AST references must not escape
-the attempt. `IPostPatch` receives current-run metadata and the complete staged output tree.
-`PatchContext.ReadFile` / `WriteFile` accept relative paths within that boundary and reject
-escaping paths or reparse points. New files participate in the same final publication.
-Post-patches run before single-file composition and optional standalone Runtime emission.
-Semantic additions shared by emitters belong in analysis or IR instead of a second generation path.
-
-## Runtime ownership
-
-### Attempt metadata
-
-`CsCodeGenerator.GetMetadata()` returns the live mutable metadata for the current attempt. A later
-attempt or `Reset()` replaces that container. `SaveMetadata(path)` is the generator's metadata
-inspection writer. The unused `CsCodeGeneratorMetadata.Save` / `Load` file entry points were removed;
-the metadata container owns named contributions rather than an independent persistence workflow.
-
-Merging a previously absent contribution clones it according to that entry's policy. Optional
-function-table contributions participate only when `BGCS.Configuration.MergeOptions.mergeFunctionTable`
-is enabled. A function-table merge validates the complete incoming batch before appending copied
-entries, so conflicting assignments leave the destination unchanged. Dictionary clones preserve
-their key comparer, constant clones preserve carrier overrides, and typed list clones retain nulls.
-
-### Language boundaries
-
-`BGCS.Language.Lexing` owns source-backed tokens and numeric syntax classification.
-`BGCS.Language.Parsing` owns cursors, analyzer dispatch, and parser results.
-`BGCS.Language.Syntax` owns shared syntax-tree containers, while
-`BGCS.Language.Diagnostics` owns source positions and language diagnostics.
-Dialect nodes and analyzers remain under `CSharp` and `Cpp`.
-
-The unused analyzer-free `BGCS.Language.Cpp.CppParser` and unused C# expression placeholder were
-removed. Native declarations are parsed by `BGCS.CppAst.Parsing.CppParser`; supported macro
-expressions use `BGCS.Language.Cpp.CppMacroParser`. These have different responsibilities.
-
-The lexer preserves adjacent source ranges, empty quoted strings and comments, and start positions
-across LF, CRLF, and CR. Numeric syntax is classified once by the lexical boundary. The generator's
-numeric projection reuses it and additionally selects managed carriers for unsuffixed integer values.
-
-`BGCS.Runtime` has no dependency on the generator, parser or consumer application.
-
-- `FunctionTable` distinguishes borrowed pointer storage from owned storage and `INativeContext`.
-  Disposal releases only owned resources and rejects further operations. Failed table initialization
-  disposes its candidate context before publication.
-- `NativeCallback<T>`, `NativeCallbackRegistry<TKey,TDelegate>` and
-  `NativeCallbackRegistration<TDelegate>` retain callbacks through the native registration lifetime.
-  Registration disposal coordinates in-flight calls and permits an explicit unregister retry.
-- `NativeAsyncOperation<TResult>` owns completion state and reports terminal cleanup failures.
-- `NativeCallbackExceptionBoundary` prevents managed exceptions from escaping an unmanaged callback.
-- `NativeAotCallback` accepts static unmanaged thunks for AOT consumers.
-- `Atomic<T>` supports unmanaged integers up to 64 bits. Arithmetic uses unchecked overflow;
-  copying the wrapper creates separate storage. Larger representations fail before access.
-- `Utils` provides matched unmanaged allocation/free and native text conversion. UTF-16 allocation
-  includes its terminator; allocation sizes and array byte counts are checked before use.
-
-Ownership, allocator pairs, callback threading and asynchronous completion are explicit mapping
-contracts. Safety diagnostics report missing high-risk semantics.
-
-## Verification
-
-See [Testing](testing.md) for managed, native, Wasm and NativeAOT consumers. The CLI's `build`
-command generates and compiles C#; native invocation requires a real target binary and consumer.
-BGCS acceptance uses its own fixtures and remains independent of any engine integration.
+Every `Dangerous` view requires the caller to keep the native allocation live,
+provide the correct bounds and synchronize native access. Null, alignment and
+checked offset tests do not establish these conditions. The view has no module
+lease; keep the appropriate context/resource owner alive independently. Unknown
+lifetime diagnostics remain subject to the configured safety policy. This
+presentation alone does not certify a platform or a lifetime protocol.

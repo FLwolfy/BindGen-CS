@@ -1,0 +1,63 @@
+{
+  "$schema": "../../schemas/bindgen.schema.json",
+  "schemaVersion": 1,
+  "library": {
+    "id": "sdl3",
+    "nativeName": "SDL3"
+  },
+  "source": {
+    "language": "c",
+    "languageStandard": "c17",
+    "includeHeaderHelpers": true,
+    "headers": [
+      "../../artifacts/corpus/headers/SDL/include/SDL3/SDL.h"
+    ],
+    "includeDirectories": [
+      "../../artifacts/corpus/headers/SDL/include"
+    ],
+    "includeTransitivelyReferencedHeaders": true,
+    "selection": {
+      "excludeDeclarations": [
+        "SDL_sscanf",
+        "SDL_snprintf",
+        "SDL_swprintf",
+        "SDL_asprintf",
+        "SDL_SetError",
+        "SDL_IOprintf",
+        "SDL_Log",
+        "SDL_LogTrace",
+        "SDL_LogVerbose",
+        "SDL_LogDebug",
+        "SDL_LogInfo",
+        "SDL_LogWarn",
+        "SDL_LogError",
+        "SDL_LogCritical",
+        "SDL_LogMessage",
+        "SDL_RenderDebugTextFormat"
+      ]
+    },
+    "defines": []
+  },
+  "api": {
+    "namespace": "BGCS.RealLibraries.SDL3",
+    "name": "SDL3",
+    "style": "instance",
+    "importMode": "functionTable",
+    "framework": "net10.0",
+    "names": {
+      "SDL_GetVersion": "CorpusVersion",
+      "SDL_abs": "CorpusAbsolute",
+      "SDL_GetRevision": "CorpusRevision"
+    }
+  },
+  "runtime": {
+    "mode": "package"
+  },
+  "nativeBuild": {
+    "mode": "none"
+  },
+  "output": {
+    "root": "Generated",
+    "layout": "singleFile"
+  }
+}

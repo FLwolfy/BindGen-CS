@@ -1,0 +1,28 @@
+{
+  "legacyFixture": "entryTests/FunctionNamingConvention",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/naming/functions/casing": "camel"
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "sampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd"
+    }
+  ]
+}

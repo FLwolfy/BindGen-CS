@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "state": "sourceRemovedParityPending",
+  "releaseCertification": false,
+  "featureParityCertified": false,
+  "reason": "The old standalone mutable authoring lexer/parser graph has no production callers after replacement of the old emitter. BGCS3 deliberately has no old public API compatibility layer. These implementation tests exercise the retired graph, not the native frontend or the neutral binding pipeline. Authoring C# syntax transformations use Roslyn; native C/C++ macro facts and expressions use the Clang frontend. Removing this unused graph is not feature or release certification.",
+  "referenceAudit": "rg of all production source found only self references within these six directories; TextHelper and its ToLiteral extension have no callers. Tests outside the listed files do not reference the retired namespaces.",
+  "preserved": [
+    {
+      "from": "src/BGCS.CSharp/CSharp/Preprocessing/CSharpPreprocessor.cs",
+      "to": "src/BGCS.CSharp/Processing/CSharpPreprocessor.cs",
+      "reason": "Actual Roslyn conditional preprocessing is preserved and aligned with the net10/CSharp14 baseline."
+    }
+  ],
+  "replacements": [
+    {
+      "capability": "C# syntax inspection and transformation",
+      "source": "src/BGCS.CSharp/Processing/SyntaxArtifactProcessor.cs",
+      "tests": "tests/BGCS.CSharp.Tests/SourceProcessorTests.cs",
+      "method": "AdvancedSyntaxSubclassRewritesDetachedSyntaxAndDoesNotInventCacheIdentity",
+      "status": "locallyPassedBeforeRetirement",
+      "receipt": "artifacts/implementation/test-results/configured-source-processor-seventeen-final.trx"
+    },
+    {
+      "capability": "C# conditional authoring preprocessing",
+      "source": "src/BGCS.CSharp/Processing/CSharpPreprocessor.cs",
+      "tests": "tests/BGCS.CSharp.Tests/CSharpPreprocessorTests.cs",
+      "status": "preservedNeedsCurrentBuild"
+    },
+    {
+      "capability": "Native macro and expression facts",
+      "source": "src/BGCS.Frontend.Clang",
+      "tests": [
+        "tests/BGCS.Frontend.Clang.Tests/Preprocessor/TestMacros.cs",
+        "tests/BGCS.Frontend.Clang.Tests/Parsing/TestExpressions.cs",
+        "tests/BGCS.Frontend.Clang.Tests/Preprocessor/NativeMacroAliasFactTests.cs"
+      ],
+      "status": "frontendSuiteInProgress"
+    },
+    {
+      "capability": "C# literals and neutral constants",
+      "source": "src/BGCS.CSharp",
+      "tests": "tests/BGCS.CSharp.Tests",
+      "status": "currentBackendSuiteRequired"
+    }
+  ],
+  "files": [
+    {
+      "path": "src/BGCS.CSharp/CSharp/CSharpParser.cs",
+      "category": "production",
+      "sha256": "23df2d781f2d56c59690f3e089291d4d9d49d065842cfadf84670ddbddf2bcfb"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Analyzers/ClassAnalyzer.cs",
+      "category": "production",
+      "sha256": "704e4b7757efe21118d39931dfc6025bd6ae276b589b8a398f3506b14a8f4acc"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Analyzers/ClassMemberAnalyzer.cs",
+      "category": "production",
+      "sha256": "0fe7c9997ed5ccf9137f0f0dfbf2da96fff18126e351ca9ffb2783f853a9d787"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Analyzers/FieldAnalyser.cs",
+      "category": "production",
+      "sha256": "6b1c1141c25075869f94835e2b1f4a7498599c62f8842cfc2569fea58984cf9e"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Analyzers/MethodAnalyser.cs",
+      "category": "production",
+      "sha256": "634fba0c1185da31b137dc463b7b746514fa7e0aa740b92016ede8f83313449c"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Analyzers/NamespaceAnalyzer.cs",
+      "category": "production",
+      "sha256": "1905f9e671acf754832979bde18c91e9568d55d1c7492b413a886c6c55e8cfb7"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Analyzers/UsingAnalyser.cs",
+      "category": "production",
+      "sha256": "7e7a29f646288034fb59f0686b25ec28f5b211f0e690b5d977e6a820d9c72aea"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Nodes/ClassNode.cs",
+      "category": "production",
+      "sha256": "285b1b09e90edec0219b5a60c9bb6f130f10d508c8a976440cdd6393e58e026e"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Nodes/FieldNode.cs",
+      "category": "production",
+      "sha256": "0864531bbe2214721d2be5833c4d4d5bdda90072d36595a2ddd58a105c1ea626"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Nodes/MethodNode.cs",
+      "category": "production",
+      "sha256": "d8eddf3c73f8999907895c9dc7b8e248dcef03f5ec84d9e5afee71e84ff4d6a6"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Nodes/NamespaceNode.cs",
+      "category": "production",
+      "sha256": "54c61b0cdcc8132ce01b74dd4a89377e13ceae19c2f8e69261f98d7f5c13d12a"
+    },
+    {
+      "path": "src/BGCS.CSharp/CSharp/Nodes/UsingNode.cs",
+      "category": "production",
+      "sha256": "44c29f3c52460c468857215b1c4412a17ba120b5c9fe92787c34c82598aacd14"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/CppMacroParser.cs",
+      "category": "production",
+      "sha256": "4fef67b7a6a74ff9de777960b99ab3abfeab685a2b12abfb0ceb1dcf95f5cd77"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Analysers/ExpressionAnalyser.cs",
+      "category": "production",
+      "sha256": "addf7dfe9a9f1930632598ffb75098d9c4f1ac395a51ca1a0a554dd13f5c1af8"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/CastNode.cs",
+      "category": "production",
+      "sha256": "6f12061962e585ec6b2f5b74b506c4bd5ff41e6bcac12914686fe4a0ec2d4ab2"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/ExpressionNode.cs",
+      "category": "production",
+      "sha256": "f14ac9414b1070211ec360b25b1d58f6f18bf8de9083a446fb1edf6abd4c8586"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/FunctionCallNode.cs",
+      "category": "production",
+      "sha256": "ca69bcd17a988062be6a536c137d4243726591b5b34581decdd468c688987ced"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/GroupNode.cs",
+      "category": "production",
+      "sha256": "ef35ae9ee4b077ced88f78526fab17b45109ad75814c4a42121110247e19f3ee"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/OperatorNode.cs",
+      "category": "production",
+      "sha256": "c3ed70bc0f2179c6f92560d22be16faeae41f85fc7a345be7df4d21cf59bebab"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/TypeNode.cs",
+      "category": "production",
+      "sha256": "1c02ba829ddcb992bd54bab12b44a8c5f818f9ee2b6a7ca2fb7bc214c7c4a394"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/ValueNode.cs",
+      "category": "production",
+      "sha256": "d484d97bdc12fd2ab434c05180416d52b8fc0379ab5149f08abe7a29d2b0fff0"
+    },
+    {
+      "path": "src/BGCS.CSharp/Cpp/Nodes/VariableNode.cs",
+      "category": "production",
+      "sha256": "215a16d8d7f4ef80b2b1dfbf7ef90d2bae9205e28fafdc112da0fda9c1f02010"
+    },
+    {
+      "path": "src/BGCS.CSharp/Lexing/KeywordType.cs",
+      "category": "production",
+      "sha256": "b3648a338ced6c79baaa8901a92000881fd7b216740f1fb5913e96efb1f56e4e"
+    },
+    {
+      "path": "src/BGCS.CSharp/Lexing/Lexer.cs",
+      "category": "production",
+      "sha256": "ae3fcb51be9e485cb476def1ef4e5c3d068f1ffed97900e0976dc1562fb45e68"
+    },
+    {
+      "path": "src/BGCS.CSharp/Lexing/LexerResult.cs",
+      "category": "production",
+      "sha256": "6b8b32069c345a5afa66ab4e84e4942b7b732b016eb3b1d64b2a472d6dd7ff5d"
+    },
+    {
+      "path": "src/BGCS.CSharp/Lexing/LiteralType.cs",
+      "category": "production",
+      "sha256": "f86a0eedac52d7bbe015f8e88be422f8e04d19368dbf9408fc028cf85b0afbef"
+    },
+    {
+      "path": "src/BGCS.CSharp/Lexing/NumberParseOptions.cs",
+      "category": "production",
+      "sha256": "e7185c7d3b8284b1c38cd7e7a7ed424ddc337a2901dd197ae468905d32294869"
+    },
+    {
+      "path": "src/BGCS.CSharp/Lexing/Token.cs",
+      "category": "production",
+      "sha256": "39558d5926d9dfb323aaeeb8a481fb69e4dfb167f91c7d7f90ceb11c9a272440"
+    },
+    {
+      "path": "src/BGCS.CSharp/Lexing/TokenType.cs",
+      "category": "production",
+      "sha256": "dd44ce1c43d735428a5dc6614d00666d67a9178a38014c853779ca925999f103"
+    },
+    {
+      "path": "src/BGCS.CSharp/Parsing/AnalyserResult.cs",
+      "category": "production",
+      "sha256": "8a217fb52e987c55d7c1cac8dd0bf2a0ea85dc782b2cc8e57fe75d57fc2b1822"
+    },
+    {
+      "path": "src/BGCS.CSharp/Parsing/IMemberSyntaxAnalyzer.cs",
+      "category": "production",
+      "sha256": "fe6ef392d21e6a0b484d2947e73a6df529b44e964d162fc0c621525242e57a41"
+    },
+    {
+      "path": "src/BGCS.CSharp/Parsing/ISyntaxAnalyzer.cs",
+      "category": "production",
+      "sha256": "7fd065e3612d1c7c16a778b075f4ba264acda6578132477370b74c1675f0ef54"
+    },
+    {
+      "path": "src/BGCS.CSharp/Parsing/ParserBase.cs",
+      "category": "production",
+      "sha256": "b695502604bcd7756cd613b82711cbffde7e224e26f8077dcff59c9d4d5d2323"
+    },
+    {
+      "path": "src/BGCS.CSharp/Parsing/ParserContext.cs",
+      "category": "production",
+      "sha256": "5b02730131df78a8decfb6c35880978cb251e4c36befeafb3ec14e7ca1eaab3c"
+    },
+    {
+      "path": "src/BGCS.CSharp/Parsing/ParserOptions.cs",
+      "category": "production",
+      "sha256": "03dd2954897b3366cddee40f9d8073715ae443d73be7b96b6e1919774c0de3f2"
+    },
+    {
+      "path": "src/BGCS.CSharp/Parsing/ParserResult.cs",
+      "category": "production",
+      "sha256": "a07cf67a3f5c43a81731c78e5613bb744f514989428839b9a5e44e3f50e9ca7f"
+    },
+    {
+      "path": "src/BGCS.CSharp/Syntax/RootNode.cs",
+      "category": "production",
+      "sha256": "f8cb86c21361841f4b23d1f898eba8f997d7179fb6e24910b470f79465478b81"
+    },
+    {
+      "path": "src/BGCS.CSharp/Syntax/SyntaxNode.cs",
+      "category": "production",
+      "sha256": "72daadc4bb3c2edbb96c63958c27eb2a004f23219212f74965107247bda72946"
+    },
+    {
+      "path": "src/BGCS.CSharp/Syntax/SyntaxTree.cs",
+      "category": "production",
+      "sha256": "57f86c0529a4a54660ee891f879e0ccd492d2f6d2e0019989c2ca56403b3dd4b"
+    },
+    {
+      "path": "src/BGCS.CSharp/Diagnostics/DiagnosticBag.cs",
+      "category": "production",
+      "sha256": "6564bf67f1a1c132fb038574face4ac237091de85c4ce805a0b534e8eadb70af"
+    },
+    {
+      "path": "src/BGCS.CSharp/Diagnostics/DiagnosticMessage.cs",
+      "category": "production",
+      "sha256": "d9371ad3b66176c3cac89f7ae71ae04a42a1e5e6d63147b0b4cfe82663d12231"
+    },
+    {
+      "path": "src/BGCS.CSharp/Diagnostics/LogMessageType.cs",
+      "category": "production",
+      "sha256": "2dd6f0f83e0368ac4000d508532d4b5247124be89a1dc0eee2c6505d92e2c80c"
+    },
+    {
+      "path": "src/BGCS.CSharp/Diagnostics/SourceLocation.cs",
+      "category": "production",
+      "sha256": "5cf7026233015128592eb8b129b102766398c2c7b0350e3323b4ffeff87ab7ad"
+    },
+    {
+      "path": "src/BGCS.CSharp/Emission/TextHelper.cs",
+      "category": "production",
+      "sha256": "4065b7267c9165b7639678a0e49843889febd4889318884d601d4460ad757128"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/CSharpParserTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "aa456442023ff8cb5e1cc3d59ac03ee282e8c2cbcdf049f358dc33b4d43a63ec"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/CppMacroParserTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "6b4935bfa7665b732dc657a06cff40048f3b0676a0e9030b41a8dc822fe5c114"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/LexerTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "c1e4b788f14cd73366d333d6991cd95618331df310a038541d50179d8c02a902"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/LexerBoundaryTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "5421be27de636f139f1f5c8c0e7f710cf7b7db293f5bef7e81e7c025787dba5c"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/TokenContractTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "f8fb97c44409e60d5d57f867554e62c778bf429cd32e4bc41c4331c9a5ace79a"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/ParserBoundaryTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "31e3316d94800baa17ab87ef8b8fbaa2aba5d7e91dc8d5ba9f2028d031ae2a17"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/SyntaxNodeOwnershipTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "4488548e46e1c4d93ba5a42184cbc575eecae56d0a61d69d5b60dca4edf7abd8"
+    },
+    {
+      "path": "tests/BGCS.CSharp.Tests/DiagnosticOwnershipTests.cs",
+      "category": "obsoleteImplementationTest",
+      "sha256": "1a4884d91708712f0d177dd8ec1625864e377beae3ecb720157ed1317d3491ba"
+    }
+  ]
+}

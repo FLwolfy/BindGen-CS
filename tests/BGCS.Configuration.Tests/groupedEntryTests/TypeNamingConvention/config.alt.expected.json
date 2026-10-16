@@ -1,0 +1,29 @@
+{
+  "legacyFixture": "entryTests/TypeNamingConvention",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/naming/types/casing": "pascal"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.SampleType",
+      "kind": "Struct"
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "MakeSample",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "value"
+      ],
+      "returns": "SampleType"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.sampleType"
+  ]
+}

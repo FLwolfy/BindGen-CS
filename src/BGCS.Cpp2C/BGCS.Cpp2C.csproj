@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Label="Compilation">
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -20,9 +21,8 @@
   </PropertyGroup>
 
   <ItemGroup Label="Project dependencies">
-    <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
-    <ProjectReference Include="../BGCS.CppAst/BGCS.CppAst.csproj" />
-    <ProjectReference Include="../BGCS.Intermediate/BGCS.Intermediate.csproj" />
+    <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
+    <ProjectReference Include="../BGCS.Analysis/BGCS.Analysis.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Package content">

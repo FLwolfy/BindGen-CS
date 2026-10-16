@@ -1,0 +1,1181 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "state": "sourceRemovedParityPending",
+  "releaseCertification": false,
+  "featureParityCertified": false,
+  "configurationParityCertified": false,
+  "reason": "The new major version removes the unused old facade, flat configuration and old binding model. Pending assertion-by-assertion parity remains gated separately; removing an obsolete harness does not certify it.",
+  "files": [
+    {
+      "path": "src/BGCS.CSharp/Emission/CSharpEmitter.cs",
+      "category": "production",
+      "sha256": "7b1b039d2527c92f3c75091b3d2a268253db01944c0c02f7c3563ed88831cc41"
+    },
+    {
+      "path": "src/BGCS.CSharp/Emission/RuntimeEmitter.cs",
+      "category": "production",
+      "sha256": "478292cf688596958aaf8ff127230c449ff2a16f28fc8768084e97bcaa94911a"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingCollection.cs",
+      "category": "production",
+      "sha256": "df035dc206d832e81c3d8fe3178e2074b562d51869562f633d260e932ec1c69f"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingConstant.cs",
+      "category": "production",
+      "sha256": "7f3b8d3b92472d7ade350b850f93ae264b72b9e425cc9d6e7c8d77c700aeec13"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingDelegate.cs",
+      "category": "production",
+      "sha256": "3c4a9bf729b5a985c2ea177320d4a3b18d0b77b4b75de68149399a95f1e2466e"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingEmissionException.cs",
+      "category": "production",
+      "sha256": "f35c4f9c4339af2e92b5ed9614e063d3de9dd9abc84afb00a5e2786ce7544c3d"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingFunction.cs",
+      "category": "production",
+      "sha256": "eca8b964f3fd09af69b4a47d7c4def3fefb36b93c75fdbd5cc0a080b5e50076e"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingGenerationResult.cs",
+      "category": "production",
+      "sha256": "c9fac4ff20b9979fa0e85a16dde4f7e05bb0869aa892501b2ee1fc6f18626b2c"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingImport.cs",
+      "category": "production",
+      "sha256": "a5e43255a18d2a73cc5f9aade57cd64999669ed8efab5abfe2558f4e0357d31e"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingModule.cs",
+      "category": "production",
+      "sha256": "b99ff4dcc60ff98cc1fb49adf86e2ebaf9b5caefe514e5b45c2adc640e96a48c"
+    },
+    {
+      "path": "src/BGCS.Contracts/BindingType.cs",
+      "category": "production",
+      "sha256": "04bd78d5efb2dd0cf84e23652c1ddbbcc509a627af5fa5b4471cec241061856b"
+    },
+    {
+      "path": "src/BGCS.Contracts/Emission/EmissionContext.cs",
+      "category": "production",
+      "sha256": "96f018a12c2d2c1be557f4792078e8c9c4b442f54d391f4a733c36b4e35ca591"
+    },
+    {
+      "path": "src/BGCS.Contracts/Emission/IBindingEmitter.cs",
+      "category": "production",
+      "sha256": "9a5e50fc41a85876f9e72a760eb84a50167d908cda90596ef7d37b68dbe0b85e"
+    },
+    {
+      "path": "src/BGCS.Contracts/MarshallingPlan.cs",
+      "category": "production",
+      "sha256": "0c9270e12d9bca76dd51abd8a1b5c71c1ce0e3bd0c5dd890431be0c1d9302e39"
+    },
+    {
+      "path": "src/BGCS.Contracts/StrictSafetySeverity.cs",
+      "category": "production",
+      "sha256": "d0d06973c0fc01454cc65dce11457297d2f87b647b2fe5546f0a6cbeeea5df6d"
+    },
+    {
+      "path": "src/BGCS/Analysis/AbiLayoutAnalyzer.cs",
+      "category": "production",
+      "sha256": "d4e7e9fe5bdfc2d4635ead41ba8291204bb7fb93a014e04f5ba14df4f7d1f39a"
+    },
+    {
+      "path": "src/BGCS/Analysis/BindingDelegateBuilder.cs",
+      "category": "production",
+      "sha256": "a7adca0d9d9bedffa9ce8c213653be519e522f403837069fffae979e96c214ad"
+    },
+    {
+      "path": "src/BGCS/Analysis/BindingFunctionBuilder.cs",
+      "category": "production",
+      "sha256": "6e32000cb7d311c1d0f250d8c9a4c143a54d1b299d90c98f6e49d1d3dee17c17"
+    },
+    {
+      "path": "src/BGCS/Analysis/BindingModuleAnalyzer.cs",
+      "category": "production",
+      "sha256": "fb2ebc82abe72f082730dc7115f037a413f7ba76cbd4631d3c30c0489f20e04b"
+    },
+    {
+      "path": "src/BGCS/Analysis/BindingModuleBuilder.cs",
+      "category": "production",
+      "sha256": "23041a0255d5f39434353ac04b734c07f75a264d15d3ff6a0945687fa09fe36f"
+    },
+    {
+      "path": "src/BGCS/Analysis/BindingTypeBuilder.cs",
+      "category": "production",
+      "sha256": "b0e5f5d71ce69c8cdc5b9812a5f4ab9dd21767a664792e66c40a3dd7f8bd6e4d"
+    },
+    {
+      "path": "src/BGCS/Analysis/Constants/NumberHelper.cs",
+      "category": "production",
+      "sha256": "80d7babe1d49448e690532af2ea7dd5a8c907dea8f129ef7b61922147b7b262a"
+    },
+    {
+      "path": "src/BGCS/Analysis/Constants/NumberParseOptions.cs",
+      "category": "production",
+      "sha256": "94c8f4099af3a09eb1017e2845c7340b17ea32903a2b9252166d8fca01df5201"
+    },
+    {
+      "path": "src/BGCS/Analysis/CppMacroExtensions.cs",
+      "category": "production",
+      "sha256": "ec127337990eac21955883f6cb7d4e831a723829b40d2e819289c85931f2bf78"
+    },
+    {
+      "path": "src/BGCS/Analysis/DeclarationGraph.cs",
+      "category": "production",
+      "sha256": "cdc281d30268acaf3a129f72f184ca84f42b8c68763904c4172f0a402ed07470"
+    },
+    {
+      "path": "src/BGCS/Analysis/FunctionTableBuilder.cs",
+      "category": "production",
+      "sha256": "6bc2952e8ba571e7fb98191ec31528688de00904197e483f66532f8c6ad5bd87"
+    },
+    {
+      "path": "src/BGCS/Analysis/OverloadPlanner.cs",
+      "category": "production",
+      "sha256": "3290d14b674ad849ac938dbf970e0f0f7b29da1bacfe8e1ff1aec086f6282b0c"
+    },
+    {
+      "path": "src/BGCS/Analysis/OwnershipAnalyzer.cs",
+      "category": "production",
+      "sha256": "0dfcd76addf54d589d801112a943d65e360efd7762109500d4a88818ebb946aa"
+    },
+    {
+      "path": "src/BGCS/Analysis/ParseResult.cs",
+      "category": "production",
+      "sha256": "04a9cbe615a903d4f1fe1a5344b860cac77bf88eaae880c49af4ce51398876a0"
+    },
+    {
+      "path": "src/BGCS/Analysis/PreProcessing/ConstantPreProcessStep.cs",
+      "category": "production",
+      "sha256": "689af8d706815a1a5a7e52190700a17c393fd715d636845c8f33f4d0a28e85b4"
+    },
+    {
+      "path": "src/BGCS/Analysis/PreProcessing/PreProcessStep.cs",
+      "category": "production",
+      "sha256": "af47fd3057bb287944b810c598364603d3ace80469df75de738b301138eb8386"
+    },
+    {
+      "path": "src/BGCS/Analysis/StrictSafetyAnalyzer.cs",
+      "category": "production",
+      "sha256": "184b24bc7414613276bc01c2dd0507273d1013bd6d4310733b3ff65fb599fddf"
+    },
+    {
+      "path": "src/BGCS/Analysis/TypeAnalyzer.cs",
+      "category": "production",
+      "sha256": "02b9bd76e803caa6baa88a0914bb8f5ba67610fdbac648e5fa03e0380945ef48"
+    },
+    {
+      "path": "src/BGCS/Application/BindingGenerationPipeline.cs",
+      "category": "production",
+      "sha256": "8963fedeb8edcc56392c22f0fbeaf61d1727e319c28f18d0ebdcc5bf79faac9a"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsDelegate.cs",
+      "category": "production",
+      "sha256": "b69752f5cf6b160072c48862de8c3266288abe4f20ec0e22baaae98c7563968a"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsFunction.cs",
+      "category": "production",
+      "sha256": "e328e16d8ff537323aa85af10a92fda7b79ec2b52cd036a7ed04cf28e5d394ef"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsFunctionOverload.cs",
+      "category": "production",
+      "sha256": "6c7d485e66bc52857c5b3aeb8ead217519e5d2cb258a26502540bf4e5c12b7a6"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsFunctionVariation.cs",
+      "category": "production",
+      "sha256": "01a5f56565130422ca634023e1883b4a3710d87673b05cd705cff55c3c752b53"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsGenericParameterInfo.cs",
+      "category": "production",
+      "sha256": "6712c6b0953d7b3a1e919dc6407a93f82e9686bdcbc4abed5fa28772667b635d"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsParameterInfo.cs",
+      "category": "production",
+      "sha256": "9515839a88f9e409faef626a3f57acc8e78702396deb71f41787874545a32307"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsPrimitiveType.cs",
+      "category": "production",
+      "sha256": "40944d79dea7537c7b4945527d3a4f2082b931df24e35c358b530983b799741b"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsStringType.cs",
+      "category": "production",
+      "sha256": "50c2203ec7bbd9963f585fd7e174f8dab44c3157a02004b459a6ff751e7519ba"
+    },
+    {
+      "path": "src/BGCS/CSharp/CsType.cs",
+      "category": "production",
+      "sha256": "97b1fe7d1ebac93279af617f987f4e6025a082409852040d18e7193867a088be"
+    },
+    {
+      "path": "src/BGCS/CSharp/Direction.cs",
+      "category": "production",
+      "sha256": "c67f4f15039125c39ea819a06a18b71aa9d22914e4fca33e4a928afeb0e2ab69"
+    },
+    {
+      "path": "src/BGCS/CSharp/FunctionAlias.cs",
+      "category": "production",
+      "sha256": "0860ea12bb89571f457375192c2fb032f687b4d989d5443b7e26c6f2acc4940a"
+    },
+    {
+      "path": "src/BGCS/CSharp/ICsFunction.cs",
+      "category": "production",
+      "sha256": "3eebbe69da2f2fc6219546be1292e237ec1162a8783ba1eabc9912081b475b8b"
+    },
+    {
+      "path": "src/BGCS/CSharp/ValueVariation.cs",
+      "category": "production",
+      "sha256": "a7f182fdf52aee316ffc29f6daeee97fa1c8d27928599286fcb5c2cf7038d102"
+    },
+    {
+      "path": "src/BGCS/CSharp/WriteFunctionFlags.cs",
+      "category": "production",
+      "sha256": "441b4aa3cf55f1a71c248c5c9dcb564a46875071cbd303e090a2bd24d7c566f2"
+    },
+    {
+      "path": "src/BGCS/Configuration/BaseConfig.cs",
+      "category": "production",
+      "sha256": "a5612cf6585dbc785f9b92dbee5f8d907dfc34dde5e07270f3be424b622be6a9"
+    },
+    {
+      "path": "src/BGCS/Configuration/ConfigComposer.cs",
+      "category": "production",
+      "sha256": "bb838b6a333153128b4cd07019271c04a57d5a91a26e929e07a2b002e83ef28d"
+    },
+    {
+      "path": "src/BGCS/Configuration/ConfigDocumentLoader.cs",
+      "category": "production",
+      "sha256": "fc22d45e3f80ea50c0d066d17d2254190b43841f1a4ffaa989004dcc3ca7371e"
+    },
+    {
+      "path": "src/BGCS/Configuration/ConfigLoader.cs",
+      "category": "production",
+      "sha256": "93d59411a1e70f2418075c2e12f76183ef926efedf295b4cc6b1b4429e255a6d"
+    },
+    {
+      "path": "src/BGCS/Configuration/ConfigValidator.cs",
+      "category": "production",
+      "sha256": "4890c89dc42b84d6f108f2d29228f90b94c40424650a4665e31f869ff8551320"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.Defaults.cs",
+      "category": "production",
+      "sha256": "99f1d5b7560a6b05fe6dd559dd54e4370d7ef76be8c04ed97a16b1de7054343d"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "category": "production",
+      "sha256": "19e7e69d5270f07c631faadc28ce8ee6dd3d1a8f4de8973d24f3a41d30adf53a"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.Merge.cs",
+      "category": "production",
+      "sha256": "0fa4982747a42cf2f12a60320cfb73e1221514dde7f1f973c68f8927ba5193a8"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.Naming.cs",
+      "category": "production",
+      "sha256": "90ef44e1045d8d98c96c3296bcdb3c0e66af008d6c2d645c74e7114653a216e1"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.Serialization.cs",
+      "category": "production",
+      "sha256": "e9f2795ac6bfc65c4bfbc085f5e10a7440a80952dbecf14440b5fff4be9e002a"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.TypeNaming.cs",
+      "category": "production",
+      "sha256": "900de648f99258d5e41d33c76c3e2b233379383439cc68a807809309f6ef8e95"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.Types.cs",
+      "category": "production",
+      "sha256": "71cee2fe5ca08164e28ea7dbf7226cbe7d0b727c11dc62c66a3e6bfd6b4a34c2"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "category": "production",
+      "sha256": "a28c40ad7f9f3b77605b527ce6ca7792b309d0ab67d64112b8a6eee37164fe84"
+    },
+    {
+      "path": "src/BGCS/Configuration/CsCodeGeneratorConfigValidator.cs",
+      "category": "production",
+      "sha256": "a30867410b1b0a24275fcc5696fbc34b5f31f8653b1b50b1eb0212395d2e683d"
+    },
+    {
+      "path": "src/BGCS/Configuration/FunctionMarshallingMapping.cs",
+      "category": "production",
+      "sha256": "a83df5c5594a87f3c18359809167593922c2c977c9486fcea2fd6876f076dae8"
+    },
+    {
+      "path": "src/BGCS/Configuration/IConfigComposer.cs",
+      "category": "production",
+      "sha256": "9bd641811b7018f785d76fd9ea0729ba9d50566cfab44528cf4c8cbb19a68f91"
+    },
+    {
+      "path": "src/BGCS/Configuration/IGeneratorConfig.cs",
+      "category": "production",
+      "sha256": "64d96f6238fe46c2bb7522a9c92619db40e5bbf93eb9eed6f1dede565f14e3e9"
+    },
+    {
+      "path": "src/BGCS/Configuration/ImportType.cs",
+      "category": "production",
+      "sha256": "e1b0a43bf02d123274a4c9efad1564a852adbe4617699f838e10af0e4568658b"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/ArrayMapping.cs",
+      "category": "production",
+      "sha256": "5e13df83b0acd2204d61d133b0b32bf4915fe4f24181225a759fda29aa27cc1b"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/BoolType.cs",
+      "category": "production",
+      "sha256": "986728b7e83916a242b4ec6de5670a334ec71716953a1a2726330049ec9ffe84"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/ConstantMapping.cs",
+      "category": "production",
+      "sha256": "a02b5e03f0449cb81c2f0040aab47d18d8708b7ea95de24d9a60d66498832b49"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/DelegateMapping.cs",
+      "category": "production",
+      "sha256": "2da93f9ee7237d0cb4dd7629ce1ffab58598b29091de0d229ccba9411cf82f6a"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/EnumItemMapping.cs",
+      "category": "production",
+      "sha256": "8d9ef0aca73bdafe5253461c17a94efd43e2fccc84d9c44de956802e948e680d"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/EnumMapping.cs",
+      "category": "production",
+      "sha256": "ec382286530262d0d483f1ed26e117b46e95f0f83ade5a07de27cad660f53996"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/EnumPrefix.cs",
+      "category": "production",
+      "sha256": "af9adc1278505af211f586cb93fb9ab02a60a48eb45bfdc1999f9efe001d0d6e"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/ExternalTypeContract.cs",
+      "category": "production",
+      "sha256": "e9d44481d22587e6a102d2badb3ebe3fdfda7277d2aadeb7c4e5defb1f0df028"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/FunctionAliasMapping.cs",
+      "category": "production",
+      "sha256": "8d8e82e82b99129153039991f3b74457b70ff841f76637e0f9e11a080cb63106"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "category": "production",
+      "sha256": "fdd859593bb4d87df25ea70f241e602fb014a9be793fa60852948860d020b956"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/HandleMapping.cs",
+      "category": "production",
+      "sha256": "09d72285ba70125b7799917a2e42be5fdaa8bfcd00983c7879c343cf25835f1e"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/StructValidityMapping.cs",
+      "category": "production",
+      "sha256": "91aff3a3931a547c6129ea14bb2edec56f53127b2e3137340788943f0696be4b"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/TypeFieldMapping.cs",
+      "category": "production",
+      "sha256": "03fb6ea12125b6d6be41d19b2de970a522798995941a5d636a90adf3d94d7dd8"
+    },
+    {
+      "path": "src/BGCS/Configuration/Mapping/TypeMapping.cs",
+      "category": "production",
+      "sha256": "4cbfb60fe7c295fb51ded6c236e6b8c6724aac9934c95508d41c4ddb2ff3f0d3"
+    },
+    {
+      "path": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "category": "production",
+      "sha256": "90cd87b1e51f90aaf775cec2ee13bbc21aecd3578ce2257a59b36987183c262b"
+    },
+    {
+      "path": "src/BGCS/Configuration/MergeOptions.cs",
+      "category": "production",
+      "sha256": "7f3f2487cba204e50945b07664315c3787911e15bc5d031ced578bdf5f6bec46"
+    },
+    {
+      "path": "src/BGCS/Configuration/Naming/NamingConvention.cs",
+      "category": "production",
+      "sha256": "af2119518c1046d5f3977328049a6f356102b61a4824f00957b5338444b95747"
+    },
+    {
+      "path": "src/BGCS/Configuration/PresetResolver.cs",
+      "category": "production",
+      "sha256": "28541713118723d399609ba2150bde7fac49f8313f417fcba2f41b0ed43e09b1"
+    },
+    {
+      "path": "src/BGCS/Configuration/VariadicFunctionVariant.cs",
+      "category": "production",
+      "sha256": "6d247d1af608bc25bb6d56a78c13627a2e1b60c0b3ec80399887101e9257b164"
+    },
+    {
+      "path": "src/BGCS/Conversion/CppBindingExtensions.cs",
+      "category": "production",
+      "sha256": "a9c8fc7e9d212f359a63ad4a6e917ae4f2e8ac62e3e301942f9789535f4991c6"
+    },
+    {
+      "path": "src/BGCS/Conversion/CppTypeConverter.cs",
+      "category": "production",
+      "sha256": "ed5a9845e443e99f1c429f5770990867376b60af1b13885b7c2f94089f18d678"
+    },
+    {
+      "path": "src/BGCS/Conversion/FormatHelper.cs",
+      "category": "production",
+      "sha256": "2e097d80275c20ab76e56c67d32f92d1931ceb1ed93bc575c9494227df71f20b"
+    },
+    {
+      "path": "src/BGCS/Conversion/PlatformAbiTypeClassifier.cs",
+      "category": "production",
+      "sha256": "34b2e3e3c3557bd7cfdaa18004783239ead438c6c7d574b4d77ae8619d4f0a52"
+    },
+    {
+      "path": "src/BGCS/Conversion/UnexposedTypeException.cs",
+      "category": "production",
+      "sha256": "b37ff3c2cf8403f819f42f6edabd2b81c16e756dc6e2a459b9106ac9f368a3d4"
+    },
+    {
+      "path": "src/BGCS/Facade/BaseGenerator.cs",
+      "category": "production",
+      "sha256": "bd8c0fbf5a0b27be16640c61d5df7858f571bd57f343b752c8e1934ee813c5f2"
+    },
+    {
+      "path": "src/BGCS/Facade/BindingGenerator.cs",
+      "category": "production",
+      "sha256": "15b748063d6fa243519b8fb169ed356a06d384a43f07b419941aa3c80aa2e7f7"
+    },
+    {
+      "path": "src/BGCS/Facade/CsCodeGenerator.cs",
+      "category": "production",
+      "sha256": "f15e1d0621aef66007bff1c87abad1abd474e790d97bbb392a1c26ca9a7fe248"
+    },
+    {
+      "path": "src/BGCS/Generation/ConfiguredGenerationRequest.cs",
+      "category": "production",
+      "sha256": "511ee965a941615cee07b4a82873ee2cd56a70247bd2b93efe4a9c6bb5bde54a"
+    },
+    {
+      "path": "src/BGCS/Metadata/CsCodeGeneratorMetadata.cs",
+      "category": "production",
+      "sha256": "59d90898507c3223d2638bcdef1f5775d5651f4412904b7235ebb58c23f2f56f"
+    },
+    {
+      "path": "src/BGCS/Metadata/CsConstantMetadata.cs",
+      "category": "production",
+      "sha256": "8f6fd2912acb0a67e6fcaab3dff481701f01105413589fdd52ff1bda992965ee"
+    },
+    {
+      "path": "src/BGCS/Metadata/CsConstantType.cs",
+      "category": "production",
+      "sha256": "b241ee80010d8398a31ba12c50bd338a0402d92fffbd0b3e243891c7d8adcfd8"
+    },
+    {
+      "path": "src/BGCS/Metadata/CsEnumItemMetadata.cs",
+      "category": "production",
+      "sha256": "3f33dd6c9a3a5f3588de0e9b2db4a41762355b97ed65210a39971395556e2d8f"
+    },
+    {
+      "path": "src/BGCS/Metadata/CsEnumMetadata.cs",
+      "category": "production",
+      "sha256": "ddeacb3c9e3d57d1dea531528e915431d5eb6231679b1852526a850f3739177d"
+    },
+    {
+      "path": "src/BGCS/Metadata/CsFunctionTableEntry.cs",
+      "category": "production",
+      "sha256": "dd1ab1b217ebf8f6886012f5baeca39cbf5e19c5653d61e6d9ab8dc93655b026"
+    },
+    {
+      "path": "src/BGCS/Metadata/CsFunctionTableMetadata.cs",
+      "category": "production",
+      "sha256": "5a973f33d9c2666caf143464eea7971c84ecdc8e1c93edf64165f6b79739807d"
+    },
+    {
+      "path": "src/BGCS/Metadata/GeneratorMetadataEntry.cs",
+      "category": "production",
+      "sha256": "460cb2e7ce4b5531a0022cc4d2b1e2378a8ed29ea72edd0697a7dccbb2468abd"
+    },
+    {
+      "path": "src/BGCS/Metadata/MergeOptions.cs",
+      "category": "production",
+      "sha256": "3803311d9182ad49bd192b1bdfadb506b812172d8a44032970985af84f22b668"
+    },
+    {
+      "path": "src/BGCS/Metadata/MetadataDictionaryEntry.cs",
+      "category": "production",
+      "sha256": "a2aa2c08d16a2089a6dc5587b2f33b0ec68a531bb75ad80bcc8a9a0a8b53113a"
+    },
+    {
+      "path": "src/BGCS/Metadata/MetadataListEntry.cs",
+      "category": "production",
+      "sha256": "1ac2e340b5dcd4632cb44314602119d9ff99e2b84f749ff1293e0cd0a86a6c24"
+    },
+    {
+      "path": "src/BGCS/Output/SingleFileOutputNameResolver.cs",
+      "category": "production",
+      "sha256": "25b8da628fbaf7cfefb125c30402fbe8e5ff21c514f88cc0cfcef9ff0f84de39"
+    },
+    {
+      "path": "src/BGCS/Patching/ConstantsToEnumPatch.cs",
+      "category": "production",
+      "sha256": "fce7196c4d4ffb2764c2395916e79f1c1cdb1d7516819fec20c6274bf14addb7"
+    },
+    {
+      "path": "src/BGCS/Patching/IPostPatch.cs",
+      "category": "production",
+      "sha256": "38d2527b8a41daf0b2dc7a8075f3f7253de3bf96421ece788726983cbf2a2e2e"
+    },
+    {
+      "path": "src/BGCS/Patching/IPrePatch.cs",
+      "category": "production",
+      "sha256": "86a1f60b59b813e6c3e15b9f3c4eea49f05efea550021e0317cc619b6258b1f5"
+    },
+    {
+      "path": "src/BGCS/Patching/NamingPatch.cs",
+      "category": "production",
+      "sha256": "87fcbf13cd50c797198d2b413cff1bed89e65c34e771b8a60ab6bbc287300719"
+    },
+    {
+      "path": "src/BGCS/Patching/PatchContext.cs",
+      "category": "production",
+      "sha256": "cdc131dbe5bb24b6834c772345930c164ede667309c4fa095482f4b15b8f2a1c"
+    },
+    {
+      "path": "src/BGCS/Patching/PatchEngine.cs",
+      "category": "production",
+      "sha256": "5d2670fa5628a58199ffcefc6f07a45fc59be0eaf1b35303715b4d526b06e375"
+    },
+    {
+      "path": "src/BGCS/Patching/PostPatch.cs",
+      "category": "production",
+      "sha256": "434150c1677129edfe06e904eaf0fe79ee6b5ec0fd7f349b9f88f3fc8f5c1740"
+    },
+    {
+      "path": "src/BGCS/Patching/PrePatch.cs",
+      "category": "production",
+      "sha256": "274bc8e10ed0457c2a7eae8c46b1981ec51206b7258fd9f88a5c1b17bd3f2dc2"
+    },
+    {
+      "path": "src/BGCS/Patching/RegexPatch.cs",
+      "category": "production",
+      "sha256": "2ab638d836477339198039e85cfe54ab9987d8bb8dd90a180444e2bf6cc2972b"
+    },
+    {
+      "path": "src/BGCS/Platform/NativeAbi.cs",
+      "category": "production",
+      "sha256": "9a3ea9238cd2e791d44b867000f8d203ef36cc5d8620ad07cc3a1fc63570d942"
+    },
+    {
+      "path": "src/BGCS/Text/IdentifierTextExtensions.cs",
+      "category": "production",
+      "sha256": "4933393ebf1675fbd01c695a5edb849160d491ef09202af1ac6219921b940c24"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/ConfigurationEntryTestBase.cs",
+      "category": "oldTestHarness",
+      "sha256": "7851f80c57188ae9301fe05fe37ac5eb2042f060223c76c2d18046b47d220fd8"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AdditionalArguments/AdditionalArgumentsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "dc5af7ccd2b207c216d6e0842c1c9b3e88a762deca15cc886eee90acfedcefdc"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedConstants/AllowedConstantsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "007dba78bc07479affada2bf2a00a96fc5ff5f118418a377148656a12a46ee0e"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedDelegates/AllowedDelegatesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "60873d2b3dac653485b4e7ad10d99f9c4d7e9f541bec2f2f7ca19f67d443443f"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedEnums/AllowedEnumsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a6ead5b70e4152ee08c9543ceadfe396dd863c8d1c69cb7da0181df53b5d1a54"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedExtensions/AllowedExtensionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "19b148063776da8b42bf7c07356d7e3f6aa6a1e5bd0ed8aaf56f3dc6f210ed02"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedFunctions/AllowedFunctionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "72cd58a7651ff28f17bf2a95f8bcdee87956abc47b491820debf891a46f27679"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedTypedefs/AllowedTypedefsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "ab8c50cc460e7a10e0d4489377e9c1c31de066af12eb518a9237f97091eded44"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedTypes/AllowedTypesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "e8a3ce24cd5e234940b148c315048ab61437c150e2e6167a03c0b7190bf8ea90"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/ApiName/ApiNameEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "2272011b5b4fcc21c5c27e53576d8e80086b99637781b1537c66e1db724d40b0"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AutoSquashTypedef/AutoSquashTypedefEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "dfe7bd60c86af1dd73966ffb69ce2e94e5c168041d3a4b1cfe30679ca2622e4a"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AutoWrapCallbacks/AutoWrapCallbacksEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "e66a9e5934239151057cb185d1f59e4bc6c80ad9d98bc3d3ccf5fff3ef25c17d"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/BaseConfig/BaseConfigEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "261e71bdb7cca7d8b477ff5c865fe53a6986a6fbd03c2c8fc84a60c1506c7318"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/BoolType/BoolTypeEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "c461e333daec0a90b8004e5dadb11ae93342ea414ab924c12b2a6eea425a9849"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/ConstantNamingConvention/ConstantNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "7677ded580e860a17c2707a78ac8881654c6c1ec120821ce8e60a8845e4cd49c"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/CppLogLevel/CppLogLevelEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "67f3c00490e0b5bfe3659d1a9ebdd9a5dedb59c60273194202bb8a45f383691b"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/CustomEnums/CustomEnumsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "d0ec0e1abe44dcb25d1d0227c55dc897a2bcfc02ebdef1e15245a33acae70691"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/Defines/DefinesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "93b8d4d648e566e2dd7817f701782ab10e6c1131044180a71c63920a5943cb2a"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/DelegateNamingConvention/DelegateNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "3bd55723c4f25396c67e623be661077c17771e8820b000ab6841d7d2acc8a006"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/DelegatesAsVoidPointer/DelegatesAsVoidPointerEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "4fb3467673199fc64c4b57b7d67943d3ecbd2dc3501fad1c96e665e059dee925"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/EnableExperimentalOptions/EnableExperimentalOptionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "9d9fc0c8e6d2f529faa17df4382125a72549aae4de93ef16301eade0a2a89da4"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/EnumItemNamingConvention/EnumItemNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "b12cd300f97c700f38985f44972712bdb806e2ea9402dcc2cc65eec3d172b27d"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/EnumNamingConvention/EnumNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "7353d67b5e010ddea0f89384381610752c840f0f2f41b8aaaeeaef5505d493ea"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/ExtensionNamingConvention/ExtensionNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "9c4e96808d9506d4ecf01a6adacf95411e3f9eadca54bbd2250daf82aba3bf3c"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/FunctionContainerMappings/FunctionContainerMappingsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "1a860b9e4ad2f7ee02a686fb837de0735f05e80a729453ae527bf9db8a827a3f"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/FunctionNamingConvention/FunctionNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "319fd7a45505879c100ae2c7c4766959a59d2b59743eb031d0bc9b64056ad875"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/FunctionTableEntries/FunctionTableEntriesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "45282474aafb5f22c60985729054a40fe629808eb71ccad1e6a7d913754c7f9c"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateAdditionalOverloads/GenerateAdditionalOverloadsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "c74f36d8454df2bb58af07d87a85da9e6c0bbd65ce55abb993c843e7e1b8aef9"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateConstants/GenerateConstantsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "202318f9e26bfa4e96dafe5300d821183edc092166e43ed9d615f46a48914e42"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateConstructorsForStructs/GenerateConstructorsForStructsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "fffb15a5557c7aa14adcdadd0ba8c6d7441adabe7d50c6c56af74ef3908bc2cd"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateDelegates/GenerateDelegatesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "dca320e3351e087a3c9ff909f60dd074d9778bba357022b410e091e2b34d2980"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateEnums/GenerateEnumsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "d6b0c45f63d6014da3921bf57b75aa6800c9f31afeaad674ccf82fceb4bd7cb6"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateExtensions/GenerateExtensionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "646be1b0c84ec2a161e9628bfe878ca4dcd9b3f0e0055f8281fab656d29d519a"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateFunctions/GenerateFunctionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "01799f9e626ddefd4c88217ee9bdd056f686c8aad431db07e1fbf7716924fbcf"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateHandles/GenerateHandlesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "9d1f1d8d2a9f4a00e7d126dcbe482ccfac2aaf3260a1081c2d7f91ff4aa52b04"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateMetadata/GenerateMetadataEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "cc45d9d118c08f75bb48d32b3b9dbec1a84b49b7c927b39af96e9e4b82f4968d"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GeneratePlaceholderComments/GeneratePlaceholderCommentsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a8e2faf9f8906d02516743b8ef1dd19dda729a398a42a0d3edae4583943278d7"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateRuntimeSource/GenerateRuntimeSourceEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "859de57b90be93397fd11bf1bc9d36c9296337fdffefefbee2dd8302410125df"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateSizeOfStructs/GenerateSizeOfStructsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "73278d5c99976acff7a09959518c1a52c8bb2e40f530fc7baf8ff7cbfb7e8f6e"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateTypes/GenerateTypesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "17183bd5eefebccd4b2fb85820172842327508f61b38954cec56f193d92d1227"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryExtensionFunctionName/GetLibraryExtensionFunctionNameEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "e8d7571a09d3d6e067fdc96ade1c6c13630df5a435a4260d36057fa2e20be278"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryNameFunctionName/GetLibraryNameFunctionNameEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "61628992b8938077b2d2b2dffe3a610d6f28ce4b86acea62b541bd6c0c63c8c8"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/HandleNamingConvention/HandleNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "d40fd76cc110e6c156d5299adbbbf6c34b8037a2a661ad95e44edadbc0aadda7"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredConstants/IgnoredConstantsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "fe2b5b714af679a1438fda639401e89e6c82d28b20db5c132097e5cf976a4056"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredDelegates/IgnoredDelegatesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "bb05c9060076cec27dbc93427b2db0870c0ff070ae120033203a8d12f2a3283c"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredEnums/IgnoredEnumsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "0912df5bc9b1fd9e8c18e73f5641dfca7b7b218add43e5306cf1742e81c227c2"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredExtensions/IgnoredExtensionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "ff14e140380365fad5de5519dbf54fb56fe79753bd9e4267688f3b209f34b7e8"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredFunctions/IgnoredFunctionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "614e8b8e6923ee756fb156915781fae340e078b52276863fca8c35dbc09c4a00"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredParts/IgnoredPartsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "c4ef10acaaa718b65097ec01cef891f3efc88ccc4db0dd1ddeed03a494aa9503"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredTypedefs/IgnoredTypedefsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "49c9647cf1149c50f00d994fc44171943b592abe0e88aa662fb97b72ff796592"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredTypes/IgnoredTypesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "5c6a77deaccb27c975a8619b8518cc9186ae5b744d9cf3277cb36283b3f7c07b"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/ImportType/ImportTypeEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "234cd09537c9de2a20f3ee1470beec28d3e5e7e6e1497118251840ce0a6a3ea5"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IncludeFolders/IncludeFoldersEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "fc75e6670a8c98f86b4048d96781a85ac2e6f6e6f279b0520fd499b19ff8224d"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/Keywords/KeywordsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "4dba5dd3a5a93acd1cef3695d5a019e3881c9010db5113dafe5a142303f56c52"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownConstantNames/KnownConstantNamesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "b4b21012f0a7f4dc0efc8b00742637dbe01418fb1adabb1e04ae96809f334039"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownConstructors/KnownConstructorsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "87a61358b2df869c63cfcd2b065ce5a08b337207288b900723c37b8c9ead96c1"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownDefaultValueNames/KnownDefaultValueNamesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "2155b8efc87a85ae77d582a3408417eeefea3c4341379aebd127352300ddbc5e"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownEnumPrefixes/KnownEnumPrefixesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "f9385ea5a063781bf33df671b15d08867a0784d3aaf136ba0b10e998557e5c3d"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownEnumValueNames/KnownEnumValueNamesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "66c67f77c0cae1529430506bac22972102d064f9aa19367009bc668cf0cef76f"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionNames/KnownExtensionNamesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "d3bd308c1d36093fb8dd2cfa5dcd1366aa43f47d4504a696e96fe5ffe6795ba2"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionPrefixes/KnownExtensionPrefixesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "7d43ad55298787efc01c4608bb92b4e565c564883592f055da67692051af260d"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownMemberFunctions/KnownMemberFunctionsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "53328dd9bc99f1c5ce74a95652d2b8bcd3c7492411b97f88f0b0f7ef1e2f85b7"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/LibName/LibNameEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "9183293fd4abec14d8a780b801373763ad264ab85634a76c0432be5097537990"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/LogLevel/LogLevelEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "2315a3120bbc418a734ecb1776dc8dc5578c258f5a4144f873145ba8a58fc392"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/MemberNamingConvention/MemberNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "ccbea7f21a66f82747d4bef73e6c176eb022423ac8e8c5ee2ef5661d7947187d"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/MergeGeneratedFilesToSingleFile/MergeGeneratedFilesToSingleFileEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "f1e31cc20c4369af84ea511a1feb1d333829d9076166f9143336002cfe040dec"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/Namespace/NamespaceEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "acac9ae80946eea492659c6fa51f7581329f5a05a1beb56b3802954df8549279"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/OneFilePerType/OneFilePerTypeEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "4ab375152e8464923405354030afa31eb237c7a0ed4f02c2db9c3aab5140025f"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/ParameterNamingConvention/ParameterNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "2e22e3586af786257a49b1b1ce3d9ac9c014ce73884a39d3a07fe8fde9bcab38"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/RuntimeNamespace/RuntimeNamespaceEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a9ba50ada085853f3546e6c522ee0453c4111da60527916f398ae2ff7482ceb7"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/SystemIncludeFolders/SystemIncludeFoldersEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "262b7348a53e7c48c070d2f85a8bd2725376210f21d0be54b3bf3a9e9dcc5e4e"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/TypeFieldMappings/TypeFieldMappingsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "b7366d68292e6f24844ea9a1e36d48c9a1629b0cec4431ffe7f164a203bb9159"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/TypeNamingConvention/TypeNamingConventionEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a6df67895041040f59775efde13846e3ce9c08ee73cb0bc332c9b947f63be531"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/UseCustomContext/UseCustomContextEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "7e785ed75bab61ebd739a3b105b32b207630af8a1a00445693c170cc924f92e5"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/Usings/UsingsEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "d53a7a7356e93321b4a87a1e277e3d99b6c98277baaf6f957f42b10661d5e0fb"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/VaryingTypes/VaryingTypesEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a4886a9c256bf4ac0e26b8ae78cca78ff2ef972ddb6e8c68174652d663eb93fb"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/WrapPointersAsHandle/WrapPointersAsHandleEntryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "9cedafc52a4d4eb53b0e85496443855db69fe769a8361437ae59dd574de945fd"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/BindingCorrectnessMatrixTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "468a00da0375ff06900f6b4f5cff34214408396d0d8fcb83b05c8edee797d126"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/BindingCoverageTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "96ffba429cd218891920c330dd0d24aecc3f57c0b60f74e655fdcc60491b2614"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/BindingGeneratorTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "41c68aa6e299703cbe4ef3e5077127f29053356fae53fafe724c003e48af1108"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/BindingIntermediateRepresentationTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "45a4560a83b23b9b363caedcd49f2f5f324587e3715f2a7915f6d32363cdf51a"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/ConfiguredCompilerPathTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "ff2f548689b645245bafec7e51904f2a95a753c0f864be6f4cb9930fd7871fb1"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/CsCodeGeneratorPipelineTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "3b173cf2436ba99c0ce8cb681e39f85a5ff3018627038e285fc8d66681e635fa"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/CsGeneratorSmokeTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "d9e8208b16a30722d37d639e13aff98645e6d1dc8d6ce243acea4da24c1d98cb"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/CsTypeTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "febad9e3a4353ed3e96a7aa565d15c96157e809e3986156bf7a6fecfbbca6381"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/CustomEnumLayoutTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "0581dd95966c78b539a6b5d3f0ec231d3dbc9df6eb3cb7451575452d39097839"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/EndToEndWorkflowTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "6e5bc48fdd38f4ea919043e69675b3e29527d9f4a21666a89762b443fee473ed"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/FormatHelperTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "5954bfe1f72555ef053191e7fc36940b95510088d82749ce196b3fdc05e913ad"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/GeneratedCodeCompilationMatrixTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "9d640eddef4baa19e59d0add05439655bc2a09516341567a9ef090b7b9b9060e"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/GeneratedCodeCompilationTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a750eaafe598c2e315b58f257ddb02fe1c447121ee2099348000badc2c212a69"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/GeneratedCodeRuntimeSemanticsTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "fba704aacb83cea3eea754f9184b05f5b6949e358e8138d4303cb856c87a21de"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/GeneratedDocumentationTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "c6dec281f4c1e4f97fd43a53c2781eccd17442bc329da96d415e71fb684e3171"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/GenerationLifetimeTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "da7a8880c3ba7959e859ac2eeff26ac4b2b5ce4c5790a37ce8d84f24d613d6a8"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/ImportCallingConventionTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "7a9df6163150c25bdb799c18c813c352825c21bd1aa602aba34b018f822a65b4"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/NativeAbiTypeConversionTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "b0ae71d550a7e6101191b02ee208fd79dfbe4879fd8bb3bb2225dd6d848fd01e"
+    },
+    {
+      "path": "tests/BGCS.Generation.Tests/TargetVariadicTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "bd5743bdfda8db459a3e7e3ce43e34d0aed8ec1dc1cac9f460efd297b2a16ba5"
+    },
+    {
+      "path": "tests/BGCS.Patching.Tests/PatchEngineTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a85c95434b0cd7b62b4d824114983778c0df9287fbff29827422e9f3f84ebf6c"
+    },
+    {
+      "path": "tests/BGCS.Patching.Tests/PatchMatrixTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "0fb7f852f0eb404418f9f519178c48ba066867141f5df0ecf2c30f28a65734d4"
+    },
+    {
+      "path": "tests/BGCS.Patching.Tests/PatchOwnershipTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "1bf5d1f368402f5651a4b360b7338d7033455a2c085642cd5969847a028f4efa"
+    },
+    {
+      "path": "tests/BGCS.Patching.Tests/SingleFilePatchCompatibilityTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "1a798c69a99bcbd4e7de0db2302a6e0bb0852ab6bf482e233f26a9b85360446f"
+    },
+    {
+      "path": "tests/BGCS.Tests/ParserInterop/DelegatePointerConsistencyTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "c6a368082d020d01a179c3d73007241b6ee58e9fb296263046b880d7015033b7"
+    },
+    {
+      "path": "tests/BGCS.Tests/ParserInterop/DocumentationGenerationTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "56dec516e063a208440514e69a493ce5815fc61760d60a20f92b57d267268871"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/ConfigComposerBaseConfigPathTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "050aa89870b7fa1f10975c83830c32888a6ac83d52388f653b59395187a0a19c"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/ConfigComposerTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "8ffd6e92336ac9b3768b817c9230e251c9ad8d578bc1dc1cba7281daa5f349c3"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/CsCodeGeneratorConfigTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "e10e1748fad150fc315fbf61882c82772457c67faeb774a7fab46303c9fd6261"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/CsCodeGeneratorConfigTypeApiTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "5a247bcbe69cea950c81bb78e04365c2cb7e094b2b78514f74d384c6b8320b08"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/EnumPrefixTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "8c8d872f4667bfb82c8e9d268b2db969e0cd3b0a30844d658697d7e251294aba"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/ExtensionsApiTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "86decb84191e6569a8b7e5902a90cd4021d42c00fa5145d49c5084ec02e584b6"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/MetadataOwnershipTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "3a6b064acb19fae4b5d365f7b3e77960b6f864970b13de0f49d4f8c0684df873"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/NamingBoundaryTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "f3a8de1ad000d1fe22a26f6775150882efd88111ce4e9181efd3a2f6c6152888"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/NamingHelperTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "a1580ff9b09ed8b718549456a21018c73c07eb0552770549ba2b89dc7303a1a2"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/NumberHelperTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "9b5e64a646844fa3661af1795c0b8384259f517ef8e465267037b73c228ffd73"
+    },
+    {
+      "path": "tests/BGCS.Tests/Unit/OverloadOwnershipTests.cs",
+      "category": "oldTestHarness",
+      "sha256": "bc7a035fbbdaff49ca7a1af2ac0410614ab328337413627d00605a6cb1afd0e1"
+    }
+  ],
+  "movedNeutralTests": [
+    {
+      "destination": "tests/BGCS.Contracts.Tests/BindingImmutabilityTests.cs",
+      "newNamespace": "BGCS.Contracts.Tests",
+      "oldNamespace": "BGCS.Generation.Tests",
+      "source": "tests/BGCS.Generation.Tests/BindingImmutabilityTests.cs"
+    },
+    {
+      "destination": "tests/BGCS.CSharp.Tests/AbiSafetyRegressionTests.cs",
+      "newNamespace": "BGCS.CSharp.Tests",
+      "oldNamespace": "BGCS.Generation.Tests",
+      "source": "tests/BGCS.Generation.Tests/AbiSafetyRegressionTests.cs"
+    },
+    {
+      "destination": "tests/BGCS.Tests/CacheExtensionRegressionTests.cs",
+      "newNamespace": "BGCS.Tests",
+      "oldNamespace": "BGCS.Generation.Tests",
+      "source": "tests/BGCS.Generation.Tests/CacheExtensionRegressionTests.cs"
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+class BGCS.Analysis.Bridge.BridgeContractVerifier [sealed]
+  ctor()
+  method BGCS.Contracts.Interop.InteropModule VerifyAndMerge(BGCS.Contracts.Bridge.CppBridgeModule plan, BGCS.Contracts.Native.NativeModule reparsed, System.String libraryId)
+class BGCS.Analysis.Bridge.BridgeRecordVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Bridge.CppBridgeModule module)
+class BGCS.Analysis.Bridge.CHeaderBridgePlanner [sealed]
+  ctor()
+  method BGCS.Contracts.Bridge.CHeaderBridgeModule Plan(BGCS.Contracts.Native.NativeModule module, System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> selectedCallables, System.String exportPrefix)
+class BGCS.Analysis.Bridge.CHeaderBridgeVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Native.NativeModule original, BGCS.Contracts.Bridge.CHeaderBridgeModule plan, BGCS.Contracts.Native.NativeModule reparsed)
+class BGCS.Analysis.Bridge.CHeaderFunctionPolicy [abstract; sealed]
+  method System.Boolean RequiresAdapter(BGCS.Contracts.Native.NativeDeclaration declaration) [static]
+class BGCS.Analysis.Bridge.ControlledSourceFragmentVerifier [sealed]
+  ctor()
+  method System.String Substitute(BGCS.Contracts.Bridge.ControlledSourceFragment fragment, System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> values)
+  method System.Void Validate(BGCS.Contracts.Bridge.ControlledSourceFragment fragment, BGCS.Contracts.Native.NativeModule source, System.Collections.Generic.IEnumerable<System.String> headers, System.Collections.Generic.IEnumerable<System.String> placeholders)
+class BGCS.Analysis.Bridge.CppBridgeOperationVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Bridge.CppBridgeModule module)
+class BGCS.Analysis.Bridge.CppCStrFact [sealed; interfaces=System.IEquatable<BGCS.Analysis.Bridge.CppCStrFact>]
+  ctor(BGCS.Contracts.Common.StableId member, BGCS.Contracts.Common.StableId elementType, System.Boolean isConst)
+  property BGCS.Contracts.Common.StableId elementType { get; init }
+  property System.Boolean isConst { get; init }
+  property BGCS.Contracts.Common.StableId member { get; init }
+  method BGCS.Analysis.Bridge.CppCStrFact <Clone>$()
+  method System.Boolean Equals(BGCS.Analysis.Bridge.CppCStrFact other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Analysis.Bridge.CppCStrFact left, BGCS.Analysis.Bridge.CppCStrFact right) [static]
+  method System.Boolean op_Inequality(BGCS.Analysis.Bridge.CppCStrFact left, BGCS.Analysis.Bridge.CppCStrFact right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId member, out BGCS.Contracts.Common.StableId elementType, out System.Boolean isConst)
+class BGCS.Analysis.Bridge.CppFamilyBindingValidator [abstract; sealed]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Bridge.CppFamilyBinding> Freeze(System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Bridge.CppFamilyBinding> bindings) [static]
+class BGCS.Analysis.Bridge.NativeValueProtocolBuilder [sealed]
+  ctor()
+  method BGCS.Contracts.Interop.InteropModule Attach(BGCS.Contracts.Bridge.CppBridgeModule bridge, BGCS.Contracts.Interop.InteropModule module)
+class BGCS.Analysis.Bridge.NativeValueProtocolVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Interop.InteropModule module)
+class BGCS.Analysis.Bridge.SequenceAdapterResultFacts [abstract; sealed]
+  method System.Boolean IsNonEscaping(BGCS.Contracts.Bridge.CppBridgeModule module, BGCS.Contracts.Bridge.BridgeExport export) [static]
+class BGCS.Analysis.Bridge.StandardLibraryFactReader [sealed]
+  ctor(System.Collections.Generic.IEnumerable<BGCS.Contracts.Bridge.CppFamilyBinding> bindings [optional; default=null])
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Bridge.CppFamilyBinding> bindings { get }
+  method BGCS.Analysis.Bridge.CppCStrFact ReadCStr(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId typeId)
+  method BGCS.Contracts.Bridge.CppFamilyBinding FindBinding(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId typeId)
+  method BGCS.Contracts.Bridge.StandardValueOperation Read(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId typeId)
+  method BGCS.Contracts.Interop.NativeDurationPeriod ReadPeriod(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId typeId)
+  method BGCS.Contracts.Native.NativeType Resolve(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId id) [static]
+  method System.Void ValidateBindings(BGCS.Contracts.Native.NativeModule module)
+class BGCS.Analysis.Bridge.StandardPathInputFacts [abstract; sealed]
+  field System.Int32 C_MAXIMUM_CODE_UNITS [static; const=1048576]
+  method BGCS.Contracts.Common.StableId ReadElement(BGCS.Contracts.Native.NativeModule source, BGCS.Contracts.Common.StableId path) [static]
+class BGCS.Analysis.Bridge.StandardSequenceArgumentVerifier [sealed]
+  ctor()
+  method System.Nullable<System.UInt64> ReadExtent(BGCS.Contracts.Native.NativeModule source, BGCS.Contracts.Common.StableId type, BGCS.Contracts.Bridge.StandardValueKind family) [static]
+  method System.Void Verify(BGCS.Contracts.Bridge.CppBridgeModule module, BGCS.Contracts.Bridge.BridgeExport export, BGCS.Contracts.Bridge.BridgeArgumentGroup group)
+class BGCS.Analysis.Bridge.StandardSequenceTextFacts [abstract; sealed]
+  method BGCS.Contracts.Interop.StringContract Read(BGCS.Contracts.Bridge.CppBridgeModule module, BGCS.Contracts.Bridge.BridgeArgumentGroup group) [static]
+class BGCS.Analysis.Bridge.StandardValueOperationVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Bridge.CppBridgeModule module, BGCS.Contracts.Bridge.BridgeExport export)
+class BGCS.Analysis.Bridge.StandardValueReleaseFacts [abstract; sealed]
+  method BGCS.Contracts.Interop.NativeValueReleaseContract Read(BGCS.Contracts.Native.NativeModule source, BGCS.Contracts.Common.StableId owner) [static]
+class BGCS.Analysis.Bridge.VirtualProxyProtocolBuilder [sealed]
+  ctor()
+  method BGCS.Contracts.Interop.InteropModule Attach(BGCS.Contracts.Bridge.CppBridgeModule bridge, BGCS.Contracts.Interop.InteropModule module)
+  method System.Void VerifyBridge(BGCS.Contracts.Bridge.CppBridgeModule bridge)
+class BGCS.Analysis.Bridge.VirtualProxyProtocolVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Interop.InteropModule module)
+class BGCS.Analysis.Declarations.DeclarationGraph [sealed]
+  property BGCS.Contracts.Native.NativeModule module { get }
+  method BGCS.Analysis.Declarations.DeclarationGraph Create(BGCS.Contracts.Native.NativeModule module) [static]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> GetDependencies(BGCS.Contracts.Common.StableId id)
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> Order(System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> selected)
+class BGCS.Analysis.Declarations.DeclarationSelection [sealed; interfaces=System.IEquatable<BGCS.Analysis.Declarations.DeclarationSelection>]
+  ctor(BGCS.Contracts.Native.NativeModule module, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> callables)
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> callables { get; init }
+  property BGCS.Contracts.Native.NativeModule module { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> publicDeclarations { get; init }
+  method BGCS.Analysis.Declarations.DeclarationSelection <Clone>$()
+  method System.Boolean Equals(BGCS.Analysis.Declarations.DeclarationSelection other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Analysis.Declarations.DeclarationSelection left, BGCS.Analysis.Declarations.DeclarationSelection right) [static]
+  method System.Boolean op_Inequality(BGCS.Analysis.Declarations.DeclarationSelection left, BGCS.Analysis.Declarations.DeclarationSelection right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Native.NativeModule module, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> callables)
+class BGCS.Analysis.Declarations.DeclarationSelector [sealed]
+  ctor()
+  method BGCS.Analysis.Declarations.DeclarationSelection Select(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Requests.DeclarationSelectionRequest request, System.Collections.Generic.IEnumerable<System.String> entryHeaders, System.String baseDirectory, System.Boolean includeTransitivelyReferencedHeaders [optional; default=true], System.Boolean includeSystemDeclarations [optional; default=false], System.Collections.Generic.IEnumerable<System.String> requiredDeclarations [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null], System.Collections.Generic.IEnumerable<System.String> additionalPublicDeclarations [optional; default=null], System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> ordinaryDeclarations [optional; default=null], System.Collections.Generic.IEnumerable<System.String> requiredMetadataDeclarations [optional; default=null], System.Boolean includeCHeaderHelpers [optional; default=false], System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> requiredNativeTypes [optional; default=null])
+  method BGCS.Analysis.Declarations.DeclarationSelection SelectEntries(BGCS.Contracts.Native.NativeModule module, System.Collections.Generic.IEnumerable<System.String> entryHeaders, System.String baseDirectory, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method System.Void ValidateCategories(BGCS.Contracts.Requests.DeclarationSelectionRequest request) [static]
+class BGCS.Analysis.Declarations.DependencyClosureBuilder [abstract; sealed]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> Build(BGCS.Analysis.Declarations.DeclarationGraph graph, System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> roots) [static]
+class BGCS.Analysis.Declarations.NativeSourceLocator [sealed]
+  ctor(BGCS.Contracts.Native.NativeModule module)
+  method System.Nullable<BGCS.Contracts.Common.SourceLocation> Locate(BGCS.Contracts.Common.StableId type)
+class BGCS.Analysis.Interop.CDeclarationAnalyzer [sealed]
+  ctor()
+  method BGCS.Contracts.Interop.InteropModule Analyze(BGCS.Contracts.Native.NativeModule module, System.String libraryId, System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> selectedFunctions [optional; default=null], BGCS.Contracts.Bridge.CHeaderBridgeModule headerBridge [optional; default=null])
+class BGCS.Analysis.Interop.InteropModuleVerifier [sealed]
+  ctor()
+  method System.Void VerifyPreservedAbi(BGCS.Contracts.Interop.InteropModule baseline, BGCS.Contracts.Interop.InteropModule candidate)
+class BGCS.Analysis.Interop.NativeConstantAnalyzer [sealed]
+  ctor()
+  method BGCS.Contracts.Interop.InteropModule Apply(BGCS.Contracts.Native.NativeModule source, BGCS.Contracts.Interop.InteropModule interop, System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> publicDeclarations [optional; default=null])
+class BGCS.Analysis.Interop.NativeFunctionAliasAnalyzer [sealed]
+  ctor()
+  method BGCS.Contracts.Interop.InteropModule Apply(BGCS.Contracts.Native.NativeModule source, BGCS.Contracts.Interop.InteropModule module, System.Collections.Generic.IEnumerable<BGCS.Contracts.Common.StableId> publicDeclarations [optional; default=null])
+class BGCS.Analysis.Interop.NativeFunctionAliasVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Interop.InteropModule module)
+class BGCS.Analysis.Interop.NativeModuleVerifier [sealed]
+  ctor()
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> Validate(BGCS.Contracts.Native.NativeModule module)
+class BGCS.Analysis.Interop.NativeStringConstantVerifier [sealed]
+  ctor()
+  method System.Void Verify(BGCS.Contracts.Native.NativeStringConstant value)
+class BGCS.Analysis.Layout.ByValueCompatibilityAnalyzer [sealed]
+  ctor()
+  method System.String GetNativeRestriction(BGCS.Contracts.Native.NativeTypeView view)
+class BGCS.Analysis.Layout.ExternalTypeContractValidator [sealed]
+  ctor()
+  method System.Void ValidateNativeStorage(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Managed.ExternalTypeProjection projection)
+  method System.Void ValidateProjection(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Managed.ExternalTypeProjection projection)
+class BGCS.Analysis.Safety.BufferProtocolAnalysis [sealed; interfaces=System.IEquatable<BGCS.Analysis.Safety.BufferProtocolAnalysis>]
+  ctor(BGCS.Contracts.Common.StableId bufferParameter, BGCS.Contracts.Common.StableId boundParameter, System.Boolean boundIsCapacity, System.Nullable<BGCS.Contracts.Common.StableId> writtenCountParameter, BGCS.Contracts.Common.StableId elementType, System.Int32 elementSize, System.Int32 alignment, System.Nullable<BGCS.Contracts.Common.StableId> writtenCountType, System.Int32 writtenCountAlignment)
+  property System.Int32 alignment { get; init }
+  property System.Boolean boundIsCapacity { get; init }
+  property BGCS.Contracts.Common.StableId boundParameter { get; init }
+  property BGCS.Contracts.Common.StableId bufferParameter { get; init }
+  property System.Int32 elementSize { get; init }
+  property BGCS.Contracts.Common.StableId elementType { get; init }
+  property System.Int32 writtenCountAlignment { get; init }
+  property System.Nullable<BGCS.Contracts.Common.StableId> writtenCountParameter { get; init }
+  property System.Nullable<BGCS.Contracts.Common.StableId> writtenCountType { get; init }
+  method BGCS.Analysis.Safety.BufferProtocolAnalysis <Clone>$()
+  method System.Boolean Equals(BGCS.Analysis.Safety.BufferProtocolAnalysis other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Analysis.Safety.BufferProtocolAnalysis left, BGCS.Analysis.Safety.BufferProtocolAnalysis right) [static]
+  method System.Boolean op_Inequality(BGCS.Analysis.Safety.BufferProtocolAnalysis left, BGCS.Analysis.Safety.BufferProtocolAnalysis right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId bufferParameter, out BGCS.Contracts.Common.StableId boundParameter, out System.Boolean boundIsCapacity, out System.Nullable<BGCS.Contracts.Common.StableId> writtenCountParameter, out BGCS.Contracts.Common.StableId elementType, out System.Int32 elementSize, out System.Int32 alignment, out System.Nullable<BGCS.Contracts.Common.StableId> writtenCountType, out System.Int32 writtenCountAlignment)
+class BGCS.Analysis.Safety.BufferProtocolAnalyzer [sealed]
+  ctor()
+  method BGCS.Analysis.Safety.BufferProtocolAnalysis Analyze(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter)
+  method System.String GetRestriction(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter)
+class BGCS.Analysis.Safety.FriendlyApiEligibilityAnalyzer [sealed]
+  ctor()
+  method System.Int32 GetBufferInputAlignment(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropParameter parameter)
+  method System.Int32 GetTextInputAlignment(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropParameter parameter)
+  method System.String GetBufferInputRestriction(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter)
+  method System.String GetTextInputRestriction(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter)
+class BGCS.Analysis.Safety.NativePointerShape [sealed; interfaces=System.IEquatable<BGCS.Analysis.Safety.NativePointerShape>]
+  ctor(BGCS.Contracts.Common.StableId pointer, BGCS.Contracts.Common.StableId record, System.Int32 depth, System.Collections.Immutable.ImmutableArray<System.Collections.Immutable.ImmutableArray<System.String>> qualifiers, System.Collections.Immutable.ImmutableArray<System.String> pointerAliases)
+  property System.Int32 depth { get; init }
+  property System.Boolean hasVolatilePointee { get }
+  property BGCS.Contracts.Common.StableId pointer { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> pointerAliases { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Collections.Immutable.ImmutableArray<System.String>> qualifiers { get; init }
+  property System.Boolean readOnly { get }
+  property BGCS.Contracts.Common.StableId record { get; init }
+  method BGCS.Analysis.Safety.NativePointerShape <Clone>$()
+  method System.Boolean Equals(BGCS.Analysis.Safety.NativePointerShape other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Analysis.Safety.NativePointerShape left, BGCS.Analysis.Safety.NativePointerShape right) [static]
+  method System.Boolean op_Inequality(BGCS.Analysis.Safety.NativePointerShape left, BGCS.Analysis.Safety.NativePointerShape right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId pointer, out BGCS.Contracts.Common.StableId record, out System.Int32 depth, out System.Collections.Immutable.ImmutableArray<System.Collections.Immutable.ImmutableArray<System.String>> qualifiers, out System.Collections.Immutable.ImmutableArray<System.String> pointerAliases)
+class BGCS.Analysis.Safety.NativePointerShapeReader [sealed]
+  ctor(BGCS.Contracts.Interop.InteropModule module)
+  method BGCS.Analysis.Safety.NativePointerShape Read(BGCS.Contracts.Common.StableId identity)
+  method System.Boolean CanConvert(BGCS.Contracts.Common.StableId source, BGCS.Contracts.Common.StableId destination)
+class BGCS.Analysis.Safety.NativeReceiverTypeMatcher [abstract; sealed]
+  method System.Boolean CanBorrowWithoutRemovingQualifiers(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Common.StableId ownedPointer, BGCS.Contracts.Common.StableId receiverPointer) [static]
+  method System.Boolean Matches(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Common.StableId selectedType, BGCS.Contracts.Common.StableId valueType) [static]
+class BGCS.Analysis.Safety.SafetyAnalyzer [sealed]
+  ctor()
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> Analyze(BGCS.Contracts.Interop.InteropModule module)
+class BGCS.Analysis.Safety.ValueParameterAnalyzer [sealed]
+  ctor()
+  method System.Int32 GetAlignment(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropParameter parameter)
+  method System.String GetNullBindingRestriction(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter)
+  method System.String GetRestriction(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter)
+class BGCS.Analysis.Types.NativeTypeFormatter [sealed]
+  ctor()
+  method System.String CallableSignature(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Native.NativeDeclaration callable)
+  method System.String DefaultConstructionSignature(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId owner)
+  method System.String Format(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId type, System.Boolean preserveAliases [optional; default=true], System.Boolean absoluteNames [optional; default=false])
+  method System.String FormatDeclaration(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Common.StableId type, System.String declarator, System.Boolean preserveAliases [optional; default=true])

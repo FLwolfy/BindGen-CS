@@ -2,7 +2,7 @@ name: Publish BGCS NuGet
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: ["Product package certification"]
     branches: [main]
     types: [completed]
   push:
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 1.2.3 or 1.2.3-preview.1)"
+        description: "Release version (e.g. 3.0.0 or 3.0.0-preview.1)"
         required: true
         type: string
 
@@ -28,7 +28,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.event == 'workflow_run' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     timeout-minutes: 10
     runs-on: ubuntu-24.04
@@ -43,9 +43,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: main
+
+      - name: Authenticate the current main release candidate
+        id: candidate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const release = require('./scripts/release-workflow.js');
+            const candidate = await release.resolveCandidate(github, context);
+            core.info(candidate.reason);
+            core.setOutput('eligible', String(candidate.eligible));
+            core.setOutput('revision', candidate.revision);
+            core.setOutput('package-run-id', candidate.packageRunId || '');
+
+      - name: Checkout the authenticated source revision
+        if: steps.candidate.outputs.eligible == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.candidate.outputs.revision }}
 
       - name: Read the declared release and its notes
+        if: steps.candidate.outputs.eligible == 'true'
         id: version
         shell: bash
         env:
@@ -74,13 +93,25 @@ jobs:
           PY
 
       - name: Require the full CI matrix for this exact commit
+        if: steps.candidate.outputs.eligible == 'true'
         id: acceptance
         uses: actions/github-script@v7
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
           RELEASE_REVISION: ${{ steps.version.outputs.revision }}
+          TRIGGER_PACKAGE_RUN_ID: ${{ steps.candidate.outputs.package-run-id }}
         with:
           script: |
+            const fs = require('fs');
+            const release = require('./scripts/release-workflow.js');
+            const gateManifest = JSON.parse(fs.readFileSync('eng/acceptance/required-release-gates.json', 'utf8'));
+            const implementation = JSON.parse(fs.readFileSync('eng/acceptance/implementation-status.json', 'utf8'));
+            if (gateManifest.requireCleanFeatureInventory !== true || gateManifest.requireProductPackageInstallation !== true) {
+              throw new Error('Release preflight requires both exact feature/configuration proof and complete installed-product certification.');
+            }
+            if (implementation.implementationReady !== true || implementation.releaseReady !== false) {
+              throw new Error('The source inventory must have reviewed implementationReady declarations; releaseReady is derived from exact current CI evidence.');
+            }
             const repository = context.repo;
             const revision = process.env.RELEASE_REVISION;
             const tag = `v${process.env.RELEASE_VERSION}`;
@@ -96,24 +127,96 @@ jobs:
               ...repository, workflow_id: 'ci.yml', head_sha: revision,
               event: 'push', branch: 'main', per_page: 100
             });
-            const accepted = runs.data.workflow_runs.find(run =>
-              run.head_sha === revision && run.status === 'completed' &&
-              run.conclusion === 'success');
-            if (!accepted) {
-              throw new Error('No successful main-branch CI exists for the release commit.');
-            }
+            const ciWorkflow = (await github.rest.actions.getWorkflow({...repository, workflow_id: gateManifest.workflow})).data;
+            const accepted = release.latestAccepted(runs.data.workflow_runs, `${repository.owner}/${repository.repo}`,
+              ciWorkflow, 'push', revision);
             const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
               ...repository, run_id: accepted.id, filter: 'latest', per_page: 100
             });
-            if (jobs.length !== 15 || jobs.some(job => job.conclusion !== 'success')) {
-              throw new Error('The complete 15-job CI matrix must pass before publishing.');
+            release.validateJobs(jobs, gateManifest.requiredJobNames);
+            const path = require('path');
+            const childProcess = require('child_process');
+            const crypto = require('crypto');
+            const evidenceRoot = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP, 'bgcs-release-evidence-'));
+            const observation = (run, workflow, observedJobs) => ({
+              workflow, id: run.id, headSha: run.head_sha, headBranch: run.head_branch,
+              event: run.event, status: run.status, conclusion: run.conclusion,
+              displayTitle: run.display_title,
+              jobs: observedJobs.map(job => ({name: job.name, status: job.status, conclusion: job.conclusion}))
+            });
+            const workflowEvidence = {schemaVersion: 1, sourceRevision: revision,
+              ci: observation(accepted, gateManifest.workflow, jobs), archiveSha256: {}};
+            const workflowEvidencePath = path.join(evidenceRoot, 'workflows.json');
+            const featureArguments = ['scripts/verify-feature-release-evidence.py', '--revision', revision,
+              '--workflow-evidence', workflowEvidencePath, '--output', 'artifacts/release-preflight/features.json'];
+            let productRunId;
+            try {
+              const featureRequirements = gateManifest.requiredFeatureEvidence;
+              if (!Array.isArray(featureRequirements) || !featureRequirements.length ||
+                  new Set(featureRequirements.map(item => item.host)).size !== featureRequirements.length)
+                throw new Error('The release lacks its explicit unique feature evidence hosts.');
+              const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                ...repository, run_id: accepted.id, per_page: 100
+              });
+              for (const required of featureRequirements) {
+                const matching = artifacts.filter(item => item.name === required.artifact && !item.expired);
+                if (matching.length !== 1 || matching[0].size_in_bytes > 64 * 1024 * 1024)
+                  throw new Error(`Missing, ambiguous or oversized feature evidence: ${required.artifact}`);
+                const archive = await github.rest.actions.downloadArtifact({
+                  ...repository, artifact_id: matching[0].id, archive_format: 'zip'
+                });
+                const destination = path.join(evidenceRoot, `feature-${matching[0].id}.zip`);
+                fs.writeFileSync(destination, Buffer.from(archive.data));
+                featureArguments.push('--archive', destination);
+              }
+              const packageRuns = await github.rest.actions.listWorkflowRuns({
+                ...repository, workflow_id: gateManifest.productPackageWorkflow,
+                event: 'workflow_run', branch: 'main', per_page: 100
+              });
+              const packageWorkflow = (await github.rest.actions.getWorkflow({...repository, workflow_id: gateManifest.productPackageWorkflow})).data;
+              const packageRun = release.latestAccepted(packageRuns.data.workflow_runs, `${repository.owner}/${repository.repo}`,
+                packageWorkflow, 'workflow_run', revision, true);
+              if (process.env.TRIGGER_PACKAGE_RUN_ID && Number(process.env.TRIGGER_PACKAGE_RUN_ID) !== packageRun.id)
+                throw new Error('The triggering product run is stale; a later run requires its own complete preflight.');
+              const packageJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                ...repository, run_id: packageRun.id, filter: 'latest', per_page: 100
+              });
+              release.validateJobs(packageJobs, gateManifest.requiredProductPackageJobNames);
+              productRunId = packageRun.id;
+              workflowEvidence.products = observation(packageRun, gateManifest.productPackageWorkflow, packageJobs);
+              // workflow_run can describe a newer default-branch tip. Validate the
+              // downloaded package/report bytes for every required artifact instead.
+              const packageArtifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                ...repository, run_id: packageRun.id, per_page: 100
+              });
+              if (!Array.isArray(gateManifest.requiredProductEvidence) ||
+                  gateManifest.requiredProductEvidence.length !== gateManifest.requiredProductPackageJobNames.length)
+                throw new Error('The release manifest lacks its complete installed-product artifact requirements.');
+              for (const required of gateManifest.requiredProductEvidence) {
+                const matching = packageArtifacts.filter(item => item.name === required.artifact && !item.expired);
+                if (matching.length !== 1 || matching[0].size_in_bytes > 64 * 1024 * 1024)
+                  throw new Error(`Missing, ambiguous or oversized installed-product artifact: ${required.artifact}`);
+                const artifact = matching[0];
+                const archive = await github.rest.actions.downloadArtifact({
+                  ...repository, artifact_id: artifact.id, archive_format: 'zip'
+                });
+                const bytes = Buffer.from(archive.data);
+                const destination = path.join(evidenceRoot, `products-${artifact.id}.zip`);
+                fs.writeFileSync(destination, bytes);
+                workflowEvidence.archiveSha256[artifact.name] = crypto.createHash('sha256').update(bytes).digest('hex');
+                featureArguments.push('--product-archive', `${artifact.name}=${destination}`);
+              }
+              fs.writeFileSync(workflowEvidencePath, JSON.stringify(workflowEvidence));
+              // One verifier joins actual host TRX, authenticated job observations,
+              // and every independently validated installed execution report.
+              core.info(childProcess.execFileSync('python3', featureArguments, {encoding: 'utf8', timeout: 60000, maxBuffer: 65536}));
+            } finally {
+              fs.rmSync(evidenceRoot, {recursive: true, force: true});
             }
             try {
               const release = await github.rest.repos.getReleaseByTag({...repository, tag});
               if (!release.data.draft) {
-                core.info(`${tag} is already published; this commit does not request another release.`);
-                core.setOutput('publish', 'false');
-                return;
+                core.info(`${tag} already exists; revalidate immutable tag, exact package payloads and public installation.`);
               }
             } catch (error) {
               if (error.status !== 404) throw error;
@@ -131,16 +234,39 @@ jobs:
               if (error.status !== 404) throw error;
             }
             core.info(`Accepted ${revision} in CI run ${accepted.id}.`);
+            // This aggregate result is produced only after every required CI job,
+            // feature/configuration proof and installed-product host passed.
+            const featureProof = JSON.parse(fs.readFileSync('artifacts/release-preflight/features.json', 'utf8'));
+            if (featureProof.featureAcceptanceVerified !== true || featureProof.releaseReady !== false || featureProof.sourceRevision !== revision)
+              throw new Error('The derived feature proof does not certify this exact release revision.');
+            fs.mkdirSync('artifacts/release-preflight', {recursive: true});
+            fs.writeFileSync('artifacts/release-preflight/readiness.json', JSON.stringify({
+              schemaVersion: 1, revision, implementationReady: true,
+              featureAcceptanceVerified: true, releaseReady: true,
+              publicationVerified: false, checkedOutSourceSha256: featureProof.checkedOutSourceSha256,
+              featureProofSha256: crypto.createHash('sha256').update(fs.readFileSync('artifacts/release-preflight/features.json')).digest('hex'),
+              ciRunId: accepted.id, productRunId, requiredGates: gateManifest
+            }, null, 2) + '\n');
             core.setOutput('ci-run-id', accepted.id);
             core.setOutput('publish', 'true');
+
+      - name: Preserve exact per-feature release proof
+        if: steps.acceptance.outputs.publish == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-feature-proof-${{ steps.version.outputs.revision }}
+          path: artifacts/release-preflight/*.json
+          if-no-files-found: error
 
   validate-pack-and-publish:
     needs: release-preflight
     if: needs.release-preflight.outputs.publish == 'true'
-    timeout-minutes: 45
+    timeout-minutes: 360
     runs-on: ubuntu-24.04
     env:
       BGCS_CPP2C_CXX: g++
+      BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
+      BGCS_REQUIRE_GNU_SOURCE_VIEW: "1"
     permissions:
       contents: write
       actions: read
@@ -156,10 +282,24 @@ jobs:
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
         with:
-          dotnet-version: |
-            9.0.x
-            10.0.x
+          dotnet-version: 10.0.401
+
+      - name: Setup Python for installed product certification
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify locked SDK and isolated runtime
+        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
+
+      - name: Install locked Meson native-provider prerequisite
+        run: python -m pip install --disable-pip-version-check meson==1.8.3
+
+      - name: Install selected .NET 10 browser workload
+        run: python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/wasm.json
 
       - name: Download accepted macOS Intel parser runtime
         uses: actions/download-artifact@v4
@@ -168,6 +308,12 @@ jobs:
           path: artifacts/clang-runtime/osx-x64
           run-id: ${{ needs.release-preflight.outputs.ci-run-id }}
           github-token: ${{ github.token }}
+
+      - name: Download same-revision per-feature release proof
+        uses: actions/download-artifact@v4
+        with:
+          name: release-feature-proof-${{ needs.release-preflight.outputs.revision }}
+          path: artifacts/supply-chain/release-features
 
       - name: Verify the accepted parser runtime checksums
         shell: bash
@@ -184,13 +330,35 @@ jobs:
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Restore
-        run: dotnet restore BindGen-CS.sln
+        run: dotnet restore BindGen-CS.slnx
 
       - name: Build
-        run: dotnet build BindGen-CS.sln --configuration Release --no-restore -p:ContinuousIntegrationBuild=true -p:Version=${{ steps.release.outputs.version }}
+        run: dotnet build BindGen-CS.slnx --configuration Release --no-restore -p:ContinuousIntegrationBuild=true -p:Version=${{ steps.release.outputs.version }}
 
-      - name: Test
-        run: dotnet test BindGen-CS.sln --configuration Release --no-build
+      - name: Test non-Host projects against fresh release binaries
+        run: dotnet test BindGen-CS.slnx --configuration Release --no-build --filter 'FullyQualifiedName!~BGCS.Tests.'
+
+      - name: Download the exact original Host execution closure
+        uses: actions/download-artifact@v4
+        with:
+          name: host-execution-linux-x64-gnu
+          path: artifacts/release-host-assets
+          run-id: ${{ needs.release-preflight.outputs.ci-run-id }}
+          github-token: ${{ github.token }}
+
+      - name: Download the complete original eight-shard Host evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: host-test-union-linux-x64-gnu
+          path: artifacts/release-host-union
+          run-id: ${{ needs.release-preflight.outputs.ci-run-id }}
+          github-token: ${{ github.token }}
+
+      - name: Reverify every original Host case and compiled byte without rerunning the suite
+        run: >-
+          python scripts/run-host-test-shards.py verify-accepted
+          --assets artifacts/release-host-assets --input artifacts/release-host-union/raw
+          --output artifacts/supply-chain/host-tests
 
       - name: Public API compatibility gate
         run: bash ./scripts/test-public-api-snapshot.sh
@@ -199,7 +367,7 @@ jobs:
         run: bash ./scripts/test-supply-chain-policy.sh
 
       - name: Pack and test package closure
-        run: bash ./scripts/test-nuget-packages.sh
+        run: python scripts/compiler_test_environment.py -- bash ./scripts/test-nuget-packages.sh
         env:
           CONFIGURATION: Release
           PACKAGE_TEST_VERSION: ${{ steps.release.outputs.version }}
@@ -208,7 +376,7 @@ jobs:
       - name: Assert Intel runtime is in published parser package
         shell: bash
         run: |
-          package="artifacts/nuget/BGCS.CppAst.${{ steps.release.outputs.version }}.nupkg"
+          package="artifacts/nuget/BGCS.ParserRuntime.osx-x64.${{ steps.release.outputs.version }}.nupkg"
           unzip -Z1 "${package}" | grep -Fx 'runtimes/osx-x64/native/libclang.dylib'
           unzip -Z1 "${package}" | grep -Fx 'runtimes/osx-x64/native/libClangSharp.dylib'
 
@@ -224,18 +392,19 @@ jobs:
               exit 1
             fi
           }
-          libraries=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
-          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64)
+          libraries=(BGCS.Contracts BGCS BGCS.Runtime)
+          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64)
           for package in "${libraries[@]}"; do
             require_package "${package}.${VERSION}.nupkg"
             require_package "${package}.${VERSION}.snupkg"
           done
+          require_package "BGCS.ParserRuntime.osx-x64.${VERSION}.nupkg"
           require_package "BindGen-CS.${VERSION}.nupkg"
           for rid in "${tool_rids[@]}"; do
             require_package "BindGen-CS.${rid}.${VERSION}.nupkg"
           done
           packages=(artifacts/nuget/*.nupkg artifacts/nuget/*.snupkg)
-          expected=$(( ${#libraries[@]} * 2 + 1 + ${#tool_rids[@]} ))
+          expected=$(( ${#libraries[@]} * 2 + 2 + ${#tool_rids[@]} ))
           if (( ${#packages[@]} != expected )); then
             echo "Expected ${expected} release packages, found ${#packages[@]}." >&2
             exit 1
@@ -246,6 +415,7 @@ jobs:
           dotnet run --project src/BGCS.Tool/BGCS.Tool.csproj --configuration Release --no-build --
           supply-chain artifacts/nuget --output artifacts/supply-chain
           --revision "${{ needs.release-preflight.outputs.revision }}"
+          --builder-id "https://github.com/${{ github.repository }}/.github/workflows/publish-bgcs-runtime-nuget.yml@${{ github.workflow_sha }}"
           --timestamp "$(git show -s --format=%cI HEAD)"
 
       - name: Write the release package checksums
@@ -282,6 +452,42 @@ jobs:
 
       # nuget.org trusted publishing: exchange the job OIDC token for an API
       # key that expires in one hour, so request it right before the push.
+      - name: Recheck physical package hashes before creating the immutable version tag
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          import json
+          import os
+          spec = importlib.util.spec_from_file_location('installed_package_verifier', 'eng/verify-packages.py')
+          verifier = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(verifier)
+          report = json.loads(Path('artifacts/verification/packages/verification.json').read_text())
+          actual = verifier.verify_package_receipt(Path('artifacts/nuget'), report['version'], report['sourceRevision'], True)
+          if actual != report['packagingEvidence']:
+              raise SystemExit('The installed packages or their physical receipt changed after consumption.')
+          PY
+
+      - name: Create the accepted main version tag and continue publishing in this same job
+        uses: actions/github-script@v7
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_REVISION: ${{ needs.release-preflight.outputs.revision }}
+        with:
+          script: |
+            const fs = require('fs');
+            const release = require('./scripts/release-workflow.js');
+            const result = await release.ensureTag(github, context.repo, {
+              revision: process.env.RELEASE_REVISION, version: process.env.RELEASE_VERSION,
+              readiness: JSON.parse(fs.readFileSync('artifacts/supply-chain/release-features/readiness.json')),
+              featureBytes: fs.readFileSync('artifacts/supply-chain/release-features/features.json'),
+              packageVerification: JSON.parse(fs.readFileSync('artifacts/verification/packages/verification.json')),
+              gateManifest: JSON.parse(fs.readFileSync('eng/acceptance/required-release-gates.json'))
+            });
+            core.info(`Immutable ${result.tag} identifies accepted main ${result.revision}; created=${result.created}.`);
+            // GITHUB_TOKEN-created tags do not start another push workflow. All
+            // NuGet publishing and public-consumption checks continue below.
+
       - name: Exchange GitHub OIDC token for a nuget.org API key
         id: nuget-login
         uses: NuGet/login@v1
@@ -294,8 +500,9 @@ jobs:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          libraries=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
-          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64)
+          libraries=(BGCS.Contracts BGCS.Runtime BGCS)
+          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64)
+          dotnet nuget push "artifacts/nuget/BGCS.ParserRuntime.osx-x64.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
           for package in "${libraries[@]}"; do
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.snupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
@@ -305,6 +512,21 @@ jobs:
             dotnet nuget push "artifacts/nuget/BindGen-CS.${rid}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
           done
           dotnet nuget push "artifacts/nuget/BindGen-CS.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
+      - name: Require public NuGet indexing, matching payloads and clean four-product installs
+        run: >-
+          python scripts/verify-published-products.py
+          --version "${{ steps.release.outputs.version }}" --packages artifacts/nuget
+          --output artifacts/supply-chain/nuget-public-verification.json
+
+      - name: Preserve public NuGet consumption evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindgen-cs-public-nuget-${{ steps.release.outputs.version }}
+          path: |
+            artifacts/supply-chain/nuget-public-verification.json
+            artifacts/supply-chain/nuget-public-logs
+          if-no-files-found: error
 
       - name: Publish GitHub release and its verified package set
         shell: bash
@@ -332,7 +554,9 @@ jobs:
             artifacts/supply-chain/provenance.slsa.json \
             artifacts/supply-chain/SHA256SUMS \
             artifacts/supply-chain/provenance-attestation.json \
-            artifacts/supply-chain/sbom-attestation.json
+            artifacts/supply-chain/sbom-attestation.json \
+            artifacts/supply-chain/nuget-public-verification.json \
+            artifacts/supply-chain/release-features/features.json
           if [[ "${VERSION}" == *-* ]]; then
             gh release edit "v${VERSION}" --draft=false --prerelease
           else

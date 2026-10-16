@@ -13,11 +13,12 @@ import subprocess
 import threading
 import time
 import uuid
+import urllib.request
 import cpp_acceptance_fixture
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MODES = ("DllImport", "LibraryImport", "FunctionTable")
+MODES = cpp_acceptance_fixture.MODES
 
 
 def stop_process(process):
@@ -68,14 +69,18 @@ def acceptance_environment(dotnet):
     environment = {key: value for key, value in os.environ.items() if key.casefold() != "platform"}
     environment.update(DOTNET_ROOT=str(Path(dotnet).parent), DOTNET_HOST_PATH=dotnet,
                        DOTNET_CLI_UI_LANGUAGE="en")
+    environment["DOTNET_ROOT_ARM64" if platform.machine().lower() in ("arm64", "aarch64") else "DOTNET_ROOT_X64"] = str(Path(dotnet).parent)
+    for key in tuple(environment):
+        if key.upper().startswith(("MSBUILD", "DOTNET_MSBUILD_SDK_RESOLVER_")):
+            environment.pop(key)
     return environment
 
 
-def build_project(dotnet, project, work, evidence, environment):
-    run([dotnet, "build", str(project), "-c", "Release", "--disable-build-servers",
+def build_project(dotnet, project, work, evidence, environment, configuration="Release"):
+    run([dotnet, "build", str(project), "-c", configuration, "--disable-build-servers",
          "-m:1", "-nodeReuse:false"], work, evidence, environment)
     output = run([dotnet, "msbuild", str(project), "-nologo", "-nodeReuse:false",
-                  "-p:Configuration=Release", "-getProperty:TargetPath"],
+                  "-p:Configuration=" + configuration, "-getProperty:TargetPath"],
                  work, evidence.with_suffix(".target-path.log"), environment).strip()
     target = Path(output)
     if not target.is_file():
@@ -103,7 +108,7 @@ class ResultHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def invoke_browser(browser, site, work):
+def invoke_browser(browser, site, work, timeout=120):
     handler = functools.partial(ResultHandler, directory=str(site))
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     server.token = uuid.uuid4().hex
@@ -114,7 +119,9 @@ def invoke_browser(browser, site, work):
     thread.start()
     url = f"http://127.0.0.1:{server.server_port}/index.html?token={server.token}"
     command = [browser, "--headless=new", "--no-first-run", "--disable-extensions", "--mute-audio",
+               "--enable-logging=stderr",
                "--disable-background-networking", "--disable-component-update", "--disable-sync",
+               "--remote-debugging-port=0", "--remote-debugging-address=127.0.0.1",
                "--user-data-dir=" + str(work / "browser-profile"), url]
     # Edge's Windows compatibility launcher otherwise detaches from the owned process tree.
     if os.name == "nt" and Path(browser).stem.lower() == "msedge":
@@ -128,10 +135,19 @@ def invoke_browser(browser, site, work):
                                        start_new_session=os.name != "nt",
                                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
             try:
-                deadline = time.monotonic() + 120
+                deadline = time.monotonic() + timeout
                 while not server.finished.wait(0.25):
                     if process.poll() is not None or time.monotonic() >= deadline:
                         raise RuntimeError(f"Browser did not return a report (exit={process.poll()}); see browser.log.")
+                port_file = work / "browser-profile/DevToolsActivePort"
+                port = int(port_file.read_text(encoding="utf-8").splitlines()[0])
+                if not 0 < port <= 65535:
+                    raise RuntimeError("The owned browser reported an invalid debugging endpoint.")
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=5) as response:
+                    browser_version = json.load(response)
+                if not browser_version.get("Browser") or not isinstance(server.result, dict):
+                    raise RuntimeError("The browser did not provide its exact version and invocation report.")
+                server.result["browserVersion"] = browser_version
                 return server.result
             finally:
                 stop_process(process)
@@ -146,24 +162,41 @@ def main():
     parser.add_argument("--dotnet", default=os.environ.get("DOTNET_HOST_PATH") or shutil.which("dotnet"))
     parser.add_argument("--browser", help="Path to Chrome, Chromium, or Edge; otherwise discover locally.")
     parser.add_argument("--aot", action="store_true", help="Compile managed code ahead of time instead of interpreting it.")
+    parser.add_argument("--tool-path", type=Path, help="Use an already deployed/installed BGCS tool instead of building repository projects.")
+    parser.add_argument("--runtime-path", type=Path, help="Use the matching BGCS.Runtime product assembly with --tool-path.")
+    parser.add_argument("--local-checkpoint", action="store_true", help="Mark the selected tool/runtime as private repository binaries rather than installed products.")
+    parser.add_argument("--no-build", action="store_true", help="Stage closed repository outputs without rebuilding shared projects.")
+    parser.add_argument("--configuration", default="Release", choices=("Debug", "Release"))
+    parser.add_argument("--keep-build-output", action="store_true", help="Keep large owned compiler/browser staging after evidence is written.")
     parser.add_argument("--inject-native-error", action="store_true", help="Corrupt a native return value to prove that invocation failures fail acceptance.")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/wasm-acceptance")
     args = parser.parse_args()
     if not args.dotnet or not Path(args.dotnet).is_file():
-        parser.error("Pass --dotnet with a .NET SDK host that has the .NET 9 wasm-tools workload.")
+        parser.error("Pass --dotnet with a .NET 10 SDK host that has the wasm-tools workload.")
+    if bool(args.tool_path) != bool(args.runtime_path):
+        parser.error("--tool-path and --runtime-path must identify the same installed product set together.")
+    if args.local_checkpoint and not args.tool_path:
+        parser.error("--local-checkpoint requires an explicit private tool/runtime pair.")
     browser = find_browser(args.browser)
     dotnet = str(Path(args.dotnet).resolve())
     work = args.output.resolve() / uuid.uuid4().hex
     work.mkdir(parents=True)
     report_path = work / "report.json"
     print(f"Wasm acceptance evidence: {work}", flush=True)
-    report = {"success": False, "target": "emscripten-wasm32-emscripten",
-              "host": platform.platform(), "browser": browser, "modes": list(MODES)}
+    report = {"success": False, "target": "emscripten-wasm32-emscripten", "managedRuntime": "browserWasm",
+              "host": platform.platform(), "browser": browser, "modes": list(MODES), "aot": args.aot,
+              "installedProducts": bool(args.tool_path) and not args.local_checkpoint, "privateRepositoryCheckpoint": args.local_checkpoint,
+              "injectedNativeError": args.inject_native_error,
+              "wideEnumPresentation": "generator-configured UInt64 enum; friendly and raw native uint64 typedef round trips"}
     environment = acceptance_environment(dotnet)
     try:
         # Scope SDK selection to the fixture. Repository packaging still uses its own global.json.
         (work / "global.json").write_text(json.dumps({"sdk": {
-            "version": "9.0.100", "rollForward": "latestFeature"}}), encoding="utf-8")
+            "version": "10.0.100", "rollForward": "latestFeature"}}), encoding="utf-8")
+        report["dotnetSdkVersion"] = run([dotnet, "--version"], work, work / "dotnet-version.log", environment).strip()
+        if not report["dotnetSdkVersion"].startswith("10."):
+            raise RuntimeError("The browser gate requires an actual .NET 10 SDK.")
+        report["workloadSet"] = run([dotnet, "workload", "list"], work, work / "workload-list.log", environment)
         fixture = ROOT / "tests/wasm"
         shutil.copytree(ROOT / "tests/fixtures/NativeApi", work / "Native")
         if args.inject_native_error:
@@ -171,10 +204,17 @@ def main():
             native_source.write_text(native_source.read_text(encoding="utf-8").replace("return left + right;", "return left + right + 1;"), encoding="utf-8")
         shutil.copytree(fixture / "wwwroot", work / "wwwroot")
         shutil.copyfile(fixture / "Consumer.project.xml", work / "Consumer.csproj")
-        tool = build_project(dotnet, ROOT / "src/BGCS.Tool/BGCS.Tool.csproj", work,
-                             work / "generator-build.log", environment)
-        runtime = build_project(dotnet, ROOT / "src/BGCS.Runtime/BGCS.Runtime.csproj", work,
-                                work / "runtime-build.log", environment)
+        if args.tool_path:
+            tool, runtime = args.tool_path.resolve(), args.runtime_path.resolve()
+            if not tool.is_file() or not runtime.is_file():
+                raise RuntimeError("The explicitly selected installed tool/runtime product is missing.")
+        else:
+            if not args.no_build:
+                for name in ("BGCS.Tool", "BGCS.Frontend.Clang.Worker", "BGCS.Runtime"):
+                    build_project(dotnet, ROOT / f"src/{name}/{name}.csproj", work, work / (name + "-build.log"), environment, args.configuration)
+            tool = cpp_acceptance_fixture.stage_repository_generator(ROOT, work, args.configuration)
+            runtime = ROOT / f"src/BGCS.Runtime/bin/{args.configuration}/net10.0/BGCS.Runtime.dll"
+        report.update(cpp_acceptance_fixture.execution_identity(ROOT, tool, runtime))
         shutil.copyfile(runtime, work / "BGCS.Runtime.dll")
         raw = run([dotnet, "msbuild", "Consumer.csproj", "-nologo", "-nodeReuse:false",
                    "-getProperty:EmscriptenSdkToolsPath,EmscriptenCacheSdkCacheDir"],
@@ -183,57 +223,51 @@ def main():
         sysroot = Path(sdk["EmscriptenCacheSdkCacheDir"]) / "sysroot"
         compiler = Path(sdk["EmscriptenSdkToolsPath"]) / "bin" / ("clang.exe" if os.name == "nt" else "clang")
         if not sysroot.is_dir() or not compiler.is_file():
-            raise RuntimeError("The selected .NET SDK does not have a complete .NET 9 wasm-tools workload.")
+            raise RuntimeError("The selected .NET 10 SDK does not have a complete wasm-tools workload.")
         report["sdk"] = sdk
-        cpp_acceptance_fixture.prepare(ROOT, work, dotnet, tool, compiler, environment, run, sysroot)
+        report["nativeCompilerVersion"] = run([str(compiler), "--version"], work, work / "native-compiler-version.log", environment).strip()
+        bridge = cpp_acceptance_fixture.prepare(ROOT, work, dotnet, tool, compiler, environment, run, sysroot)
+        project = work / "Consumer.csproj"
+        project.write_text(project.read_text(encoding="utf-8").replace("__BRIDGE_SOURCE__", bridge["source"].relative_to(work).as_posix()), encoding="utf-8")
         for mode in MODES:
-            config = {"preset": "emscripten-c", "apiName": "NativeApi",
-                      "namespace": "WasmAcceptance." + mode, "libName": "api",
-                      "entryFiles": ["Native/api.h", "Bridge/include/Classes.h", "Bridge/include/common.h"], "outputPath": "Generated/" + mode,
-                      "targetSysRoot": str(sysroot), "compilerPath": str(compiler),
-                      "importType": mode, "useCustomContext": mode == "FunctionTable",
-                      "parseSystemIncludes": False, "parseMacros": False, "parseComments": False,
-                      "generateExtensions": False, "delegatesAsVoidPointer": False,
-                      "generateHandles": True, "generateRuntimeSource": False,
-                      "mergeGeneratedFilesToSingleFile": True, "singleFileOutputName": "Bindings.cs",
-                      "typeMappings": {"BgcsWideFlags": "BgcsWideFlags"},
-                      "ignoredTypedefs": ["BgcsWideFlags"],
-                      "customEnums": [{"cppName": "BgcsWideFlags", "name": "BgcsWideFlags",
-                                       "baseType": "ulong", "items": [
-                                           {"cppName": "BGCS_WIDE_HIGH_BIT", "name": "HighBit",
-                                            "cppValue": "1ULL << 60", "value": "1UL << 60"}]}]}
+            config = cpp_acceptance_fixture.binding_configuration(mode, "WasmAcceptance", compiler, bridge, sysroot)
             config_path = work / (mode + ".json")
             config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
-            run([dotnet, str(tool), "generate", str(config_path)], work,
+            run(cpp_acceptance_fixture.tool_command(dotnet, tool) + ["generate", str(config_path)], work,
                 work / (mode + "-generation.log"), environment)
-        program = (fixture / "Program.cs.in").read_text(encoding="utf-8")
-        invocation = (fixture / "Invocation.cs.in").read_text(encoding="utf-8")
-        runners = "\n".join(invocation.replace("__MODE__", mode) for mode in MODES)
-        (work / "Program.cs").write_text(program.replace("__RUNNERS__", runners), encoding="utf-8")
+        report["generatedAbiManifests"] = [cpp_acceptance_fixture.generated_abi_identity(work, mode) for mode in MODES]
+        if any(item["nativeTargetId"] != report["target"] or item["nativePointerSize"] != 4
+               for item in report["generatedAbiManifests"]):
+            raise RuntimeError("Every browser import mode must use the same resolved wasm32 target.")
+        cpp_acceptance_fixture.write_consumer(ROOT, work, "WasmAcceptance", 4)
         run([dotnet, "publish", "Consumer.csproj", "-c", "Release", "-o", str(work / "published"),
              "--disable-build-servers", "-m:1", "-nodeReuse:false",
              "-p:RunAOTCompilation=" + str(args.aot).lower(), "-p:PublishTrimmed=" + str(args.aot).lower()],
             work, work / "publish.log", environment)
         result = invoke_browser(browser, work / "published/wwwroot", work)
+        report["browserVersion"] = result.pop("browserVersion")
         report["invocation"] = result
-        expected = {mode + ":" + check for mode in MODES for check in (
-            "scalar", "wide-integer", "wide-enum", "native-long", "bool", "layout", "bitfields", "buffer", "capacity", "handle", "callback", "null-callback", "release",
-            "cpp-construction", "cpp-method", "cpp-inheritance", "cpp-release")}
-        expected.update(("missing-symbol", "function-table-context"))
-        expected.update(("failed-initialization", "borrowed-context", "borrowed-storage"))
+        expected = cpp_acceptance_fixture.expected_checks()
         checks = result.get("checks", []) if result else []
         if not result or not result.get("success") or len(checks) != len(expected) or set(checks) != expected:
             raise RuntimeError("Native invocation failed or did not complete every required check.")
         if result.get("pointerSize") != 4:
             raise RuntimeError("The invocation did not execute in wasm32.")
+        lifecycle = result.get("lifecycleChecks", [])
+        expected_lifecycle = cpp_acceptance_fixture.expected_lifecycle_checks()
+        if len(lifecycle) != len(expected_lifecycle) or set(lifecycle) != expected_lifecycle:
+            raise RuntimeError("The browser did not complete every nonblocking retained/async lifecycle obligation.")
+        report["nonblockingLifecycle"] = {"success": True, "checks": lifecycle, "requiredCount": len(expected_lifecycle)}
         report["success"] = True
-        print(f"Passed: {len(expected)} acceptance checks across {len(MODES)} import modes.")
+        print(f"Passed: {len(expected)} acceptance checks and {len(expected_lifecycle)} nonblocking lifecycle checks across {len(MODES)} import modes.")
     except Exception as error:
         report["error"] = str(error)
         print(f"FAILED: {error}", flush=True)
     finally:
         report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(f"Report: {report_path}", flush=True)
+        if not args.keep_build_output:
+            cpp_acceptance_fixture.cleanup_build_outputs(work)
     return 0 if report["success"] else 1
 
 

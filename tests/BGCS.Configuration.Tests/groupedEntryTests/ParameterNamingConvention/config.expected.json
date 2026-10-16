@@ -1,0 +1,22 @@
+{
+  "legacyFixture": "entryTests/ParameterNamingConvention",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/naming/parameters/casing": "pascal"
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "InputValue",
+        "MaxCount"
+      ],
+      "returns": "int"
+    }
+  ]
+}

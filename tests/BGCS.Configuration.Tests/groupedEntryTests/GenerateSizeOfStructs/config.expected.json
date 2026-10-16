@@ -1,0 +1,49 @@
+{
+  "legacyFixture": "entryTests/GenerateSizeOfStructs",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/records": [
+      {
+        "nativeType": "sample_size_type",
+        "emitSizeConstant": true,
+        "name": null,
+        "documentation": null,
+        "fields": [],
+        "constructorFields": [],
+        "validity": null
+      }
+    ],
+    "/api/naming/fields/casing": "pascal"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.SampleSizeType",
+      "kind": "Struct"
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "public int Value;"
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.SampleSizeType",
+      "name": "NativeSize",
+      "value": 4
+    }
+  ]
+}

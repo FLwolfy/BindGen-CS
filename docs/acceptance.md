@@ -23,15 +23,15 @@ Both reports record their UTC generation time, Git revision, and working-tree di
 | Modern C++ | passed | Selected templates/STL/smart pointers/virtual callbacks |
 | Generated API quality | passed | Source/public-API snapshots; analyzers; no native imports outside generated output |
 | Beginner usability | passed | Five-command maximum from header to validated output |
-| External architecture | passed | Intermediate/Runtime dependency-boundary tests and complete solution build |
-| Internal architecture | passed | Shared IR, analyzer/IR-emitter tests, and no pre-release fallback emitter |
+| External architecture | passed | Contracts/Runtime independence, Contracts-only plugins and complete solution build |
+| Internal architecture | passed | Thirteen-project dependency policy, neutral model stages, worker isolation and no old facade/configuration path |
 | NuGet/testing/release | passed | Clean packages/symbols, API and dependency policy, deterministic output, native-RID consumer, host-native and managed matrices |
 
 ## Real-library budgets
 
 Measured on a controlled, reported host target after warm NuGet restore. The real-library functional matrix reports generation times without failing on noisy shared-runner timing. Set `BGCS_ENFORCE_GENERATION_BUDGETS=1` for a dedicated real-library performance run that enforces these budgets; `scripts/test-performance-budget.sh` separately enforces the 10,000-declaration cold/warm cache budgets below.
 
-The 10,000-declaration cache gate always verifies emitted method count, byte-identical output after deleting the generated directory, and exactly one immutable cache entry. It also enforces host-calibrated wall-clock budgets: 60 seconds cold / 10 seconds warm on Linux, Windows, and macOS ARM64; 120 seconds cold / 30 seconds warm on the GitHub-hosted macOS Intel runner. The Intel limits account for the observed 76-second cold and 12-second warm run on that host, not a different fixture or a skipped check. `BGCS_PERF_COLD_BUDGET_SECONDS` and `BGCS_PERF_WARM_BUDGET_SECONDS` can set stricter budgets on a controlled machine; the report records the target, elapsed times, and applied limits.
+The 10,000-declaration cache gate verifies emitted method count, byte-identical output after deleting the generated directory, and the complete sealed immutable artifact set. The current budgets in `eng/acceptance/performance-budgets.json` are 60 seconds cold / 10 seconds warm on Linux and Windows x64, and 120 seconds cold / 30 seconds warm on macOS Intel. ARM64 budgets belong to its independent certification. `BGCS_PERF_COLD_BUDGET_SECONDS` and `BGCS_PERF_WARM_BUDGET_SECONDS` may set stricter limits; reports record actual limits, worker and session peak memory. A C# emission cache hit alone never certifies parser or whole-pipeline reuse.
 
 | Library | Generate budget | Required result |
 | --- | ---: | --- |
@@ -55,7 +55,8 @@ The ABI suite must compile a native test DLL with the same headers and compare m
 - signed, unsigned, zero-width, cross-unit, struct, and union bitfields;
 - pointers, references, function pointers, callbacks, and user data;
 - cdecl, stdcall, thiscall where applicable, and vectorcall diagnostics;
-- UTF-8/UTF-16 strings with borrowed, owned, and caller-allocated lifetimes;
+- UTF-8/UTF-16/UTF-32 strings, explicit byte/code-unit lengths, embedded zeros, and borrowed/owned/caller-allocated lifetimes;
+- independent native layout, managed storage and by-value calling compatibility, including over-alignment and long-double pointer/shim alternatives;
 - pointer/count, capacity/written-count, and two-call query patterns.
 
 Generated compilation without native invocation is not sufficient ABI evidence.
@@ -72,7 +73,7 @@ The bridge suite must compile, link, and execute tests for:
 - configured lowerings for string, vector, span, array, map, set, optional, variant, expected, path, chrono, and unique/shared pointers;
 - allocator/deallocator pairing, retained callback unregister/drain races, and async completion lifetime;
 - managed implementations of configured abstract callback interfaces;
-- native bridge compilation plus synthetic lifecycle/method runtime invocation.
+- actual native bridge compilation and managed-consumer lifecycle/method invocation.
 
 Unsupported constructs must produce actionable diagnostics and an inspectable report; silently emitting an ABI-unsafe signature fails the category.
 
@@ -97,26 +98,29 @@ bindgen-cs generate
 bindgen-cs build
 ```
 
-`doctor` reports toolchain problems, `validate` performs parsing and IR validation without replacing output, and `build` compiles generated C#. `bridge` emits a versioned native build manifest, and `native-build` can compile it with the built-in Clang/GNU-compatible provider; ordinary C# `build` remains separate. Structured safety/C++ rejections must include a suggested configuration path or source action.
+`doctor` reports toolchain and resource problems; `validate` checks configuration and neutral contracts without replacing output. `generate` follows the unified C/C++ pipeline, including a C++ bridge when required. `build` compiles candidate managed output and performs configured native source/prebuilt validation before joint publication. `bridge` and `native-build` remain explicit requests into the same Host. Native mode `none` is reported as unexecuted native verification. Safety/C++ rejections identify a concrete configuration or source repair.
 
 ## Architecture evidence
 
 Current automated architecture tests directly enforce:
 
-- Runtime has no generator dependency;
-- Intermediate has no facade, emitter, Roslyn, filesystem, or CLI dependency;
-- the Intermediate assembly references no other BGCS assembly;
-- IR analysis and IR-native `CSharpEmitter.Emit` have independent behavior tests;
-- unsupported IR-native C# semantics fail before output with stable `BGCSCS001` diagnostics.
-- all five real C libraries regenerate through the IR-native backend and compile with warnings as errors; incomplete opaque storage passed by value is rejected instead of guessed.
+- Runtime and Contracts each reference no other BGCS assembly;
+- Contracts exposes no frontend, Roslyn, filesystem, MSBuild or CLI types;
+- standard lowering and C# emission do not reference the parser implementation;
+- the default Host crosses a checked worker process boundary before consuming detached NativeModule facts;
+- NativeModule, CppBridgeModule, InteropModule, ManagedApiModel and CSharpEmissionPlan have distinct ownership and independent tests;
+- the C# backend validates planned and actual import/storage contracts before publication; unknown by-value ABI is rejected;
+- the real C corpus and bimg C++ path regenerate and compile with warnings as errors without editing generated output;
+- production Compile Link sharing and production friend assemblies are rejected. The one registered frontend-test friend is constrained to a real non-packable test project.
 
-Primary configured generation calls `CSharpEmitter` from canonical IR and covers raw plus string/span/ref/out friendly surfaces. No pre-release compatibility emitter or old-schema migration path exists.
+CLI, embedded SDK, workspace and MSBuild call the public BindingHost pipeline. CSharpBackend consumes managed/interop contracts and a checked emission plan. There is no old CsCodeGenerator facade, BindingModule, flat configuration reader, migration tool or compatibility emitter. Model-specific extension ports and the advanced Clang-only worker port are documented separately.
 
 ## Package and release evidence
 
 - All package IDs share one version.
-- A clean local feed restores public packages and all transitive implementation packages.
-- The consumer uses an isolated package cache; third-party packages already locked by solution restore are read only from the machine's global-packages fallback, so the release smoke does not depend on live nuget.org availability.
+- A clean local feed restores the four products and their declared technical parser/tool partitions; internal projects are not separately installed products.
+- Consumers use isolated product caches and exact archive hashes. Any declared third-party fallback cannot substitute previously installed BGCS products. Public-release smoke separately installs from the actual public NuGet source.
+- Package and source Runtime consumers include minimal and complete source closures, single-file output, independent namespaces and no generator references.
 - The tool installs into an empty tool path and completes init/generate/build smoke tests.
 - Two clean packs from the same commit produce equivalent package content after excluding NuGet signature metadata.
 - A clean consumer selects and invokes the current host binary from `runtimes/<rid>/native/`.
@@ -127,4 +131,4 @@ Primary configured generation calls `CSharpEmitter` from canonical IR and covers
 
 ## Current status
 
-`scripts/run-full-test-matrix.sh` writes `artifacts/acceptance/report.json`, `report.md`, and target-retained copies only after every local BGCS gate above passes. The required maintenance-candidate desktop reports are Windows x64 MSVC, Linux x64 GNU, and macOS x64 Darwin; Windows additionally requires real clang-cl and MSBuild DLL build/export/invocation. These same-version reports remain pending until their runners complete. Consumer-specific generation and integration acceptance belong to the consuming repositories and are reported separately from BGCS evidence. A real OIDC/Sigstore signature likewise remains a release-run artifact, not local evidence.
+`scripts/run-full-test-matrix.sh` writes host acceptance reports only after its mandatory gates succeed. Complete release requirements are data in `eng/acceptance/required-release-gates.json`: same-revision desktop reports, browser interpreter/AOT, NativeAOT, full installed products and Visual Studio 2026 TaskHost evidence. Host tests use exact structured discovery, eight disjoint class shards and a complete raw/TRX union; missing, extra, duplicate, skipped or failed cases cannot certify the suite. Dirty local receipts remain development evidence. See [review and certification states](release-evidence-state-flow.md); authenticated preflight, actual attestations and verified public installation cannot be replaced by a checked-in completion claim.

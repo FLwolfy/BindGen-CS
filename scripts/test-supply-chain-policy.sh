@@ -9,7 +9,7 @@ REPORT_PATH="${OUTPUT_DIR}/nuget-vulnerabilities.json"
 INVENTORY_PATH="${OUTPUT_DIR}/dependency-licenses.json"
 mkdir -p "${OUTPUT_DIR}"
 
-"${DOTNET_CMD}" list "${ROOT_DIR}/BindGen-CS.sln" package \
+"${DOTNET_CMD}" list "${ROOT_DIR}/BindGen-CS.slnx" package \
   --include-transitive --vulnerable --format json --output-version 1 > "${REPORT_PATH}"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
   --configuration Release -- validate dependencies vulnerabilities "${REPORT_PATH}"

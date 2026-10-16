@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -11,18 +12,6 @@ namespace BGCS.Tool.Validation;
 
 internal static class ArchitectureValidator
 {
-    private static readonly IReadOnlyDictionary<string, string[]> AllowedDependencies = new Dictionary<string, string[]>(StringComparer.Ordinal)
-    {
-        ["BGCS.Core"] = [],
-        ["BGCS.CppAst"] = ["BGCS.Core"],
-        ["BGCS.Intermediate"] = [],
-        ["BGCS"] = ["BGCS.Core", "BGCS.CppAst", "BGCS.Intermediate", "BGCS.Language"],
-        ["BGCS.Cpp2C"] = ["BGCS.Core", "BGCS.CppAst", "BGCS.Intermediate"],
-        ["BGCS.Language"] = ["BGCS.Core"],
-        ["BGCS.Runtime"] = [],
-        ["BGCS.Tool"] = ["BGCS", "BGCS.Cpp2C"]
-    };
-
     internal static int Run(
         string[] arguments,
         TextWriter output,
@@ -40,14 +29,36 @@ internal static class ArchitectureValidator
             error.WriteLine($"Production source root is unavailable: {sourceRoot}");
             return 2;
         }
+        string integrationRoot = Path.Combine(root, "integrations");
+        Dictionary<string, string[]> allowedDependencies = new(StringComparer.Ordinal);
+        HashSet<string> executables;
+        try
+        {
+            using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "eng", "architecture", "project-dependencies.json")));
+            if (manifest.RootElement.GetProperty("schemaVersion").GetInt32() != 1)
+                throw new InvalidDataException("The architecture manifest revision is unsupported.");
+            foreach (JsonProperty project in manifest.RootElement.GetProperty("projects").EnumerateObject())
+                allowedDependencies.Add(project.Name, project.Value.EnumerateArray().Select(value => value.GetString()!).ToArray());
+            executables = manifest.RootElement.GetProperty("executables").EnumerateArray().Select(value => value.GetString()!).ToHashSet(StringComparer.Ordinal);
+            if (allowedDependencies.Count != 13 || executables.Any(name => !allowedDependencies.ContainsKey(name))
+                || allowedDependencies.Values.SelectMany(dependencies => dependencies).Any(name => !allowedDependencies.ContainsKey(name)))
+                throw new InvalidDataException("The architecture manifest must describe all thirteen implementation projects.");
+        }
+        catch (Exception failure) when (failure is IOException or JsonException or InvalidOperationException)
+        {
+            error.WriteLine($"Architecture manifest could not be read: {failure.Message}");
+            return 2;
+        }
         string[] projects = Directory.GetFiles(sourceRoot, "*.csproj", SearchOption.AllDirectories)
+            .Concat(Directory.Exists(integrationRoot) ? Directory.GetFiles(integrationRoot, "*.csproj", SearchOption.AllDirectories) : [])
             .Where(static path => !IsOutput(path)).OrderBy(static path => path, StringComparer.Ordinal).ToArray();
         var failures = new List<string>();
+        ArchitectureFriendPolicy friends = ArchitectureFriendPolicy.Load(root, projects, failures);
         var discovered = new HashSet<string>(StringComparer.Ordinal);
         foreach (string project in projects)
         {
             string name = Path.GetFileNameWithoutExtension(project);
-            if (!discovered.Add(name) || !AllowedDependencies.TryGetValue(name, out string[]? allowed))
+            if (!discovered.Add(name) || !allowedDependencies.TryGetValue(name, out string[]? allowed))
             {
                 failures.Add($"Unexpected or duplicate production project: {Path.GetRelativePath(root, project)}");
                 continue;
@@ -59,12 +70,12 @@ internal static class ArchitectureValidator
                 string dependency = Path.GetFileNameWithoutExtension(path);
                 string resolved = Path.GetFullPath(path, Path.GetDirectoryName(project)!);
                 if (!File.Exists(resolved) || !allowed.Contains(dependency, StringComparer.Ordinal)
-                    || !resolved.StartsWith(sourceRoot + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                    || !projects.Contains(resolved, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
                     failures.Add($"{name}: forbidden or missing dependency '{path}'.");
             }
             bool executable = document.Descendants("OutputType").Any(static element => element.Value is "Exe" or "WinExe");
-            if (executable != (name == "BGCS.Tool"))
-                failures.Add($"{name}: BGCS.Tool must be the sole production executable.");
+            if (executable != executables.Contains(name))
+                failures.Add($"{name}: executable status does not match the architecture manifest.");
             foreach (XElement item in document.Descendants("Compile"))
             {
                 if (item.Attribute("Link") is not null || item.Element("Link") is not null)
@@ -73,12 +84,14 @@ internal static class ArchitectureValidator
                 if (include is not null && include.Replace('\\', '/').Contains("../", StringComparison.Ordinal))
                     failures.Add($"{name}: production source is included from another owner.");
             }
-            if (name is "BGCS.Core" or "BGCS.Intermediate" or "BGCS.Runtime")
+            if (name is "BGCS.Infrastructure" or "BGCS.Contracts" or "BGCS.Runtime")
                 ValidateNeutralSources(Path.GetDirectoryName(project)!, name, failures);
-            else if (name != "BGCS.CppAst")
+            else if (name != "BGCS.Frontend.Clang")
                 ValidateParserOwnership(Path.GetDirectoryName(project)!, name, failures);
+            friends.Validate(project, document);
         }
-        foreach (string required in AllowedDependencies.Keys.Where(name => !discovered.Contains(name)))
+        friends.Complete();
+        foreach (string required in allowedDependencies.Keys.Where(name => !discovered.Contains(name)))
             failures.Add($"Missing production project: {required}");
         foreach (string failure in failures)
             error.WriteLine(failure);
@@ -97,9 +110,11 @@ internal static class ArchitectureValidator
             foreach (QualifiedNameSyntax name in syntax.DescendantNodes().OfType<QualifiedNameSyntax>())
             {
                 string value = name.ToString().Replace("global::", string.Empty, StringComparison.Ordinal);
-                if (value.StartsWith("BGCS.CppAst", StringComparison.Ordinal)
+                if (value.StartsWith("BGCS.Frontend.Clang", StringComparison.Ordinal)
                     || value.StartsWith("ClangSharp", StringComparison.Ordinal)
-                    || project != "BGCS.Core" && value.StartsWith("BGCS.Core", StringComparison.Ordinal))
+                    || project != "BGCS.Infrastructure" && value.StartsWith("BGCS.", StringComparison.Ordinal) && value != project && !value.StartsWith(project + ".", StringComparison.Ordinal)
+                    || value.StartsWith("Microsoft.CodeAnalysis", StringComparison.Ordinal)
+                    || value.StartsWith("Microsoft.Build", StringComparison.Ordinal))
                 {
                     failures.Add($"{project}: implementation dependency in {Path.GetRelativePath(directory, file)}: {value}");
                     break;
@@ -122,10 +137,12 @@ internal static class ArchitectureValidator
         {
             SyntaxNode syntax = CSharpSyntaxTree.ParseText(File.ReadAllText(file)).GetRoot();
             bool usesNativeParser = syntax.DescendantNodes().OfType<QualifiedNameSyntax>()
-                .Any(static name => name.ToString().Replace("global::", string.Empty, StringComparison.Ordinal)
-                    .StartsWith("ClangSharp", StringComparison.Ordinal));
+                .Any(name => name.ToString().Replace("global::", string.Empty, StringComparison.Ordinal)
+                    .StartsWith("ClangSharp", StringComparison.Ordinal)
+                    || project != "BGCS.Frontend.Clang.Worker" && name.ToString().Replace("global::", string.Empty, StringComparison.Ordinal)
+                        .StartsWith("BGCS.Frontend.Clang", StringComparison.Ordinal));
             if (usesNativeParser)
-                failures.Add($"{project}: native parser interop must remain inside BGCS.CppAst: {Path.GetRelativePath(directory, file)}");
+                failures.Add($"{project}: native parser interop must remain inside BGCS.Frontend.Clang: {Path.GetRelativePath(directory, file)}");
         }
     }
 }

@@ -1,6 +1,0 @@
-{
-  "Contains": [
-    "Def_Counter_Add",
-    "typedef struct Def_Counter Def_Counter;"
-  ]
-}

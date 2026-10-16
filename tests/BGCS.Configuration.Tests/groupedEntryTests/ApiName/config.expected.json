@@ -1,0 +1,29 @@
+{
+  "legacyFixture": "entryTests/ApiName",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/name": "ExpectedApiName"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.ExpectedApiName",
+      "kind": "Class"
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.ExpectedApiName",
+      "name": "ApiNameFn",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "value"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.EntryApi"
+  ]
+}

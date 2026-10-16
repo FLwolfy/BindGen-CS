@@ -1,0 +1,26 @@
+{
+  "legacyFixture": "entryTests/GenerateRuntimeSource",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/runtime/mode": "package"
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [],
+  "notContains": [
+    "namespace EntryTests.Generated.Runtime"
+  ]
+}

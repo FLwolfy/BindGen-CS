@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "kind": "native",
+  "contentPolicy": "Exact detached Git commit, clean checkout including ignored/untracked files, deterministic raw checked-out content digest and entry-header SHA-256; core.autocrlf=false during restore. Submodule pointers are recorded and do not imply native sources are materialized.",
+  "repositories": [
+    {
+      "id": "miniaudio",
+      "repository": "https://github.com/mackron/miniaudio.git",
+      "revision": "9634bedb5b5a2ca38c1ee7108a9358a4e233f14d",
+      "sparseDirectories": [
+        "extras/miniaudio_split"
+      ],
+      "checkedOutContentSha256": "d18ddceef8cda3ca7b7ca096c8a2682ed224447f268e1cccad0a81c75bd6a3d4",
+      "entryHeaders": {
+        "extras/miniaudio_split/miniaudio.h": "01d3ac6049132bdccc30bd467b7c1d030c090e8f30eb0ceb2da14bea0ba7143a"
+      }
+    },
+    {
+      "id": "SDL",
+      "repository": "https://github.com/libsdl-org/SDL.git",
+      "revision": "5f78ded3194a85ebdabc219f844811ba953b4450",
+      "sparseDirectories": [],
+      "checkedOutContentSha256": "7625308d0a7c9e4721bf90a6a6e27a501fae35937f82a726b596d045fc24b26c",
+      "entryHeaders": {
+        "include/SDL3/SDL.h": "f596d4c0ec02baffce1038c3c886a0eb0ce3115f89678ee175ae807e9aa13fa5"
+      }
+    },
+    {
+      "id": "cimgui",
+      "repository": "https://github.com/cimgui/cimgui.git",
+      "revision": "715802490eabca2fc86cf25b41b83aa7c5d6060d",
+      "sparseDirectories": [],
+      "checkedOutContentSha256": "23a1e6e7a8a4c47145c18b948ced91612ceca9d9336e56fb1cfd4dd7c443c9bc",
+      "entryHeaders": {
+        "cimgui.h": "6ac29dba01cf7ef40015025a757524151c14476c83ecdd1d0fe6c0f1320b6054"
+      }
+    },
+    {
+      "id": "cimguizmo",
+      "repository": "https://github.com/cimgui/cimguizmo.git",
+      "revision": "77e8ff47dc16a688edb06526b2f19c845b653bc7",
+      "sparseDirectories": [],
+      "checkedOutContentSha256": "bf8d1086c5f683ebec4cf52e4f94b59fcb9967601a421fb26f74809982b6fc7d",
+      "entryHeaders": {
+        "cimguizmo.h": "66301576f83da2ca279fb9e7b1e6152fe44c7cbd0ac5f713e2d1c4ee5039a824"
+      }
+    },
+    {
+      "id": "bgfx",
+      "repository": "https://github.com/bkaradzic/bgfx.git",
+      "revision": "20a637e3e6dd946031dd21e74c7138d2fab06abc",
+      "sparseDirectories": [],
+      "checkedOutContentSha256": "e0a59e65c8c14c1fc30fb35f40396fdfa34eb47244f3d0d5988e32042b370a0a",
+      "entryHeaders": {
+        "include/bgfx/c99/bgfx.h": "c73cf594a7b9213f17aac201763c40b4b40935336dff38f393add93dba75134b"
+      }
+    },
+    {
+      "id": "bimg",
+      "repository": "https://github.com/bkaradzic/bimg.git",
+      "revision": "6c13a0c8a8908243df475dfcab276554458dcd13",
+      "sparseDirectories": [],
+      "checkedOutContentSha256": "9e6931e0f0afd1ebda269c708247d975a596052aa05eebabf3b785488a2c0e2c",
+      "entryHeaders": {
+        "include/bimg/bimg.h": "d3c82fdf973eda2f1dedeb7f3104c87184fcf1a5c5cf80be191bb95f5633fc99"
+      }
+    },
+    {
+      "id": "bx",
+      "repository": "https://github.com/bkaradzic/bx.git",
+      "revision": "0d38df86151b73b7b471a9a7db31deb5f4ce02ca",
+      "sparseDirectories": [],
+      "checkedOutContentSha256": "df06c7c64cbb4dd7f6de813f00c86d6f30d6192c8986b5e5a5a30edc4bf6e8ad",
+      "entryHeaders": {
+        "include/bx/bx.h": "be6130024c7f01591558054c6575aa6be66498a9639bbcc4a19891990eda8667"
+      }
+    },
+    {
+      "id": "cimgui/imgui",
+      "repository": "https://github.com/ocornut/imgui.git",
+      "revision": "2a1b69f05748ad909f03acf4533447cac1331611",
+      "sparseDirectories": [],
+      "entryHeaders": {
+        "imgui.h": "fb4388fee713b9349b392e4cc29b440ec3b2b36c61d2eff2c04f5030b6a4f9b0"
+      },
+      "checkedOutContentSha256": "134d0cb25d1db954dcb953677ab0909aed18934b54da4c383af31645ccfe3dd2"
+    },
+    {
+      "id": "cimguizmo/ImGuizmo",
+      "repository": "https://github.com/CedricGuillemet/ImGuizmo.git",
+      "revision": "b10e91756d32395f5c1fefd417899b657ed7cb88",
+      "sparseDirectories": [],
+      "entryHeaders": {
+        "ImGuizmo.h": "538d59be68fe25284e067f7f60f5a8e08b6599ca873b8a26b102de9bb1bb95ed"
+      },
+      "checkedOutContentSha256": "d084dcafc250362ca9566a9d6e95b63ef13c099a7b1e4ba2bfe2ef3d55de3bc3"
+    }
+  ]
+}

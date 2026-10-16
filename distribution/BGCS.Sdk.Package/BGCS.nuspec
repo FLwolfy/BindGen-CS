@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>BGCS</id>
+    <version>$version$</version>
+    <authors>FLwolfy</authors>
+    <description>Complete BGCS generation SDK, native bridge, isolated parser worker and opt-in MSBuild integration.</description>
+    <license type="expression">MIT</license>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/FLwolfy/BindGen-CS</projectUrl>
+    <repository type="git" url="https://github.com/FLwolfy/BindGen-CS" />
+    <!-- eng/pack.py fills exact external dependency versions from the restored SDK graph. -->
+    <dependencies><group targetFramework="net10.0" /></dependencies>
+  </metadata>
+  <files><file src="**/*" target="" /></files>
+</package>

@@ -1,0 +1,26 @@
+{
+  "legacyFixture": "entryTests/GeneratePlaceholderComments",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/emitPlaceholderComments": false
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [],
+  "notContains": [
+    "To be documented."
+  ]
+}

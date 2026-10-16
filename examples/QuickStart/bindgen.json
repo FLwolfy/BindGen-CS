@@ -1,10 +1,8 @@
 {
-  "namespace": "QuickStart.Generated",
-  "apiName": "NativeApi",
-  "libName": "quickstart",
-  "entryFiles": ["native.h"],
-  "outputPath": "Generated",
-  "generateExtensions": false,
-  "mergeGeneratedFilesToSingleFile": true,
-  "enableIncrementalCache": false
+  "schemaVersion": 1,
+  "library": { "id": "quickstart", "nativeName": "quickstart" },
+  "source": { "language": "c", "languageStandard": "c17", "headers": ["native.h"] },
+  "api": { "namespace": "QuickStart.Generated", "name": "NativeApi", "names": { "bgcs_add": "Add" } },
+  "nativeBuild": { "mode": "sources", "sources": ["native.c"] },
+  "output": { "root": "Generated", "layout": "split" }
 }

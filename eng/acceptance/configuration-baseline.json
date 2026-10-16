@@ -1,0 +1,1465 @@
+{
+  "schemaVersion": 1,
+  "baseline": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "policy": "Frozen original configuration identities in original enumeration order. Current inventory may append new stable IDs; source correspondence and dirty local tests do not certify release parity.",
+  "entries": [
+    {
+      "configurationId": "CFG0001",
+      "source": "src/BGCS.Cpp2C/Configuration/BaseConfig.cs",
+      "member": "url",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0002",
+      "source": "src/BGCS.Cpp2C/Configuration/BaseConfig.cs",
+      "member": "ignoredProperties",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0003",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.Serialization.cs",
+      "member": "configDirectory",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0004",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "lowerings",
+      "type": "CppLoweringRegistry"
+    },
+    {
+      "configurationId": "CFG0005",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "typeLowerings",
+      "type": "List<CppTypeLoweringRecipe>"
+    },
+    {
+      "configurationId": "CFG0006",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "callableLowerings",
+      "type": "List<CppCallableLoweringRecipe>"
+    },
+    {
+      "configurationId": "CFG0007",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "nativeShims",
+      "type": "List<CppNativeShim>"
+    },
+    {
+      "configurationId": "CFG0008",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "loweringSafetyPolicy",
+      "type": "CppLoweringSafetyPolicy"
+    },
+    {
+      "configurationId": "CFG0009",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "enableIncrementalCache",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0010",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "cacheDirectory",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0011",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "pluginAssemblies",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0012",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "plugins",
+      "type": "BindingPluginRegistry"
+    },
+    {
+      "configurationId": "CFG0013",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "baseConfig",
+      "type": "BaseConfig?"
+    },
+    {
+      "configurationId": "CFG0014",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "entryFiles",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0015",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "allowedHeaders",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0016",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "outputPath",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0017",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "languageStandard",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0018",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "generateBuildManifest",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0019",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "buildManifestFileName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0020",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "generateCSharpBindings",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0021",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "cSharpNamespace",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0022",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "cSharpApiName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0023",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "nativeLibraryName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0024",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "cSharpOutputPath",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0025",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "cSharpStrictSafetySeverity",
+      "type": "StrictSafetySeverity"
+    },
+    {
+      "configurationId": "CFG0026",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "logLevel",
+      "type": "LogSeverity"
+    },
+    {
+      "configurationId": "CFG0027",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "cppLogLevel",
+      "type": "LogSeverity"
+    },
+    {
+      "configurationId": "CFG0028",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "parseSystemIncludes",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0029",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "parseMacros",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0030",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "parseComments",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0031",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "includeFolders",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0032",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "systemIncludeFolders",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0033",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "defines",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0034",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "additionalArguments",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0035",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "librarySearchFolders",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0036",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "linkLibraries",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0037",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "linkerArguments",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0038",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "templateInstantiations",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0039",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "functionTemplateInstantiations",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0040",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "utf8StringTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0041",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "uniquePtrTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0042",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "sharedPtrTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0043",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "spanTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0044",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "vectorTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0045",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "optionalTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0046",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "arrayTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0047",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "mapTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0048",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "setTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0049",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "variantTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0050",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "expectedTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0051",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "pathTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0052",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "chronoDurationTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0053",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "chronoTimePointTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0054",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "virtualCallbackInterfaces",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0055",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "namePrefix",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0056",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "targetId",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0057",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "targetResolver",
+      "type": "ClangTargetResolver"
+    },
+    {
+      "configurationId": "CFG0058",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "targetTriple",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0059",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "targetSysRoot",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0060",
+      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+      "member": "compilerPath",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0061",
+      "source": "src/BGCS/Configuration/BaseConfig.cs",
+      "member": "url",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0062",
+      "source": "src/BGCS/Configuration/BaseConfig.cs",
+      "member": "ignoredProperties",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0063",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "constantMappings",
+      "type": "List<ConstantMapping>"
+    },
+    {
+      "configurationId": "CFG0064",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "enumMappings",
+      "type": "List<EnumMapping>"
+    },
+    {
+      "configurationId": "CFG0065",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "functionMappings",
+      "type": "List<FunctionMapping>"
+    },
+    {
+      "configurationId": "CFG0066",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "variadicFunctionVariants",
+      "type": "Dictionary<string, List<VariadicFunctionVariant>>"
+    },
+    {
+      "configurationId": "CFG0067",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "marshallingMappings",
+      "type": "Dictionary<string, FunctionMarshallingMapping>"
+    },
+    {
+      "configurationId": "CFG0068",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "handleMappings",
+      "type": "List<HandleMapping>"
+    },
+    {
+      "configurationId": "CFG0069",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "classMappings",
+      "type": "List<TypeMapping>"
+    },
+    {
+      "configurationId": "CFG0070",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "delegateMappings",
+      "type": "List<DelegateMapping>"
+    },
+    {
+      "configurationId": "CFG0071",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "arrayMappings",
+      "type": "List<ArrayMapping>"
+    },
+    {
+      "configurationId": "CFG0072",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "nameMappings",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0073",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "typeMappings",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0074",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "externalTypeContracts",
+      "type": "List<ExternalTypeContract>"
+    },
+    {
+      "configurationId": "CFG0075",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "typedefToEnumMappings",
+      "type": "Dictionary<string, string?>"
+    },
+    {
+      "configurationId": "CFG0076",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.Mappings.cs",
+      "member": "functionAliasMappings",
+      "type": "Dictionary<string, List<FunctionAliasMapping>>"
+    },
+    {
+      "configurationId": "CFG0077",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.TypeNaming.cs",
+      "member": "customEnumItemMapper",
+      "type": "CustomEnumItemMapperDelegate?"
+    },
+    {
+      "configurationId": "CFG0078",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "enableIncrementalCache",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0079",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "cacheDirectory",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0080",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "pluginAssemblies",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0081",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "plugins",
+      "type": "BindingPluginRegistry"
+    },
+    {
+      "configurationId": "CFG0082",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "baseConfig",
+      "type": "BaseConfig?"
+    },
+    {
+      "configurationId": "CFG0083",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "preset",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0084",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "apiName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0085",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "libName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0086",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "entryFiles",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0087",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedHeaders",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0088",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "includeTransitivelyReferencedHeaders",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0089",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "outputPath",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0090",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "targetId",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0091",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "targetResolver",
+      "type": "ClangTargetResolver"
+    },
+    {
+      "configurationId": "CFG0092",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "targetTriple",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0093",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "targetSysRoot",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0094",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "compilerPath",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0095",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "logLevel",
+      "type": "LogSeverity"
+    },
+    {
+      "configurationId": "CFG0096",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "cppLogLevel",
+      "type": "LogSeverity"
+    },
+    {
+      "configurationId": "CFG0097",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "parseSystemIncludes",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0098",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "parseMacros",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0099",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "parseComments",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0100",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "strictSafety",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0101",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "strictSafetySeverity",
+      "type": "StrictSafetySeverity"
+    },
+    {
+      "configurationId": "CFG0102",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "parserKind",
+      "type": "CppParserKind"
+    },
+    {
+      "configurationId": "CFG0103",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "enableExperimentalOptions",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0104",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateSizeOfStructs",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0105",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateConstructorsForStructs",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0106",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "delegatesAsVoidPointer",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0107",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "autoWrapCallbacks",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0108",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "wrapPointersAsHandle",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0109",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generatePlaceholderComments",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0110",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "functionTableEntries",
+      "type": "List<CsFunctionTableEntry>"
+    },
+    {
+      "configurationId": "CFG0111",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "useCustomContext",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0112",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "getLibraryNameFunctionName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0113",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "getLibraryExtensionFunctionName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0114",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "importType",
+      "type": "ImportType"
+    },
+    {
+      "configurationId": "CFG0115",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "emitLibraryNameConstant",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0116",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateMetadata",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0117",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateConstants",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0118",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateEnums",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0119",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateExtensions",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0120",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateFunctions",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0121",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateHandles",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0122",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateTypes",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0123",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateDelegates",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0124",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "oneFilePerType",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0125",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "nestGeneratedTypesInApi",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0126",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "mergeGeneratedFilesToSingleFile",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0127",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "singleFileOutputName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0128",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "runtimeNamespace",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0129",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateRuntimeSource",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0130",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "boolType",
+      "type": "BoolType"
+    },
+    {
+      "configurationId": "CFG0131",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownConstantNames",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0132",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownEnumValueNames",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0133",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownEnumPrefixes",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0134",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownExtensionPrefixes",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0135",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownExtensionNames",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0136",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownDefaultValueNames",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0137",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownConstructors",
+      "type": "Dictionary<string, List<string>>"
+    },
+    {
+      "configurationId": "CFG0138",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "knownMemberFunctions",
+      "type": "Dictionary<string, List<string>>"
+    },
+    {
+      "configurationId": "CFG0139",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "functionPrefixes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0140",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredParts",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0141",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "keywords",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0142",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredFunctions",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0143",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredExtensions",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0144",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredTypes",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0145",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredEnums",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0146",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredTypedefs",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0147",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredDelegates",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0148",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "ignoredConstants",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0149",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedFunctions",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0150",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedExtensions",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0151",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedTypes",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0152",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedEnums",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0153",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedTypedefs",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0154",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedDelegates",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0155",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "allowedConstants",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0156",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "usings",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0157",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "constantNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0158",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "enumNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0159",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "enumItemNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0160",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "extensionNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0161",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "functionNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0162",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "handleNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0163",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "typeNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0164",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "delegateNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0165",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "parameterNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0166",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "memberNamingConvention",
+      "type": "NamingConvention"
+    },
+    {
+      "configurationId": "CFG0167",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "autoSquashTypedef",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0168",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "includeFolders",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0169",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "systemIncludeFolders",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0170",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "defines",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0171",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "additionalArguments",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0172",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "customEnums",
+      "type": "List<CsEnumMetadata>"
+    },
+    {
+      "configurationId": "CFG0173",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "varyingTypes",
+      "type": "HashSet<string>"
+    },
+    {
+      "configurationId": "CFG0174",
+      "source": "src/BGCS/Configuration/CsCodeGeneratorConfig.cs",
+      "member": "generateAdditionalOverloads",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0175",
+      "source": "src/BGCS/Configuration/FunctionMarshallingMapping.cs",
+      "member": "parameters",
+      "type": "Dictionary<string, MarshallingMapping>"
+    },
+    {
+      "configurationId": "CFG0176",
+      "source": "src/BGCS/Configuration/Mapping/ConstantMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0177",
+      "source": "src/BGCS/Configuration/Mapping/ConstantMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0178",
+      "source": "src/BGCS/Configuration/Mapping/ConstantMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0179",
+      "source": "src/BGCS/Configuration/Mapping/ConstantMapping.cs",
+      "member": "type",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0180",
+      "source": "src/BGCS/Configuration/Mapping/ConstantMapping.cs",
+      "member": "value",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0181",
+      "source": "src/BGCS/Configuration/Mapping/DelegateMapping.cs",
+      "member": "name",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0182",
+      "source": "src/BGCS/Configuration/Mapping/DelegateMapping.cs",
+      "member": "returnType",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0183",
+      "source": "src/BGCS/Configuration/Mapping/DelegateMapping.cs",
+      "member": "signature",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0184",
+      "source": "src/BGCS/Configuration/Mapping/EnumItemMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0185",
+      "source": "src/BGCS/Configuration/Mapping/EnumItemMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0186",
+      "source": "src/BGCS/Configuration/Mapping/EnumItemMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0187",
+      "source": "src/BGCS/Configuration/Mapping/EnumItemMapping.cs",
+      "member": "value",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0188",
+      "source": "src/BGCS/Configuration/Mapping/EnumMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0189",
+      "source": "src/BGCS/Configuration/Mapping/EnumMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0190",
+      "source": "src/BGCS/Configuration/Mapping/EnumMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0191",
+      "source": "src/BGCS/Configuration/Mapping/EnumMapping.cs",
+      "member": "itemMappings",
+      "type": "List<EnumItemMapping>"
+    },
+    {
+      "configurationId": "CFG0192",
+      "source": "src/BGCS/Configuration/Mapping/ExternalTypeContract.cs",
+      "member": "nativeTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0193",
+      "source": "src/BGCS/Configuration/Mapping/ExternalTypeContract.cs",
+      "member": "managedTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0194",
+      "source": "src/BGCS/Configuration/Mapping/ExternalTypeContract.cs",
+      "member": "size",
+      "type": "int"
+    },
+    {
+      "configurationId": "CFG0195",
+      "source": "src/BGCS/Configuration/Mapping/ExternalTypeContract.cs",
+      "member": "alignment",
+      "type": "int"
+    },
+    {
+      "configurationId": "CFG0196",
+      "source": "src/BGCS/Configuration/Mapping/ExternalTypeContract.cs",
+      "member": "byValuePolicy",
+      "type": "ExternalTypeByValuePolicy"
+    },
+    {
+      "configurationId": "CFG0197",
+      "source": "src/BGCS/Configuration/Mapping/FunctionAliasMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0198",
+      "source": "src/BGCS/Configuration/Mapping/FunctionAliasMapping.cs",
+      "member": "exportedAliasName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0199",
+      "source": "src/BGCS/Configuration/Mapping/FunctionAliasMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0200",
+      "source": "src/BGCS/Configuration/Mapping/FunctionAliasMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0201",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0202",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0203",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0204",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "containerName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0205",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "defaults",
+      "type": "Dictionary<string, string>"
+    },
+    {
+      "configurationId": "CFG0206",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "customVariations",
+      "type": "List<Dictionary<string, string>>"
+    },
+    {
+      "configurationId": "CFG0207",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "parameters",
+      "type": "List<ParameterMapping>?"
+    },
+    {
+      "configurationId": "CFG0208",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0209",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0210",
+      "source": "src/BGCS/Configuration/Mapping/FunctionMapping.cs",
+      "member": "useOut",
+      "type": "bool"
+    },
+    {
+      "configurationId": "CFG0211",
+      "source": "src/BGCS/Configuration/Mapping/HandleMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0212",
+      "source": "src/BGCS/Configuration/Mapping/HandleMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0213",
+      "source": "src/BGCS/Configuration/Mapping/HandleMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0214",
+      "source": "src/BGCS/Configuration/Mapping/StructValidityMapping.cs",
+      "member": "fieldName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0215",
+      "source": "src/BGCS/Configuration/Mapping/StructValidityMapping.cs",
+      "member": "invalidValue",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0216",
+      "source": "src/BGCS/Configuration/Mapping/StructValidityMapping.cs",
+      "member": "propertyName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0217",
+      "source": "src/BGCS/Configuration/Mapping/TypeFieldMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0218",
+      "source": "src/BGCS/Configuration/Mapping/TypeFieldMapping.cs",
+      "member": "displayName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0219",
+      "source": "src/BGCS/Configuration/Mapping/TypeFieldMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0220",
+      "source": "src/BGCS/Configuration/Mapping/TypeMapping.cs",
+      "member": "exportedName",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0221",
+      "source": "src/BGCS/Configuration/Mapping/TypeMapping.cs",
+      "member": "friendlyName",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0222",
+      "source": "src/BGCS/Configuration/Mapping/TypeMapping.cs",
+      "member": "comment",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0223",
+      "source": "src/BGCS/Configuration/Mapping/TypeMapping.cs",
+      "member": "fieldMappings",
+      "type": "List<TypeFieldMapping>"
+    },
+    {
+      "configurationId": "CFG0224",
+      "source": "src/BGCS/Configuration/Mapping/TypeMapping.cs",
+      "member": "validity",
+      "type": "StructValidityMapping?"
+    },
+    {
+      "configurationId": "CFG0225",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "strategy",
+      "type": "MarshallingStrategy?"
+    },
+    {
+      "configurationId": "CFG0226",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "ownership",
+      "type": "BindingOwnership?"
+    },
+    {
+      "configurationId": "CFG0227",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "encoding",
+      "type": "BindingStringEncoding?"
+    },
+    {
+      "configurationId": "CFG0228",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "lengthParameter",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0229",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "capacityParameter",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0230",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "writtenCountParameter",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0231",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "cleanupFunction",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0232",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "requiresCleanup",
+      "type": "bool?"
+    },
+    {
+      "configurationId": "CFG0233",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "nullTerminated",
+      "type": "bool?"
+    },
+    {
+      "configurationId": "CFG0234",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "allocatorKind",
+      "type": "BindingAllocatorKind?"
+    },
+    {
+      "configurationId": "CFG0235",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "allocatorFunction",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0236",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "callbackLifetime",
+      "type": "BindingCallbackLifetime?"
+    },
+    {
+      "configurationId": "CFG0237",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "callbackThreading",
+      "type": "BindingCallbackThreading?"
+    },
+    {
+      "configurationId": "CFG0238",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "unregisterFunction",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0239",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "asyncCompletion",
+      "type": "BindingAsyncCompletion?"
+    },
+    {
+      "configurationId": "CFG0240",
+      "source": "src/BGCS/Configuration/MarshallingMapping.cs",
+      "member": "completionFunction",
+      "type": "string?"
+    },
+    {
+      "configurationId": "CFG0241",
+      "source": "src/BGCS/Configuration/VariadicFunctionVariant.cs",
+      "member": "suffix",
+      "type": "string"
+    },
+    {
+      "configurationId": "CFG0242",
+      "source": "src/BGCS/Configuration/VariadicFunctionVariant.cs",
+      "member": "parameterTypes",
+      "type": "List<string>"
+    },
+    {
+      "configurationId": "CFG0243",
+      "source": "src/BGCS/Configuration/VariadicFunctionVariant.cs",
+      "member": "parameterNames",
+      "type": "List<string>"
+    }
+  ]
+}

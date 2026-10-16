@@ -1,0 +1,500 @@
+{
+  "schemaVersion": 1,
+  "diagnostics": [
+    {
+      "code": "BGCS-ANALYSIS-INPUTS",
+      "title": "Analysis inputs could not be released",
+      "cause": "Capturing or releasing the frozen analysis inputs failed.",
+      "resolution": "Inspect the detailed file or plugin failure; close conflicting handles and repair the input declaration before creating a new request.",
+      "zh": {
+        "title": "分析输入释放失败",
+        "cause": "捕获或释放冻结的分析输入时失败。",
+        "resolution": "根据详细的文件或插件错误关闭冲突句柄，修正输入声明后创建新请求。"
+      }
+    },
+    {
+      "code": "BGCS-ANALYSIS-SESSION",
+      "title": "Native analysis session failed",
+      "cause": "A target, frontend, native graph or analysis extension failed before a valid model was returned.",
+      "resolution": "Use the accompanying stage, target and source diagnostic to fix the parser arguments, target prerequisites or failing extension; rerun inspect.",
+      "zh": {
+        "title": "原生分析会话失败",
+        "cause": "目标、frontend、原生事实图或分析扩展未能返回有效模型。",
+        "resolution": "根据阶段、目标与源码诊断修正解析参数、目标前提或失败扩展，再运行 inspect。"
+      }
+    },
+    {
+      "code": "BGCS-C-ABI",
+      "title": "C declaration has no supported direct ABI",
+      "cause": "A C declaration lacks an exact fixed prototype or contains an unsupported direct ABI type; a C++ graph cannot enter direct C analysis.",
+      "resolution": "Declare exact C prototypes and supported ABI carriers; lower C++ through its bridge or add an explicit native shim for unsupported signatures.",
+      "zh": {
+        "title": "C 声明缺少可支持的直接 ABI",
+        "cause": "C 声明缺少精确固定原型或包含不支持的直接 ABI 类型；C++ 事实图不能直接进入 C 分析。",
+        "resolution": "补全 C 原型与受支持载体；C++ 使用桥接路径，不支持的签名使用显式原生 shim。"
+      }
+    },
+    {
+      "code": "BGCS-C-INTERNAL-LINKAGE",
+      "title": "Configured native module is missing C header helper exports",
+      "cause": "A selected C function has internal linkage, a header definition, or compiler-established direct-call-only intrinsic semantics instead of an independently addressable external symbol. A prebuilt module cannot supply a generated helper automatically.",
+      "resolution": "Build the emitted C helper sources into the configured native module so their explicit exported wrappers exist, or provide a declared native shim. A helper-only dependency DLL does not supply the parent module exports on Windows.",
+      "zh": {
+        "title": "配置的原生模块缺少 C 头文件辅助导出",
+        "cause": "选中的 C 函数具有内部链接、头文件定义，或编译器确认的仅可直接调用 intrinsic 语义，没有独立可取地址的外部符号；预编译模块不会自动包含生成的辅助导出。",
+        "resolution": "把生成的 C helper 源码编译进配置指定的原生模块，使明确的包装导出实际存在，或提供声明的原生 shim。Windows 上单独的 helper 依赖 DLL 不会提供父模块导出。"
+      }
+    },
+    {
+      "code": "BGCS-CACHE-BUDGET",
+      "title": "Generated cache entry exceeds its budget",
+      "cause": "A successful generated stage is too large for the configured serialized cache-entry limit.",
+      "resolution": "Inspect artifact size; raise cache.maximumEntryBytes within its supported bound or keep the successful result uncached.",
+      "zh": {
+        "title": "生成缓存条目超过预算",
+        "cause": "生成阶段成功，但序列化结果超过配置的单条目缓存上限。",
+        "resolution": "检查产物大小，在受支持范围内提高 cache.maximumEntryBytes，或保留此次成功但不缓存的结果。"
+      }
+    },
+    {
+      "code": "BGCS-CACHE-MISS",
+      "title": "Cached stage was not reused",
+      "cause": "A stored stage is missing, corrupt, stale or incompatible with the current complete contract check.",
+      "resolution": "Read the reported reason; normal regeneration repairs a stale or corrupt entry. Do not disable current ABI checks to accept old bytes.",
+      "zh": {
+        "title": "缓存阶段未被复用",
+        "cause": "缓存条目缺失、损坏、过期，或未通过当前完整契约复核。",
+        "resolution": "查看具体原因；正常重新生成可以重建过期或损坏条目，不要关闭 ABI 检查来接纳旧字节。"
+      }
+    },
+    {
+      "code": "BGCS-CACHE-STORE",
+      "title": "Published result could not be cached",
+      "cause": "Generation published successfully, but writing a reusable immutable cache entry failed.",
+      "resolution": "Check cache directory permissions, space and competing handles; the published result remains the successful output.",
+      "zh": {
+        "title": "已发布结果无法写入缓存",
+        "cause": "生成已经成功发布，但写入可复用的不可变缓存条目失败。",
+        "resolution": "检查缓存目录权限、空间与冲突句柄；正式生成结果仍然有效。"
+      }
+    },
+    {
+      "code": "BGCS-CACHE-UNAVAILABLE",
+      "title": "Generation cache is unavailable",
+      "cause": "Preparing, identifying or reading an eligible generation cache failed.",
+      "resolution": "Inspect the cache failure, choose a writable nonoverlapping cache directory, or disable caching while retaining ordinary generation and validation.",
+      "zh": {
+        "title": "生成缓存不可用",
+        "cause": "准备、标识或读取符合条件的生成缓存时失败。",
+        "resolution": "检查缓存错误，选择可写且不与输入或输出重叠的目录，或关闭缓存并保留普通生成与验证。"
+      }
+    },
+    {
+      "code": "BGCS-CONSTANT-OMITTED",
+      "title": "Object macro has no supported scalar value",
+      "cause": "The compiler did not establish a supported scalar constant for an object macro; its original replacement remains in native facts.",
+      "resolution": "Use a native/interop transform for the intended non-scalar semantics, or leave the macro unprojected. Text, type aliases and context-dependent macros are not guessed as numeric constants.",
+      "zh": {
+        "title": "对象宏缺少受支持的标量值",
+        "cause": "编译器未能证明该对象宏具有受支持的标量值；原始替换文本仍保留在原生事实中。",
+        "resolution": "通过原生或 interop 变换实现所需的非标量语义，或不投影该宏；不会把文本、类型别名或上下文宏猜成数值常量。"
+      }
+    },
+    {
+      "code": "BGCS-CSHARP-ABI-PLAN",
+      "title": "C# ABI plan cannot represent the native declaration",
+      "cause": "The native declaration has no proven C# storage or by-value calling representation for its resolved ABI, managed runtime and import mode; the attached source location identifies the declaration or field.",
+      "resolution": "Inspect the detailed type, layout or calling restriction. Use an explicit pointer-based native bridge or shim, or select an independently verified compatible runtime/import profile; do not replace the native type based only on equal size.",
+      "zh": {
+        "title": "C# ABI 规划不能表达该原生声明",
+        "cause": "在已解析的 ABI、托管运行环境和导入模式下，该原生声明缺少已证明正确的 C# 存储或按值调用表示；附带源码位置指向相关声明或字段。",
+        "resolution": "根据详细类型、布局或调用约束，使用显式指针形式的原生桥接或 shim，或者选择已独立验证兼容的运行环境与导入模式；不能只根据大小相同替换原生类型。"
+      }
+    },
+    {
+      "code": "BGCS-DIFF-OUTPUT",
+      "title": "Existing output cannot be compared safely",
+      "cause": "Diff could not read or verify the previous owned publication before comparing it with candidate generation.",
+      "resolution": "Check the prior ownership manifest, artifact hashes, paths and file access; restore a complete owned output before retrying diff.",
+      "zh": {
+        "title": "无法安全比较已有输出",
+        "cause": "Diff 在比较候选生成前无法读取或验证上一套受管理输出。",
+        "resolution": "检查原有所有权清单、产物 hash、路径与访问权限，恢复完整输出后重试 diff。"
+      }
+    },
+    {
+      "code": "BGCS-DOCTOR-CONFIGURATION",
+      "title": "Configuration prerequisites are invalid",
+      "cause": "Doctor could not load or validate the grouped configuration and its declared plugins.",
+      "resolution": "Fix the reported schema, path, composition or plugin error before checking compiler and worker prerequisites.",
+      "zh": {
+        "title": "配置前提无效",
+        "cause": "Doctor 无法加载或验证分组配置及其声明的插件。",
+        "resolution": "先修正 schema、路径、配置组合或插件错误，再检查编译器与 worker 前提。"
+      }
+    },
+    {
+      "code": "BGCS-DOCTOR-NATIVE",
+      "title": "Native build prerequisite is unavailable",
+      "cause": "A declared native artifact, compiler, linker, build-system executable or target prerequisite is unavailable or invalid.",
+      "resolution": "Supply the exact missing tool/artifact or correct nativeBuild and target settings, then rerun doctor; BGCS does not silently download or substitute a different ABI.",
+      "zh": {
+        "title": "原生构建前提不可用",
+        "cause": "声明的原生产物、编译器、链接器、构建工具或目标前提缺失或无效。",
+        "resolution": "提供确切缺失项，或修正 nativeBuild 与目标设置后重试 doctor；BGCS 不会静默下载或替换另一种 ABI。"
+      }
+    },
+    {
+      "code": "BGCS-DOCTOR-NATIVE-PENDING",
+      "title": "Custom provider prerequisite check is pending",
+      "cause": "Doctor resolved a native provider but has no complete executable prerequisite contract for that custom provider.",
+      "resolution": "Implement the neutral prerequisite provider contract or independently verify the declared tools; this status is not evidence that a native build ran.",
+      "zh": {
+        "title": "自定义 provider 的前提检查待完成",
+        "cause": "Doctor 已解析原生 provider，但该自定义 provider 未提供完整可执行前提契约。",
+        "resolution": "实现中立前提检查契约，或独立验证声明的工具；此状态不表示已经执行原生构建。"
+      }
+    },
+    {
+      "code": "BGCS-DOCTOR-TARGET",
+      "title": "Native target cannot be resolved",
+      "cause": "The requested target, SDK, sysroot or toolchain cannot be resolved from the explicit configuration and installed environment.",
+      "resolution": "Correct the target identity and SDK/toolchain paths or register the intended target provider before retrying doctor.",
+      "zh": {
+        "title": "原生目标无法解析",
+        "cause": "无法根据显式配置与已安装环境解析请求的目标、SDK、sysroot 或工具链。",
+        "resolution": "修正目标身份及 SDK、工具链路径，或注册所需目标 provider 后重试 doctor。"
+      }
+    },
+    {
+      "code": "BGCS-DOCTOR-WORKER",
+      "title": "Parser worker assets are invalid",
+      "cause": "The host-specific worker execution closure is missing, incomplete or fails its declared digest checks.",
+      "resolution": "Redeploy the complete matching worker assets for the generator host; do not select parser assets by the generated native target.",
+      "zh": {
+        "title": "解析 worker 资源无效",
+        "cause": "匹配宿主的 worker 执行闭包缺失、不完整或未通过声明的 hash 验证。",
+        "resolution": "重新部署匹配生成器宿主的完整 worker 资源，不要按生成目标选择解析器资源。"
+      }
+    },
+    {
+      "code": "BGCS-FRIENDLY-OMITTED",
+      "title": "Friendly projection lacks a complete contract",
+      "cause": "A requested text or buffer wrapper cannot prove its encoding, extent, direction, retention, lifetime or alignment contract.",
+      "resolution": "Complete the exact semantics.stringParameters or semantics.bufferParameters assertion when justified; otherwise use the valid raw ABI without an unsafe friendly wrapper.",
+      "zh": {
+        "title": "易用 API 缺少完整契约",
+        "cause": "请求的字符串或缓冲区包装无法证明编码、范围、方向、保留、生命周期或对齐契约。",
+        "resolution": "在有依据时补全 semantics.stringParameters 或 semantics.bufferParameters 的精确声明；否则使用正确的 raw ABI。"
+      }
+    },
+    {
+      "code": "BGCS-FRONTEND-CLANG",
+      "title": "Clang reported a source diagnostic",
+      "cause": "The parser worker forwarded a Clang diagnostic for the current language, target and effective source arguments.",
+      "resolution": "Use the original source location and compiler message to fix declarations, macros, include directories or target SDK inputs.",
+      "zh": {
+        "title": "Clang 报告源码诊断",
+        "cause": "解析 worker 转发了当前语言、目标与有效参数下的 Clang 诊断。",
+        "resolution": "根据原始源码位置和编译器消息修正声明、宏、include 路径或目标 SDK 输入。"
+      }
+    },
+    {
+      "code": "BGCS-FRONTEND-NATIVE",
+      "title": "Selected native compiler reported a preprocessing diagnostic",
+      "cause": "The selected MSVC, GNU or Clang compiler reported a warning, note or error while establishing the effective source view; the original compiler message, severity and available source position are retained.",
+      "resolution": "Inspect the original compiler message and source position, then correct the header, macro definitions or compiler arguments as appropriate. The frontend console threshold controls display only; structured diagnostics retain these messages and the configured diagnostic policy still applies.",
+      "zh": {
+        "title": "所选原生编译器报告预处理诊断",
+        "cause": "所选 MSVC、GNU 或 Clang 编译器在建立实际生效的源码视图时报告了警告、说明或错误；保留编译器原始消息、严重程度和可用源码位置。",
+        "resolution": "根据编译器原始消息和源码位置，按需修正头文件、宏定义或编译器参数。frontend 控制台阈值只控制显示；结构化诊断继续保留这些消息，配置的诊断策略仍然生效。"
+      }
+    },
+    {
+      "code": "BGCS-GENERATION-SESSION",
+      "title": "Generation session could not complete",
+      "cause": "A required generation, lowering, ABI planning, plugin, validation or publication stage failed.",
+      "resolution": "Follow the detailed failure and source/target context; add a supported neutral lowering or native shim when the ABI cannot be expressed. Previous complete output is not replaced on failure.",
+      "zh": {
+        "title": "生成会话无法完成",
+        "cause": "必需的生成、lowering、ABI 规划、插件、验证或发布阶段失败。",
+        "resolution": "根据详细错误及源码、目标上下文修复；无法表达 ABI 时增加受支持的中立 lowering 或原生 shim。失败不会替换上一套完整输出。"
+      }
+    },
+    {
+      "code": "BGCS-MACRO-ALIAS",
+      "title": "Function macro alias has no unambiguous checked export",
+      "cause": "A compiler-established object-like macro names a source free function, but the final interoperability model has zero or multiple eligible primary exports for that exact callable. Input adapters are not primary exports.",
+      "resolution": "Preserve the exact original callable through source selection and lowering, or provide an explicit unambiguous managed projection. BGCS will not invent an export or guess an overload for the macro alias.",
+      "zh": {
+        "title": "函数宏别名没有唯一可验证的导出",
+        "cause": "编译器确认的对象式宏引用了原生自由函数，但最终互操作模型中该确切函数没有合格的主导出，或对应多个主导出；输入适配器不算主导出。",
+        "resolution": "通过声明选择与 lowering 保留确切原始函数，或提供明确且无歧义的托管 projection。BGCS 不会为宏别名虚构导出，也不会猜测重载。"
+      }
+    },
+    {
+      "code": "BGCS-MANAGED-COMPILE",
+      "title": "Candidate managed code failed compilation",
+      "cause": "The generated candidate and declared managed inputs did not compile under the requested validation settings.",
+      "resolution": "Inspect the retained compiler output; fix generation/configuration or required references and source helpers before publication. Do not hand-edit formal generated files.",
+      "zh": {
+        "title": "候选托管代码编译失败",
+        "cause": "生成候选及声明的托管输入未能按请求的验证设置完成编译。",
+        "resolution": "检查保留的编译日志，修正生成、配置、引用或辅助源码后再发布，不要手工修改正式生成文件。"
+      }
+    },
+    {
+      "code": "BGCS-NATIVE-CANDIDATE-CLEANUP",
+      "title": "Native build candidate cleanup failed",
+      "cause": "An independently owned native build candidate could not release its temporary artifacts.",
+      "resolution": "Close the reported compiler/file handles and retry cleanup only for the exact owned candidate; check the build result before assuming publication succeeded.",
+      "zh": {
+        "title": "原生构建候选清理失败",
+        "cause": "独立拥有的原生构建候选无法释放临时产物。",
+        "resolution": "关闭日志中对应的编译器或文件句柄，仅清理确切受管理候选，并查看构建结果确认是否已发布。"
+      }
+    },
+    {
+      "code": "BGCS-NATIVE-GRAPH",
+      "title": "Native fact graph is inconsistent",
+      "cause": "Detached native declarations or types contain missing, duplicate, cyclic or incompatible graph facts.",
+      "resolution": "Fix the frontend or native transform that produced the identified facts; do not continue generation with substituted default type/layout values.",
+      "zh": {
+        "title": "原生事实图不一致",
+        "cause": "分离后的原生声明或类型包含缺失、重复、循环或不相容的事实。",
+        "resolution": "修正产生该事实的 frontend 或原生变换，不要用默认类型或布局值掩盖错误后继续生成。"
+      }
+    },
+    {
+      "code": "BGCS-NATIVE-MACRO-ORIGIN",
+      "title": "Native macro has no unique original definition",
+      "cause": "The effective native compiler preprocessing preserved a user macro's final replacement, but the included source definitions do not establish one unique original source location. The macro value is retained with unknown origin rather than an invented location.",
+      "resolution": "Inspect the configured defines, conditional redefinitions and included headers to identify the intended original definition. Remove ambiguity or provide an explicit configured definition when source attribution is required; do not interpret the preserved final value as verified declaration provenance.",
+      "zh": {
+        "title": "原生宏无法确定唯一的原始定义",
+        "cause": "实际原生编译器的预处理保留了用户宏的最终替换值，但包含的源码定义无法确定唯一的原始位置。宏值仍被保留，来源标记为未知，不伪造源码位置。",
+        "resolution": "检查配置中的宏定义、条件重定义和包含的头文件，确定预期的原始定义。如果需要源码归属，请消除歧义或明确配置定义；不要将保留的最终值解释为已验证的声明来源。"
+      }
+    },
+    {
+      "code": "BGCS-NATIVE-MANIFEST-BUILD",
+      "title": "Standalone native manifest build failed",
+      "cause": "The published neutral native manifest or its locked source, toolchain, plugin, ABI or export checks failed during native-build.",
+      "resolution": "Read the detailed build failure; restore unchanged declared inputs and matching tools, or regenerate the manifest after an intentional input change. Do not edit manifest hashes to bypass validation.",
+      "zh": {
+        "title": "独立原生 manifest 构建失败",
+        "cause": "native-build 中已发布的中立 manifest 或其锁定源码、工具链、插件、ABI、导出检查失败。",
+        "resolution": "查看详细构建错误，恢复未变更输入与匹配工具，或在有意修改输入后重新生成 manifest；不要修改 hash 绕过验证。"
+      }
+    },
+    {
+      "code": "BGCS-NATIVE-SCRATCH-CLEANUP",
+      "title": "Native scratch directory cleanup failed",
+      "cause": "The native build scratch workspace could not be removed after its execution.",
+      "resolution": "Release the reported process/file handles and clean only the exact owned scratch directory; the diagnostic severity identifies whether a result had already been published.",
+      "zh": {
+        "title": "原生临时工作目录清理失败",
+        "cause": "原生构建结束后无法移除临时工作目录。",
+        "resolution": "释放对应进程或文件句柄，仅清理确切受管理临时目录；诊断级别会反映结果是否已经发布。"
+      }
+    },
+    {
+      "code": "BGCS-NATIVE-SERVICE-RELEASE",
+      "title": "Native build extension release failed",
+      "cause": "A native build provider or packaging service failed while releasing its session-owned state.",
+      "resolution": "Fix the failing extension cleanup and its native/process handles; inspect the recorded result rather than treating disposal failure as successful certification.",
+      "zh": {
+        "title": "原生构建扩展释放失败",
+        "cause": "原生构建 provider 或包装服务释放会话状态时失败。",
+        "resolution": "修复扩展清理及其原生、进程句柄，依据记录结果判断状态，不要把释放失败当作验收成功。"
+      }
+    },
+    {
+      "code": "BGCS-PUBLICATION-CLEANUP",
+      "title": "Committed publication backup cleanup failed",
+      "cause": "The complete candidate was published, but obsolete owned backup or journal cleanup failed.",
+      "resolution": "Check the named owned path and remaining handles/space; retain the valid current manifest and use the publication recovery protocol for leftovers.",
+      "zh": {
+        "title": "已提交发布的备份清理失败",
+        "cause": "完整候选已发布，但旧受管理备份或 journal 清理失败。",
+        "resolution": "检查对应受管理路径、句柄与空间，保留当前有效清单，并按发布恢复协议处理残留。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-ALLOCATOR",
+      "title": "Owned output has no matching allocator",
+      "cause": "An owned native value lacks a complete allocation/release-domain contract.",
+      "resolution": "Declare the justified release function and domain through semantics.ownedResults or a neutral interop contract; retain a raw pointer when cleanup cannot be established.",
+      "zh": {
+        "title": "拥有型输出缺少匹配分配器",
+        "cause": "拥有型原生值缺少完整的分配与释放域契约。",
+        "resolution": "通过 semantics.ownedResults 或中立 interop 契约声明有依据的释放函数与域；无法确定时保留 raw pointer。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-ASYNC",
+      "title": "Native completion lifetime is incomplete",
+      "cause": "Asynchronous native access has no established terminal completion boundary for retained callbacks or buffers.",
+      "resolution": "Declare a real terminal completion protocol in the neutral async contract; keep pins, callbacks and module leases until native access has actually ended.",
+      "zh": {
+        "title": "原生异步完成生命周期不完整",
+        "cause": "异步原生访问没有为保留的回调或缓冲区确立最终完成边界。",
+        "resolution": "在中立 async 契约中声明真实最终完成协议；原生访问真正结束前保留 pin、callback 和模块 lease。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-CALLBACK",
+      "title": "Callback lifetime is incomplete",
+      "cause": "A callback contract does not establish native retention, unregister completion and in-flight invocation lifetime.",
+      "resolution": "Supply an explicit neutral callback contract with the library protocol, or manage the raw callback lifetime yourself until native access has ended.",
+      "zh": {
+        "title": "回调生命周期不完整",
+        "cause": "回调契约未明确原生保留、unregister 完成和正在执行的调用生命周期。",
+        "resolution": "按库协议提供显式中立回调契约，或在原生访问真正结束前自行管理 raw callback 生命周期。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-CALLBACK-THREAD",
+      "title": "Callback thread contract is incomplete",
+      "cause": "The allowed native callback threads or thread-affine release domain are unknown.",
+      "resolution": "Declare the permitted callback/release threads in the neutral semantic contract and synchronize application state for those threads.",
+      "zh": {
+        "title": "回调线程契约不完整",
+        "cause": "原生回调允许的线程或受线程约束的释放域未知。",
+        "resolution": "在中立语义契约中声明允许的回调、释放线程，并同步这些线程访问的应用状态。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-EXTERNAL-TYPE",
+      "title": "External carrier needs independent ABI evidence",
+      "cause": "A supplied managed type is used across the native boundary without complete matching storage and calling-ABI evidence.",
+      "resolution": "Provide independently validated target layout and calling compatibility or use a native pointer/bridge representation; a type-name or equal-size assertion is insufficient.",
+      "zh": {
+        "title": "外部载体需要独立 ABI 证据",
+        "cause": "用户提供的托管类型跨越原生边界，但缺少完整匹配的存储与调用 ABI 证据。",
+        "resolution": "提供独立验证的目标布局与调用相容性，或使用原生指针、桥接表示；类型名或大小相同不足以证明安全。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-LENGTH",
+      "title": "Native buffer bounds are incomplete",
+      "cause": "The selected buffer lacks a proven length, capacity or written-count relationship.",
+      "resolution": "Declare the exact pointer and lengthParameter relationship in semantics.bufferParameters when supported, or provide an explicit interop contract/native adapter for richer protocols.",
+      "zh": {
+        "title": "原生缓冲区边界不完整",
+        "cause": "所选缓冲区缺少可证明的长度、容量或已写数量关系。",
+        "resolution": "在受支持时使用 semantics.bufferParameters 声明精确关系，更复杂协议使用显式 interop 契约或原生 adapter。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-LOWERING-BYPASS",
+      "title": "Unsafe lowering was explicitly selected",
+      "cause": "A lowering was accepted under an explicit unsafe policy rather than complete ABI/lifetime proof.",
+      "resolution": "Retain independent native invocation and lifetime tests, and replace the bypass with a declared and validated neutral lowering where available.",
+      "zh": {
+        "title": "显式选择了不安全 lowering",
+        "cause": "lowering 依据显式不安全策略被接纳，而非完整 ABI 与生命周期证明。",
+        "resolution": "保留独立原生调用和生命周期测试，并在可用时使用声明且已验证的中立 lowering 替代绕过。"
+      }
+    },
+    {
+      "code": "BGCS-SAFETY-OWNERSHIP",
+      "title": "Native pointer ownership is incomplete",
+      "cause": "A returned data address lacks explicit ownership or pointer-validity facts with an identified evidence source; its raw ABI does not establish its lifetime.",
+      "resolution": "Declare matching release semantics through semantics.ownedResults, explicit module validity through semantics.borrowedResults, or a neutral plugin contract. Select this warning in execution.diagnostics.errorCodes to block publication; do not infer ownership or encoding from names.",
+      "zh": {
+        "title": "原生指针所有权不完整",
+        "cause": "返回的数据地址缺少具有明确证据来源的所有权或有效期事实；原始 ABI 本身不能证明生命周期。",
+        "resolution": "通过 semantics.ownedResults 声明匹配释放、semantics.borrowedResults 声明模块有效期，或提供中立插件契约。可在 execution.diagnostics.errorCodes 中选择该警告以阻断发布；不按名称推断所有权或编码。"
+      }
+    },
+    {
+      "code": "BGCS-SESSION-RELEASE",
+      "title": "Generation service release failed",
+      "cause": "A session-owned service or plugin failed during disposal.",
+      "resolution": "Fix cleanup in the named extension and release its resources; rerun the request so lifecycle failure is included in the complete result.",
+      "zh": {
+        "title": "生成服务释放失败",
+        "cause": "会话拥有的服务或插件在释放时失败。",
+        "resolution": "修复指定扩展的清理并释放其资源，重新执行请求，使生命周期失败进入完整结果。"
+      }
+    },
+    {
+      "code": "BGCS-SOURCE-CLEANUP",
+      "title": "Published generation left private source storage to clean",
+      "cause": "The complete candidate was already committed, but cleanup of a host-owned private contributed-source store failed.",
+      "resolution": "Inspect the exact private-store path and maintenance error, release conflicting file handles or attributes, and retry its verified owned cleanup. The published artifact set remains valid; contributor-service disposal errors before commit still block publication.",
+      "zh": {
+        "title": "生成发布完成后私有源码存储清理失败",
+        "cause": "完整候选产物已经提交，但宿主拥有的私有贡献源码存储未能清理。",
+        "resolution": "检查明确的私有存储路径与维护错误，解除冲突句柄或文件属性，再重试已验证归属的清理。已发布产物保持有效；提交前贡献服务释放错误仍会阻断发布。"
+      }
+    },
+    {
+      "code": "BGCS-WORKSPACE-DEPENDENCY",
+      "title": "Workspace prerequisites failed",
+      "cause": "A workspace project was skipped because one or more explicit prerequisite projects failed.",
+      "resolution": "Repair and rerun the named prerequisite projects; dependent output is not published from failed upstream work.",
+      "zh": {
+        "title": "工作区前置项目失败",
+        "cause": "某工作区项目因显式前置项目失败而被跳过。",
+        "resolution": "修复并重跑指定前置项目；依赖项目不会发布基于失败上游工作的结果。"
+      }
+    },
+    {
+      "code": "BGCS-WORKSPACE-PROJECT",
+      "title": "Workspace project failed",
+      "cause": "One project request failed while the workspace executed its dependency graph.",
+      "resolution": "Inspect that project configuration and its generation/build diagnostics; independent projects may finish, but the workspace remains failed.",
+      "zh": {
+        "title": "工作区项目失败",
+        "cause": "工作区执行依赖图时有一个项目请求失败。",
+        "resolution": "查看该项目配置及其生成、构建诊断；独立项目可以完成，但整个工作区仍然失败。"
+      }
+    },
+    {
+      "code": "BGCSCPP-INSTANTIATION",
+      "title": "C++ template needs a concrete instance",
+      "cause": "A selected primary class or function template has no explicit concrete specialization.",
+      "resolution": "Declare the requested concrete class/function instance in cpp.templateInstantiations and provide all required type/value arguments.",
+      "zh": {
+        "title": "C++ 模板需要具体实例",
+        "cause": "选中的主类模板或函数模板没有显式具体特化。",
+        "resolution": "在 cpp.templateInstantiations 中声明所需类或函数实例，并提供完整类型、值参数。"
+      }
+    },
+    {
+      "code": "BGCSCPP001",
+      "title": "C++ declaration has no safe lowering",
+      "cause": "No registered C++ lowering preserves the selected declaration and its ABI/lifetime contract.",
+      "resolution": "Add a typed Contracts-only lowering, a configured recipe, a concrete template instance or an explicit native shim.",
+      "zh": {
+        "title": "C++ 声明缺少安全 lowering",
+        "cause": "没有已注册 C++ lowering 能保留选中声明及其 ABI、生命周期契约。",
+        "resolution": "增加类型化 Contracts-only lowering、配置 recipe、具体模板实例或显式原生 shim。"
+      }
+    },
+    {
+      "code": "BGCSCS001",
+      "title": "Managed backend cannot preserve semantics",
+      "cause": "The managed model requests a type or callable the selected C# backend cannot express without losing its contract.",
+      "resolution": "Use a supported neutral projection/lowering or native shim, or implement and validate the missing backend capability before generation.",
+      "zh": {
+        "title": "托管 backend 无法保留语义",
+        "cause": "托管模型请求的类型或调用无法由所选 C# backend 在保留契约的前提下表达。",
+        "resolution": "使用受支持的中立 projection、lowering 或原生 shim，或先实现并验证缺少的 backend 能力。"
+      }
+    },
+    {
+      "code": "BGCSIO001",
+      "title": "Artifact publication failed",
+      "cause": "A file-system operation failed while staging or committing generated artifacts.",
+      "resolution": "Check the exact path, permissions, available space and open handles. Failed publication preserves prior output; use publication recovery for an interrupted commit.",
+      "zh": {
+        "title": "产物发布失败",
+        "cause": "暂存或提交生成产物时文件系统操作失败。",
+        "resolution": "检查确切路径、权限、空间与打开的句柄，保留上一套完整输出，并按发布恢复协议处理提交中断。"
+      }
+    }
+  ]
+}

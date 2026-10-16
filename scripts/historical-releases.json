@@ -117,10 +117,10 @@
         "BGCS",
         "BGCS.Cpp2C",
         "BGCS.Runtime",
-        "BGCS.Intermediate",
-        "BGCS.CppAst",
-        "BGCS.Core",
-        "BGCS.Language"
+        "BGCS.Contracts",
+        "BGCS.Frontend.Clang",
+        "BGCS.Infrastructure",
+        "BGCS.CSharp"
       ],
       "packageCommits": [
         "895a309f49f09e924976ad716404d4731107be73"
@@ -138,10 +138,10 @@
         "BGCS",
         "BGCS.Cpp2C",
         "BGCS.Runtime",
-        "BGCS.Intermediate",
-        "BGCS.CppAst",
-        "BGCS.Core",
-        "BGCS.Language",
+        "BGCS.Contracts",
+        "BGCS.Frontend.Clang",
+        "BGCS.Infrastructure",
+        "BGCS.CSharp",
         "BindGen-CS",
         "BindGen-CS.win-x64",
         "BindGen-CS.win-arm64",

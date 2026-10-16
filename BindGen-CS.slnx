@@ -1,0 +1,51 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/BGCS.Analysis/BGCS.Analysis.csproj" />
+    <Project Path="src/BGCS.Contracts/BGCS.Contracts.csproj" />
+    <Project Path="src/BGCS.Cpp2C/BGCS.Cpp2C.csproj" />
+    <Project Path="src/BGCS.CSharp/BGCS.CSharp.csproj" />
+    <Project Path="src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj" />
+    <Project Path="src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
+    <Project Path="src/BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
+    <Project Path="src/BGCS.NativeBuild/BGCS.NativeBuild.csproj" />
+    <Project Path="src/BGCS.Platforms/BGCS.Platforms.csproj" />
+    <Project Path="src/BGCS.Runtime/BGCS.Runtime.csproj" />
+    <Project Path="src/BGCS.Tool/BGCS.Tool.csproj" />
+    <Project Path="src/BGCS/BGCS.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BGCS.Analysis.Tests/BGCS.Analysis.Tests.csproj" />
+    <Project Path="tests/BGCS.Architecture.Tests/BGCS.Architecture.Tests.csproj" />
+    <Project Path="tests/BGCS.Configuration.Tests/BGCS.Configuration.Tests.csproj" />
+    <Project Path="tests/BGCS.Contracts.Tests/BGCS.Contracts.Tests.csproj" />
+    <Project Path="tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" />
+    <Project Path="tests/BGCS.CSharp.Tests/BGCS.CSharp.Tests.csproj" />
+    <Project Path="tests/BGCS.Frontend.Clang.Tests/BGCS.Frontend.Clang.Tests.csproj" />
+    <Project Path="tests/BGCS.Infrastructure.Tests/BGCS.Infrastructure.Tests.csproj" />
+    <Project Path="tests/BGCS.MSBuild.Tests/BGCS.MSBuild.Tests.csproj" />
+    <Project Path="tests/BGCS.NativeBuild.Tests/BGCS.NativeBuild.Tests.csproj" />
+    <Project Path="tests/BGCS.Platforms.Tests/BGCS.Platforms.Tests.csproj" />
+    <Project Path="tests/BGCS.Runtime.Tests/BGCS.Runtime.Tests.csproj" />
+    <Project Path="tests/BGCS.Tests/BGCS.Tests.csproj" />
+    <Project Path="tests/BGCS.Tool.Tests/BGCS.Tool.Tests.csproj" />
+    <Project Path="tests/BGCS.Worker.Tests/BGCS.Worker.Tests.csproj" />
+  </Folder>
+  <Folder Name="/integrations/">
+    <Project Path="integrations/BGCS.MSBuild/BGCS.MSBuild.csproj" />
+  </Folder>
+  <Folder Name="/tests/fixtures/">
+    <Project Path="tests/fixtures/FailingFingerprintPlugin/FailingFingerprintPlugin.csproj" />
+    <Project Path="tests/fixtures/OutputPublisher/OutputPublisher.csproj" />
+    <Project Path="tests/fixtures/ParserLibraryHost/ParserLibraryHost.csproj" />
+    <Project Path="tests/fixtures/hosts/EmbeddedSdkHost/EmbeddedSdkHost.csproj" />
+    <Project Path="tests/fixtures/hosts/FaultingWorker/FaultingWorker.csproj" />
+    <Project Path="tests/fixtures/hosts/ProcessProbe/ProcessProbe.csproj" />
+    <Project Path="tests/fixtures/plugins/ClangFactPlugin/ClangFactPlugin.csproj" />
+    <Project Path="tests/fixtures/plugins/NeutralLoweringPlugin/NeutralLoweringPlugin.csproj" />
+  </Folder>
+</Solution>

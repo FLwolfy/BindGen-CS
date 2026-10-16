@@ -1,53 +1,32 @@
 using System;
-using System.Linq;
 using System.Text.Json;
-using BGCS.Facade;
-using BGCS.Intermediate;
-using BGCS.Tool.Output;
 
 namespace BGCS.Tool.Commands;
 
 internal static class ValidateCommand
 {
-    internal static int Run(string[] args)
-    {
-        string configPath = GenerationArguments.ParseConfiguration(args);
-        CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
-        using var logging = GenerationDiagnosticWriter.Attach(generator, Console.Out);
-        BindingGenerationResult<BindingModule> result = generator.AnalyzeConfigured();
-        if (!result.success)
-            return 1;
-        Console.WriteLine($"Validated {result.module!.types.Count} types and {result.module.functions.Count} functions.");
-        if (result.module.diagnostics.Count > 0)
-        {
-            Console.WriteLine($"IR diagnostics: {result.module.diagnostics.Count}");
-            return 1;
-        }
+    internal static int Run(string[] args) => Execute(args, inspect: false);
+    internal static int Inspect(string[] args) => Execute(args, inspect: true);
 
-        return 0;
-    }
-
-    internal static int Inspect(string[] args)
-    {
-        bool json = args.Contains("--json", StringComparer.Ordinal);
-        string configPath = GenerationArguments.ParseConfiguration(args.Where(argument => argument != "--json").ToArray());
-        CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
-        BindingGenerationResult<BindingModule> result = generator.AnalyzeConfigured();
-        if (!result.success || result.module == null)
-            return 1;
-        if (json)
+    private static int Execute(
+        string[] args,
+        bool inspect
+    ) {
+        GenerationArguments.Options options = GenerationArguments.ParseOptions(args);
+        if (options.outputPath is not null) throw new ArgumentException("Inspection and validation do not accept --output.");
+        using CommandCancellation cancellation = new();
+        return ExecuteAsync().GetAwaiter().GetResult();
+        async System.Threading.Tasks.Task<int> ExecuteAsync()
         {
-            Console.WriteLine(JsonSerializer.Serialize(result.module, new JsonSerializerOptions { WriteIndented = true }));
+            GenerationRequest request = await GenerationArguments.CreateRequestAsync(options, cancellation.token).ConfigureAwait(false);
+            await using BindingHost host = BindingHost.CreateDefault();
+            InspectionResult result = await host.InspectAsync(request, cancellation.token).ConfigureAwait(false);
+            cancellation.token.ThrowIfCancellationRequested();
+            GenerateCommand.WriteDiagnostics(result.diagnostics, options.diagnostics);
+            if (options.json) Console.WriteLine(JsonSerializer.Serialize(result, GenerateCommand.JsonOptions));
+            else foreach (TargetInspection target in result.targets)
+                Console.WriteLine($"{(inspect ? "Inspected" : "Validated")} {target.targetId}: {target.native.types.Length} types, {target.interop.functions.Length} ABI functions");
+            return result.success ? 0 : 1;
         }
-        else
-        {
-            Console.WriteLine($"Module: {result.module.name}");
-            Console.WriteLine($"Target ABI: {result.module.targetAbi}");
-            Console.WriteLine($"Types: {result.module.types.Count}");
-            Console.WriteLine($"Functions: {result.module.functions.Count}");
-            Console.WriteLine($"IR diagnostics: {result.module.diagnostics.Count}");
-        }
-
-        return result.module.diagnostics.Count == 0 ? 0 : 1;
     }
 }

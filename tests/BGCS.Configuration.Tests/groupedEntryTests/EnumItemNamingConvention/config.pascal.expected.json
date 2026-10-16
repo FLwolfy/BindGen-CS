@@ -1,0 +1,38 @@
+{
+  "legacyFixture": "entryTests/EnumItemNamingConvention",
+  "legacyVariant": "config.pascal",
+  "configuration": {
+    "/api/naming/enumerators/casing": "pascal",
+    "/api/naming/enumerators/removePrefixes": [
+      "color_mode_"
+    ]
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.ColorMode",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.ColorMode",
+      "name": "One",
+      "value": 1
+    },
+    {
+      "type": "EntryTests.Generated.ColorMode",
+      "name": "Two",
+      "value": 2
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.ColorMode",
+      "name": "one"
+    },
+    {
+      "type": "EntryTests.Generated.ColorMode",
+      "name": "two"
+    }
+  ]
+}

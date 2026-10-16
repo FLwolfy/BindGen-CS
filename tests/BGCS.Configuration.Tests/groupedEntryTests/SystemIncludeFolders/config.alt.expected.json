@@ -1,0 +1,11 @@
+{
+  "legacyFixture": "entryTests/SystemIncludeFolders",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/source/systemIncludeDirectories": []
+  },
+  "success": false,
+  "diagnosticsContain": [
+    "sysdeps.h"
+  ]
+}

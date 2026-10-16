@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Compilation">
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup Label="Runtime dependency" Condition="'$(BGCSRuntimeAssembly)' == ''">
+    <ProjectReference Include="../../../src/BGCS.Runtime/BGCS.Runtime.csproj" />
+  </ItemGroup>
+  <ItemGroup Label="Closed runtime acceptance input" Condition="'$(BGCSRuntimeAssembly)' != ''">
+    <Reference Include="BGCS.Runtime"><HintPath>$(BGCSRuntimeAssembly)</HintPath></Reference>
+  </ItemGroup>
+</Project>

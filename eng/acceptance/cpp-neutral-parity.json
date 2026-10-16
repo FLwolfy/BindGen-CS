@@ -1,0 +1,998 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "claim": "Source parity map, not a release certification. All installed packages, platform runners and same-revision release gates still require their own receipts.",
+  "intentionalMajorVersionChanges": [
+    "Old flat configuration readers, mutable generator.lastResult/state and old method names are removed; grouped strict configuration and immutable per-request results replace them.",
+    "Old arbitrary unsafe ABI bypass is replaced by explicit typed source fragments/recipes/shims with UserAsserted provenance and required shape/native verification; unsupported by-value ABI cannot be forced by a global flag.",
+    "Internal unbalanced text-operation IR is replaced by typed bridge operations; source writer remains a standalone neutral utility."
+  ],
+  "files": [
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs",
+      "baselineTestMethods": [
+        "Generate_AdvancedStandardAdapters_ShouldCompileAndInvokeNativeBridge",
+        "Generate_ComplexInheritance_ShouldPerformRealPointerAdjustmentAndCheckedDowncast",
+        "Generate_ExplicitFullAndPartialTemplateSpecializations_ShouldSelectOnlyRequestedInstances"
+      ],
+      "capability": "Standard families, native inheritance adjustment and selected full/partial specializations",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/NativeStandardLoweringTests.cs",
+          "methods": [
+            "StandardValues_ParseBridgeReparseCompileAndInvokeRealNativeOperations",
+            "ExplicitClassAndFunctionTemplates_UseConcreteWorkerFactsAndRealNativeExports"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeShimInheritanceTests.cs",
+          "methods": [
+            "MultipleInheritance_UsesNativePointerAdjustmentAndCheckedDowncast"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/ConfigurationCompositionTests.cs",
+      "baselineTestMethods": [
+        "FileCompositionKeepsExplicitDefaultValuesAndClearsInheritance"
+      ],
+      "capability": "Explicit default values and configuration inheritance",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/GroupedConfigurationCompositionTests.cs",
+          "methods": [
+            "Composition_PreservesPrecedenceFalseListsAndEveryDeclaringPathBase"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CDefaultPipelineTests.cs",
+      "baselineTestMethods": [
+        "Generate_WithoutManualSteps_ShouldApplyDefaultPipeline"
+      ],
+      "capability": "One public SDK request runs the entire default C++ pipeline",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/NeutralCppBridgeTests.cs",
+          "methods": [
+            "CppHost_ReparsesTypedBridgeAndPreservesOwnedResultsBeforeManagedCompilation"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CEndToEndWorkflowTests.cs",
+      "baselineTestMethods": [
+        "LoadConfigWithBaseFile_ThenGenerate_ShouldProduceExpectedOutputStructure"
+      ],
+      "capability": "Composed configuration produces bridge, managed bindings and manifests",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/GroupedConfigurationCompositionTests.cs",
+          "methods": [
+            "Composition_PreservesPrecedenceFalseListsAndEveryDeclaringPathBase"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/RemoteConfigurationTests.cs",
+          "methods": [
+            "GenerationPublishesPinnedProvenanceAndAChangedPinChangesTheActualApi"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NeutralCppBridgeTests.cs",
+          "methods": [
+            "CppHost_ReparsesTypedBridgeAndPreservesOwnedResultsBeforeManagedCompilation"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CGeneratedOutputSemanticsTests.cs",
+      "baselineTestMethods": [
+        "Generate_VirtualClassAndEnum_OutputShouldContainBridgeSemantics",
+        "Generate_ConstructorsStaticAndReferenceMethods_ShouldProduceAbiSafeSignatures"
+      ],
+      "capability": "Classes, enums, constructors, static/const/reference methods and exception boundaries",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/NativeCppOverloadTests.cs",
+          "methods": [
+            "NativeOverloads_ConstructorsMembersAndOperators_UseNaturalNamesAndExactSignatures"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeCppSequenceTests.cs",
+          "methods": [
+            "TypedSequences_PreserveRawExports_CopyValuesAndPinBorrowedCalls"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NeutralCppBridgeTests.cs",
+          "methods": [
+            "CppHost_ReparsesTypedBridgeAndPreservesOwnedResultsBeforeManagedCompilation"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CGeneratorTests.cs",
+      "baselineTestMethods": [
+        "Config_DefaultCollections_ShouldBeInitialized",
+        "Config_GetCType_ShouldPreservePointerReferenceAndQualificationShape",
+        "Generate_MinimalClassHeader_ShouldNotReportErrors",
+        "Config_LoadExistingFile_ShouldNotRewriteUnknownProperties",
+        "GenerateConfigured_ShouldResolvePathsRelativeToConfiguration",
+        "GenerateConfigured_IncrementalCacheRestoresBridgeAndInvalidatesOnHeaderChange",
+        "GenerateConfigured_ShouldNotChangeProcessCurrentDirectory",
+        "Config_Load_ShouldRejectCyclicBaseConfiguration",
+        "Generate_MultipleInheritance_ShouldEmitPointerAdjustingCasts",
+        "Generate_NamespaceFreeFunctions_ShouldEmitGuardedCBridge",
+        "Generate_Utf8StringAdapter_ShouldLowerInputAndBorrowedReturn",
+        "Generate_ClassMethod_ShouldPreserveConstPointerParameter",
+        "Generate_UniquePtrAdapter_ShouldTransferOpaqueOwnership",
+        "Generate_SpanAdapter_ShouldExpandPointerAndCount",
+        "Generate_VectorAndSpanReturns_ShouldPreservePointerCountViews",
+        "Generate_SharedPtrAdapter_ShouldRetainReturnAndBorrowInput",
+        "Generate_VirtualCallbackInterface_ShouldEmitManagedProxyThunk",
+        "Generate_OptionalAdapter_ShouldPreservePresenceSemantics",
+        "Generate_ExplicitTemplateInstantiation_ShouldEmitSpecializedBridge",
+        "Generate_UnsupportedType_ShouldReturnActionableDiagnosticAndPreserveOutput",
+        "Generate_NonBlittableOptional_ShouldUseOwnedHandleProtocol",
+        "Generate_FunctionTemplateInstantiation_ShouldEmitConcreteBridge",
+        "Generate_CppBridge_ShouldLinkAndInvokeNativeDll",
+        "Generate_PublicFacade_ExcludesPrivateImplementationAndDtoLifetimes",
+        "Generate_ForwardDeclaration_DoesNotInventCallableLifetimes",
+        "Config_SaveAndLoad_ShouldRoundTripValues",
+        "Generate_WhenParsingFails_ShouldPreserveLastSuccessfulOutputAndCallerFilters"
+      ],
+      "capability": "Objects, filtering, strings, standard values, ownership, templates, callbacks, cache, configuration and output rollback",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/NativeStandardLoweringTests.cs",
+          "methods": [
+            "StandardValues_ParseBridgeReparseCompileAndInvokeRealNativeOperations",
+            "ExplicitClassAndFunctionTemplates_UseConcreteWorkerFactsAndRealNativeExports"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeCppSequenceTests.cs",
+          "methods": [
+            "TypedSequences_PreserveRawExports_CopyValuesAndPinBorrowedCalls"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeCppWideTextTests.cs",
+          "methods": [
+            "CppStatusAndOwnedMethods_PreserveCompilerCodeUnitsAndCheckedTextLifetimes"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeSourceSelectionTests.cs",
+          "methods": [
+            "ExactPublicSelection_PreservesRequiredDependencyFieldsWithoutUnrelatedExports",
+            "StandalonePublicClassWithoutDeclaredFunctions_RetainsItsOpaqueIdentityAndDefaultConstruction"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeManagedVirtualCallbackTests.cs",
+          "methods": [
+            "GeneratedStaticThunksRetainIndependentTargetsAndCloseOnlyAfterNativeQuiescence"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/GenerationStageCacheIntegrationTests.cs",
+          "methods": [
+            "RealWorkerEmissionHitRestoresDeletedOwnedOutputAndStillRunsTheValidator",
+            "CorruptCachedBytesAndChangedNativeModelAreRegeneratedBeforePublication"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NeutralGenerationHostTests.cs",
+          "methods": [
+            "BuildAsync_CompilesBeforePublicationAndKeepsThePreviousOutputOnFailure"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/GroupedConfigurationCompositionTests.cs",
+          "methods": [
+            "CyclesUnknownFieldsAndInvalidProfilesFailWithoutFallback"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppBridgeBuildManifestTests.cs",
+      "baselineTestMethods": [
+        "Generate_EmitsPortableDeterministicBuildContract",
+        "Generate_RelativeCompilerPath_IsManifestRelativeToConfiguration",
+        "Validator_RejectsManifestPathTraversal",
+        "Validator_RejectsInvalidCacheAndPluginSettings",
+        "Validator_RejectsInvalidOptionalCSharpSafetyPolicy"
+      ],
+      "capability": "Portable build input identities, provider-relative tool paths and path/config validation",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/ManifestNativeBuildTests.cs",
+          "methods": [
+            "GeneratedNeutralManifestBuildsInvokesAndRetainsGeneratedArtifacts"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeGeneratedInputContractTests.cs",
+          "methods": [
+            "PortableGeneratedDirectoryLocksRejectEveryUndeclaredChangeBeforePlanning"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/SourceSelectionConfigurationTests.cs",
+          "methods": [
+            "HeaderSelectionPaths_PreserveEachDeclaringDocumentBaseAcrossComposition",
+            "SdkSelection_InvalidSnapshotsFailBeforeFrontendExecution"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppBridgeIntermediateTests.cs",
+      "baselineTestMethods": [
+        "Generate_FrozenBridge_CanBeEmittedAfterDeletingSource",
+        "Artifact_CopiesMutableAnalysisOperations",
+        "Emit_EscapingArtifact_RejectsBeforeWritingAnyFiles",
+        "Emit_DuplicateOutput_RejectsBeforeWriting",
+        "Emit_UnbalancedOperation_RejectsBeforeWriting"
+      ],
+      "capability": "Frozen independent emission, defensive immutable graphs and early malformed artifact rejection",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/NeutralFrozenBridgeTests.cs",
+          "methods": [
+            "SerializedNeutralBridgeEmitsIdenticalNativeArtifactsAfterOriginalSourceDeletion"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Cpp2C.Tests/TypedBridgeOperationTests.cs",
+          "methods": [
+            "CompleteOwnedConstruction_EmitsBothCandidates",
+            "InvalidPlans_FailBeforeWritingAnyArtifact"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Infrastructure.Tests/ArtifactPublicationTests.cs",
+          "methods": [
+            "CorruptCandidate_LeavesTheEntirePreviousOutputUntouched"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppBridgeOutputFailureTests.cs",
+      "baselineTestMethods": [
+        "OutputFailuresRemainDistinctFromUnsupportedDeclarationsAndPreservePreviousOutput",
+        "SourceAndFrozenMetadataApplyTheSameExplicitHeaderBoundary"
+      ],
+      "capability": "IO failure rollback and explicit source/header boundaries",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Infrastructure.Tests/ArtifactPublicationTests.cs",
+          "methods": [
+            "InterruptedPublication_RecoversTheJournaledCompleteCollection",
+            "UnownedOrManuallyModifiedOutput_IsNeverReplaced"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeSourceSelectionTests.cs",
+          "methods": [
+            "ExplicitRequiredHeaderExclusion_ProducesAnActionableFailure"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Cpp2C.Tests/NeutralDeclarationSelectionTests.cs",
+          "methods": [
+            "EntrySelection_PreservesRequiredStorageWithoutPromotingDependencyFunctions"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppLoweringExtensionTests.cs",
+      "baselineTestMethods": [
+        "Registration_PublishesReadOnlySnapshotsWithoutChangingPreviousReaders",
+        "RegisteredLowerings_ChangeTypeCallableAndInvocationWithoutGeneratorChanges",
+        "CacheFingerprintProvidersCanQueryTheRegistryFromAnotherThread",
+        "Registry_IsDeterministicAndRejectsDuplicates",
+        "DeclarativeRecipe_PerformsRealBidirectionalCustomTypeLowering",
+        "SafetyPolicy_RequiresExplicitOptInForAssertedAndUnsafeLowerings",
+        "ExplicitNativeShim_IsBuiltExportedAndInvoked",
+        "ArtifactContributor_EmitsNativeAndManagedProjectionArtifacts",
+        "ConfiguredPlugin_RegistersFinalLoweringContractAndUsesStableCacheFingerprint"
+      ],
+      "capability": "Frozen registries, typed/custom recipes, native shim and contributor artifacts",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Cpp2C.Tests/NeutralLoweringRegistryTests.cs",
+          "methods": [],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Cpp2C.Tests/NeutralRecipeTests.cs",
+          "methods": [],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Cpp2C.Tests/NeutralOwnedRecipeTests.cs",
+          "methods": [],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeStandardLoweringTests.cs",
+          "methods": [
+            "ConfiguredNativeAndManagedRecipes_CompileInvokeAndPreserveAssertionEvidence",
+            "OwnedNativeRecipe_UsesTypedReleaseAndRetainsCleanupAfterContextDisposal"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeShimInheritanceTests.cs",
+          "methods": [
+            "ProjectOwnedCShim_UsesDeclaredHeadersSourcesAndExactCLinkage"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/SourceContributionIntegrationTests.cs",
+          "methods": [
+            "ContractsOnlyManifestContributesSourcesThatSurviveStoreCleanupAndNativeBuild"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/PluginSessionTests.cs",
+          "methods": [
+            "DiscoveryAndSessions_HaveIndependentPluginsAndReleaseServicesBeforeTheirPlugin"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/GenerationLifetimeTests.cs",
+      "baselineTestMethods": [
+        "RepeatedAttempts_DoNotRetainParserFailuresOrPriorSuccessfulResults"
+      ],
+      "capability": "Session isolation and release without shared mutable lastResult state",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Tests/PluginSessionTests.cs",
+          "methods": [
+            "DiscoveryAndSessions_HaveIndependentPluginsAndReleaseServicesBeforeTheirPlugin",
+            "InvalidSessionRegistration_ReleasesThePluginAndNeverCreatesTheFrontend"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Worker.Tests/CrashIsolationTests.cs",
+          "methods": [
+            "NativeRuntimeAbort_IsContainedInTheWorkerAndHostCanContinue"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/NativeBuildProviderTests.cs",
+      "baselineTestMethods": [
+        "CMakeProvider_BuildsAndVerifiesGeneratedBridgeOnUnixHost",
+        "Provider_BuildsGeneratedBridgeAsHostSharedLibrary",
+        "Providers_ProduceDeterministicShellIndependentPipelines",
+        "GnuDriver_UsesItsConfiguredTargetWithoutClangOnlyTargetFlag",
+        "UnspecifiedCompiler_DoesNotAssumeClangForCMakeOrMeson",
+        "ClangClProvider_BuildsExportsAndInvokesGeneratedDllOnWindowsX64",
+        "MSBuildProvider_BuildsExportsAndInvokesGeneratedDllOnWindowsX64",
+        "ExportInspector_ReadsOnlyDeclaredApiSymbols"
+      ],
+      "capability": "Shell-independent native plans and real build/export/invocation validation",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.NativeBuild.Tests/NativeProviderExecutionTests.cs",
+          "methods": [
+            "WindowsProvidersCompileMixedC17Cpp23AndInvoke"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.NativeBuild.Tests/UnixNativeProviderExecutionTests.cs",
+          "methods": [
+            "ProvidersCompileMixedC17Cpp23AndInvokeUsingFrozenWorkingDirectory"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeGeneratedClassProviderTests.cs",
+          "methods": [
+            "GeneratedClassManifestBuildsConstructsReadsAndDestroysThroughNeutralProvider"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/TargetTemplateTests.cs",
+      "baselineTestMethods": [
+        "TemplatePacksRetainParsedTypesAndTargetLayouts"
+      ],
+      "capability": "Compiler-established template-pack argument widths for actual non-host triples",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Frontend.Clang.Tests/Types/NeutralTemplateFactTests.cs",
+          "methods": [
+            "ParameterPackPreservesExactNeutralTypeArgumentsAndTargetWidths"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/NativeBuildSnapshotTests.cs",
+      "baselineTestMethods": [
+        "PlansOwnTheirArgumentsAndPipelineClosure",
+        "ManifestAndInspectionResultsOwnTheirCollections"
+      ],
+      "capability": "Immutable native plan/manifest collection snapshots",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.NativeBuild.Tests/NativeModelSnapshotTests.cs",
+          "methods": [
+            "NativePlanClosureAndExportInspectionDoNotRetainMutableInputLists"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/ManifestNativeBuildTests.cs",
+          "methods": [
+            "GeneratedNeutralManifestBuildsInvokesAndRetainsGeneratedArtifacts"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Tests/NativeGeneratedInputContractTests.cs",
+          "methods": [
+            "PortableGeneratedDirectoryLocksRejectEveryUndeclaredChangeBeforePlanning"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old mutable-list native plan/manifest facade removed. Immutable request/command arrays, defensive export results and independently locked standalone construction replace it. Native151 includes the neutral snapshot regression."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/NativeAssetLayoutTests.cs",
+      "baselineTestMethods": [
+        "GetRuntimeIdentifier_MapsSupportedDesktopTargets",
+        "GetRuntimeIdentifier_DoesNotClaimDeferredTargets",
+        "Stage_MergesTargetsIntoDeterministicNuGetRuntimeLayout",
+        "Stage_RejectsWrongBinaryArchitectureBeforeWritingPackage",
+        "Stage_AcceptsWindowsPeWithMatchingMachine",
+        "Stage_InvalidExistingIndexPreservesInstalledBinary",
+        "Stage_ConcurrentPublishersRetainAllAssetsAndPackageContents"
+      ],
+      "capability": "RID layout, artifact architecture checks and concurrent joint asset publication",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.NativeBuild.Tests/NativeAssetPackageTests.cs",
+          "methods": [
+            "AssetRidsRetainExactDesktopAbiIdentity",
+            "CompleteMultiTargetPackageHasDeterministicPathsAndExactContentDigests",
+            "InvalidBatchMemberCannotEmitAPartialPackage"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.NativeBuild.Tests/NativeArtifactKindTests.cs",
+          "methods": [
+            "SharedArtifactsMustDeclareTheirActualLibraryKind"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Infrastructure.Tests/ArtifactPublicationTests.cs",
+          "methods": [
+            "CorruptCandidate_LeavesTheEntirePreviousOutputUntouched",
+            "UnownedOrManuallyModifiedOutput_IsNeverReplaced"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Infrastructure.Tests/ArtifactSetPublisherTests.cs",
+          "methods": [
+            "FileAndDirectoryPublicationPreservesUnrelatedParentFilesAndOwners",
+            "FailedLaterFileInstallRollsBackAlreadyInstalledDirectory"
+          ],
+          "exists": true
+        },
+        {
+          "path": "tests/BGCS.Infrastructure.Tests/ArtifactSetConcurrencyTests.cs",
+          "methods": [
+            "CompetingPublishersInstallOnlyCompleteUniformOwnedSets"
+          ],
+          "exists": true
+        }
+      ],
+      "pending": [],
+      "retirement": "Old per-asset Stage/index merger removed. The neutral packager receives a complete set and emits only candidates; central ArtifactPublisher owns formal output locks, ownership and rollback. RID mapping is separate from platform certification, including deferred mobile/FreeBSD targets. Native151 and the actual four-writer publication receipt cover the replacement."
+    },
+    {
+      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppSourceWriterTests.cs",
+      "baselineTestMethods": [
+        "Fragments_PreserveMixedLineEndingsAndIndentEveryNewLine",
+        "WriteLines_EmitsSeparateLinesWithoutMergingFragments",
+        "ScopedBlocks_CloseExactlyOnceAndReleaseTheFile",
+        "DisposalFailure_StillReleasesTheStream",
+        "UnbalancedBlocksAndIndentation_FailBeforeChangingOutputState"
+      ],
+      "capability": "Standalone neutral ICodeWriter utility formatting and owned stream cleanup",
+      "neutralCoverage": [
+        {
+          "path": "tests/BGCS.Cpp2C.Tests/CppSourceWriterTests.cs",
+          "methods": [],
+          "exists": true
+        }
+      ],
+      "pending": [
+        "Retain unchanged: no frontend/native-build dependency is needed"
+      ]
+    }
+  ],
+  "observedLocalEvidence": [
+    {
+      "passed": 151,
+      "failed": 0,
+      "receipt": "artifacts/implementation/test-results/native-proof151-intrinsic-neutral-full.trx",
+      "capabilities": [
+        "Windows native providers with forced Meson and Wasm prerequisites",
+        "bounded C direct-call-only intrinsic native proof and unsupported-shape refusal",
+        "neutral complete-set asset packaging, exact digests, architecture rejection and immutable snapshots"
+      ]
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "receipt": "artifacts/implementation/test-results/native-asset-concurrent-publication.trx",
+      "capabilities": [
+        "four simultaneous same-output publishers with three complete revisions each",
+        "uniform locked directory and native-file reads, stale-file removal, ownership and journal cleanup"
+      ]
+    },
+    {
+      "passed": 6,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-neutral-pack-and-context-macros.trx",
+      "capabilities": [
+        "cross-target typed template pack facts",
+        "context-dependent macro rejection"
+      ]
+    },
+    {
+      "passed": 4,
+      "failed": 1,
+      "receipt": "artifacts/test-results/cpp-frozen-and-standard-neutral-parity.trx",
+      "limitation": "Initial partial-specialization guard failure was corrected and rerun below; frozen bridge and both recipes passed."
+    },
+    {
+      "passed": 2,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-specialization-optional-native-parity.trx",
+      "capabilities": [
+        "full and partial specialization actual invocation",
+        "optional nontrivial object copy/release and unknown cleanup thread domain"
+      ]
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-nested-template-guard.trx",
+      "capabilities": [
+        "nested pointer/reference/array template syntax with outer declarator rejection"
+      ]
+    },
+    {
+      "passed": 6,
+      "failed": 0,
+      "receipt": "artifacts/implementation/test-results/managed-virtual-six-native.trx",
+      "capabilities": [
+        "managed virtual static thunks",
+        "all imports",
+        "package/source runtime",
+        "caller stop and join lifecycle"
+      ]
+    },
+    {
+      "passed": 18,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-configured-family-unit.trx",
+      "capabilities": [
+        "exact configured String/Vector/Span/Array/Optional template-family admission",
+        "missing or contradictory native template facts and duplicate binding refusal",
+        "independent frozen bridge verification before artifact writes"
+      ]
+    },
+    {
+      "passed": 247,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-configured-family-full-cpp.trx",
+      "capabilities": [
+        "complete neutral C++ module regression suite including configured family operations"
+      ]
+    },
+    {
+      "passed": 9,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-configured-family-native-nine.trx",
+      "capabilities": [
+        "Windows x64 MSVC native custom family operations and generated CoreCLR calls",
+        "FunctionTable/DllImport/LibraryImport with package and source Runtime; source uses single-file output",
+        "UTF-8 code units including embedded NUL, mutable borrowed span identity and checked fixed extents",
+        "empty optional access refusal and three incompatible native protocol/macro failures preserving previous output"
+      ],
+      "limitation": "Dirty-worktree local evidence; does not certify final packages, NativeAOT, Wasm or other operating systems. Behavioral, ownership, encoding and nonretention assertions remain UserAsserted."
+    },
+    {
+      "passed": 21,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-configured-family-associative-unit.trx",
+      "capabilities": [
+        "eight exact configurable families including Map, Set and Expected",
+        "independent original-type and finite-operation checks before emission"
+      ]
+    },
+    {
+      "passed": 7,
+      "failed": 0,
+      "receipt": "artifacts/test-results/cpp-configured-associative-native-seven.trx",
+      "capabilities": [
+        "Windows x64 MSVC custom Map/Set/Expected operations invoked through generated CoreCLR code",
+        "FunctionTable/DllImport/LibraryImport with package and source Runtime; source uses static nested single-file output",
+        "expected void success, state failures, mutation, range checks and overreported associative iterator counts",
+        "contradictory aliases, accessor types and proof-token macros reject while preserving previous publication"
+      ],
+      "limitation": "Dirty-worktree local evidence; does not certify final packages, NativeAOT, Wasm or other operating systems. Explicit behavioral assertions remain UserAsserted and cleanup thread/lifetime facts are not inferred."
+    }
+  ],
+  "configuredExtendedFamilyEvidence": {
+    "unitReceipt": "artifacts/test-results/cpp-configured-extended-unit-twenty-one.trx",
+    "unitPassed": 21,
+    "fullModuleReceipt": "artifacts/test-results/cpp-configured-extended-full-module.trx",
+    "fullModulePassed": 295,
+    "nativeReceipt": "artifacts/test-results/cpp-configured-extended-native-seven.trx",
+    "nativePassed": 7,
+    "nativeFailed": 0,
+    "scope": "Windows x64 MSVC/CoreCLR, three import modes and package/source Runtime; dirty local checkpoint17533 only.",
+    "capabilities": [
+      "Exact custom unique/shared ownership holder transfer, copy and borrowed pointee access with real destruction counts",
+      "Explicit member-template variant alternatives with active-index refusal",
+      "Explicit GenericUtf8 custom template path conversion including non-BMP bytes",
+      "Native duration representation, normalized rational period and clock identity without fabricated epoch or nanosecond conversion",
+      "Contradictory ownership, alternative, path unit and period proofs preserve previous publication"
+    ],
+    "limitation": "Native shape and noexcept checks do not establish any-thread destruction, arbitrary behavior or platform certification. Non-template minimal c_str/u8string protocols remain separately pending.",
+    "releaseCertified": false
+  },
+  "virtualNoBlockingBoundaryEvidence": {
+    "receipt": "artifacts/test-results/cpp-virtual-no-block-raw-boundary-six.trx",
+    "passed": 6,
+    "scope": "Actual Windows x64/CoreCLR virtual proxy matrix plus explicit no-block managed-projection omission/raw preservation assertions.",
+    "missingCapability": "Nonblocking virtual-proxy shutdown still requires its own implementation and real runtime proof; retained-C-callback/async protocols do not establish it.",
+    "releaseCertified": false
+  },
+  "configuredFamilyScope": {
+    "configuration": "cpp.familyBindings",
+    "supportedFamilies": [
+      "String",
+      "Vector",
+      "Span",
+      "Array",
+      "Optional",
+      "Map",
+      "Set",
+      "Expected",
+      "UniquePointer",
+      "SharedPointer",
+      "Variant",
+      "Path",
+      "Duration",
+      "TimePoint"
+    ],
+    "matching": "Exact qualified template head with concrete compiler-derived arguments; no wildcard or storage substitution.",
+    "implementation": "src/BGCS.Cpp2C/Emission/ConfiguredFamilyAssertionEmitter.cs",
+    "independentVerifier": "src/BGCS.Analysis/Bridge/StandardValueOperationVerifier.cs",
+    "nativeTests": [
+      "tests/BGCS.Tests/NativeConfiguredFamilyTests.cs",
+      "tests/BGCS.Tests/NativeConfiguredAssociativeFamilyTests.cs",
+      "tests/BGCS.Tests/NativeConfiguredExtendedFamilyTests.cs"
+    ],
+    "releaseCertified": false,
+    "remainingLimits": [
+      "Exact non-template indexed String/Path bindings passed local Windows/CoreCLR native7. Minimal c_str/u8string protocol and generated counted string input have six real local import/runtime rows; the corrected configuration-freeze/rollback gate also passed.",
+      "Native operation shape checks cannot prove arbitrary method behavior, allocator ownership, thread-independent destruction or encoding.",
+      "Returned element borrow lifetimes remain unknown unless separately declared; sequence borrowing still requires explicit call lifetime and nonretention."
+    ]
+  },
+  "legacyConfigurationProject": {
+    "decision": "Removed old flat configuration reader and API-shape snapshots after replacement with grouped configuration and shared Host paths.",
+    "obsoleteShapes": [
+      "separate cppLogLevel flat property",
+      "flat namePrefix property",
+      "separate C++ base-config reader"
+    ],
+    "equivalents": [
+      "tests/BGCS.Tests/GroupedConfigurationCompositionTests.cs",
+      "tests/BGCS.Tests/FrontendArgumentBoundaryTests.cs",
+      "tests/BGCS.Tests/SourceSelectionConfigurationTests.cs",
+      "tests/BGCS.Tests/NativeCompilerSourceViewTests.cs",
+      "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs"
+    ],
+    "path": "tests/BGCS.Cpp2C.Configuration.Tests"
+  },
+  "configuredExactTypeEvidence": {
+    "unitReceipt": "artifacts/test-results/cpp-exact-minimal-focused-thirty-six.trx",
+    "unitPassed": 36,
+    "fullModuleReceipt": "artifacts/test-results/cpp-exact-minimal-full-module.trx",
+    "fullModulePassed": 331,
+    "nativePassed": 7,
+    "nativeFailed": 0,
+    "cause": "Required non-system class public alias metadata is now preserved. The three neutral dependency/exclusion regressions and the full actual native matrix passed; historical failure remains available.",
+    "pending": [
+      "Final revision package/platform certification"
+    ],
+    "releaseCertified": false,
+    "unitScope": "20 exact selectors and alias-closure regressions plus16 minimal c_str/native-path protocol tests",
+    "nativeReceipt": "artifacts/test-results/cpp-configured-exact-native-seven.trx",
+    "failedHistoricalNativeReceipt": "artifacts/test-results/cpp-configured-exact-native-first.trx",
+    "scope": "Dirty local checkpoint79372+8076, Windows x64 MSVC/CoreCLR only; all three imports with package/source Runtime and static/nested/single-file source output."
+  },
+  "managedValueProjectionBoundary": {
+    "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+    "sourceEvidence": [
+      "src/BGCS.Tool/Commands/BridgeCommand.cs: generated Classes.h is reparsed by CsCodeGenerator; CppBridgeAbiAnalyzer marshalling IR is not passed into it.",
+      "src/BGCS/Analysis/OwnershipAnalyzer.cs:43 infers string encoding from char/wchar pointer spelling.",
+      "src/BGCS/Emission/CSharpEmitter.cs:1758 creates managed string inputs;1795/1900 convert native string pointer returns.",
+      "src/BGCS.Cpp2C/Analysis/CppBridgeClassAnalyzer.cs:833 uses native c_str for string return;1194 constructs native string from const char pointer.",
+      "src/BGCS.Cpp2C/Analysis/CppBridgeClassAnalyzer.cs:797 returns vector/array data plus out_count;840 converts chrono counts to int64 nanoseconds."
+    ],
+    "verifiedCurrentScope": "Typed native value operations, independently reparsed ABI and generic raw/status wrappers have real local Windows/CoreCLR evidence for fourteen template families.",
+    "pendingManagedErgonomics": [
+      "Default-standard string/path return copying now passed its independent six-mode local Windows/CoreCLR invocation cohort; owned-instance composition remains a separate pending implementation/test group.",
+      "Counted CStr-friendly string input now has six real local Windows/CoreCLR import/runtime rows; additional C counted-string matrix remains separate.",
+      "Prior vector/array path exposes pointer/out_count rather than proving automatic managed-array or Span return. New convenience must preserve native storage/lifetime semantics.",
+      "Chrono native representation/ratio/clock facts are preserved; any nanosecond convenience requires checked explicit conversion without invented epoch."
+    ],
+    "releaseCertified": false
+  },
+  "minimalStringProtocolEvidence": {
+    "unitReceipt": "artifacts/test-results/cpp-exact-minimal-focused-thirty-six.trx",
+    "unitPassed": 16,
+    "nativeReceipt": "artifacts/test-results/cpp-minimal-cstr-counted-friendly-native-six.trx",
+    "nativePassed": 6,
+    "nativeFailed": 0,
+    "historicalMixedReceipt": "artifacts/test-results/cpp-minimal-cstr-native-seven.trx",
+    "negativeReceipt": "artifacts/test-results/cpp-minimal-cstr-negative-freeze-corrected.trx",
+    "negativePassed": 1,
+    "scope": "Dirty local checkpoint4145 Windows x64 MSVC/CoreCLR only: all six import/runtime rows now call the generated counted string overload with non-BMP input. Corrected early configuration-freeze and native rollback gate passed1; previous mixed receipt remains available.",
+    "capabilities": [
+      "Actual c_str pointer-derived units without value_type/count/index/mutation members",
+      "Bounded mutable getter reads, null pointer and unterminated buffer refusal",
+      "Explicit copying constructor with terminated input, embedded-NUL/count-cap refusal",
+      "NativeUtf8 u8string data/size-only holder preserving native separators and non-BMP bytes",
+      "Generated counted string overload materializes the explicit copying CStr constructor without discarding its native length channel"
+    ],
+    "pending": [
+      "Final revision package/platform certification"
+    ],
+    "releaseCertified": false
+  },
+  "scopedTextReturnSourceCheckpoint": {
+    "status": "local-native-synchronous-default-text-projection-passed",
+    "unitReceipt": "artifacts/test-results/cpp-scoped-text-release-copy-path-focused-corrected.trx",
+    "unitPassed": 41,
+    "fullModuleReceipt": "artifacts/test-results/cpp-scoped-text-full-module.trx",
+    "fullModulePassed": 372,
+    "nativeBulkReceipt": "artifacts/test-results/cpp-standard-value-native-bulk-copy-oracle.trx",
+    "nativeBulkPassed": 1,
+    "nativeManagedStringProjection": "artifacts/test-results/cpp-standard-value-string-native-six.trx",
+    "nativeManagedStringPassed": 6,
+    "scope": "Dirty local checkpoint42555 Windows x64 MSVC/CoreCLR only; all imports and Runtime package/source, source static/nested/single-file output. Owned instance string input/result composition is a separate next cohort.",
+    "source": "src/BGCS.Contracts/Interop/NativeValueReleaseContract.cs",
+    "semantics": "Unknown is default; CreatingCall is limited to fresh default standard basic_string or filesystem::path, copied and destroyed synchronously on its creating caller thread. Custom traits/allocators and pmr do not acquire this capability.",
+    "bulkCopy": "CopyCodeUnits keeps exact writable unit pointer plus unsigned64 capacity inputs and unsigned64 written output, under the fixed owned error boundary; path conversion occurs once per copy.",
+    "tests": [
+      "BGCS.Cpp2C.Tests.StandardValueReleaseTests",
+      "BGCS.Cpp2C.Tests.NeutralValueProtocolTests.CompleteCodeUnitCopyAndCreatingCallReleaseAreIndependentlyChecked",
+      "BGCS.Tests.NativeValueStringResultTests.FreshStandardValuesCopyCountedUnicodeAndDestroyWithinTheirCreatingCall",
+      "BGCS.Tests.NativeStandardLoweringTests.StandardValues_ParseBridgeReparseCompileAndInvokeRealNativeOperations"
+    ],
+    "releaseCertified": false
+  },
+  "standardFilesystemInputEvidence": {
+    "unitReceipt": "artifacts/test-results/cpp-scoped-text-release-copy-path-focused-corrected.trx",
+    "unitPassed": 14,
+    "nativeReceipt": "artifacts/test-results/cpp-standard-path-input-native-six.trx",
+    "nativePassed": 6,
+    "nativeFailed": 0,
+    "historicalFailureReceipt": "artifacts/test-results/cpp-standard-path-input-native-first.trx",
+    "scope": "Dirty local checkpoint42555, Windows x64 MSVC/CoreCLR only: three imports and package/source Runtime, with source static/nested/single-file output.",
+    "capabilities": [
+      "Explicit nonretaining call-scoped by-value/const-reference standard path input from counted UTF8",
+      "Actual compiler char8_t probe retained only as neutral type metadata without publishing its alias",
+      "Native std::u8string materialization rather than system-codepage char pointer construction",
+      "Native separators, non-BMP, embedded NUL, null and empty inputs; raw null/count cap refusal"
+    ],
+    "limitation": "Custom path input requires its explicit native shim protocol; this evidence does not certify final packages, NativeAOT, Wasm or another operating system.",
+    "releaseCertified": false
+  },
+  "ownedTextCompositionSourceCheckpoint": {
+    "status": "local-native-owned-counted-text-composition-passed",
+    "unitReceipt": "artifacts/test-results/cpp-owned-counted-text-result-boundary-seven.trx",
+    "unitPassed": 7,
+    "fullModuleReceipt": "artifacts/test-results/cpp-owned-counted-text-full-module.trx",
+    "fullModulePassed": 379,
+    "semantics": "Counted sequence inputs may return only scalars or a fresh default-standard text owner with complete creating-call cleanup. Explicit encoded String metadata carries exact native code-unit width/order; unknown encoding remains a buffer protocol.",
+    "nativeFixture": "BGCS.Tests.NativeOwnedValueStringResultTests.OwnedMembersKeepTheirStableReceiverWhileCopyingCountedTextInputsAndResults",
+    "firstNativeReceipt": "artifacts/test-results/cpp-owned-value-string-native-first-corrected.trx",
+    "firstNativePassed": 1,
+    "nativeReceipt": "artifacts/test-results/cpp-owned-value-string-native-six-corrected.trx",
+    "nativePassed": 6,
+    "nativeFailed": 0,
+    "scope": "Dirty local checkpoint69520 Windows x64 MSVC/CoreCLR only; three imports and package/source Runtime, with source static/nested/single-file output.",
+    "historicalMatrixReceipt": "artifacts/test-results/cpp-owned-value-string-native-six.trx",
+    "historicalMatrixPassed": 3,
+    "historicalMatrixFailed": 3,
+    "fixtureCorrection": "Source/static ordinary SetNameWithSequence is an owned object member, not an ordinary static context API; fixture now calls sharedWidget.SetNameWithSequence and still verifies new typed shared GetName/PrefixWithSequence facades.",
+    "retention": "Native member self retention remains unknown; the owned fixture really stores this until destructor and requires owning-wrapper/context protection rather than an invented false fact.",
+    "assertions": [
+      "Owned object SetNameWithSequence and CheckNameWithSequence consume strict counted UTF8 managed strings with embedded NUL and non-BMP units",
+      "GetName and PrefixWithSequence copy fresh default-standard text results and destroy them synchronously within their creating leased call",
+      "Context and shared GetName/PrefixWithSequence require the exact existing owned object and reject another context",
+      "Invalid managed Unicode, native exception and native count exceeding the configured bound preserve the original live object",
+      "Context close rejects new calls while object cleanup still succeeds and clears the actual retained native this reference",
+      "ABI metadata describes the exact owned receiver plans and retains unknown self pointer retention without inventing false"
+    ],
+    "releaseCertified": false
+  },
+  "objectiveCNeutralFactEvidence": {
+    "status": "local-neutral-worker-and-public-host-facts-passed",
+    "graphReceipt": "artifacts/test-results/cpp-objc-neutral-graph-twelve.trx",
+    "graphPassed": 12,
+    "workerReceipt": "artifacts/test-results/cpp-objc-worker-facts-two-corrected.trx",
+    "workerPassed": 2,
+    "hostReceipt": "artifacts/test-results/cpp-objc-public-host-three.trx",
+    "hostPassed": 3,
+    "strengthenedWorkerReceipt": "artifacts/test-results/cpp-objc-two-parameters-worker-fourteen.trx",
+    "strengthenedWorkerAndGraphPassed": 14,
+    "strengthenedHostReceipt": "artifacts/test-results/cpp-objc-two-parameters-public-host-three.trx",
+    "strengthenedHostPassed": 3,
+    "strengthenedAssertions": "Two generic parameters retain distinct stable native identities and their exact corresponding method results; the dependent Element typedef remains owned by its interface; selected closure retains both parameters.",
+    "historicalFixtureFailure": "artifacts/test-results/cpp-objc-worker-facts-two.trx",
+    "scope": "Dirty local checkpoint69520 Windows-host parser with self-contained arm64 Darwin declarations and explicit Objective-C runtime/weak/blocks flags; no Apple SDK dependency, native link or call certification.",
+    "semantics": "Exact typed interface/protocol/category/base/generic/property/accessor/selector facts; compiler property attribute flags do not create ARC ownership. Actual External declaration linkage remains separate from Objective-C dispatch, absent C calling convention and Unknown addressability.",
+    "limitation": "BindingHost.AnalyzeAsync supports these facts; generation explicitly rejects Objective-C message-send bindings. Block invocation, ARC and Apple runtime support are not inferred.",
+    "releaseCertified": false
+  },
+  "frontendPublicBoundaryCheckpoint": {
+    "status": "local-minimal-public-surface-and-complete-parser-worker-regressions-passed",
+    "implementation": [
+      "src/BGCS.Frontend.Clang/Properties/AssemblyInfo.cs",
+      "src/BGCS.Tool/Validation/ArchitectureFriendPolicy.cs",
+      "eng/architecture/test-friends.json",
+      "tests/fixtures/ParserLibraryHost/ParseNativeApiTask.cs"
+    ],
+    "publicSurface": "ClangFrontend and the three scoped Advanced entry types; parser model and construction helpers are internal.",
+    "surfaceReceipt": "artifacts/test-results/cpp-frontend-minimal-public-surface-two.trx",
+    "surfacePassed": 2,
+    "historicalControlsReceipt": "artifacts/test-results/cpp-friend-policy-and-architecture-controls.trx",
+    "historicalControls": {
+      "passed": 26,
+      "failed": 5,
+      "total": 31
+    },
+    "exception": "Exactly BGCS.Frontend.Clang.Tests; registered and validated as a real non-packable owner-referencing test assembly. Production friends are rejected.",
+    "pending": [
+      "Fresh installed SDK/worker resource closure and same-revision release gates"
+    ],
+    "releaseCertified": false,
+    "controlsReceipt": "artifacts/test-results/cpp-friend-policy-architecture-controls-corrected.trx",
+    "controlsPassed": 31,
+    "independentHostAndSurfaceReceipt": "artifacts/test-results/cpp-minimal-frontend-independent-host-four.trx",
+    "independentHostAndSurfacePassed": 4,
+    "fullFrontendReceipt": "artifacts/test-results/cpp-frontend-full-internalized-boundary.trx",
+    "fullFrontendPassed": 228,
+    "fullWorkerReceipt": "artifacts/test-results/cpp-worker-full-internalized-frontend.trx",
+    "fullWorkerPassed": 80
+  },
+  "flatIdentifierNamingCheckpoint": {
+    "status": "local-immutable-naming-and-real-worker-cache-passed",
+    "implementation": [
+      "src/BGCS.Contracts/Managed/ManagedNamingPolicy.cs",
+      "src/BGCS.CSharp/Projection/FlatIdentifierWordIndex.cs",
+      "src/BGCS.CSharp/Projection/ManagedNamingResolver.cs"
+    ],
+    "tests": {
+      "pure": "BGCS.CSharp.Tests.FlatIdentifierNamingTests",
+      "pureRows": 33,
+      "host": "BGCS.Tests.FlatIdentifierNamingTests",
+      "hostRows": 2
+    },
+    "semantics": "Explicit None(default), English or Custom immutable word policy; longest-prefix segmentation only for all-uppercase stems under explicit casing. Preserve/exact mappings/default category casing and lowercase/mixed-case behavior remain unchanged.",
+    "resource": {
+      "path": "src/BGCS.CSharp/Resources/en_EN.txt",
+      "sha256": "480a91457cb2e2e11226f0f37d91e8bfce2d9c02825e02a0b8d2de2a70a45bcc",
+      "bytes": 3864812,
+      "wordCount": 370105,
+      "normalization": "Only CRLF to LF from historical raw English resource; exact original Git blob bytes."
+    },
+    "pending": [
+      "Compile the reviewed old utility cone retirement and verify the final single-assembly vocabulary distribution",
+      "Fresh installed SDK/tool and same-revision release gates"
+    ],
+    "releaseCertified": false,
+    "pureReceipt": "artifacts/test-results/cpp-immutable-flat-naming-thirty-three-corrected.trx",
+    "purePassed": 33,
+    "hostReceipt": "artifacts/test-results/cpp-flat-naming-host-schema-cache-two.trx",
+    "hostPassed": 2,
+    "historicalFixtureFailure": "artifacts/test-results/cpp-immutable-flat-naming-thirty-three.trx"
+  }
+}

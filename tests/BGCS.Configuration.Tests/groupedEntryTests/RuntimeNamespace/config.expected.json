@@ -1,0 +1,24 @@
+{
+  "legacyFixture": "entryTests/RuntimeNamespace",
+  "legacyVariant": "config",
+  "configuration": {
+    "/runtime/namespace": "EntryTests.Runtime",
+    "/runtime/mode": "source"
+  },
+  "contains": [
+    "namespace EntryTests.Runtime"
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "BoolEval",
+      "parameters": [
+        "bool"
+      ],
+      "parameterNames": [
+        "value"
+      ],
+      "returns": "bool"
+    }
+  ]
+}

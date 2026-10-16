@@ -20,8 +20,8 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "scripts/historical-releases.json"
 NUGET = "https://api.nuget.org/v3-flatcontainer"
 PACKAGE_IDS = (
-    "BGCS", "BGCS.Cpp2C", "BGCS.Runtime", "BGCS.Intermediate", "BGCS.CppAst",
-    "BGCS.Core", "BGCS.Language", "BindGen-CS", "BindGen-CS.win-x64",
+    "BGCS", "BGCS.Cpp2C", "BGCS.Runtime", "BGCS.Contracts", "BGCS.Frontend.Clang",
+    "BGCS.Infrastructure", "BGCS.CSharp", "BindGen-CS", "BindGen-CS.win-x64",
     "BindGen-CS.win-arm64", "BindGen-CS.linux-x64", "BindGen-CS.linux-arm64",
     "BindGen-CS.osx-arm64",
 )

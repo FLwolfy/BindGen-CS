@@ -1,0 +1,24 @@
+{
+  "legacyFixture": "entryTests/RuntimeNamespace",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/runtime/namespace": "EntryTests.Runtime.Alt",
+    "/runtime/mode": "source"
+  },
+  "contains": [
+    "namespace EntryTests.Runtime.Alt"
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "BoolEval",
+      "parameters": [
+        "bool"
+      ],
+      "parameterNames": [
+        "value"
+      ],
+      "returns": "bool"
+    }
+  ]
+}

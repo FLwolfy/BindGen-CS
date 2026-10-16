@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "features": [
+    {
+      "featureId": "native.c-declarations",
+      "owner": "BGCS.Frontend.Clang",
+      "basis": "tests/BGCS.Frontend.Clang.Tests/Parsing"
+    },
+    {
+      "featureId": "native.type-graph",
+      "owner": "BGCS.Contracts",
+      "basis": "tests/BGCS.Frontend.Clang.Tests/Types"
+    },
+    {
+      "featureId": "native.macros-and-expressions",
+      "owner": "BGCS.Frontend.Clang",
+      "basis": "tests/BGCS.Frontend.Clang.Tests/Preprocessor"
+    },
+    {
+      "featureId": "native.objective-c-facts",
+      "owner": "BGCS.Frontend.Clang",
+      "basis": "tests/BGCS.Frontend.Clang.Tests/ObjC"
+    },
+    {
+      "featureId": "native.source-and-documentation",
+      "owner": "BGCS.Frontend.Clang",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedDocumentationTests.cs"
+    },
+    {
+      "featureId": "analysis.selection-and-closure",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/BindingCoverageTests.cs"
+    },
+    {
+      "featureId": "analysis.storage-layout",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/AbiSafetyRegressionTests.cs"
+    },
+    {
+      "featureId": "analysis.aggregate-calling-abi",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/NativeAbiTypeConversionTests.cs"
+    },
+    {
+      "featureId": "analysis.external-types",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Configuration.Tests"
+    },
+    {
+      "featureId": "analysis.semantic-evidence",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/BindingCorrectnessMatrixTests.cs"
+    },
+    {
+      "featureId": "api.naming-and-type-mapping",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Tests/Unit/NamingBoundaryTests.cs"
+    },
+    {
+      "featureId": "api.function-containers-and-member-extensions",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Tests/Unit/ExtensionsApiTests.cs"
+    },
+    {
+      "featureId": "api.raw-and-friendly",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeRuntimeSemanticsTests.cs"
+    },
+    {
+      "featureId": "api.function-table",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/ImportCallingConventionTests.cs"
+    },
+    {
+      "featureId": "api.dllimport",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeCompilationMatrixTests.cs"
+    },
+    {
+      "featureId": "api.libraryimport",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeCompilationMatrixTests.cs"
+    },
+    {
+      "featureId": "api.instances-and-static-context",
+      "owner": "BGCS.CSharp",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "storage.struct-and-union",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/BindingCoverageTests.cs"
+    },
+    {
+      "featureId": "storage.bitfields",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/BindingCoverageTests.cs"
+    },
+    {
+      "featureId": "storage.fixed-and-flexible-arrays",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/BindingCoverageTests.cs"
+    },
+    {
+      "featureId": "storage.enum-high-bits",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/CustomEnumLayoutTests.cs"
+    },
+    {
+      "featureId": "storage.special-scalars-and-va-list",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/NativeAbiTypeConversionTests.cs"
+    },
+    {
+      "featureId": "semantics.strings-and-encoding",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeRuntimeSemanticsTests.cs"
+    },
+    {
+      "featureId": "semantics.buffers-and-direction",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/BindingCorrectnessMatrixTests.cs"
+    },
+    {
+      "featureId": "semantics.ownership-and-allocators",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/BindingCorrectnessMatrixTests.cs"
+    },
+    {
+      "featureId": "semantics.retained-callbacks",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeRuntimeSemanticsTests.cs"
+    },
+    {
+      "featureId": "semantics.asynchronous-completion",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeRuntimeSemanticsTests.cs"
+    },
+    {
+      "featureId": "semantics.error-and-cleanup",
+      "owner": "BGCS.Analysis",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeRuntimeSemanticsTests.cs"
+    },
+    {
+      "featureId": "cpp.objects-and-operators",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/Cpp2CGeneratorTests.cs"
+    },
+    {
+      "featureId": "cpp.string-vector-span-array",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs"
+    },
+    {
+      "featureId": "cpp.map-set-optional-variant-expected",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs"
+    },
+    {
+      "featureId": "cpp.path-and-chrono",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs"
+    },
+    {
+      "featureId": "cpp.unique-and-shared-pointers",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs"
+    },
+    {
+      "featureId": "cpp.templates-and-function-templates",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs"
+    },
+    {
+      "featureId": "cpp.inheritance-and-native-casts",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs"
+    },
+    {
+      "featureId": "cpp.virtual-callbacks",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs"
+    },
+    {
+      "featureId": "cpp.exception-boundaries",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/Cpp2CGeneratorTests.cs"
+    },
+    {
+      "featureId": "cpp.custom-lowering-recipes-and-shims",
+      "owner": "BGCS.Cpp2C",
+      "basis": "tests/BGCS.Cpp2C.Tests/CppLoweringExtensionTests.cs"
+    },
+    {
+      "featureId": "cpp.typed-operations-and-semantic-reparse",
+      "owner": "BGCS.Cpp2C",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "output.source-patch-and-regex-processing",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Patching.Tests"
+    },
+    {
+      "featureId": "output.split-and-single-file",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Patching.Tests/SingleFilePatchCompatibilityTests.cs"
+    },
+    {
+      "featureId": "output.metadata-and-documentation",
+      "owner": "BGCS.CSharp",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedDocumentationTests.cs"
+    },
+    {
+      "featureId": "runtime.package-and-source",
+      "owner": "BGCS.Runtime",
+      "basis": "tests/BGCS.Generation.Tests/GeneratedCodeCompilationTests.cs"
+    },
+    {
+      "featureId": "runtime.primitives-iterators-and-atomics",
+      "owner": "BGCS.Runtime",
+      "basis": "tests/BGCS.Runtime.Tests/NativeCallbackAndAtomicTests.cs"
+    },
+    {
+      "featureId": "runtime.module-handle-and-call-lifetimes",
+      "owner": "BGCS.Runtime",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "runtime.callback-and-async-lifetimes",
+      "owner": "BGCS.Runtime",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "runtime.aligned-memory-and-utf32",
+      "owner": "BGCS.Runtime",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "runtime.custom-allocator-and-owned-buffer",
+      "owner": "BGCS.Runtime",
+      "origin": "3.0 requirement and baseline allocator configuration audit"
+    },
+    {
+      "featureId": "extensions.neutral-plugins-and-custom-targets",
+      "owner": "BGCS.Contracts",
+      "basis": "tests/BGCS.Tests/Unit/LibraryAgnosticArchitectureTests.cs"
+    },
+    {
+      "featureId": "extensions.schema-lifetime-and-fingerprints",
+      "owner": "BGCS.Infrastructure",
+      "basis": "tests/BGCS.Infrastructure.Tests"
+    },
+    {
+      "featureId": "host.configuration-composition",
+      "owner": "BGCS",
+      "basis": "tests/BGCS.Configuration.Tests"
+    },
+    {
+      "featureId": "host.cache-dependencies-and-extension-invalidation",
+      "owner": "BGCS.Infrastructure",
+      "basis": "tests/BGCS.Generation.Tests/CacheExtensionRegressionTests.cs"
+    },
+    {
+      "featureId": "host.candidate-publication-and-recovery",
+      "owner": "BGCS.Infrastructure",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "host.workspace-inspection-and-diff",
+      "owner": "BGCS",
+      "basis": "tests/BGCS.Tool.Tests"
+    },
+    {
+      "featureId": "host.worker-isolation-and-cancellation",
+      "owner": "BGCS.Infrastructure",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "native-build.providers-and-artifact-validation",
+      "owner": "BGCS.NativeBuild",
+      "basis": "tests/BGCS.Cpp2C.Tests/NativeBuildProviderTests.cs"
+    },
+    {
+      "featureId": "platforms.targets-sdks-and-runtime-capabilities",
+      "owner": "BGCS.Platforms",
+      "basis": "tests/BGCS.Frontend.Clang.Tests/Targeting"
+    },
+    {
+      "featureId": "platforms.native-assets-and-musl",
+      "owner": "BGCS.NativeBuild",
+      "basis": "tests/BGCS.Generation.Tests/AbiSafetyRegressionTests.cs"
+    },
+    {
+      "featureId": "integration.cli-sdk-and-msbuild",
+      "owner": "BGCS",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "distribution.four-products-and-resource-closures",
+      "owner": "distribution",
+      "origin": "3.0 requirement"
+    },
+    {
+      "featureId": "validation.desktop-wasm-and-nativeaot",
+      "owner": "eng",
+      "basis": ".github/workflows/ci.yml"
+    },
+    {
+      "featureId": "validation.corpus-package-and-performance",
+      "owner": "eng",
+      "basis": "scripts"
+    },
+    {
+      "featureId": "validation.api-architecture-documentation-and-supply-chain",
+      "owner": "eng",
+      "basis": "src/BGCS.Tool/Validation"
+    },
+    {
+      "featureId": "extensions.source-contribution",
+      "owner": "BGCS",
+      "origin": "Preserve generated native/managed artifacts formerly contributed through ICppArtifactContributor using Contracts-only source contributions."
+    }
+  ]
+}

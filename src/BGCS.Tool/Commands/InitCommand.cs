@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace BGCS.Tool.Commands;
@@ -8,7 +9,7 @@ namespace BGCS.Tool.Commands;
 internal static partial class InitCommand
 {
     private const string C_DEFAULTCCONFIGNAME = "bindgen.json";
-    private const string C_DEFAULTCPPCONFIGNAME = "bridge.json";
+    private const string C_DEFAULTCPPCONFIGNAME = "bindgen.json";
     internal static int Run(
         string[] args,
         string workingDirectory,
@@ -35,12 +36,20 @@ internal static partial class InitCommand
             string? includeFolder = Path.GetDirectoryName(nativeInput)?.Replace('\\', '/');
             if (string.IsNullOrEmpty(includeFolder))
                 includeFolder = ".";
-            object config = isCpp ? CreateCppConfig(nativeInput, includeFolder) : CreateCConfig(nativeInput, includeFolder);
-            File.WriteAllText(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions
+            object config = CreateConfig(nativeInput, includeFolder, isCpp);
+            JsonSerializerOptions serialization = new()
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }) + Environment.NewLine);
+            };
+            JsonObject document = (JsonObject)JsonSerializer.SerializeToNode(config, serialization)!;
+            document["$schema"] = "./bindgen.schema.json";
+            string schemaPath = Path.Combine(configDirectory, "bindgen.schema.json");
+            string schema = new BGCS.Configuration.SchemaCatalog().CreateBindingSchema().ToJsonString(serialization) + Environment.NewLine;
+            if (File.Exists(schemaPath) && File.ReadAllText(schemaPath) != schema)
+                return Fail(error, $"An existing schema differs from this BGCS version: {schemaPath}. Export the current schema to a separately reviewed location first.");
+            File.WriteAllText(schemaPath, schema);
+            File.WriteAllText(configPath, document.ToJsonString(serialization) + Environment.NewLine);
             output.WriteLine($"Created {configPath}");
             output.WriteLine($"Input: {nativeInput} ({(isCpp ? "C++ bridge" : "C ABI")})");
             return 0;
@@ -55,56 +64,21 @@ internal static partial class InitCommand
         }
     }
 
-    private static object CreateCConfig(
+    private static object CreateConfig(
         string nativeInput,
-        string includeFolder
+        string includeFolder,
+        bool cpp
     ) => new
     {
-        Preset = "host-c,c-library",
-        Namespace = "Native.Bindings",
-        ApiName = "NativeApi",
-        LibName = "native",
-        EntryFiles = new[]
-        {
-            nativeInput
-        },
-        AllowedHeaders = Array.Empty<string>(),
-        IncludeTransitivelyReferencedHeaders = true,
-        IncludeFolders = new[]
-        {
-            includeFolder
-        },
-        OutputPath = "Generated",
-        ImportType = "DllImport",
-        MergeGeneratedFilesToSingleFile = true
-    };
-    private static object CreateCppConfig(
-        string nativeInput,
-        string includeFolder
-    ) => new
-    {
-        EntryFiles = new[]
-        {
-            nativeInput
-        },
-        AllowedHeaders = new[]
-        {
-            nativeInput
-        },
-        IncludeFolders = new[]
-        {
-            includeFolder
-        },
-        OutputPath = "GeneratedBridge",
-        LanguageStandard = "c++23",
-        GenerateBuildManifest = true,
-        GenerateCSharpBindings = true,
-        CSharpNamespace = "Native.Bindings",
-        CSharpApiName = "NativeApi",
-        NativeLibraryName = "native",
-        CSharpOutputPath = "Generated",
-        ParseSystemIncludes = false,
-        ParseComments = false
+        SchemaVersion = 1,
+        Library = new { Id = "native", NativeName = cpp ? "native_bridge" : "native" },
+        Source = new { Language = cpp ? "cpp" : "c", LanguageStandard = cpp ? "c++23" : "c17", Headers = new[] { nativeInput }, IncludeDirectories = includeFolder == "." ? Array.Empty<string>() : new[] { includeFolder }, IncludeTransitivelyReferencedHeaders = true },
+        Targets = new[] { new { Id = "host", Toolchain = "auto" } },
+        Api = new { Namespace = "Native.Bindings", Name = "NativeApi", Style = "instance", ImportMode = "functionTable", Framework = "net10.0" },
+        Runtime = new { Mode = "package" },
+        NativeBuild = new { Mode = "none", Provider = "auto" },
+        Output = new { Root = "Generated", Layout = "split" },
+        Cache = new { Enabled = true }
     };
     private static string ResolveConfigPath(
         InitOptions options,

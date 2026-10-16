@@ -1,0 +1,11 @@
+{
+  "legacyFixture": "entryTests/AdditionalArguments",
+  "legacyVariant": "config.no-args",
+  "configuration": {
+    "/source/arguments": []
+  },
+  "success": false,
+  "diagnosticsContain": [
+    "FROM_ADDITIONAL_ARGUMENTS is required"
+  ]
+}

@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <BGCSGenerateBindings Condition="'$(BGCSGenerateBindings)' == ''">false</BGCSGenerateBindings>
+    <BGCSBuildNative Condition="'$(BGCSBuildNative)' == ''">true</BGCSBuildNative>
+    <BGCSConfig Condition="'$(BGCSConfig)' == ''">bindgen.json</BGCSConfig>
+    <_BGCSPackageRoot Condition="'$(_BGCSPackageRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))/</_BGCSPackageRoot>
+    <BGCSMSBuildTaskAssembly Condition="'$(BGCSMSBuildTaskAssembly)' == '' and Exists('$(_BGCSPackageRoot)tools/msbuild/net10.0/BGCS.MSBuild.dll')">$(_BGCSPackageRoot)tools/msbuild/net10.0/BGCS.MSBuild.dll</BGCSMSBuildTaskAssembly>
+    <BGCSWorkerAssetSourceRoot Condition="'$(BGCSWorkerAssetSourceRoot)' == '' and Exists('$(_BGCSPackageRoot)tools/clang-worker/common/BGCS.Frontend.Clang.Worker.dll')">$(_BGCSPackageRoot)tools/clang-worker/common</BGCSWorkerAssetSourceRoot>
+    <BGCSWorkerHostRid Condition="'$(BGCSWorkerHostRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</BGCSWorkerHostRid>
+    <BGCSWorkerAssetManifest Condition="'$(BGCSWorkerAssetManifest)' == '' and '$(BGCSWorkerAssetSourceRoot)' != '' and '$(BGCSWorkerHostRid)' != ''">$(_BGCSPackageRoot)tools/clang-worker/manifests/$(BGCSWorkerHostRid).json</BGCSWorkerAssetManifest>
+    <BGCSNativePackageRoot Condition="'$(BGCSNativePackageRoot)' == '' and '$(BGCSWorkerAssetSourceRoot)' != '' and '$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)</BGCSNativePackageRoot>
+    <BGCSParserRuntimeVersion Condition="'$(BGCSParserRuntimeVersion)' == ''">20.1.2</BGCSParserRuntimeVersion>
+  </PropertyGroup>
+</Project>

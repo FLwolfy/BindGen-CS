@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Label="Compilation">
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>bindgen-cs</ToolCommandName>
     <!-- The parser carries a libclang runtime per RID, so a single tool package would
          exceed the nuget.org 250 MB limit. RID-specific tool packages ship only the
          native assets of their own platform behind a small pointer package. -->
-    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-arm64</RuntimeIdentifiers>
-    <ToolPackageRuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-arm64</ToolPackageRuntimeIdentifiers>
+    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <ToolPackageRuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</ToolPackageRuntimeIdentifiers>
   </PropertyGroup>
 
   <PropertyGroup Label="NuGet package">
@@ -25,15 +25,42 @@
   </PropertyGroup>
 
   <ItemGroup Label="Project dependencies">
-    <ProjectReference Include="../BGCS.Cpp2C/BGCS.Cpp2C.csproj" />
     <ProjectReference Include="../BGCS/BGCS.csproj" />
+    <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Package dependencies">
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
   </ItemGroup>
 
   <ItemGroup Label="Package content">
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="../BGCS.Frontend.Clang/Resources/Clang/LICENSE.txt" Pack="true" PackagePath="licenses/clang-resource/LICENSE.txt" />
+    <None Include="../BGCS.Frontend.Clang/Resources/Clang/README.md" Pack="true" PackagePath="licenses/clang-resource/README.md" />
   </ItemGroup>
+
+  <Target Name="BGCSIncludeToolWorker" AfterTargets="Publish" Condition="'$(BGCSWorkerPackageRoot)' != '' and '$(RuntimeIdentifier)' != ''">
+    <Error Condition="!Exists('$(BGCSWorkerPackageRoot)/common/BGCS.Frontend.Clang.Worker.dll') or !Exists('$(BGCSWorkerPackageRoot)/manifests/$(RuntimeIdentifier).json')" Text="The locked tool worker closure is missing for $(RuntimeIdentifier)." />
+    <Error Condition="'$(PublishDir)' == ''" Text="The tool worker requires an explicit publish directory." />
+    <PropertyGroup>
+      <_BGCSToolPublishRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(PublishDir)'))</_BGCSToolPublishRoot>
+      <_BGCSToolWorkerOutputRoot>$([MSBuild]::NormalizeDirectory('$(_BGCSToolPublishRoot)', 'bgcs', 'worker'))</_BGCSToolWorkerOutputRoot>
+      <_BGCSToolWorkerSourceRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(BGCSWorkerPackageRoot)'))</_BGCSToolWorkerSourceRoot>
+    </PropertyGroup>
+    <Error Condition="!$([System.String]::Copy('$(_BGCSToolWorkerOutputRoot)').StartsWith('$(_BGCSToolPublishRoot)', System.StringComparison.OrdinalIgnoreCase)) or $([System.String]::Copy('$(_BGCSToolWorkerSourceRoot)').StartsWith('$(_BGCSToolWorkerOutputRoot)', System.StringComparison.OrdinalIgnoreCase))" Text="The owned tool worker output must remain inside its publish directory and separate from its source closure." />
+    <!-- Publish retains files copied by earlier custom targets. Replace only this
+         owned worker subtree so retired dependencies cannot enter a new package. -->
+    <RemoveDir Directories="$(_BGCSToolWorkerOutputRoot)" Condition="Exists('$(_BGCSToolWorkerOutputRoot)')" />
+    <ItemGroup>
+      <_BGCSToolWorkerCommon Include="$(BGCSWorkerPackageRoot)/common/**/*" />
+      <_BGCSToolWorkerNative Include="$(BGCSWorkerPackageRoot)/native/$(RuntimeIdentifier)/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_BGCSToolWorkerCommon)" DestinationFiles="@(_BGCSToolWorkerCommon->'$(_BGCSToolWorkerOutputRoot)%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(_BGCSToolWorkerNative)" DestinationFolder="$(_BGCSToolWorkerOutputRoot)runtimes/$(RuntimeIdentifier)/native" />
+    <Copy SourceFiles="$(BGCSWorkerPackageRoot)/manifests/$(RuntimeIdentifier).json" DestinationFiles="$(_BGCSToolWorkerOutputRoot)worker-assets.manifest.json" />
+  </Target>
+  <Target Name="BGCSIncludeToolNotices" AfterTargets="Publish" Condition="'$(BGCSToolNoticesRoot)' != ''">
+    <ItemGroup><_BGCSToolNotice Include="$(BGCSToolNoticesRoot)/**/*" /></ItemGroup>
+    <Copy SourceFiles="@(_BGCSToolNotice)" DestinationFiles="@(_BGCSToolNotice->'$(PublishDir)licenses/dependencies/%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
 </Project>

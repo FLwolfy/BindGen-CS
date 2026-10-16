@@ -1,0 +1,8 @@
+namespace BGCS.Frontend.Clang.Parsing;
+
+/// <summary>
+/// Defines the public class <c>DeclContainerVisitor</c>.
+/// </summary>
+internal abstract class DeclContainerVisitor : CursorVisitor<CppContainerContext>
+{
+}

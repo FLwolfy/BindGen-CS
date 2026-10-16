@@ -1,0 +1,545 @@
+{
+  "schemaVersion": 1,
+  "stageOrder": [
+    "Resolved",
+    "Parsed",
+    "Generated",
+    "ManagedCompiled",
+    "NativeLinked",
+    "Invoked",
+    "Packaged"
+  ],
+  "certificationRule": "Every stage requires its own same-revision receipt. Resolution, synthetic layout tests, generated command plans, static adapter protocol tests and copied assets cannot stand in for actual application invocation or installed package consumption.",
+  "certificationStatus": "pending",
+  "releaseRevision": null,
+  "runtimeProfiles": [
+    "CoreClr",
+    "NativeAot",
+    "BrowserWasm"
+  ],
+  "importModes": [
+    "FunctionTable",
+    "DllImport",
+    "LibraryImport"
+  ],
+  "targets": [
+    {
+      "id": "windows-x64-msvc",
+      "releaseGate": "required",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "runtimeProfiles": [
+        "CoreClr",
+        "NativeAot"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [
+        {
+          "workflow": ".github/workflows/ci.yml",
+          "job": "build-and-test",
+          "target": "windows-x64-msvc"
+        },
+        {
+          "workflow": ".github/workflows/ci.yml",
+          "job": "acceptance",
+          "target": "windows-x64-msvc"
+        },
+        {
+          "script": "scripts/test-native-aot-bindings.py",
+          "stages": [
+            "ManagedCompiled",
+            "NativeLinked",
+            "Invoked"
+          ]
+        },
+        {
+          "workflow": ".github/workflows/packages.yml",
+          "job": "packages",
+          "stages": [
+            "Packaged"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "linux-x64-gnu",
+      "releaseGate": "required",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "runtimeProfiles": [
+        "CoreClr",
+        "NativeAot"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [
+        {
+          "workflow": ".github/workflows/ci.yml",
+          "job": "build-and-test",
+          "target": "linux-x64-gnu"
+        },
+        {
+          "workflow": ".github/workflows/ci.yml",
+          "job": "acceptance",
+          "target": "linux-x64-gnu"
+        },
+        {
+          "script": "scripts/test-native-aot-bindings.py",
+          "stages": [
+            "ManagedCompiled",
+            "NativeLinked",
+            "Invoked"
+          ]
+        },
+        {
+          "workflow": ".github/workflows/packages.yml",
+          "job": "packages",
+          "stages": [
+            "Packaged"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "macos-x64-darwin",
+      "releaseGate": "required",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "runtimeProfiles": [
+        "CoreClr",
+        "NativeAot"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [
+        {
+          "workflow": ".github/workflows/ci.yml",
+          "job": "build-and-test",
+          "target": "macos-x64-darwin"
+        },
+        {
+          "workflow": ".github/workflows/ci.yml",
+          "job": "acceptance",
+          "target": "macos-x64-darwin"
+        },
+        {
+          "script": "scripts/test-native-aot-bindings.py",
+          "stages": [
+            "ManagedCompiled",
+            "NativeLinked",
+            "Invoked"
+          ]
+        },
+        {
+          "workflow": ".github/workflows/packages.yml",
+          "job": "packages",
+          "stages": [
+            "Packaged"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "emscripten-wasm32-emscripten",
+      "releaseGate": "required",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "runtimeProfiles": [
+        "BrowserWasm"
+      ],
+      "executionModes": [
+        "interpreter",
+        "aot"
+      ],
+      "requiredHosts": [
+        "windows-x64-msvc",
+        "linux-x64-gnu",
+        "macos-x64-darwin"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [
+        {
+          "path": "tests/BGCS.NativeBuild.Tests/WasmNativeExecutionTests.cs",
+          "method": "WorkloadCompilerBuildsMixedC17Cpp23WithIndependentDependenciesAndExports",
+          "stages": [
+            "NativeLinked"
+          ],
+          "requiresEnvironment": "BGCS_REQUIRE_WASM_NATIVE=1"
+        },
+        {
+          "script": "scripts/test-wasm-bindings.py",
+          "stages": [
+            "ManagedCompiled",
+            "NativeLinked",
+            "Invoked"
+          ]
+        },
+        {
+          "workflow": ".github/workflows/packages.yml",
+          "job": "packages",
+          "stages": [
+            "Packaged"
+          ]
+        }
+      ],
+      "constraints": [
+        "Static archive/object references carry an exact import module identity matching .NET NativeFileReference registration.",
+        "LibraryImport uses the explicitly resolved browser default Cdecl convention profile.",
+        "Chromium evidence does not certify Firefox or Safari."
+      ]
+    },
+    {
+      "id": "windows-arm64-msvc",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "linux-arm64-gnu",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "macos-arm64-darwin",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "linux-x64-musl",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "linux-arm64-musl",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "android-arm64",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "android-x64",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "ios-arm64-darwin",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "ios-simulator-x64-darwin",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "ios-simulator-arm64-darwin",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "freebsd-x64-gnu",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    },
+    {
+      "id": "freebsd-arm64-gnu",
+      "releaseGate": "deferredCertification",
+      "requiredStages": [
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked",
+        "Packaged"
+      ],
+      "certification": {
+        "status": "pending",
+        "revision": null,
+        "receipts": []
+      },
+      "executionMappings": [],
+      "knownLimits": [
+        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+      ]
+    }
+  ],
+  "sharedTestMappings": [
+    {
+      "path": "tests/BGCS.Frontend.Clang.Tests/Targeting/NativeTargetProviderTests.cs",
+      "scope": "provider claims, immutable SDK inputs and distinct Apple device/simulator targets"
+    },
+    {
+      "path": "tests/BGCS.Frontend.Clang.Tests/Targeting/CppTargetTests.cs",
+      "scope": "existing target parsing/layout parity fixtures; legacy facade must be ported before architecture acceptance"
+    },
+    {
+      "path": "tests/BGCS.NativeBuild.Tests/TargetCapabilityTests.cs",
+      "scope": "opaque identities, declared mechanisms and GNU/musl RID separation"
+    },
+    {
+      "path": "tests/BGCS.NativeBuild.Tests/NativeReferenceTests.cs",
+      "scope": "runtime-specific typed asset references and import module identity"
+    },
+    {
+      "path": "tests/BGCS.NativeBuild.Tests/StaticArtifactTests.cs",
+      "scope": "native binary identity, byte order and rejection of incompatible RID assumptions"
+    },
+    {
+      "path": "tests/BGCS.Tests/StaticManagedAdapterTests.cs",
+      "scope": "generated managed-to-native static-table protocol on desktop; not Wasm/AOT certification"
+    }
+  ],
+  "receiptRequirements": [
+    "sourceRevision",
+    "targetId",
+    "platformId",
+    "architectureId",
+    "abiId",
+    "byteOrder",
+    "compilerIdentity",
+    "sdkIdentity",
+    "runtimeProfile",
+    "importMode",
+    "stage",
+    "testId",
+    "artifactDigests",
+    "success"
+  ],
+  "knownLimits": [
+    "Source/model byte-order facts never default Unknown to verified LittleEndian.",
+    "NativeTargetId is an opaque identity; binary layout and NuGet RID mapping use explicit platform/CPU/ABI facts.",
+    "Postponed platforms remain visibly uncertified until their real matrix completes."
+  ]
+}

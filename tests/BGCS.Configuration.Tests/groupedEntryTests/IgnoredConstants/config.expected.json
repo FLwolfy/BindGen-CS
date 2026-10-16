@@ -1,0 +1,37 @@
+{
+  "legacyFixture": "entryTests/IgnoredConstants",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/categories": [
+      {
+        "category": "constants",
+        "excludeDeclarations": [
+          "MY_CONST"
+        ],
+        "includeDeclarations": []
+      }
+    ]
+  },
+  "constants": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "KEEP_CONST",
+      "value": 13
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "ReadConst",
+      "parameters": [],
+      "parameterNames": [],
+      "returns": "int"
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "MY_CONST"
+    }
+  ]
+}

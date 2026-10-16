@@ -1,0 +1,20 @@
+{
+  "legacyFixture": "entryTests/GenerateFunctions",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/excludeCategories": [
+      "callables"
+    ]
+  },
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd"
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+RawApi",
+      "name": "SampleAdd",
+      "ownerOptional": true
+    }
+  ]
+}

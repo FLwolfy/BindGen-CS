@@ -1,0 +1,13 @@
+class BGCS.Frontend.Clang.Advanced.ClangFactContributionContext [sealed]
+  property BGCS.Contracts.Requests.FrontendRequest request { get }
+  property ClangSharp.Interop.CXTranslationUnit translationUnit { get }
+  method BGCS.Contracts.Common.SourceLocation GetSourceLocation(ClangSharp.Interop.CXCursor cursor)
+  method System.Boolean TryGetDeclarationCursor(BGCS.Contracts.Common.StableId declaration, out ClangSharp.Interop.CXCursor cursor)
+class BGCS.Frontend.Clang.Advanced.ClangPluginAssemblyIdentity [abstract; sealed]
+  property System.Collections.Immutable.ImmutableArray<System.Reflection.Assembly> sharedAssemblies { get } [static]
+interface BGCS.Frontend.Clang.Advanced.IClangFactContributor [abstract]
+  method BGCS.Contracts.Native.NativeModule Contribute(BGCS.Frontend.Clang.Advanced.ClangFactContributionContext context, BGCS.Contracts.Native.NativeModule module, System.Threading.CancellationToken cancellationToken) [abstract; virtual]
+class BGCS.Frontend.Clang.ClangFrontend [sealed; interfaces=BGCS.Contracts.Ports.IFrontend]
+  ctor()
+  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Requests.FrontendResult> ParseAsync(BGCS.Contracts.Requests.FrontendRequest request, System.Collections.Generic.IReadOnlyList<BGCS.Frontend.Clang.Advanced.IClangFactContributor> contributors, System.Threading.CancellationToken cancellationToken)
+  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Requests.FrontendResult> ParseAsync(BGCS.Contracts.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]

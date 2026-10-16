@@ -1,0 +1,31 @@
+{
+  "legacyFixture": "entryTests/GenerateConstants",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/selection/excludeCategories": [
+      "constants"
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi+Constants",
+      "name": "SAMPLE_FLAG",
+      "ownerOptional": true
+    }
+  ]
+}

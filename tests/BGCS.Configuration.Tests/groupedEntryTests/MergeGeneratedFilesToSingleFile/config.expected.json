@@ -1,0 +1,33 @@
+{
+  "legacyFixture": "entryTests/MergeGeneratedFilesToSingleFile",
+  "legacyVariant": "config",
+  "configuration": {
+    "/output/layout": "split"
+  },
+  "singleFile": false,
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "types": [
+    {
+      "name": "EntryTests.Generated.MergeType",
+      "kind": "Struct"
+    },
+    {
+      "name": "EntryTests.Generated.MergeMode",
+      "kind": "Enum"
+    }
+  ]
+}

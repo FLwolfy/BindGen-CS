@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Xunit;
 
@@ -13,14 +15,29 @@ public sealed class SupplyChainCommandTests
         string temp = Path.Combine(Path.GetTempPath(), "bgcs-supply-chain-" + Guid.NewGuid().ToString("N"));
         string artifacts = Path.Combine(temp, "packages");
         string outputDirectory = Path.Combine(temp, "attestations");
+        string revision = new('a', 40);
         Directory.CreateDirectory(artifacts);
-        File.WriteAllText(Path.Combine(artifacts, "BGCS.1.0.0.nupkg"), "package");
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(artifacts, "BGCS.1.0.0.nupkg"), ZipArchiveMode.Create))
+        {
+            using StreamWriter writer = new(archive.CreateEntry("BGCS.nuspec").Open());
+            writer.Write("<package><metadata><id>BGCS</id><version>1.0.0</version><license type=\"expression\">MIT</license></metadata></package>");
+        }
+        string packagePath = Path.Combine(artifacts, "BGCS.1.0.0.nupkg");
+        File.WriteAllText(Path.Combine(artifacts, "package-verification.json"), JsonSerializer.Serialize(new
+        {
+            schemaVersion = 1, completeProductSet = true, sourceRevision = revision,
+            checkedOutSourceSha256 = new string('b', 64), sourceRevisionStable = true, sourceBytesStable = true,
+            sourceWorktreeDirty = false,
+            sourceAtCompletion = new { sourceRevision = revision, checkedOutSourceSha256 = new string('b', 64), sourceWorktreeDirty = false },
+            packages = new[] { new { file = "BGCS.1.0.0.nupkg", bytes = new FileInfo(packagePath).Length,
+                sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(packagePath))).ToLowerInvariant() } }
+        }));
         try
         {
             using StringWriter output = new();
             using StringWriter error = new();
             int exitCode = Run(
-                [artifacts, "--output", outputDirectory, "--revision", "0123456789abcdef", "--timestamp", "2026-01-02T03:04:05Z"],
+                [artifacts, "--output", outputDirectory, "--revision", revision, "--timestamp", "2026-01-02T03:04:05Z"],
                 temp, output, error);
 
             Assert.Equal(0, exitCode);
@@ -28,21 +45,23 @@ public sealed class SupplyChainCommandTests
             using JsonDocument sbom = JsonDocument.Parse(File.ReadAllText(Path.Combine(outputDirectory,
                 "sbom.spdx.json")));
             Assert.Equal("SPDX-2.3", sbom.RootElement.GetProperty("spdxVersion").GetString());
-            Assert.Equal("BGCS.1.0.0.nupkg",
-                sbom.RootElement.GetProperty("packages")[0].GetProperty("name").GetString());
+            JsonElement product = Assert.Single(sbom.RootElement.GetProperty("packages").EnumerateArray(), package => package.GetProperty("name").GetString() == "BGCS");
+            Assert.Equal("1.0.0", product.GetProperty("versionInfo").GetString());
+            Assert.All(sbom.RootElement.GetProperty("packages").EnumerateArray(), package =>
+                Assert.DoesNotContain(package.EnumerateObject(), property => property.Value.ValueKind == JsonValueKind.Null));
             using JsonDocument provenance = JsonDocument.Parse(File.ReadAllText(Path.Combine(outputDirectory,
                 "provenance.slsa.json")));
             Assert.Equal("https://slsa.dev/provenance/v1",
                 provenance.RootElement.GetProperty("predicateType").GetString());
             Assert.Equal(64, provenance.RootElement.GetProperty("subject")[0]
                 .GetProperty("digest").GetProperty("sha256").GetString()!.Length);
-            Assert.Equal("0123456789abcdef", provenance.RootElement.GetProperty("predicate")
+            Assert.Equal(revision, provenance.RootElement.GetProperty("predicate")
                 .GetProperty("buildDefinition").GetProperty("resolvedDependencies")[0]
                 .GetProperty("digest").GetProperty("gitCommit").GetString());
             string firstSbom = File.ReadAllText(Path.Combine(outputDirectory, "sbom.spdx.json"));
             string firstProvenance = File.ReadAllText(Path.Combine(outputDirectory, "provenance.slsa.json"));
             Assert.Equal(0, Run(
-                [artifacts, "--output", outputDirectory, "--revision", "0123456789abcdef", "--timestamp", "2026-01-02T03:04:05Z"],
+                [artifacts, "--output", outputDirectory, "--revision", revision, "--timestamp", "2026-01-02T03:04:05Z"],
                 temp, TextWriter.Null, TextWriter.Null));
             Assert.Equal(firstSbom, File.ReadAllText(Path.Combine(outputDirectory, "sbom.spdx.json")));
             Assert.Equal(firstProvenance, File.ReadAllText(Path.Combine(outputDirectory, "provenance.slsa.json")));

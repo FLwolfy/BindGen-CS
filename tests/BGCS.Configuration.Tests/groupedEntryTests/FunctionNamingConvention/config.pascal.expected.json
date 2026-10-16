@@ -1,0 +1,28 @@
+{
+  "legacyFixture": "entryTests/FunctionNamingConvention",
+  "legacyVariant": "config.pascal",
+  "configuration": {
+    "/api/naming/functions/casing": "pascal"
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "sampleAdd"
+    }
+  ]
+}

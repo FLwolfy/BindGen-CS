@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "extends": [
+    "base.bindgen.json"
+  ]
+}

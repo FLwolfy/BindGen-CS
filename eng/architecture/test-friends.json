@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "exceptions": [
+    {
+      "sourceProject": "src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj",
+      "friendProject": "tests/BGCS.Frontend.Clang.Tests/BGCS.Frontend.Clang.Tests.csproj",
+      "friendAssembly": "BGCS.Frontend.Clang.Tests",
+      "reason": "Frontend-owned parser implementation regression tests; standard and advanced extensions use the public neutral or scoped Clang contribution ports."
+    }
+  ]
+}

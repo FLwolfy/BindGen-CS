@@ -1,0 +1,22 @@
+{
+  "legacyFixture": "entryTests/IncludeFolders",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/includeDirectories": [
+      "$fixture/include"
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "UseDep",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "value"
+      ],
+      "returns": "int"
+    }
+  ]
+}

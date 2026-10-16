@@ -1,7 +1,0 @@
-{
-  "Contains": [
-    "Base_Counter_Add",
-    "BaseMode_A",
-    "#define Base_API(type)"
-  ]
-}

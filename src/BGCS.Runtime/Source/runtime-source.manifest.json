@@ -1,0 +1,240 @@
+{
+  "revision": 1,
+  "features": {
+    "metadata.native-names": [
+      "NativeNameAttribute.cs"
+    ],
+    "modules.session": [
+      "NativeModuleSession.cs"
+    ],
+    "memory.native-allocator": [
+      "NativeAllocator.cs",
+      "NativeBuffer.cs"
+    ],
+    "modules.dynamic": [
+      "DynamicModuleProvider.cs"
+    ],
+    "modules.static": [
+      "StaticModuleProvider.cs"
+    ],
+    "modules.external-table": [
+      "ExternalFunctionTableProvider.cs"
+    ],
+    "strings.utf8-input": [
+      "Utf8Codec.cs"
+    ],
+    "strings.utf16-input": [
+      "Utf16Codec.cs"
+    ],
+    "strings.utf32-input": [
+      "Utf32Codec.cs"
+    ],
+    "strings.utf8-result": [
+      "Utf8Codec.cs"
+    ],
+    "strings.utf16-result": [
+      "Utf16Codec.cs"
+    ],
+    "strings.utf32-result": [
+      "Utf32Codec.cs"
+    ],
+    "errors.native-status": [
+      "NativeCallException.cs"
+    ],
+    "handles.owned": [
+      "OwnedNativeHandle.cs"
+    ],
+    "handles.module-borrowed": [
+      "ModuleBorrowedNativeHandle.cs"
+    ],
+    "callbacks.static-registration": [
+      "CallbackRegistry.cs",
+      "CallbackRegistration.cs",
+      "CallbackExceptionBoundary.cs"
+    ],
+    "async.operation": [
+      "NativeOperation.cs"
+    ],
+    "runtime.complete": [
+      "Aapcs64VaList.cs",
+      "Atomic.cs",
+      "Bitfield.cs",
+      "Bool32.cs",
+      "Bool8.cs",
+      "BorrowedNativeHandle.cs",
+      "CallbackExceptionBoundary.cs",
+      "CallbackRegistration.cs",
+      "CallbackRegistry.cs",
+      "ConstPointer.cs",
+      "DynamicModuleProvider.cs",
+      "ExternalFunctionTableProvider.cs",
+      "INativeModuleProvider.cs",
+      "INativeReleaseDispatcher.cs",
+      "Iterator.cs",
+      "ModuleBorrowedNativeHandle.cs",
+      "NativeAlignedBuffer.cs",
+      "NativeAllocator.cs",
+      "NativeAllocatorThreadDomain.cs",
+      "NativeAotCallback.cs",
+      "NativeBuffer.cs",
+      "NativeCallback.cs",
+      "NativeCallbackDispatcher.cs",
+      "NativeCallbackRegistry.cs",
+      "NativeCallException.cs",
+      "NativeCallLease.cs",
+      "NativeLongDouble.cs",
+      "NativeModuleLease.cs",
+      "NativeModuleSession.cs",
+      "NativeNameAttribute.cs",
+      "NativeOperation.cs",
+      "NativeStringLease.cs",
+      "NativeTextEncoder.cs",
+      "NativeTextReader.cs",
+      "OwnedNativeHandle.cs",
+      "Pointer.cs",
+      "SourceLocationAttribute.cs",
+      "StaticModuleProvider.cs",
+      "Utf16Codec.cs",
+      "Utf32Codec.cs",
+      "Utf8Codec.cs",
+      "Utils.cs"
+    ],
+    "primitives.booleans": [
+      "Bool8.cs",
+      "Bool32.cs"
+    ],
+    "primitives.pointers": [
+      "Pointer.cs",
+      "ConstPointer.cs",
+      "Iterator.cs"
+    ],
+    "primitives.atomic": [
+      "Atomic.cs"
+    ],
+    "primitives.bitfields": [
+      "Bitfield.cs"
+    ],
+    "primitives.special-storage": [
+      "NativeLongDouble.cs",
+      "Aapcs64VaList.cs"
+    ],
+    "memory.aligned-buffer": [
+      "NativeAlignedBuffer.cs"
+    ],
+    "metadata.source-location": [
+      "SourceLocationAttribute.cs"
+    ],
+    "callbacks.delegate-registry": [
+      "NativeCallbackRegistry.cs"
+    ],
+    "callbacks.aot-address": [
+      "NativeAotCallback.cs"
+    ],
+    "utilities.raw-interop": [
+      "Utils.cs"
+    ]
+  },
+  "files": {
+    "NativeNameAttribute.cs": [],
+    "NativeModuleSession.cs": [
+      "INativeModuleProvider.cs",
+      "NativeModuleLease.cs",
+      "NativeCallLease.cs"
+    ],
+    "NativeAllocator.cs": [
+      "NativeBuffer.cs",
+      "NativeAllocatorThreadDomain.cs",
+      "INativeReleaseDispatcher.cs",
+      "NativeModuleSession.cs",
+      "NativeModuleLease.cs",
+      "NativeCallLease.cs"
+    ],
+    "NativeBuffer.cs": [
+      "NativeAllocator.cs",
+      "NativeModuleLease.cs",
+      "NativeCallLease.cs"
+    ],
+    "NativeAllocatorThreadDomain.cs": [],
+    "INativeReleaseDispatcher.cs": [],
+    "INativeModuleProvider.cs": [],
+    "NativeModuleLease.cs": [
+      "NativeModuleSession.cs",
+      "NativeCallLease.cs"
+    ],
+    "NativeCallLease.cs": [
+      "NativeModuleSession.cs"
+    ],
+    "DynamicModuleProvider.cs": [
+      "INativeModuleProvider.cs"
+    ],
+    "StaticModuleProvider.cs": [
+      "INativeModuleProvider.cs"
+    ],
+    "ExternalFunctionTableProvider.cs": [
+      "INativeModuleProvider.cs"
+    ],
+    "Utf8Codec.cs": [
+      "NativeStringLease.cs",
+      "NativeTextReader.cs",
+      "NativeTextEncoder.cs"
+    ],
+    "Utf16Codec.cs": [
+      "NativeStringLease.cs",
+      "NativeTextReader.cs",
+      "NativeTextEncoder.cs"
+    ],
+    "Utf32Codec.cs": [
+      "NativeStringLease.cs",
+      "NativeTextReader.cs",
+      "NativeTextEncoder.cs"
+    ],
+    "NativeTextEncoder.cs": [
+      "NativeStringLease.cs"
+    ],
+    "NativeTextReader.cs": [],
+    "NativeStringLease.cs": [
+      "NativeAllocator.cs",
+      "NativeBuffer.cs"
+    ],
+    "NativeCallException.cs": [],
+    "OwnedNativeHandle.cs": [
+      "NativeModuleLease.cs",
+      "NativeCallLease.cs",
+      "BorrowedNativeHandle.cs"
+    ],
+    "BorrowedNativeHandle.cs": [
+      "OwnedNativeHandle.cs"
+    ],
+    "ModuleBorrowedNativeHandle.cs": [
+      "NativeModuleLease.cs",
+      "NativeCallLease.cs"
+    ],
+    "CallbackRegistry.cs": [],
+    "CallbackRegistration.cs": [
+      "NativeModuleLease.cs",
+      "NativeCallLease.cs",
+      "NativeCallback.cs",
+      "NativeCallbackDispatcher.cs"
+    ],
+    "NativeCallbackDispatcher.cs": [],
+    "CallbackExceptionBoundary.cs": [],
+    "NativeCallback.cs": [],
+    "NativeOperation.cs": [],
+    "Aapcs64VaList.cs": [],
+    "Atomic.cs": [],
+    "Bitfield.cs": [],
+    "Bool32.cs": [],
+    "Bool8.cs": [],
+    "ConstPointer.cs": [],
+    "Iterator.cs": [],
+    "NativeAlignedBuffer.cs": [],
+    "NativeAotCallback.cs": [],
+    "NativeCallbackRegistry.cs": [
+      "NativeCallback.cs"
+    ],
+    "NativeLongDouble.cs": [],
+    "Pointer.cs": [],
+    "SourceLocationAttribute.cs": [],
+    "Utils.cs": []
+  }
+}

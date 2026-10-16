@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "scope": "Explicit original-storage record members; local evidence, not release certification",
+  "sourceWorktreeDirty": true,
+  "releaseCertification": false,
+  "configuration": "api.memberFunctions[].kind=value with semantics.valueParameters for the exact receiver",
+  "legacyCorrespondence": [
+    "tests/BGCS.Configuration.Tests/entryTests/KnownMemberFunctions/header.h:my_type_inc",
+    "src/BGCS.CSharp/Emission/CSharpEmitter.cs:EmitInstanceManagedFunction"
+  ],
+  "implementation": [
+    "src/BGCS.Contracts/Managed/ManagedReceiver.cs",
+    "src/BGCS.CSharp/Planning/ValueReceiverPlanner.cs",
+    "src/BGCS.CSharp/Emission/ValueReceiverEmitter.cs",
+    "src/BGCS.CSharp/Validation/EmittedInteropContractReader.cs"
+  ],
+  "planning": {
+    "tests": "tests/BGCS.CSharp.Tests/ValueReceiverTests.cs",
+    "passed": 24,
+    "receipt": "artifacts/test-results/cpp-value-receiver-planning-sdk-corrected.trx",
+    "assertions": [
+      "Three imports with Runtime package/source; source uses static facade, single file and nested carriers",
+      "LibraryImport consumer compiles with actual SDK generators and warnings as errors",
+      "Original in/ref-this forwarding, exact field count and explicit context",
+      "Complete carrier mutation guard and field/size/type/overload collision refusal",
+      "Unknown record role, unknown/contradictory retention, ownership lifetime, output-only, const-write, volatile/unknown qualification and over-alignment retain raw imports with omissions",
+      "Contracts-only projection forbids a value receiver object name, release domain or pointer-alias substitution"
+    ]
+  },
+  "configurationValidation": {
+    "tests": "tests/BGCS.Tests/ValueReceiverConfigurationTests.cs",
+    "passed": 2,
+    "receipt": "artifacts/test-results/cpp-value-receiver-configuration.trx"
+  },
+  "native": {
+    "tests": "tests/BGCS.Tests/NativeValueReceiverTests.cs",
+    "passed": 6,
+    "receipt": "artifacts/test-results/cpp-value-receiver-native-six.trx",
+    "scope": "Windows x64 MSVC/CoreCLR, FunctionTable/DllImport/LibraryImport, Runtime package/source; source static facade, single-file output and nested carrier",
+    "assertions": [
+      "Six exact C value operations execute through generated members without native factory or destructor",
+      "Stack and managed-array values retain native size and field offsets",
+      "Readonly in-this passes the same address as an aliased field without a defensive copy",
+      "ref-this, a field reference and overlapping Span preserve native-visible identity",
+      "Receiver selection works at a nonzero native parameter index",
+      "Independent contexts operate on caller-owned values while a disposed context rejects new calls",
+      "Native atomic controls keep the complete native frame parked through forced compacting GC; its retained address matches the original array element",
+      "Gate release occurs in finally and the native operation is joined with a deadline before reporting fixture failures",
+      "Raw pointer signatures remain callable and the explicit static facade still forwards ordinary ref operations"
+    ]
+  },
+  "remainingLimits": [
+    "Named standalone pointer wrappers are a separate presentation capability.",
+    "Status/owned results, callbacks and async value-receiver combinations require independently checked plans.",
+    "The address borrow is synchronous, non-null and explicitly nonretaining; it supplies no ownership or native validity after return.",
+    "NativeAOT, browser Wasm, other operating systems and final physical packages require their own same-revision validation."
+  ]
+}

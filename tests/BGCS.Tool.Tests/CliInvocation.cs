@@ -10,7 +10,8 @@ internal static class CliInvocation {
         string[] args,
         string directory,
         TextWriter output,
-        TextWriter error
+        TextWriter error,
+        string? toolPath = null
     ) {
         string host = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? Path.GetFullPath(Path.Combine(
             Path.GetDirectoryName(typeof(object).Assembly.Location)!, "..", "..", "..",
@@ -22,7 +23,7 @@ internal static class CliInvocation {
             UseShellExecute = false,
             CreateNoWindow = true
         };
-        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "BGCS.Tool.dll"));
+        start.ArgumentList.Add(toolPath ?? Path.Combine(AppContext.BaseDirectory, "BGCS.Tool.dll"));
         foreach (string argument in args)
             start.ArgumentList.Add(argument);
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("The CLI process could not start.");

@@ -1,0 +1,53 @@
+{
+  "$schema": "../../schemas/bindgen.schema.json",
+  "schemaVersion": 1,
+  "library": {
+    "id": "bgfx",
+    "nativeName": "bgfx"
+  },
+  "source": {
+    "language": "c",
+    "languageStandard": "c17",
+    "headers": [
+      "../../artifacts/corpus/headers/bgfx/include/bgfx/c99/bgfx.h"
+    ],
+    "includeDirectories": [
+      "../../artifacts/corpus/headers/bgfx/include",
+      "../../artifacts/corpus/headers/bx/include"
+    ],
+    "includeTransitivelyReferencedHeaders": true,
+    "selection": {
+      "excludeDeclarations": [
+        "bgfx_dbg_text_printf"
+      ]
+    },
+    "defines": []
+  },
+  "api": {
+    "namespace": "BGCS.RealLibraries.Bgfx",
+    "name": "Bgfx",
+    "style": "instance",
+    "importMode": "functionTable",
+    "framework": "net10.0",
+    "names": {
+      "bgfx_vertex_layout_begin": "CorpusLayoutBegin",
+      "bgfx_vertex_layout_add": "CorpusLayoutAdd",
+      "bgfx_vertex_layout_end": "CorpusLayoutEnd",
+      "bgfx_vertex_layout_get_stride": "CorpusLayoutStride",
+      "bgfx_vertex_layout_get_offset": "CorpusLayoutOffset",
+      "bgfx_vertex_layout_get_size": "CorpusLayoutSize",
+      "bgfx_calc_texture_size": "CorpusTextureSize",
+      "bgfx_get_renderer_name": "CorpusRendererName"
+    }
+  },
+  "runtime": {
+    "mode": "package"
+  },
+  "nativeBuild": {
+    "mode": "none"
+  },
+  "output": {
+    "root": "Generated",
+    "layout": "singleFile"
+  }
+}

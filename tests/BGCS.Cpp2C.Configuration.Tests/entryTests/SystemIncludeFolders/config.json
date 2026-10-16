@@ -1,7 +1,0 @@
-{
-  "namePrefix": "Sys_",
-  "parseSystemIncludes": true,
-  "systemIncludeFolders": [
-    "sysincludes"
-  ]
-}

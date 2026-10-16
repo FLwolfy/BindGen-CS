@@ -9,7 +9,7 @@ public sealed class InitCommandTests
 {
     [Theory]
     [InlineData("c", "native.h", "int native_add(int left, int right);", "bindgen.json", "generate")]
-    [InlineData("cpp", "native.hpp", "class Widget { public: int Add(int value); };", "bridge.json", "bridge")]
+    [InlineData("cpp", "native.hpp", "class Widget { public: int Add(int value); };", "bindgen.json", "generate")]
     public void Run_InitializedConfiguration_CanGenerateWithoutEditing(
         string language,
         string header,
@@ -26,10 +26,10 @@ public sealed class InitCommandTests
         int exitCode = CliInvocation.Run([command, config], directory.Path, output, error);
 
         Assert.True(exitCode == 0, output.ToString() + error.ToString());
-        Assert.True(File.Exists(directory.Resolve("Generated/Bindings.cs")));
+        Assert.NotEmpty(Directory.GetFiles(directory.Resolve("Generated"), "*.cs", SearchOption.AllDirectories));
         using JsonDocument document = directory.ReadJson(config);
         foreach (JsonProperty property in document.RootElement.EnumerateObject())
-            Assert.True(char.IsLower(property.Name[0]), property.Name);
+            Assert.True(property.Name == "$schema" || char.IsLower(property.Name[0]), property.Name);
     }
 
     [Fact]
@@ -43,9 +43,9 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindgen.json");
         JsonElement root = config.RootElement;
-        Assert.Equal("host-c,c-library", root.GetProperty("preset").GetString());
-        Assert.Equal("include/native.h", root.GetProperty("entryFiles")[0].GetString());
-        Assert.Equal("include", root.GetProperty("includeFolders")[0].GetString());
+        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal("include/native.h", root.GetProperty("source").GetProperty("headers")[0].GetString());
+        Assert.Equal("include", root.GetProperty("source").GetProperty("includeDirectories")[0].GetString());
         Assert.DoesNotContain(directory.Path, File.ReadAllText(directory.Resolve("bindgen.json")), StringComparison.Ordinal);
     }
 
@@ -60,9 +60,9 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindings/bridge.json");
         JsonElement root = config.RootElement;
-        Assert.Equal("../include/library.hpp", root.GetProperty("entryFiles")[0].GetString());
-        Assert.Equal("../include", root.GetProperty("includeFolders")[0].GetString());
-        Assert.True(root.GetProperty("generateCSharpBindings").GetBoolean());
+        Assert.Equal("../include/library.hpp", root.GetProperty("source").GetProperty("headers")[0].GetString());
+        Assert.Equal("../include", root.GetProperty("source").GetProperty("includeDirectories")[0].GetString());
+        Assert.Equal("cpp", root.GetProperty("source").GetProperty("language").GetString());
     }
 
     [Fact]
@@ -75,13 +75,13 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindings/bindgen.json");
         JsonElement root = config.RootElement;
-        Assert.Equal("native.h", root.GetProperty("entryFiles")[0].GetString());
-        Assert.Equal(".", root.GetProperty("includeFolders")[0].GetString());
+        Assert.Equal("native.h", root.GetProperty("source").GetProperty("headers")[0].GetString());
+        Assert.Empty(root.GetProperty("source").GetProperty("includeDirectories").EnumerateArray());
     }
 
     [Theory]
     [InlineData("c", "bindgen.json")]
-    [InlineData("cpp", "bridge.json")]
+    [InlineData("cpp", "bindgen.json")]
     public void Run_LanguageOption_OverridesHeaderHeuristics(string language, string expectedConfig)
     {
         using TestDirectory directory = new();

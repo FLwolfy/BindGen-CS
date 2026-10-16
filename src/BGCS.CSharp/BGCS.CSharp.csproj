@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Compilation">
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup Label="Project dependencies">
+    <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
+    <ProjectReference Include="../BGCS.Analysis/BGCS.Analysis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Package dependencies">
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup Label="Runtime source catalog">
+    <EmbeddedResource Include="../BGCS.Runtime/Source/runtime-source.manifest.json" LogicalName="BGCS.RuntimeSources.Manifest.json" />
+    <EmbeddedResource Include="../BGCS.Runtime/**/*.cs" Exclude="../BGCS.Runtime/bin/**;../BGCS.Runtime/obj/**">
+      <LogicalName>BGCS.RuntimeSources.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup Label="Immutable naming vocabulary">
+    <EmbeddedResource Include="Resources/en_EN.txt" LogicalName="BGCS.CSharp.Naming.en_EN.txt" />
+  </ItemGroup>
+</Project>

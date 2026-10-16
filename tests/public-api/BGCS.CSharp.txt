@@ -1,0 +1,1221 @@
+class BGCS.CSharp.CSharpBackend [sealed; interfaces=BGCS.Contracts.Ports.IBindingBackend]
+  ctor()
+  method System.Threading.Tasks.ValueTask<System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor>> EmitAsync(BGCS.Contracts.Managed.ManagedApiModel model, BGCS.Contracts.Requests.EmissionRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.CSharp.Emission.RuntimeSourceCatalog [sealed]
+  ctor()
+  method System.Collections.Immutable.ImmutableArray<System.String> GetFeatureIds() [static]
+  method System.Collections.Immutable.ImmutableArray<System.ValueTuple<System.String,System.String>> GetSources(System.Collections.Generic.IEnumerable<System.String> features, System.String targetNamespace, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.CSharp.Emission.SingleFileComposer [sealed]
+  ctor()
+  method System.String ComposeSources(System.Collections.Generic.IEnumerable<System.ValueTuple<System.String,System.String>> sources, System.String targetNamespace, System.String abiReferenceTarget [optional; default=null])
+class BGCS.CSharp.Planning.BufferProtocolPlanner [sealed]
+  ctor()
+  method BGCS.CSharp.Planning.CSharpBufferProtocolPlan Plan(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter, System.Func<BGCS.Contracts.Common.StableId,System.String> resolve)
+class BGCS.CSharp.Planning.CSharpAbiDelegatePlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpAbiDelegatePlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeType, BGCS.Contracts.Common.StableId callableType, System.String name, System.String returnType, System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, System.String callingConvention)
+  property BGCS.Contracts.Common.StableId callableType { get; init }
+  property System.String callingConvention { get; init }
+  property System.String documentation { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterTypes { get; init }
+  property System.String returnType { get; init }
+  method BGCS.CSharp.Planning.CSharpAbiDelegatePlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpAbiDelegatePlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpAbiDelegatePlan left, BGCS.CSharp.Planning.CSharpAbiDelegatePlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpAbiDelegatePlan left, BGCS.CSharp.Planning.CSharpAbiDelegatePlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeType, out BGCS.Contracts.Common.StableId callableType, out System.String name, out System.String returnType, out System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, out System.String callingConvention)
+class BGCS.CSharp.Planning.CSharpAggregateCallPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpAggregateCallPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeType, BGCS.Contracts.Targets.ManagedAggregateCallingAbi callingAbi, System.Int32 size, System.Int32 alignment, System.Collections.Immutable.ImmutableArray<System.String> eightByteClasses)
+  property System.Int32 alignment { get; init }
+  property BGCS.Contracts.Targets.ManagedAggregateCallingAbi callingAbi { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> eightByteClasses { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.Int32 size { get; init }
+  method BGCS.CSharp.Planning.CSharpAggregateCallPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpAggregateCallPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpAggregateCallPlan left, BGCS.CSharp.Planning.CSharpAggregateCallPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpAggregateCallPlan left, BGCS.CSharp.Planning.CSharpAggregateCallPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeType, out BGCS.Contracts.Targets.ManagedAggregateCallingAbi callingAbi, out System.Int32 size, out System.Int32 alignment, out System.Collections.Immutable.ImmutableArray<System.String> eightByteClasses)
+class BGCS.CSharp.Planning.CSharpAliasPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpAliasPlan>]
+  ctor(System.Int32 targetIndex, BGCS.CSharp.Planning.CSharpMethodPlan raw, BGCS.CSharp.Planning.CSharpFacadeMethodPlan friendly)
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan friendly { get; init }
+  property BGCS.CSharp.Planning.CSharpMethodPlan raw { get; init }
+  property System.Int32 targetIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpAliasPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpAliasPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpAliasPlan left, BGCS.CSharp.Planning.CSharpAliasPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpAliasPlan left, BGCS.CSharp.Planning.CSharpAliasPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 targetIndex, out BGCS.CSharp.Planning.CSharpMethodPlan raw, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan friendly)
+class BGCS.CSharp.Planning.CSharpAsyncBufferPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpAsyncBufferPlan>]
+  ctor(System.Int32 parameterIndex, System.String elementType, System.Collections.Immutable.ImmutableArray<System.Int32> countIndices, System.Boolean allowsEmpty)
+  property System.Boolean allowsEmpty { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Int32> countIndices { get; init }
+  property System.String elementType { get; init }
+  property System.Int32 parameterIndex { get; init }
+  property System.Int32 requiredAlignment { get; init }
+  method BGCS.CSharp.Planning.CSharpAsyncBufferPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpAsyncBufferPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpAsyncBufferPlan left, BGCS.CSharp.Planning.CSharpAsyncBufferPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpAsyncBufferPlan left, BGCS.CSharp.Planning.CSharpAsyncBufferPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out System.String elementType, out System.Collections.Immutable.ImmutableArray<System.Int32> countIndices, out System.Boolean allowsEmpty)
+class BGCS.CSharp.Planning.CSharpAsyncOperationPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpAsyncOperationPlan>]
+  ctor(System.Int32 methodIndex, System.Int32 unregisterIndex, BGCS.CSharp.Planning.CSharpCallbackInputPlan callback, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+  property System.Boolean booleanResult { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpAsyncBufferPlan> buffers { get; init }
+  property BGCS.CSharp.Planning.CSharpCallbackInputPlan callback { get; init }
+  property System.Int32 cancelIndex { get; init }
+  property System.String cancellationExpression { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.Boolean nonBlockingShutdown { get; init }
+  property System.Int32 resultIndex { get; init }
+  property System.String resultType { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  property System.Int32 statusIndex { get; init }
+  property System.String successExpression { get; init }
+  property System.Int32 unregisterIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpAsyncOperationPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpAsyncOperationPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpAsyncOperationPlan left, BGCS.CSharp.Planning.CSharpAsyncOperationPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpAsyncOperationPlan left, BGCS.CSharp.Planning.CSharpAsyncOperationPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Int32 unregisterIndex, out BGCS.CSharp.Planning.CSharpCallbackInputPlan callback, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+class BGCS.CSharp.Planning.CSharpBitfieldPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpBitfieldPlan>]
+  ctor(System.String name, System.String type, System.Int64 bitOffset, System.Int32 width, System.Boolean isSigned)
+  property System.Int64 bitOffset { get; init }
+  property System.String documentation { get; init }
+  property System.Boolean isSigned { get; init }
+  property System.String name { get; init }
+  property System.String type { get; init }
+  property System.Int32 width { get; init }
+  method BGCS.CSharp.Planning.CSharpBitfieldPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpBitfieldPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpBitfieldPlan left, BGCS.CSharp.Planning.CSharpBitfieldPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpBitfieldPlan left, BGCS.CSharp.Planning.CSharpBitfieldPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String type, out System.Int64 bitOffset, out System.Int32 width, out System.Boolean isSigned)
+class BGCS.CSharp.Planning.CSharpBufferInputPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpBufferInputPlan>]
+  ctor(System.Int32 parameterIndex, System.Int32 lengthIndex, System.String elementType, BGCS.Contracts.Interop.NativeLengthUnit lengthUnit, BGCS.Contracts.Interop.NativeParameterDirection direction, System.Boolean allowsNull, System.Int32 alignment)
+  property System.Int32 alignment { get; init }
+  property System.Boolean allowsNull { get; init }
+  property BGCS.Contracts.Interop.NativeParameterDirection direction { get; init }
+  property System.String elementType { get; init }
+  property System.Int32 lengthIndex { get; init }
+  property BGCS.Contracts.Interop.NativeLengthUnit lengthUnit { get; init }
+  property System.Int32 parameterIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpBufferInputPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpBufferInputPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpBufferInputPlan left, BGCS.CSharp.Planning.CSharpBufferInputPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpBufferInputPlan left, BGCS.CSharp.Planning.CSharpBufferInputPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out System.Int32 lengthIndex, out System.String elementType, out BGCS.Contracts.Interop.NativeLengthUnit lengthUnit, out BGCS.Contracts.Interop.NativeParameterDirection direction, out System.Boolean allowsNull, out System.Int32 alignment)
+class BGCS.CSharp.Planning.CSharpBufferProtocolPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpBufferProtocolPlan>]
+  ctor(System.Int32 parameterIndex, System.Int32 boundIndex, System.Boolean boundIsCapacity, System.Int32 writtenCountIndex, System.String elementType, System.Int32 elementSize, System.String boundType, System.String writtenCountType, System.Boolean writtenCountIsSigned, BGCS.Contracts.Interop.NativeParameterDirection direction, BGCS.Contracts.Interop.NativeLengthUnit lengthUnit, System.Boolean allowsNull, System.Int32 alignment, System.Int32 writtenCountAlignment)
+  property System.Int32 alignment { get; init }
+  property System.Boolean allowsNull { get; init }
+  property System.Int32 boundIndex { get; init }
+  property System.Boolean boundIsCapacity { get; init }
+  property System.String boundType { get; init }
+  property BGCS.Contracts.Interop.NativeParameterDirection direction { get; init }
+  property System.Int32 elementSize { get; init }
+  property System.String elementType { get; init }
+  property BGCS.Contracts.Interop.NativeLengthUnit lengthUnit { get; init }
+  property System.Int32 parameterIndex { get; init }
+  property System.Int32 writtenCountAlignment { get; init }
+  property System.Int32 writtenCountIndex { get; init }
+  property System.Boolean writtenCountIsSigned { get; init }
+  property System.String writtenCountType { get; init }
+  method BGCS.CSharp.Planning.CSharpBufferProtocolPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpBufferProtocolPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpBufferProtocolPlan left, BGCS.CSharp.Planning.CSharpBufferProtocolPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpBufferProtocolPlan left, BGCS.CSharp.Planning.CSharpBufferProtocolPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out System.Int32 boundIndex, out System.Boolean boundIsCapacity, out System.Int32 writtenCountIndex, out System.String elementType, out System.Int32 elementSize, out System.String boundType, out System.String writtenCountType, out System.Boolean writtenCountIsSigned, out BGCS.Contracts.Interop.NativeParameterDirection direction, out BGCS.Contracts.Interop.NativeLengthUnit lengthUnit, out System.Boolean allowsNull, out System.Int32 alignment, out System.Int32 writtenCountAlignment)
+class BGCS.CSharp.Planning.CSharpCallableDocumentationPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpCallableDocumentationPlan>]
+  ctor(System.String summary, System.Collections.Immutable.ImmutableArray<System.String> parameters, System.String returns, System.Collections.Immutable.ImmutableArray<System.String> notes, System.Boolean statusReturn)
+  property System.Collections.Immutable.ImmutableArray<System.String> notes { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameters { get; init }
+  property System.String returns { get; init }
+  property System.Boolean statusReturn { get; init }
+  property System.String summary { get; init }
+  method BGCS.CSharp.Planning.CSharpCallableDocumentationPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpCallableDocumentationPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpCallableDocumentationPlan left, BGCS.CSharp.Planning.CSharpCallableDocumentationPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpCallableDocumentationPlan left, BGCS.CSharp.Planning.CSharpCallableDocumentationPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String summary, out System.Collections.Immutable.ImmutableArray<System.String> parameters, out System.String returns, out System.Collections.Immutable.ImmutableArray<System.String> notes, out System.Boolean statusReturn)
+class BGCS.CSharp.Planning.CSharpCallbackInputPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpCallbackInputPlan>]
+  ctor(System.Int32 parameterIndex, System.Int32 userDataIndex, System.Int32 callableUserDataIndex, System.String delegateName, System.String stateName, System.String thunkName, System.String resultType, System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, System.Collections.Immutable.ImmutableArray<System.Int32> publicIndices, System.String callingConvention, System.String fallbackExpression, System.Boolean staticThunk)
+  property System.String abiDelegateType { get; init }
+  property System.Int32 callableUserDataIndex { get; init }
+  property System.String callingConvention { get; init }
+  property System.String delegateName { get; init }
+  property System.String fallbackExpression { get; init }
+  property System.Int32 parameterIndex { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterTypes { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Int32> publicIndices { get; init }
+  property System.String resultType { get; init }
+  property System.String stateName { get; init }
+  property System.Boolean staticThunk { get; init }
+  property System.String thunkName { get; init }
+  property System.Int32 userDataIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpCallbackInputPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpCallbackInputPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpCallbackInputPlan left, BGCS.CSharp.Planning.CSharpCallbackInputPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpCallbackInputPlan left, BGCS.CSharp.Planning.CSharpCallbackInputPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out System.Int32 userDataIndex, out System.Int32 callableUserDataIndex, out System.String delegateName, out System.String stateName, out System.String thunkName, out System.String resultType, out System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, out System.Collections.Immutable.ImmutableArray<System.Int32> publicIndices, out System.String callingConvention, out System.String fallbackExpression, out System.Boolean staticThunk)
+class BGCS.CSharp.Planning.CSharpCallbackMethodPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpCallbackMethodPlan>]
+  ctor(System.Int32 methodIndex, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpCallbackInputPlan> callbacks, System.Collections.Immutable.ImmutableArray<System.Int32> publicIndices, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpCallbackInputPlan> callbacks { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Int32> publicIndices { get; init }
+  property BGCS.CSharp.Planning.CSharpCallbackReceiverPlan receiver { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  property BGCS.CSharp.Planning.CSharpStatusMethodPlan statusOperation { get; init }
+  method BGCS.CSharp.Planning.CSharpCallbackMethodPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpCallbackMethodPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpCallbackMethodPlan left, BGCS.CSharp.Planning.CSharpCallbackMethodPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpCallbackMethodPlan left, BGCS.CSharp.Planning.CSharpCallbackMethodPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpCallbackInputPlan> callbacks, out System.Collections.Immutable.ImmutableArray<System.Int32> publicIndices, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+class BGCS.CSharp.Planning.CSharpCallbackOmissionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpCallbackOmissionPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeExport, BGCS.Contracts.Common.StableId callbackParameter, System.String reason)
+  property BGCS.Contracts.Common.StableId callbackParameter { get; init }
+  property BGCS.Contracts.Common.StableId nativeExport { get; init }
+  property System.String reason { get; init }
+  property System.Nullable<BGCS.Contracts.Common.SourceLocation> source { get; init }
+  method BGCS.CSharp.Planning.CSharpCallbackOmissionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpCallbackOmissionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpCallbackOmissionPlan left, BGCS.CSharp.Planning.CSharpCallbackOmissionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpCallbackOmissionPlan left, BGCS.CSharp.Planning.CSharpCallbackOmissionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeExport, out BGCS.Contracts.Common.StableId callbackParameter, out System.String reason)
+class BGCS.CSharp.Planning.CSharpCallbackReceiverPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpCallbackReceiverPlan>]
+  ctor(System.String objectName, BGCS.Contracts.Common.StableId nativeType, System.Int32 instanceIndex, BGCS.CSharp.Planning.CSharpFacadeMethodPlan objectSignature)
+  property System.Int32 instanceIndex { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.String objectName { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan objectSignature { get; init }
+  method BGCS.CSharp.Planning.CSharpCallbackReceiverPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpCallbackReceiverPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpCallbackReceiverPlan left, BGCS.CSharp.Planning.CSharpCallbackReceiverPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpCallbackReceiverPlan left, BGCS.CSharp.Planning.CSharpCallbackReceiverPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String objectName, out BGCS.Contracts.Common.StableId nativeType, out System.Int32 instanceIndex, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan objectSignature)
+class BGCS.CSharp.Planning.CSharpConstantPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpConstantPlan>]
+  ctor(BGCS.Contracts.Common.StableId sourceDeclaration, System.String name, System.String type, System.String expression, System.Boolean isCompileTimeConstant)
+  property System.String documentation { get; init }
+  property System.String expression { get; init }
+  property System.Boolean isCompileTimeConstant { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.Evidence presentationEvidence { get; init }
+  property BGCS.Contracts.Common.StableId sourceDeclaration { get; init }
+  property System.String type { get; init }
+  method BGCS.CSharp.Planning.CSharpConstantPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpConstantPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpConstantPlan left, BGCS.CSharp.Planning.CSharpConstantPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpConstantPlan left, BGCS.CSharp.Planning.CSharpConstantPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId sourceDeclaration, out System.String name, out System.String type, out System.String expression, out System.Boolean isCompileTimeConstant)
+class BGCS.CSharp.Planning.CSharpConstantPlanner [sealed]
+  ctor()
+  method System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpConstantPlan> Plan(BGCS.Contracts.Managed.ManagedApiModel model, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.CSharp.Planning.CSharpContainerMethodPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpContainerMethodPlan>]
+  ctor(System.String targetName, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+  property System.Collections.Immutable.ImmutableArray<System.String> arguments { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  property System.String targetName { get; init }
+  method BGCS.CSharp.Planning.CSharpContainerMethodPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpContainerMethodPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpContainerMethodPlan left, BGCS.CSharp.Planning.CSharpContainerMethodPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpContainerMethodPlan left, BGCS.CSharp.Planning.CSharpContainerMethodPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String targetName, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+class BGCS.CSharp.Planning.CSharpDefaultConstantPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpDefaultConstantPlan>]
+  ctor(System.String name, System.String type, System.String expression)
+  property System.String expression { get; init }
+  property System.String name { get; init }
+  property System.String type { get; init }
+  method BGCS.CSharp.Planning.CSharpDefaultConstantPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpDefaultConstantPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpDefaultConstantPlan left, BGCS.CSharp.Planning.CSharpDefaultConstantPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpDefaultConstantPlan left, BGCS.CSharp.Planning.CSharpDefaultConstantPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String type, out System.String expression)
+class BGCS.CSharp.Planning.CSharpDefaultOverloadPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpDefaultOverloadPlan>]
+  ctor(System.String targetName, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, System.Collections.Immutable.ImmutableArray<System.String> arguments)
+  property System.Collections.Immutable.ImmutableArray<System.String> arguments { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  property System.String targetName { get; init }
+  method BGCS.CSharp.Planning.CSharpDefaultOverloadPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpDefaultOverloadPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpDefaultOverloadPlan left, BGCS.CSharp.Planning.CSharpDefaultOverloadPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpDefaultOverloadPlan left, BGCS.CSharp.Planning.CSharpDefaultOverloadPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String targetName, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, out System.Collections.Immutable.ImmutableArray<System.String> arguments)
+class BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan>]
+  ctor(System.Int32 methodIndex, BGCS.CSharp.Planning.CSharpOwnedResultPlan ownership)
+  property System.Int32 methodIndex { get; init }
+  property BGCS.CSharp.Planning.CSharpOwnedResultPlan ownership { get; init }
+  method BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan left, BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan left, BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out BGCS.CSharp.Planning.CSharpOwnedResultPlan ownership)
+class BGCS.CSharp.Planning.CSharpEmissionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpEmissionPlan>]
+  ctor(BGCS.Contracts.Managed.ManagedApiModel api, BGCS.Contracts.BindingImportMode importMode, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpTypePlan> types, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpMethodPlan> methods)
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpAbiDelegatePlan> abiDelegates { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpAggregateCallPlan> aggregateCalls { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpAliasPlan> aliases { get; init }
+  property BGCS.Contracts.Managed.ManagedApiModel api { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpAsyncOperationPlan> asyncOperations { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpCallbackMethodPlan> callScopedCallbacks { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpCallbackOmissionPlan> callbackOmissions { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpConstantPlan> constants { get; init }
+  property System.String contextName { get }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpDefaultConstantPlan> defaultConstants { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpDefaultOverloadPlan> defaultOverloads { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan> directBorrowedFactories { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpDirectOwnedFactoryPlan> directOwnedFactories { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan> externalTypeProjections { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFunctionContainerPlan> functionContainers { get; init }
+  property BGCS.CSharp.Planning.CSharpImportLibraryNamePlan importLibraryName { get; init }
+  property BGCS.Contracts.BindingImportMode importMode { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpInputVariationPlan> inputVariations { get; init }
+  property System.Boolean libraryImportUsesPlatformDefault { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpManagedEnumPlan> managedEnums { get; init }
+  property BGCS.Contracts.Targets.ManagedRuntimeProfile managedRuntime { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpMethodPlan> methods { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan> nullDefaultMethods { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpObjectPlan> objects { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpOpaqueCallablePlan> opaqueCallables { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan> ownedProjectionOmissions { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpPhysicalImportPlan> physicalImports { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpPointerCarrierPlan> pointerCarriers { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpPointerFunctionPlan> pointerFunctions { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpRecipeAliasPlan> recipeAliases { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpRecipeProjectionPlan> recipeProjections { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpRetainedCallbackPlan> retainedCallbacks { get; init }
+  property System.String runtimeNamespace { get; init }
+  property BGCS.CSharp.Planning.CSharpSharedContextPlan sharedContext { get; init }
+  property BGCS.Contracts.Requests.StaticExportTableDescriptor staticExportTable { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpStatusMethodPlan> statusMethods { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpStoragePlan> storage { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpStringConstantPlan> stringConstants { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpStringResultPlan> stringResults { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpTypePlan> types { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan> valueParameterOmissions { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpValueStringResultPlan> valueStringResults { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualProxyPlan> virtualProxies { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan> virtualProxyOmissions { get; init }
+  method BGCS.CSharp.Planning.CSharpEmissionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpEmissionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpEmissionPlan left, BGCS.CSharp.Planning.CSharpEmissionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpEmissionPlan left, BGCS.CSharp.Planning.CSharpEmissionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Managed.ManagedApiModel api, out BGCS.Contracts.BindingImportMode importMode, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpTypePlan> types, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpMethodPlan> methods)
+class BGCS.CSharp.Planning.CSharpEmissionPlanner [sealed]
+  ctor()
+  method BGCS.CSharp.Planning.CSharpEmissionPlan Plan(BGCS.Contracts.Managed.ManagedApiModel model, BGCS.Contracts.Requests.EmissionRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.CSharp.Planning.CSharpEnumValuePlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpEnumValuePlan>]
+  ctor(System.String name, System.String value)
+  property System.String documentation { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.Evidence presentationEvidence { get; init }
+  property System.String value { get; init }
+  method BGCS.CSharp.Planning.CSharpEnumValuePlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpEnumValuePlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpEnumValuePlan left, BGCS.CSharp.Planning.CSharpEnumValuePlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpEnumValuePlan left, BGCS.CSharp.Planning.CSharpEnumValuePlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String value)
+class BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeField, System.String rawField, System.String managedField)
+  property System.Boolean isNativeAddress { get; init }
+  property System.String managedField { get; init }
+  property BGCS.Contracts.Common.StableId nativeField { get; init }
+  property System.String rawField { get; init }
+  method BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan left, BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan left, BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeField, out System.String rawField, out System.String managedField)
+class BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan>]
+  ctor(System.String id, BGCS.Contracts.Common.StableId nativeType, System.String managedType, System.String rawCarrierType, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan> fields)
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan> fields { get; init }
+  property System.String id { get; init }
+  property System.String managedType { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.String rawCarrierType { get; init }
+  method BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan left, BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan left, BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String id, out BGCS.Contracts.Common.StableId nativeType, out System.String managedType, out System.String rawCarrierType, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpExternalFieldCopyPlan> fields)
+class BGCS.CSharp.Planning.CSharpFacadeMethodPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpFacadeMethodPlan>]
+  ctor(System.String name, System.String returnType, System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, System.Collections.Immutable.ImmutableArray<System.String> parameterNames)
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> boundNativeNullInputs { get; init }
+  property System.String documentation { get; init }
+  property BGCS.CSharp.Planning.CSharpCallableDocumentationPlan documentationContent { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Int32> inputIndices { get; init }
+  property System.String name { get; init }
+  property System.Nullable<BGCS.Contracts.Common.StableId> nativeExport { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterModifiers { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterNames { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterTypes { get; init }
+  property System.String returnType { get; init }
+  method BGCS.CSharp.Planning.CSharpFacadeMethodPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpFacadeMethodPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpFacadeMethodPlan left, BGCS.CSharp.Planning.CSharpFacadeMethodPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpFacadeMethodPlan left, BGCS.CSharp.Planning.CSharpFacadeMethodPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String returnType, out System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, out System.Collections.Immutable.ImmutableArray<System.String> parameterNames)
+class BGCS.CSharp.Planning.CSharpFieldPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpFieldPlan>]
+  ctor(System.String name, System.String type, System.Int32 offset)
+  property System.String documentation { get; init }
+  property System.String name { get; init }
+  property System.Nullable<BGCS.Contracts.Common.StableId> nativeField { get; init }
+  property System.Int32 offset { get; init }
+  property System.String type { get; init }
+  method BGCS.CSharp.Planning.CSharpFieldPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpFieldPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpFieldPlan left, BGCS.CSharp.Planning.CSharpFieldPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpFieldPlan left, BGCS.CSharp.Planning.CSharpFieldPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String type, out System.Int32 offset)
+class BGCS.CSharp.Planning.CSharpFlexibleArrayPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpFlexibleArrayPlan>]
+  ctor(System.String name, System.String elementType, System.Int32 offset)
+  property System.String documentation { get; init }
+  property System.String elementType { get; init }
+  property System.String name { get; init }
+  property System.Int32 offset { get; init }
+  method BGCS.CSharp.Planning.CSharpFlexibleArrayPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpFlexibleArrayPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpFlexibleArrayPlan left, BGCS.CSharp.Planning.CSharpFlexibleArrayPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpFlexibleArrayPlan left, BGCS.CSharp.Planning.CSharpFlexibleArrayPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String elementType, out System.Int32 offset)
+class BGCS.CSharp.Planning.CSharpFunctionContainerPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpFunctionContainerPlan>]
+  ctor(System.String name, System.String viewType, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpContainerMethodPlan> methods)
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpContainerMethodPlan> methods { get; init }
+  property System.String name { get; init }
+  property System.String viewType { get; init }
+  method BGCS.CSharp.Planning.CSharpFunctionContainerPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpFunctionContainerPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpFunctionContainerPlan left, BGCS.CSharp.Planning.CSharpFunctionContainerPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpFunctionContainerPlan left, BGCS.CSharp.Planning.CSharpFunctionContainerPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String viewType, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpContainerMethodPlan> methods)
+class BGCS.CSharp.Planning.CSharpImportLibraryNamePlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpImportLibraryNamePlan>]
+  ctor(System.String reference, System.String declaringType, System.String value)
+  property System.String declaringType { get; init }
+  property System.String reference { get; init }
+  property System.String value { get; init }
+  method BGCS.CSharp.Planning.CSharpImportLibraryNamePlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpImportLibraryNamePlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpImportLibraryNamePlan left, BGCS.CSharp.Planning.CSharpImportLibraryNamePlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpImportLibraryNamePlan left, BGCS.CSharp.Planning.CSharpImportLibraryNamePlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String reference, out System.String declaringType, out System.String value)
+class BGCS.CSharp.Planning.CSharpInputVariationPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpInputVariationPlan>]
+  ctor(BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, System.String targetName, System.Collections.Immutable.ImmutableArray<System.String> arguments)
+  property System.Collections.Immutable.ImmutableArray<System.String> arguments { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  property System.String targetName { get; init }
+  method BGCS.CSharp.Planning.CSharpInputVariationPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpInputVariationPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpInputVariationPlan left, BGCS.CSharp.Planning.CSharpInputVariationPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpInputVariationPlan left, BGCS.CSharp.Planning.CSharpInputVariationPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, out System.String targetName, out System.Collections.Immutable.ImmutableArray<System.String> arguments)
+class BGCS.CSharp.Planning.CSharpManagedEnumPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpManagedEnumPlan>]
+  ctor(System.String name, System.String underlyingType, System.Int32 size, System.Boolean isSigned, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpEnumValuePlan> values, System.Boolean isFlags)
+  property System.String documentation { get; init }
+  property System.Boolean isFlags { get; init }
+  property System.Boolean isSigned { get; init }
+  property System.String name { get; init }
+  property System.Int32 size { get; init }
+  property System.String underlyingType { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpEnumValuePlan> values { get; init }
+  method BGCS.CSharp.Planning.CSharpManagedEnumPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpManagedEnumPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpManagedEnumPlan left, BGCS.CSharp.Planning.CSharpManagedEnumPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpManagedEnumPlan left, BGCS.CSharp.Planning.CSharpManagedEnumPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String underlyingType, out System.Int32 size, out System.Boolean isSigned, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpEnumValuePlan> values, out System.Boolean isFlags)
+class BGCS.CSharp.Planning.CSharpMethodPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpMethodPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeExport, System.String name, System.String exportName, System.String returnType, System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, System.Collections.Immutable.ImmutableArray<System.String> parameterNames, System.String callingConvention)
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpBufferInputPlan> bufferInputs { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpBufferProtocolPlan> bufferProtocols { get; init }
+  property System.String callingConvention { get; init }
+  property System.String documentation { get; init }
+  property BGCS.CSharp.Planning.CSharpCallableDocumentationPlan documentationContent { get; init }
+  property System.String exportName { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.StableId nativeExport { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterNames { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterTypes { get; init }
+  property BGCS.CSharp.Planning.CSharpRecipeProjectionPlan returnProjection { get; init }
+  property System.String returnType { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpStringInputPlan> stringInputs { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpValueParameterPlan> valueParameters { get; init }
+  property System.Collections.Immutable.ImmutableDictionary<System.Int32,BGCS.CSharp.Planning.CSharpRecipeProjectionPlan> valueProjections { get; init }
+  method BGCS.CSharp.Planning.CSharpMethodPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpMethodPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpMethodPlan left, BGCS.CSharp.Planning.CSharpMethodPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpMethodPlan left, BGCS.CSharp.Planning.CSharpMethodPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeExport, out System.String name, out System.String exportName, out System.String returnType, out System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, out System.Collections.Immutable.ImmutableArray<System.String> parameterNames, out System.String callingConvention)
+class BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan>]
+  ctor(System.Int32 methodIndex)
+  property System.Int32 methodIndex { get; init }
+  property System.String objectName { get; init }
+  method BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan left, BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan left, BGCS.CSharp.Planning.CSharpModuleBorrowedFactoryPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex)
+class BGCS.CSharp.Planning.CSharpNullDefaultInputPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpNullDefaultInputPlan>]
+  ctor(System.Int32 parameterIndex, BGCS.Contracts.Common.StableId nativeParameter, System.String rawPointerType)
+  property BGCS.Contracts.Common.StableId nativeParameter { get; init }
+  property System.Int32 parameterIndex { get; init }
+  property System.String rawPointerType { get; init }
+  method BGCS.CSharp.Planning.CSharpNullDefaultInputPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpNullDefaultInputPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpNullDefaultInputPlan left, BGCS.CSharp.Planning.CSharpNullDefaultInputPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpNullDefaultInputPlan left, BGCS.CSharp.Planning.CSharpNullDefaultInputPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out BGCS.Contracts.Common.StableId nativeParameter, out System.String rawPointerType)
+class BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan>]
+  ctor(System.Int32 methodIndex, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpNullDefaultInputPlan> nullInputs, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+  property System.Int32 methodIndex { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpNullDefaultInputPlan> nullInputs { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  method BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan left, BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan left, BGCS.CSharp.Planning.CSharpNullDefaultMethodPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpNullDefaultInputPlan> nullInputs, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+class BGCS.CSharp.Planning.CSharpObjectPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpObjectPlan>]
+  ctor(System.String name, BGCS.Contracts.Common.StableId nativeType, System.Collections.Immutable.ImmutableArray<System.Int32> methodIndices)
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpReceiverMethodPlan> directMethods { get; init }
+  property BGCS.Contracts.Managed.ManagedReceiverKind kind { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Int32> methodIndices { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  method BGCS.CSharp.Planning.CSharpObjectPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpObjectPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpObjectPlan left, BGCS.CSharp.Planning.CSharpObjectPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpObjectPlan left, BGCS.CSharp.Planning.CSharpObjectPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out BGCS.Contracts.Common.StableId nativeType, out System.Collections.Immutable.ImmutableArray<System.Int32> methodIndices)
+class BGCS.CSharp.Planning.CSharpOpaqueCallablePlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpOpaqueCallablePlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeType, System.String reason)
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.String reason { get; init }
+  method BGCS.CSharp.Planning.CSharpOpaqueCallablePlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpOpaqueCallablePlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpOpaqueCallablePlan left, BGCS.CSharp.Planning.CSharpOpaqueCallablePlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpOpaqueCallablePlan left, BGCS.CSharp.Planning.CSharpOpaqueCallablePlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeType, out System.String reason)
+class BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeExport, System.Nullable<BGCS.Contracts.Common.StableId> parameter, System.Nullable<BGCS.Contracts.Common.SourceLocation> source, System.String reason)
+  property BGCS.Contracts.Common.StableId nativeExport { get; init }
+  property System.Nullable<BGCS.Contracts.Common.StableId> parameter { get; init }
+  property System.String reason { get; init }
+  property System.Nullable<BGCS.Contracts.Common.SourceLocation> source { get; init }
+  method BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan left, BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan left, BGCS.CSharp.Planning.CSharpOwnedProjectionOmissionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeExport, out System.Nullable<BGCS.Contracts.Common.StableId> parameter, out System.Nullable<BGCS.Contracts.Common.SourceLocation> source, out System.String reason)
+class BGCS.CSharp.Planning.CSharpOwnedResultPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpOwnedResultPlan>]
+  ctor(System.Int32 releaseIndex, System.String releaseDomain, System.Int32 releaseErrorIndex, System.Int32 releaseErrorCleanupIndex, System.Int32 releaseSuccessValue)
+  property System.String objectName { get; init }
+  property System.String releaseDomain { get; init }
+  property System.Int32 releaseErrorCleanupIndex { get; init }
+  property System.Int32 releaseErrorIndex { get; init }
+  property System.Int32 releaseIndex { get; init }
+  property System.Int32 releaseSuccessValue { get; init }
+  method BGCS.CSharp.Planning.CSharpOwnedResultPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpOwnedResultPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpOwnedResultPlan left, BGCS.CSharp.Planning.CSharpOwnedResultPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpOwnedResultPlan left, BGCS.CSharp.Planning.CSharpOwnedResultPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 releaseIndex, out System.String releaseDomain, out System.Int32 releaseErrorIndex, out System.Int32 releaseErrorCleanupIndex, out System.Int32 releaseSuccessValue)
+class BGCS.CSharp.Planning.CSharpPhysicalImportPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpPhysicalImportPlan>]
+  ctor(System.Int32 methodIndex, System.String declarationName, System.String fieldName, System.String returnType, System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, System.Collections.Immutable.ImmutableArray<System.Int32> addressParameters, System.Boolean addressResult)
+  property System.Collections.Immutable.ImmutableArray<System.Int32> addressParameters { get; init }
+  property System.Boolean addressResult { get; init }
+  property System.String declarationName { get; init }
+  property System.String fieldName { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> parameterTypes { get; init }
+  property System.String returnType { get; init }
+  method BGCS.CSharp.Planning.CSharpPhysicalImportPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpPhysicalImportPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpPhysicalImportPlan left, BGCS.CSharp.Planning.CSharpPhysicalImportPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpPhysicalImportPlan left, BGCS.CSharp.Planning.CSharpPhysicalImportPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.String declarationName, out System.String fieldName, out System.String returnType, out System.Collections.Immutable.ImmutableArray<System.String> parameterTypes, out System.Collections.Immutable.ImmutableArray<System.Int32> addressParameters, out System.Boolean addressResult)
+class BGCS.CSharp.Planning.CSharpPointerCarrierPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpPointerCarrierPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativePointer, System.String name, System.String pointerType, System.String elementType, System.Int32 depth, System.Boolean readOnly, System.Nullable<System.Int32> elementSize, System.Nullable<System.Int32> elementAlignment, System.Int32 pointerSize, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpPointerFieldPlan> fields)
+  property System.Int32 depth { get; init }
+  property System.String documentation { get; init }
+  property System.Nullable<System.Int32> elementAlignment { get; init }
+  property System.String elementCarrier { get; init }
+  property System.Boolean elementReadOnly { get; init }
+  property System.Nullable<System.Int32> elementSize { get; init }
+  property System.String elementType { get; init }
+  property System.Boolean exposesTypedPointer { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpPointerFieldPlan> fields { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.StableId nativePointer { get; init }
+  property System.Int32 pointerSize { get; init }
+  property System.String pointerType { get; init }
+  property System.Boolean readOnly { get; init }
+  method BGCS.CSharp.Planning.CSharpPointerCarrierPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpPointerCarrierPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpPointerCarrierPlan left, BGCS.CSharp.Planning.CSharpPointerCarrierPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpPointerCarrierPlan left, BGCS.CSharp.Planning.CSharpPointerCarrierPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativePointer, out System.String name, out System.String pointerType, out System.String elementType, out System.Int32 depth, out System.Boolean readOnly, out System.Nullable<System.Int32> elementSize, out System.Nullable<System.Int32> elementAlignment, out System.Int32 pointerSize, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpPointerFieldPlan> fields)
+class BGCS.CSharp.Planning.CSharpPointerFieldPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpPointerFieldPlan>]
+  ctor(System.String name, System.String type, System.Int32 offset, System.Boolean readOnly, BGCS.Contracts.Common.StableId nativeType)
+  property System.Nullable<System.Int32> arrayLength { get; init }
+  property System.Boolean bitfield { get; init }
+  property System.String carrier { get; init }
+  property System.String documentation { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.Int32 offset { get; init }
+  property System.Boolean pointer { get; init }
+  property System.Boolean readOnly { get; init }
+  property System.String type { get; init }
+  method BGCS.CSharp.Planning.CSharpPointerFieldPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpPointerFieldPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpPointerFieldPlan left, BGCS.CSharp.Planning.CSharpPointerFieldPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpPointerFieldPlan left, BGCS.CSharp.Planning.CSharpPointerFieldPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String type, out System.Int32 offset, out System.Boolean readOnly, out BGCS.Contracts.Common.StableId nativeType)
+class BGCS.CSharp.Planning.CSharpPointerFunctionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpPointerFunctionPlan>]
+  ctor(System.Int32 methodIndex, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, System.Collections.Immutable.ImmutableDictionary<System.Int32,System.String> parameters, System.String returnCarrier)
+  property System.Int32 methodIndex { get; init }
+  property System.Collections.Immutable.ImmutableDictionary<System.Int32,System.String> parameters { get; init }
+  property System.String receiverCarrier { get; init }
+  property System.Nullable<System.Int32> receiverIndex { get; init }
+  property System.String returnCarrier { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  method BGCS.CSharp.Planning.CSharpPointerFunctionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpPointerFunctionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpPointerFunctionPlan left, BGCS.CSharp.Planning.CSharpPointerFunctionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpPointerFunctionPlan left, BGCS.CSharp.Planning.CSharpPointerFunctionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, out System.Collections.Immutable.ImmutableDictionary<System.Int32,System.String> parameters, out System.String returnCarrier)
+class BGCS.CSharp.Planning.CSharpReceiverMethodPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpReceiverMethodPlan>]
+  ctor(System.Int32 methodIndex, System.Int32 receiverIndex, BGCS.CSharp.Planning.CSharpFacadeMethodPlan contextSignature, BGCS.CSharp.Planning.CSharpFacadeMethodPlan objectSignature, System.String requiredReleaseDomain)
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan contextSignature { get; init }
+  property System.Int32 methodIndex { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan objectSignature { get; init }
+  property System.Int32 receiverIndex { get; init }
+  property System.String requiredReleaseDomain { get; init }
+  method BGCS.CSharp.Planning.CSharpReceiverMethodPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpReceiverMethodPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpReceiverMethodPlan left, BGCS.CSharp.Planning.CSharpReceiverMethodPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpReceiverMethodPlan left, BGCS.CSharp.Planning.CSharpReceiverMethodPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Int32 receiverIndex, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan contextSignature, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan objectSignature, out System.String requiredReleaseDomain)
+class BGCS.CSharp.Planning.CSharpRecipeAliasPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpRecipeAliasPlan>]
+  ctor(System.String name, System.String projectionId)
+  property System.String name { get; init }
+  property System.String projectionId { get; init }
+  method BGCS.CSharp.Planning.CSharpRecipeAliasPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpRecipeAliasPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpRecipeAliasPlan left, BGCS.CSharp.Planning.CSharpRecipeAliasPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpRecipeAliasPlan left, BGCS.CSharp.Planning.CSharpRecipeAliasPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String projectionId)
+class BGCS.CSharp.Planning.CSharpRecipeProjectionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpRecipeProjectionPlan>]
+  ctor(System.String id, System.String managedType, System.String carrierType, System.String toNativeExpression, System.String fromNativeExpression, System.String requiredNamespace)
+  property System.String carrierType { get; init }
+  property System.String fromNativeExpression { get; init }
+  property System.String id { get; init }
+  property System.String managedType { get; init }
+  property System.String requiredNamespace { get; init }
+  property System.String toNativeExpression { get; init }
+  method BGCS.CSharp.Planning.CSharpRecipeProjectionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpRecipeProjectionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpRecipeProjectionPlan left, BGCS.CSharp.Planning.CSharpRecipeProjectionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpRecipeProjectionPlan left, BGCS.CSharp.Planning.CSharpRecipeProjectionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String id, out System.String managedType, out System.String carrierType, out System.String toNativeExpression, out System.String fromNativeExpression, out System.String requiredNamespace)
+class BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission>]
+  ctor(BGCS.Contracts.Common.StableId nativeField, System.String fieldName, System.String reason)
+  property System.String fieldName { get; init }
+  property BGCS.Contracts.Common.StableId nativeField { get; init }
+  property System.String reason { get; init }
+  method BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission left, BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission left, BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeField, out System.String fieldName, out System.String reason)
+class BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeField, System.String fieldName, System.String elementType, System.Int32 length)
+  property System.String elementType { get; init }
+  property System.String fieldName { get; init }
+  property System.Int32 length { get; init }
+  property BGCS.Contracts.Common.StableId nativeField { get; init }
+  method BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan left, BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan left, BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeField, out System.String fieldName, out System.String elementType, out System.Int32 length)
+class BGCS.CSharp.Planning.CSharpRecordPresentationPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpRecordPresentationPlan>]
+  ctor(System.Boolean emitSizeConstant, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFieldPlan> constructorFields, BGCS.CSharp.Planning.CSharpRecordValidityPlan validity)
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpRecordArrayCopyPlan> arrayCopies { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpRecordArrayCopyOmission> arrayCopyOmissions { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFieldPlan> constructorFields { get; init }
+  property System.Boolean emitSizeConstant { get; init }
+  property BGCS.CSharp.Planning.CSharpRecordValidityPlan validity { get; init }
+  method BGCS.CSharp.Planning.CSharpRecordPresentationPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpRecordPresentationPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpRecordPresentationPlan left, BGCS.CSharp.Planning.CSharpRecordPresentationPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpRecordPresentationPlan left, BGCS.CSharp.Planning.CSharpRecordPresentationPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Boolean emitSizeConstant, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFieldPlan> constructorFields, out BGCS.CSharp.Planning.CSharpRecordValidityPlan validity)
+class BGCS.CSharp.Planning.CSharpRecordValidityPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpRecordValidityPlan>]
+  ctor(System.String propertyName, System.String fieldName, System.String fieldType, System.String invalidExpression, System.String constantName)
+  property System.String constantName { get; init }
+  property System.String fieldName { get; init }
+  property System.String fieldType { get; init }
+  property System.String invalidExpression { get; init }
+  property System.String propertyName { get; init }
+  method BGCS.CSharp.Planning.CSharpRecordValidityPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpRecordValidityPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpRecordValidityPlan left, BGCS.CSharp.Planning.CSharpRecordValidityPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpRecordValidityPlan left, BGCS.CSharp.Planning.CSharpRecordValidityPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String propertyName, out System.String fieldName, out System.String fieldType, out System.String invalidExpression, out System.String constantName)
+class BGCS.CSharp.Planning.CSharpRetainedCallbackPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpRetainedCallbackPlan>]
+  ctor(System.Int32 methodIndex, System.Int32 unregisterIndex, BGCS.CSharp.Planning.CSharpCallbackInputPlan callback, System.String registrationName, System.String nativeCallName, System.String handleType, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+  property BGCS.CSharp.Planning.CSharpCallbackInputPlan callback { get; init }
+  property System.String handleType { get; init }
+  property BGCS.Contracts.Interop.NativeCallbackRegistrationKind kind { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.String nativeCallName { get; init }
+  property System.Boolean nonBlockingShutdown { get; init }
+  property System.String registrationName { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  property System.String successExpression { get; init }
+  property System.Int32 unregisterCallbackIndex { get; init }
+  property System.Int32 unregisterIndex { get; init }
+  property System.Int32 unregisterUserDataIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpRetainedCallbackPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpRetainedCallbackPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpRetainedCallbackPlan left, BGCS.CSharp.Planning.CSharpRetainedCallbackPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpRetainedCallbackPlan left, BGCS.CSharp.Planning.CSharpRetainedCallbackPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Int32 unregisterIndex, out BGCS.CSharp.Planning.CSharpCallbackInputPlan callback, out System.String registrationName, out System.String nativeCallName, out System.String handleType, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+class BGCS.CSharp.Planning.CSharpScopedStatusCallPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpScopedStatusCallPlan>]
+  ctor(System.Int32 methodIndex, System.Collections.Immutable.ImmutableArray<System.Int32> inputIndices, System.Int32 resultIndex, System.String resultType, System.Int32 errorIndex, System.Int32 errorReleaseIndex)
+  property System.Int32 errorIndex { get; init }
+  property System.Int32 errorReleaseIndex { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Int32> inputIndices { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.Int32 resultIndex { get; init }
+  property System.String resultType { get; init }
+  method BGCS.CSharp.Planning.CSharpScopedStatusCallPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpScopedStatusCallPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpScopedStatusCallPlan left, BGCS.CSharp.Planning.CSharpScopedStatusCallPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpScopedStatusCallPlan left, BGCS.CSharp.Planning.CSharpScopedStatusCallPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Collections.Immutable.ImmutableArray<System.Int32> inputIndices, out System.Int32 resultIndex, out System.String resultType, out System.Int32 errorIndex, out System.Int32 errorReleaseIndex)
+class BGCS.CSharp.Planning.CSharpSharedContextPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpSharedContextPlan>]
+  ctor(System.String name, System.String runtimeNamespace, System.Boolean canLoad, System.Boolean canFromStatic, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFacadeMethodPlan> methods)
+  property System.Boolean canFromStatic { get; init }
+  property System.Boolean canLoad { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFacadeMethodPlan> methods { get; init }
+  property System.String name { get; init }
+  property System.String runtimeNamespace { get; init }
+  method BGCS.CSharp.Planning.CSharpSharedContextPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpSharedContextPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpSharedContextPlan left, BGCS.CSharp.Planning.CSharpSharedContextPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpSharedContextPlan left, BGCS.CSharp.Planning.CSharpSharedContextPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String name, out System.String runtimeNamespace, out System.Boolean canLoad, out System.Boolean canFromStatic, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFacadeMethodPlan> methods)
+class BGCS.CSharp.Planning.CSharpStatusMethodPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpStatusMethodPlan>]
+  ctor(System.Int32 methodIndex, System.Collections.Immutable.ImmutableArray<System.Int32> inputIndices, System.Int32 resultIndex, System.Int32 errorIndex, System.Int32 releaseIndex, System.Int32 successValue, System.String resultType)
+  property System.Int32 errorIndex { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.Int32> inputIndices { get; init }
+  property System.Int32 instanceIndex { get; init }
+  property System.Int32 methodIndex { get; init }
+  property BGCS.CSharp.Planning.CSharpOwnedResultPlan ownedResult { get; init }
+  property System.Int32 releaseIndex { get; init }
+  property System.Int32 resultIndex { get; init }
+  property System.String resultType { get; init }
+  property System.Int32 successValue { get; init }
+  method BGCS.CSharp.Planning.CSharpStatusMethodPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpStatusMethodPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpStatusMethodPlan left, BGCS.CSharp.Planning.CSharpStatusMethodPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpStatusMethodPlan left, BGCS.CSharp.Planning.CSharpStatusMethodPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Collections.Immutable.ImmutableArray<System.Int32> inputIndices, out System.Int32 resultIndex, out System.Int32 errorIndex, out System.Int32 releaseIndex, out System.Int32 successValue, out System.String resultType)
+class BGCS.CSharp.Planning.CSharpStoragePlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpStoragePlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeType, System.String name, System.Nullable<System.Int32> size, System.Nullable<System.Int32> alignment, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFieldPlan> fields)
+  property System.Nullable<System.Int32> alignment { get; init }
+  property System.String alignmentProbeName { get; init }
+  property System.String arrayElementType { get; init }
+  property System.Nullable<System.Int32> arrayLength { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpBitfieldPlan> bitfields { get; init }
+  property System.String documentation { get; init }
+  property System.String enumUnderlyingType { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpEnumValuePlan> enumValues { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFieldPlan> fields { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFlexibleArrayPlan> flexibleArrays { get; init }
+  property System.Nullable<System.Int32> managedAlignment { get; init }
+  property System.String name { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.Int32 packing { get; init }
+  property System.Nullable<System.Int32> pointerArrayWidth { get; init }
+  property BGCS.CSharp.Planning.CSharpRecordPresentationPlan presentation { get; init }
+  property System.Nullable<System.Int32> size { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpValueReceiverPlan> valueMembers { get; init }
+  method BGCS.CSharp.Planning.CSharpStoragePlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpStoragePlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpStoragePlan left, BGCS.CSharp.Planning.CSharpStoragePlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpStoragePlan left, BGCS.CSharp.Planning.CSharpStoragePlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeType, out System.String name, out System.Nullable<System.Int32> size, out System.Nullable<System.Int32> alignment, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpFieldPlan> fields)
+class BGCS.CSharp.Planning.CSharpStringConstantPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpStringConstantPlan>]
+  ctor(BGCS.Contracts.Common.StableId sourceDeclaration, System.String name, System.String type, System.String expression, System.Boolean isUnicodeString)
+  property System.String documentation { get; init }
+  property System.String expression { get; init }
+  property System.Boolean isUnicodeString { get; init }
+  property System.String name { get; init }
+  property System.Int32 nativeUnitCount { get; init }
+  property BGCS.Contracts.Common.StableId sourceDeclaration { get; init }
+  property System.String type { get; init }
+  property System.Int32 unitWidth { get; init }
+  method BGCS.CSharp.Planning.CSharpStringConstantPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpStringConstantPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpStringConstantPlan left, BGCS.CSharp.Planning.CSharpStringConstantPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpStringConstantPlan left, BGCS.CSharp.Planning.CSharpStringConstantPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId sourceDeclaration, out System.String name, out System.String type, out System.String expression, out System.Boolean isUnicodeString)
+class BGCS.CSharp.Planning.CSharpStringConstantPlanner [sealed]
+  ctor()
+  method System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpStringConstantPlan> Plan(BGCS.Contracts.Managed.ManagedApiModel model, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.CSharp.Planning.CSharpStringInputPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpStringInputPlan>]
+  ctor(System.Int32 parameterIndex, BGCS.Contracts.Interop.NativeTextEncoding encoding, BGCS.Contracts.Interop.NativeTextByteOrder byteOrder, System.Boolean allowsNull, System.Int32 alignment)
+  property System.Int32 alignment { get; init }
+  property System.Boolean allowsNull { get; init }
+  property BGCS.Contracts.Interop.NativeTextByteOrder byteOrder { get; init }
+  property System.Int32 codeUnitWidth { get; init }
+  property BGCS.Contracts.Interop.NativeTextEncoding encoding { get; init }
+  property System.Nullable<System.Int32> lengthIndex { get; init }
+  property BGCS.Contracts.Interop.NativeLengthUnit lengthUnit { get; init }
+  property System.Int32 maximumCodeUnits { get; init }
+  property System.Int32 parameterIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpStringInputPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpStringInputPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpStringInputPlan left, BGCS.CSharp.Planning.CSharpStringInputPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpStringInputPlan left, BGCS.CSharp.Planning.CSharpStringInputPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out BGCS.Contracts.Interop.NativeTextEncoding encoding, out BGCS.Contracts.Interop.NativeTextByteOrder byteOrder, out System.Boolean allowsNull, out System.Int32 alignment)
+class BGCS.CSharp.Planning.CSharpStringResultLengthPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpStringResultLengthPlan>]
+  ctor(System.Int32 parameterIndex, System.String carrierType, System.Boolean output, BGCS.Contracts.Interop.NativeLengthUnit unit, System.Int32 alignment)
+  property System.Int32 alignment { get; init }
+  property System.String carrierType { get; init }
+  property System.Boolean output { get; init }
+  property System.Int32 parameterIndex { get; init }
+  property BGCS.Contracts.Interop.NativeLengthUnit unit { get; init }
+  method BGCS.CSharp.Planning.CSharpStringResultLengthPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpStringResultLengthPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpStringResultLengthPlan left, BGCS.CSharp.Planning.CSharpStringResultLengthPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpStringResultLengthPlan left, BGCS.CSharp.Planning.CSharpStringResultLengthPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out System.String carrierType, out System.Boolean output, out BGCS.Contracts.Interop.NativeLengthUnit unit, out System.Int32 alignment)
+class BGCS.CSharp.Planning.CSharpStringResultPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpStringResultPlan>]
+  ctor(System.Int32 methodIndex, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, BGCS.Contracts.Interop.NativeTextEncoding encoding, System.Int32 codeUnitWidth, BGCS.Contracts.Interop.NativeTextByteOrder byteOrder, System.Boolean allowsNull, System.Int32 maximumCodeUnits)
+  property System.Boolean allowsNull { get; init }
+  property BGCS.Contracts.Interop.NativeTextByteOrder byteOrder { get; init }
+  property System.Int32 codeUnitWidth { get; init }
+  property BGCS.Contracts.Interop.NativeTextEncoding encoding { get; init }
+  property System.Nullable<System.Int32> exactCodeUnits { get; init }
+  property BGCS.CSharp.Planning.CSharpStringResultLengthPlan length { get; init }
+  property System.Int32 maximumCodeUnits { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.Nullable<System.Int32> releaseIndex { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  method BGCS.CSharp.Planning.CSharpStringResultPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpStringResultPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpStringResultPlan left, BGCS.CSharp.Planning.CSharpStringResultPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpStringResultPlan left, BGCS.CSharp.Planning.CSharpStringResultPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, out BGCS.Contracts.Interop.NativeTextEncoding encoding, out System.Int32 codeUnitWidth, out BGCS.Contracts.Interop.NativeTextByteOrder byteOrder, out System.Boolean allowsNull, out System.Int32 maximumCodeUnits)
+class BGCS.CSharp.Planning.CSharpTypePlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpTypePlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeType, System.String syntax, System.String declaredName)
+  property System.String declaredName { get; init }
+  property BGCS.Contracts.Common.StableId nativeType { get; init }
+  property System.String syntax { get; init }
+  method BGCS.CSharp.Planning.CSharpTypePlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpTypePlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpTypePlan left, BGCS.CSharp.Planning.CSharpTypePlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpTypePlan left, BGCS.CSharp.Planning.CSharpTypePlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeType, out System.String syntax, out System.String declaredName)
+enum BGCS.CSharp.Planning.CSharpValueAllocationMode [sealed; underlying=System.Int32; interfaces=System.IComparable|System.IConvertible|System.IFormattable|System.ISpanFormattable]
+  field BGCS.CSharp.Planning.CSharpValueAllocationMode AddressCheckedPinnedBorrow [static; const=0]
+  field System.Int32 value__
+class BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan>]
+  ctor(BGCS.Contracts.Common.StableId nativeExport, BGCS.Contracts.Common.StableId parameter, System.Nullable<BGCS.Contracts.Common.SourceLocation> source, System.String reason)
+  property BGCS.Contracts.Common.StableId nativeExport { get; init }
+  property BGCS.Contracts.Common.StableId parameter { get; init }
+  property System.String reason { get; init }
+  property System.Nullable<BGCS.Contracts.Common.SourceLocation> source { get; init }
+  method BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan left, BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan left, BGCS.CSharp.Planning.CSharpValueParameterOmissionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId nativeExport, out BGCS.Contracts.Common.StableId parameter, out System.Nullable<BGCS.Contracts.Common.SourceLocation> source, out System.String reason)
+class BGCS.CSharp.Planning.CSharpValueParameterPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpValueParameterPlan>]
+  ctor(System.Int32 parameterIndex, System.String elementType, BGCS.Contracts.Interop.NativeParameterDirection direction, System.Int32 alignment, BGCS.CSharp.Planning.CSharpValueAllocationMode allocationMode)
+  property System.Int32 alignment { get; init }
+  property BGCS.CSharp.Planning.CSharpValueAllocationMode allocationMode { get; init }
+  property BGCS.Contracts.Interop.NativeParameterDirection direction { get; init }
+  property System.String elementType { get; init }
+  property System.String managedElementType { get; init }
+  property System.Int32 parameterIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpValueParameterPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpValueParameterPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpValueParameterPlan left, BGCS.CSharp.Planning.CSharpValueParameterPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpValueParameterPlan left, BGCS.CSharp.Planning.CSharpValueParameterPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 parameterIndex, out System.String elementType, out BGCS.Contracts.Interop.NativeParameterDirection direction, out System.Int32 alignment, out BGCS.CSharp.Planning.CSharpValueAllocationMode allocationMode)
+class BGCS.CSharp.Planning.CSharpValueReceiverPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpValueReceiverPlan>]
+  ctor(System.Int32 methodIndex, System.Int32 receiverIndex, System.Boolean isReadOnly, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, BGCS.CSharp.Planning.CSharpFacadeMethodPlan target)
+  property System.Boolean isReadOnly { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.Int32 receiverIndex { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan target { get; init }
+  method BGCS.CSharp.Planning.CSharpValueReceiverPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpValueReceiverPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpValueReceiverPlan left, BGCS.CSharp.Planning.CSharpValueReceiverPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpValueReceiverPlan left, BGCS.CSharp.Planning.CSharpValueReceiverPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Int32 receiverIndex, out System.Boolean isReadOnly, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan target)
+class BGCS.CSharp.Planning.CSharpValueStringReceiverPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpValueStringReceiverPlan>]
+  ctor(System.String objectName, System.Int32 receiverIndex, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+  property System.String objectName { get; init }
+  property System.Int32 receiverIndex { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  method BGCS.CSharp.Planning.CSharpValueStringReceiverPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpValueStringReceiverPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpValueStringReceiverPlan left, BGCS.CSharp.Planning.CSharpValueStringReceiverPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpValueStringReceiverPlan left, BGCS.CSharp.Planning.CSharpValueStringReceiverPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String objectName, out System.Int32 receiverIndex, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature)
+class BGCS.CSharp.Planning.CSharpValueStringResultPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpValueStringResultPlan>]
+  ctor(BGCS.CSharp.Planning.CSharpScopedStatusCallPlan factory, BGCS.CSharp.Planning.CSharpScopedStatusCallPlan count, BGCS.CSharp.Planning.CSharpScopedStatusCallPlan copy, BGCS.CSharp.Planning.CSharpScopedStatusCallPlan release, BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, BGCS.Contracts.Interop.NativeTextEncoding encoding, System.Int32 codeUnitWidth, BGCS.Contracts.Interop.NativeTextByteOrder byteOrder, System.Int32 maximumCodeUnits, System.Int32 copyAlignment)
+  property BGCS.Contracts.Interop.NativeTextByteOrder byteOrder { get; init }
+  property System.Int32 codeUnitWidth { get; init }
+  property BGCS.CSharp.Planning.CSharpScopedStatusCallPlan copy { get; init }
+  property System.Int32 copyAlignment { get; init }
+  property BGCS.CSharp.Planning.CSharpScopedStatusCallPlan count { get; init }
+  property BGCS.Contracts.Interop.NativeTextEncoding encoding { get; init }
+  property BGCS.CSharp.Planning.CSharpScopedStatusCallPlan factory { get; init }
+  property System.Int32 maximumCodeUnits { get; init }
+  property BGCS.CSharp.Planning.CSharpValueStringReceiverPlan receiver { get; init }
+  property BGCS.CSharp.Planning.CSharpScopedStatusCallPlan release { get; init }
+  property System.Boolean requiresOwnedReceiver { get; init }
+  property BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature { get; init }
+  method BGCS.CSharp.Planning.CSharpValueStringResultPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpValueStringResultPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpValueStringResultPlan left, BGCS.CSharp.Planning.CSharpValueStringResultPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpValueStringResultPlan left, BGCS.CSharp.Planning.CSharpValueStringResultPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.CSharp.Planning.CSharpScopedStatusCallPlan factory, out BGCS.CSharp.Planning.CSharpScopedStatusCallPlan count, out BGCS.CSharp.Planning.CSharpScopedStatusCallPlan copy, out BGCS.CSharp.Planning.CSharpScopedStatusCallPlan release, out BGCS.CSharp.Planning.CSharpFacadeMethodPlan signature, out BGCS.Contracts.Interop.NativeTextEncoding encoding, out System.Int32 codeUnitWidth, out BGCS.Contracts.Interop.NativeTextByteOrder byteOrder, out System.Int32 maximumCodeUnits, out System.Int32 copyAlignment)
+class BGCS.CSharp.Planning.CSharpVirtualOperationPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpVirtualOperationPlan>]
+  ctor(System.Int32 methodIndex, System.Int32 instanceIndex, System.Int32 resultIndex, System.String resultType, System.Int32 errorIndex, System.String errorType, System.Int32 errorReleaseIndex, System.Int32 successValue)
+  property System.Int32 errorIndex { get; init }
+  property System.Int32 errorReleaseIndex { get; init }
+  property System.String errorType { get; init }
+  property System.Int32 instanceIndex { get; init }
+  property System.Int32 methodIndex { get; init }
+  property System.Int32 resultIndex { get; init }
+  property System.String resultType { get; init }
+  property System.Int32 successValue { get; init }
+  method BGCS.CSharp.Planning.CSharpVirtualOperationPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpVirtualOperationPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpVirtualOperationPlan left, BGCS.CSharp.Planning.CSharpVirtualOperationPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpVirtualOperationPlan left, BGCS.CSharp.Planning.CSharpVirtualOperationPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 methodIndex, out System.Int32 instanceIndex, out System.Int32 resultIndex, out System.String resultType, out System.Int32 errorIndex, out System.String errorType, out System.Int32 errorReleaseIndex, out System.Int32 successValue)
+class BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan>]
+  ctor(BGCS.Contracts.Common.StableId proxy, System.Nullable<BGCS.Contracts.Common.SourceLocation> source, System.String reason)
+  property BGCS.Contracts.Common.StableId proxy { get; init }
+  property System.String reason { get; init }
+  property System.Nullable<BGCS.Contracts.Common.SourceLocation> source { get; init }
+  method BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan left, BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan left, BGCS.CSharp.Planning.CSharpVirtualProxyOmissionPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Common.StableId proxy, out System.Nullable<BGCS.Contracts.Common.SourceLocation> source, out System.String reason)
+class BGCS.CSharp.Planning.CSharpVirtualProxyPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpVirtualProxyPlan>]
+  ctor(BGCS.Contracts.Interop.VirtualProxyContract contract, System.String name, System.String interfaceName, System.String registrationName, System.String interfacePointerType, BGCS.CSharp.Planning.CSharpVirtualOperationPlan create, BGCS.CSharp.Planning.CSharpVirtualOperationPlan destroy, BGCS.CSharp.Planning.CSharpVirtualOperationPlan cast, System.Int32 userDataIndex, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualSlotPlan> slots)
+  property BGCS.CSharp.Planning.CSharpVirtualOperationPlan cast { get; init }
+  property BGCS.Contracts.Interop.VirtualProxyContract contract { get; init }
+  property BGCS.CSharp.Planning.CSharpVirtualOperationPlan create { get; init }
+  property BGCS.CSharp.Planning.CSharpVirtualOperationPlan destroy { get; init }
+  property System.String interfaceName { get; init }
+  property System.String interfacePointerType { get; init }
+  property System.String name { get; init }
+  property System.String registrationName { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualSlotPlan> slots { get; init }
+  property System.Int32 userDataIndex { get; init }
+  method BGCS.CSharp.Planning.CSharpVirtualProxyPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpVirtualProxyPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpVirtualProxyPlan left, BGCS.CSharp.Planning.CSharpVirtualProxyPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpVirtualProxyPlan left, BGCS.CSharp.Planning.CSharpVirtualProxyPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Interop.VirtualProxyContract contract, out System.String name, out System.String interfaceName, out System.String registrationName, out System.String interfacePointerType, out BGCS.CSharp.Planning.CSharpVirtualOperationPlan create, out BGCS.CSharp.Planning.CSharpVirtualOperationPlan destroy, out BGCS.CSharp.Planning.CSharpVirtualOperationPlan cast, out System.Int32 userDataIndex, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualSlotPlan> slots)
+class BGCS.CSharp.Planning.CSharpVirtualSlotPlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpVirtualSlotPlan>]
+  ctor(BGCS.Contracts.Interop.VirtualProxySlotContract contract, System.String name, System.Collections.Immutable.ImmutableArray<System.String> nativeParameterTypes, System.Int32 factoryParameterIndex, System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualValuePlan> parameters, BGCS.CSharp.Planning.CSharpVirtualValuePlan result)
+  property BGCS.Contracts.Interop.VirtualProxySlotContract contract { get; init }
+  property System.Int32 factoryParameterIndex { get; init }
+  property System.String name { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> nativeParameterTypes { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualValuePlan> parameters { get; init }
+  property BGCS.CSharp.Planning.CSharpVirtualValuePlan result { get; init }
+  method BGCS.CSharp.Planning.CSharpVirtualSlotPlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpVirtualSlotPlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpVirtualSlotPlan left, BGCS.CSharp.Planning.CSharpVirtualSlotPlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpVirtualSlotPlan left, BGCS.CSharp.Planning.CSharpVirtualSlotPlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Interop.VirtualProxySlotContract contract, out System.String name, out System.Collections.Immutable.ImmutableArray<System.String> nativeParameterTypes, out System.Int32 factoryParameterIndex, out System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpVirtualValuePlan> parameters, out BGCS.CSharp.Planning.CSharpVirtualValuePlan result)
+class BGCS.CSharp.Planning.CSharpVirtualValuePlan [sealed; interfaces=System.IEquatable<BGCS.CSharp.Planning.CSharpVirtualValuePlan>]
+  ctor(BGCS.Contracts.Interop.VirtualProxyValueContract contract, System.String nativeType, System.String managedType, System.Boolean isBoolean, System.Boolean isPointer)
+  property BGCS.Contracts.Interop.VirtualProxyValueContract contract { get; init }
+  property System.Boolean isBoolean { get; init }
+  property System.Boolean isPointer { get; init }
+  property System.String managedType { get; init }
+  property System.String nativeType { get; init }
+  method BGCS.CSharp.Planning.CSharpVirtualValuePlan <Clone>$()
+  method System.Boolean Equals(BGCS.CSharp.Planning.CSharpVirtualValuePlan other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.CSharp.Planning.CSharpVirtualValuePlan left, BGCS.CSharp.Planning.CSharpVirtualValuePlan right) [static]
+  method System.Boolean op_Inequality(BGCS.CSharp.Planning.CSharpVirtualValuePlan left, BGCS.CSharp.Planning.CSharpVirtualValuePlan right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out BGCS.Contracts.Interop.VirtualProxyValueContract contract, out System.String nativeType, out System.String managedType, out System.Boolean isBoolean, out System.Boolean isPointer)
+class BGCS.CSharp.Planning.ExternalCarrierPlanner [sealed]
+  ctor()
+  method BGCS.CSharp.Planning.CSharpExternalTypeProjectionPlan Plan(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Managed.ExternalTypeProjection projection, System.String rawCarrierType, System.Collections.Generic.IReadOnlyDictionary<BGCS.Contracts.Common.StableId,System.String> rawFieldNames)
+  method System.String NormalizeField(System.String field) [static]
+  method System.String NormalizeType(System.String type) [static]
+class BGCS.CSharp.Planning.ManagedEnumPlanner [sealed]
+  ctor()
+  method System.Collections.Immutable.ImmutableArray<BGCS.CSharp.Planning.CSharpManagedEnumPlan> Plan(System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedEnumDefinition> definitions, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.CSharp.Planning.ValueParameterPlanner [sealed]
+  ctor()
+  method BGCS.CSharp.Planning.CSharpValueParameterPlan Plan(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Interop.InteropFunction function, BGCS.Contracts.Interop.InteropParameter parameter, System.Func<BGCS.Contracts.Common.StableId,System.String> resolve, System.Collections.Generic.IReadOnlyDictionary<BGCS.Contracts.Common.StableId,BGCS.CSharp.Planning.CSharpStoragePlan> storage)
+class BGCS.CSharp.Processing.AdditionalSourceArtifactProcessor [sealed; interfaces=BGCS.Contracts.Plugins.ICacheFingerprintProvider|BGCS.Contracts.Ports.IArtifactProcessor]
+  ctor(System.String id, System.Int32 priority, System.String path, System.String content)
+  property System.String id { get } [virtual; final]
+  property System.Int32 priority { get } [virtual; final]
+  method BGCS.Contracts.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Contracts.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Threading.Tasks.ValueTask ProcessAsync(BGCS.Contracts.Requests.ArtifactProcessingRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.CSharp.Processing.CSharpPreprocessor [sealed]
+  ctor(System.Collections.Generic.IEnumerable<System.String> symbols [optional; default=null])
+  method System.String Process(System.String text, System.String filename)
+class BGCS.CSharp.Processing.RegexArtifactProcessor [sealed; interfaces=BGCS.Contracts.Plugins.ICacheFingerprintProvider|BGCS.Contracts.Ports.IArtifactProcessor]
+  ctor(System.String id, System.Int32 priority, System.Collections.Generic.IEnumerable<System.String> paths, System.String pattern, System.String replacement, System.Int32 timeoutMilliseconds [optional; default=1000], System.Text.RegularExpressions.RegexOptions options [optional; default=0], System.Boolean requireMatch [optional; default=true])
+  property System.String id { get } [virtual; final]
+  property System.Int32 priority { get } [virtual; final]
+  method BGCS.Contracts.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Contracts.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Threading.Tasks.ValueTask ProcessAsync(BGCS.Contracts.Requests.ArtifactProcessingRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.CSharp.Processing.SyntaxArtifactProcessor [abstract; interfaces=BGCS.Contracts.Ports.IArtifactProcessor]
+  property System.String id { get } [virtual; final]
+  property System.Int32 priority { get } [virtual; final]
+  method System.Threading.Tasks.ValueTask ProcessAsync(BGCS.Contracts.Requests.ArtifactProcessingRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.CSharp.Processing.TextArtifactProcessor [sealed; interfaces=BGCS.Contracts.Plugins.ICacheFingerprintProvider|BGCS.Contracts.Ports.IArtifactProcessor]
+  ctor(System.String id, System.Int32 priority, System.Collections.Generic.IEnumerable<System.String> paths, System.String match, System.String replacement, System.Boolean ignoreCase [optional; default=false], System.Boolean requireMatch [optional; default=true])
+  property System.String id { get } [virtual; final]
+  property System.Int32 priority { get } [virtual; final]
+  method BGCS.Contracts.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Contracts.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Threading.Tasks.ValueTask ProcessAsync(BGCS.Contracts.Requests.ArtifactProcessingRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.CSharp.Projection.DefaultManagedProjection [sealed; interfaces=BGCS.Contracts.Ports.IManagedProjection]
+  ctor()
+  method BGCS.Contracts.Managed.ManagedApiModel Project(BGCS.Contracts.Interop.InteropModule module, BGCS.Contracts.Requests.ManagedProjectionRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.CSharp.Projection.ManagedEnumProjection [sealed]
+  ctor()
+  method BGCS.Contracts.Managed.ManagedApiModel Apply(BGCS.Contracts.Managed.ManagedApiModel model, BGCS.Contracts.Requests.ManagedProjectionRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.CSharp.Projection.ManagedNamingResolver [abstract; sealed]
+  method System.String Convert(System.String source, BGCS.Contracts.Managed.ManagedNameCasing casing) [static]
+  method System.String Convert(System.String source, BGCS.Contracts.Managed.ManagedNameCasing casing, BGCS.Contracts.Managed.ManagedNamingPolicy policy) [static]
+  method System.Void Validate(BGCS.Contracts.Managed.ManagedNamingPolicy policy) [static]
+class BGCS.CSharp.Projection.ManagedRecipeProjectionBinder [sealed]
+  ctor()
+  method BGCS.Contracts.Managed.ManagedApiModel Apply(BGCS.Contracts.Managed.ManagedApiModel model, BGCS.Contracts.Bridge.CppBridgeModule bridge, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Bridge.TypeLoweringRecipe> recipes)
+class BGCS.CSharp.Projection.ManagedRecipeProjectionValidator [sealed]
+  ctor()
+  method BGCS.CSharp.Planning.CSharpRecipeProjectionPlan Plan(BGCS.Contracts.Managed.ManagedRecipeProjection projection, System.String carrier, System.Int32 pointerSize)
+  method System.Void ValidateRecipes(System.Collections.Generic.IEnumerable<BGCS.Contracts.Bridge.TypeLoweringRecipe> recipes)
+class BGCS.CSharp.Validation.CSharpPlanningException [sealed; base=System.NotSupportedException; interfaces=System.Runtime.Serialization.ISerializable]
+  ctor(BGCS.Contracts.Common.StableId nativeIdentity, System.Nullable<BGCS.Contracts.Common.SourceLocation> source, System.String message, System.Exception innerException [optional; default=null])
+  property BGCS.Contracts.BindingDiagnostic diagnostic { get }
+  property BGCS.Contracts.Common.StableId nativeIdentity { get }
+class BGCS.CSharp.Validation.EmittedInteropContractReader [sealed]
+  ctor()
+  method System.Void Verify(BGCS.CSharp.Planning.CSharpEmissionPlan plan, System.Collections.Generic.IEnumerable<System.ValueTuple<System.String,System.String>> sources, System.String libraryName, System.Threading.CancellationToken cancellationToken [optional; default=null])

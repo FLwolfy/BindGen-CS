@@ -1,0 +1,26 @@
+{
+  "legacyFixture": "entryTests/ImportType",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/importMode": "functionTable"
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "delegate* unmanaged"
+  ],
+  "sdkBuild": false
+}

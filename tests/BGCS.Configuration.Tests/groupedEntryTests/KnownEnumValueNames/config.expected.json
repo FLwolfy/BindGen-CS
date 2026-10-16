@@ -1,0 +1,33 @@
+{
+  "legacyFixture": "entryTests/KnownEnumValueNames",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/names": {
+      "strange_enum::MY_PREFIX_ON": "Enabled"
+    }
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.StrangeEnum",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "MyPrefixOff",
+      "value": 0
+    },
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "Enabled",
+      "value": 1
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "MyPrefixOn"
+    }
+  ]
+}

@@ -4,9 +4,9 @@
 
 ## Clang 内建头文件与 SDK
 
-`src/BGCS.CppAst/Resources/Clang/Headers.zip` 是 LLVM 20 系列的内建头文件，嵌入解析器程序集。
+`src/BGCS.Frontend.Clang/Resources/Clang/Headers.zip` 是 LLVM 20 系列的内建头文件，嵌入解析器程序集。
 它不是宿主 SDK，也不是 macOS 专用资源。目标 SDK、C++ 标准库、ABI 和工具链由目标边界配置。
-资源的来源、SHA-256 和许可证见[资源说明](../src/BGCS.CppAst/Resources/Clang/README.md)。
+资源的来源、SHA-256 和许可证见[资源说明](../src/BGCS.Frontend.Clang/Resources/Clang/README.md)。
 
 解析器和 compiler discovery 同时传入 `--sysroot` 与 `-isysroot`，使链接根与头文件根一致。
 Darwin 的 SDK 搜索优先读取 `-isysroot`；只提供 `--sysroot` 时，环境或编译器默认 SDK
@@ -36,14 +36,14 @@ Linux x64 的候选来自[本次真实 CI](https://github.com/FLwolfy/BindGen-CS
 bimg 的 C header 与 C++ bridge 与已验证的 Windows 输出一致；managed enum 采用目标 ABI 的底层类型。
 仅更新该宿主实际产生并审阅的三个 manifest，不改变其他架构的基线。
 
-macOS x64 的候选来自[真实 CI 的后续验收](https://github.com/FLwolfy/BindGen-CS/actions/runs/37366219842)。
+macOS x64 的候选来自[真实 CI 的后续验收](https://github.com/FLwolfy/BindGen-CS/actions/runs/37367419842)。
 完整的 1,023 项托管测试、五个 C 库和 bimg 消费者均通过；真实库消费者编译为零警告、零错误。
 审阅覆盖 CoreAudio 声明、Darwin pthread 与 FILE 类型、LP64 布局，以及 SDK 平台宏。
 bimg 的 C header 与 C++ bridge 保持不变；剔除生成文件中目标来源说明后，其 managed 输出和
 公开 API 与本次 Linux 候选一致。仅更新实际运行并审阅的 macOS x64 三份 manifest。
 
 快照变化仍返回失败并保存候选；CI 不自动接受新输出。
-独立 NativeAOT、Wasm 解释执行和 Wasm AOT 消费者包含 56 项真实调用检查，
+当前独立门禁要求 NativeAOT 全部 113 项、Wasm 解释执行和 Wasm AOT 各 74 项真实调用检查及独立的 33 项非阻塞生命周期检查，
 负向验收要求错误原生返回值确实导致失败。最终状态以对应提交的完整 CI 结果为准。
 
 ## 开发规范

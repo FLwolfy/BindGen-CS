@@ -1,0 +1,28 @@
+{
+  "legacyFixture": "entryTests/Usings",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/usings": [
+      "System.Text"
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "using global::System.Text;"
+  ],
+  "notContains": []
+}

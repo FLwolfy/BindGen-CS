@@ -1,0 +1,66 @@
+{
+  "$schema": "../../schemas/bindgen.schema.json",
+  "schemaVersion": 1,
+  "library": {
+    "id": "cimguizmo",
+    "nativeName": "cimguizmo"
+  },
+  "source": {
+    "language": "c",
+    "languageStandard": "c17",
+    "headers": [
+      "../../artifacts/corpus/headers/cimguizmo/cimguizmo.h"
+    ],
+    "includeDirectories": [
+      "../../artifacts/corpus/headers/cimguizmo",
+      "../../artifacts/corpus/headers/cimgui"
+    ],
+    "includeTransitivelyReferencedHeaders": true,
+    "selection": {
+      "excludeDeclarations": [
+        "igText",
+        "igTextColored",
+        "igTextDisabled",
+        "igTextWrapped",
+        "igLabelText",
+        "igBulletText",
+        "igTreeNode_StrStr",
+        "igTreeNode_Ptr",
+        "igTreeNodeEx_StrStr",
+        "igTreeNodeEx_Ptr",
+        "igSetTooltip",
+        "igSetItemTooltip",
+        "igLogText",
+        "igDebugLog",
+        "igImFormatString",
+        "igImFormatStringToTempBuffer",
+        "igTextAligned",
+        "ImGuiTextBuffer_appendf"
+      ]
+    },
+    "defines": [
+      "CIMGUI_DEFINE_ENUMS_AND_STRUCTS"
+    ]
+  },
+  "api": {
+    "namespace": "BGCS.RealLibraries.CImGuizmo",
+    "name": "CImGuizmo",
+    "style": "instance",
+    "importMode": "functionTable",
+    "framework": "net10.0",
+    "names": {
+      "ImGuizmo_RecomposeMatrixFromComponents": "CorpusRecompose",
+      "ImGuizmo_DecomposeMatrixToComponents": "CorpusDecompose"
+    }
+  },
+  "runtime": {
+    "mode": "package"
+  },
+  "nativeBuild": {
+    "mode": "none"
+  },
+  "output": {
+    "root": "Generated",
+    "layout": "singleFile"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "library": { "id": "engine", "nativeName": "engine_bridge" },
+  "source": { "language": "cpp", "headers": ["native.hpp"] },
+  "api": { "namespace": "Engine.Bindings", "name": "EngineApi" },
+  "extensions": { "plugins": ["plugin.json"] },
+  "nativeBuild": { "mode": "sources" },
+  "output": { "root": "Generated" }
+}

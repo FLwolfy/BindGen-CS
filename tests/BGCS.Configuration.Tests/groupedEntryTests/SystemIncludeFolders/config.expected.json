@@ -1,0 +1,22 @@
+{
+  "legacyFixture": "entryTests/SystemIncludeFolders",
+  "legacyVariant": "config",
+  "configuration": {
+    "/source/systemIncludeDirectories": [
+      "$fixture/sysinclude"
+    ]
+  },
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "UseSys",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "value"
+      ],
+      "returns": "int"
+    }
+  ]
+}

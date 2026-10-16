@@ -1,0 +1,29 @@
+{
+  "legacyFixture": "entryTests/TypeNamingConvention",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/naming/types/casing": "camel"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.sampleType",
+      "kind": "Struct"
+    }
+  ],
+  "methods": [
+    {
+      "type": "EntryTests.Generated.EntryApi",
+      "name": "MakeSample",
+      "parameters": [
+        "int"
+      ],
+      "parameterNames": [
+        "value"
+      ],
+      "returns": "sampleType"
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.SampleType"
+  ]
+}

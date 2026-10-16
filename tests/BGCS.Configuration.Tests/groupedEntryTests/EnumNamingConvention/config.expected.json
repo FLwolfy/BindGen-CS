@@ -1,0 +1,23 @@
+{
+  "legacyFixture": "entryTests/EnumNamingConvention",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/naming/enumerations/casing": "camel"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.sampleMode",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.sampleMode",
+      "name": "sample_mode_on",
+      "value": 1
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.SampleMode"
+  ]
+}

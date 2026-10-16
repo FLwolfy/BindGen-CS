@@ -1,181 +1,70 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using BGCS.Configuration;
-using BGCS.Facade;
-using BGCS.Intermediate;
-using BGCS.Tool.Output;
+using BGCS.Tool.Commands;
 
 namespace BGCS.Tool;
 
 internal static class WorkspaceCommand
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    internal static int Run(string[] args)
     {
-        AllowTrailingCommas = true,
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
-    };
-    public static int Run(string[] args)
-    {
-        if (args.Length != 2 || args[0] is not ("validate" or "generate" or "diff"))
-            throw new ArgumentException("workspace expects '<validate|generate|diff> <workspace.json>'.");
-        string operation = args[0];
-        string manifestPath = Path.GetFullPath(args[1]);
-        BindingWorkspaceManifest manifest = LoadManifest(manifestPath);
-        string manifestDirectory = Path.GetDirectoryName(manifestPath)!;
-        List<string> configPaths = ResolveConfigs(manifest, manifestDirectory);
-        return operation switch
+        args = DiagnosticPresentation.Extract(args, out DiagnosticPresentation.Options diagnostics);
+        bool json = args.Contains("--json", StringComparer.Ordinal);
+        string[] positional = args.Where(argument => argument != "--json").ToArray();
+        if (positional.Length != 2 || positional[0] is not ("validate" or "generate" or "build" or "diff"))
+            throw new ArgumentException("workspace expects '<validate|generate|build|diff> <workspace.json> [--json]'.");
+        using CommandCancellation cancellation = new();
+        return ExecuteAsync().GetAwaiter().GetResult();
+
+        async System.Threading.Tasks.Task<int> ExecuteAsync()
         {
-            "validate" => Validate(configPaths),
-            "generate" => Generate(configPaths),
-            "diff" => Diff(configPaths),
-            _ => throw new InvalidOperationException($"Unsupported workspace operation '{operation}'.")
-        };
-    }
-
-    private static BindingWorkspaceManifest LoadManifest(string manifestPath)
-    {
-        if (!File.Exists(manifestPath))
-            throw new FileNotFoundException($"Workspace manifest does not exist: {manifestPath}", manifestPath);
-        BindingWorkspaceManifest? manifest = JsonSerializer.Deserialize<BindingWorkspaceManifest>(File.ReadAllText(manifestPath), JsonOptions);
-        if (manifest?.configs is not { Count: > 0 })
-            throw new InvalidOperationException("Workspace manifest must contain at least one config path in 'Configs'.");
-        return manifest;
-    }
-
-    private static List<string> ResolveConfigs(
-        BindingWorkspaceManifest manifest,
-        string manifestDirectory
-    ) {
-        List<string> paths = [];
-        HashSet<string> uniquePaths = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string configuredPath in manifest.configs)
-        {
-            if (string.IsNullOrWhiteSpace(configuredPath))
-                throw new InvalidOperationException("Workspace config paths cannot be empty.");
-            string path = Path.GetFullPath(configuredPath, manifestDirectory);
-            if (!File.Exists(path))
-                throw new FileNotFoundException($"Workspace config does not exist: {path}", path);
-            if (!uniquePaths.Add(path))
-                throw new InvalidOperationException($"Workspace contains duplicate config path: {path}");
-            paths.Add(path);
-        }
-
-        return paths;
-    }
-
-    private static int Validate(IReadOnlyList<string> configPaths)
-    {
-        foreach (string configPath in configPaths)
-        {
-            Console.WriteLine($"Validating {configPath}");
-            CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
-            using var logging = GenerationDiagnosticWriter.Attach(generator, Console.Out);
-            BindingGenerationResult<BindingModule> result = generator.AnalyzeConfigured();
-            if (!result.success || result.module == null)
+            BindingWorkspace workspace = await new WorkspaceLoader().LoadAsync(positional[1], cancellation.token).ConfigureAwait(false);
+            await using BindingHost host = BindingHost.CreateDefault();
+            if (positional[0] == "diff")
             {
-                GenerationDiagnosticWriter.WriteFailure(result, Console.Error);
-                return 1;
-            }
-
-            if (result.module.structuredDiagnostics.Any(diagnostic => diagnostic.severity == BindingDiagnosticSeverity.Error))
-            {
-                GenerationDiagnosticWriter.WriteFailure(result, Console.Error);
-                return 1;
-            }
-        }
-
-        Console.WriteLine($"Validated {configPaths.Count} binding configurations.");
-        return 0;
-    }
-
-    private static int Generate(IReadOnlyList<string> configPaths)
-    {
-        // Validate every input before replacing any generated directory.
-        if (Validate(configPaths) != 0)
-            return 1;
-        foreach (string configPath in configPaths)
-        {
-            Console.WriteLine($"Generating {configPath}");
-            CsCodeGenerator generator = CsCodeGenerator.Create(configPath);
-            using var logging = GenerationDiagnosticWriter.Attach(generator, Console.Out);
-            if (!generator.GenerateConfigured())
-            {
-                GenerationDiagnosticWriter.WriteFailure(generator.lastResult, Console.Error);
-                return 1;
-            }
-        }
-
-        Console.WriteLine($"Generated {configPaths.Count} binding projects.");
-        return 0;
-    }
-
-    private static int Diff(IReadOnlyList<string> configPaths)
-    {
-        bool hasChanges = false;
-        foreach (string configPath in configPaths)
-        {
-            CsCodeGeneratorConfig config = new BGCS.Configuration.ConfigLoader().Load(configPath);
-            string expectedOutput = Path.GetFullPath(config.outputPath, Path.GetDirectoryName(configPath)!);
-            string temporaryOutput = Path.Combine(Path.GetTempPath(), "bindgen-cs-workspace-diff-" + Guid.NewGuid().ToString("N"));
-            try
-            {
-                CsCodeGenerator generator = new(config);
-                if (!generator.GenerateConfigured(temporaryOutput))
+                WorkspaceDiffResult result = await host.DiffWorkspaceAsync(workspace, cancellation.token).ConfigureAwait(false);
+                cancellation.token.ThrowIfCancellationRequested();
+                GenerateCommand.WriteDiagnostics(result.diagnostics, diagnostics);
+                if (json) Console.WriteLine(JsonSerializer.Serialize(result, GenerateCommand.JsonOptions));
+                else foreach (var project in result.projects)
                 {
-                    GenerationDiagnosticWriter.WriteFailure(generator.lastResult, Console.Error);
-                    return 2;
+                    Console.WriteLine($"{project.projectId}: {project.status}");
+                    if (project.diff is not null)
+                        foreach (ArtifactChange change in project.diff.changes) Console.WriteLine($"{project.projectId}: {change.kind}: {change.relativePath}");
                 }
-
-                IReadOnlyDictionary<string, string> expected = ReadDirectory(temporaryOutput);
-                IReadOnlyDictionary<string, string> actual = Directory.Exists(expectedOutput) ? ReadDirectory(expectedOutput) : new Dictionary<string, string>();
-                List<string> changes = Compare(expected, actual);
-                foreach (string change in changes)
-                    Console.WriteLine($"{Path.GetFileName(configPath)}: {change}");
-                hasChanges |= changes.Count != 0;
+                return !result.success ? 2 : result.hasChanges ? 1 : 0;
             }
-            finally
+            if (positional[0] == "validate")
             {
-                if (Directory.Exists(temporaryOutput))
-                    Directory.Delete(temporaryOutput, true);
+                bool success = true;
+                List<WorkspaceValidationProject> projects = [];
+                foreach (WorkspaceProject project in workspace.projects)
+                {
+                    InspectionResult result = await host.InspectAsync(project.request, cancellation.token).ConfigureAwait(false);
+                    cancellation.token.ThrowIfCancellationRequested();
+                    GenerateCommand.WriteDiagnostics(result.diagnostics, diagnostics);
+                    projects.Add(new(project.id, result));
+                    if (!json) Console.WriteLine($"{project.id}: {(result.success ? "validated" : "failed")}");
+                    success &= result.success;
+                }
+                if (json) Console.WriteLine(JsonSerializer.Serialize(new { success, projects }, GenerateCommand.JsonOptions));
+                return success ? 0 : 1;
             }
+            WorkspaceResult generated = positional[0] == "build"
+                ? await host.BuildWorkspaceAsync(workspace, cancellation.token).ConfigureAwait(false)
+                : await host.GenerateWorkspaceAsync(workspace, cancellation.token).ConfigureAwait(false);
+            cancellation.token.ThrowIfCancellationRequested();
+            GenerateCommand.WriteDiagnostics(generated.diagnostics, diagnostics);
+            if (json) Console.WriteLine(JsonSerializer.Serialize(generated, GenerateCommand.JsonOptions));
+            else foreach (WorkspaceProjectResult project in generated.projects) Console.WriteLine($"{project.projectId}: {project.status}");
+            return generated.success ? 0 : 1;
         }
-
-        if (!hasChanges)
-            Console.WriteLine($"All {configPaths.Count} generated binding projects are up to date.");
-        return hasChanges ? 1 : 0;
     }
 
-    private static IReadOnlyDictionary<string, string> ReadDirectory(string directory)
-    {
-        return Directory.GetFiles(directory, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(directory, path).Replace('\\', '/'), File.ReadAllText, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static List<string> Compare(
-        IReadOnlyDictionary<string, string> expected,
-        IReadOnlyDictionary<string, string> actual
-    ) {
-        List<string> changes = [];
-        foreach (string path in expected.Keys.Except(actual.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(path => path))
-            changes.Add($"Added: {path}");
-        foreach (string path in actual.Keys.Except(expected.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(path => path))
-            changes.Add($"Removed: {path}");
-        foreach (string path in expected.Keys.Intersect(actual.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(path => path))
-        {
-            if (!GeneratedSourceComparison.Equals(path, expected[path], actual[path]))
-                changes.Add($"Changed: {path}");
-        }
-
-        return changes;
-    }
-
-    private sealed class BindingWorkspaceManifest
-    {
-        public List<string> configs { get; init; } = [];
-    }
+    private sealed record WorkspaceValidationProject(
+        string projectId,
+        InspectionResult result
+    );
 }

@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup Label="Parser build assets">
+    <BGCSParserAssetRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</BGCSParserAssetRid>
+    <BGCSParserAssetRid Condition="'$(BGCSParserAssetRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</BGCSParserAssetRid>
+  </PropertyGroup>
+
+  <!-- Ordinary builds need one parser host. Package manifests retain all RID dependencies. -->
+  <Target
+    Name="BGCSSelectParserBuildAssets"
+    AfterTargets="ResolveLockFileCopyLocalFiles"
+    Condition="'$(BGCSParserAssetRid)' != '' and '$(BGCSDisableHostAssetFiltering)' != 'true'">
+    <ItemGroup>
+      <RuntimeCopyLocalItems
+        Remove="@(RuntimeCopyLocalItems)"
+        Condition="($([System.String]::Copy('%(RuntimeCopyLocalItems.NuGetPackageId)').StartsWith('libclang.runtime.')) or $([System.String]::Copy('%(RuntimeCopyLocalItems.NuGetPackageId)').StartsWith('libClangSharp.runtime.'))) and !$([System.String]::Copy('%(RuntimeCopyLocalItems.PathInPackage)').Replace('\', '/').Contains('runtimes/$(BGCSParserAssetRid)/'))" />
+      <ReferenceCopyLocalPaths
+        Remove="@(ReferenceCopyLocalPaths)"
+        Condition="($([System.String]::Copy('%(ReferenceCopyLocalPaths.NuGetPackageId)').StartsWith('libclang.runtime.')) or $([System.String]::Copy('%(ReferenceCopyLocalPaths.NuGetPackageId)').StartsWith('libClangSharp.runtime.'))) and !$([System.String]::Copy('%(ReferenceCopyLocalPaths.PathInPackage)').Replace('\', '/').Contains('runtimes/$(BGCSParserAssetRid)/'))" />
+    </ItemGroup>
+  </Target>
+</Project>

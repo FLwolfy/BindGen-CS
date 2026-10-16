@@ -1,0 +1,31 @@
+{
+  "legacyFixture": "entryTests/KnownEnumValueNames",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/names": {}
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.StrangeEnum",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "MyPrefixOff",
+      "value": 0
+    },
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "MyPrefixOn",
+      "value": 1
+    }
+  ],
+  "absentMembers": [
+    {
+      "type": "EntryTests.Generated.StrangeEnum",
+      "name": "Enabled"
+    }
+  ]
+}

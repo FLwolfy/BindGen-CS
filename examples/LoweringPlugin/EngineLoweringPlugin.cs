@@ -1,54 +1,73 @@
-using BGCS.Core.Extensibility;
-using BGCS.Cpp2C.Lowering;
-using BGCS.CppAst.Model.Declarations;
+using System;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using BGCS.Contracts.Bridge;
+using BGCS.Contracts.Common;
+using BGCS.Contracts.Native;
+using BGCS.Contracts.Plugins;
+using BGCS.Contracts.Ports;
+using BGCS.Contracts.Requests;
 
 namespace BGCS.Examples.LoweringPlugin;
 
-/// <summary>
-/// Demonstrates callable renaming through an independently loaded generation plugin.
-/// </summary>
+/// <summary>Plans one complete typed member export using only neutral Contracts.</summary>
 public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public string id => "bgcs.examples.engine-lowering";
-    /// <inheritdoc />
-    public string version => "1.0.0";
-    /// <inheritdoc />
-    public int contractVersion => BindingPluginContract.C_CURRENT_VERSION;
+    public PluginDescriptor descriptor => new("bgcs.examples.engine-lowering", "3.0.0",
+        [new("engine.rename-tick", ExtensionPort.CppCallableLowering, 100)]);
 
     /// <inheritdoc />
-    public void Configure(IBindingPluginHost host)
+    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
+        => registry.RegisterFactory<ICppCallableLowering>("engine.rename-tick", () => new RenameTickLowering());
+
+    /// <inheritdoc />
+    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        => Fingerprint("engine-lowering-plugin:3.0.0", cancellationToken);
+
+    private static CacheFingerprintContribution Fingerprint(string state, CancellationToken cancellationToken)
     {
-        host.Register<ICppCallableLowering>(
-            "engine.rename-tick",
-            new RenameTickLowering(),
-            priority: 100);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(state)))), []);
     }
-
-    /// <inheritdoc />
-    public string GetCacheFingerprint() => "rename-tick";
 
     private sealed class RenameTickLowering : ICppCallableLowering, ICacheFingerprintProvider
     {
         /// <inheritdoc />
-        public string name => "engine.rename-tick";
+        public string id => "engine.rename-tick";
         /// <inheritdoc />
         public int priority => 100;
 
         /// <inheritdoc />
-        public bool CanLower(
-            CppFunction function,
-            CppCallableLoweringContext context
-        ) =>
-            function.name == "Tick" && context.declaringType?.fullName == "Engine::World";
+        public bool CanLower(NativeDeclaration callable, LoweringContext context)
+            => callable.kind == "Function" && callable.qualifiedName == "Engine::World::Tick"
+                && !callable.isStatic && !callable.isVariadic && callable.hasPrototype
+                && callable.parent is StableId parent && context.module.GetDeclaration(parent).type is not null
+                && callable.returnType is StableId result && context.module.GetType(result).primitiveKind == "Void"
+                && !callable.children.Select(context.module.GetDeclaration).Any(child => child.kind == "Parameter");
 
         /// <inheritdoc />
-        public CppCallableLoweringPlan CreatePlan(
-            CppFunction function,
-            CppCallableLoweringContext context
-        ) => new(name, "engine_world_tick");
+        public CppCallableLoweringPlan Lower(NativeDeclaration callable, LoweringContext context, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!CanLower(callable, context)) throw new ArgumentException("The extension supports only void World.Tick() with no parameters.", nameof(callable));
+            NativeDeclaration owner = context.module.GetDeclaration(callable.parent!.Value);
+            StableId nativeType = owner.type!.Value;
+            StableId handleId = new("engine-handle:" + nativeType.value);
+            StableId pointerId = new("engine-pointer:" + (callable.isConst ? "const:" : string.Empty) + nativeType.value);
+            StableId selfId = new("engine-self:" + callable.id.value);
+            BridgeType handle = new(handleId, BridgeTypeKind.Handle, "engine_world_handle") { nativeType = nativeType };
+            BridgeType pointer = new(pointerId, BridgeTypeKind.Pointer, string.Empty) { elementType = handleId, isConst = callable.isConst };
+            BridgeParameter self = new(selfId, "bgcs_self", pointerId, nativeType, BridgeConversionKind.PointerCast);
+            BridgeExport export = new(new("engine-tick:" + callable.id.value), "engine_world_tick", [self],
+                new(BridgeOperationKind.InstanceCall, callable.id, nativeType, selfId)) { documentation = callable.documentation };
+            return new(export, [handle, pointer], []);
+        }
 
         /// <inheritdoc />
-        public string GetCacheFingerprint() => "engine-world-tick";
+        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+            => Fingerprint("engine-world-tick:void/no-parameters:3.0.0", cancellationToken);
     }
 }

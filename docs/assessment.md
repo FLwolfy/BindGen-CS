@@ -1,56 +1,87 @@
-# BindGen-CS Engineering Maturity Assessment
+# BGCS 3.0 engineering assessment
 
-[简体中文](assessment.cn.md) | [Capability matrix](capabilities.md) | [Acceptance](acceptance.md) | [Roadmap](roadmap.md)
+[简体中文](assessment.cn.md) | [Capabilities](capabilities.md) | [Acceptance](acceptance.md)
 
-Assessment date: 2026-09-24.
+Assessment date: 2026-10-16. This reviews current source, public interfaces and
+identified local checkpoints. It is not completed 3.0.0 release certification.
+Historical macOS reports and subjective scores are not carried forward as current
+proof. The same-revision launch matrix and clean installation gates remain decisive.
 
-## Verdict
+## Seven dimensions
 
-BindGen-CS is a **strong maintenance-candidate C/C++ to C# toolchain within its declared semantic scope**, not a thin header-to-`DllImport` script. Its sole C# path is IR-native; advanced desktop C++ lowerings, lifetime contracts, real native invocation, deterministic packaging, API/dependency gates, and the OIDC signed-release workflow are implemented.
+The layers, extension contracts and safety mechanisms have substantive implementation
+and regression evidence. They support a broad C ABI and a defined set of C++ protocols;
+that does not establish every feature on every platform or close the refactor merely
+because the project tree exists.
 
-The current local `macos-arm64-darwin` report passes all ten mandatory categories at 9.0/10. The report records a dirty working tree, so a committed same-revision runner matrix is still required before a release claim.
+| Dimension | Current assessment | Material limits |
+| --- | --- | --- |
+| Functionality | C/C++, three imports, package/source Runtime, instance/static APIs, plugins, cache, workspaces and MSBuild share an implementation. Complex lifetimes have actual fixtures. | Raw ABI, native holders and friendly managed projections have different scopes. Arbitrary templates, collection results and unknown ownership are not automatic. Feature inventory needs current item-level evidence. |
+| Code quality | Immutable data, finite typed operations, explicit failure and final generated-contract checks improve reviewability; style/API gates constrain regressions. | ABI/lifecycle correctness creates real planner/verifier/cleanup complexity. Formatting is not proof of elegance; public helper contracts require maintenance. |
+| Architectural clarity | Thirteen implementation projects have dependency gates; neutral analysis/C# generation do not retain ASTs, the frontend public surface is small and Host coordinates the workflow. | Keep semantics in their owning modules and review new public implementation helpers. Friends or linked production source cannot replace a proper contract. |
+| Extensibility | Contracts-only ports cover source input, targets, transforms, lowerings, projection/backend, processors, validation and construction. Inputs/state participate in caching. | Plugins must meet shape, lifetime, evidence and fingerprint rules. Parser-pinned advanced AST contributors are intentionally a different stability/dependency surface. |
+| Usability | Grouped configuration and init/doctor/validate/generate/build serve ordinary users; C++ bridge orchestration is automatic. Defaults are instance/FunctionTable/split; MSBuild is opt-in. | Native SDK/compiler setup and project-specific encoding, allocator, template, lifecycle and build facts remain necessary. Not every library is a one-header setup. |
+| Decoupling | Native facts, bridge operations, interop ABI and managed presentation have distinct models; a worker isolates parser crashes; Runtime carries no generator. | A replacement frontend must supply equally complete facts. A new ABI/provider still needs actual proof; interfaces cannot erase platform differences. |
+| Cross-platform design | Host, target, SDK/toolchain, ABI, runtime and import are separated; desktop/AOT/browser mechanisms differ and GNU/musl assets stay distinct. | Certification requires the same-revision platform matrix. Owning C++ virtual registrations remain omitted on nonblocking browser profiles; Windows/Chromium evidence does not certify other hosts/browsers. |
 
-It is not yet honest to call the current revision universally production-supported. Windows x64, Linux x64, and macOS x64 must each publish the same-version complete report; Windows must additionally prove clang-cl and MSBuild runtime invocation. A real OIDC/Sigstore signature is still release-run-only evidence. Downstream projects own their own binding configurations and integration acceptance.
+An average score cannot offset a failed release gate. Record source presence, local
+proof and release certification separately.
 
-## Quantified assessment
+## Extending the product
 
-| Dimension | Current assessment | Evidence and remaining deduction |
-| --- | ---: | --- |
-| Supported C ABI correctness | 9.0/10 code quality | Real libraries, layout, compilation, invocation, snapshots, and strict diagnostics; desktop-x64 report evidence remains pending |
-| Supported C++ Bridge subset | 9.0/10 code quality | Class lifecycle, inheritance adjustment, specializations, requested STL lowerings, smart pointers, and callbacks are tested; unknown semantics fail closed |
-| Usability | 9.0/10 | `init → doctor → validate → generate → build`, workspace, schema, explain, config-relative paths, and transactional output |
-| Extensibility | 9.3/10 | Final lowering contract, declarative recipes, type/callable/artifact plugin SPI, explicit C shims, safety policy, deterministic priority, isolation, and cache fingerprints |
-| Performance and determinism | 9.0/10 | 10,000-declaration cold/warm budgets, content-addressed cache, concurrent publication, output restoration, and stable hashes |
-| Architecture completion | 9.0/10 | IR-native raw/friendly emission is the sole path; pre-release fallback and old config migration are removed |
-| Global cross-platform evidence | Not accepted yet | Windows x64, Linux x64, and macOS x64 same-version reports remain mandatory |
-| Arbitrary C++ coverage | Explicitly bounded | The controlled subset is strong; arbitrary metaprogramming and undeclared allocator/container semantics are rejected |
-| Release supply chain | 9.0/10 local automation; signature pending | Deterministic NuGet, native-RID consumer, SPDX/SLSA, API/license/vulnerability gates; OIDC workflow ready, real signature requires an authorized release run |
+An ordinary extension references `BGCS.Contracts` and registers typed ports through
+`IBindingPlugin`. Use `ICppTypeLowering` for type semantics, `IManagedApiTransform` for
+managed presentation, `ISourceContributor` for generated inputs, `INativeTargetProvider`
+for a target and `INativeBuildProvider` for construction. A finite recipe or native shim
+may be enough for a project-specific C++ conversion.
 
-These values are not averaged into a substitute release score. The [acceptance specification](acceptance.md) still requires every category for every declared target to reach 9.0 independently.
+A manifest declares compatibility, IDs/priorities, settings schema and locked assets.
+Factories create session-owned services. `ICacheFingerprintProvider` declares state and
+external inputs; incomplete fingerprints disable affected reuse. CLI, SDK, workspace
+and MSBuild read the same configuration. See [extensibility](extensibility.md) and
+[the cookbook](cpp-extension-cookbook.md).
 
-## Honest status of the five current workstreams
+Use `IClangFactContributor` only for parser-specific inspection. It uses the full SDK's
+exact advanced parser interface inside the worker; borrowed native handles cannot
+outlive contribution. Ordinary plugins do not need those dependencies.
 
-| Workstream | Status | Existing acceptance | Required before closure |
-| --- | --- | --- | --- |
-| Fully IR-native C# path | Complete | Raw ABI, string/span/ref/out friendly surface, fail-closed rollback, schema/init tests; old emitter deleted | Continue expanding real-library API snapshots |
-| Final C++ lowering architecture | Complete | Real recipe invocation, external plugin E2E, explicit shim build/export/invocation, managed/native artifacts, API shape, deterministic order, conflict rejection, built-ins in one registry | Keep extending the current contract; no pre-release adapter compatibility remains |
-| Native build providers and export inspection | Desktop artifact orchestration complete | Provider/export gates plus NuGet `runtimes/<rid>/native` and SHA-256 index | Execute clang-cl/MSBuild runtime gates on Windows |
-| Desktop-x64 acceptance | Automated, evidence pending | Dedicated GNU/MSVC/Darwin x64 runners and target-isolated reports | All three jobs must pass on the same revision; dry-run or cross compilation cannot count |
-| Incremental cache, large-project budget, stable plugin contracts | Current pre-release contract complete | Fingerprints, atomic immutable cache, concurrency/10k/plugin E2E, and reviewed API baseline | Workspace DAG, shared parser cache, and memory trends are later extensions |
+## How complete is cross-platform support?
 
-## Why it is already strong
+This is more than a collection of OS flags. The parser follows the host, headers/layout
+follow the target SDK/ABI, native construction uses the selected compiler, and managed
+emission follows runtime/import capabilities. Actual MSVC/GNU preprocessing and native
+proof check that construction has not changed declarations, layout or constants.
 
-- Correctness comes first: missing ownership, allocator, callback-lifetime, or C++-lowering evidence produces stable diagnostics instead of plausible but wrong ABI code.
-- The engineering loop covers generation, compilation, native invocation, API snapshots, deterministic packages, clean native consumers, and supply-chain policy.
-- No requested high-risk feature uses a native-library-name branch; semantics are expressed through reusable configuration, mappings, lowering recipes/plugins/shims, providers, and gates.
-- Third-party lowering plugins use a versioned contract; binary content, versions, shim content, and state participate in cache keys.
-- Target, ABI, triple, sysroot, compiler, generated output, snapshots, and reports are isolated, preventing one host pass from masquerading as evidence for another ABI.
+That supplies real infrastructure; full platform support still needs actual invocation
+and package consumption. Unsupported combinations fail or require a shim rather than
+pretending that every ABI is universal.
 
-## Hard gates for the “super-universal” claim
+## How decoupling works
 
-1. Run the same complete matrix on Windows x64, Linux x64, macOS x64, then Windows Arm64; execute clang-cl/MSBuild providers on Windows.
-2. Retain an independent current-version artifact for every production target; Android/iOS/FreeBSD are formal support targets and remain ⚠️ until implementation and acceptance are complete.
-3. Execute the OIDC/Sigstore workflow in an authorized release job; do not substitute local unsigned provenance.
-4. Treat workspace DAG/shared parser caches as later performance evolution, not a blocker for the declared single-workspace feature set.
+Frontend creates detached native facts; Analysis evaluates selection, layout, semantics
+and safety; Cpp2C produces a checked C ABI; CSharp emits from interop/managed models;
+NativeBuild handles construction/assets; Runtime handles calls/lifetimes. Host composes
+these modules. CLI/MSBuild enter the same pipeline.
 
-The precise product statement is therefore: **BindGen-CS is architecturally strong, powerful, and easy to operate inside its explicit C/C++ contract; universal maintenance-release status still requires the three desktop-x64 reports and an actual signed release run.**
+Contracts and Runtime reference no other BGCS project. Ordinary lowering does not
+reference Clang; parsing lives in a worker. Frozen inputs/registrations and independent
+contract checks enforce the boundaries. The sole registered Frontend.Tests friend is
+an implementation test exception; production friends remain forbidden.
+
+## Can most libraries be bound easily?
+
+A public fixed-prototype C API with representable layouts is usually the simplest case.
+Raw imports often need little configuration. Friendly string/Span/owned APIs still need
+semantics absent from headers.
+
+For C++, producing a C ABI bridge and automatically designing a natural C# API are
+different tasks. Common objects, inheritance, concrete templates and supported standard
+protocols have paths. Complex templates, allocators, retained callbacks, cancellation,
+custom containers and unclear lifetimes often need configuration, lowering or a shim.
+There is no defensible percentage promise that most arbitrary C++ libraries are easy.
+Finite CPU fixtures also do not certify complete GUI, audio-device or GPU rendering
+systems.
+
+Delivery still requires generated-source compilation with warnings as errors, actual
+native linking/calls and clean installed consumption, with accurate feature scope and
+all required evidence bound to the same revision.

@@ -1,0 +1,131 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "plugin": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "port": {
+                "enum": [
+                  "frontend",
+                  "nativeTargetProvider",
+                  "nativeModuleTransform",
+                  "cppTypeLowering",
+                  "cppCallableLowering",
+                  "interopTransform",
+                  "managedProjection",
+                  "bindingBackend",
+                  "generationValidator",
+                  "artifactProcessor",
+                  "nativeBuildProvider",
+                  "nativeArtifactPackager",
+                  "sourceContributor",
+                  "managedApiTransform",
+                  "frontendFactContributor"
+                ]
+              },
+              "priority": {
+                "type": "integer",
+                "default": 0
+              }
+            },
+            "required": [
+              "id",
+              "port"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "contractsMajor": {
+          "type": "integer",
+          "const": 3
+        },
+        "minimumApiMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 0
+        },
+        "configurationSchema": true
+      },
+      "required": [
+        "id",
+        "version",
+        "services"
+      ],
+      "additionalProperties": false
+    },
+    "assembly": {
+      "type": "string"
+    },
+    "entryType": {
+      "type": "string"
+    },
+    "workerOnly": {
+      "type": "boolean"
+    },
+    "workerParserIdentity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "path",
+          "digest"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "plugin",
+    "assembly",
+    "entryType",
+    "assets"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BGCS 3.0 neutral plugin manifest"
+}

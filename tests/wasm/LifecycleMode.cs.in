@@ -1,0 +1,28 @@
+    private static unsafe LifecycleApi Create__MODE__()
+    {
+        var api = __FACTORY__;
+        var observer = __FACTORY__;
+        Console.WriteLine("BGCS browser lifecycle: __MODE__ raw async null-start probe");
+        if (api.Raw.BgcsEventAsyncStart(null, 0, null, null, 0) != null)
+            throw new InvalidOperationException("The fixture's invalid raw async request must create no native handle.");
+        Console.WriteLine("BGCS browser lifecycle: __MODE__ raw async null-start probe complete");
+        if (api.Raw.BgcsEventCompletionIdentity(null) != null)
+            throw new InvalidOperationException("A native null function-table index must remain null.");
+        var original = (delegate* unmanaged[Cdecl]<int, int, void*, void>)&TransportProbe;
+        var returned = api.Raw.BgcsEventCompletionIdentity(original);
+        if ((nint)returned != (nint)original) throw new InvalidOperationException("Native function-address transport changed the exact callback address bits.");
+        m_transportValue = 0; returned(20, 22, null);
+        if (m_transportValue != 42) throw new InvalidOperationException("The returned native callback address must retain its exact callable signature.");
+        return new LifecycleApi(api, observer,
+            callback =>
+            {
+                var registration = api.BgcsEventRegister(value => callback(value));
+                return new Registration(value => registration.Invoke(handle => api.Raw.BgcsEventFire(handle, value)),
+                    registration.Dispose, registration.DisposeAsync, () => registration.completion, registration.TakeCallbackException);
+            },
+            (values, immediate) => api.BgcsEventAsyncStartAsync(values, immediate),
+            status => observer.Raw.BgcsEventAsyncPump(status),
+            () => observer.Raw.BgcsEventLive(), () => observer.Raw.BgcsEventErrors(),
+            () => observer.Raw.BgcsEventAsyncLive(), () => observer.Raw.BgcsEventAsyncErrors(),
+            () => observer.Raw.BgcsEventAsyncCancelRequested());
+    }

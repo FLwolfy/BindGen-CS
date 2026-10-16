@@ -1,5 +1,5 @@
 using System;
-using BGCS.Core.Text;
+using BGCS.Infrastructure.Text;
 using Xunit;
 
 namespace BGCS.Tests;

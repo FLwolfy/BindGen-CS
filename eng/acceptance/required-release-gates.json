@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "workflow": "ci.yml",
+  "requiredJobNames": [
+    "Build and test (linux-x64-gnu)",
+    "Build and test (windows-x64-msvc)",
+    "Build and test (macos-x64-darwin)",
+    "BGCS acceptance (linux-x64-gnu)",
+    "BGCS acceptance (windows-x64-msvc)",
+    "BGCS acceptance (macos-x64-darwin)",
+    "Independent NativeAOT invocation (ubuntu-24.04)",
+    "Independent NativeAOT invocation (windows-2022)",
+    "Independent NativeAOT invocation (macos-15-intel)",
+    "Independent Wasm invocation (ubuntu-24.04, interpreter)",
+    "Independent Wasm invocation (ubuntu-24.04, aot)",
+    "Independent Wasm invocation (windows-2022, interpreter)",
+    "Independent Wasm invocation (windows-2022, aot)",
+    "Independent Wasm invocation (macos-15-intel, interpreter)",
+    "Independent Wasm invocation (macos-15-intel, aot)",
+    "Host test completeness (linux-x64-gnu)",
+    "Host test completeness (windows-x64-msvc)",
+    "Host test completeness (macos-x64-darwin)"
+  ],
+  "requireAllObservedJobsSuccessful": true,
+  "requireCleanFeatureInventory": true,
+  "featureBaseline": "eng/acceptance/feature-baseline.json",
+  "configurationBaseline": "eng/acceptance/configuration-baseline.json",
+  "requiredFeatureEvidence": [
+    {
+      "artifact": "release-feature-evidence-linux-x64-gnu",
+      "host": "linux-x64"
+    },
+    {
+      "artifact": "release-feature-evidence-windows-x64-msvc",
+      "host": "windows-x64"
+    },
+    {
+      "artifact": "release-feature-evidence-macos-x64-darwin",
+      "host": "macos-x64"
+    }
+  ],
+  "requireProductPackageInstallation": true,
+  "productPackageWorkflow": "packages.yml",
+  "requiredProductPackageJobNames": [
+    "Installed BGCS products (ubuntu-24.04)",
+    "Installed BGCS products (windows-2022)",
+    "Installed BGCS products (macos-15-intel)",
+    "Installed BGCS products (windows-2025-vs2026)"
+  ],
+  "requiredProductEvidence": [
+    {
+      "artifact": "product-package-evidence-ubuntu-24.04",
+      "hostRid": "linux-x64"
+    },
+    {
+      "artifact": "product-package-evidence-windows-2022",
+      "hostRid": "win-x64"
+    },
+    {
+      "artifact": "product-package-evidence-macos-15-intel",
+      "hostRid": "osx-x64"
+    },
+    {
+      "artifact": "product-package-evidence-windows-2025-vs2026",
+      "hostRid": "win-x64",
+      "requireVs2026": true
+    }
+  ],
+  "globalFeatureProofs": {
+    "desktop-browser-nativeaot": {
+      "requiredReports": [
+        "installed-native-aot-full-abi-cpp-and-lifetime-matrix",
+        "installed-wasm-interpreter-full-import-matrix",
+        "installed-wasm-aot-full-import-matrix"
+      ],
+      "hosts": {
+        "linux-x64": {
+          "hostRid": "linux-x64",
+          "artifact": "product-package-evidence-ubuntu-24.04",
+          "jobs": [
+            "Build and test (linux-x64-gnu)",
+            "BGCS acceptance (linux-x64-gnu)",
+            "Independent NativeAOT invocation (ubuntu-24.04)",
+            "Independent Wasm invocation (ubuntu-24.04, interpreter)",
+            "Independent Wasm invocation (ubuntu-24.04, aot)",
+            "Host test completeness (linux-x64-gnu)"
+          ]
+        },
+        "windows-x64": {
+          "hostRid": "win-x64",
+          "artifact": "product-package-evidence-windows-2022",
+          "jobs": [
+            "Build and test (windows-x64-msvc)",
+            "BGCS acceptance (windows-x64-msvc)",
+            "Independent NativeAOT invocation (windows-2022)",
+            "Independent Wasm invocation (windows-2022, interpreter)",
+            "Independent Wasm invocation (windows-2022, aot)",
+            "Host test completeness (windows-x64-msvc)"
+          ]
+        },
+        "macos-x64": {
+          "hostRid": "osx-x64",
+          "artifact": "product-package-evidence-macos-15-intel",
+          "jobs": [
+            "Build and test (macos-x64-darwin)",
+            "BGCS acceptance (macos-x64-darwin)",
+            "Independent NativeAOT invocation (macos-15-intel)",
+            "Independent Wasm invocation (macos-15-intel, interpreter)",
+            "Independent Wasm invocation (macos-15-intel, aot)",
+            "Host test completeness (macos-x64-darwin)"
+          ]
+        }
+      }
+    }
+  }
+}

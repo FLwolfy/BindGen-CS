@@ -1,0 +1,38 @@
+{
+  "legacyFixture": "entryTests/BaseConfig",
+  "legacyVariant": "config",
+  "configuration": {
+    "/api/namespace": "Expected.FromBase",
+    "/api/name": "BaseApi",
+    "/library/nativeName": "base-lib",
+    "/output/layout": "singleFile"
+  },
+  "types": [
+    {
+      "name": "Expected.FromBase.BaseApi",
+      "kind": "Class"
+    }
+  ],
+  "methods": [
+    {
+      "type": "Expected.FromBase.BaseApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "contains": [
+    "\"base-lib\"",
+    "EntryPoint = \"sample_add\""
+  ],
+  "absentTypes": [
+    "Expected.FromBase.EntryApi"
+  ]
+}

@@ -8,101 +8,75 @@ namespace BGCS.Tool.Tests;
 public sealed class SchemaCommandTests
 {
     [Fact]
-    public void Run_DefaultSchema_RejectsUnknownPropertiesAndDescribesCoreFields()
+    public void BindingSchema_UsesStrictGroupedDefaultsAndBothLanguages()
     {
-        using TestDirectory directory = new();
-
-        CommandResult result = Run(directory);
-
-        Assert.Equal(0, result.ExitCode);
-        using JsonDocument schema = directory.ReadJson("bindgen.schema.json");
-        JsonElement root = schema.RootElement;
-        Assert.False(root.GetProperty("additionalProperties").GetBoolean());
-        Assert.Equal("array", root.GetProperty("properties").GetProperty("entryFiles").GetProperty("type").GetString());
-        Assert.Contains("relative", root.GetProperty("properties").GetProperty("entryFiles").GetProperty("description").GetString(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("DllImport", root.GetProperty("properties").GetProperty("importType").GetProperty("enum").ToString(), StringComparison.Ordinal);
-        JsonElement externalTypes = root.GetProperty("properties").GetProperty("externalTypeContracts");
-        Assert.Equal("array", externalTypes.GetProperty("type").GetString());
-        JsonElement policy = externalTypes.GetProperty("items").GetProperty("properties").GetProperty("byValuePolicy");
-        Assert.Contains("RequireLayoutMatch", policy.GetProperty("enum").ToString(), StringComparison.Ordinal);
-        Assert.Contains("BypassLayoutValidation", policy.GetProperty("enum").ToString(), StringComparison.Ordinal);
-        Assert.False(root.GetProperty("properties").TryGetProperty("headerInjector", out _));
-    }
-
-    [Fact]
-    public void Run_CppKind_EmitsCppSpecificContract()
-    {
-        using TestDirectory directory = new();
-
-        CommandResult result = Run(directory, "--kind", "cpp");
-
-        Assert.Equal(0, result.ExitCode);
-        using JsonDocument schema = directory.ReadJson("bridge.schema.json");
-        JsonElement root = schema.RootElement;
-        Assert.Contains("C++ bridge", root.GetProperty("title").GetString(), StringComparison.Ordinal);
-        Assert.True(root.GetProperty("properties").TryGetProperty("templateInstantiations", out _));
-        Assert.True(root.GetProperty("properties").TryGetProperty("typeLowerings", out JsonElement typeLowerings));
-        Assert.Equal("array", typeLowerings.GetProperty("type").GetString());
-        Assert.True(root.GetProperty("properties").TryGetProperty("nativeShims", out _));
-        JsonElement csharpSafety = root.GetProperty("properties").GetProperty("cSharpStrictSafetySeverity");
-        Assert.Contains("SuppressFriendly", csharpSafety.GetProperty("enum").ToString(), StringComparison.Ordinal);
-        Assert.Equal("SuppressFriendly", csharpSafety.GetProperty("default").GetString());
-        Assert.Contains("AllowUnsafe", root.GetProperty("properties").GetProperty("loweringSafetyPolicy").GetProperty("enum").ToString(), StringComparison.Ordinal);
-        Assert.Equal("entryFiles", root.GetProperty("required")[0].GetString());
-    }
-
-    [Fact]
-    public void Run_AllowUnknownProperties_IsExplicitOptOut()
-    {
-        using TestDirectory directory = new();
-
-        CommandResult result = Run(directory, "custom.schema.json", "--allow-unknown-properties");
-
-        Assert.Equal(0, result.ExitCode);
-        using JsonDocument schema = directory.ReadJson("custom.schema.json");
-        Assert.True(schema.RootElement.GetProperty("additionalProperties").GetBoolean());
-    }
-
-    [Fact]
-    public void Run_InvalidKind_FailsWithoutWritingSchema()
-    {
-        using TestDirectory directory = new();
-
-        CommandResult result = Run(directory, "--kind", "rust");
-
-        Assert.Equal(2, result.ExitCode);
-        Assert.Contains("c, cpp", result.Error, StringComparison.Ordinal);
-        Assert.False(File.Exists(directory.Resolve("bindgen.schema.json")));
-    }
-
-    private static CommandResult Run(TestDirectory directory, params string[] args)
-    {
-        using StringWriter output = new();
-        using StringWriter error = new();
-        int exitCode = CliInvocation.Run(["schema", .. args], directory.Path, output, error);
-        return new(exitCode, output.ToString(), error.ToString());
-    }
-
-    private sealed record CommandResult(int ExitCode, string Output, string Error);
-
-    private sealed class TestDirectory : IDisposable
-    {
-        public TestDirectory()
+        WithDirectory(directory =>
         {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "bgcs-schema-tests-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path);
-        }
+            Assert.Equal(0, Run(directory));
+            using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "bindgen.schema.json")));
+            JsonElement root = schema.RootElement;
+            Assert.False(root.GetProperty("additionalProperties").GetBoolean());
+            JsonElement properties = root.GetProperty("properties");
+            Assert.False(properties.TryGetProperty("entryFiles", out _));
+            JsonElement api = properties.GetProperty("api").GetProperty("properties");
+            Assert.Equal("functionTable", api.GetProperty("importMode").GetProperty("default").GetString());
+            Assert.Equal("instance", api.GetProperty("style").GetProperty("default").GetString());
+            Assert.Equal("net10.0", api.GetProperty("framework").GetProperty("const").GetString());
+            JsonElement managedEnum = api.GetProperty("enums").GetProperty("items");
+            Assert.Equal("[\"name\",\"underlyingType\",\"values\"]", JsonSerializer.Serialize(managedEnum.GetProperty("required")));
+            string enumKinds = managedEnum.GetProperty("properties").GetProperty("underlyingType").GetProperty("enum").ToString();
+            Assert.DoesNotContain("unknown", enumKinds, StringComparison.Ordinal);
+            Assert.Contains("uInt64", enumKinds, StringComparison.Ordinal);
+            Assert.Contains("cpp", properties.GetProperty("source").GetProperty("properties").GetProperty("language").GetProperty("enum").ToString());
+            Assert.True(properties.TryGetProperty("semantics", out _));
+            Assert.True(properties.TryGetProperty("extensions", out _));
+        });
+    }
 
-        public string Path { get; }
-
-        public string Resolve(string relativePath) => System.IO.Path.Combine(Path, relativePath);
-
-        public JsonDocument ReadJson(string relativePath) => JsonDocument.Parse(File.ReadAllText(Resolve(relativePath)));
-
-        public void Dispose()
+    [Fact]
+    public void PluginSchema_ExportsTheActualStrictManifestContract()
+    {
+        WithDirectory(directory =>
         {
-            if (Directory.Exists(Path))
-                Directory.Delete(Path, true);
-        }
+            Assert.Equal(0, Run(directory, "--kind", "plugin"));
+            using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "plugin.schema.json")));
+            Assert.Equal("object", schema.RootElement.GetProperty("type").GetString());
+            Assert.Equal(1, schema.RootElement.GetProperty("properties").GetProperty("schemaVersion").GetProperty("const").GetInt32());
+            Assert.Equal(3, schema.RootElement.GetProperty("properties").GetProperty("plugin").GetProperty("properties").GetProperty("contractsMajor").GetProperty("const").GetInt32());
+        });
+    }
+
+    [Fact]
+    public void WorkspaceSchema_RequiresANonNullVersionedObject()
+    {
+        WithDirectory(directory =>
+        {
+            Assert.Equal(0, Run(directory, "--kind", "workspace"));
+            using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "workspace.schema.json")));
+            Assert.Equal("object", schema.RootElement.GetProperty("type").GetString());
+            Assert.Equal(1, schema.RootElement.GetProperty("properties").GetProperty("schemaVersion").GetProperty("const").GetInt32());
+        });
+    }
+
+    [Theory]
+    [InlineData("--allow-unknown-properties")]
+    [InlineData("--kind", "rust")]
+    [InlineData("--kind", "cpp")]
+    public void UnsupportedSchemaOptions_DoNotWriteOutput(params string[] args)
+    {
+        WithDirectory(directory =>
+        {
+            Assert.Equal(2, Run(directory, args));
+            Assert.Empty(Directory.GetFiles(directory));
+        });
+    }
+
+    private static int Run(string directory, params string[] args) => CliInvocation.Run(["schema", .. args], directory, TextWriter.Null, TextWriter.Null);
+    private static void WithDirectory(Action<string> action)
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "bgcs-schema-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try { action(directory); }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 }

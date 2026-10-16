@@ -1,56 +1,73 @@
-# BindGen-CS 工程成熟度审计
+# BGCS 3.0 七项工程评估
 
-[English](assessment.md) | [能力矩阵](capabilities.cn.md) | [验收规范](acceptance.cn.md) | [路线图](roadmap.cn.md)
+[English](assessment.md) | [能力与边界](capabilities.cn.md) | [验收](acceptance.cn.md)
 
-审计日期：2026-09-24。
+评估日期：2026-10-16。依据是当前源码、公开接口审阅和记录明确的本地检查点，
+不是已经完成的 3.0.0 发布认证。不再沿用旧架构的 macOS 报告或主观分数。
+最终结论必须等待同 revision 首发矩阵、干净安装和发布门禁。
 
-## 结论
+## 当前判断
 
-BindGen-CS 已经是一个**在声明语义范围内很强的维护候选 C/C++ → C# 工具链**，不是简单的 header-to-`DllImport` 脚本。唯一 C# 路径已经 IR-native；高级桌面 C++ lowering、lifetime contract、真实 native invocation、确定性 packaging、API/dependency gate 与 OIDC 签名发布 workflow 均已实现。
+BGCS 3.0 的分层、扩展接口与安全策略有实质实现和回归证据。它已经能处理丰富的 C ABI
+和一组明确的 C++ 协议，但还不能据此宣布“所有功能在所有平台完全成熟”，也不能把目录
+拆分完成等同于进入维护状态。
 
-当前本机 `macos-arm64-darwin` 完整报告的十个强制分类均已达到 9.0/10。报告记录了未提交的工作区改动，因此正式发布结论仍需同一提交的 runner 矩阵。
+| 维度 | 当前评估 | 仍需正视的限制 |
+| --- | --- | --- |
+| 功能 | C/C++、三种 import、两种 Runtime 交付、实例/静态、插件、缓存、工作区和 MSBuild 有统一实现；复杂生命周期有实际 fixture。 | Raw、native holder 与友好托管投影的能力不同。任意模板、容器结果和未知 ownership 不会自动解决。功能 inventory 必须保留逐项当前证据。 |
+| 代码优雅 | 不可变模型、有限类型化操作、明确失败路径和生成契约复核提升了可读性和可审查性；源码风格/API 门禁能约束回归。 | 复杂 ABI 与生命周期必然带来较多 planner/verifier/cleanup 代码。风格通过不是简洁或可维护性的数学证明，公共辅助面也需要长期契约维护。 |
+| 架构整洁 | 十三个实现工程有依赖门禁；Frontend 的普通公开面已收敛，中立分析和 C# backend 不持有 Clang AST；Host 统一编排。 | 仍需持续防止 Host 变成所有语义的归属处。实现工程公开 helper 的增加要经过审阅，不能借友元或共享生产源码绕边界。 |
+| 可扩展性 | 标准插件仅依赖 Contracts，支持源码输入、目标、变换、lowering、projection/backend、产物处理、验证和构建。扩展状态和外部输入参与缓存。 | 插件必须遵守形状、ownership、证据及指纹协议。高级 AST 插件刻意依赖精确解析器版本，并限制在 worker，不是同样稳定的普通端口。 |
+| 使用简易性 | 普通用户使用分组配置及 init/doctor/validate/generate/build，C++ 自动串联 bridge；默认实例、FunctionTable、分文件，MSBuild 显式启用。 | SDK/编译器仍须安装；复杂 C++ 项目必须配置编码、allocator、模板实例、生命周期和 native build。不能承诺所有库只填一个头文件。 |
+| 解耦性 | NativeModule、CppBridgeModule、InteropModule、ManagedApiModel 分离事实、桥接、ABI、托管呈现；进程协议隔离解析崩溃；Runtime 不带生成器。 | 换 frontend 必须提供同等完整的事实；换 ABI/provider 必须增加真实证明。接口解耦不会消除底层平台差异或证据要求。 |
+| 跨平台性 | 宿主、目标、工具链、SDK、ABI、托管 runtime、import 分离；desktop/AOT/browser 有不同机制，GNU/musl 等资产不能混同。 | 只有同 revision 平台矩阵通过才可认证。Browser 非阻塞模式下拥有型 C++ virtual registration 当前仍省略，其他平台/浏览器也不能从 Windows/Chromium 推定。 |
 
-但当前 revision 还不能称为“所有桌面平台生产支持”。Windows x64、Linux x64、macOS x64 必须分别生成同版本完整报告；Windows 还必须证明 clang-cl 与 MSBuild runtime invocation。真实 OIDC/Sigstore 签名仍只能由 release runner 提供。下游项目自行拥有 binding 配置与集成验收。
+这些维度不能用平均分抵消未通过的发布门禁。源码完整、本地测试和 release 认证应分别记录。
 
-## 量化判断
+## 1. 如何扩展
 
-| 维度 | 当前判断 | 证据与扣分原因 |
-| --- | ---: | --- |
-| 已支持 C ABI 正确性 | 代码质量 9.0/10 | 真实库、layout、compile、invocation、snapshot 与严格诊断；desktop-x64 报告仍待完成 |
-| 已支持 C++ Bridge 子集 | 代码质量 9.0/10 | lifecycle、继承 adjustment、specialization、所需 STL lowering、smart pointer、callback 均有测试；未知语义 fail-closed |
-| 易用性 | 9.0/10 | `init → doctor → validate → generate → build`、workspace、schema、explain、配置相对路径和事务输出 |
-| 可扩展性 | 9.3/10 | 最终 lowering contract、声明式 recipe、type/callable/artifact plugin SPI、显式 C shim、安全策略、确定性优先级、隔离与 cache fingerprint |
-| 性能与确定性 | 9.0/10 | 10,000 declarations 冷/热预算、内容寻址缓存、并发发布、删除输出后恢复和稳定 hash |
-| 架构完成度 | 9.0/10 | IR-native raw/friendly 是唯一路径；预发布 fallback 与旧配置迁移已删除 |
-| 全球跨平台证据 | 尚未验收 | Windows x64、Linux x64、macOS x64 同版本报告仍是硬门槛 |
-| 任意 C++ 语言覆盖 | 明确有边界 | 受控子集很强；任意模板元编程和未声明 allocator/container 语义会被拒绝 |
-| 发布供应链 | 本地自动化 9.0/10；签名待执行 | deterministic NuGet、native-RID consumer、SPDX/SLSA、API/license/vulnerability gate；OIDC workflow 就绪，真实签名需要授权 release run |
+普通扩展项目引用 `BGCS.Contracts`，实现所需端口并通过 `IBindingPlugin` 注册。
+例如，新类型语义进入 `ICppTypeLowering`，变更托管呈现进入 `IManagedApiTransform`，
+补充原生/托管源码进入 `ISourceContributor`，新目标进入 `INativeTargetProvider`，
+新构建方式进入 `INativeBuildProvider`。仅需要有限 C++ 转换时，可以先选 recipe 或 native shim。
 
-这些分数不进行平均后冒充发布分数。发布 gate 仍采用[验收规范](acceptance.cn.md)的规则：每个声明 target 的每一个分类都必须单独达到 9.0。
+插件 manifest 声明契约范围、服务身份/优先级、设置 schema 和锁定资源；实际服务工厂按会话
+创建并释放。通过 `ICacheFingerprintProvider` 声明状态与外部输入，无完整指纹时相应缓存
+不会复用。CLI、SDK、workspace、MSBuild 读取同一配置。完整步骤与可运行示例见
+[扩展](extensibility.cn.md)、[C++ 手册](cpp-extension-cookbook.cn.md)。
 
-## 本轮五项工作的真实状态
+需要 AST 专属事实时才使用 `IClangFactContributor`：它依赖完整 SDK 的精确 Clang 高级面，
+只在隔离 worker 执行，借用句柄不能跨出贡献调用。普通插件不必承担这些依赖。
 
-| 功能 | 状态 | 已有验收 | 尚需完成才可关闭 |
-| --- | --- | --- | --- |
-| C# 路径完全 IR-native | 完成 | raw ABI、string/span/ref/out friendly、fail-closed、last-good、schema/init tests；旧 emitter 已删除 | 持续扩大真实库 API snapshots |
-| 最终 C++ lowering 架构 | 已完成 | recipe 真实调用、外部 plugin E2E、显式 shim build/export/invocation、managed/native artifact、API-shape、确定性排序、重复拒绝、built-in 同 registry | 持续扩展当前 contract；不存在预发布 adapter compatibility |
-| Native build providers 与 export inspection | 桌面产物编排完成 | provider/export gates；NuGet `runtimes/<rid>/native` 与 SHA-256 index | 在 Windows 执行 clang-cl/MSBuild runtime gate |
-| Desktop-x64 验收 | 自动化已就绪、证据待产出 | 独立 GNU/MSVC/Darwin x64 runner 与隔离报告 | 三个 job 必须在同一 revision 通过；dry-run/cross compile 不能计分 |
-| 增量缓存、大项目预算、稳定插件契约 | 当前预发布 contract 已完成 | fingerprint、原子 immutable cache、并发/10k/plugin E2E 和 reviewed API baseline | Workspace DAG、共享 parser cache 和内存趋势属于后续扩展 |
+## 2. 跨平台是否充分
 
-## 为什么它已经很强
+平台模型不是用一个 `isWindows` 或 `isWasm` 拼接出来的；解析使用宿主 worker，头文件和
+布局使用目标 SDK/ABI，原生 provider 使用实际编译器，生成策略使用 runtime/import 能力。
+MSVC/GNU 等实际预处理及独立 native proof 用来检查最终构建没有改变声明、布局或常量。
 
-- 正确性优先：无法证明 ownership、allocator、callback lifetime 或 C++ lowering 时给出稳定诊断，而不是生成看似能编译的错误 ABI。
-- 工程闭环：生成、编译、native invocation、API snapshot、确定性 package、clean native consumer 与供应链策略属于同一验收流程。
-- 所有高风险能力都通过通用 config、mapping、lowering recipe/plugin/shim、provider 与 gate 表达，没有 native-library-name 特判。
-- 扩展不会污染核心：第三方 lowering plugin 使用版本化 contract；其二进制、版本、shim 内容和状态参与缓存键。
-- 目标隔离：target、ABI、triple、sysroot、compiler、生成输出与 snapshot/report 绑定，避免一个宿主通过被误写成另一个 ABI 已验证。
+因此基础架构是认真实现的，某个平台的完整支持却仍取决于真实运行和包消费。跨平台合理的
+边界是：能证明的组合生成，不能证明的拒绝或要求 shim；不是为了列更多目标而假装 ABI 通用。
 
-## 达到“超级通用”的硬性剩余门槛
+## 3. 如何做到解耦
 
-1. 在 Windows x64、Linux x64、macOS x64、随后 Windows Arm64 执行同等级完整矩阵；Windows 还要真实执行 clang-cl/MSBuild provider。
-2. 每个 production target 保留独立当前版本 acceptance artifact；Android/iOS/FreeBSD 是正式支持目标，在实现与验收闭环前标记为 ⚠️。
-3. 在授权 release job 中真实执行 OIDC/Sigstore workflow，不以本地未签名 provenance 代替。
-4. workspace DAG/shared parser cache 属于后续性能演进，不阻塞当前声明的单 workspace 能力。
+Frontend 只构建中立原生事实；Analysis 判断选择、布局、语义和安全；Cpp2C 把 C++ 降为可复核
+的 C ABI；CSharp 从 interop/managed 模型生成；NativeBuild 负责构建/资产；Runtime 负责调用
+与生命周期。Host 组合它们，CLI/MSBuild 只把请求接入同一个入口。
 
-因此最准确的产品结论是：**BindGen-CS 在显式 C/C++ contract 内已经架构清晰、功能强且易用；通用维护发布状态仍需要三份 desktop-x64 报告与一次真实签名 release run。**
+Contracts/Runtime 无其他 BGCS 工程依赖；普通 lowering 不引用 Clang；解析在 worker 中。
+注册顺序、输入与配置冻结，扩展结果还会经过独立契约复核。解耦依靠这些数据和执行边界，
+不是依靠增加目录。唯一的 Frontend.Tests 友元已登记，生产友元仍被门禁拒绝。
+
+## 4. 大多数 C/C++ 库是否能轻松绑定
+
+公开接口为普通 C ABI、固定参数、可表达结构布局的库通常最直接。原始导入往往少量配置即可
+生成；想获得 string/Span/owned object 等友好 API，还须提供头文件没有表达的语义。
+
+C++ 需要区分“可生成 C ABI bridge”与“无需设计就成为自然 C# API”。常见对象、继承、具体
+模板实例和已支持的标准协议已有路径；复杂模板、allocator、retained callback、异步取消、
+第三方容器及不明生命周期通常需要项目配置、lowering 或 shim。没有调查范围与真实库证据，
+不能给出“大多数 C++ 库都能轻松”的比例保证。受控 CPU fixture 的通过也不证明整个 GUI、
+音频设备或 GPU 渲染系统都已绑定验收。
+
+正确的完成标准仍是：针对要交付的库生成完整源码，warnings-as-errors 编译，真实 native
+链接/调用，干净包消费，并把这些结果和准确功能范围绑定到同一 revision。

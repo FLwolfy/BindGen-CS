@@ -1,0 +1,23 @@
+{
+  "legacyFixture": "entryTests/EnumNamingConvention",
+  "legacyVariant": "config.pascal",
+  "configuration": {
+    "/api/naming/enumerations/casing": "pascal"
+  },
+  "types": [
+    {
+      "name": "EntryTests.Generated.SampleMode",
+      "kind": "Enum"
+    }
+  ],
+  "constants": [
+    {
+      "type": "EntryTests.Generated.SampleMode",
+      "name": "sample_mode_on",
+      "value": 1
+    }
+  ],
+  "absentTypes": [
+    "EntryTests.Generated.sampleMode"
+  ]
+}

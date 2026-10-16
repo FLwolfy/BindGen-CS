@@ -1,0 +1,1643 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "releaseReady": false,
+  "sourceRetirementIsParityCertification": false,
+  "state": "sourceCorrespondenceOnly",
+  "oldInheritedDeclaredMethods": 145,
+  "alreadyLinkedByFiveGroupedPortLedgers": 83,
+  "additionalAssertionMappings": 62,
+  "baselineSources": [
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedExtensions/AllowedExtensionsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "164add2dd6cc24bf79b4321b95edfd5c6d4596e9dfa269515eb7ce0a7efd7773"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AllowedTypedefs/AllowedTypedefsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "9590f4131a733b6f738abb898a64385116555c1eef5fa529887794264a9468a8"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AutoSquashTypedef/AutoSquashTypedefEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "f3a76879b607e53c029f6540886019824bf6f9ab80c0f11712d8e9c4a1369bda"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/AutoWrapCallbacks/AutoWrapCallbacksEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "b39ccf5bc0c3c467ca07c9d143574aa7513a986b7bc0ec2339be795f1ba43cbf"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/BaseConfig/BaseConfigEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "261e71bdb7cca7d8b477ff5c865fe53a6986a6fbd03c2c8fc84a60c1506c7318"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/BoolType/BoolTypeEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "7031da0a4a86bb05c1fa16a8a1b937b64db2ac5b8eeb064ee39e990cf153a88b"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/CppLogLevel/CppLogLevelEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "bdec1e6f63eb626f58ac8b8cbca15521bfc7f2db93da957301dfb3cd032a1899"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/CustomEnums/CustomEnumsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "d0ec0e1abe44dcb25d1d0227c55dc897a2bcfc02ebdef1e15245a33acae70691"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/DelegatesAsVoidPointer/DelegatesAsVoidPointerEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "0b958a54254008bedf47667dcf42181ed8a6fae5759822010731aae2f313f0f5"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/EnableExperimentalOptions/EnableExperimentalOptionsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "ade4bbc68f6a74f308f6f95690efb24cf88ba60cd9d6ebc18b6aa03bc62ae41b"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/ExtensionNamingConvention/ExtensionNamingConventionEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "b9324ec2b734acb41d5b31c341a72cb38ddd225efa05b7fd80f807b0989de7e0"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/FunctionContainerMappings/FunctionContainerMappingsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "3d1af9efe5e665f83b51ed4c8bea416e51a830aa21d4b7d833ef6e5b55b0b487"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/FunctionTableEntries/FunctionTableEntriesEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "8efd8e06a103c9aa5d1c42965849af2bbd163d108eaab185862ffbabdf55186b"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateAdditionalOverloads/GenerateAdditionalOverloadsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "3dd2e45b13282e3b0b6c0ea9e3b956326e8525312e5b8e60c29e49f70a9f1d79"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateExtensions/GenerateExtensionsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "af4d87a0d91a30a5f5071004622f49ba1c63a518deee6b12562490e1a69377fe"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateHandles/GenerateHandlesEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "99c04992a1f853fa8a263ed4ac1457cb6e08e0634e0026b832038fe233031f04"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GenerateMetadata/GenerateMetadataEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "34660c38c3a7f9e0c65505e5107efd035de66d89bc321a47e67b7a002bdbec80"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryExtensionFunctionName/GetLibraryExtensionFunctionNameEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "6530ea4b7938199dc0704789ad5f94edcfbb63ee3dab68ba7cfafc8ab841a716"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryNameFunctionName/GetLibraryNameFunctionNameEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "823357ce52522f910b1ba33fed538ef2f4a56191871c9db67f5e677148af90a3"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/HandleNamingConvention/HandleNamingConventionEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "531b5a68d4b95a08ea4705954aed9d66f4d509519957a1387f437aafb43b0594"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredExtensions/IgnoredExtensionsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "cd0b4d353bc0faefe298a2a6746581d67b803239d953d354a8239bd2fb82c624"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/IgnoredTypedefs/IgnoredTypedefsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "300f67ebf34b2e1d516c73694017de3f5f24ee9c325bbc7d91e11abac0aeb885"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/Keywords/KeywordsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "f817ce59780cf756b62a380fc6be929899b159c7db0420e5749990652b8dd0ad"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownConstructors/KnownConstructorsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "974910ec32eb82584e04cd560aa7eff0a9803e372c667c9dd511b513c0ae74c8"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionNames/KnownExtensionNamesEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "9716ce06e63373bb13d93e79788d2bca0ba2fae7a5e74bbaeac8f3bf0b6e321c"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionPrefixes/KnownExtensionPrefixesEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "1db93f9aee8edba699424f795fe183f48e77b4a5bc795daa984369381a70841a"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/KnownMemberFunctions/KnownMemberFunctionsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "396d6543c792e6b4d639f979cc1a6927ccc8677427cb1701620258e4287e6bfa"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/LogLevel/LogLevelEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "a39b5d9107a2b6ed8acade607a6cef1c765af0f90f61f2333ea135617b8f264c"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/OneFilePerType/OneFilePerTypeEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "4ab375152e8464923405354030afa31eb237c7a0ed4f02c2db9c3aab5140025f"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/TypeFieldMappings/TypeFieldMappingsEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "b281c956e04135bcee212a6e1a2eb509614a4bc257dea71b88675c3a3e1f9755"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/UseCustomContext/UseCustomContextEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "44c729e5053bd2f9cd3c63265eb49ef08bc1b2c62ea07098ba3f2f8535b7243b"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/VaryingTypes/VaryingTypesEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "31ef997223afb180907ee3fd70dad1f59f406aab8f576e6b8065e9288e628ef1"
+    },
+    {
+      "path": "tests/BGCS.Configuration.Tests/entryTests/WrapPointersAsHandle/WrapPointersAsHandleEntryTests.cs",
+      "baselineGitRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+      "baselineSha256": "3989b658efdc599fdb72f9170d5e7e737ac8418224c3f477c4c7ce652dc8997e"
+    }
+  ],
+  "rows": [
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/AllowedExtensions/AllowedExtensionsEntryTests.cs",
+      "legacyMethod": "AllowedExtensions_ParseHeaderResult_ShouldMatchExpected",
+      "family": "AllowedExtensions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_presentation_selection",
+      "replacementReason": "The old extension switch/allowlist is replaced by an explicit finite receiver presentation whitelist; raw calls and independently required cleanup remain available.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "OmittingNonowningViewsMustNotDisableAnIndependentlyRequiredOwnedReleaseProtocol",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Focused16 and grouped8 passed locally; consolidate exact original selection assertions into same-revision feature/config proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/AllowedTypedefs/AllowedTypedefsEntryTests.cs",
+      "legacyMethod": "AllowedTypedefs_ParseHeaderResult_ShouldMatchExpected",
+      "family": "AllowedTypedefs",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "family_scoped_source_selection",
+      "replacementReason": "Alias identity is selected in its declaration family; required native storage remains in the dependency closure and cannot be removed to satisfy a filter.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "TypedNamesResolveTagsBeforeTheirSameNamedTypedefs",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "CallableUseOfACoNamedAliasStillRequiresItsExcludedTagStorage",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Link the original scalar alias inclusion/exclusion fixture to explicit category rules; do not count a required-storage refusal as output parity."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/AutoSquashTypedef/AutoSquashTypedefEntryTests.cs",
+      "legacyMethod": "AutoSquashTypedef_False_ShouldKeepTypedefInBindings",
+      "family": "AutoSquashTypedef",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "normalization_policy",
+      "replacementReason": "Raw signatures use canonical ABI carriers while detached native aliases retain identity. Old using AliasInt=int directives were file-local syntax, not independently public CLR types.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Worker.Tests/WorkerRoundTripTests.cs",
+          "method": "NativeStorageFacts_PreserveArrayAliasAndPointerAlignment",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "ExactIdsDoNotRebindToANameInTheRequestedFamily",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/LegacyConfigurationStorageParityTests.cs",
+          "method": "ScalarAliasChainsKeepNativeIdentityAndCanonicalRawSignatures",
+          "methodVerified": true,
+          "proofStatus": "focusedPassedDirtyCheckpoint",
+          "receipt": "artifacts/implementation/test-results/csharp-full-retired-context-receivers.trx"
+        }
+      ],
+      "remainingAcceptance": "Consolidate a source alias-chain signature regression and explicitly record the replacement of the old cosmetic squash toggle.",
+      "localFocusedStatus": "focusedReplacementPassed; policy and same-revision release consolidation remain separate"
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/AutoSquashTypedef/AutoSquashTypedefEntryTests.cs",
+      "legacyMethod": "AutoSquashTypedef_True_ShouldSquashTypedefInBindings",
+      "family": "AutoSquashTypedef",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "normalization_policy",
+      "replacementReason": "Raw signatures use canonical ABI carriers while detached native aliases retain identity. Old using AliasInt=int directives were file-local syntax, not independently public CLR types.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Worker.Tests/WorkerRoundTripTests.cs",
+          "method": "NativeStorageFacts_PreserveArrayAliasAndPointerAlignment",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "ExactIdsDoNotRebindToANameInTheRequestedFamily",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/LegacyConfigurationStorageParityTests.cs",
+          "method": "ScalarAliasChainsKeepNativeIdentityAndCanonicalRawSignatures",
+          "methodVerified": true,
+          "proofStatus": "focusedPassedDirtyCheckpoint",
+          "receipt": "artifacts/implementation/test-results/csharp-full-retired-context-receivers.trx"
+        }
+      ],
+      "remainingAcceptance": "Consolidate a source alias-chain signature regression and explicitly record the replacement of the old cosmetic squash toggle.",
+      "localFocusedStatus": "focusedReplacementPassed; policy and same-revision release consolidation remain separate"
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/AutoWrapCallbacks/AutoWrapCallbacksEntryTests.cs",
+      "legacyMethod": "AutoWrapCallbacks_False_ShouldNotGenerateCallbackHolder",
+      "family": "AutoWrapCallbacks",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_lifetime_policy",
+      "replacementReason": "Implicit static callback roots are replaced by declared call/registration/operation lifetime, native unregister/quiescence and matching failure protocols.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/CallScopedCallbackTests.cs",
+          "method": "UnknownOrIncompatibleContractsPreserveRawAndExplainTheMissingManagedWrapper",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/RetainedCallbackTests.cs",
+          "method": "MissingOrIncompatibleNativeGuaranteesPreserveRawWithoutOwningRegistration",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeRetainedCallbackTests.cs",
+          "method": "RealNativeThreadsRetainStateUntilFullJoinAndSelfCloseNeverJoinsItsOwnFrame",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "old unsafe automatic retention is not restored."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/AutoWrapCallbacks/AutoWrapCallbacksEntryTests.cs",
+      "legacyMethod": "AutoWrapCallbacks_True_ShouldGenerateCallbackHolder",
+      "family": "AutoWrapCallbacks",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_lifetime_policy",
+      "replacementReason": "Implicit static callback roots are replaced by declared call/registration/operation lifetime, native unregister/quiescence and matching failure protocols.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/CallScopedCallbackTests.cs",
+          "method": "UnknownOrIncompatibleContractsPreserveRawAndExplainTheMissingManagedWrapper",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/RetainedCallbackTests.cs",
+          "method": "MissingOrIncompatibleNativeGuaranteesPreserveRawWithoutOwningRegistration",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeRetainedCallbackTests.cs",
+          "method": "RealNativeThreadsRetainStateUntilFullJoinAndSelfCloseNeverJoinsItsOwnFrame",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "old unsafe automatic retention is not restored."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/BaseConfig/BaseConfigEntryTests.cs",
+      "legacyMethod": "BaseConfig_SourceMappedCallerPath_UsesCopiedFixtures",
+      "family": "BaseConfig",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "declaring_input_identity",
+      "replacementReason": "Composition resolves every path from its declaring document and never changes process current directory.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/GroupedConfigurationCompositionTests.cs",
+          "method": "Composition_PreservesPrecedenceFalseListsAndEveryDeclaringPathBase",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "The removed CallerFilePath/copied-fixture harness assertion is test infrastructure, not a generator API. Preserve grouped fixture path-base assertion and source snapshot proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/BoolType/BoolTypeEntryTests.cs",
+      "legacyMethod": "BoolType_Bool32_ParseHeaderResult_ShouldMatchExpected",
+      "family": "BoolType",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "raw_abi_policy",
+      "replacementReason": "Compiler-established boolean width stays exact at Raw; friendly methods normalize bool. A global Bool32 carrier cannot change a one-byte native bool ABI.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeCBooleanTests.cs",
+          "method": "CBooleanValuesNormalizeAtFriendlyBoundaryAndPreserveByteStorage",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/LegacyConfigurationStorageParityTests.cs",
+          "method": "AGlobalFourByteCarrierCannotReplaceCompilerProvenOneByteBooleanStorage",
+          "methodVerified": true,
+          "proofStatus": "focusedPassedDirtyCheckpoint",
+          "receipt": "artifacts/implementation/test-results/csharp-full-retired-context-receivers.trx"
+        }
+      ],
+      "remainingAcceptance": "Record old Bool8/Bool32 surface choice as an explicit ABI policy change; preserve Runtime Bool8/Bool32 independent functionality and actual native bool values.",
+      "localFocusedStatus": "focusedReplacementPassed; policy and same-revision release consolidation remain separate"
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/BoolType/BoolTypeEntryTests.cs",
+      "legacyMethod": "BoolType_Bool8_ParseHeaderResult_ShouldMatchExpected",
+      "family": "BoolType",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "raw_abi_policy",
+      "replacementReason": "Compiler-established boolean width stays exact at Raw; friendly methods normalize bool. A global Bool32 carrier cannot change a one-byte native bool ABI.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeCBooleanTests.cs",
+          "method": "CBooleanValuesNormalizeAtFriendlyBoundaryAndPreserveByteStorage",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/LegacyConfigurationStorageParityTests.cs",
+          "method": "AGlobalFourByteCarrierCannotReplaceCompilerProvenOneByteBooleanStorage",
+          "methodVerified": true,
+          "proofStatus": "focusedPassedDirtyCheckpoint",
+          "receipt": "artifacts/implementation/test-results/csharp-full-retired-context-receivers.trx"
+        }
+      ],
+      "remainingAcceptance": "Record old Bool8/Bool32 surface choice as an explicit ABI policy change; preserve Runtime Bool8/Bool32 independent functionality and actual native bool values.",
+      "localFocusedStatus": "focusedReplacementPassed; policy and same-revision release consolidation remain separate"
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/CppLogLevel/CppLogLevelEntryTests.cs",
+      "legacyMethod": "CppLogLevel_Error_RetainsWarningsForTheGenerationResult",
+      "family": "CppLogLevel",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "diagnostic_presentation_policy",
+      "replacementReason": "Console thresholds affect display while structured warnings remain available and errors cannot become successful results.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "FrontendThreshold_OnlyFiltersConsoleAndPreservesStructuredWarnings",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "NoneThreshold_CannotHideErrorsOrTurnFailureIntoSuccess",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Require CLI exact threshold cases plus structured diagnostic evidence; do not conflate execution diagnostics promotion with log filtering."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/CppLogLevel/CppLogLevelEntryTests.cs",
+      "legacyMethod": "CppLogLevel_Warning_ShouldIncludeCppWarningDiagnostics",
+      "family": "CppLogLevel",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "diagnostic_presentation_policy",
+      "replacementReason": "Console thresholds affect display while structured warnings remain available and errors cannot become successful results.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "FrontendThreshold_OnlyFiltersConsoleAndPreservesStructuredWarnings",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "NoneThreshold_CannotHideErrorsOrTurnFailureIntoSuccess",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Require CLI exact threshold cases plus structured diagnostic evidence; do not conflate execution diagnostics promotion with log filtering."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/CustomEnums/CustomEnumsEntryTests.cs",
+      "legacyMethod": "CustomEnums_OmittedOptionalCollections_DeserializeAsEmpty",
+      "family": "CustomEnums",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "typed_optional_defaults",
+      "replacementReason": "Managed-only enums have immutable optional documentation and typed values; arbitrary attribute source strings are not accepted.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedEnumDocumentationTests.cs",
+          "method": "OptionalDocumentationRoundTripsWithoutChangingExplicitTypedValues",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/ManagedPresentationConfigurationTests.cs",
+          "method": "ExplicitFalseZeroAndEmptyDocumentationSurviveFreezing",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/ManagedEnumOptionalConfigurationParityTests.cs",
+          "method": "OmittedPresentationOptionsHaveTypedDefaultsAndNeverAdmitAttributeSourceStrings",
+          "methodVerified": true,
+          "proofStatus": "focusedPassedDirtyCheckpoint",
+          "receipt": "artifacts/implementation/test-results/neutral-plugin-registry-enum-ten.trx"
+        }
+      ],
+      "remainingAcceptance": "Consolidate omitted collections/default integral kind assertion; do not claim arbitrary legacy attribute-string emission is retained.",
+      "localFocusedStatus": "focusedReplacementPassed; policy and same-revision release consolidation remain separate"
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/DelegatesAsVoidPointer/DelegatesAsVoidPointerEntryTests.cs",
+      "legacyMethod": "DelegatesAsVoidPointer_False_ShouldGenerateFunctionPointerSignatures",
+      "family": "DelegatesAsVoidPointer",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "capability_and_exact_signature_policy",
+      "replacementReason": "Known callback prototypes retain typed raw ABI signatures. Opaque unsupported invocation addresses and Browser physical table-index imports are explicit validated capabilities; no user flag bypasses calling correctness.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
+          "method": "StandaloneDeclarationsCanBeOmittedWithoutChangingRawPointersOrTheCheckedCallScope",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/OpaqueCallbackAddressTests.cs",
+          "method": "AnUnsupportedCallbackInvocationRetainsOnlyAnOpaqueAddress",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PhysicalImportTests.cs",
+          "method": "BrowserAddressTransportKeepsTypedAliasesNullAndReturnedCallablesWithExactFinalGuards",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate old cosmetic/raw toggle disposition; Browser74+33 local proof is not installed or platform release certification."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/DelegatesAsVoidPointer/DelegatesAsVoidPointerEntryTests.cs",
+      "legacyMethod": "DelegatesAsVoidPointer_True_ShouldGenerateVoidPointerSignatures",
+      "family": "DelegatesAsVoidPointer",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "capability_and_exact_signature_policy",
+      "replacementReason": "Known callback prototypes retain typed raw ABI signatures. Opaque unsupported invocation addresses and Browser physical table-index imports are explicit validated capabilities; no user flag bypasses calling correctness.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
+          "method": "StandaloneDeclarationsCanBeOmittedWithoutChangingRawPointersOrTheCheckedCallScope",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/OpaqueCallbackAddressTests.cs",
+          "method": "AnUnsupportedCallbackInvocationRetainsOnlyAnOpaqueAddress",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PhysicalImportTests.cs",
+          "method": "BrowserAddressTransportKeepsTypedAliasesNullAndReturnedCallablesWithExactFinalGuards",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate old cosmetic/raw toggle disposition; Browser74+33 local proof is not installed or platform release certification."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/EnableExperimentalOptions/EnableExperimentalOptionsEntryTests.cs",
+      "legacyMethod": "EnableExperimentalOptions_False_ShouldMatchExpected",
+      "family": "EnableExperimentalOptions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "capability_and_exact_signature_policy",
+      "replacementReason": "Known callback prototypes retain typed raw ABI signatures. Opaque unsupported invocation addresses and Browser physical table-index imports are explicit validated capabilities; no user flag bypasses calling correctness.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
+          "method": "StandaloneDeclarationsCanBeOmittedWithoutChangingRawPointersOrTheCheckedCallScope",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/OpaqueCallbackAddressTests.cs",
+          "method": "AnUnsupportedCallbackInvocationRetainsOnlyAnOpaqueAddress",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PhysicalImportTests.cs",
+          "method": "BrowserAddressTransportKeepsTypedAliasesNullAndReturnedCallablesWithExactFinalGuards",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate old cosmetic/raw toggle disposition; Browser74+33 local proof is not installed or platform release certification."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/EnableExperimentalOptions/EnableExperimentalOptionsEntryTests.cs",
+      "legacyMethod": "EnableExperimentalOptions_True_ShouldMatchExpected",
+      "family": "EnableExperimentalOptions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "capability_and_exact_signature_policy",
+      "replacementReason": "Known callback prototypes retain typed raw ABI signatures. Opaque unsupported invocation addresses and Browser physical table-index imports are explicit validated capabilities; no user flag bypasses calling correctness.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
+          "method": "StandaloneDeclarationsCanBeOmittedWithoutChangingRawPointersOrTheCheckedCallScope",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/OpaqueCallbackAddressTests.cs",
+          "method": "AnUnsupportedCallbackInvocationRetainsOnlyAnOpaqueAddress",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PhysicalImportTests.cs",
+          "method": "BrowserAddressTransportKeepsTypedAliasesNullAndReturnedCallablesWithExactFinalGuards",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate old cosmetic/raw toggle disposition; Browser74+33 local proof is not installed or platform release certification."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/ExtensionNamingConvention/ExtensionNamingConventionEntryTests.cs",
+      "legacyMethod": "ExtensionNamingConvention_CamelCase_ShouldMatchExpected",
+      "family": "ExtensionNamingConvention",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/ExtensionNamingConvention/ExtensionNamingConventionEntryTests.cs",
+      "legacyMethod": "ExtensionNamingConvention_PascalCase_ShouldMatchExpected",
+      "family": "ExtensionNamingConvention",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/FunctionContainerMappings/FunctionContainerMappingsEntryTests.cs",
+      "legacyMethod": "FunctionContainerMapping_ShouldRouteFriendlyOverloadsAndKeepNativeStubsCentralized",
+      "family": "FunctionContainerMappings",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "checked_context_views",
+      "replacementReason": "Function containers forward through a captured explicit API context while aliases share the original exact import and lifetime plan.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeFunctionAliasTests.cs",
+          "method": "NativeAndConfiguredAliasesShareOneRealImportAndTheOriginalLifetimePlan",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original friendly overload-routing assertions with the existing native aliases/groups six-mode fixture."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/FunctionTableEntries/FunctionTableEntriesEntryTests.cs",
+      "legacyMethod": "FunctionTableEntries_Index0_ShouldMatchExpected",
+      "family": "FunctionTableEntries",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "runtime_protocol_adapter",
+      "replacementReason": "External native slot protocols are validated by a Runtime-only adapter that maps exact exported names to immutable addresses; reserved/scrambled slots are supported explicitly, missing entries rejected.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Local actual adapter1 covers scrambled slots and rejection; do not retain silent missing/duplicate-index normalization or infer ABI validity from address size."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/FunctionTableEntries/FunctionTableEntriesEntryTests.cs",
+      "legacyMethod": "FunctionTableEntries_Index7_ShouldMatchExpected",
+      "family": "FunctionTableEntries",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "runtime_protocol_adapter",
+      "replacementReason": "External native slot protocols are validated by a Runtime-only adapter that maps exact exported names to immutable addresses; reserved/scrambled slots are supported explicitly, missing entries rejected.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Local actual adapter1 covers scrambled slots and rejection; do not retain silent missing/duplicate-index normalization or infer ABI validity from address size."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/FunctionTableEntries/FunctionTableEntriesEntryTests.cs",
+      "legacyMethod": "FunctionTableEntries_MissingOrDuplicateIndices_ShouldBeAutoNormalized",
+      "family": "FunctionTableEntries",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "runtime_protocol_adapter",
+      "replacementReason": "External native slot protocols are validated by a Runtime-only adapter that maps exact exported names to immutable addresses; reserved/scrambled slots are supported explicitly, missing entries rejected.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Local actual adapter1 covers scrambled slots and rejection; do not retain silent missing/duplicate-index normalization or infer ABI validity from address size."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateAdditionalOverloads/GenerateAdditionalOverloadsEntryTests.cs",
+      "legacyMethod": "GenerateAdditionalOverloads_AlternateConfig_ShouldMatchExpected",
+      "family": "GenerateAdditionalOverloads",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "finite_convenience_policy",
+      "replacementReason": "Exact raw calls remain; optional defaults/input variations are finite explicit checked projections, not an unbounded global generation switch.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/InputVariationTests.cs",
+          "method": "AlternateInputsShareTheOriginalImportAndCheckedForwarding",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeDefaultArgumentTests.cs",
+          "method": "TypedDefaultsShareConversionsWithAliasesViewsAndSharedContexts",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "The old sample_add fixture asserted the same methods in both toggle modes; preserve that baseline fact and new bounded overload validation."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateAdditionalOverloads/GenerateAdditionalOverloadsEntryTests.cs",
+      "legacyMethod": "GenerateAdditionalOverloads_ParseHeaderResult_ShouldMatchExpected",
+      "family": "GenerateAdditionalOverloads",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "finite_convenience_policy",
+      "replacementReason": "Exact raw calls remain; optional defaults/input variations are finite explicit checked projections, not an unbounded global generation switch.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/InputVariationTests.cs",
+          "method": "AlternateInputsShareTheOriginalImportAndCheckedForwarding",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeDefaultArgumentTests.cs",
+          "method": "TypedDefaultsShareConversionsWithAliasesViewsAndSharedContexts",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "The old sample_add fixture asserted the same methods in both toggle modes; preserve that baseline fact and new bounded overload validation."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateExtensions/GenerateExtensionsEntryTests.cs",
+      "legacyMethod": "GenerateExtensions_False_ShouldNotGenerateExtensionMethods",
+      "family": "GenerateExtensions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_presentation_selection",
+      "replacementReason": "The old extension switch/allowlist is replaced by an explicit finite receiver presentation whitelist; raw calls and independently required cleanup remain available.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "OmittingNonowningViewsMustNotDisableAnIndependentlyRequiredOwnedReleaseProtocol",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Focused16 and grouped8 passed locally; consolidate exact original selection assertions into same-revision feature/config proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateExtensions/GenerateExtensionsEntryTests.cs",
+      "legacyMethod": "GenerateExtensions_True_ShouldGenerateExtensionMethods",
+      "family": "GenerateExtensions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_presentation_selection",
+      "replacementReason": "The old extension switch/allowlist is replaced by an explicit finite receiver presentation whitelist; raw calls and independently required cleanup remain available.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "OmittingNonowningViewsMustNotDisableAnIndependentlyRequiredOwnedReleaseProtocol",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Focused16 and grouped8 passed locally; consolidate exact original selection assertions into same-revision feature/config proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateHandles/GenerateHandlesEntryTests.cs",
+      "legacyMethod": "GenerateHandles_AlternateConfig_ShouldMatchExpected",
+      "family": "GenerateHandles",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_nonowning_address_selection",
+      "replacementReason": "Named address views are optional unsafe non-owning presentation, separate from raw ABI carriers, tracked owned objects and module-borrowed resources.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "NamedNonowningHandleViewsAreOptionalAndNeverReplaceRawNativeCarriers",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PointerCarrierTests.cs",
+          "method": "AddressViewsPreserveRawAbiConstFieldsArraysAndWholeSurfaceGuards",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativePointerCarrierTests.cs",
+          "method": "ExplicitAddressesPreserveOpaqueAliasesNestedArraysConstAndNativeIndirection",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate native6/focused20 and explicit selection16 local proofs; no lifetime ownership inferred."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateHandles/GenerateHandlesEntryTests.cs",
+      "legacyMethod": "GenerateHandles_ParseHeaderResult_ShouldMatchExpected",
+      "family": "GenerateHandles",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_nonowning_address_selection",
+      "replacementReason": "Named address views are optional unsafe non-owning presentation, separate from raw ABI carriers, tracked owned objects and module-borrowed resources.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "NamedNonowningHandleViewsAreOptionalAndNeverReplaceRawNativeCarriers",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PointerCarrierTests.cs",
+          "method": "AddressViewsPreserveRawAbiConstFieldsArraysAndWholeSurfaceGuards",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativePointerCarrierTests.cs",
+          "method": "ExplicitAddressesPreserveOpaqueAliasesNestedArraysConstAndNativeIndirection",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate native6/focused20 and explicit selection16 local proofs; no lifetime ownership inferred."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateMetadata/GenerateMetadataEntryTests.cs",
+      "legacyMethod": "GenerateMetadata_AlternateConfig_ShouldMatchExpected",
+      "family": "GenerateMetadata",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "native_source_annotations",
+      "replacementReason": "Optional typed native-name annotations label canonical Raw/import declarations and exact return/parameter native types; verified attributes are checked before existing AST guards.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/NativeMetadataTests.cs",
+          "method": "CanonicalCallsRetainNativeFactsAcrossImportModesAndRuntimeLayouts",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/NativeMetadataTests.cs",
+          "method": "DefaultOptOutEmitsNoNativeAnnotationsOrSourceFeature",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeMetadataTests.cs",
+          "method": "GeneratedAttributesRetainCompilerFactsAndRealCallsAcrossImportAndRuntimeModes",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Focused21 and actual native6 passed locally; no claim that converted friendly surfaces retain raw native type annotations."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GenerateMetadata/GenerateMetadataEntryTests.cs",
+      "legacyMethod": "GenerateMetadata_ParseHeaderResult_ShouldMatchExpected",
+      "family": "GenerateMetadata",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "native_source_annotations",
+      "replacementReason": "Optional typed native-name annotations label canonical Raw/import declarations and exact return/parameter native types; verified attributes are checked before existing AST guards.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/NativeMetadataTests.cs",
+          "method": "CanonicalCallsRetainNativeFactsAcrossImportModesAndRuntimeLayouts",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/NativeMetadataTests.cs",
+          "method": "DefaultOptOutEmitsNoNativeAnnotationsOrSourceFeature",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeMetadataTests.cs",
+          "method": "GeneratedAttributesRetainCompilerFactsAndRealCallsAcrossImportAndRuntimeModes",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Focused21 and actual native6 passed locally; no claim that converted friendly surfaces retain raw native type annotations."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryExtensionFunctionName/GetLibraryExtensionFunctionNameEntryTests.cs",
+      "legacyMethod": "GetLibraryExtensionFunctionName_AlternateConfig_ShouldMatchExpected",
+      "family": "GetLibraryExtensionFunctionName",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_provider_factory_policy",
+      "replacementReason": "The new API accepts explicit session providers/resolvers and frozen import-library constants, rather than configurable names for static loader helper functions.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/SharedContextTests.cs",
+          "method": "SharedFacadeRetainsExactInstanceInteropAndCheckedLifecycle",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ImportLibraryConstantTests.cs",
+          "method": "FrozenConsumerConstantRemainsADeclarativeImportReference",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Original DllImport fixtures only checked successful SampleAdd output after setting helper names. Record that limited baseline; custom loading behavior has separate real provider tests."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryExtensionFunctionName/GetLibraryExtensionFunctionNameEntryTests.cs",
+      "legacyMethod": "GetLibraryExtensionFunctionName_ParseHeaderResult_ShouldMatchExpected",
+      "family": "GetLibraryExtensionFunctionName",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_provider_factory_policy",
+      "replacementReason": "The new API accepts explicit session providers/resolvers and frozen import-library constants, rather than configurable names for static loader helper functions.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/SharedContextTests.cs",
+          "method": "SharedFacadeRetainsExactInstanceInteropAndCheckedLifecycle",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ImportLibraryConstantTests.cs",
+          "method": "FrozenConsumerConstantRemainsADeclarativeImportReference",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Original DllImport fixtures only checked successful SampleAdd output after setting helper names. Record that limited baseline; custom loading behavior has separate real provider tests."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryNameFunctionName/GetLibraryNameFunctionNameEntryTests.cs",
+      "legacyMethod": "GetLibraryNameFunctionName_AlternateConfig_ShouldMatchExpected",
+      "family": "GetLibraryNameFunctionName",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_provider_factory_policy",
+      "replacementReason": "The new API accepts explicit session providers/resolvers and frozen import-library constants, rather than configurable names for static loader helper functions.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/SharedContextTests.cs",
+          "method": "SharedFacadeRetainsExactInstanceInteropAndCheckedLifecycle",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ImportLibraryConstantTests.cs",
+          "method": "FrozenConsumerConstantRemainsADeclarativeImportReference",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Original DllImport fixtures only checked successful SampleAdd output after setting helper names. Record that limited baseline; custom loading behavior has separate real provider tests."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/GetLibraryNameFunctionName/GetLibraryNameFunctionNameEntryTests.cs",
+      "legacyMethod": "GetLibraryNameFunctionName_ParseHeaderResult_ShouldMatchExpected",
+      "family": "GetLibraryNameFunctionName",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_provider_factory_policy",
+      "replacementReason": "The new API accepts explicit session providers/resolvers and frozen import-library constants, rather than configurable names for static loader helper functions.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/SharedContextTests.cs",
+          "method": "SharedFacadeRetainsExactInstanceInteropAndCheckedLifecycle",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ImportLibraryConstantTests.cs",
+          "method": "FrozenConsumerConstantRemainsADeclarativeImportReference",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Original DllImport fixtures only checked successful SampleAdd output after setting helper names. Record that limited baseline; custom loading behavior has separate real provider tests."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/HandleNamingConvention/HandleNamingConventionEntryTests.cs",
+      "legacyMethod": "HandleNamingConvention_AlternateConfig_ShouldMatchExpected",
+      "family": "HandleNamingConvention",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/HandleNamingConvention/HandleNamingConventionEntryTests.cs",
+      "legacyMethod": "HandleNamingConvention_ParseHeaderResult_ShouldMatchExpected",
+      "family": "HandleNamingConvention",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/IgnoredExtensions/IgnoredExtensionsEntryTests.cs",
+      "legacyMethod": "IgnoredExtensions_AlternateConfig_ShouldMatchExpected",
+      "family": "IgnoredExtensions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_presentation_selection",
+      "replacementReason": "The old extension switch/allowlist is replaced by an explicit finite receiver presentation whitelist; raw calls and independently required cleanup remain available.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "OmittingNonowningViewsMustNotDisableAnIndependentlyRequiredOwnedReleaseProtocol",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Focused16 and grouped8 passed locally; consolidate exact original selection assertions into same-revision feature/config proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/IgnoredExtensions/IgnoredExtensionsEntryTests.cs",
+      "legacyMethod": "IgnoredExtensions_ParseHeaderResult_ShouldMatchExpected",
+      "family": "IgnoredExtensions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_presentation_selection",
+      "replacementReason": "The old extension switch/allowlist is replaced by an explicit finite receiver presentation whitelist; raw calls and independently required cleanup remain available.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "OmittingNonowningViewsMustNotDisableAnIndependentlyRequiredOwnedReleaseProtocol",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Focused16 and grouped8 passed locally; consolidate exact original selection assertions into same-revision feature/config proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/IgnoredTypedefs/IgnoredTypedefsEntryTests.cs",
+      "legacyMethod": "IgnoredTypedefs_AlternateConfig_ShouldMatchExpected",
+      "family": "IgnoredTypedefs",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "family_scoped_source_selection",
+      "replacementReason": "Alias identity is selected in its declaration family; required native storage remains in the dependency closure and cannot be removed to satisfy a filter.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "TypedNamesResolveTagsBeforeTheirSameNamedTypedefs",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "CallableUseOfACoNamedAliasStillRequiresItsExcludedTagStorage",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Link the original scalar alias inclusion/exclusion fixture to explicit category rules; do not count a required-storage refusal as output parity."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/IgnoredTypedefs/IgnoredTypedefsEntryTests.cs",
+      "legacyMethod": "IgnoredTypedefs_ParseHeaderResult_ShouldMatchExpected",
+      "family": "IgnoredTypedefs",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "family_scoped_source_selection",
+      "replacementReason": "Alias identity is selected in its declaration family; required native storage remains in the dependency closure and cannot be removed to satisfy a filter.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "TypedNamesResolveTagsBeforeTheirSameNamedTypedefs",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "CallableUseOfACoNamedAliasStillRequiresItsExcludedTagStorage",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "method": "ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Link the original scalar alias inclusion/exclusion fixture to explicit category rules; do not count a required-storage refusal as output parity."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/Keywords/KeywordsEntryTests.cs",
+      "legacyMethod": "Keywords_AlternateConfig_ShouldMatchExpected",
+      "family": "Keywords",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "identifier_policy",
+      "replacementReason": "Actual C# keywords are escaped and reserved names can receive configured suffixes; redundant verbatim spelling of an ordinary identifier is not a different callable API.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "Identifiers_AreValidatedAndKeywordsEscapedBeforeWriting",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Record explicit replacement for custom keyword list and preserve actual keyword/rename collision negatives. Do not claim exact old redundant @ token formatting."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/Keywords/KeywordsEntryTests.cs",
+      "legacyMethod": "Keywords_ParseHeaderResult_ShouldMatchExpected",
+      "family": "Keywords",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "identifier_policy",
+      "replacementReason": "Actual C# keywords are escaped and reserved names can receive configured suffixes; redundant verbatim spelling of an ordinary identifier is not a different callable API.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "Identifiers_AreValidatedAndKeywordsEscapedBeforeWriting",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Record explicit replacement for custom keyword list and preserve actual keyword/rename collision negatives. Do not claim exact old redundant @ token formatting."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownConstructors/KnownConstructorsEntryTests.cs",
+      "legacyMethod": "KnownConstructors_AlternateConfig_ShouldMatchExpected",
+      "family": "KnownConstructors",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "baseline_no_emission",
+      "replacementReason": "The original knownConstructors field had no emission consumer; its entry fixtures checked ordinary factory and record output in both configured/empty modes.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/DirectCOwnershipTests.cs",
+          "method": "UnprovenFactoryOmitsConvenienceAndPreservesExactRawSignature",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Retain docs/parity-option-dispositions.md pinned source audit; constructor naming alone must never create an owned lifetime."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownConstructors/KnownConstructorsEntryTests.cs",
+      "legacyMethod": "KnownConstructors_ParseHeaderResult_ShouldMatchExpected",
+      "family": "KnownConstructors",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "baseline_no_emission",
+      "replacementReason": "The original knownConstructors field had no emission consumer; its entry fixtures checked ordinary factory and record output in both configured/empty modes.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/DirectCOwnershipTests.cs",
+          "method": "UnprovenFactoryOmitsConvenienceAndPreservesExactRawSignature",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Retain docs/parity-option-dispositions.md pinned source audit; constructor naming alone must never create an owned lifetime."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionNames/KnownExtensionNamesEntryTests.cs",
+      "legacyMethod": "KnownExtensionNames_AlternateConfig_ShouldMatchExpected",
+      "family": "KnownExtensionNames",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionNames/KnownExtensionNamesEntryTests.cs",
+      "legacyMethod": "KnownExtensionNames_ParseHeaderResult_ShouldMatchExpected",
+      "family": "KnownExtensionNames",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionPrefixes/KnownExtensionPrefixesEntryTests.cs",
+      "legacyMethod": "KnownExtensionPrefixes_AlternateConfig_ShouldMatchExpected",
+      "family": "KnownExtensionPrefixes",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownExtensionPrefixes/KnownExtensionPrefixesEntryTests.cs",
+      "legacyMethod": "KnownExtensionPrefixes_ParseHeaderResult_ShouldMatchExpected",
+      "family": "KnownExtensionPrefixes",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_managed_naming",
+      "replacementReason": "Managed naming rules and exact receiver/address names preserve original native symbols and raw storage. Per-function overrides replace heuristic extension-prefix guessing.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedNamingPolicyTests.cs",
+          "method": "CategoryPoliciesAndExactOverridesCompileWithoutChangingNativeStorageOrExports",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate original extension/member name and prefix examples; explicit names have priority and address wrappers remain non-owning."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownMemberFunctions/KnownMemberFunctionsEntryTests.cs",
+      "legacyMethod": "KnownMemberFunctions_AlternateConfig_ShouldMatchExpected",
+      "family": "KnownMemberFunctions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_receiver_policy",
+      "replacementReason": "Finite typed member requests retain an explicit context and checked receiver lifetime; factories are not inferred from names.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ValueReceiverTests.cs",
+          "method": "ValueMembersReuseCheckedOriginalStorageAndAnExplicitContext",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeCOwnedReceiverTests.cs",
+          "method": "ExplicitCOwnersAndReceiversPreserveContextDomainsCallsAndMatchingCleanup",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Old combined untracked factory/member IR case remains separately partial; owned/value/module-borrowed proofs must not be relabeled arbitrary-address lifetime proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/KnownMemberFunctions/KnownMemberFunctionsEntryTests.cs",
+      "legacyMethod": "KnownMemberFunctions_ParseHeaderResult_ShouldMatchExpected",
+      "family": "KnownMemberFunctions",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_receiver_policy",
+      "replacementReason": "Finite typed member requests retain an explicit context and checked receiver lifetime; factories are not inferred from names.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ValueReceiverTests.cs",
+          "method": "ValueMembersReuseCheckedOriginalStorageAndAnExplicitContext",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativeCOwnedReceiverTests.cs",
+          "method": "ExplicitCOwnersAndReceiversPreserveContextDomainsCallsAndMatchingCleanup",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Old combined untracked factory/member IR case remains separately partial; owned/value/module-borrowed proofs must not be relabeled arbitrary-address lifetime proof."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/LogLevel/LogLevelEntryTests.cs",
+      "legacyMethod": "LogLevel_AlternateConfig_ShouldMatchExpected",
+      "family": "LogLevel",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "diagnostic_presentation_policy",
+      "replacementReason": "Console thresholds affect display while structured warnings remain available and errors cannot become successful results.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "FrontendThreshold_OnlyFiltersConsoleAndPreservesStructuredWarnings",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "NoneThreshold_CannotHideErrorsOrTurnFailureIntoSuccess",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Require CLI exact threshold cases plus structured diagnostic evidence; do not conflate execution diagnostics promotion with log filtering."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/LogLevel/LogLevelEntryTests.cs",
+      "legacyMethod": "LogLevel_ParseHeaderResult_ShouldMatchExpected",
+      "family": "LogLevel",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "diagnostic_presentation_policy",
+      "replacementReason": "Console thresholds affect display while structured warnings remain available and errors cannot become successful results.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "FrontendThreshold_OnlyFiltersConsoleAndPreservesStructuredWarnings",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs",
+          "method": "NoneThreshold_CannotHideErrorsOrTurnFailureIntoSuccess",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Require CLI exact threshold cases plus structured diagnostic evidence; do not conflate execution diagnostics promotion with log filtering."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/OneFilePerType/OneFilePerTypeEntryTests.cs",
+      "legacyMethod": "OneFilePerType_AlternateConfig_ShouldMatchExpected",
+      "family": "OneFilePerType",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "responsibility_layout",
+      "replacementReason": "Split output follows responsibility/type ownership and single-file composition preserves namespace/nullable/source scopes.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "SplitAndSingleFileStorageRetainFormattingAndCompileWithWarningsAsErrors",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/SingleFileScopeTests.cs",
+          "method": "NullableAnnotationsKeepTheirEnabledContextAfterComposition",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Compare complete manifests/compiled API rather than assuming file counts prove semantic equivalence."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/OneFilePerType/OneFilePerTypeEntryTests.cs",
+      "legacyMethod": "OneFilePerType_ParseHeaderResult_ShouldMatchExpected",
+      "family": "OneFilePerType",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "responsibility_layout",
+      "replacementReason": "Split output follows responsibility/type ownership and single-file composition preserves namespace/nullable/source scopes.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "SplitAndSingleFileStorageRetainFormattingAndCompileWithWarningsAsErrors",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/SingleFileScopeTests.cs",
+          "method": "NullableAnnotationsKeepTheirEnabledContextAfterComposition",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Compare complete manifests/compiled API rather than assuming file counts prove semantic equivalence."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/OneFilePerType/OneFilePerTypeEntryTests.cs",
+      "legacyMethod": "OneFilePerType_True_ShouldGenerateNoFewerFilesThanFalse",
+      "family": "OneFilePerType",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "responsibility_layout",
+      "replacementReason": "Split output follows responsibility/type ownership and single-file composition preserves namespace/nullable/source scopes.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "SplitAndSingleFileStorageRetainFormattingAndCompileWithWarningsAsErrors",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/SingleFileScopeTests.cs",
+          "method": "NullableAnnotationsKeepTheirEnabledContextAfterComposition",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Compare complete manifests/compiled API rather than assuming file counts prove semantic equivalence."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/TypeFieldMappings/TypeFieldMappingsEntryTests.cs",
+      "legacyMethod": "TypeFieldMappings_ShouldPreserveExplicitManagedNamesEverywhere",
+      "family": "TypeFieldMappings",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "stable_member_identity",
+      "replacementReason": "Explicit field names map by native identity without altering offsets; record conveniences use checked generated storage.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedMemberNameTests.cs",
+          "method": "QualifiedMemberMappingsCompileAndPreserveNativeStorageAndFunctionIdentities",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/ManagedRecordPresentationTests.cs",
+          "method": "ExplicitRecordConveniencesCompileAndRunWithoutChangingStorage",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/LegacyConfigurationStorageParityTests.cs",
+          "method": "ExplicitFieldNamesArrayStorageAndConstructorCopiesComposeWithoutChangingOffsets",
+          "methodVerified": true,
+          "proofStatus": "focusedPassedDirtyCheckpoint",
+          "receipt": "artifacts/implementation/test-results/csharp-full-retired-context-receivers.trx"
+        }
+      ],
+      "remainingAcceptance": "Consolidate combined old fixed-array property/constructor field spelling assertion.",
+      "localFocusedStatus": "focusedReplacementPassed; policy and same-revision release consolidation remain separate"
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/UseCustomContext/UseCustomContextEntryTests.cs",
+      "legacyMethod": "UseCustomContext_AlternateConfig_ShouldMatchExpected",
+      "family": "UseCustomContext",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_module_provider",
+      "replacementReason": "Each context owns a verified complete function table and module session; callers can supply a Runtime-only external provider, with no shared mutable global loader.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "FunctionTable_CompilesInvokesIndependentInstancesAndClosesCalls",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate default loading and injected provider paths; old static InitApi signature is intentionally replaced."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/UseCustomContext/UseCustomContextEntryTests.cs",
+      "legacyMethod": "UseCustomContext_ParseHeaderResult_ShouldMatchExpected",
+      "family": "UseCustomContext",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_module_provider",
+      "replacementReason": "Each context owns a verified complete function table and module session; callers can supply a Runtime-only external provider, with no shared mutable global loader.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.Tests/NativeCustomFunctionTableTests.cs",
+          "method": "RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "FunctionTable_CompilesInvokesIndependentInstancesAndClosesCalls",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate default loading and injected provider paths; old static InitApi signature is intentionally replaced."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/VaryingTypes/VaryingTypesEntryTests.cs",
+      "legacyMethod": "VaryingTypes_AlternateConfig_ShouldMatchExpected",
+      "family": "VaryingTypes",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "typed_conversion_and_lifetime_policy",
+      "replacementReason": "Explicit text/value/buffer contracts and finite input variations produce checked overloads. A pointer spelling does not establish length, ownership or retention.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/InputVariationTests.cs",
+          "method": "AlternateInputsShareTheOriginalImportAndCheckedForwarding",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "DeclaredUtf8Input_UsesScopedConversionWithPackageOrSourceRuntime",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate actual old string/span/in-byte fixture against explicit bounded contracts; raw address remains available without inventing an unbounded span."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/VaryingTypes/VaryingTypesEntryTests.cs",
+      "legacyMethod": "VaryingTypes_ParseHeaderResult_ShouldMatchExpected",
+      "family": "VaryingTypes",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "typed_conversion_and_lifetime_policy",
+      "replacementReason": "Explicit text/value/buffer contracts and finite input variations produce checked overloads. A pointer spelling does not establish length, ownership or retention.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/InputVariationTests.cs",
+          "method": "AlternateInputsShareTheOriginalImportAndCheckedForwarding",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/NeutralBackendTests.cs",
+          "method": "DeclaredUtf8Input_UsesScopedConversionWithPackageOrSourceRuntime",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate actual old string/span/in-byte fixture against explicit bounded contracts; raw address remains available without inventing an unbounded span."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/WrapPointersAsHandle/WrapPointersAsHandleEntryTests.cs",
+      "legacyMethod": "WrapPointersAsHandle_AlternateConfig_ShouldMatchExpected",
+      "family": "WrapPointersAsHandle",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_nonowning_address_selection",
+      "replacementReason": "Named address views are optional unsafe non-owning presentation, separate from raw ABI carriers, tracked owned objects and module-borrowed resources.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "NamedNonowningHandleViewsAreOptionalAndNeverReplaceRawNativeCarriers",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PointerCarrierTests.cs",
+          "method": "AddressViewsPreserveRawAbiConstFieldsArraysAndWholeSurfaceGuards",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativePointerCarrierTests.cs",
+          "method": "ExplicitAddressesPreserveOpaqueAliasesNestedArraysConstAndNativeIndirection",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate native6/focused20 and explicit selection16 local proofs; no lifetime ownership inferred."
+    },
+    {
+      "legacySource": "tests/BGCS.Configuration.Tests/entryTests/WrapPointersAsHandle/WrapPointersAsHandleEntryTests.cs",
+      "legacyMethod": "WrapPointersAsHandle_ParseHeaderResult_ShouldMatchExpected",
+      "family": "WrapPointersAsHandle",
+      "status": "mappedNeedsConsolidation",
+      "releaseCertified": false,
+      "classification": "explicit_nonowning_address_selection",
+      "replacementReason": "Named address views are optional unsafe non-owning presentation, separate from raw ABI carriers, tracked owned objects and module-borrowed resources.",
+      "replacementTests": [
+        {
+          "file": "tests/BGCS.CSharp.Tests/ExplicitPresentationSelectionParityTests.cs",
+          "method": "NamedNonowningHandleViewsAreOptionalAndNeverReplaceRawNativeCarriers",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.CSharp.Tests/PointerCarrierTests.cs",
+          "method": "AddressViewsPreserveRawAbiConstFieldsArraysAndWholeSurfaceGuards",
+          "methodVerified": true
+        },
+        {
+          "file": "tests/BGCS.Tests/NativePointerCarrierTests.cs",
+          "method": "ExplicitAddressesPreserveOpaqueAliasesNestedArraysConstAndNativeIndirection",
+          "methodVerified": true
+        }
+      ],
+      "remainingAcceptance": "Consolidate native6/focused20 and explicit selection16 local proofs; no lifetime ownership inferred."
+    }
+  ],
+  "note": "Exact executable same-revision proof and policy review remain required. Earlier local receipts are mixed dirty checkpoints and are not copied into release evidence.",
+  "replacementMethodPathsValidated": true
+}

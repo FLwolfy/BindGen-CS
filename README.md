@@ -2,205 +2,169 @@
 
 [English](README.md) | [简体中文](README.cn.md)
 
-**BindGen-CS (BGCS) generates the code that lets C# call C and C++ libraries.**
-You provide native headers and configuration; BGCS produces C# bindings. For C++ APIs,
-it can also generate a C bridge that exposes classes and supported templates to C#.
+**BGCS generates C# bindings for C and C++ libraries.** Supply native headers and a
+versioned configuration. The unified Host parses declarations in an isolated Clang
+worker, analyzes ABI and lifetime contracts, generates a C bridge when needed, and
+emits C# with raw calls and supported friendly APIs.
 
-## Understand the three pieces
+BGCS 3.0 uses .NET 10 and C# 14. Its defaults are C17/C++23, an instance API,
+FunctionTable imports, split output files and the independent Runtime package.
+The new version reads the grouped configuration format and exposes `BindingHost`;
+old configuration readers and generator APIs are not part of this interface.
 
-| Piece | What it does | Who provides it |
-| --- | --- | --- |
-| Header (`.h` / `.hpp`) | Describes native functions and types | The native library |
-| Native library (`.dll`, `.so`, `.dylib`, or Wasm-linked code) | Implements those functions | Your native build |
-| C# bindings (`Bindings.cs`) | Lets C# call those functions with the correct ABI | BGCS |
+## Start from a header
 
-Generating bindings does not compile the original library, translate its implementation
-into C#, or deploy your application. A C# bindings assembly and a native DLL are different
-parts of the integration.
-
-```text
-C API:    header ────────────────> C# bindings ──> calls the native library
-C++ API:  header ──> C bridge ───> C# bindings ──> calls the compiled bridge
-```
-
-## Getting started
-
-### 1. Prepare your environment
-
-For this source checkout, install **.NET SDK 10.0** and the **.NET 9 runtime**.
-The repository's `global.json` selects SDK 10; the projects target `net9.0`.
-Check your installation with `dotnet --list-sdks` and `dotnet --list-runtimes`.
-
-A native compiler and the target's SDK are needed when compiling a library or C++ bridge.
-BGCS bundles its parser's Clang builtin headers; these are compiler support files,
-not replacements for your target SDK or C/C++ standard library.
-
-### 2. Generate your first bindings
-
-Open a terminal in the repository root and run:
+After version 3.0.0 has been published:
 
 ```bash
-dotnet run --project src/BGCS.Tool -- init examples/QuickStart/native.h --config examples/QuickStart/bindgen.json
-dotnet run --project src/BGCS.Tool -- generate examples/QuickStart/bindgen.json
-dotnet run --project src/BGCS.Tool -- build examples/QuickStart/bindgen.json
+dotnet tool install --global BindGen-CS --version 3.0.0
+bindgen-cs init include/native.h --language c
+bindgen-cs doctor bindgen.json
+bindgen-cs validate bindgen.json
+bindgen-cs generate bindgen.json
 ```
 
-- `init` creates the starting configuration. Run it once for a new integration.
-- `generate` writes `examples/QuickStart/Generated/Bindings.cs`.
-- `build` generates and compile-checks the C# bindings in a temporary consumer project.
-  **It does not build the native library or prove that native calls work.**
+C++ uses the same configuration and commands; select `--language cpp` and provide
+the C++ header. `generate` automatically emits the supported native bridge and C#.
+For source use, build the checkout and replace `bindgen-cs` with the source command:
 
-The example header declares `bgcs_add`. Replace the header with your library's header
-and review the configuration before using it in your project. Generated files are
-reproducible output; make changes in configuration, not in `Bindings.cs`.
+```bash
+dotnet build BindGen-CS.slnx -c Release
+dotnet run --project src/BGCS.Tool -c Release -- generate examples/QuickStart/bindgen.json
+dotnet run --project src/BGCS.Tool -c Release -- build examples/QuickStart/bindgen.json
+```
 
-### 3. Use the bindings in your C# project
+A native compiler and the target SDK are required for native builds. The parser's
+bundled builtin headers supplement the target SDK and standard library.
 
-1. Include the generated `Bindings.cs` in your project.
-2. Reference `BGCS.Runtime`. From a source checkout, add a project reference to
-   `src/BGCS.Runtime/BGCS.Runtime.csproj`; a published package can use a package reference.
-3. Build and deploy the native library for your application's target. `libName` in the
-   configuration must match the library's loadable name, and the entry points must be exported.
-4. Call the generated API and test it against the real native library.
+## Configure and build
 
-For the default example configuration, the call looks like this **after** the native
-implementation is available:
+A small C integration has one `bindgen.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "library": { "id": "example", "nativeName": "example" },
+  "source": { "language": "c", "headers": ["include/native.h"] },
+  "api": { "namespace": "Example.Bindings", "name": "NativeApi" },
+  "nativeBuild": { "mode": "sources", "sources": ["src/native.c"] },
+  "output": { "root": "Generated", "layout": "split" }
+}
+```
+
+Paths in configuration are relative to its declaring document. `init` writes a
+matching schema reference. `generate` produces managed sources, optional bridge
+sources, manifests and reports under `Generated/<resolved-target>/`.
+
+`build` compiles the candidate C# with warnings as errors and builds or verifies the
+native inputs declared by `nativeBuild`. It validates required exports before
+publishing the complete artifact set. A failed validation preserves the previous
+owned output. With `nativeBuild.mode = "none"`, the report explicitly records that
+native building was not requested. Actual invocation is a separate validation stage.
+
+A generated consumer targets `net10.0`, enables unsafe blocks and normally references
+`BGCS.Runtime`. Compile the selected target's `managed` files and deploy its verified
+native library. The QuickStart example maps `bgcs_add` to `Add`:
 
 ```csharp
-using Native.Bindings;
+using QuickStart.Generated;
 
-int result = NativeApi.BgcsAdd(2, 3);
+using NativeApi api = NativeApi.Load("/absolute/path/to/the/built/native/library");
+int answer = api.Raw.Add(19, 23);
 ```
 
-The initial configuration uses `Native.Bindings`, `NativeApi`, and library name `native`.
-Change `namespace`, `apiName`, and `libName` to fit your project. The complete integration
-and troubleshooting guide is in [Getting started](docs/getting-started.md).
+An API instance owns its module session and function table. Resources retain the
+module leases required for cleanup. `runtime.mode = "source"` emits the required
+Runtime source closure; `output.layout = "singleFile"` combines managed output into
+`Bindings.cs`. See [Getting started](docs/getting-started.md) for complete consumers,
+C++ construction, custom loading, runtime modes and build configuration.
 
-Set `<DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>` in the consumer project.
-Generated wrappers already own ABI conversion; .NET should call the declared carriers directly.
-This applies across targets. Run actual native calls to verify the result; compilation and matching `sizeof` values are insufficient.
+## Four products, one pipeline
 
-## C++ libraries
-
-A C++ class cannot generally be called through a C ABI directly. BGCS can generate the
-bridge and matching bindings for its supported C++ semantics:
-
-```bash
-dotnet run --project src/BGCS.Tool -- init path/to/library.hpp
-dotnet run --project src/BGCS.Tool -- bridge bridge.json
-dotnet run --project src/BGCS.Tool -- native-build GeneratedBridge/bridge.manifest.json
-```
-
-`GeneratedBridge/` contains C headers, C++ wrappers, and a native build manifest;
-`Generated/` contains the C# bindings. The bridge configuration must include the original
-library's required sources, libraries, and include paths. `native-build` builds the bridge
-from that manifest and verifies its exports.
-
-Supported lowerings include classes, overloads, inheritance, configured template instances,
-common STL containers, smart pointers, and configured callback proxies. Unknown C++ semantics
-are rejected until a lowering or project-owned shim defines them. See
-[Capabilities](docs/capabilities.md) and the [C++ extension cookbook](docs/cpp-extension-cookbook.md).
-
-## Cross-platform and WebAssembly
-
-**The machine running BGCS and the platform running your application are separate.**
-Windows, Linux, and macOS can produce bindings for an explicitly selected target, provided
-the relevant SDK and parser runtime are available. Native libraries still need target-specific
-builds. Pointer size, `long`, packing, calling conventions, and conditional declarations may
-change the ABI; a successful build on one platform does not certify another.
-
-| Scenario | What you configure |
+| Product | Purpose |
 | --- | --- |
-| Desktop native library | Target ABI, compiler/SDK paths, and library name |
-| WebAssembly through Emscripten | `emscripten-c` / `emscripten-cpp` preset and the target SDK/sysroot |
-| Another WebAssembly environment | Its own target and runtime contracts; WASI is not an Emscripten alias |
+| `BGCS` | Complete embedded SDK, worker deployment and opt-in MSBuild integration |
+| `BGCS.Contracts` | Neutral immutable models and ordinary plugin contracts |
+| `BGCS.Runtime` | Generated binding consumer support, independent of the generator/parser |
+| `BindGen-CS` | Command-line tool exposing the same Host pipeline |
 
-Emscripten support uses the same parser, analysis, IR, and emitter as desktop targets.
-BGCS generates the bindings; your application toolchain compiles and links the native Wasm
-code and supplies browser startup. BGCS does not depend on a game engine.
+Internal projects are bundled implementation modules. Users do not assemble extra
+feature packages for C++, lowering or native builds. Tool RID shards and parser
+runtime packages supply the six declared desktop host resource closures.
 
-The independent [Wasm invocation test](docs/testing.md#independent-webassembly-invocation)
-generates all three import modes and calls a BGCS-owned C API and generated C++ bridge inside
-a real browser. Its 56 checks cover values, layouts, buffers, opaque handles, callbacks,
-construction, inheritance, and release. The same fixture runs in a standalone NativeAOT consumer.
-See [target evidence](docs/capabilities.md#target-evidence) for tested hosts and remaining gates;
-Windows, Linux, macOS, mobile, packaging, and browser coverage have separate acceptance scopes.
+```csharp
+using BGCS;
 
-## Import modes, safety, and extension
+await using BindingHost host = BindingHost.CreateDefault();
+GenerationResult result = await host.GenerateAsync(
+    GenerationRequest.FromFile("bindgen.json"));
+if (!result.success)
+    throw new InvalidOperationException(result.GetDiagnosticSummary());
+```
 
-- **`DllImport`**: conventional P/Invoke declarations.
-- **`LibraryImport`**: .NET source-generated P/Invoke declarations.
-- **`FunctionTable`**: calls through resolved function pointers; an `INativeContext` can provide
-  application-owned symbol resolution. It does not make unavailable dynamic loading available.
+MSBuild generation requires explicit `BGCSGenerateBindings = true`; generated
+compilation items come from the verified manifest under `obj`. See
+[MSBuild](docs/msbuild.md) and [Packages](docs/packages.md).
 
-BGCS keeps raw ABI bindings and generates convenient `string`, `Span<T>`, `ref`, and `out`
-overloads when their safety contracts are known. Missing ownership, allocator, buffer length,
-or callback lifetime information produces diagnostics and suppresses unproven friendly
-overloads by default. Configuration can make these diagnostics fatal.
+## ABI safety, extension and platforms
 
-Extend project-specific behavior with `TypeLowerings` / `CallableLowerings`, typed lowering
-plugins, or native shims. Keep library-specific semantics in those extensions.
-See [Configuration](docs/configuration-guide.md), [Diagnostics](docs/diagnostics.md), and
-[Architecture](docs/architecture.md).
+FunctionTable is the default import mode; `api.importMode` can select `dllImport` or
+`libraryImport` where the runtime and ABI support them. All modes use the same native
+facts and semantic analysis. Raw ABI calls remain accessible; friendly strings,
+buffers, owned objects and callbacks require their explicit conversion and lifetime
+contracts. Size equality alone does not prove field layout, alignment or by-value
+call compatibility. Unsupported ABI forms are rejected or require a native shim.
 
-## Everyday commands
+Ordinary plugins reference `BGCS.Contracts` and implement neutral ports for targets,
+transforms, lowering, projection, output processing, building or validation.
+Grouped `cpp` recipes, explicit template selections and native shims handle
+library-specific C++ semantics. See [Extensibility](docs/extensibility.md),
+[Configuration](docs/configuration-guide.md) and the
+[C++ cookbook](docs/cpp-extension-cookbook.md).
 
-Run `dotnet run --project src/BGCS.Tool -- <command>` from this checkout.
-After installing a published `BindGen-CS` tool package, use `bindgen-cs <command>` instead.
+The generator host, native target, toolchain and managed runtime are separate.
+Target providers supply ABI/SDK facts; browser Wasm uses static native references,
+verified adapters and runtime capabilities. Adding a target family does not require
+copying every emitter. Native binaries and real platform invocation still require
+independent certification. Consult [Capabilities](docs/capabilities.md) and current
+receipts: resolving or generating a target is not a production support claim.
+
+## Commands and validation
 
 | Command | Purpose |
 | --- | --- |
-| `doctor` | Inspect the host compiler, includes, and SDK |
-| `validate` / `inspect` | Check a configuration or inspect its analyzed API |
-| `generate` / `build` | Generate C# or additionally compile-check it |
-| `bridge` / `native-build` | Generate and compile a C++ bridge |
-| `diff` | Check whether generated bindings need updating |
-| `workspace` | Process several native libraries together |
-| `schema` / `explain` | Export configuration schema or explain a diagnostic |
-
-For build-tool integration, reference `BGCS` or `BGCS.Cpp2C`. Generated-code consumers
-normally reference only `BGCS.Runtime`; `BGCS.Intermediate` contains the independent IR contracts.
-See [Packages and APIs](docs/packages.md).
-
-## Tests and documentation
+| `init`, `schema`, `explain` | Create grouped configuration, export schema and explain diagnostics |
+| `doctor`, `validate`, `inspect` | Check prerequisites/configuration and inspect frozen models |
+| `generate`, `build` | Generate artifacts or validate declared managed/native builds |
+| `bridge`, `native-build` | Request native-only bridge output or build a verified manifest |
+| `diff`, `workspace` | Compare without publication or process explicit project dependencies |
+| `supply-chain`, `version` | Inspect delivery provenance and implementation identities |
 
 ```bash
-dotnet test BindGen-CS.sln -c Release
+dotnet test BindGen-CS.slnx -c Release
+python scripts/test-native-aot-bindings.py
 python scripts/test-wasm-bindings.py
 python scripts/test-wasm-bindings.py --aot
-python scripts/test-native-aot-bindings.py
+bash scripts/run-full-test-matrix.sh
 ```
 
-The Wasm test additionally requires a **.NET 9 SDK with `wasm-tools`**, Python 3.10+, and
-Chrome, Chromium, or Edge. Use `--dotnet` and `--browser` to select installed executables.
-Missing prerequisites or an incomplete native invocation fail the test; they are not skipped.
-
-For the complete target release gates, run `bash scripts/run-full-test-matrix.sh`.
-Native ABI tests, deterministic snapshots, NuGet consumers, supply-chain checks, and performance
-are separate from the focused Wasm test. See [Testing](docs/testing.md) and [Acceptance](docs/acceptance.md).
+Browser tests need the .NET 10 `wasm-tools` workload, Python and an accepted browser.
+Release gates also cover real library corpora, package installation, architecture,
+publication failures, worker crashes, lifetimes and performance. The full package
+installer runs actual consumer applications and compares repeated package content.
+Missing prerequisites fail required gates. A local partial check does not certify
+all platforms or make a release ready.
 
 - [Documentation index](docs/README.md)
-- [First integration](docs/getting-started.md)
-- [Configuration reference](docs/configuration-guide.md)
-- [Capabilities and platform evidence](docs/capabilities.md)
-- [C++ extension cookbook](docs/cpp-extension-cookbook.md)
+- [Testing](docs/testing.md)
+- [Architecture](docs/architecture.md)
 - [Publishing](docs/publish.md)
 - [Contributing](CONTRIBUTING.md)
 
-## Why does BGCS include `src/BGCS.CppAst/Resources/Clang`?
+## License and parser resources
 
-The archive contains Clang's builtin C/C++ headers, such as `stddef.h` and architecture intrinsics.
-It is shared by Windows, Linux and macOS parser hosts and is not a macOS SDK.
-The current parser embeds these headers so its libclang runtime has a matching resource directory
-without requiring a separate Clang installation. Keep the archive when building or packaging BGCS.
-
-Builtin headers do not replace a target SDK. Target providers select the target's ABI, sysroot
-and system headers; an Emscripten target, for example, still needs its Emscripten SDK.
-See [Clang's cross-compilation documentation](https://clang.llvm.org/docs/CrossCompilation.html)
-and the [bundled resource provenance](src/BGCS.CppAst/Resources/Clang/README.md).
-
-## License
-
-BGCS uses the [MIT License](LICENSE). Derived CppAst/HexaGen portions retain their notices.
-Bundled Clang builtin headers use Apache-2.0 WITH LLVM-exception; their
-[source, checksum, and license](src/BGCS.CppAst/Resources/Clang/README.md) are included with the parser.
+BGCS uses the [MIT License](LICENSE); derived components retain their notices.
+The [frontend resource directory](src/BGCS.Frontend.Clang/Resources/Clang/README.md)
+records the bundled Clang builtin header source, checksum and
+Apache-2.0 WITH LLVM-exception license. These resources travel with the matched
+parser worker and do not replace Windows SDKs, libc, C++ libraries or target sysroots.

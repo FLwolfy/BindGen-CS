@@ -1,6 +1,6 @@
 {
   "Contains": [
-    "internal static global::BGCS.Runtime.FunctionTable funcTable = null !;",
+    "internal static global::BGCS.Runtime.FunctionTable funcTable = null!;",
     "public static void InitApi()",
     "candidate.LoadRequired(0, \"sample_add\");",
     "delegate* unmanaged[Cdecl]<int, int, int>)funcTable[0]"

@@ -1,54 +1,50 @@
-# BindGen-CS Wiki
+# BGCS 3.0 Documentation
 
 [English](README.md) | [简体中文](README.cn.md) | [Repository README](../README.md)
 
-The completed local refactor is documented in the [acceptance record](architecture-refactor-acceptance.cn.md).
-The [requirement audit](architecture-plan-audit.cn.md) maps the approved plan to the current boundaries and independent evidence.
-Other host and release execution states are reported separately.
+BGCS 3.0 uses .NET 10, grouped versioned configuration and the public `BindingHost`
+pipeline. Current implementation and acceptance status are recorded in
+[implementation status](implementation-status.cn.md), the machine-readable
+[feature inventory](../eng/acceptance/feature-inventory.json) and actual validation
+receipts. A successful local subset does not establish release readiness.
 
-## First use
+## First integration
 
-1. [Getting started](getting-started.md): go from a header to compilable bindings.
-2. [Capabilities and boundaries](capabilities.md): verify that the target ABI/C++ feature is in scope.
-3. [Current contracts and release evidence](compatibility-policy.md): configuration, public APIs, target support, and supply-chain evidence.
-4. [Configuration guide](configuration-guide.md): choose presets, targets, import modes, and marshalling policies.
-5. [Diagnostics guide](diagnostics.md): resolve parser, ownership, buffer, callback, and C++ lowering issues.
+1. [Getting started](getting-started.md): input headers, generate bindings, declare native inputs and consume an instance API.
+2. [Configuration guide](configuration-guide.md): grouped defaults, paths, semantic contracts, extensions and output modes.
+3. [Generated configuration reference](generated/config-reference.md): every current schema property, constraint and default.
+4. [Packages](packages.md): complete SDK, Contracts-only plugins, Runtime consumers and the tool's physical distribution.
+5. [MSBuild integration](msbuild.md): explicit opt-in, exact manifest items and independent inner builds.
 
-## Find documentation by task
+## Architecture and extension
 
 | Task | Document |
 | --- | --- |
-| C bindings | [Getting started](getting-started.md) |
-| C++ to C bridge | [C++ section of Getting started](getting-started.md#c-bridge), [C++ options with dedicated regression tests](cpp2c.config.md) |
-| Extend complex C++ semantics | [Final lowering architecture](lowering.md): declarative recipes, typed lowering plugins, explicit C shims, and safety policy |
-| Build a project-specific adaptation | [C++ extension cookbook](cpp-extension-cookbook.md): runnable shim/plugin, callable recipe, decision tree, and lifetime patterns |
-| Complete configuration property list | Run `bindgen-cs schema bindgen.schema.json` |
-| Long-term execution order and gates | [Universal execution roadmap](roadmap.md) |
-| Decide whether the tool is already “super-universal” | [Engineering maturity assessment](assessment.md) |
-| Configuration entries with dedicated regression tests | [Generated tested-entry reference](config.md) |
-| Embed the generator in C# | [C# API reference](api.md) |
-| Choose a NuGet package | [NuGet packages and public APIs](packages.md) |
-| Run tests and acceptance | [Testing](testing.md), [Acceptance specification](acceptance.md) |
-| Clang resources and CI hosts | [CI host and target boundaries (Chinese)](ci-portability.cn.md) |
-| Verify native calls in Wasm | [Standalone workflow](testing.md#independent-webassembly-invocation), [local report](wasm-acceptance-2026-10-03.md) |
-| Publish packages | [Publishing](publish.md) |
-| BGCS 2.1.0 release changes | [Release notes](releases/2.1.0.md) |
-| Historical releases and package availability | [Release history](releases/README.md) |
+| Understand module ownership, dependencies and pipeline | [Architecture](architecture.md) |
+| Embed generation, building, inspection or a workspace | [Public API](api.md) |
+| Declare native sources, choose build providers and consume verified artifacts | [Native construction](native-build.md) |
+| Understand resources, callback drain and asynchronous cancellation | [Runtime lifetimes](runtime-lifetime.md) |
+| Configure synchronous callbacks, returned-handle registrations and terminal operations | [Callback cookbook](callbacks.md) |
+| Distinguish storage, calling ABI and semantic evidence | [ABI safety](abi-safety.md) |
+| Inspect original callable/type/parameter names on canonical raw signatures | [Native name attributes](native-metadata.md) |
+| Implement a neutral plugin | [Extensibility](extensibility.md) |
+| Understand a diagnostic | [Diagnostics](diagnostics.md) |
+| Add C++ type/callable lowering or a native shim | [C++ cookbook](cpp-extension-cookbook.md), [lowering architecture](lowering.md) |
+| Inspect grouped C++ configuration | [Generated C++ reference](generated/cpp-config-reference.md) |
+| Understand host/target/SDK separation | [Platform extension](platform-extension.cn.md) |
+| Follow design decisions | [Architecture decision records](adr/) |
 
-## Design and quality
+## Verification and release
 
-[Platform extension and solution layout (Chinese)](platform-extension.cn.md) explains host/target separation,
-the current iOS target descriptor API, provider composition and the cleaned solution structure.
+- [Testing](testing.md) describes required native, NativeAOT, browser Wasm and repository acceptance execution.
+- [Package certification](packages.md#packaging-and-certification) installs actual local products, compiles and invokes consumers, validates schema closure and compares repeated package content.
+- [Publishing](publish.md) describes same-revision release gates, product packages and actual authorized publication.
+- [Baseline option dispositions](parity-option-dispositions.md) records exact old consumers and explicit managed presentation selection.
+- [Contributing](../CONTRIBUTING.md) records repository development requirements.
+- [Release history](releases/README.md) retains historical release availability and version records.
 
-- [Architecture](architecture.md): layers, dependency rules, and the IR-native data flow.
-- [C++ extension cookbook](cpp-extension-cookbook.md): advanced extensions from configuration through real native/C# invocation.
-- [Acceptance specification](acceptance.md): 9.0 gates, budgets, and target isolation.
-- [Capabilities and boundaries](capabilities.md): implementation, evidence, and unsupported-scope matrix.
-- [Universal execution roadmap](roadmap.md): phased work, non-negotiable rules, and 9.0 exit criteria.
-- [Engineering maturity assessment](assessment.md): quantified scores, five-workstream status, and claims that remain gated.
-
-## Current maturity
-
-The CLI/workspace workflow, transactional output, single-file generation, target/toolchain model, shared IR, safety analysis, package closure, real-library snapshots, declared STL/smart-pointer lowering, lifetime diagnostics, and release-governance gates are available now. Desktop-x64 acceptance reports remain independent release evidence.
-
-macOS arm64 has a local complete acceptance run. The supplied September 24 desktop-x64 CI logs showed failures in all three runners; fixes in this checkout require a new same-revision CI run before those hosts can be marked accepted. The report's 9.0 value is a fixed gate-passed label, not a calibrated quality score. C# output uses only the IR-native emitter; no prior pre-release configuration or emitter is loaded. See [CI diagnosis](ci-remediation-2026-09-24.md).
+Platform resolution, parsing, generation, managed compilation, native linking,
+invocation and package consumption are separate stages. Current receipts must show
+the exact target, runtime, import mode, toolchain and source revision for each claim.
+Historical reports and former maturity scores remain historical evidence; they do
+not certify the 3.0 implementation or substitute for its mandatory release gates.

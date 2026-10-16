@@ -1,0 +1,80 @@
+    private static void RunAggregates__MODE__(__MODE__.NativeApi api)
+    {
+        List<string> values = [];
+        __MODE__.AggregateSmall small = api.Raw.AggregateTransformSmall(new() { a = 1, b = 2, c = 3 });
+        Assert(small.a == 4 && small.b == 7 && small.c == 10, "__MODE__: non-power-of-two 3-byte aggregate.");
+        values.Add(FormattableString.Invariant($"{small.a},{small.b},{small.c}"));
+        m_checks.Add("__MODE__:aggregate-small");
+
+        __MODE__.AggregatePair pair = api.Raw.AggregateTransformPair(new() { a = 17, b = 1.25f });
+        Assert(pair.a == 21 && pair.b == 2.5f && api.Raw.AggregateTransformPair(pair).a == 25, "__MODE__: int/float aggregate arguments and return.");
+        values.Add(FormattableString.Invariant($"{pair.a},{pair.b}"));
+        m_checks.Add("__MODE__:aggregate-pair");
+
+        __MODE__.AggregateMixed mixed = api.Raw.AggregateTransformMixed(new() { a = 3.5, b = 19 });
+        Assert(mixed.a == 10.5 && mixed.b == 28, "__MODE__: double/int register classification.");
+        values.Add(FormattableString.Invariant($"{mixed.a},{mixed.b}"));
+        m_checks.Add("__MODE__:aggregate-mixed");
+
+        __MODE__.AggregateLarge large = api.Raw.AggregateTransformLarge(new() { a = 0xFEDCBA9876543210UL, b = 5, c = 2.25, d = 7 });
+        Assert(large.a == (0xFEDCBA9876543210UL ^ 0x8000000000000001UL) && large.b == 14 && large.c == 4.5 && large.d == 20,
+            "__MODE__: large indirect aggregate and high-bit integer.");
+        values.Add(FormattableString.Invariant($"{large.a},{large.b},{large.c},{large.d}"));
+        m_checks.Add("__MODE__:aggregate-large");
+
+        __MODE__.AggregateNumber number = api.Raw.AggregateTransformNumber(new() { bits = 0xFEDCBA9876543210UL });
+        Assert(number.bits == (0xFEDCBA9876543210UL ^ 0x8000000000000001UL), "__MODE__: overlapping union return classification.");
+        values.Add(FormattableString.Invariant($"{number.bits}"));
+        m_checks.Add("__MODE__:aggregate-union");
+
+        __MODE__.AggregateNested nested = api.Raw.AggregateTransformNested(new() { prefix = 3, nested = new() { a = 19, b = 2.5f }, tail = 4.25 });
+        Assert(nested.prefix == 8 && nested.nested.a == 23 && nested.nested.b == 5 && nested.tail == 8.5, "__MODE__: nested aggregate padding and storage.");
+        values.Add(FormattableString.Invariant($"{nested.prefix},{nested.nested.a},{nested.nested.b},{nested.tail}"));
+        m_checks.Add("__MODE__:aggregate-nested");
+
+        __MODE__.AggregateFloats floats = api.Raw.AggregateTransformFloats(new() { a = 1.25f, b = 2.5f, c = 3.75f, d = 5 });
+        Assert(floats.a == 2.5f && floats.b == 7.5f && floats.c == 15 && floats.d == 25, "__MODE__: homogeneous four-float aggregate.");
+        values.Add(FormattableString.Invariant($"{floats.a},{floats.b},{floats.c},{floats.d}"));
+        m_checks.Add("__MODE__:aggregate-floats");
+
+        __MODE__.AggregateDoubles doubles = api.Raw.AggregateTransformDoubles(new() { a = 1.25, b = 2.5 });
+        Assert(doubles.a == 5 && doubles.b == 12.5, "__MODE__: homogeneous two-double aggregate.");
+        values.Add(FormattableString.Invariant($"{doubles.a},{doubles.b}"));
+        m_checks.Add("__MODE__:aggregate-doubles");
+
+        __MODE__.AggregateArray array = default;
+        array.values[0] = 7; array.values[1] = 11; array.values[2] = 13; array.tag = 2;
+        array = api.Raw.AggregateTransformArray(array);
+        Assert(array.values[0] == 14 && array.values[1] == 33 && array.values[2] == 52 && array.tag == 9, "__MODE__: inline array aggregate.");
+        values.Add(FormattableString.Invariant($"{array.values[0]},{array.values[1]},{array.values[2]},{array.tag}"));
+        m_checks.Add("__MODE__:aggregate-inline-array");
+
+        __MODE__.AggregatePacked packed = api.Raw.AggregateTransformPacked(new() { prefix = 2, value = 4.25 });
+        Assert(packed.prefix == 9 && packed.value == 17, "__MODE__: packed unaligned double aggregate.");
+        values.Add(FormattableString.Invariant($"{packed.prefix},{packed.value}"));
+        m_checks.Add("__MODE__:aggregate-packed");
+
+        __MODE__.AggregatePair callback = api.Raw.AggregateInvokeCallback(new() { a = 7, b = 1.5f }, &AggregateCallback__MODE__);
+        Assert(callback.a == 24 && callback.b == 9, "__MODE__: native/managed aggregate argument and return in reverse callback.");
+        values.Add(FormattableString.Invariant($"{callback.a},{callback.b}"));
+        m_checks.Add("__MODE__:aggregate-reverse-callback");
+
+        __MODE__.AggregateFloatOne oneFloat = api.Raw.AggregateTransformFloatOne(new() { value = 1.5f });
+        Assert(oneFloat.value == 6, "__MODE__: singleton float aggregate.");
+        values.Add(FormattableString.Invariant($"{oneFloat.value}"));
+        m_checks.Add("__MODE__:aggregate-single-float");
+
+        __MODE__.AggregateDoubleOne oneDouble = api.Raw.AggregateTransformDoubleOne(new() { value = 1.25 });
+        Assert(oneDouble.value == 10, "__MODE__: singleton double aggregate.");
+        values.Add(FormattableString.Invariant($"{oneDouble.value}"));
+        m_checks.Add("__MODE__:aggregate-single-double");
+        m_aggregateSignatures.Add("__MODE__", string.Join(";", values));
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static __MODE__.AggregatePair AggregateCallback__MODE__(__MODE__.AggregatePair value)
+    {
+        value.a += 8;
+        value.b *= 3;
+        return value;
+    }

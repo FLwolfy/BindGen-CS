@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -7,16 +8,19 @@ namespace BGCS.Tool.Tests;
 public sealed class ArchitectureCommandTests
 {
     [Fact]
-    public void Validate_AcceptsTheEightProjectLibraryBoundaries()
+    public void Validate_AcceptsTheThirteenProjectBoundariesAndWorker()
     {
         using var repository = new Repository();
         Assert.Equal(0, repository.Validate());
     }
 
     [Theory]
-    [InlineData("BGCS.Core", "<ItemGroup><ProjectReference Include='../BGCS.CppAst/BGCS.CppAst.csproj'/></ItemGroup>")]
-    [InlineData("BGCS.Intermediate", "<ItemGroup><Compile Include='../BGCS/BindingModule.cs' Link='BindingModule.cs'/></ItemGroup>")]
+    [InlineData("BGCS.Infrastructure", "<ItemGroup><ProjectReference Include='../BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj'/></ItemGroup>")]
+    [InlineData("BGCS.Contracts", "<ItemGroup><Compile Include='../BGCS/BindingModule.cs' Link='BindingModule.cs'/></ItemGroup>")]
     [InlineData("BGCS.Runtime", "<PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>")]
+    [InlineData("BGCS.Cpp2C", "<ItemGroup><ProjectReference Include='../BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj'/></ItemGroup>")]
+    [InlineData("BGCS.CSharp", "<ItemGroup><ProjectReference Include='../BGCS.NativeBuild/BGCS.NativeBuild.csproj'/></ItemGroup>")]
+    [InlineData("BGCS", "<ItemGroup><ProjectReference Include='../BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj'/></ItemGroup>")]
     public void Validate_RejectsDependencyOwnershipAndExecutableViolations(
         string project,
         string content
@@ -30,8 +34,8 @@ public sealed class ArchitectureCommandTests
     public void Validate_RejectsParserObjectsInNeutralSource()
     {
         using var repository = new Repository();
-        File.WriteAllText(Path.Combine(repository.root, "src", "BGCS.Intermediate", "Invalid.cs"),
-            "using BGCS.CppAst.Model; public class Invalid { public CppCompilation ast; }");
+        File.WriteAllText(Path.Combine(repository.root, "src", "BGCS.Contracts", "Invalid.cs"),
+            "using BGCS.Frontend.Clang.Model; public class Invalid { public CppCompilation ast; }");
         Assert.Equal(1, repository.Validate());
     }
 
@@ -60,15 +64,22 @@ public sealed class ArchitectureCommandTests
 
         internal Repository()
         {
-            foreach (string project in new[] { "BGCS.Core", "BGCS.CppAst", "BGCS.Intermediate", "BGCS", "BGCS.Cpp2C", "BGCS.Language", "BGCS.Runtime", "BGCS.Tool" })
-                WriteProject(project, project == "BGCS.Tool" ? "<PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>" : string.Empty);
+            DirectoryInfo? actual = new(AppContext.BaseDirectory);
+            while (actual is not null && !File.Exists(Path.Combine(actual.FullName, "eng", "architecture", "project-dependencies.json")))
+                actual = actual.Parent;
+            string manifest = Path.Combine(actual!.FullName, "eng", "architecture", "project-dependencies.json");
+            Directory.CreateDirectory(Path.Combine(root, "eng", "architecture"));
+            File.Copy(manifest, Path.Combine(root, "eng", "architecture", "project-dependencies.json"));
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifest));
+            foreach (JsonProperty project in document.RootElement.GetProperty("projects").EnumerateObject())
+                WriteProject(project.Name, project.Name is "BGCS.Tool" or "BGCS.Frontend.Clang.Worker" ? "<PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>" : string.Empty);
         }
 
         internal void WriteProject(
             string project,
             string content
         ) {
-            string directory = Path.Combine(root, "src", project);
+            string directory = Path.Combine(root, project == "BGCS.MSBuild" ? "integrations" : "src", project);
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, project + ".csproj"), "<Project Sdk='Microsoft.NET.Sdk'>" + content + "</Project>");
         }

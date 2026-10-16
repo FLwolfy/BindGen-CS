@@ -1,0 +1,32 @@
+{
+  "legacyFixture": "entryTests/Namespace",
+  "legacyVariant": "config.alt",
+  "configuration": {
+    "/api/namespace": "Expected.Namespace.Entry.Alt"
+  },
+  "types": [
+    {
+      "name": "Expected.Namespace.Entry.Alt.EntryApi",
+      "kind": "Class",
+      "isStatic": false
+    }
+  ],
+  "methods": [
+    {
+      "type": "Expected.Namespace.Entry.Alt.EntryApi",
+      "name": "SampleAdd",
+      "parameters": [
+        "int",
+        "int"
+      ],
+      "parameterNames": [
+        "a",
+        "b"
+      ],
+      "returns": "int"
+    }
+  ],
+  "absentTypes": [
+    "Expected.Namespace.Entry.EntryApi"
+  ]
+}

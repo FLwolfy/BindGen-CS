@@ -1,272 +1,849 @@
 # Configuration Guide
 
-[Wiki](README.md) | [中文](configuration-guide.cn.md) | [Configuration entries with dedicated tests](config.md)
+[Wiki](README.md) | [中文](configuration-guide.cn.md) | [Generated field reference](generated/config-reference.md)
 
-The current JSON model is flat; the internal pipeline separates input, target, analysis, marshalling, emission, and output responsibilities. Layer large configurations through BaseConfig and presets instead of copying one monolithic document. No earlier pre-release configuration format is loaded.
-
-Use configuration sources in this order of authority:
-
-1. `bindgen-cs schema` from the installed version for the complete property set;
-2. this guide for workflow and safety rules;
-3. `docs/config.md` for behavioral examples backed by dedicated regression tests.
-
-`docs/config.md` is not a complete property inventory and does not replace the schema.
-
-Generate an editor/CI schema with:
+BGCS 3.0 uses one strict grouped `bindgen.json` for C and C++. The generator, Runtime
+and default consumers use .NET 10 / C# 14. Configuration values become an immutable
+session input; services and parser handles do not live in that input. The complete
+installed schema is authoritative for field names and defaults:
 
 ```bash
 bindgen-cs schema bindgen.schema.json
-bindgen-cs schema bridge.schema.json --kind cpp
+bindgen-cs schema workspace.schema.json --kind workspace
+bindgen-cs schema plugin.schema.json --kind plugin
 ```
 
-Schemas are derived from the installed C or C++ configuration type, include nested public object shapes, enum names, and core semantic descriptions, and reject unknown root properties by default. Use `--allow-unknown-properties` only when a controlled outer tool owns additional metadata; it does not enable old schema migration. Detailed marshalling semantics remain in this guide and the tests.
+The [English](generated/config-reference.md) and [Chinese](generated/config-reference.cn.md)
+references are generated from the same actual CLI schema. `scripts/generate-config-docs.py`
+requires a built tool, exports that schema into an owned temporary directory, and offers
+`--check` to reject stale references. It does not infer behavior from legacy fixture names.
 
-## Make four decisions first
+The schema rejects unknown built-in fields. Plugin options are accepted only in their
+registered plugin namespace after bootstrap. There is no global unknown-field bypass.
+Only `schemaVersion: 1` is accepted; old flat configuration and facade APIs are not read.
+The schema validates documents and fragments, while final validation checks the fully
+composed source, library identities, targets, semantics and execution limits.
 
-| Decision | Common choice | When to change it |
+## Defaults and a complete small request
+
+| Decision | Default | Explicit alternatives |
 | --- | --- | --- |
-| Language boundary | C header → C# | Use a C bridge for C++ classes/templates |
-| Target | `host-c` | Select an explicit target/triple/sysroot for a non-host ABI |
-| Import | `DllImport` | Use `LibraryImport` for source generation or `FunctionTable` for runtime loading |
-| Runtime | Reference `BGCS.Runtime` | Enable `generateRuntimeSource` for standalone source distribution |
-
-## Minimal configuration
+| C standard | `c17` | A supported declared source standard |
+| C++ standard | `c++23` | A supported declared source standard |
+| Native target | `host` resolved to a concrete ABI | Configured target family and SDK |
+| API style | `instance` | Explicit shared `static` style |
+| Import | `functionTable` | `dllImport`, `libraryImport` |
+| Framework | `net10.0` | The current major's schema fixes this baseline |
+| Runtime delivery | `package` | `source` |
+| Managed layout | `split` | `singleFile` with default `Bindings.cs` |
+| Native construction | `none` | `sources`, `prebuilt` |
+| Cache policy | enabled | Disable explicitly; reuse still requires proven inputs |
 
 ```json
 {
-  "namespace": "MyCompany.Native.Library",
-  "apiName": "LibraryApi",
-  "libName": "library",
-  "preset": "host-c,c-library",
-  "entryFiles": [
-    "include/library.h"
-  ],
-  "includeFolders": [
-    "include"
-  ],
-  "importType": "DllImport",
-  "outputPath": "Generated"
-}
-```
-
-This configuration follows the host ABI. Reproducible release configurations should use an explicit target preset or set platform/architecture/ABI directly; the configured target must match the final native binary.
-
-`ConfigVersion` identifies the JSON contract. `init` writes the current version; this pre-release build accepts only that version and provides no old-schema migration.
-
-## Input and parser settings
-
-| Property | Purpose | Guidance |
-| --- | --- | --- |
-| `entryFiles` | Root headers | Prefer one stable umbrella header when available |
-| `allowedHeaders` | Explicit emission whitelist | Empty plus transitive mode is easier for umbrella headers |
-| `includeTransitivelyReferencedHeaders` | Include user headers below entry/include roots | Recommended for SDL-style APIs |
-| `includeFolders` | User include roots | Declarations can be emitted in transitive mode |
-| `systemIncludeFolders` | Compiler/system include roots | Normally not emitted |
-| `defines` | Preprocessor defines | Match the native library build exactly |
-| `additionalArguments` | Raw Clang arguments | Use only when a typed setting is unavailable |
-| `parserKind` | `C`, `Cpp`, or `ObjC` | Match the actual header language |
-| `parseMacros` | Build macro AST | Disable for macro-heavy libraries if constants are unnecessary |
-| `parseComments` | Build documentation AST | Disable for speed only when docs are unnecessary |
-| `parseSystemIncludes` | Include system declarations | Keep false unless deliberately binding them |
-| `autoSquashTypedef` | Collapse typedef chains | Disable when public aliases must be preserved |
-
-## Target settings
-
-`TargetPlatform`, `TargetArchitecture`, and `TargetAbi` form a validated target. `Host` resolves to the running platform/architecture; explicit targets cover Windows, Linux, macOS, Android, iOS, FreeBSD, and Emscripten wasm32 with their valid architecture combinations. `targetTriple`, `targetSysRoot`, and `compilerPath` provide controlled overrides. C# and C++ configuration paths expand environment variables before deciding whether a compiler value is a command name or a configuration-relative path; both absolute and relative path values are supported. Defines and native binaries must match the resolved target. Host parsing discovers compiler system includes, and macOS additionally discovers the active SDK. For Emscripten, provide the matching SDK sysroot explicitly.
-
-Model support is not the same as completed host acceptance. See the [target evidence matrix](capabilities.md#target-evidence) and the current generated acceptance report.
-
-## Import modes
-
-- `DllImport`: broad compatibility and simple diagnostics.
-- `LibraryImport`: source-generated imports; signatures must satisfy source-generator restrictions.
-- `FunctionTable`: caller-owned native context and explicit symbol resolution; the generated API has no dependency on a consumer's loader or engine.
-
-Opaque handle wrappers retain their managed API while native imports carry pointer-sized `nint` values on every target. Callback signatures use the same recursive type analysis as ordinary parameters, including canonical record aliases and native pointer carriers for incomplete records. These rules apply to all ABIs; they do not depend on a browser target or a library-specific type name.
-
-## C# emission backend
-
-`CSharpEmissionBackend` is a future extension point and currently accepts only `IntermediateRepresentation`. Canonical `BindingModule` emits raw ABI plus public string/span/ref/out friendly overloads, covering constants, enums, aliases, opaque handles, delegates, anonymous/nested records, fixed arrays, bitfields, and all import modes. Unsupported semantics fail with `BGCSCS001` before transaction commit. There is no fallback emitter, and a failed run preserves last-good output.
-
-## Output and Runtime
-
-- `outputPath` is resolved relative to the config file by `GenerateConfigured`.
-- `mergeGeneratedFilesToSingleFile=true` combines generated bindings into one C# file per target. `oneFilePerType` is independent; set it to `false` if you also want to avoid per-type files before composition. The `c-library` preset already sets both for one `Bindings.cs`.
-- `singleFileOutputName` must be a file name ending in `.cs`; paths are rejected.
-- `generateRuntimeSource=false` expects a `BGCS.Runtime` reference.
-- `generateRuntimeSource=true` emits guarded standalone `Runtime.cs` separately, even with single-file bindings.
-- Output is transactional; failed parsing/generation does not delete previous successful output.
-
-## Incremental cache and plugins
-
-`enableIncrementalCache` defaults to `true`; `cacheDirectory` defaults to `.bindgen-cache` relative to the configuration file. A key contains the installed generator identity, complete serialized configuration, parser arguments, resolved compiler identity/version, plugin/lowering fingerprints, and exact contents of discovered C/C++ inputs. Restore and publication are transactional. Changing a header, target, toolchain, define, include, mapping, plugin binary, shim, or generator binary creates a different key. Programmatic generators with unfingerprinted custom state bypass cache hits rather than risk stale output.
-
-`pluginAssemblies` lists explicit assembly paths relative to the configuration file. Each assembly must expose a public parameterless `IBindingPlugin` and return `BindingPluginContract.C_CURRENT_VERSION` from its `contractVersion` property; mismatches and duplicate IDs fail before generation. The revision is a load-time compatibility guard, not a marketed plugin generation. Loading uses an isolated dependency resolver and atomic batch registration. C++ plugins register `ICppTypeLowering`, `ICppCallableLowering`, or `ICppArtifactContributor`; C# post-analysis output can register `IBindingEmitter`. Stateful lowerings must implement `ICacheFingerprintProvider`. See the [final lowering architecture](lowering.md) for recipes, plugins, shims, and safety policy.
-
-## Mappings and policies
-
-Use mappings only for facts that cannot be inferred safely:
-
-- native/managed naming;
-- opaque or unexposed types;
-- string encoding and ownership;
-- pointer/count relationships that names cannot identify;
-- constructors and member-style functions;
-- explicit template instantiations and C++ lowerings.
-
-A mapping must not hide ABI uncertainty. If a non-trivial C++ type crosses a boundary, generate a C bridge instead.
-
-BGCS's default C# mappings contain C/C++ standard type names only. Native-SDK aliases and constructor expressions belong in the consuming project's config, not in BGCS core. For example, use `"typeMappings": { "Uint8": "byte" }` for a project typedef and `"knownDefaultValueNames": { "ExternalPoint(1,2)": "new Point2(1, 2)" }` for its default expression. The latter is an exact expression mapping; it does not infer the ABI or layout of `ExternalPoint`.
-
-## Strict safety diagnostics
-
-`strictSafety` defaults to `true`, and `strictSafetySeverity` defaults to `SuppressFriendly`: unresolved semantics keep the raw ABI but remove that function's inferred friendly overloads. `Warning` deliberately keeps those overloads while reporting risk; `Error` makes validate/generate/build fail before commit. Diagnostics use `BGCS-SAFETY-*` codes and include the exact minimum `marshallingMappings` path. Set `strictSafety=false` only when an external audit owns those semantics.
-
-When `typeMappings` redirects a native record to a project-supplied managed value type, add an `externalTypeContracts` entry. `NativeTypes` and `ManagedTypes` are ordinal selectors that accept `*` and `?`, so one audited contract can cover closed generic carriers such as `NativeVector_*` to `NativeVector<*>`. Every selected `typeMappings` pair is validated and overlapping contracts are rejected. `ByValuePolicy=Reject` permits pointer-only use, `RequireLayoutMatch` accepts by-value use only when parsed native size/alignment match the declared carrier, and `BypassLayoutValidation` explicitly continues without that proof. Accepted by-value carriers remain visible in Binding IR and emit `BGCS-SAFETY-EXTERNAL-TYPE`; the project must keep managed-layout and native-invocation tests.
-
-```json
-{
-  "typeMappings": {
-    "NativeVec2": "Vector2"
+  "schemaVersion": 1,
+  "library": { "id": "sample", "nativeName": "sample" },
+  "source": {
+    "language": "c",
+    "languageStandard": "c17",
+    "headers": ["include/sample.h"],
+    "includeDirectories": ["include"]
   },
-  "usings": [
-    "System.Numerics"
-  ],
-  "externalTypeContracts": [
+  "targets": [{ "id": "host", "toolchain": "auto" }],
+  "api": {
+    "namespace": "Example.Sample",
+    "name": "SampleApi",
+    "names": { "sample_add": "Add" }
+  },
+  "nativeBuild": { "mode": "sources", "sources": ["src/sample.c"] },
+  "output": { "root": "Generated" }
+}
+```
+
+`generate` produces validated managed artifacts and any required C++ bridge.
+`build` additionally validates managed compilation and the declared native sources or
+prebuilt artifacts before joint publication. The report distinguishes resolution,
+parsing, generation, managed compilation, native linking, invocation and packaging.
+A passed build does not imply an unexecuted native invocation passed.
+
+## Source and language facts
+
+`source.headers` is the ordered root header collection. `includeDirectories` and
+`systemIncludeDirectories` are ordered search roots, not interchangeable declaration
+policies. `includeTransitivelyReferencedHeaders` keeps transitive declarations;
+`includeSystemDeclarations` deliberately opts into system declaration retention.
+`defines` and `arguments` must match the actual native build. `preamble` and `postamble`
+are explicit parser inputs and participate in content identity.
+
+`includeHeaderHelpers` defaults to `false` for C. Ordinary binding generation imports
+external C functions and their aliases without requiring extra exports from an existing
+library. Set it to `true` to include selected static, inline and direct-call-only C
+helpers; BGCS then emits adapters that must be compiled into the same configured native
+module as its external functions. Exact helper selectors and helper cleanup requirements
+diagnose this opt-in when it is missing. Explicit `variadicVariants` keep their requested
+fixed adapters independently. C++ uses its ordinary C++ bridge instead.
+
+`parseMacros` and `parseComments` select whether those facts are retained. Turn them off
+only when those outputs are unnecessary. An umbrella header can include the public
+surface of a library without listing every child header. Source identities, typedefs,
+qualifiers, nested arrays and calling conventions remain native facts until later analysis.
+
+Keep formal output and cache outside explicit include/source roots. A header next to the
+configuration needs no `includeDirectories: ["."]`. Use dedicated `include/`, `src/` and
+`Generated/` directories when an explicit include root is needed. Inputs are read without
+silently changing the process current directory.
+
+## Targets, SDKs and managed runtime
+
+Each `targets[]` entry has its own `id`, toolchain selection and `settings`. Settings
+include `compilerPath`, `sysRoot`, normal and C++ system header paths, definitions and
+parser arguments. A simple executable name remains a discovery request; a path belongs
+to the declaring configuration's directory. Native target IDs describe OS, CPU and ABI;
+NuGet RIDs describe asset selection and do not replace target facts.
+
+The worker follows the **host**. Target headers, primitive widths, layout, calling ABI,
+SDK and native construction follow the **target**. Clang parsing does not require a
+Clang final compiler. Using MSVC or GNU still requires matching headers and target ABI.
+Do not mix host standard-library headers into a cross-target request.
+
+`api.runtime` can select `coreClr`, `nativeAot` or `browserWasm`; omitting it lets the
+runtime resolver choose the appropriate target default. Managed runtime and import mode
+participate in capability checks. Browser Wasm uses explicit static native references
+and an export-table adapter, rather than desktop dynamic loading. GNU and musl asset
+paths are distinct. Android SDK/API levels and Apple device/simulator SDK requirements
+cannot be proven from a short target or RID string.
+
+Use `doctor`, `inspect` and the [capability evidence](capabilities.md) to review actual
+resolved facts. Missing prerequisites are diagnosed; BGCS does not implicitly download
+SDKs or compiler installations.
+
+## API naming, imports and layout
+
+`api.namespace`, `name` and `names` control managed identity independently of parsing.
+Use exact native names or unambiguous qualified callable names for mappings. A C++
+export-name override belongs to `cpp.callableLowerings`; changing only a managed name
+must not change the native ABI.
+
+All import modes consume the same checked interop contracts. FunctionTable loads the
+complete required symbol set and enables explicit module providers and independent
+instances. DllImport and LibraryImport use their supported import/marshalling capabilities;
+LibraryImport validation also checks its generated source. Choosing a mode does not
+bypass unsupported by-value layouts, callback rules or special native scalar ABI.
+
+The instance context offers `Raw` plus eligible friendly methods. FunctionTable contexts
+use `Load()` or `FromProvider(...)`; DllImport/LibraryImport contexts use `Create()`.
+Explicit static style has shared lifetime semantics. Consumers must enable unsafe code
+and compile the exact selected target's managed manifest entries.
+
+`output.layout = split` separates API, imports, types, callbacks and helpers by role.
+`singleFile` composes managed artifacts into `output.singleFileName`; it must be a safe
+`.cs` filename, not a path. Native and metadata files retain their own manifest entries.
+Generated output is a jointly owned complete set. Failed parsing, ABI validation,
+compilation or publication must preserve the previous complete set.
+
+`api.enums` declares managed enum presentation with an explicit fixed-width underlying
+kind and decimal member values. `api.enumMappings` selects an exact native typedef,
+enum or scalar name. The mapping must preserve width and signedness; `Raw` retains the
+original native carrier. This example preserves a high bit in a C `uint64_t` typedef:
+
+```json
+{
+  "api": {
+    "enums": [{
+      "name": "WideFlags",
+      "underlyingType": "uInt64",
+      "isFlags": true,
+      "values": [{ "name": "HighBit", "value": "1152921504606846976" }]
+    }],
+    "enumMappings": { "bgcs_wide_flags": "WideFlags" }
+  }
+}
+```
+
+Use decimal strings to preserve all 64 bits across configuration serialization. An
+omitted underlying kind, duplicate member, out-of-range value or incompatible carrier
+fails validation; naming an enum does not prove native storage or calling compatibility.
+
+## Existing consumer value types
+
+`api.externalTypes` maps an exact native struct to a closed consumer type through
+explicit field copies. For example:
+
+```json
+{
+  "api": {
+    "externalTypes": [{
+      "nativeType": "NativeVector_int",
+      "managedType": "Consumer.NativeVector<int>",
+      "fields": { "size": "Size", "capacity": "Capacity", "data": "Data" }
+    }]
+  },
+  "managedBuild": { "sources": ["ConsumerTypes.cs"] }
+}
+```
+
+The consumer probe runs outside the Host and measures every actual public writable
+field. Field order and total managed size can differ: imports continue to use the
+generated native carrier, with independently checked native calling ABI. An external
+type is never substituted into an import merely because its size matches.
+
+Fixed-width integer and floating-point fields preserve kind, signedness and width.
+Data-address fields may use an unmanaged pointer, `nint` or `nuint`; measured pointer
+width and byte order must match the target. Address copies support packed fields
+without assuming alignment. They neither retain pointed-to storage nor transfer its
+ownership. Keep the pointee alive yourself and use unsafe access only within its
+actual lifetime. A same-size `long` is not an address declaration. Callable pointers,
+overlapping fields, nested aggregates and unproven storage require a separate typed
+adapter. Field copies cannot preserve original `in`/`ref`/`out` address aliases.
+
+## Strings, buffers, owned results and evidence
+
+The pointer spelling `char*` does not establish UTF-8, termination, retention or ownership.
+`wchar_t` width comes from the target; 2-byte and 4-byte text use different codecs.
+A complete string assertion can be expressed as:
+
+```json
+{
+  "semantics": {
+    "stringParameters": [{
+      "function": "sample_set_name",
+      "parameter": "name",
+      "encoding": "utf8",
+      "codeUnitWidth": 1,
+      "byteOrder": "native",
+      "lengthUnit": "codeUnits",
+      "direction": "input",
+      "lifetime": "call",
+      "zeroTerminated": true,
+      "retainsPointer": false,
+      "allowsNull": false
+    }]
+  }
+}
+```
+
+For bounded input buffers, use `semantics.bufferParameters` with the exact parameter,
+its `lengthParameter`, `lengthUnit`, direction, lifetime, retention and null policy.
+Optional `requiredAlignment` must agree with native storage requirements. A span wrapper
+is appropriate only for the declared access window; a retained native pointer needs a
+separate lifetime owner. Length in bytes, code units, Unicode scalars and typed elements
+must not be substituted for each other.
+
+Writable capacity protocols can instead select `capacityParameter` and a distinct
+`writtenCountParameter` naming one output integral pointer. The generated signature
+accepts `Span<T>` and exposes `out int written` in **elements**. BGCS converts the span
+capacity to the declared native units with checked arithmetic, then rejects a negative,
+over-capacity or incomplete-element native count before exposing it. A capacity and
+written count share the declared `lengthUnit`. Distinct initialized input length and
+writable capacity require an explicit adapter; they are not silently conflated.
+
+Use `semantics.valueParameters` for a single required pointer with an explicit
+`direction` (`input`, `output`, `inputOutput`), `lifetime: "call"`,
+`retainsPointer: false` and `allowsNull: false`. Supported scalars and checked generated
+record carriers become `in T`, `out T` or `ref T`. The original storage stays pinned
+through the call and its actual address alignment is checked before native code runs.
+Aliased references, record/field overlap and overlap with a borrowed span preserve
+their real addresses and write-through order. An `out` borrow does not first zero
+storage that may also be an input. External field-copy projections cannot promise
+this reference identity, so that convenience is omitted with a diagnostic.
+Validated written counts are converted copies and must not overlap borrowed
+value/span storage or another count output; overlapping requests fail before the call.
+Raw imports keep their original pointers. An explicitly annotated one-byte native
+`_Bool` uses `in bool`, `out bool` or `ref bool` while its raw pointer remains `byte*`.
+The checked facade pins the original Boolean storage, preserving aliases and writes
+even if a later result check throws. Its native and requested alignments must both
+be one byte. Integer conventions such as Windows `BOOL`, unknown Boolean layouts,
+nullable, retained, asynchronous, over-aligned, enum and pointer-to-pointer
+conveniences require an explicit supported adapter. C++ bool-pointer lowering
+remains a separate native bridge capability; equal size does not justify a C++
+pointer reinterpretation.
+Reference modifiers are preserved by aliases, function views and shared facades.
+These wrappers cannot prevent native code from writing outside a supplied capacity;
+the native library must obey the declared access and lifetime contract.
+
+An optional pointer can instead be permanently bound to NULL in a checked overload.
+Declare its `semantics.valueParameters` contract with `allowsNull: true`,
+`lifetime: "call"`, `retainsPointer: false` and its actual access direction, then add
+an `api.functions[].defaults` entry such as
+`{ "parameter": "p_open", "value": { "kind": "null" } }`.
+BGCS hides that pointer only in the NULL-bound facade and checks the remaining
+string, value and buffer inputs normally. Other explicit defaults can generate
+further overloads; aliases, named views and shared facades use the same operation.
+This does not create a general nullable `ref T` overload: the complete pointer
+signature remains available in `Raw`. Missing nullability, retention or lifetime
+facts cannot be supplied by a NULL default alone.
+
+`api.records[].constructorFields` selects a managed data-carrier constructor. An
+exact fixed primitive array field also receives an additive `ReadOnlySpan<T>` copy
+overload. Every selected array must have exactly its native element count; all
+lengths are checked before any field assignment. The constructor copies into the
+record's independent inline storage, and preserves the constructor accepting its
+raw array carriers. This does not construct a native C++ object or lend a Span over
+an owned native object. Pointer, Boolean, enum, record and special scalar arrays keep
+their raw constructor with an explicit restriction on the Span convenience.
+
+`semantics.ownedResults` identifies a result's matching `releaseFunction`, release/allocation
+domain and `releaseThreadDomain`. Use `any` only when cleanup is actually thread independent;
+`unknown` prevents assuming unrestricted automatic cleanup. Native construction and
+release must use the same domain. An owned object retains the module needed by its destructor.
+The [NativeShim example](../examples/NativeShim/README.md) shows explicit raw cleanup
+when no automatic ownership contract has been provided.
+
+Configuration assertions are `UserAsserted`. Declared source facts and independently
+verified evidence retain their distinct levels. A user assertion never becomes `Verified`
+merely because it was accepted. Unknown friendly semantics suppress unsafe conveniences;
+a representable raw ABI can remain available. Unsupported ABI itself is a failure.
+Equal sizes do not prove field offsets, alignment or by-value register classification.
+Special scalars such as `long double` need supported evidence or pointer/shim paths.
+
+Retained callbacks require an unregister-and-quiescence protocol. Async cancellation
+requires a terminal native acknowledgement before releasing pinned memory or module leases.
+These facts can be contributed through neutral interop ports; no config name invents an
+unimplemented safety guarantee. Consult the actual feature inventory and tests before
+relying on a particular callback or async projection.
+
+## C++ typed recipes, templates and shims
+
+The `cpp` group has `typeLowerings`, `callableLowerings`, `templateInstantiations`,
+`nativeShims` and `virtualCallbacks`. C++ lowering builds typed bridge operations, emits
+the C header/C++ source, reparses the actual C header and verifies exported contracts.
+Its ownership and conversion semantics survive that reparse through stable identities.
+
+Type recipes specify a matched native type, its exact C ABI carrier, typed parameter/result
+conversions and optional explicitly fingerprinted helper fragments. Managed projections
+add a public managed type and conversion assertions while keeping raw carriers exact.
+Every configured managed expression is syntax validated even if its type pattern is unused.
+Target-sized carriers such as `size_t` follow the actual target facts, not the generator host.
+
+Callable recipes select qualified names and can override export names, exclude a declaration
+or wrap the independently planned invocation. `templateInstantiations` selects concrete class
+and fixed function templates. A native shim declares public C headers, implementation sources
+and exact symbols, then uses ordinary parse/build/publication stages. Abstract virtual callback
+interfaces require explicit finite callback slots and a native proxy lifetime protocol.
+
+[The C++ cookbook](cpp-extension-cookbook.md), [lowering architecture](lowering.md),
+[Contracts-only plugin](../examples/LoweringPlugin/README.md) and
+[generated C++ group reference](generated/cpp-config-reference.md) cover the concrete DTOs.
+An unsupported variadic signature needs an explicit fixed native wrapper with correct C
+argument promotions. A nontrivial C++ record must not be mapped to a same-sized managed
+struct merely to make generation compile.
+
+## Native and managed construction inputs
+
+`nativeBuild.mode` is `none`, `sources` or `prebuilt`. Sources include upstream implementation
+inputs and generated bridge/shim inputs. Prebuilt artifacts require an explicit matching
+`prebuiltTargetId`, format/CPU checks and required-export verification. Modes and successful
+validation stages are reported rather than inferred.
+
+The provider choices are `auto`, `clang`, `gnu`, `msvc`, `clang-cl`, `cmake`, `meson` and
+`msbuild`. `buildToolPath` and `auxiliaryToolPath` select optional build-system programs.
+Compiler/linker arguments are separate lists; libraries and search roots are explicit.
+`outputKind` chooses an allowed shared/static/object form. Providers create immutable
+argument-list plans that the unified executor runs with cancellation and bounded time.
+
+`managedBuild.references`, `sources` and `defines` declare inputs needed for managed candidate
+compilation. Keep handwritten partial types and external managed carriers in those source
+inputs or consumer projects, outside generated roots. External carrier or ABI customization
+must still satisfy checked storage/calling contracts; a name mapping alone is not evidence.
+
+`bridge` generates native-only artifacts. The neutral `bridge.manifest.json` can be consumed
+by `native-build` with explicit overrides. Embedded SDK and MSBuild requests use the same
+Host construction logic; see [native invocation tests](testing.md) and [MSBuild](msbuild.md).
+
+## Runtime package or source delivery
+
+`runtime.mode = package` references the independent `BGCS.Runtime` consumer library.
+It has no generator or parser dependency. `source` emits the selected source closure under
+`runtime.namespace`, or `<api.namespace>.Runtime` by default. Namespace changes are applied
+structurally. Single-file layout can include that closure in `Bindings.cs`.
+
+The package and source variants must pass the same codec, module, handle and callback tests.
+Do not add duplicate Runtime implementations for one binding. Multiple source-runtime bindings
+use separate API-local namespaces; a custom namespace is an explicit collision responsibility.
+
+## Composition, profiles and path ownership
+
+The precedence is built-in defaults, selected named profile, ordered `extends` bases,
+current document, then explicit CLI/SDK overrides. Scalars replace; objects merge by field;
+ordinary lists replace. Values `false`, `0` and empty strings are not silently ignored;
+their validity is decided by the field's schema and final validation. Inheritance cycles fail.
+
+```json
+{
+  "schemaVersion": 1,
+  "extends": ["base.bindgen.json"],
+  "profiles": {
+    "single": { "output": { "layout": "singleFile" } }
+  },
+  "profile": "single",
+  "output": { "root": "Generated" }
+}
+```
+
+Each local document's paths retain that document's directory as their origin. CLI overrides
+use the invocation directory. Plugin settings retain their `pathBase` and value origins.
+Workspace paths are relative to the workspace document, while each binding retains its own
+base. A remote base uses an explicit object; a bare URL string never triggers a download:
+
+```json
+{
+  "schemaVersion": 1,
+  "extends": [
     {
-      "NativeTypes": [
-        "NativeVec2"
-      ],
-      "ManagedTypes": [
-        "Vector2"
-      ],
-      "Size": 8,
-      "Alignment": 4,
-      "ByValuePolicy": "RequireLayoutMatch"
+      "url": "https://example.com/bgcs/base.json",
+      "sha256": "<64 hexadecimal digits identifying the exact response bytes>",
+      "pathBase": "./bindings"
     }
   ]
 }
 ```
 
-For C++ bridges, `loweringSafetyPolicy` defaults to `VerifiedOnly`. Use `AllowUserAsserted` for reviewed project recipes/plugins/shims, and `AllowUnsafe` only when the project explicitly owns ABI and lifetime risk. The latter continues generation but emits the auditable `BGCS-SAFETY-LOWERING-BYPASS` diagnostic.
+`pathBase` explicitly identifies the local base for paths in the remote document,
+relative to the declaring document's local base or absolute. URL directories never
+become local directories and there is no current-directory fallback. A remote
+document's further local bases use that explicit base. Every document declares
+`schemaVersion: 1`; content is verified before JSON parsing or merging.
 
-## Ownership and buffer marshalling
+Inputs and redirects require HTTPS without URI fragments or embedded credentials.
+At most five redirects and 30 seconds are allowed per remote read. Each document
+is limited to 16 MiB; composition permits 128 document visits, 64 MiB of input and
+64 inheritance levels. Remote bytes stay in this composition's memory and do not
+create a disk download cache. Conflicting content pins for one URL fail. Local
+file identities remain revalidated; remote digest/length/path-base identities are
+recorded separately rather than masquerading as local file dependencies.
 
-Use `marshallingMappings` when pointer syntax cannot express ownership or buffer relationships:
+Embedded callers can cancel composition with `GenerationRequest.FromFileAsync(path,
+cancellationToken: token)`, `BuildRequest.FromFileAsync(...)` and
+`WorkspaceLoader.LoadAsync(...)`. A `BindingConfigurationLoader` can receive a
+caller-owned `HttpClient` for a custom HTTPS transport. Its caller manages the
+client lifetime and should disable automatic redirects.
+
+## Plugin bootstrap and cache policy
+
+`extensions.plugins` lists strict plugin manifests. Each manifest identifies its exact public
+entry type, compatibility major, services and complete executable asset hashes. Bootstrap
+loads descriptors/schema before validating plugin settings and custom target choices. Session
+factories register neutral services, then the registry freezes. Duplicates, exclusive matches
+and conflicting output paths fail deterministically.
+
+Ordinary plugins use `BGCS.Contracts`; a Clang-specific fact contributor is an explicit
+worker-only advanced extension. Host and worker resource ownership stay separate. A normal
+plugin process/load boundary is not a security sandbox.
+
+Artifact-affecting extension state requires `ICacheFingerprintProvider`, including external
+input content/existence facts. Missing fingerprints disable affected cache reuse. Priority,
+registration order, configuration, code, headers/search membership, target, toolchain, Runtime
+mode and processors contribute to generation identity. Read the report for actual hit/miss/
+not-used status: enabling policy alone does not prove a hit.
+
+The reusable stages are the original built-in frontend result and built-in C# emission.
+Frontend reuse additionally requires its verified worker/resource closure and pinned .NET
+execution environment, effective arguments, source content and include-search directory
+membership. Ambient or compiler input effects that cannot be closed disable frontend reuse.
+Generated source contributors run before that lookup and their actual captured bytes affect
+identity. Projection, source processing and requested build validations still execute;
+native construction is not currently cached. Unsupported frontends/backends, incomplete
+upstream fingerprints or processors without complete fingerprints disable that stage rather
+than reuse uncertain bytes. Fingerprinted processors activate and declare their inputs before
+lookup, then run on both cache misses and hits. Entries verify their complete named content set,
+and corrupt entries become misses.
+`cache.maximumBytes` defaults to 512 MiB and `cache.maximumEntryBytes` to 64 MiB; values
+must be positive, an entry is at most 256 MiB, and the total must be at least one entry.
+A cache hit cannot skip this request's required build or invocation validation.
+
+## Execution, workspaces and publication
+
+`execution` contains positive session, managed-compilation and native-build deadlines.
+
+`execution.diagnostics` controls warning promotion at candidate gates:
 
 ```json
 {
-  "marshallingMappings": {
-    "library_create_name": {
-      "Return": {
-        "Strategy": "String",
-        "Ownership": "Owned",
-        "Encoding": "Utf8",
-        "CleanupFunction": "library_free_name",
-        "RequiresCleanup": true,
-        "NullTerminated": true
-      }
-    },
-    "library_get_items": {
-      "Parameters": {
-        "output": {
-          "Strategy": "Span",
-          "Ownership": "CallerAllocated",
-          "LengthParameter": "actual_count",
-          "CapacityParameter": "capacity",
-          "WrittenCountParameter": "actual_count"
-        }
-      }
+  "execution": {
+    "diagnostics": {
+      "warningsAsErrors": false,
+      "errorCodes": ["BGCS-SAFETY-OWNERSHIP"]
     }
   }
 }
 ```
 
-Explicit mappings override conservative inference and are preserved by `OverloadPlanner`. They are available to all shared-IR emitters through `MarshallingPlan`.
-
-## Typed C variadic functions
-
-Unconfigured `...` functions are skipped with a diagnostic because silently dropping variadic arguments is ABI-unsafe. Define promoted fixed variants for Windows DllImport:
+Warnings remain warnings by default. `errorCodes` matches complete identities without
+wildcards; `warningsAsErrors: true` promotes every warning observed by a candidate
+gate, including extension validator warnings. Errors cannot be downgraded, and console
+log filters do not affect this policy. A returned data pointer without explicit ownership
+or lifetime evidence produces `BGCS-SAFETY-OWNERSHIP`; its correct raw ABI remains
+available by default. Declare `semantics.ownedResults`, `semantics.borrowedResults` or
+neutral plugin contracts before requesting a friendly resource projection. Callable names
+do not establish ownership or encoding, and user assertions remain UserAsserted.
+Promoted errors prevent replacement of the previous complete publication. Backup cleanup,
+private source-store cleanup or cache-write notices after publication remain post-processing diagnostics; they cannot
+roll back a completed publication.
+Ctrl+C and SDK cancellation reach the Host and its worker/native process tree. Cancellation
+or validation failure must not publish a partial successful artifact set.
 
 ```json
 {
-  "variadicFunctionVariants": {
-    "native_log": [
-      {
-        "Suffix": "IntString",
-        "ParameterTypes": [
-          "int",
-          "byte*"
-        ],
-        "ParameterNames": [
-          "value",
-          "text"
-        ]
-      }
+  "schemaVersion": 1,
+  "parallelism": 2,
+  "projects": [
+    { "id": "core", "configuration": "core/bindgen.json" },
+    { "id": "addon", "configuration": "addon/bindgen.json", "dependencies": ["core"] }
+  ]
+}
+```
+
+Workspace IDs are unique, dependencies are explicit and cycles fail before execution.
+Outputs cannot overlap each other or protected input/cache roots. Generation and build follow
+the dependency graph; failed prerequisites block dependent publication. `diff` previews in
+private storage and keeps formal output intact. `inspect` exposes detached native, bridge,
+interop and managed facts for review.
+
+Output publication uses ownership, hashes, locks and a recovery journal. Do not use an unowned
+nonempty directory, a filesystem root or a path that escapes through a symlink. Temporary
+validation output is private; the final manifest owns exact artifacts and obsolete generated
+files. Handwritten work belongs outside that ownership boundary.
+
+The release inventory, schema documentation, package closure and actual platform receipts must
+agree at the release revision. This guide describes supported inputs and conservative boundaries;
+implementation/certification status determines whether the complete 3.0 maintenance gate is met.
+
+Console diagnostic presentation can use `--log-level warning` and an independent
+`--frontend-log-level error`. Accepted severities are `trace`, `debug`, `information`
+(`info`), `warning`, `error`, `critical` and `none`. Failure diagnostics always remain
+visible, and presentation never changes success or removes diagnostics from JSON/Host
+results. These preferences are command options rather than generation/cache inputs.
+
+CMake native plans require CMake 3.24 or newer, including its exact `cmake -E env --`
+argument boundary. Provider discovery and execution still use the configured compiler,
+headers and native target instead of silently adopting a host compiler.
+
+## C pointer factories and explicit member methods
+
+Ownership and presentation are independent inputs. For a native
+`Widget* widget_create(void)` / `void widget_destroy(Widget*)` pair and
+`int widget_get(Widget* self)`, declare:
+
+```json
+{
+  "semantics": {
+    "ownedResults": [{ "function": "widget_create", "releaseFunction": "widget_destroy", "releaseDomain": "widget", "releaseThreadDomain": "any" }],
+    "borrowedParameters": [{ "function": "widget_get", "parameter": "self", "lifetime": "call", "retainsPointer": false }]
+  },
+  "api": {
+    "memberFunctions": [{ "function": "widget_get", "nativeType": "Widget", "receiver": "self", "objectName": "WidgetObject", "name": "Get", "releaseDomain": "widget" }]
+  }
+}
+```
+
+This fragment belongs inside the normal grouped configuration. It produces an
+owned factory return and both `widget.Get()` and the checked context facade.
+`releaseDomain` on a member is optional; when supplied, it rejects objects from
+other allocation/release domains even when their native pointer type matches.
+The receiver must have the exact selected record-pointer or opaque alias
+identity. Unknown retention, an unsupported destructor protocol or missing
+ownership evidence does not create a speculative owning wrapper. See
+[Runtime lifetimes](runtime-lifetime.md#explicit-c-ownership-and-receiver-presentation).
+
+## Constant and native enum presentation
+
+`api.constants` selects an existing native scalar or string constant by stable
+source identity or an unambiguous original name. `api.nativeEnums` selects an
+existing native enum and its existing members. These settings can rename,
+replace inert documentation and assert managed values; they do not rewrite
+native facts, add native enum members or change an enum's native storage width.
+`api.enums` remains the separate facility for defining additional managed enums.
+
+```json
+{
+  "api": {
+    "emitLibraryNameConstant": true,
+    "constants": [{
+      "constant": "NATIVE_VALUE",
+      "name": "PresentedValue",
+      "managedType": "long",
+      "documentation": "An explicitly asserted managed value.",
+      "expression": "6L * 7L + 1L"
+    }],
+    "nativeEnums": [{
+      "nativeType": "NativeMode",
+      "name": "Mode",
+      "documentation": "Public names for the original native enum carrier.",
+      "values": [{
+        "member": "NATIVE_MODE_FIRST",
+        "name": "First",
+        "value": { "kind": "integer", "value": "11" }
+      }]
+    }]
+  }
+}
+```
+
+Use either typed `value` or `expression` for one member. Typed values preserve
+exact integer strings and Unicode text. Expressions must be bounded C#
+compile-time expressions supported by the framework, generated constant/enum
+carriers and declared `managedBuild.sources` / `managedBuild.references`.
+Statements, directives, runtime calls, undeclared consumer-only references,
+out-of-range enum values and ambiguous
+selectors fail before emission. The planner compiles assertions with warnings
+as errors, evaluates compiler constant values and emits canonical inert literals;
+the final artifact check rejects changed constant types, values and visibility.
+The full consumer build still validates its complete references and source set.
+
+Managed compiler inputs are captured before the emission-cache lookup. The host
+freezes every declared source and reference, the framework metadata images and
+the complete adjacent dependency closure; even an unselected dependency is an
+input. Explicit references have precedence over adjacent lookup, which searches
+the referring assembly's directory followed by the declared reference directories.
+Missing earlier candidates are tracked, so a new shadowing DLL cannot reuse a
+result produced from the previous closure. Assembly identities, original bytes
+and effective preprocessor symbols participate in the cache identity, and changes
+during generation prevent publication. Metadata inspection never loads consumer
+assemblies or executes their initializers. The verification receipt records paths
+and content digests without embedding PE images.
+
+An unused framework compatibility facade may forward optional types to an
+assembly outside the installed framework. A forwarding-only target is optional
+only when the facade has no implementation/type dependency on that assembly.
+Selecting a missing forwarded type still fails constant validation. Consumer
+assembly references retain their complete dependency requirement, including
+unselected members and type-forwarding assemblies.
+
+For example, declare a source containing `Vendor.Values.Answer` or its assembly
+under `managedBuild`, then use `"expression": "global::Vendor.Values.Answer"`.
+`managedBuild.defines` augments the plain `net10.0` validation project's framework
+symbols and default Debug symbols. Errors in the selected constant, its field,
+signature, alias or dependency fail generation. Unresolved bodies of handwritten
+partial methods on the generated API/context can be deferred because constant
+evaluation cannot execute those bodies. `build` compiles all supplied sources
+with warnings as errors; it does not defer those method-body errors.
+
+These overrides retain `UserAsserted` provenance separately from the original
+compiler facts. For example, presenting native `42` as managed `43` leaves an
+actual native function returning `42`. Changing a named enum value changes the
+number passed when that managed name is used; choose such assertions deliberately.
+The underlying enum carrier and raw import signatures stay fixed.
+
+By default, `NativeLibraryName` is a public `const string` on the instance
+context and, for static style, its shared facade. It is readable before loading
+a module and is emitted for all three import modes. Set
+`api.emitLibraryNameConstant` to `false` to omit it. Its identifier is reserved
+only when enabled, and processors cannot substitute its configured value.
+
+For a declarative consumer-owned import constant, set
+`api.importLibraryNameConstant` to a qualified field such as
+`Vendor.LibraryNames.Native`, and declare its source in `managedBuild.sources`
+or its assembly in `managedBuild.references`. DllImport and LibraryImport keep
+the fully qualified field reference in their attributes. Generation compiles
+the frozen inputs without executing consumer code and requires one `const string`
+whose value exactly equals the resolved import name (`__Internal` for the browser
+static module). Missing, mutable or mismatched fields fail before publication.
+The declaring type must belong to a consumer namespace outside the generated
+namespace; artifact processors cannot introduce a shadow type or change the
+reference. This choice is independent of the informational `NativeLibraryName`
+constant. FunctionTable uses its module provider or `Load` argument and rejects
+this static-import-only setting. A changed source or assembly participates in
+cache invalidation and input verification.
+
+## Generated type scope and finite input variations
+
+`api.nestGeneratedTypesInApi` defaults to `false`. Enabling it places generated native
+storage, inline-array carriers, native and additional managed enums, and named ABI delegates
+inside the public API type, for example `WidgetApi.Packet`. Static style uses that same
+public scope while retaining `WidgetApiContext` for independent instance lifetimes.
+Split and single-file output preserve identical type identities, layouts and raw calling
+conventions. Conflicts with API members and implementation types fail before writing files.
+
+For an existing `int add(int left, int right)`, this configuration adds a checked alternate
+input while preserving `Add(int, int)`:
+
+```json
+{
+  "api": {
+    "nestGeneratedTypesInApi": true,
+    "functions": [{
+      "function": "add",
+      "inputVariations": [{
+        "parameters": [{
+          "parameter": "left",
+          "projection": {
+            "managedType": "long",
+            "managedToNativeExpression": "checked((int){value})"
+          }
+        }]
+      }]
+    }]
+  }
+}
+```
+
+The added signature is `Add(long, int)`; overflow prevents the native call. An optional
+variation `name` selects a different method name. A conversion targets the existing
+friendly input type, so an alternate `Vector3` can first become an existing `Vector2`
+before entering its original scalar conversion. Forwarders reuse that operation's pinning,
+error handling and cleanup, with no additional raw imports. Instance and shared static
+facades use the same checked operation.
+
+Value conversions cannot replace `in/ref/out` borrows or hidden parameters. Ambiguous
+base projections and duplicate C# signatures fail. Input variations and default-argument
+overloads share `api.defaultOverloadLimit`. These expressions are explicit user code,
+with final types and references checked by the consumer build; they do not establish
+verified native lifetime or ownership semantics.
+
+## Independent family selection and ordered name replacements
+
+`source.selection.categories` applies an independent allowlist to each native family:
+
+```json
+{
+  "source": {
+    "selection": {
+      "categories": [
+        { "category": "callables", "includeDeclarations": ["read", "write"] },
+        { "category": "records", "includeDeclarations": ["Packet"] }
+      ]
+    }
+  },
+  "api": {
+    "naming": {
+      "replacements": [
+        { "match": "Http", "replacement": "HTTP", "ignoreCase": true },
+        { "match": "Internal", "replacement": "" }
+      ]
+    }
+  }
+}
+```
+
+Unlisted families remain unrestricted by these independent lists. Global declaration,
+header and category filters still apply. Each family occurs once; selectors must match
+that family, and ambiguous overloads require an exact signature or stable ID. Positive
+family lists restrict ordinary public roots while preserving required native storage
+and explicitly required cleanup. Family exclusions are strict: removing required
+storage or cleanup fails with its dependency chain. Explicit template or shim requests
+can bypass positive filters, but cannot bypass exclusions.
+
+Family names resolve within the declared family. In a common C declaration such as
+`typedef struct Item { int value; } Item;`, the tag and typedef do not make a
+`records` selector ambiguous. An implicit same-named typedef follows its tag's
+family filters. Explicit alias requests and aliases with distinct names keep their
+own required-storage contract; selecting an alias cannot bypass an excluded tag.
+
+Name replacements run in array order after category casing and affixes, before
+reserved-name protection. Matching is ordinal and case-sensitive unless `ignoreCase`
+explicitly selects ordinal case-insensitive matching. Literal replacements do not use
+regular expressions or iterate until stable. Exact `api.names` overrides bypass the
+policy. Empty results, invalid C# names and signature collisions fail; native export
+names and storage remain unchanged.
+
+## Explicit direct string results
+
+Declare encoding and extent independently from the native ownership protocol:
+
+```json
+{
+  "semantics": {
+    "ownedResults": [
+      { "function": "get_text", "releaseFunction": "free_text", "releaseDomain": "library-text", "releaseThreadDomain": "any" }
+    ],
+    "stringResults": [
+      { "function": "get_text", "encoding": "utf8", "zeroTerminated": true, "allowsNull": false }
     ]
   }
 }
 ```
 
-C default argument promotion must already be reflected in the configured types: use `double` rather than `float`, and `int` rather than narrow integer types. Each variant uses the original native EntryPoint.
+This produces a copied managed `string` only when the actual native return is an
+integral-code-unit pointer of the declared width and the selected cleanup has the
+exact synchronous `void(T*)` signature. The release domain and any-thread property
+remain user assertions. Decoding, extent checks and native cleanup run inside one
+active module call; `finally` releases every nonnull owned result even when decoding
+fails. A null result either returns `string?` with `allowsNull: true`, or fails with
+`allowsNull: false`. No encoding is inferred from `char*` or a function name.
 
-## Base configuration
+UTF-16 and UTF-32 use `encoding: "utf16"` or `"utf32"`; `byteOrder` accepts `native`
+(default), `littleEndian` or `bigEndian`. The optional `codeUnitWidth` is checked
+against both the encoding and actual native pointee. For borrowed static buffers,
+replace the owned rule with `borrowedResults: [{ "function": "get_text", "lifetime": "module" }]`.
+That contract must guarantee address validity until the supplying module actually
+unloads. A call-bound pointer already expires when the getter returns; an unrelated
+owner requires its own protocol and cannot be extended by this copy wrapper.
+
+Choose exactly one extent: `zeroTerminated: true`, nonnegative `fixedLength`, or
+`lengthParameter`. Exact lengths exclude a trailing terminator and preserve embedded
+nulls. `lengthUnit` is `codeUnits` (default) or `bytes`; byte counts must contain
+complete code units. A scalar input count uses `lengthDirection: "input"`. A private
+output count uses `lengthDirection: "output"` and the explicit
+`lengthOutputCallBounded: true` guarantee that native code writes it synchronously
+without retaining its address. The generated signature hides only that private
+output count. Negative, overflowing and excessive lengths fail before copying.
+
+`maximumCodeUnits` defaults to 1,048,576, including a terminator during scanning.
+It is a scan/copy limit, not a claim that the whole range is allocated or readable.
+Zero-terminated native storage must be valid through its first zero code unit.
+The scalar scan stops there and strict decoding reads only the discovered extent;
+larger valid strings require an explicit higher cap. Unknown ownership, missing
+null/extent evidence, incompatible release signatures, status/async results and
+unsupported callback combinations retain their raw ABI and an omission diagnostic.
+
+## Documentation on managed-only enums
+
+`api.enums` declares additional managed enums independently of native raw storage.
+The enum and each value accept optional plain-text `documentation`:
 
 ```json
 {
-  "baseConfig": {
-    "Url": "file://shared.windows-x64.json",
-    "IgnoredProperties": [
-      "EntryFiles",
-      "OutputPath"
-    ]
+  "api": {
+    "enums": [{
+      "name": "Status",
+      "underlyingType": "uInt32",
+      "documentation": "Application status values.",
+      "values": [{ "name": "Ready", "value": "1", "documentation": "The operation is ready." }]
+    }]
   }
 }
 ```
 
-Relative base files resolve from the referring config. Circular references fail with a clear error. Loading an existing config never rewrites it.
+Prose becomes escaped XML summary text. XML tags, `//` markers and source-looking
+lines remain data; documentation does not accept source statements or attribute
+strings. Omitted documentation produces no comment unless
+`api.emitPlaceholderComments` is enabled. The same rule applies to the enum and
+its values, including nested types and split/single-file output. Documentation
+does not change the explicitly selected integral carrier, value or Flags contract,
+and declaring a managed enum does not automatically replace a native ABI type.
 
-## Presets
+## Explicit members on non-owning addresses
 
-Presets are composable and generic: choose one target preset (`host-c`, `host-cpp`, `windows-c`, `windows-cpp`, `linux-c`, `linux-cpp`, `macos-c`, `macos-cpp`, `emscripten-c`, or `emscripten-cpp`) and optionally add API/output policies such as `c-library`, `function-table`, and `opaque-callbacks`. Library-specific facts stay in the consuming project's configuration rather than in BindGen-CS core.
+`api.pointerFunctions[].receiver` selects one parameter already mapped in that operation's `parameters`. The generator adds an instance method to the selected address carrier. It requires the API context explicitly: `address.Read(api, "AB")`. Factories remain on the API context. The address stores only its pointer; the method forwards through the supplied context's checked operation, preserving string conversion, `ref`/`out`, temporary cleanup and module call leases. A null or closed context fails before native invocation.
+
+For example, configure `{"function":"read_node","name":"Read","receiver":"self","parameters":[{"parameter":"self","carrier":"NodeAddress"}]}` after selecting `NodeAddress` in `api.pointerCarriers`. The `self` parameter may occur anywhere in the native signature. The original raw signature and context method remain available. A receiver cannot replace owned or module-borrowed wrappers, remove const qualification, or hide required address members. Every pointed allocation must remain valid under the caller's protocol; adding a member neither owns nor retains it.
+
+## Counted string inputs
+
+Explicit input contracts can expose `void set_name(const char* data, size_t length)` as `api.SetName(string)` when encoding, length units, call lifetime and nonretention are declared. Select `zeroTerminated: false`, `lengthParameter: "length"`, `lengthDirection: "input"`, a positive `maximumCodeUnits`, and explicit null allowance. `lengthUnit` is `codeUnits` or `bytes`; UTF-16 code units, UTF-32 scalar code units and UTF-8 bytes are counted after strict encoding, independently of .NET string length. Embedded zero units are preserved. A null string produces a null address and count zero only when allowed; an empty string has a non-null address and count zero.
+
+The generated convenience method hides only the independently selected integral length parameter. Checked conversion rejects lengths that do not fit that native parameter before invocation. Temporary text uses the selected matching allocator and cleanup pair. The exact pointer and length remain available on `Raw`. This projection does not support fixed extents, retained text, output length channels or a length shared with another text/buffer conversion; those require their own explicit protocol. Zero-terminated inputs retain their existing truncation checks and reject embedded nulls.
+
+## Native C++ text value results
+
+Native C++ text values can also be copied into a managed `string` before their creating call ends. This requires a fresh owned holder, exact count and bounded bulk-copy exports, explicit string encoding, and a same-creating-call cleanup capability. Exact standard `basic_string` types with default `char_traits` and `allocator`, and `filesystem::path`, can carry compiler-checked finite cleanup evidence. This permits synchronous destruction on the creating caller thread; it does not authorize escaping handles, arbitrary cleanup threads or finalizer destruction. Custom traits, allocators and custom families do not inherit that capability from a familiar type name or a `noexcept` declaration.
+
+Use exact named aliases such as `std::string`, `std::u16string` and `std::u32string` in `cpp.familyBindings[].nativeType` to attach the corresponding explicit `stringEncoding`. These alias selectors still resolve actual compiler template arguments and reject conflicting bindings. A `char` string does not automatically become UTF-8. Path conversion uses the selected `pathFormat`, including `nativeUtf8` when native separators must be preserved. `api.maximumValueStringCodeUnits` defaults to 1,048,576 and bounds the complete copied extent. Unknown encoding or cleanup facts leave the exact Raw holder operations available with an omission diagnostic.
+
+The text-returning facade retains one resource lease and one call throughout factory invocation, count validation, one bulk copy, strict decoding and matching destruction. Empty text remains `string.Empty`; embedded zero code units are preserved. A count/copy mismatch, invalid Unicode or an excessive extent still runs matching cleanup. An unexpected destruction failure retains the module and faults unload without retrying an ambiguous release; combined copy and cleanup failures remain observable together.
+
+
+## Optional complete Runtime source delivery
+
+Source mode emits the smallest dependency closure required by the generated API by default. To include the complete public Runtime implementation for handwritten consumers as well, use:
 
 ```json
-{
-  "preset": "host-c,c-library,opaque-callbacks",
-  "entryFiles": [
-    "vendor/SDL/include/SDL3/SDL.h"
-  ],
-  "includeFolders": [
-    "vendor/SDL/include"
-  ]
+"runtime": {
+  "mode": "source",
+  "sourceFeatures": ["runtime.complete"]
 }
 ```
 
-Explicit project settings override preset defaults, independent of preset order.
+This includes the module, handle, callback, async, codec, allocator, Bool8/Bool32, Pointer/ConstPointer, iterator, bounded integer Atomic, bitfield, special storage and raw interop utilities. It adds source files and no generator or Runtime package reference. Split and single-file output follow the normal output configuration. `sourceFeatures` is an exact, case-sensitive list with no duplicates and is valid only in source mode. The SDK exposes `RuntimeSourceCatalog.GetFeatureIds()` for individually selectable catalog features and `EmissionRequest.additionalRuntimeSourceFeatures` for direct backend use. Configuration, source catalog implementation identity and selected features participate in generation caching.
 
-## Workspaces
-
-A workspace stores multiple configuration paths for repository-level automation:
-
-```json
-{
-  "Configs": [
-    "cimgui.json",
-    "sdl3.json",
-    "bgfx.json"
-  ]
-}
-```
-
-```bash
-bindgen-cs workspace validate native/bindings/workspace.json
-bindgen-cs workspace generate native/bindings/workspace.json
-bindgen-cs workspace diff native/bindings/workspace.json
-```
-
-`generate` uses each config's `outputPath`; `diff` checks that same path without replacing the checked-in output. With single-file output enabled, a workspace does not introduce target-specific source directories.
-
-The generated header records the `ABI reference target` used for native parsing. This is a marker, not a cross-platform certification: native headers may expose different declarations or layouts after target-specific preprocessing. Run ABI and native-consumer tests on every intended target before sharing one binding source.
-
-
-C++ bridge IncludeFolders, SystemIncludeFolders, TargetSysRoot and CompilerPath expand environment variables before resolving paths relative to the configuration directory. Cross-target bridge profiles must supply their actual SDK/sysroot and must not discover host C++ headers.
+Including an implementation does not grant an unsupported calling ABI or runtime capability. Special numeric carriers remain storage types; dynamic module loading and dynamic delegates remain subject to the selected execution environment. A complete source consumer and the Runtime package expose the same public Runtime types and members. Each library can use its own source namespace without sharing mutable module state.

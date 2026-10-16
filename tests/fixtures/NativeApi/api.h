@@ -53,6 +53,10 @@ int32_t bgcs_write(
     size_t capacity,
     size_t* written
 );
+int32_t bgcs_alias_ref(int32_t* first, int32_t* second);
+int32_t bgcs_alias_in_out(const int32_t* input, int32_t* output);
+int32_t bgcs_alias_record(BgcsLayout* record, int32_t* field);
+int32_t bgcs_alias_span(int32_t* buffer, size_t length, int32_t* value);
 BgcsCounter* bgcs_counter_create(int32_t initial);
 int32_t bgcs_counter_next(
     BgcsCounter* counter,
@@ -67,3 +71,21 @@ int32_t bgcs_invoke_callback(
     void* state
 );
 void* bgcs_resolve(const char* name);
+
+#if defined(__EMSCRIPTEN__)
+typedef int32_t (*BgcsEventCallback)(int32_t value, void* state);
+typedef void (*BgcsEventCompletion)(int32_t result, int32_t status, void* state);
+BgcsEventCompletion bgcs_event_completion_identity(BgcsEventCompletion callback);
+void* bgcs_event_register(BgcsEventCallback callback, void* state);
+int32_t bgcs_event_fire(void* handle, int32_t value);
+void bgcs_event_unregister(void* handle);
+int32_t bgcs_event_live(void);
+int32_t bgcs_event_errors(void);
+void* bgcs_event_async_start(int32_t* values, size_t length, BgcsEventCompletion completion, void* state, int32_t immediate);
+void bgcs_event_async_pump(int32_t status);
+void bgcs_event_async_cancel(void* handle);
+void bgcs_event_async_stop(void* handle);
+int32_t bgcs_event_async_live(void);
+int32_t bgcs_event_async_errors(void);
+int32_t bgcs_event_async_cancel_requested(void);
+#endif

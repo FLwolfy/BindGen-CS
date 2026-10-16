@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>BGCS.ParserRuntime.osx-x64</id>
+    <version>$version$</version>
+    <authors>FLwolfy</authors>
+    <description>Locked LLVM 20 parser runtime for the BGCS Intel macOS generator host.</description>
+    <license type="expression">Apache-2.0 WITH LLVM-exception</license>
+    <repository type="git" url="https://github.com/FLwolfy/BindGen-CS" />
+  </metadata>
+  <files><file src="runtimes/**/*" target="runtimes" /><file src="licenses/**/*" target="licenses" /><file src="build-inputs/**/*" target="build-inputs" /><file src="runtime-provenance.json" target="" /></files>
+</package>

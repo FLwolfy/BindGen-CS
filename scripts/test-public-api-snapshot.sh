@@ -9,13 +9,25 @@ BASELINE_DIR="${ROOT_DIR}/tests/public-api"
 CURRENT_DIR="${ROOT_DIR}/artifacts/public-api"
 mkdir -p "${CURRENT_DIR}"
 
-projects=(BGCS.Intermediate BGCS.CppAst BGCS.Core BGCS.Language BGCS BGCS.Cpp2C BGCS.Runtime)
+projects=()
+while IFS= read -r project; do projects+=("${project}"); done < <(
+  "${PYTHON:-python3}" -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["publicApiAssemblies"]))' \
+    "${ROOT_DIR}/distribution/manifests/product-packages.json"
+)
+if (( ${#projects[@]} == 0 )); then
+  printf 'The delivered public API assembly manifest is empty.\n' >&2
+  exit 1
+fi
 # The production CLI owns snapshot generation and restores its dependencies on a fresh runner.
 "${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
   --configuration "${CONFIGURATION}"
+# Advanced frontend references are delivered independently of Host's project
+# graph and must stay in the reviewed public SDK surface after decoupling.
+"${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" \
+  --configuration "${CONFIGURATION}"
 
 for project in "${projects[@]}"; do
-  assembly="${ROOT_DIR}/src/${project}/bin/${CONFIGURATION}/net9.0/${project}.dll"
+  assembly="${ROOT_DIR}/src/${project}/bin/${CONFIGURATION}/net10.0/${project}.dll"
   baseline="${BASELINE_DIR}/${project}.txt"
   current="${CURRENT_DIR}/${project}.txt"
   if [[ ! -f "${assembly}" ]]; then
