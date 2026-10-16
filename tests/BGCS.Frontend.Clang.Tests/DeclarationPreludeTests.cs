@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Inputs;
@@ -157,6 +158,78 @@ public sealed class DeclarationPreludeTests
         Assert.Contains(ordinary.module.diagnostics, diagnostic => diagnostic.message.Contains("BGCS_REAL_USER_WARNING", StringComparison.Ordinal));
         FrontendResult strict = await new ClangFrontend().ParseAsync(fixture.Request() with { arguments = ["-Werror"] }, CancellationToken.None);
         Assert.Contains(strict.module.diagnostics, diagnostic => diagnostic.isFailure && diagnostic.message.Contains("BGCS_REAL_USER_WARNING", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AuthenticatedSystemEntryPreservesIncludeNextSearchOriginBeforeMacroDiscovery()
+    {
+        using Fixture fixture = new();
+        string cxx = Path.Combine(fixture.root, "cxx");
+        string c = Path.Combine(fixture.root, "c");
+        Directory.CreateDirectory(cxx);
+        Directory.CreateDirectory(c);
+        string wrapper = Path.Combine(cxx, "wrapper.hpp");
+        string selected = Path.Combine(c, "selected.hpp");
+        await File.WriteAllTextAsync(wrapper, "#pragma once\n#include_next <selected.hpp>\n");
+        await File.WriteAllTextAsync(Path.Combine(cxx, "selected.hpp"), "#error BGCS_INCLUDE_NEXT_RESTARTED_AT_FIRST_ROOT\n");
+        await File.WriteAllTextAsync(selected, "struct SdkNext { int value; };\n");
+        await File.WriteAllTextAsync(fixture.entry, "SdkNext transform(SdkNext value);\n");
+        FrontendRequest request = fixture.Request() with
+        {
+            headerSearchPaths = [new(cxx, false, false), new(c, false, false)],
+            declarationPrelude = new("#define ENTRY_STATE 42\n#include \"" + wrapper.Replace("\\", "\\\\", StringComparison.Ordinal) + "\"\n", [wrapper])
+        };
+        FrontendResult result = await new ClangFrontend().ParseAsync(request, CancellationToken.None);
+        Assert.DoesNotContain(result.module.diagnostics, diagnostic => diagnostic.isFailure);
+        Assert.True(result.requiresNativeCompilerProof);
+        NativeDeclaration record = Assert.Single(result.module.declarations, declaration => declaration.name == "SdkNext");
+        Assert.True(record.isSystemDeclaration);
+        Assert.Equal(4, result.module.GetType(record.type!.Value).size);
+        Assert.Contains(result.snapshot.files, input => input.path == wrapper);
+        Assert.Contains(result.snapshot.files, input => input.path == selected);
+        Assert.DoesNotContain(result.snapshot.files, input => input.path == Path.Combine(cxx, "selected.hpp"));
+        Assert.True(SourceSnapshotVerifier.Matches(result.snapshot));
+    }
+
+    [Fact]
+    public async Task PreludeEntryRewritePreservesIncludeLookingCommentsRawStringsAndContinuedMacros()
+    {
+        using Fixture fixture = new();
+        string include = "#include \"" + fixture.header.Replace("\\", "\\\\", StringComparison.Ordinal) + "\"";
+        string literal = "\n" + include + "\n";
+        await File.WriteAllTextAsync(fixture.header, "static_assert(ENTRY_STATE == 42 && DIGITS == 1000 && HEX_DIGITS == 0x1ff && WIDE_CHARACTER == L'x');\nstatic_assert(sizeof(JOINED) == 3);\nstatic_assert(sizeof(REPLAY_LITERAL) == "
+            + (Encoding.UTF8.GetByteCount(literal) + 1) + ");\nstruct Sdk { int value; };\n");
+        await File.WriteAllTextAsync(fixture.entry, "Sdk transform(Sdk value);\n");
+        string source = "/*\n" + include + "\n*/\n#define REPLAY_LITERAL u8R\"bgcs(" + literal + ")bgcs\"\n#define CONTINUED \\\n"
+            + include + "\n#define DIGITS 1'000\n#define HEX_DIGITS 0x1'ff\n#define WIDE_CHARACTER L'x'\n#define JOINED \"a\\\r\nb\"\n#define ENTRY_STATE 42\n" + include + "\n";
+        FrontendResult result = await new ClangFrontend().ParseAsync(fixture.Request() with { declarationPrelude = new(source, [fixture.header]) }, CancellationToken.None);
+        Assert.DoesNotContain(result.module.diagnostics, diagnostic => diagnostic.isFailure);
+        Assert.True(Assert.Single(result.module.declarations, declaration => declaration.name == "Sdk").isSystemDeclaration);
+        Assert.Contains(result.snapshot.files, input => input.path == fixture.header);
+    }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("unlisted")]
+    [InlineData("duplicate")]
+    [InlineData("inactive")]
+    public async Task PreludeEntryRewriteRequiresEveryDeclaredIncludeToBeActiveAndExactlyOrdered(string shape)
+    {
+        using Fixture fixture = new();
+        string include = "#include \"" + fixture.header.Replace("\\", "\\\\", StringComparison.Ordinal) + "\"\n";
+        string other = Path.Combine(fixture.root, "sdk", "other.hpp");
+        await File.WriteAllTextAsync(other, "struct Other {};\n");
+        string source = shape switch
+        {
+            "missing" => "#define NO_INCLUDE 1\n",
+            "unlisted" => "#include \"" + other.Replace("\\", "\\\\", StringComparison.Ordinal) + "\"\n",
+            "duplicate" => include + include,
+            "inactive" => "#if 0\n" + include + "#endif\n",
+            _ => throw new ArgumentOutOfRangeException(nameof(shape))
+        };
+        IOException failure = Assert.Throws<IOException>(() => new ClangFrontend().ParseAsync(
+            fixture.Request() with { declarationPrelude = new(source, [fixture.header]) }, CancellationToken.None).GetAwaiter().GetResult());
+        Assert.Contains("ordered dependency entry", failure.Message);
     }
 
     [Fact]

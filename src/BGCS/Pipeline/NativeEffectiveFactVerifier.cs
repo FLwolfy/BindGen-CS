@@ -14,6 +14,7 @@ using BGCS.Contracts.Plugins;
 using BGCS.Infrastructure.IO;
 using BGCS.NativeBuild.Planning;
 using BGCS.NativeBuild.Validation;
+using BGCS.Platforms.Targeting;
 
 namespace BGCS;
 
@@ -41,7 +42,16 @@ internal sealed class NativeEffectiveFactVerifier(
         NativeTargetDescriptor target = plan.target;
         ImmutableArray<string> arguments = NativeEffectiveFactArguments.Resolve(plan, operation, cancellationToken);
         var effectiveSource = await NativeEffectiveSourceAdapter.PrepareAsync(plan, operation, cancellationToken).ConfigureAwait(false);
-        NativeToolchainDescriptor toolchain = new(target.toolchain.compilerPath, target.toolchain.sysRoot,
+        string? compilerPath = target.toolchain.compilerPath;
+        if (effectiveSource.declarationPrelude is not null)
+        {
+            // A provider can select a different concrete driver from its target
+            // descriptor. Preserve that driver's SDK order for include_next.
+            compilerPath = plan.compilerPath ?? operation.command.executable;
+            if (!Path.IsPathFullyQualified(compilerPath) || !File.Exists(compilerPath))
+                throw new InvalidOperationException("An effective declaration prelude requires the selected absolute native compiler path.");
+        }
+        NativeToolchainDescriptor toolchain = new(compilerPath, target.toolchain.sysRoot,
             target.toolchain.systemIncludeFolders, [], [], target.toolchain.cxxSystemIncludeFolders,
             target.toolchain.sdkVersion, target.toolchain.compilerVersion, target.toolchain.linkerPath, target.toolchain.libraryDirectories);
         NativeTargetDescriptor parserTarget = new(target.targetId, target.platformId, target.architectureId, target.abiId,
@@ -55,6 +65,9 @@ internal sealed class NativeEffectiveFactVerifier(
             pathBase = pathBase,
             preamble = effectiveSource.preamble,
             declarationPrelude = effectiveSource.declarationPrelude,
+            // Match the adapter's actual driver query, including cross drivers.
+            headerSearchPaths = effectiveSource.declarationPrelude is null ? []
+                : ToolchainDiscovery.DiscoverHeaderSearchPaths(operation.language, compilerPath, toolchain.sysRoot).ToImmutableArray(),
             sourcePathMappings = sourcePathMappings ?? ImmutableDictionary<string, string>.Empty,
             workerPlugins = workerPlugins.IsDefault ? [] : workerPlugins,
             workerPluginContext = workerPluginContext is null ? null : new(workerPluginContext.configuration, workerPluginContext.pathBase, parserTarget),

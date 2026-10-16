@@ -62,12 +62,21 @@ internal sealed class ClangDeclarationPrelude : IDisposable
             throw new NotSupportedException("An isolated declaration prelude cannot be combined with another forced header, module or PCH.");
         baseArguments.RemoveAll(argument => argument is "-E" or "-dM" or "-xc++");
         baseArguments.Add("-xc++-header");
-        // Absolute includes still name authenticated SDK entries. Apply the same
-        // system search classification to both PCH construction and its consumer.
+        // Apply the same system search classification to construction and consumer.
+        // Existing driver search roots stay ahead of any fallback entry directory.
         string[] systemArguments = prelude.headers.Select(header => Path.GetDirectoryName(header)!).Distinct(
             OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
             .SelectMany(directory => new[] { "-isystem", directory }).ToArray();
         baseArguments.AddRange(systemArguments);
+        List<string> searchArguments = [];
+        for (int index = 0; index < baseArguments.Count; index++)
+        {
+            string argument = baseArguments[index];
+            if (argument is "-isystem" or "-iframework" or "-I")
+                searchArguments.Add(argument + " " + (index + 1 < baseArguments.Count ? baseArguments[++index] : "<missing>"));
+            else if (argument.StartsWith("-isystem", StringComparison.Ordinal) || argument.StartsWith("-iframework", StringComparison.Ordinal)
+                || argument.StartsWith("-I", StringComparison.Ordinal)) searchArguments.Add(argument);
+        }
         Directory.CreateDirectory(root);
         ClangDeclarationPrelude? result = null;
         try
@@ -75,7 +84,9 @@ internal sealed class ClangDeclarationPrelude : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             using CXIndex index = CXIndex.Create();
             List<CppDiagnosticMessage> messages = [];
-            using CXTranslationUnit discovery = Parse(prelude.source);
+            string isolatedSource = RewriteDeclaredEntries(prelude);
+            using CXTranslationUnit discovery = Parse(isolatedSource, "discovery");
+            VerifyEntries(discovery, "discovery");
             HashSet<string> names = new(DynamicBuiltins, StringComparer.Ordinal);
             Exception? callbackFailure = null;
             discovery.Cursor.VisitChildren((
@@ -97,10 +108,9 @@ internal sealed class ClangDeclarationPrelude : IDisposable
             StringBuilder cleanup = new("#pragma clang diagnostic push\n#pragma clang diagnostic ignored \"-Wbuiltin-macro-redefined\"\n");
             foreach (string name in names.Order(StringComparer.Ordinal)) cleanup.Append("#undef ").AppendLine(name);
             cleanup.AppendLine("#pragma clang diagnostic pop");
-            string isolatedSource = RewriteEntries(discovery, prelude.source, rewrite: true);
             string clearedSource = isolatedSource + "\n" + cleanup;
-            using CXTranslationUnit materialized = Parse(clearedSource);
-            _ = RewriteEntries(materialized, clearedSource, rewrite: false);
+            using CXTranslationUnit materialized = Parse(clearedSource, "materialization");
+            VerifyEntries(materialized, "materialization");
             ImmutableArray<InputDependency> second = ExternalInputs(materialized);
             if (!first.SequenceEqual(second)) throw new IOException("Declaration prelude dependencies changed between discovery and materialization.");
             cancellationToken.ThrowIfCancellationRequested();
@@ -115,13 +125,11 @@ internal sealed class ClangDeclarationPrelude : IDisposable
             result.diagnostics.AddRange(messages);
             return result;
 
-            string RewriteEntries(
+            void VerifyEntries(
                 CXTranslationUnit unit,
-                string source,
-                bool rewrite
+                string phase
             ) {
                 string sourcePath = Path.Combine(root, "declaration-prelude.hpp");
-                List<(int start, int end, string text)> replacements = [];
                 List<string> observed = [];
                 Exception? failure = null;
                 unit.Cursor.VisitChildren((
@@ -132,53 +140,41 @@ internal sealed class ClangDeclarationPrelude : IDisposable
                     if (failure is not null || cursor.Kind != CXCursorKind.CXCursor_InclusionDirective) return CXChildVisitResult.CXChildVisit_Continue;
                     try
                     {
-                        cursor.Extent.Start.GetFileLocation(out CXFile file, out _, out _, out uint start);
+                        cursor.Extent.Start.GetFileLocation(out CXFile file, out _, out _, out _);
                         using CXString origin = file.Name;
                         if (!Path.GetFullPath(origin.ToString()).Equals(sourcePath, Comparison)) return CXChildVisitResult.CXChildVisit_Continue;
                         using CXString actual = cursor.IncludedFile.Name;
                         string header = Path.GetFullPath(actual.ToString());
                         observed.Add(header);
-                        if (rewrite)
-                        {
-                            string name = Path.GetFileName(header);
-                            if (name.Any(character => character is '<' or '>' or '\r' or '\n' or '\0'))
-                                throw new NotSupportedException("An authenticated dependency has no unambiguous system include spelling.");
-                            cursor.Extent.End.GetFileLocation(out _, out _, out _, out uint end);
-                            replacements.Add((checked((int)start), checked((int)end), "#include <" + name + ">"));
-                        }
                     }
                     catch (Exception exception) { failure = exception; }
                     return CXChildVisitResult.CXChildVisit_Continue;
                 }, default);
-                if (failure is not null) throw new IOException("The declaration prelude include entries could not be authenticated.", failure);
+                if (failure is not null) throw new IOException("The declaration prelude include entries could not be authenticated. " + Context(phase, observed), failure);
                 if (observed.Count != prelude.headers.Length || observed.Where((
                     header,
                     position
                 ) =>
                     !PhysicalPathResolver.Resolve(header).Equals(PhysicalPathResolver.Resolve(prelude.headers[position]), Comparison)).Any())
-                    throw new IOException("The declaration prelude resolved a different ordered dependency entry; ambiguous include basenames are unsupported.");
-                if (!rewrite) return source;
-                byte[] original = Encoding.UTF8.GetBytes(source);
-                using MemoryStream output = new();
-                int copied = 0;
-                foreach (var replacement in replacements.OrderBy(item => item.start))
-                {
-                    if (replacement.start < copied || replacement.end < replacement.start || replacement.end > original.Length)
-                        throw new IOException("A declaration prelude include has an invalid compiler byte extent.");
-                    output.Write(original.AsSpan(copied, replacement.start - copied));
-                    output.Write(Encoding.UTF8.GetBytes(replacement.text));
-                    copied = replacement.end;
-                }
-                output.Write(original.AsSpan(copied));
-                return Encoding.UTF8.GetString(output.ToArray());
+                    throw new IOException("The declaration prelude resolved a different ordered dependency entry; ambiguous include basenames are unsupported. " + Context(phase, observed));
             }
+
+            string Context(
+                string phase,
+                IReadOnlyList<string>? observed = null
+            )
+                => "Stage: " + phase + "; expected entries: [" + string.Join(", ", prelude.headers) + "]; actual entries: ["
+                    + string.Join(", ", observed ?? []) + "]; explicit search arguments: ["
+                    + string.Join(", ", searchArguments) + "].";
 
             ImmutableArray<InputDependency> ExternalInputs(CXTranslationUnit unit)
                 => IncludeDependencyCollector.Collect(unit).Where(input => !input.path.Equals(Path.Combine(root, "declaration-prelude.hpp"), Comparison)
                     && !input.path.Equals(Path.Combine(root, "declarations.pch"), Comparison)).ToImmutableArray();
 
-            CXTranslationUnit Parse(string source)
-            {
+            CXTranslationUnit Parse(
+                string source,
+                string phase
+            ) {
                 cancellationToken.ThrowIfCancellationRequested();
                 string sourcePath = Path.Combine(root, "declaration-prelude.hpp");
                 File.WriteAllText(sourcePath, source, new UTF8Encoding(false));
@@ -201,7 +197,7 @@ internal sealed class ClangDeclarationPrelude : IDisposable
                         messages.Add(new(level, text, location));
                         errors |= level == CppLogMessageType.Error;
                     }
-                    if (errors) throw new InvalidOperationException("The native dependency declaration prelude is not representable by the pinned frontend: "
+                    if (errors) throw new InvalidOperationException("The native dependency declaration prelude is not representable by the pinned frontend. " + Context(phase) + " Diagnostics: "
                         + string.Join("; ", messages.Where(message => message.type == CppLogMessageType.Error).Select(message => message.text)));
                     cancellationToken.ThrowIfCancellationRequested();
                     return unit;
@@ -213,6 +209,110 @@ internal sealed class ClangDeclarationPrelude : IDisposable
     }
 
     public void Dispose() => Cleanup(m_root);
+
+    // The producer emits literal absolute includes, but parsing one before this
+    // rewrite loses include_next's search-root origin. Inspect only directive
+    // header tokens; copied macro strings, comments and continued lines stay exact.
+    private static string RewriteDeclaredEntries(NativeDeclarationPrelude prelude)
+    {
+        string source = prelude.source;
+        StringBuilder rewritten = new(source.Length);
+        int position = 0, copied = 0, entry = 0;
+        bool directiveStart = true;
+        while (position < source.Length)
+        {
+            char character = source[position];
+            if (Splice(position) is int splice) { position = splice; continue; }
+            if (character is '\r' or '\n') { directiveStart = true; position++; continue; }
+            if (char.IsWhiteSpace(character)) { position++; continue; }
+            if (source.AsSpan(position).StartsWith("//", StringComparison.Ordinal))
+            {
+                position += 2;
+                while (position < source.Length && source[position] is not ('\r' or '\n'))
+                    position = Splice(position) ?? position + 1;
+                continue;
+            }
+            if (source.AsSpan(position).StartsWith("/*", StringComparison.Ordinal))
+            {
+                int end = source.IndexOf("*/", position + 2, StringComparison.Ordinal);
+                if (end < 0) throw Refuse("an unterminated comment");
+                end += 2;
+                if (source.AsSpan(position, end - position).ContainsAny('\r', '\n')) directiveStart = true;
+                position = end; continue;
+            }
+            if (character == '#' && directiveStart)
+            {
+                int token = position + 1;
+                SkipSpace(ref token);
+                if (source.AsSpan(token).StartsWith("include", StringComparison.Ordinal)
+                    && (token + 7 == source.Length || !(char.IsLetterOrDigit(source[token + 7]) || source[token + 7] == '_')))
+                {
+                    token += 7; SkipSpace(ref token);
+                    if (token >= source.Length || source[token] != '"') throw Refuse("a nonliteral dependency include");
+                    int end = QuotedEnd(token);
+                    if (entry >= prelude.headers.Length) throw Refuse("an unlisted dependency include");
+                    string header = prelude.headers[entry++];
+                    string encoded = "\"" + header.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
+                    if (!source.AsSpan(token, end - token).SequenceEqual(encoded))
+                        throw Refuse("a literal dependency include differs from its ordered authenticated entry");
+                    string name = Path.GetFileName(header);
+                    if (name.Any(value => value is '<' or '>' or '\r' or '\n' or '\0'))
+                        throw Refuse("a dependency has no system include spelling");
+                    rewritten.Append(source, copied, token - copied).Append('<').Append(name).Append('>');
+                    copied = end; position = end; directiveStart = false; continue;
+                }
+            }
+            if (character == 'R' && position + 1 < source.Length && source[position + 1] == '"')
+            {
+                int open = source.IndexOf('(', position + 2);
+                if (open < 0 || open - position - 2 > 16) throw Refuse("an unproved raw string extent");
+                string delimiter = source[(position + 2)..open];
+                if (delimiter.Any(value => char.IsWhiteSpace(value) || value is '(' or ')' or '\\')) throw Refuse("an invalid raw string delimiter");
+                string terminator = ")" + delimiter + "\"";
+                int end = source.IndexOf(terminator, open + 1, StringComparison.Ordinal);
+                if (end < 0) throw Refuse("an unterminated raw string");
+                position = end + terminator.Length; directiveStart = false; continue;
+            }
+            if (char.IsAsciiDigit(character) && (position == 0 || !(char.IsLetterOrDigit(source[position - 1]) || source[position - 1] == '_')))
+            {
+                do { position++; }
+                while (position < source.Length && (char.IsLetterOrDigit(source[position]) || source[position] is '_' or '.' or '\''));
+                directiveStart = false; continue;
+            }
+            if (character is '\'' or '"') { position = QuotedEnd(position); directiveStart = false; continue; }
+            directiveStart = false; position++;
+        }
+        if (entry != prelude.headers.Length) throw Refuse("a declared dependency include is missing");
+        return rewritten.Append(source, copied, source.Length - copied).ToString();
+
+        int? Splice(int start)
+        {
+            if (source[start] != '\\' || start + 1 >= source.Length || source[start + 1] is not ('\r' or '\n')) return null;
+            int end = start + 2;
+            if (source[start + 1] == '\r' && end < source.Length && source[end] == '\n') end++;
+            return end;
+        }
+
+        int QuotedEnd(int start)
+        {
+            char quote = source[start];
+            for (int end = start + 1; end < source.Length; end++)
+            {
+                if (source[end] == quote) return end + 1;
+                if (Splice(end) is int splice) { end = splice - 1; continue; }
+                if (source[end] == '\\') { end++; continue; }
+                if (source[end] is '\r' or '\n') break;
+            }
+            throw Refuse("an unproved quoted literal extent");
+        }
+
+        void SkipSpace(ref int start)
+        {
+            while (start < source.Length && source[start] is ' ' or '\t' or '\f' or '\v') start++;
+        }
+
+        static IOException Refuse(string reason) => new("The declaration prelude ordered dependency entry cannot be authenticated before discovery: " + reason + ".");
+    }
 
     private static void Cleanup(string root)
     {
