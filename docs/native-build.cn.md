@@ -80,7 +80,7 @@ GNU 选择核对 driver 实际的有界 `--version` 输出和文件身份，不�
 
 `nativeBuild.mode = "prebuilt"` 通过 `artifacts` 和具体 `prebuiltTargetId` 声明输入。CPU 架构匹配不足以证明 libc、调用 ABI 或编译配置一致；仍需检查产物、目标、导出和输入身份。
 
-`nativeBuild.mode = "none"` 明确省略原生构建，生成可以成功但原生阶段仍未执行。可选资产请求为 `"packaging": { "enabled": true, "packager": "auto" }`。布局使用 descriptor 的平台、CPU 和 ABI，目标 ID 与 NuGet RID 不互换。GNU 与 musl 不能假定共享 `linux-x64`。
+`nativeBuild.mode = "none"` 省略配置的原生产物构建，不代表关闭全部编译器验证。经过解析适配的 C++ 事实仍可能要求[下述独立证明](#所选原生编译器的源码视图)，该证明不能认证最终产物链接或调用。可选资产请求为 `"packaging": { "enabled": true, "packager": "auto" }`。布局使用 descriptor 的平台、CPU 和 ABI，目标 ID 与 NuGet RID 不互换。GNU 与 musl 不能假定共享 `linux-x64`。
 
 资产布局通过不代表干净安装消费或真实调用通过。自定义 packager 通过稳定 ID 注册，并声明完整输入和指纹。
 
@@ -142,6 +142,23 @@ Windows driver 是 `clang++.exe`。这些路径是示意值，实际路径由查
 默认 worker frontend 先取得所选 MSVC、Clang 或 GNU 编译器的实际预处理视图，再让 Clang 提取中立事实，使条件编译和 builtin 能力先决定真实声明。即使禁用原生构建，`generate` 仍需要实际安装的编译器及输入真正引用的 SDK 头文件。自包含的跨目标预处理不代表原生链接器或目标 SDK 已经可用。自定义 `IFrontend` 接收已解析请求，负责其自己声明的解析能力。
 
 MSVC 要求 `/Zc:preprocessor` 标准预处理模式以及实际可用的 `/PD` 最终宏状态输出；显式请求传统预处理器时拒绝执行，响应文件中的相同选项也不例外。无法忠实映射到原生编译器的解析参数会明确失败。Clang 和 GNU 分别执行带依赖跟踪的源码及 `-dM` 最终宏操作，保留注释、源码位置、响应文件/配置输入和最终 `#undef` 状态。替换受控输出或删除源码来源的选项明确拒绝，包括响应文件中的同类选项。
+
+对于 GNU C++ 头文件，固定版本的 Clang 无法解析每一种 GCC 展开的 SDK 实现 token。
+BGCS 可以从完整的前导 SDK include 树重建声明；这些树须由所选 driver 的搜索目录、实际依赖文件
+和系统头行标记共同认证。SDK 头文件在隔离的声明 prelude 中解析，实际 GNU 展开的用户 token
+及最终原生宏状态仍予保留。单独提供用户 `-isystem` 目录不构成 SDK 认证。当前适配器会拒绝
+出现在用户语义 token 之后的 SDK 展开树、折叠 SDK 树内嵌的用户头文件、未证明的前导用户
+pragma/pack/push-pop 状态、不平衡的 SDK pack 状态，以及无法忠实重放的宏历史。
+有序头文件入口也必须能够唯一且精确地解析。不支持的具体 GNU 类型或求值不会被同尺寸别名
+或猜测值替代。
+
+隔离 prelude 只是解析兼容层，不是 ABI 证明。当 frontend 结果要求独立原生编译器证明
+（`requiresNativeCompilerProof`）时，发布前必须使用所选原生编译器及原始源码设置，编译生成的
+bridge 和 canonical/storage 断言。`generate`/`bridge` 以及 `nativeBuild.mode` 为 `none` 或
+`prebuilt` 的请求也适用，缓存命中不会免除该步骤。验证 metadata 的 `nativeFactProofRequired`
+和 `nativeFactProof` 与产物构建、最终链接和调用分别记录。证明使用对象编译；收据单独记录
+是否发生对象链接，并明确不代表最终产物链接或调用。没有此证明要求的普通 C 请求不会因此
+新增 C++ 编译要求；实际原生预处理及显式请求的构建检查仍是独立要求。
 
 源码视图保留原始位置、注释、最终宏值和 SDK 系统头分类；无法唯一确定的宏来源保持未知。未使用的依赖模板 intrinsic 可以保留，Clang 无法证明的具体求值仍然失败。仅在原生构建配置中增加的宏定义独立保留，并在实际构建时与已生成事实核对。
 

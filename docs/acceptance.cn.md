@@ -103,7 +103,12 @@ bindgen-cs generate
 bindgen-cs build
 ```
 
-`doctor` 报告工具链及资源问题；`validate` 检查配置与中立契约，不替换输出。`generate` 使用统一 C/C++ 流水线，按需自动生成 C++ bridge。`build` 在联合发布前编译候选托管源码，并执行配置要求的 native sources/prebuilt 验证。`bridge` 和 `native-build` 保留为同一 Host 的显式请求。native mode `none` 必须记录原生验证未执行。安全或 C++ 拒绝诊断应指出具体配置或源码修复方式。
+`doctor` 报告工具链及资源问题；`validate` 检查配置与中立契约，不替换输出。`generate` 使用统一 C/C++ 流水线，按需自动生成 C++ bridge。`build` 在联合发布前编译候选托管源码，并执行配置要求的 native sources/prebuilt 验证。`bridge` 和 `native-build` 保留为同一 Host 的显式请求。安全或 C++ 拒绝诊断应指出具体配置或源码修复方式。
+
+`nativeBuild.mode: none` 不请求构建产品原生库，但不跳过源码预处理或所需的独立原生事实证明。
+例如，使用 GNU SDK 声明 prelude 的解析结果要求在发布前由所选原生编译器独立检查类型、布局和常量，
+该检查也适用于 `generate` 和 `bridge`。报告必须分别记录产品构建/链接是否执行，以及
+`nativeFactProofRequired`、`nativeFactProof` 的实际结果；事实证明不能冒充产品链接或调用证据。
 
 ## 架构证据
 

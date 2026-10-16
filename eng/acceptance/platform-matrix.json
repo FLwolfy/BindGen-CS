@@ -502,7 +502,7 @@
     },
     {
       "path": "tests/BGCS.Frontend.Clang.Tests/Targeting/CppTargetTests.cs",
-      "scope": "existing target parsing/layout parity fixtures; legacy facade must be ported before architecture acceptance"
+      "scope": "target triple/layout and C++ SDK include-order parsing regressions; no target invocation or package certification"
     },
     {
       "path": "tests/BGCS.NativeBuild.Tests/TargetCapabilityTests.cs",

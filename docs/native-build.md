@@ -149,8 +149,11 @@ accepting a triple is target resolution rather than platform certification.
 calling ABI or compiler configuration compatibility. Prebuilt inputs still
 require artifact/target/export validation and exact input identities.
 
-`nativeBuild.mode = "none"` explicitly omits construction; generation can
-succeed with native stages still unexecuted. An optional packaging request is
+`nativeBuild.mode = "none"` omits construction of the configured native product;
+it does not imply that all compiler verification is disabled. Parser-adapted C++
+facts can still require the independent proof described
+[below](#selected-native-compiler-source-view). This proof does not establish
+final product linking or invocation. An optional packaging request is
 `"packaging": { "enabled": true, "packager": "auto" }`. Native assets use the
 target descriptor's platform/CPU/ABI facts; target IDs and NuGet RIDs are not
 interchangeable. GNU and musl cannot share an assumed `linux-x64` identity.
@@ -265,6 +268,32 @@ Clang and GNU use separate dependency-tracked source and `-dM` final-macro
 operations, preserving comments, source locations, response/configuration
 inputs and final `#undef` state. Options that replace the controlled output or
 remove its source provenance are rejected, including inside response files.
+
+For GNU C++ headers, the pinned Clang parser cannot consume every GCC-expanded
+SDK implementation token. BGCS can reconstruct declarations from complete,
+leading SDK include trees authenticated against the selected driver's search
+roots, dependency files and system-header markers. It parses those headers in
+an isolated declaration prelude while preserving the actual GNU-expanded user
+tokens and final native macro state. A user-supplied `-isystem` directory alone
+does not authenticate an SDK tree. The current adapter rejects an expanded SDK
+tree reached after user semantic tokens, user headers nested inside a folded
+SDK tree, unproved leading user pragma/pack/push-pop state, unbalanced SDK pack
+state, and macro history that cannot be replayed faithfully. The exact ordered
+header entries must also resolve unambiguously. Unsupported concrete GNU
+types or evaluations are not replaced with same-size aliases or guessed values.
+
+An isolated prelude is parser compatibility, not an ABI proof. When the frontend
+result requires independent native compiler proof (`requiresNativeCompilerProof`),
+generation must compile the emitted bridge and canonical/storage assertions
+with the selected native compiler and original source settings before publication.
+This also applies to `generate`/`bridge` and `nativeBuild.mode` `none` or `prebuilt`;
+a cache hit does not waive it. The verification metadata records
+`nativeFactProofRequired` and `nativeFactProof`, separately from product build,
+final linking and invocation. The proof uses object compilation; its receipt
+separately records any object-link operation and reports no final product link
+or invocation. Ordinary C requests without this proof requirement do not acquire
+an additional C++ compilation requirement; native preprocessing and any explicitly
+requested build checks remain separate requirements.
 
 The source view retains original source locations, comments, final macro
 values and SDK system-header classification. Ambiguous macro origins remain

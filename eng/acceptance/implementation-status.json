@@ -4,7 +4,61 @@
   "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
   "implementationReady": true,
   "releaseReady": false,
+  "evidenceScope": "Local checkpoints are pinned observations, not certification of the current or a future release revision. Historical evidence and phase logs below are retained for audit only.",
   "latestLocalEvidence": {
+    "date": "2026-10-16",
+    "referenceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
+    "releaseCertification": false,
+    "sameRevisionPlatformCiPassed": false,
+    "fullProductPackageCertificationPassed": false,
+    "frontendSuite": {
+      "sourceCohortCommit": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
+      "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
+      "passed": 252,
+      "failed": 0,
+      "skipped": 0,
+      "receipt": "artifacts/implementation/test-results/anonymous-access-complete-frontend.trx"
+    },
+    "nativeBuildSuite": {
+      "sourceCohortCommit": "cc171550294972462bb0cdd2d4ac82b2d8c1e34c",
+      "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
+      "passed": 329,
+      "failed": 0,
+      "skipped": 0,
+      "receipt": "artifacts/implementation/test-results/owned-compiler-mutation-complete-native.trx"
+    },
+    "sdkOnlyPackagePreflight": {
+      "sourceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
+      "sourceWorktreeDirty": false,
+      "success": true,
+      "hostRid": "win-x64",
+      "packageVersion": "0.0.0-local.sdkpreflight20261016a",
+      "archiveCount": 6,
+      "consumerCheckCount": 14,
+      "repeatContentVerified": true,
+      "sourceAndProductionBytesStable": true,
+      "hostToolCertified": false,
+      "releaseCertification": false,
+      "receipt": "artifacts/sdk-preflight-38f4d85-20261016-76471a20f5f34c018297fe330f0816e4/local-sdk-only-preflight.json"
+    },
+    "performanceCheckpoint": {
+      "sourceRevision": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
+      "sourceWorktreeDirty": false,
+      "host": "windows-x64",
+      "declarations": 10000,
+      "coldElapsedSeconds": 21.26191160000053,
+      "warmWatchdogElapsedSeconds": 10.027832799998578,
+      "warmTimedOut": true,
+      "warmCompletedElapsedSeconds": null,
+      "warmBudgetSeconds": 10,
+      "budgetPassed": false,
+      "controlledReleaseRerunPending": true,
+      "sameRevisionReleaseCertification": false,
+      "receipt": "artifacts/implementation/performance-068f-anonymous-strict-current/39bbe86474da4c1d95fadfa5711ece21/report.json"
+    },
+    "remainingExecution": "Exact-revision desktop components and complete Host partitions, controlled performance, corpus, complete installed SDK/tool/Runtime/plugin/MSBuild products, browser/NativeAOT matrices and publication proofs remain mandatory. Independent checkpoint counts must not be added into a full-suite certification."
+  },
+  "historicalLocalEvidence": {
     "date": "2026-10-16",
     "sourceWorktreeDirty": true,
     "commonBuildWarnings": 0,
@@ -1789,6 +1843,44 @@
     }
   },
   "phases": [
+    {
+      "id": "source-implementation",
+      "status": "implementationReviewed",
+      "scope": "The 64 feature groups and 243 configuration identities have reviewed source mappings; this is not execution certification."
+    },
+    {
+      "id": "certification",
+      "status": "pending",
+      "remaining": [
+        "same-revision complete desktop and Host test matrices",
+        "same-revision browser and NativeAOT invocation",
+        "controlled performance and real-library corpus",
+        "complete installed products including Visual Studio 2026",
+        "authenticated feature, package and supply-chain evidence"
+      ]
+    },
+    {
+      "id": "publication",
+      "status": "pending",
+      "remaining": [
+        "immutable v3.0.0 tag after accepted release preflight",
+        "automatic NuGet publication and public payload verification",
+        "final evidence-based engineering assessment"
+      ]
+    },
+    {
+      "id": "additional-platforms",
+      "status": "deferredCertification",
+      "remaining": [
+        "ARM64",
+        "musl",
+        "Android",
+        "iOS",
+        "FreeBSD"
+      ]
+    }
+  ],
+  "historicalDevelopmentPhases": [
     {
       "id": "foundation",
       "status": "inProgress",
