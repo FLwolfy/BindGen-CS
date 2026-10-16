@@ -27,15 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
-        env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
-        with:
-          dotnet-version: 10.0.401
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
 
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
@@ -126,14 +123,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
-        with:
-          dotnet-version: 10.0.401
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
 
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
@@ -209,17 +204,13 @@ jobs:
         with:
           arch: x64
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
-        with:
-          dotnet-version: 10.0.401
-
       - name: Setup Python for generated documentation
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
 
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
@@ -281,6 +272,9 @@ jobs:
       - name: Verify explicit compiler test environment and exact child arguments
         run: python scripts/test-compiler-test-environment.py
 
+      - name: Verify locked SDK archive bootstrap and workflow ordering
+        run: python scripts/test-locked-dotnet-bootstrap.py
+
       - name: Verify trusted release trigger and immutable tag controls
         run: node --test scripts/test-release-workflow.js
 
@@ -324,14 +318,12 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
-      - uses: actions/setup-dotnet@v4
-        env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
-        with:
-          dotnet-version: 10.0.401
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
       - name: Verify locked SDK/runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
       - name: Use the exact frozen Intel parser and locked LLVM compiler
@@ -388,14 +380,12 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
-      - uses: actions/setup-dotnet@v4
-        env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
-        with:
-          dotnet-version: 10.0.401
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
       - name: Verify locked SDK/runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
       - name: Use the exact frozen Intel parser and locked LLVM compiler
@@ -457,17 +447,13 @@ jobs:
         with:
           arch: x64
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
-        with:
-          dotnet-version: 10.0.401
-
       - name: Setup Python for native-provider acceptance
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
 
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json

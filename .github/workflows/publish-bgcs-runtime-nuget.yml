@@ -280,17 +280,13 @@ jobs:
         with:
           ref: ${{ needs.release-preflight.outputs.revision }}
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/bgcs-dotnet
-        with:
-          dotnet-version: 10.0.401
-
       - name: Setup Python for installed product certification
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
 
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
