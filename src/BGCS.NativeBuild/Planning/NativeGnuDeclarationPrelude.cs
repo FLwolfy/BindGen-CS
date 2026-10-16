@@ -46,6 +46,7 @@ internal static class NativeGnuDeclarationPrelude
             bool folding = foldDepth >= 0;
             if (item.marker is { } marker)
             {
+                bool foldedReturn = false;
                 if (marker.msvc) throw Refuse("mixed line directive dialects");
                 bool enter = (marker.flags & 1) != 0, leave = (marker.flags & 2) != 0;
                 if (enter && leave) throw Refuse("contradictory include entry/return metadata");
@@ -87,13 +88,26 @@ internal static class NativeGnuDeclarationPrelude
                     {
                         if (sdkPack.Count != 0) throw Refuse("unbalanced SDK pragma-pack state at an include return");
                         foldDepth = -1;
+                        foldedReturn = true;
                     }
                 }
                 else if (!paths.Equals(next, current) && stack.Count != 0)
                     throw Refuse("a file transition has no include entry/return evidence");
                 current = next;
                 line = int.TryParse(marker.lineNumber, NumberStyles.None, CultureInfo.InvariantCulture, out int parsed) ? parsed - 1 : throw Refuse("invalid native source line");
-                if (foldDepth < 0 && !Pseudo(current)) frozen.Append(trace, item.start, item.length);
+                if (foldDepth < 0 && !Pseudo(current))
+                {
+                    if (foldedReturn)
+                    {
+                        // Its matching SDK entry was folded into the PCH. Keep
+                        // location/system/linkage metadata without an orphan pop.
+                        frozen.Append("# ").Append(marker.lineNumber).Append(' ')
+                            .Append(trace, marker.fileStart - 1, marker.fileLength + 2);
+                        if ((marker.flags & 4) != 0) frozen.Append(" 3");
+                        if ((marker.flags & 8) != 0) frozen.Append(" 4");
+                    }
+                    else frozen.Append(trace, item.start, item.length);
+                }
             }
             else if (item.macro is { } directive)
             {

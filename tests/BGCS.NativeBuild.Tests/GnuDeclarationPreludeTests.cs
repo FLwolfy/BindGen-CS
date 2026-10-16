@@ -8,6 +8,7 @@ using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Requests;
 using BGCS.Contracts.Targets;
 using BGCS.Infrastructure.IO;
+using BGCS.Infrastructure.Workers;
 using BGCS.NativeBuild.Planning;
 using BGCS.Platforms.Targeting;
 using BGCS.Platforms.Toolchains;
@@ -17,6 +18,46 @@ namespace BGCS.NativeBuild.Tests;
 
 public sealed class GnuDeclarationPreludeTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RealGnuMultipleSdkReturnsAndNestedUserEntriesRemainParseableInThePublicWorker(bool systemUserHeaders)
+    {
+        NativeTargetDescriptor? target = Installed(); if (target is null) return;
+        using Fixture fixture = new();
+        string users = Path.Combine(fixture.root, "user-includes"); Directory.CreateDirectory(users);
+        await File.WriteAllTextAsync(Path.Combine(users, "first.hpp"), "// first user include\n#include <cstddef>\n#define FIRST_USER 17\n");
+        await File.WriteAllTextAsync(Path.Combine(users, "second.hpp"), "// second user include\n#include <type_traits>\n#define SECOND_USER 25\n");
+        await File.WriteAllTextAsync(fixture.header, """
+            #include <first.hpp>
+            #include <second.hpp>
+            struct FrozenRecord { int value; };
+            static_assert(sizeof(FrozenRecord) == sizeof(int));
+            int native_consume(FrozenRecord value);
+            """);
+        FrontendRequest request = fixture.Request(target) with
+        { arguments = [systemUserHeaders ? "-isystem" : "-I", users] };
+        NativeSourceViewResult view = await fixture.Prepare(request, "multiple");
+        Assert.NotNull(view.declarationPrelude);
+        Assert.True(view.declarationPrelude.headers.Length >= 2);
+        string frozen = Path.Combine(fixture.root, "multiple", "frozen.hpp");
+        await File.WriteAllTextAsync(frozen, view.expandedSource);
+        FrontendResult parsed = await new FrontendWorkerClient(WorkerPath(), TimeSpan.FromSeconds(90)).ParseAsync(request with
+        {
+            headers = [frozen], declarationPrelude = view.declarationPrelude,
+            parseMacros = false, usePresumedSourceLocations = true,
+            snapshotExcludedDirectories = [Path.Combine(fixture.root, "multiple")]
+        }, CancellationToken.None);
+        Assert.DoesNotContain(parsed.module.diagnostics, diagnostic => diagnostic.isFailure);
+        Assert.True(parsed.requiresNativeCompilerProof);
+        var record = Assert.Single(parsed.module.declarations, declaration => declaration.kind == "Class" && declaration.name == "FrozenRecord");
+        Assert.Equal(4, parsed.module.GetType(record.type!.Value).size);
+        Assert.Equal(0, Assert.Single(record.children.Select(parsed.module.GetDeclaration), declaration => declaration.kind == "Field").offset);
+        Assert.Contains(parsed.module.declarations, declaration => declaration.kind == "Function" && declaration.name == "native_consume");
+        Assert.True(SourceSnapshotVerifier.Matches(parsed.snapshot));
+        Assert.True(SourceSnapshotVerifier.Matches(view.inputs));
+    }
+
     [Fact]
     public async Task RealGnuLeadingSdkViewPreservesUserBranchesCommentsMacrosAndUntrustedSystemHeaders()
     {
@@ -194,6 +235,17 @@ public sealed class GnuDeclarationPreludeTests
             return null;
         }
         return target;
+    }
+
+    private static string WorkerPath()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "src", "BGCS.Frontend.Clang.Worker")))
+            directory = directory.Parent;
+        string root = directory?.FullName ?? throw new InvalidOperationException("The test repository is unavailable.");
+        string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            ? "Release" : "Debug";
+        return Path.Combine(root, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0", "BGCS.Frontend.Clang.Worker.dll");
     }
 
     private sealed class Fixture : IDisposable
