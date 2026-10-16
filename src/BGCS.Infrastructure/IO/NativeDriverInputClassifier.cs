@@ -91,7 +91,10 @@ internal static class NativeDriverInputClassifier
         }
         SourceSnapshot snapshot = new(files.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray(), directories.Values.ToImmutableArray())
         { absentInputs = missing.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray(), excludedDirectories = exclusions };
-        if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken)) throw new IOException("Declared driver file or search inputs changed while their closure was captured.");
+        // Expand is the sole caller. Its final verification checks this complete
+        // closure together with the response/config inputs already read before
+        // classification. No external operation separates these in-memory merges;
+        // verifying here as well would traverse every SDK tree twice at one fence.
         return new(snapshot, reasons.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToImmutableArray());
 
         string ResolveDirectory(string value)

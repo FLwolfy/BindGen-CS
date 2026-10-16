@@ -36,11 +36,14 @@ internal static class ManagedSdkEnvironment
                 .Where(name => Version.TryParse(name, out Version? parsed) && parsed.Major == 10)
                 .OrderByDescending(name => Version.Parse(name!)).FirstOrDefault();
             if (version is null) continue;
-            Dictionary<string, string?> environment = new(StringComparer.OrdinalIgnoreCase);
+            // Keep distinct Unix environment spellings so every ambient alias is
+            // removed from the private managed verifier, without changing its caller.
+            Dictionary<string, string?> environment = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
             foreach (DictionaryEntry item in Environment.GetEnvironmentVariables())
             {
                 string name = (string)item.Key;
-                if (name.StartsWith("MSBUILD", StringComparison.OrdinalIgnoreCase)
+                if (name.Equals("Platform", StringComparison.OrdinalIgnoreCase)
+                    || name.StartsWith("MSBUILD", StringComparison.OrdinalIgnoreCase)
                     || name.StartsWith("DOTNET_MSBUILD_SDK_RESOLVER_", StringComparison.OrdinalIgnoreCase)) environment[name] = null;
             }
             environment["DOTNET_ROOT"] = root;

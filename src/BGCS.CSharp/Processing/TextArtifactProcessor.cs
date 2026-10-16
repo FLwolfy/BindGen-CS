@@ -53,7 +53,7 @@ public sealed class TextArtifactProcessor : IArtifactProcessor, ICacheFingerprin
         CancellationToken cancellationToken
     ) {
         bool matched = false;
-        foreach (var artifact in m_selector.Select(request))
+        foreach (var artifact in m_selector.Select(request, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             string input = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken).ConfigureAwait(false);

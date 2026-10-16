@@ -6,12 +6,14 @@ import importlib.util
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import shutil
 import subprocess
 import sys
 import unittest
+from unittest import mock
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -242,6 +244,92 @@ class PackageClosureTests(unittest.TestCase):
         self.assertIn("compiler stdout", result.stdout)
         self.assertIn("compiler stderr", result.stderr)
         self.assertIn("non-zero exit status 7", result.stderr)
+
+    def accepted_parser_fixture(self):
+        spec = importlib.util.spec_from_file_location("parser_fixture_for_package_controls", ROOT / "scripts/test-parser-resource-provenance.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        fixture = module.ParserResourceProvenanceTests("test_complete_x64_digest_and_source_provenance_is_accepted")
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        PACK.ROOT = fixture.root
+        return fixture
+
+    def capture_product_builds(self):
+        capture = PACK.ROOT / "captured-builds.jsonl"
+        # A real Python child captures each launcher argv/environment. No compiler or product is executed.
+        (PACK.ROOT / "build").write_text(
+            "import json,os,sys\n"
+            f"with open({str(capture)!r}, 'a', encoding='utf-8') as stream:\n"
+            " stream.write(json.dumps({'arguments':sys.argv[1:], 'parserRoot':os.environ.get('BGCS_CLANG_RUNTIME_DIR'),"
+            "'sentinel':os.environ.get('BGCS_PACKAGE_ENV_CONTROL')})+'\\n')\n", encoding="utf-8")
+        return capture
+
+    def test_accepted_explicit_parser_root_reaches_only_worker_when_parent_has_no_runtime_override(self):
+        fixture = self.accepted_parser_fixture()
+        capture = self.capture_product_builds()
+        with mock.patch.dict(os.environ, {"BGCS_PACKAGE_ENV_CONTROL": "parent-unchanged"}):
+            os.environ.pop("BGCS_CLANG_RUNTIME_DIR", None)
+            before = dict(os.environ)
+            PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
+            self.assertEqual(before, dict(os.environ))
+        calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(4, len(calls))
+        self.assertEqual([None, str(fixture.directory.resolve()), None, None], [call["parserRoot"] for call in calls])
+        self.assertEqual(["parent-unchanged"] * 4, [call["sentinel"] for call in calls])
+        self.assertEqual("src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj", calls[1]["arguments"][0])
+        self.assertTrue(all(call["arguments"][-1] == "-p:Version=0.0.0-control" for call in calls))
+
+    def test_accepted_explicit_parser_overrides_worker_ambient_value_without_changing_other_children(self):
+        fixture = self.accepted_parser_fixture()
+        capture = self.capture_product_builds()
+        with mock.patch.dict(os.environ, {"BGCS_CLANG_RUNTIME_DIR": "caller-native-root"}):
+            before = dict(os.environ)
+            PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
+            self.assertEqual(before, dict(os.environ))
+        calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(["caller-native-root", str(fixture.directory.resolve()), "caller-native-root", "caller-native-root"],
+                         [call["parserRoot"] for call in calls])
+
+    def test_without_explicit_parser_all_builds_keep_the_callers_runtime_selection(self):
+        capture = self.capture_product_builds()
+        with mock.patch.dict(os.environ, {"BGCS_CLANG_RUNTIME_DIR": "caller-native-root"}):
+            before = dict(os.environ)
+            PACK.build_products(sys.executable, "Release", "0.0.0-control", None, "c" * 40)
+            self.assertEqual(before, dict(os.environ))
+        calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(["caller-native-root"] * 4, [call["parserRoot"] for call in calls])
+
+    def test_managed_child_removes_every_platform_case_without_changing_parent_or_native_discovery(self):
+        for index, names in enumerate((("Platform",), ("PLATFORM",), ("pLaTfOrM",), ("Platform", "PLATFORM", "platform"))):
+            capture = self.root / ("platform-environment-" + str(index) + ".json")
+            command = ("import json,os; from pathlib import Path; "
+                f"Path({str(capture)!r}).write_text(json.dumps({{"
+                "'platformEntries':{key:value for key,value in os.environ.items() if key.casefold()=='platform'},"
+                "'vc':os.environ.get('VCINSTALLDIR'),'sdk':os.environ.get('WindowsSdkDir'),"
+                "'include':os.environ.get('INCLUDE'),'compiler':os.environ.get('CXX'),"
+                "'parser':os.environ.get('BGCS_CLANG_RUNTIME_DIR')}),encoding='utf-8')")
+            with self.subTest(names=names), mock.patch.dict(os.environ, {
+                "VCINSTALLDIR": "retained-vc", "WindowsSdkDir": "retained-sdk", "INCLUDE": "retained-native-headers",
+                "CXX": "retained-compiler", **dict.fromkeys(names, "x64")
+            }):
+                before = dict(os.environ)
+                PACK.execute(sys.executable, ["-c", command], environment_overrides={"BGCS_CLANG_RUNTIME_DIR": "accepted-explicit-root"})
+                self.assertEqual(before, dict(os.environ))
+                actual = json.loads(capture.read_text(encoding="utf-8"))
+                self.assertEqual({"platformEntries": {}, "vc": "retained-vc", "sdk": "retained-sdk",
+                    "include": "retained-native-headers", "compiler": "retained-compiler", "parser": "accepted-explicit-root"}, actual)
+
+    def test_invalid_or_stale_parser_provenance_rejects_before_any_build_process(self):
+        fixture = self.accepted_parser_fixture()
+        capture = self.capture_product_builds()
+        with self.assertRaisesRegex(RuntimeError, "current BGCS revision"):
+            PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "d" * 40)
+        self.assertFalse(capture.exists())
+        (fixture.directory / "libclang.dylib").write_bytes(b"changed native input")
+        with self.assertRaisesRegex(RuntimeError, "changed after its actual build"):
+            PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
+        self.assertFalse(capture.exists())
 
     def prepare_resource_notices(self):
         source = self.root / 'distribution/third-party/english-words'

@@ -48,6 +48,51 @@ public sealed class SourceProcessorTests
         Assert.Equal("NAME", editor.Text("types/Value.cs"));
     }
 
+    [Fact]
+    public async Task PortableSelectorsMatchThePreviousAnchoredRegexOracle()
+    {
+        string[] selectors = ["Api.cs", "*", "*.cs", "?.cs", "??.cs", "?pi.cs", "**", "**/*.cs", "Types/**", "Types/**/Value?.cs",
+            "**/**/A*.cs", "A/*/**/B?.cs", "Types/*/Other.cs", "[A]+(x).cs", "A/**/B/**", "A/**/**"];
+        string[] candidates = ["Api.cs", "api.cs", "Api.txt", "Types/Value1.cs", "Types/Nested/Value2.cs",
+            "Types/Nested/Other.cs", "A/B1.cs", "A/X/B2.cs", "A/X/Y/B2.cs", "A/X/Y/B2.txt", "A", "A/",
+            "A//B1.cs", "Types//Other.cs", "[A]+(x).cs", "目录/😀.cs", "😀.cs", "A/😀.cs", "A/\n/B1.cs", "A/X/\n", ""];
+        foreach (string selector in selectors)
+        {
+            string[] segments = selector.Split('/');
+            StringBuilder expression = new("\\A");
+            for (int index = 0; index < segments.Length; index++)
+            {
+                if (segments[index] == "**") expression.Append(index == segments.Length - 1 ? ".*" : "(?:[^/]+/)*");
+                else
+                {
+                    foreach (char character in segments[index])
+                        expression.Append(character switch { '*' => "[^/]*", '?' => "[^/]", _ => Regex.Escape(character.ToString()) });
+                    if (index != segments.Length - 1) expression.Append('/');
+                }
+            }
+            expression.Append("\\z");
+            Regex oracle = new(expression.ToString(), RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromSeconds(5));
+            foreach (string candidate in candidates)
+            {
+                Editor editor = new((candidate, "BEFORE"));
+                await new TextArtifactProcessor("glob", 0, [selector], "BEFORE", "AFTER", requireMatch: false).ProcessAsync(editor.Request(), default);
+                Assert.True(editor.Text(candidate) == (oracle.IsMatch(candidate) ? "AFTER" : "BEFORE"),
+                    "Selector: " + selector + "; candidate: " + candidate);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task CancelledSelectorEnumerationRejectsEvenWhenNoArtifactMatches()
+    {
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        Editor editor = new(("Api.cs", "BEFORE"));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await new TextArtifactProcessor(
+            "cancel", 0, ["Types/**"], "BEFORE", "AFTER", requireMatch: false).ProcessAsync(editor.Request(), cancellation.Token));
+        Assert.Equal("BEFORE", editor.Text("Api.cs"));
+    }
+
     [Theory]
     [InlineData("../Other.cs")]
     [InlineData("/Other.cs")]

@@ -265,7 +265,9 @@ jobs:
 
       - name: Build structured Host discovery driver
         shell: bash
-        run: dotnet build eng/BGCS.TestDriver/BGCS.TestDriver.csproj --configuration Release -p:TreatWarningsAsErrors=true -m:1 -nr:false
+        run: |
+          unset Platform PLATFORM platform
+          dotnet build eng/BGCS.TestDriver/BGCS.TestDriver.csproj --configuration Release -p:TreatWarningsAsErrors=true -m:1 -nr:false
 
       - name: Verify real inherited generic and dynamic theory controls
         run: python scripts/test-host-test-driver.py

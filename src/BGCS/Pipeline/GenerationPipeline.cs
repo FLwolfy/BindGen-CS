@@ -951,9 +951,8 @@ public sealed partial class BindingHost
                             throw new IOException("A declared extension input directory overlaps the formal output it would replace.");
                     }
                 }
-                foreach (SourceSnapshot snapshot in parsedInputs)
-                    if (BGCS.Infrastructure.IO.SourceSnapshotVerifier.GetMismatch(snapshot, cancellation.Token) is string mismatch)
-                        throw new IOException("Native file bytes or include-search membership changed during generation; the candidate cannot be published. " + mismatch);
+                if (SourceSnapshotBatch.GetMismatch(parsedInputs, cancellation.Token) is string mismatch)
+                    throw new IOException("Native file bytes or include-search membership changed during generation; the candidate cannot be published. " + mismatch);
                 foreach (InputDependency input in request.configurationInputs)
                 {
                     cancellation.Token.ThrowIfCancellationRequested();

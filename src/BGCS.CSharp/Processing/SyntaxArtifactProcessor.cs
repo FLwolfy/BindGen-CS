@@ -49,7 +49,7 @@ public abstract class SyntaxArtifactProcessor : IArtifactProcessor
         CancellationToken cancellationToken
     ) {
         string prefix = ManagedArtifactSelector.Prefix(request);
-        foreach (var artifact in m_selector.Select(request))
+        foreach (var artifact in m_selector.Select(request, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             string input = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken).ConfigureAwait(false);

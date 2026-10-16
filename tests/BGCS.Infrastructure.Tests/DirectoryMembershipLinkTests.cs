@@ -53,6 +53,9 @@ public sealed class DirectoryMembershipLinkTests : IDisposable
         Assert.Equal(first, new DirectoryInfo(one).LinkTarget);
 
         DirectoryInputDependency before = DirectoryMembershipDigest.Capture(include);
+        // A nonempty exclusion set exercises the shared entry-local target
+        // observation without changing this exact known graph's encoding.
+        Assert.Equal(before, DirectoryMembershipDigest.Capture(include, [Path.Combine(m_root, "unreachable-private")]));
         ContentDigest expected = KnownDigest(include, PhysicalPathResolver.Resolve(include), "exists",
             "one", "directory", first, first, "two", "directory", first, first,
             "two/ancestor", "directory", include, include, "two/value.any", "file", "");

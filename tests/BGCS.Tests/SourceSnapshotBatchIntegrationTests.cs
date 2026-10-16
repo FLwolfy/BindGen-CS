@@ -21,6 +21,32 @@ namespace BGCS.Tests;
 public sealed class SourceSnapshotBatchIntegrationTests
 {
     [Fact]
+    public async Task RepeatedDirectoryDeclarationsStillRejectLateMembershipChangesAndPreservePublication()
+    {
+        using WorkerPluginFixture fixture = new();
+        string directory = Directory.CreateDirectory(Path.Combine(fixture.root, "directory-input")).FullName;
+        File.WriteAllText(Path.Combine(directory, "original.any"), "input");
+        string added = Path.Combine(directory, "new.unrecognized-extension");
+        bool mutate = false;
+        await using BindingHost host = fixture.Builder().AddPluginFactory(DirectoryPlugin.Descriptor,
+            () => new DirectoryPlugin(directory)).AddValidator("batch-mutation", 0,
+            () => new MutationValidator(() => { if (mutate) File.WriteAllText(added, "new membership"); })).Build();
+        GenerationRequest request = fixture.Request();
+        await Warm(host, request);
+        Dictionary<string, byte[]> before = Snapshot(fixture.output);
+        mutate = true;
+        GenerationResult rejected = await host.GenerateAsync(request);
+        Assert.False(rejected.success);
+        Assert.Contains("external inputs changed", rejected.GetDiagnosticSummary());
+        AssertSnapshot(fixture.output, before);
+        mutate = false;
+        File.Delete(added);
+        GenerationResult recovered = await host.GenerateAsync(request);
+        Assert.True(recovered.success, recovered.GetDiagnosticSummary());
+        AssertHits(recovered);
+    }
+
+    [Fact]
     public async Task WarmWorkerPluginInputsRetainCompleteEvidenceAndRejectSameLengthLateMutation()
     {
         using WorkerPluginFixture fixture = new();
@@ -140,6 +166,28 @@ public sealed class SourceSnapshotBatchIntegrationTests
             mutation();
             return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty);
         }
+    }
+
+    private sealed class DirectoryPlugin(string directory) : IBindingPlugin, IExternalInputProvider, ICacheFingerprintProvider
+    {
+        internal static PluginDescriptor Descriptor { get; } = new("batch.directory", "1.0.0", [new("batch.directory.transform", ExtensionPort.NativeModuleTransform)]);
+        public PluginDescriptor descriptor => Descriptor;
+        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken)
+            => [new(directory, ExternalInputKind.Directory)];
+        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+            => new(new ContentDigest(new string('a', 64)), [new(directory, ExternalInputKind.Directory)]);
+        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
+            => registry.RegisterFactory<INativeModuleTransform>("batch.directory.transform", () => new DirectoryTransform());
+        public void Dispose() { }
+    }
+
+    private sealed class DirectoryTransform : INativeModuleTransform, ICacheFingerprintProvider
+    {
+        public string id => "batch.directory.transform";
+        public int priority => 0;
+        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) => module;
+        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+            => new(new ContentDigest(new string('b', 64)), []);
     }
 
     private sealed class MutationState(string input, bool restore)

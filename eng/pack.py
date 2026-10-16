@@ -54,10 +54,15 @@ def package_evidence(path: Path) -> dict:
     return {"file": path.name, "bytes": path.stat().st_size, "sha256": digest(path), "executionAssets": execution}
 
 
-def execute(dotnet: str, arguments: list[str]) -> None:
+def execute(dotnet: str, arguments: list[str], *, environment_overrides: dict[str, str] | None = None) -> None:
     check_free_space(ROOT)
+    # Every invocation here is a managed dotnet build/pack. The owned collector
+    # uses project-default output paths; an MSVC shell's Platform=x64 must not
+    # redirect them into bin/x64. Preserve native compiler/SDK discovery inputs.
+    environment = {name: value for name, value in {**os.environ, **(environment_overrides or {})}.items()
+                   if name.casefold() != "platform"}
     process = subprocess.Popen([dotnet, *arguments], cwd=ROOT, start_new_session=os.name != 'nt',
-        stdout=sys.stdout, stderr=sys.stderr,
+        stdout=sys.stdout, stderr=sys.stderr, env=environment,
         creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0)
     try:
         code = wait_for_process(process, ROOT)
@@ -75,6 +80,18 @@ def execute(dotnet: str, arguments: list[str]) -> None:
                 except ProcessLookupError: pass
             process.wait(timeout=30)
         raise
+
+
+def build_products(dotnet: str, configuration: str, version: str, parser_osx_x64: Path | None, source_revision: str) -> None:
+    """Forward an explicitly accepted Intel resource root to the worker build alone."""
+    if parser_osx_x64 is not None:
+        parser_osx_x64 = parser_osx_x64.resolve()
+        parser_runtime_provenance.verify_supplemental(ROOT, parser_osx_x64, source_revision)
+    worker_project = "src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj"
+    for project in ("src/BGCS/BGCS.csproj", worker_project, "integrations/BGCS.MSBuild/BGCS.MSBuild.csproj", "src/BGCS.Tool/BGCS.Tool.csproj"):
+        overrides = {"BGCS_CLANG_RUNTIME_DIR": str(parser_osx_x64)} if project == worker_project and parser_osx_x64 is not None else None
+        execute(dotnet, ["build", project, "--configuration", configuration, "-m:2", "-nr:false", "-p:UseSharedCompilation=false", f"-p:Version={version}"],
+                environment_overrides=overrides)
 
 
 def build_output(project: str, configuration: str) -> Path:
@@ -537,10 +554,10 @@ def main() -> None:
         parser.error("Full package distribution requires accepted --parser-osx-x64 assets.")
     if args.parser_osx_x64 is not None:
         args.parser_osx_x64 = args.parser_osx_x64.resolve()
-        parser_runtime_provenance.verify_supplemental(ROOT, args.parser_osx_x64, source["sourceRevision"])
     if not args.no_build:
-        for project in ("src/BGCS/BGCS.csproj", "src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj", "integrations/BGCS.MSBuild/BGCS.MSBuild.csproj", "src/BGCS.Tool/BGCS.Tool.csproj"):
-            execute(args.dotnet, ["build", project, "--configuration", args.configuration, "-m:2", "-nr:false", "-p:UseSharedCompilation=false", f"-p:Version={version}"])
+        build_products(args.dotnet, args.configuration, version, args.parser_osx_x64, source["sourceRevision"])
+    elif args.parser_osx_x64 is not None:
+        parser_runtime_provenance.verify_supplemental(ROOT, args.parser_osx_x64, source["sourceRevision"])
     if full or args.include_host_tool:
         require_tool_restore_rids(RIDS if full else [args.host_only])
     temporary_parent = ROOT / "artifacts/temporary"

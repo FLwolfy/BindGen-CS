@@ -170,10 +170,10 @@ public sealed class PlannedNativeBuildExecutor
             if (!expectedProofDependencies.SequenceEqual(actualProofDependencies, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
                 throw new IOException("The actual preprocessing dependency closure differs from its independent preflight scan.");
             SourceSnapshot frozenSource = new([CaptureFile(proof.outputFile, cancellationToken), CaptureFile(proofDependencies.path, cancellationToken)], []);
-            if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken) || !SourceSnapshotVerifier.Matches(plan.argumentInputs, cancellationToken))
-                throw new IOException("Native inputs changed while their effective declarations were preprocessed.");
             if (sourceVerifier is not null && verificationSources.Contains(proof.source, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
             {
+                if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken) || !SourceSnapshotVerifier.Matches(plan.argumentInputs, cancellationToken))
+                    throw new IOException("Native inputs changed while their effective declarations were preprocessed.");
                 TimeSpan verifierRemaining = timeout - elapsed.Elapsed;
                 if (verifierRemaining <= TimeSpan.Zero) throw new TimeoutException("The native deadline elapsed before detached effective-source fact verification.");
                 using CancellationTokenSource proofDeadline = new(verifierRemaining);
@@ -189,14 +189,20 @@ public sealed class PlannedNativeBuildExecutor
                 if (proofDeadline.IsCancellationRequested || elapsed.Elapsed >= timeout)
                     throw new TimeoutException("The native deadline elapsed during detached effective-source fact verification.");
             }
+            // Without a detached verifier, no external operation separates the
+            // two input fences. Keep the later complete check, including the
+            // actual preprocessed bytes and dependency output, for that branch.
             if (!SourceSnapshotVerifier.Matches(frozenSource, cancellationToken) || !SourceSnapshotVerifier.Matches(snapshot, cancellationToken)
                 || !SourceSnapshotVerifier.Matches(plan.argumentInputs, cancellationToken))
                 throw new IOException("Native effective source or compiler inputs changed during detached fact verification.");
         }
         if (preprocessOnly)
         {
-            if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken) || !SourceSnapshotVerifier.Matches(plan.argumentInputs, cancellationToken))
-                throw new IOException("Native preprocessing inputs changed before source view extraction completed.");
+            // A preprocessing-only plan requires nonempty proofs. Its last
+            // complete post-proof fence has just checked the same inputs; only
+            // loop completion and this immutable result construction intervene.
+            cancellationToken.ThrowIfCancellationRequested();
+            if (elapsed.Elapsed >= timeout) throw new TimeoutException("The native deadline elapsed before source view extraction completed.");
             return new(results.ToImmutable(), snapshot) { argumentInputs = plan.argumentInputs };
         }
         foreach (NativeBuildCommand command in plan.commands)

@@ -24,10 +24,12 @@ public static class DirectoryMembershipDigest
         IEnumerable<string>? excludedDirectories = null,
         CancellationToken cancellationToken = default
     ) {
+        cancellationToken.ThrowIfCancellationRequested();
+        PhysicalPathResolver.ResolutionScope resolution = new();
         string logical = Path.GetFullPath(directory);
-        string physical = PhysicalPathResolver.Resolve(logical);
+        string physical = resolution.Resolve(logical, cancellationToken);
         bool exists = Directory.Exists(logical);
-        string[] exclusions = (excludedDirectories ?? []).Select(path => PhysicalPathResolver.Resolve(Path.GetFullPath(path))).ToArray();
+        string[] exclusions = (excludedDirectories ?? []).Select(path => resolution.Resolve(Path.GetFullPath(path), cancellationToken)).ToArray();
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         Append(logical);
         Append(physical);
@@ -39,7 +41,7 @@ public static class DirectoryMembershipDigest
         while (pending.TryPop(out var item))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string resolved = PhysicalPathResolver.Resolve(item.Path);
+            string resolved = resolution.Resolve(item.Path, cancellationToken);
             if (!visited.Add(resolved))
                 continue;
             foreach (FileSystemInfo entry in new DirectoryInfo(resolved).EnumerateFileSystemInfos().OrderBy(entry => entry.Name, StringComparer.Ordinal))
@@ -47,18 +49,22 @@ public static class DirectoryMembershipDigest
                 cancellationToken.ThrowIfCancellationRequested();
                 FileAttributes attributes = entry.Attributes;
                 string? linkTarget = (attributes & FileAttributes.ReparsePoint) != 0 ? entry.LinkTarget : null;
-                if (exclusions.Length != 0 && Excluded(linkTarget is null ? entry.FullName : PhysicalPathResolver.Resolve(entry.FullName))) continue;
+                string? resolvedTarget = linkTarget is null ? null : resolution.Resolve(entry.FullName, cancellationToken);
+                if (exclusions.Length != 0 && Excluded(resolvedTarget ?? entry.FullName)) continue;
                 string relative = item.Relative + entry.Name;
                 bool isDirectory = (attributes & FileAttributes.Directory) != 0;
                 Append(relative);
                 Append(isDirectory ? "directory" : "file");
                 Append(linkTarget ?? string.Empty);
-                if (linkTarget is not null)
-                    Append(PhysicalPathResolver.Resolve(entry.FullName));
+                if (resolvedTarget is not null)
+                    Append(resolvedTarget);
                 if (isDirectory)
                     pending.Push((entry.FullName, relative + "/"));
             }
         }
+        resolution.Verify(cancellationToken);
+        if (Directory.Exists(logical) != exists) throw new IOException("The directory root's existence changed during membership capture: " + logical);
+        cancellationToken.ThrowIfCancellationRequested();
         return new(logical, physical, exists, new ContentDigest(Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant()));
 
         bool Excluded(string path) => exclusions.Any(root => string.Equals(path, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)

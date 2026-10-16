@@ -71,15 +71,45 @@ public sealed class NativeBuildCommandTests
     public void Run_RelativeOutputPath_IsResolvedFromInvocationDirectory()
     {
         using TestDirectory directory = new();
-        directory.WriteManifest(CreateManifest(directory));
+        NativeBuildManifest manifest = CreateManifest(directory);
+        directory.WriteManifest(manifest);
         string filename = OperatingSystem.IsWindows() ? "sample.dll" : OperatingSystem.IsMacOS() ? "libsample.dylib" : "libsample.so";
         string output = Path.Combine("Consumer native", filename);
         CommandResult result = Run(directory, "bridge.manifest.json", "--compiler", FindCompiler(), "--output", output, "--dry-run", "--json");
         Assert.True(result.ExitCode == 0, result.Error);
         using JsonDocument document = JsonDocument.Parse(result.Output);
         string planned = document.RootElement.GetProperty("nativeArtifact").GetString()!;
-        Assert.Equal(Path.GetFullPath(output, directory.Path), planned);
+        // ProcessStartInfo resolves its invocation directory through filesystem aliases.
+        // Use the independently captured input's physical parent and preserve the exact relative suffix.
+        string physicalInvocation = Path.GetDirectoryName(Assert.Single(manifest.externalInputs).resolvedPath)!;
+        Assert.Equal(Path.GetFullPath(output, physicalInvocation), planned);
         Assert.False(File.Exists(planned));
+    }
+
+    [Fact]
+    public void Run_RelativeOutputUsesInvocationDirectoryWhenManifestIsInAnotherDirectory()
+    {
+        using TestDirectory directory = new();
+        NativeBuildManifest manifest = CreateManifest(directory);
+        directory.WriteManifest(manifest);
+        string manifestDirectory = Path.Combine(directory.Path, "Manifest files");
+        Directory.CreateDirectory(manifestDirectory);
+        File.Move(Path.Combine(directory.Path, "bridge.manifest.json"), Path.Combine(manifestDirectory, "bridge.manifest.json"));
+        string filename = OperatingSystem.IsWindows() ? "sample.dll" : OperatingSystem.IsMacOS() ? "libsample.dylib" : "libsample.so";
+        string output = Path.Combine("Consumer native", filename);
+
+        CommandResult result = Run(directory, Path.Combine("Manifest files", "bridge.manifest.json"),
+            "--compiler", FindCompiler(), "--output", output, "--dry-run", "--json");
+
+        Assert.True(result.ExitCode == 0, result.Error);
+        using JsonDocument document = JsonDocument.Parse(result.Output);
+        Assert.True(document.RootElement.GetProperty("success").GetBoolean());
+        string planned = document.RootElement.GetProperty("nativeArtifact").GetString()!;
+        string physicalInvocation = Path.GetDirectoryName(Assert.Single(manifest.externalInputs).resolvedPath)!;
+        Assert.Equal(Path.GetFullPath(output, physicalInvocation), planned);
+        Assert.NotEqual(Path.GetFullPath(output, Path.Combine(physicalInvocation, "Manifest files")), planned);
+        Assert.False(File.Exists(planned));
+        Assert.False(Directory.Exists(Path.Combine(directory.Path, "Consumer native")));
     }
 
     [Fact]

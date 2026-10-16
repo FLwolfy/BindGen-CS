@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO.Enumeration;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Threading;
 using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Requests;
 
@@ -11,7 +11,7 @@ namespace BGCS.CSharp.Processing;
 
 internal sealed class ManagedArtifactSelector
 {
-    private readonly ImmutableArray<Regex> m_patterns;
+    private readonly ImmutableArray<ImmutableArray<string>> m_patterns;
     internal ImmutableArray<string> patterns { get; }
 
     internal ManagedArtifactSelector(IEnumerable<string> patterns)
@@ -23,12 +23,18 @@ internal sealed class ManagedArtifactSelector
         m_patterns = this.patterns.Select(Compile).ToImmutableArray();
     }
 
-    internal IEnumerable<ArtifactDescriptor> Select(ArtifactProcessingRequest request)
-    {
+    internal IEnumerable<ArtifactDescriptor> Select(
+        ArtifactProcessingRequest request,
+        CancellationToken cancellationToken
+    ) {
         string prefix = Prefix(request);
-        return request.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp"
+        return request.artifacts.Where(artifact =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return artifact.mediaType == "text/x-csharp"
             && artifact.relativePath.StartsWith(prefix, StringComparison.Ordinal)
-            && m_patterns.Any(pattern => pattern.IsMatch(artifact.relativePath[prefix.Length..])))
+            && m_patterns.Any(pattern => Matches(pattern, artifact.relativePath[prefix.Length..], cancellationToken));
+        })
             .OrderBy(artifact => artifact.relativePath, StringComparer.Ordinal);
     }
 
@@ -45,24 +51,48 @@ internal sealed class ManagedArtifactSelector
             throw new ArgumentException("A processor path must be a bounded portable managed-relative path without traversal.", nameof(path));
     }
 
-    private static Regex Compile(string path)
+    private static ImmutableArray<string> Compile(string path)
     {
         ValidatePath(path, pattern: true);
-        StringBuilder expression = new("\\A");
-        string[] segments = path.Split('/');
-        for (int index = 0; index < segments.Length; index++)
+        ImmutableArray<string> segments = [.. path.Split('/')];
+        foreach (string segment in segments)
+            if (segment != "**" && segment.Contains("**", StringComparison.Ordinal))
+                throw new ArgumentException("A recursive source selector must use ** as a complete path segment.", nameof(path));
+        return segments;
+    }
+
+    private static bool Matches(
+        ImmutableArray<string> pattern,
+        string path,
+        CancellationToken cancellationToken
+    ) {
+        // Portable globs have bounded states; match their segments directly instead of
+        // imposing a wall-clock regex deadline on short paths in a busy build process.
+        string[] parts = path.Split('/');
+        bool[] next = new bool[parts.Length + 1], current = new bool[parts.Length + 1];
+        next[parts.Length] = true;
+        for (int index = pattern.Length - 1; index >= 0; index--)
         {
-            string segment = segments[index];
-            if (segment == "**") expression.Append(index == segments.Length - 1 ? ".*" : "(?:[^/]+/)*");
-            else
+            cancellationToken.ThrowIfCancellationRequested();
+            Array.Clear(current);
+            string segment = pattern[index];
+            bool last = index == pattern.Length - 1, suffixWithoutNewline = true;
+            for (int part = parts.Length - 1; part >= 0; part--)
             {
-                if (segment.Contains("**", StringComparison.Ordinal)) throw new ArgumentException("A recursive source selector must use ** as a complete path segment.", nameof(path));
-                foreach (char character in segment)
-                    expression.Append(character switch { '*' => "[^/]*", '?' => "[^/]", _ => Regex.Escape(character.ToString()) });
-                if (index != segments.Length - 1) expression.Append('/');
+                cancellationToken.ThrowIfCancellationRequested();
+                if (segment == "**")
+                {
+                    suffixWithoutNewline &= !parts[part].Contains('\n');
+                    current[part] = last ? suffixWithoutNewline
+                        : next[part] || part < parts.Length - 1 && parts[part].Length != 0 && current[part + 1];
+                }
+                else current[part] = next[part + 1]
+                    && (last ? part == parts.Length - 1 : part < parts.Length - 1)
+                    && (segment == "*" && parts[part].Length == 0
+                        || FileSystemName.MatchesSimpleExpression(segment, parts[part], ignoreCase: false));
             }
+            (next, current) = (current, next);
         }
-        expression.Append("\\z");
-        return new(expression.ToString(), RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100));
+        return next[0];
     }
 }
