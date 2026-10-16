@@ -204,7 +204,11 @@ public sealed class CompilerBuildProvider : INativeBuildProvider, INativeBuildPr
             includeSearchDirectories = request.sources.Select(unit => Path.GetDirectoryName(unit.path)!).Concat(request.includeDirectories).Concat(systemIncludes).Distinct(StringComparer.Ordinal).ToImmutableArray(),
             externalInputFiles = commands.Select(command => command.executable).Concat(pinnedLinker is string linker ? [linker] : [])
                 .Concat(request.libraries.Where(Path.IsPathFullyQualified)).Distinct(StringComparer.Ordinal).ToImmutableArray(),
-            librarySearchDirectories = request.target.toolchain.libraryDirectories.Concat(request.libraryDirectories).Distinct(StringComparer.Ordinal).ToImmutableArray()
+            // No linker operation executes for the private source-view plan.
+            // Keep explicit -L and other driver inputs in argumentInputs, but
+            // do not treat implicit link-only SDK directories as header inputs.
+            librarySearchDirectories = preprocessingOnly ? []
+                : request.target.toolchain.libraryDirectories.Concat(request.libraryDirectories).Distinct(StringComparer.Ordinal).ToImmutableArray()
             ,
             linkDependencyScans = linkScans.ToImmutableArray()
         }, request);

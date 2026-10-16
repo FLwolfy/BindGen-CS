@@ -36,10 +36,27 @@ internal static unsafe class IncludeDependencyCollector
         compilation.translationUnit.GetInclusions(visitor, default);
         GC.KeepAlive(visitor);
         if (failure is not null) throw new IOException("Parsed source provenance could not be collected.", failure);
+        paths.ExceptWith(compilation.declarationPreludeFiles);
+        paths.UnionWith(compilation.declarationPreludeInputs.Select(input => input.path));
         return paths.OrderBy(path => path, StringComparer.Ordinal).ToArray();
     }
 
     internal static ImmutableArray<InputDependency> Collect(CppCompilation compilation)
+    {
+        var owned = compilation.declarationPreludeFiles.ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        ImmutableArray<InputDependency> parsed = Collect(compilation.translationUnit).Where(input => !owned.Contains(input.path)).ToImmutableArray();
+        if (!SourceSnapshotVerifier.Matches(new(compilation.declarationPreludeInputs, [])))
+            throw new IOException("Declaration prelude inputs changed before detached fact extraction completed.");
+        return parsed.Concat(compilation.declarationPreludeInputs).GroupBy(input => input.path,
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).Select(group =>
+            {
+                InputDependency first = group.First();
+                if (group.Any(input => input != first)) throw new IOException("Prelude and consumer read different native dependency bytes: " + first.path);
+                return first;
+            }).OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray();
+    }
+
+    internal static ImmutableArray<InputDependency> Collect(CXTranslationUnit translationUnit)
     {
         Dictionary<string, InputDependency> dependencies = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         Exception? failure = null;
@@ -58,7 +75,7 @@ internal static unsafe class IncludeDependencyCollector
                 string path = Path.GetFullPath(nativeName.ToString());
                 if (!File.Exists(path)) // The synthesized unsaved entry is not a physical dependency.
                     return;
-                ReadOnlySpan<byte> parsedBytes = compilation.translationUnit.GetFileContents(file, out _);
+                ReadOnlySpan<byte> parsedBytes = translationUnit.GetFileContents(file, out _);
                 string digest = Convert.ToHexString(SHA256.HashData(parsedBytes)).ToLowerInvariant();
                 using FileStream current = File.OpenRead(path);
                 if (current.Length != parsedBytes.Length || !string.Equals(digest, Convert.ToHexString(SHA256.HashData(current)).ToLowerInvariant(), StringComparison.Ordinal))
@@ -70,7 +87,7 @@ internal static unsafe class IncludeDependencyCollector
                 failure = exception; // Never unwind a managed exception through libclang's callback frame.
             }
         };
-        compilation.translationUnit.GetInclusions(visitor, default);
+        translationUnit.GetInclusions(visitor, default);
         GC.KeepAlive(visitor);
         if (failure is not null)
             throw new IOException("The parser input snapshot could not be verified.", failure);

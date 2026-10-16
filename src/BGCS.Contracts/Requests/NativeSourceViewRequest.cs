@@ -46,6 +46,8 @@ public sealed record NativeSourceViewResult(
     public string compilerFamily { get; init; } = "msvc";
     /// <summary>Gets the selected native driver's exact reported identity when available.</summary>
     public string compilerIdentity { get; init; } = string.Empty;
+    /// <summary>Gets isolated dependency declarations for a bounded leading native SDK expansion; their resulting facts require native compiler proof.</summary>
+    public NativeDeclarationPrelude? declarationPrelude { get; init; }
     /// <summary>Gets the expanded-source, final-macro, declared macro argv, diagnostic locale and compiler diagnostic identity with only private filename metadata and explicit Host-owned source origins mapped to portable identities.</summary>
     public ContentDigest observationFingerprint { get; init; }
 

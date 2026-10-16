@@ -14,6 +14,7 @@ using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Ports;
 using BGCS.Contracts.Requests;
 using BGCS.Infrastructure.Workers;
+using BGCS.Infrastructure.IO;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -112,7 +113,7 @@ public sealed class PostReplayInputFenceTests
             string store = file[..^suffix.Length];
             Assert.Equal(64, Path.GetFileName(store).Length);
             Assert.All(Path.GetFileName(store), character => Assert.True(char.IsAsciiHexDigit(character)));
-            Assert.Equal(Path.GetFullPath(Path.Combine(Path.GetTempPath(), "BGCS", "source-inputs", "v1")), Path.GetDirectoryName(store));
+            Assert.Equal(Path.Combine(PhysicalPathResolver.Resolve(Path.GetTempPath()), "BGCS", "source-inputs", "v1"), Path.GetDirectoryName(store));
             return store;
         }
 

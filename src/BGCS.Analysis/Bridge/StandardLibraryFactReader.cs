@@ -83,7 +83,7 @@ public sealed class StandardLibraryFactReader
             if (matches.Length != 1 || matches[0].category != NativeTypeCategory.Record || matches[0].declaration is not StableId ownerId)
                 throw new InvalidOperationException("An exact configured family must resolve unambiguously to one actual native class or class alias.");
             NativeDeclaration owner = module.GetDeclaration(ownerId);
-            bool standardString = binding.family == StandardValueKind.String && BaseName(matches[0].spelling) == "std::basic_string";
+            bool standardString = binding.family == StandardValueKind.String && IsStandardString(module, matches[0], owner);
             if (!owner.isCompleteDefinition || !owner.templateParameters.IsEmpty || !owner.templateArguments.IsEmpty && !standardString)
                 throw new NotSupportedException("An exact nativeType binding requires a complete non-template class or a named alias of the actual std::basic_string specialization; other concrete template families use nativeTemplate.");
             if (!result.TryAdd(matches[0].id, binding)) throw new InvalidOperationException("Distinct configured aliases cannot bind the same canonical native class more than once.");
@@ -166,6 +166,7 @@ public sealed class StandardLibraryFactReader
             "std::shared_ptr" => StandardValueKind.SharedPointer,
             _ => null
         };
+        if (family is null && IsStandardString(module, type, declaration)) family = StandardValueKind.String;
         CppFamilyBinding? binding = FindBinding(module, typeId);
         if (binding is not null)
         {
@@ -288,6 +289,30 @@ public sealed class StandardLibraryFactReader
             || unit.primitiveKind is "Bool" or "Void" or "Float" or "Double")
             throw new NotSupportedException("The actual c_str result must point to one-byte integral UTF-8 code-unit storage.");
         return new(getter.id, unit.id, getter.isConst);
+    }
+
+    private static bool IsStandardString(
+        NativeModule module,
+        NativeType type,
+        NativeDeclaration declaration
+    ) {
+        if (BaseName(type.spelling) == "std::basic_string") return true;
+        // Clang's preferred_name attribute can spell the canonical specialization
+        // as std::string. Its declaration and typed template arguments still identify
+        // basic_string; keep the original record identity, including its allocator.
+        if (declaration.name != "basic_string" || declaration.kind != "Class" || declaration.type != type.id
+            || !declaration.isCompleteDefinition || declaration.templateKind != "TemplateSpecializedClass"
+            || !declaration.templateParameters.IsEmpty || declaration.templateArguments.Length != 3
+            || declaration.templateArguments.Any(argument => argument.type is null)
+            || declaration.parent is not StableId parentId) return false;
+        NativeDeclaration parent = module.GetDeclaration(parentId);
+        if (parent.kind != "Namespace") return false;
+        if (parent.name is "__1" or "__cxx11")
+        {
+            if (parent.parent is not StableId standardId) return false;
+            parent = module.GetDeclaration(standardId);
+        }
+        return parent.kind == "Namespace" && parent.name == "std" && parent.parent is null;
     }
 
     private static string BaseName(string spelling)

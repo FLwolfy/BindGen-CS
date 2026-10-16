@@ -20,6 +20,7 @@ using BGCS.Contracts.Requests;
 using BGCS.NativeBuild.Packaging;
 using BGCS.Contracts.Targets;
 using BGCS.Infrastructure.Workers;
+using BGCS.Infrastructure.IO;
 using BGCS.Platforms;
 using BGCS.Platforms.Targeting;
 using Xunit;
@@ -147,7 +148,7 @@ public sealed class ManifestNativeBuildTests
             ManagedRuntimeProfile profile = ManagedRuntimeResolver.Resolve(target, ManagedRuntimeKind.BrowserWasm);
             byte[] sourceBytes = await File.ReadAllBytesAsync(source);
             NativeBuildManifest manifest = new("browser-manifest", "api", target, [new(source, SourceLanguage.C, "c17")], [],
-                [new(source, source, sourceBytes.Length, new(Convert.ToHexStringLower(SHA256.HashData(sourceBytes))))], ["twice"])
+                [new(source, PhysicalPathResolver.Resolve(source), sourceBytes.Length, new(Convert.ToHexStringLower(SHA256.HashData(sourceBytes))))], ["twice"])
             {
                 outputKind = NativeOutputKind.StaticLibrary, providerId = "fixture-browser-planner", managedRuntime = profile,
                 importModuleName = "api", nativeArtifactFilename = "api.a"

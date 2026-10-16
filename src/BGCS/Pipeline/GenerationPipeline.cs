@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -739,10 +740,11 @@ public sealed partial class BindingHost
                 }
                 bool nativeLinked = false;
                 object? nativeEvidence = null;
+                object? nativeFactProof = null;
                 NativeAssetPackageResult? nativeAssets = null;
                 BindingConfiguration nativeConfiguration = shims.IsEmpty ? configuration : configuration with
                 { nativeBuild = configuration.nativeBuild with { sources = configuration.nativeBuild.sources.Concat(shims.SelectMany(shim => shim.sourceFiles)).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToImmutableArray() } };
-                if (source.language == SourceLanguage.Cpp || configuration.nativeBuild.mode == "sources" || staticTable is not null || cHeaderBridge is { exports.IsEmpty: false })
+                if (analysis.requiresNativeCompilerProof || source.language == SourceLanguage.Cpp || configuration.nativeBuild.mode == "sources" || staticTable is not null || cHeaderBridge is { exports.IsEmpty: false })
                 {
                     ImmutableArray<string> nativeHeaders = parseHeaders.Select(path => NativeGeneratedInputRelocation.HeaderInclude(path, contributionMaps, targetId + "/native/src")).ToImmutableArray();
                     string assertionPath = targetId + "/native/src/storage.assertions." + (source.language == SourceLanguage.C ? "c" : "cpp");
@@ -751,11 +753,63 @@ public sealed partial class BindingHost
                     rootSink.WriteText(assertionPath, assertions);
                     artifacts.Add(new(assertionPath, source.language == SourceLanguage.C ? "text/x-c" : "text/x-c++",
                         new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(assertions))))));
+                    if (analysis.requiresNativeCompilerProof)
+                    {
+                        if (source.language != SourceLanguage.Cpp)
+                            throw new NotSupportedException("Independent parser-adaptation proofs currently require C++ source.");
+                        string canonicalPath = targetId + "/native/src/canonical.assertions.cpp";
+                        string canonical = new BGCS.NativeBuild.Planning.NativeCanonicalAssertionEmitter().Emit(selectedModule,
+                            nativeHeaders, source.preamble, nativePostamble);
+                        rootSink.WriteText(canonicalPath, canonical);
+                        artifacts.Add(new(canonicalPath, "text/x-c++",
+                            new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))))));
+                    }
                     string factsPath = targetId + "/native/src/facts.input." + (source.language == SourceLanguage.C ? "h" : "hpp");
                     string factsInput = new BGCS.NativeBuild.Planning.NativeFactInputEmitter().Emit(nativeHeaders, source.preamble, nativePostamble, selectedModule);
                     rootSink.WriteText(factsPath, factsInput);
                     artifacts.Add(new(factsPath, source.language == SourceLanguage.C ? "text/x-c-header" : "text/x-c++-header",
                         new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(factsInput))))));
+                    if (analysis.requiresNativeCompilerProof)
+                    {
+                        FrontendRequest prepared = analysis.preparedFrontend
+                            ?? throw new InvalidOperationException("Independent native proof omitted its frozen frontend inputs.");
+                        List<SourceSnapshot> effectiveProofInputs = [];
+                        NativeEffectiveFactVerifier factVerifier = new(selectedModule, prepared.retainFunctionBodies,
+                            registry.Frontend, request.baseDirectory, extensionInputs,
+                            new NativeGeneratedInputRelocation(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot).SourcePathMappings(publisher.candidateRoot),
+                            prepared.workerPlugins, prepared.workerPluginContext, effectiveProofInputs.Add);
+                        NativeCompilerProofValidator.Result proof = await new NativeCompilerProofValidator().VerifyAsync(
+                            nativeConfiguration, analysis.target!, prepared,
+                            artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal)
+                                && artifact.mediaType == "text/x-c++").Select(artifact => Path.Combine(publisher.candidateRoot, artifact.relativePath)),
+                            [Path.Combine(publisher.candidateRoot, targetId, "native", "include")],
+                            new[] { publisher.candidateRoot, output, logicalOutput, cacheRoot }
+                                .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToImmutableArray(),
+                            extensionInputs, factVerifier, Path.Combine(publisher.candidateRoot, factsPath), cancellation.Token).ConfigureAwait(false);
+                        ImmutableArray<SourceSnapshot> rawProofInputs = proof.inputs.AddRange(effectiveProofInputs);
+                        foreach (SourceSnapshot snapshot in rawProofInputs)
+                        {
+                            RejectFormalOutputReads(snapshot);
+                            parsedInputs.Add(snapshot);
+                        }
+                        ImmutableArray<SourceSnapshot> portableProofInputs = NativeProofInputProjection.Create(rawProofInputs, proof.privateRoot,
+                            publisher.candidateRoot, artifacts.ToImmutable(), cancellation.Token);
+                        foreach (SourceSnapshot snapshot in portableProofInputs)
+                            extensionInputs.CaptureArgumentInputs(snapshot);
+                        JsonObject proofReceipt = JsonSerializer.SerializeToNode(proof.evidence)!.AsObject();
+                        proofReceipt["inputs"] = JsonSerializer.SerializeToNode(portableProofInputs);
+                        string physicalCandidate = PhysicalPathResolver.Resolve(publisher.candidateRoot);
+                        string candidatePrefix = Path.TrimEndingDirectorySeparator(physicalCandidate) + Path.DirectorySeparatorChar;
+                        proofReceipt["generatedInputs"] = JsonSerializer.SerializeToNode(rawProofInputs.SelectMany(snapshot => snapshot.files)
+                            .Where(input => input.resolvedPath.StartsWith(candidatePrefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                            .Select(input => new
+                            {
+                                path = "artifact:/" + Path.GetRelativePath(physicalCandidate, input.resolvedPath).Replace('\\', '/'),
+                                input.length,
+                                input.digest
+                            }).Distinct().OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray());
+                        nativeFactProof = proofReceipt;
+                    }
                     NativeGeneratedInputRelocation generatedInputs = new(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot);
                     var nativeManifest = NativeBuildManifestFactory.Create(nativeConfiguration, analysis.target!, analysis.snapshot!, artifacts.ToImmutable(), request.baseDirectory, target.settings.defines, definition, generatedInputs, analysis.preparedFrontend)
                         with
@@ -904,6 +958,8 @@ public sealed partial class BindingHost
                     nativeLinked,
                     nativeArtifactVerified = nativeEvidence is not null,
                     nativeEvidence,
+                    nativeFactProofRequired = analysis.requiresNativeCompilerProof,
+                    nativeFactProof,
                     invoked = false,
                     packaged = false,
                     managedRuntime = runtimeProfile,

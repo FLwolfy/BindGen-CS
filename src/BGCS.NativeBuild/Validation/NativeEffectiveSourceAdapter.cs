@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Requests;
 using BGCS.NativeBuild.Planning;
+using BGCS.NativeBuild.Execution;
+using BGCS.Platforms.Targeting;
 
 namespace BGCS.NativeBuild.Validation;
 
@@ -18,13 +20,26 @@ public static class NativeEffectiveSourceAdapter
     /// <param name="plan">The frozen native construction plan.</param>
     /// <param name="operation">The completed native preprocessing operation.</param>
     /// <param name="cancellationToken">Cancels reading or writing the private source input.</param>
-    /// <returns>The source path and parser-only preamble; unsupported concrete intrinsic evaluations still fail.</returns>
-    public static async ValueTask<(string sourceFile, string preamble)> PrepareAsync(
+    /// <returns>The preserved source path, parser-only preamble and optional isolated dependency declarations; unsupported concrete intrinsic evaluations still fail.</returns>
+    public static async ValueTask<(string sourceFile, string preamble, NativeDeclarationPrelude? declarationPrelude)> PrepareAsync(
         NativeBuildPlan plan,
         NativePreprocessingOperation operation,
         CancellationToken cancellationToken = default
     ) {
-        if ((plan.compilerFamily ?? plan.providerId) != "msvc") return (operation.outputFile, string.Empty);
+        string family = plan.compilerFamily ?? plan.providerId;
+        if (family == "gnu" && operation.language == SourceLanguage.Cpp)
+        {
+            string trace = await File.ReadAllTextAsync(operation.outputFile, cancellationToken).ConfigureAwait(false);
+            var roots = ToolchainDiscovery.DiscoverHeaderSearchPaths(operation.language, plan.compilerPath ?? operation.command.executable, plan.target.toolchain.sysRoot)
+                .Select(entry => entry.path).ToImmutableArray();
+            var dependencies = BuildDependencyCollector.Read([operation.dependencyFile ?? throw new InvalidOperationException("GNU source adaptation requires actual preprocessing dependencies.")],
+                operation.command.workingDirectory, cancellationToken).ToImmutableArray();
+            var extracted = NativeGnuDeclarationPrelude.Extract(trace, roots, dependencies, cancellationToken);
+            string adaptedDestination = operation.outputFile + ".facts.hpp";
+            await File.WriteAllTextAsync(adaptedDestination, extracted.source, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+            return (adaptedDestination, string.Empty, extracted.prelude);
+        }
+        if (family != "msvc") return (operation.outputFile, string.Empty, null);
         string scratch = Path.GetFullPath(plan.scratchDirectory ?? throw new InvalidOperationException("MSVC effective facts require an owned scratch directory."));
         string original = Path.GetFullPath(operation.outputFile);
         if (!original.StartsWith(scratch.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar,
@@ -34,7 +49,7 @@ public static class NativeEffectiveSourceAdapter
         string adapted = PreserveSystemHeaderMarkers(source, plan.target.toolchain.systemIncludeFolders.Concat(plan.target.toolchain.cxxSystemIncludeFolders).ToImmutableArray());
         string destination = original + ".facts." + (operation.language == SourceLanguage.Cpp ? "hpp" : "h");
         await File.WriteAllTextAsync(destination, adapted, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
-        return (destination, ParserPreamble("msvc", operation.language));
+        return (destination, ParserPreamble("msvc", operation.language), null);
     }
 
     /// <summary>Provides parser-only declarations that reject every unsupported concrete native intrinsic evaluation.</summary>

@@ -46,7 +46,7 @@ internal static class NativeCallableExceptionFactReader
         using CXUnsavedFile input = CXUnsavedFile.Create(CppParser.C_CPPASTROOTFILENAME, source.ToString());
         ReadOnlySpan<CXUnsavedFile> inputs = stackalloc CXUnsavedFile[] { input };
         using CXTranslationUnit probe = CXTranslationUnit.Parse(index, CppParser.C_CPPASTROOTFILENAME, arguments, inputs,
-            CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies);
+            CppParser.ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies));
         for (uint diagnosticIndex = 0; diagnosticIndex < probe.NumDiagnostics; diagnosticIndex++)
         {
             using CXDiagnostic diagnostic = probe.GetDiagnostic(diagnosticIndex);

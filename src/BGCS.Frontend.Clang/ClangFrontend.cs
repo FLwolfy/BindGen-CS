@@ -65,11 +65,14 @@ public sealed class ClangFrontend : IFrontend
         options.additionalArguments.AddRange(request.arguments);
         options.additionalArguments.Add("-std=" + request.languageStandard);
         string[] searchRoots = request.headers.Select(header => Path.GetDirectoryName(Path.GetFullPath(header))!)
+            .Concat((request.declarationPrelude?.headers ?? []).Select(header => Path.GetDirectoryName(Path.GetFullPath(header))!))
             .Concat(request.includeDirectories).Concat(request.systemIncludeDirectories)
             .Concat(request.target.toolchain.cxxSystemIncludeFolders).Concat(request.target.toolchain.systemIncludeFolders)
             .Concat(request.headerSearchPaths.Where(path => !path.isBuiltin).Select(path => path.path))
             .Append(Path.Combine(resourceDirectory, "include")).Distinct(StringComparer.Ordinal).ToArray();
         ImmutableArray<DirectoryInputDependency> directories = searchRoots.Select(path => DirectoryMembershipDigest.Capture(path, request.snapshotExcludedDirectories, cancellationToken)).ToImmutableArray();
+        using var declarationPrelude = ClangDeclarationPrelude.Prepare(request.declarationPrelude, options, searchRoots, request.snapshotExcludedDirectories, cancellationToken);
+        options.declarationPrelude = declarationPrelude;
         using var compilation = CppParser.ParseFiles(request.headers.ToList(), options);
         cancellationToken.ThrowIfCancellationRequested();
         NativeModuleBuilder builder = new(request, compilation);
@@ -93,6 +96,6 @@ public sealed class ClangFrontend : IFrontend
         if (!SourceSnapshotVerifier.Matches(executionInputs, cancellationToken))
             throw new IOException("Locked Clang parser resources changed while parsing.");
         return ValueTask.FromResult(new FrontendResult(module, new SourceSnapshot(files, directories) { excludedDirectories = request.snapshotExcludedDirectories })
-        { executionInputs = executionInputs });
+        { executionInputs = executionInputs, requiresNativeCompilerProof = request.declarationPrelude is not null });
     }
 }

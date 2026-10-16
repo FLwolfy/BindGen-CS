@@ -18,7 +18,8 @@ internal static class NativeLineDirectiveReader
         int fileLength,
         string lineNumber,
         string file,
-        bool msvc
+        bool msvc,
+        int flags
     );
 
     internal static string Rewrite(
@@ -122,15 +123,18 @@ internal static class NativeLineDirectiveReader
         }
         if (position >= end) return null;
         int fileLength = position++ - fileStart;
+        int flags = 0;
         while (position < end)
         {
             if (!Skip()) return null;
             if (position == end) break;
             if (msvc || source[position] is not (>= '1' and <= '4')) return null;
-            position++;
+            int bit = 1 << (source[position++] - '1');
+            if ((flags & bit) != 0) return null;
+            flags |= bit;
             if (position < end && source[position] is not (' ' or '\t')) return null;
         }
-        return new(start, end - start, fileStart, fileLength, lineNumber, file.ToString(), msvc);
+        return new(start, end - start, fileStart, fileLength, lineNumber, file.ToString(), msvc, flags);
 
         bool Skip()
         {

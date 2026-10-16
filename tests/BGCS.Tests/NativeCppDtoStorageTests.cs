@@ -152,16 +152,17 @@ public sealed class NativeCppDtoStorageTests
                         input->prefix = 2; input->inner.count = 5; input->inner.active = 1;
                         input->inner.flags[0] = 1; input->inner.flags[1] = 0;
                         input->values[0] = 10; input->values[1] = 20; input->values[2] = 30;
+                        int expectedCalls = checked(api.Calls() + 1);
                         if (api.Raw.Transform(input, output, null) != 0) return 3;
                         if (output->prefix != 3 || output->inner.count != 7 || output->inner.active != 0 || output->values[2] != 35) return 4;
                         if (input->prefix != 2 || input->inner.count != 5 || input->inner.active != 1 || input->values[2] != 30) return 5;
-                        if (api.Calls() != 1) return 6;
+                        if (api.Calls() != expectedCalls) return 6;
                         input->inner.active = 255;
-                        if (api.Raw.Transform(input, output, null) == 0 || api.Calls() != 1 || output->inner.count != 0) return 7;
+                        if (api.Raw.Transform(input, output, null) == 0 || api.Calls() != expectedCalls || output->inner.count != 0) return 7;
                         input->inner.active = 1; input->inner.flags[1] = 255;
-                        if (api.Raw.Transform(input, output, null) == 0 || api.Calls() != 1) return 8;
+                        if (api.Raw.Transform(input, output, null) == 0 || api.Calls() != expectedCalls || output->inner.count != 0) return 8;
                         input->inner.flags[1] = 0;
-                        if (api.Raw.Transform((Packet*)((byte*)input + 1), output, null) == 0 || api.Calls() != 1) return 9;
+                        if (api.Raw.Transform((Packet*)((byte*)input + 1), output, null) == 0 || api.Calls() != expectedCalls || output->inner.count != 0) return 9;
                         alignedInput->number = 41;
                         if (api.Raw.TransformAligned(alignedInput, alignedOutput, null) != 0 || alignedOutput->number != 42) return 10;
                         if (api.Raw.TransformAligned(alignedInput, (Aligned*)((byte*)alignedOutput + 1), null) == 0) return 11;
@@ -188,12 +189,23 @@ public sealed class NativeCppDtoStorageTests
         Assert.True(emitted.Success, string.Join(Environment.NewLine, emitted.Diagnostics));
         image.Position = 0;
         AssemblyLoadContext load = new("BGCS.NativeDto.Test", isCollectible: true);
+        nint pinnedModule = 0;
         try
         {
             Assembly assembly = load.LoadFromStream(image);
-            Assert.Equal(42, assembly.GetType("DtoConsumer", true)!.GetMethod("Run")!.Invoke(null, [binary]));
+            // Keep the module and its counter alive across both complete runs.
+            // This proves nonzero initial state even on loaders that unload a
+            // module immediately after the generated context releases it.
+            pinnedModule = System.Runtime.InteropServices.NativeLibrary.Load(binary);
+            MethodInfo run = assembly.GetType("DtoConsumer", true)!.GetMethod("Run")!;
+            Assert.Equal(42, run.Invoke(null, [binary]));
+            Assert.Equal(42, run.Invoke(null, [binary]));
         }
-        finally { load.Unload(); }
+        finally
+        {
+            if (pinnedModule != 0) System.Runtime.InteropServices.NativeLibrary.Free(pinnedModule);
+            load.Unload();
+        }
     }
 
     private const string Header = """

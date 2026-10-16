@@ -43,9 +43,10 @@ internal static class NativeSourceViewFrontend
             NativeSourceViewResult view = await new NativeSourceViewPreprocessor().PrepareAsync(new(source, nativeRoot)
             { timeoutSeconds = checked((int)Math.Ceiling(timeout.TotalSeconds)) }, linked.Token).ConfigureAwait(false);
             inputs.CaptureNativeSourceObservation(source.target.targetId.value, view.observationFingerprint, view.inputs, nativeRoot, source.sourcePathMappings);
-            inputs.CaptureObservation(Replay);
+            inputs.CaptureObservation(Replay, view.inputs);
             FrontendGenerationCache.Attempt? cached = frontendCache?.Prepare(source, frontend, linked.Token, view);
-            if (cached?.result is FrontendResult restored) return restored;
+            if (cached?.result is FrontendResult restored)
+                return restored with { requiresNativeCompilerProof = view.declarationPrelude is not null || restored.requiresNativeCompilerProof };
             string parserRoot = Path.Combine(root, "parser");
             Directory.CreateDirectory(parserRoot);
             string input = Path.Combine(parserRoot, "primary.preprocessed." + (source.language == SourceLanguage.C ? "h" : "hpp"));
@@ -76,6 +77,7 @@ internal static class NativeSourceViewFrontend
                 headers = [input],
                 defines = [],
                 preamble = NativeEffectiveSourceAdapter.ParserPreamble(view.compilerFamily, source.language),
+                declarationPrelude = view.declarationPrelude,
                 postamble = string.Empty,
                 sourcePathMappings = source.sourcePathMappings.SetItem(input, logical),
                 usePresumedSourceLocations = true,
@@ -111,7 +113,11 @@ internal static class NativeSourceViewFrontend
             NativeModule module = new(parsed.module.targetId, parsed.module.triple, parsed.module.pointerSize, parsed.module.types,
                 declarations, parsed.module.diagnostics.AddRange(view.diagnostics))
             { language = parsed.module.language, byteOrder = parsed.module.byteOrder };
-            FrontendResult result = new(module, snapshot) { executionInputs = parsed.executionInputs };
+            FrontendResult result = new(module, snapshot)
+            {
+                executionInputs = parsed.executionInputs,
+                requiresNativeCompilerProof = view.declarationPrelude is not null || parsed.requiresNativeCompilerProof
+            };
             if (cached is not null && !module.diagnostics.Any(diagnostic => diagnostic.isFailure)
                 && !new NativeModuleVerifier().Validate(module).Any(diagnostic => diagnostic.isFailure))
                 frontendCache!.Capture(cached, source, result, linked.Token);
@@ -121,7 +127,6 @@ internal static class NativeSourceViewFrontend
             {
                 // Includes successful and failed dynamic/absolute __has_include queries:
                 // a dependency list alone cannot report every absence the compiler observed.
-                if (!SourceSnapshotVerifier.Matches(view.inputs, token)) throw new IOException("Native source-view inputs changed before compiler observation replay.");
                 string replay = Path.Combine(temporaryParent, "bgcs-native-source-view-replay-" + Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(replay);
                 try

@@ -40,7 +40,7 @@ internal static class NativeCallableAddressabilityFactReader
         using CXUnsavedFile input = CXUnsavedFile.Create(CppParser.C_CPPASTROOTFILENAME, source.ToString());
         ReadOnlySpan<CXUnsavedFile> inputs = stackalloc CXUnsavedFile[] { input };
         using CXTranslationUnit probe = CXTranslationUnit.Parse(index, CppParser.C_CPPASTROOTFILENAME,
-            arguments.Concat(new[] { "-ferror-limit=0" }).ToArray(), inputs, CXTranslationUnit_Flags.CXTranslationUnit_None);
+            arguments.Concat(new[] { "-ferror-limit=0" }).ToArray(), inputs, CppParser.ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_None));
         Dictionary<int, List<string>> errors = [];
         bool unrelatedFailure = false;
         for (uint diagnosticIndex = 0; diagnosticIndex < probe.NumDiagnostics; diagnosticIndex++)

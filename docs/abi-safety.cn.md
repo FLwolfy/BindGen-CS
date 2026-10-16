@@ -86,6 +86,12 @@ C++ operation 表达构造、析构、native cast、参数/返回转换和异常
 
 MSVC 预处理的 line directive 不携带 Clang 的 system-header 标记。事实 adapter 只对已解析 SDK include 根恢复该元数据，保留源码 token 和用户头分类；它还用仅供 parser 的非 builtin 名称保留一个冲突的 MSVC intrinsic 声明。少量未实现的 dependent type/member intrinsic 可出现在未实例化的 SDK 模板中；任何具体实例化都触发硬错误，包括 SFINAE，不能采用猜测值。未知 intrinsic、parser 无法求值的具体使用以及不匹配声明都阻止构建。这一有界兼容机制不表示 Clang 能解析任意 MSVC/GCC 扩展。
 
+GNU C++ 的系统头可能包含与固定 Clang frontend 不同的编译器扩展。适配器只允许把用户声明之前、具有实际依赖和系统来源证据的完整工具链头文件树转成独立声明前导。用户 token 仍来自所选 GNU 编译器，最终宏状态通过独立 `-dM` 操作取得。前导声明在 worker 私有 PCH 中存活至事实提取结束；清除它的宏环境后才解析已经展开的用户 token。PCH、Clang 句柄和专有 AST 不进入 Contracts。
+
+这条路径不是任意 GCC 源码转换：交错在用户声明之后的工具链 include、工具链头中嵌套的用户头、无法证明的 pack/pragma 历史、用户修改 compiler builtin，或依赖动态 builtin 的 include-entry 宏都会被明确拒绝。调用者应调整头文件边界或提供能准确描述该语言扩展的 frontend/shim；不能用相同大小的浮点类型替换 GNU 特殊类型来通过解析。
+
+使用声明前导的事实带有 `requiresNativeCompilerProof`。Host 在 `generate`、`bridge` 和所有 `build` 模式发布前，都要求实际所选原生编译器检查原始命名类型的规范身份、变量类型、枚举和已选择标量常量，并编译 storage guard 与 bridge。常量在支持头文件载入前冻结，浮点值比较精确 IEEE 位。最终构建参数另行接受有效事实和字符串字节检查。对象构建可能需要 relocatable link；这些证明既不表示完成最终库链接，也不表示真实调用或全部 ABI 已认证。无法证明的公开类型明确失败，私有 opaque 实现不会被当作可公开命名的原生类型。
+
 ## Import 与最终源码
 
 FunctionTable、DllImport 和 LibraryImport 共享 interop/语义模型，但各自运行时签名能力不同。FunctionTable 必需导出完整验证。外部 ABI 字符串属于声明，不是独立调用证明。

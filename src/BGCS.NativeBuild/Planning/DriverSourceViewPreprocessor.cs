@@ -73,7 +73,7 @@ internal static class DriverSourceViewPreprocessor
             command = original.command with
             {
                 id = "preprocess-final-macros",
-                arguments = original.command.arguments.Select(argument => argument == original.outputFile ? macroOutput
+                arguments = original.command.arguments.Where(argument => argument != "-dD").Select(argument => argument == original.outputFile ? macroOutput
                     : argument == original.dependencyFile!.path ? macroDependencies : argument).ToImmutableArray().Add("-dM"),
                 outputFiles = [macroOutput, macroDependencies]
             }
@@ -136,16 +136,29 @@ internal static class DriverSourceViewPreprocessor
             excludedDirectories = source.snapshotExcludedDirectories.Add(root)
         };
         NativeSourceViewIdentity sourceIdentity = new(input, source);
+        string rawTrace = tokens;
+        foreach (var capability in NativeMacroDirectiveReader.Read(rawTrace).Where(definition => definition.name == marker).OrderByDescending(definition => definition.start))
+            rawTrace = rawTrace.Remove(capability.start, capability.length);
+        NativeDeclarationPrelude? declarationPrelude = null;
+        if (family == "gnu" && source.language == SourceLanguage.Cpp)
+        {
+            ImmutableArray<string> authenticated = ToolchainDiscovery.DiscoverHeaderSearchPaths(source.language, compiler, source.target.toolchain.sysRoot)
+                .Select(entry => entry.path).ToImmutableArray();
+            (tokens, declarationPrelude) = NativeGnuDeclarationPrelude.Extract(rawTrace, authenticated,
+                executed.inputSnapshot.files.Select(file => file.path).ToImmutableArray(), cancellationToken);
+        }
         string normalized = sourceIdentity.Normalize(tokens);
         string identity = version.standardOutput + version.standardError;
         byte[] observation = JsonSerializer.SerializeToUtf8Bytes(new
         {
-            revision = 4,
+            revision = 5,
             diagnosticLocale = new { LC_ALL = "C" },
             family,
             identity,
             compilerInputs = components.files.OrderBy(component => component.path, StringComparer.Ordinal).ToImmutableArray(),
             source = normalized,
+            nativeTrace = sourceIdentity.Normalize(rawTrace),
+            declarationPrelude,
             commandLine = macroFacts.commandLineFingerprint,
             macros = macroFacts.macros.Select(macro => macro with { location = sourceIdentity.Map(macro.location) }).ToImmutableArray(),
             diagnostics = diagnostics.Select(diagnostic => diagnostic with { location = sourceIdentity.Map(diagnostic.location) }).ToImmutableArray()
@@ -154,6 +167,7 @@ internal static class DriverSourceViewPreprocessor
         {
             compilerFamily = family,
             compilerIdentity = identity,
+            declarationPrelude = declarationPrelude,
             diagnostics = diagnostics,
             observationFingerprint = new(Convert.ToHexStringLower(SHA256.HashData(observation)))
         };

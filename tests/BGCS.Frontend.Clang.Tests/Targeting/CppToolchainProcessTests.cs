@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BGCS.Contracts.Targets;
 using BGCS.Frontend.Clang.Parsing;
 using BGCS.Platforms.Targeting;
+using BGCS.Platforms.Toolchains;
 using Xunit;
 
 namespace BGCS.Frontend.Clang.Tests;
@@ -242,6 +243,23 @@ public sealed class CppToolchainProcessTests : IDisposable
         };
         foreach (string argument in new[] { source, "-o", executable })
             start.ArgumentList.Add(argument);
+        if (OperatingSystem.IsWindows())
+        {
+            // The fixture needs the same explicit SDK inputs as a native build;
+            // a developer shell's LIB/INCLUDE must not make linking succeed.
+            NativeTargetDescriptor target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(
+                new(new NativeTargetId("host"), new(compilerPath: driver))), SourceLanguage.C);
+            foreach (string directory in target.toolchain.systemIncludeFolders)
+            {
+                start.ArgumentList.Add("-isystem");
+                start.ArgumentList.Add(directory);
+            }
+            foreach (string directory in target.toolchain.libraryDirectories)
+                start.ArgumentList.Add("-L" + directory);
+        }
+        foreach (string variable in new[] { "INCLUDE", "CPATH", "C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH", "OBJC_INCLUDE_PATH", "SDKROOT",
+            "GCC_EXEC_PREFIX", "COMPILER_PATH", "LIBRARY_PATH", "CL", "_CL_", "LINK", "_LINK_", "LIB", "CCC_OVERRIDE_OPTIONS" })
+            start.Environment.Remove(variable);
         using Process process = Process.Start(start)!;
         Task<string> standardOutput = process.StandardOutput.ReadToEndAsync();
         Task<string> standardError = process.StandardError.ReadToEndAsync();

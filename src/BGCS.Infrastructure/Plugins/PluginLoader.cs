@@ -196,12 +196,26 @@ public sealed class PluginLoader
         private byte[] ReadLocked(string path)
         {
             StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            var expected = m_manifest.inputs.FirstOrDefault(input => string.Equals(input.path, Path.GetFullPath(path), comparison))
+            string absolute = Path.GetFullPath(path);
+            string physical = PhysicalPathResolver.Resolve(absolute);
+            var expected = m_manifest.inputs.FirstOrDefault(input => string.Equals(input.path, absolute, comparison))
+                ?? m_manifest.inputs.FirstOrDefault(input => string.Equals(input.resolvedPath, physical, comparison))
                 ?? throw new FileLoadException("A plugin dependency resolved outside its declared private asset closure.", path);
-            if (PhysicalPathResolver.Resolve(path) != expected.resolvedPath) throw new FileLoadException("A plugin dependency changed its physical identity before loading.", path);
+            if (!string.Equals(physical, expected.resolvedPath, comparison)
+                || !string.Equals(PhysicalPathResolver.Resolve(expected.path), expected.resolvedPath, comparison))
+                throw new FileLoadException("A plugin dependency changed its physical identity before loading.", path);
             byte[] bytes = File.ReadAllBytes(path);
             if (bytes.LongLength != expected.length || new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))) != expected.digest)
                 throw new FileLoadException("A plugin dependency changed before its exact bytes could be loaded.", path);
+            if (!string.Equals(absolute, expected.path, comparison))
+            {
+                byte[] original = File.ReadAllBytes(expected.path);
+                if (original.LongLength != expected.length || new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(original))) != expected.digest)
+                    throw new FileLoadException("A locked logical plugin dependency changed while loading its canonical path.", expected.path);
+            }
+            if (!string.Equals(PhysicalPathResolver.Resolve(absolute), expected.resolvedPath, comparison)
+                || !string.Equals(PhysicalPathResolver.Resolve(expected.path), expected.resolvedPath, comparison))
+                throw new FileLoadException("A plugin dependency changed its physical identity while loading.", path);
             return bytes;
         }
     }

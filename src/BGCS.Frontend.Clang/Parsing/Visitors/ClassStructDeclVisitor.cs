@@ -26,7 +26,9 @@ internal class ClassStructDeclVisitor : DeclContainerVisitor
         CXCursor parent
     ) {
         ICppDeclarationContainer parentContainer = this.context.GetOrCreateDeclContainer(cursor.SemanticParent).declarationContainer;
-        CppClass cppClass = new(cursor, CXUtil.GetCursorSpelling(cursor));
+        // Referenced SDK records can be materialized directly from a type,
+        // without the enclosing member visitor assigning lexical visibility.
+        CppClass cppClass = new(cursor, CXUtil.GetCursorSpelling(cursor)) { visibility = cursor.GetVisibility() };
         parentContainer.classes.Add(cppClass);
         cppClass.isAnonymous = cursor.IsAnonymous;
         switch (cursor.Kind)

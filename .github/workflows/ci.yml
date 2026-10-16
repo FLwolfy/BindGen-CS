@@ -14,6 +14,57 @@ permissions:
   contents: read
 
 jobs:
+  gnu-compatibility-smoke:
+    name: Early GNU compiler/parser compatibility smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BGCS_CPP2C_CXX: g++
+      BGCS_CC: gcc
+      BGCS_GNU_CXX: g++
+      BGCS_GNU_CC: gcc
+      BGCS_REQUIRE_GNU_SOURCE_VIEW: "1"
+      BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
+      BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact locked .NET SDK
+        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
+      - name: Verify locked SDK and isolated runtime
+        run: python scripts/verify-locked-toolchain.py --output artifacts/gnu-smoke/sdk.json
+      - name: Record actual GNU compiler identity
+        shell: bash
+        run: |
+          mkdir -p artifacts/gnu-smoke
+          { command -v gcc; gcc --version; command -v g++; g++ --version; } | tee artifacts/gnu-smoke/compilers.log
+      - name: Restore and build only the real Host tests and Worker closure
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/source_ownership.py
+          unset Platform PLATFORM platform
+          dotnet restore tests/BGCS.Tests/BGCS.Tests.csproj 2>&1 | tee artifacts/gnu-smoke/restore.log
+          dotnet build tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-restore -m:2 -nr:false 2>&1 | tee artifacts/gnu-smoke/build.log
+      - name: Exercise GNU standard values native observations DTO drift and C typedefs
+        shell: bash
+        run: |
+          set -o pipefail
+          unset Platform PLATFORM platform
+          smoke_filter="$(python scripts/verify-gnu-smoke.py --print-filter)"
+          python scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-build --no-restore -m:1 -nr:false --filter "$smoke_filter" --results-directory artifacts/gnu-smoke --logger "trx;LogFileName=gnu-smoke.trx" --logger "console;verbosity=detailed" 2>&1 | tee artifacts/gnu-smoke/native-test.log
+      - name: Reject missing duplicate skipped or changed GNU smoke cases
+        run: python scripts/verify-gnu-smoke.py --trx artifacts/gnu-smoke/gnu-smoke.trx --output artifacts/gnu-smoke/cases.json
+      - name: Upload GNU smoke TRX and native compiler failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gnu-compatibility-smoke
+          path: artifacts/gnu-smoke
+          if-no-files-found: error
+
   wasm-invocation:
     name: Independent Wasm invocation (${{ matrix.os }}, ${{ matrix.deployment }})
     timeout-minutes: 45

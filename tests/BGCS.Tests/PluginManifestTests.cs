@@ -15,6 +15,9 @@ using BGCS.Contracts.Common;
 using BGCS.Contracts.Plugins;
 using BGCS.Contracts.Ports;
 using BGCS.Infrastructure.Plugins;
+using BGCS.Infrastructure.Execution;
+using BGCS.Infrastructure.IO;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -38,11 +41,58 @@ public sealed class PluginManifestTests : IDisposable
     [Fact]
     public void Loader_SharesContractsButKeepsOtherDependenciesPrivateAndReleasesItsContext()
     {
+        WeakReference context = RunIsolated(PrivateDependencyManifest(m_root));
+        for (int count = 0; context.IsAlive && count < 10; count++) { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); }
+        Assert.False(context.IsAlive);
+    }
+
+    [Fact]
+    public async Task CanonicalResolverPathsKeepLogicalClosureIdentityAndRejectRetargetedOrUntrackedAssets()
+    {
+        string physical = Path.Combine(m_root, "physical"), logical = Path.Combine(m_root, "logical");
+        Directory.CreateDirectory(physical);
+        bool linked = false;
+        try
+        {
+            await CreateAlias(logical, physical);
+            linked = true;
+            LockedPluginManifest locked = PrivateDependencyManifest(logical);
+            LockedPluginManifest canonical = locked with { path = PhysicalPathResolver.Resolve(locked.path) };
+            Assert.NotEqual(locked.path, canonical.path);
+            Assert.All(locked.inputs, input => Assert.StartsWith(logical + Path.DirectorySeparatorChar, input.path, StringComparison.Ordinal));
+            _ = RunIsolated(canonical);
+
+            string untracked = Path.Combine(m_root, "untracked");
+            Directory.CreateDirectory(untracked);
+            foreach (string file in Directory.GetFiles(physical)) File.Copy(file, Path.Combine(untracked, Path.GetFileName(file)));
+            FileLoadException outside = Assert.Throws<FileLoadException>(() => new PluginLoader().Activate(canonical with { path = Path.Combine(untracked, "plugin.json") }));
+            Assert.Contains("outside its declared private asset closure", outside.Message, StringComparison.Ordinal);
+
+            string dependency = Assert.Single(Directory.GetFiles(physical, "BgcsPrivateDependency*.dll"));
+            byte[] original = File.ReadAllBytes(dependency), changed = original.ToArray();
+            changed[^1] ^= 1;
+            File.WriteAllBytes(dependency, changed);
+            try { Assert.Throws<IOException>(() => new PluginLoader().Activate(canonical)); }
+            finally { File.WriteAllBytes(dependency, original); }
+
+            DeleteAlias(logical);
+            linked = false;
+            await CreateAlias(logical, untracked);
+            linked = true;
+            IOException retargeted = Assert.Throws<IOException>(() => new PluginLoader().Activate(canonical));
+            Assert.Contains("physical identity", retargeted.Message, StringComparison.Ordinal);
+            Assert.Equal(original, File.ReadAllBytes(Path.Combine(untracked, Path.GetFileName(dependency))));
+        }
+        finally { if (linked) DeleteAlias(logical); }
+    }
+
+    private static LockedPluginManifest PrivateDependencyManifest(string root)
+    {
         string name = "BgcsPrivateDependency" + Guid.NewGuid().ToString("N");
         byte[] hostDependency = Compile(name, "public static class Dependency { public static string Value() => \"host\"; }");
         using (MemoryStream stream = new(hostDependency)) AssemblyLoadContext.Default.LoadFromStream(stream);
         byte[] privateDependency = Compile(name, "public static class Dependency { public static string Value() => \"private\"; }");
-        File.WriteAllBytes(Path.Combine(m_root, name + ".dll"), privateDependency);
+        File.WriteAllBytes(Path.Combine(root, name + ".dll"), privateDependency);
         byte[] entry = Compile("EntryPlugin", """
             using System;
             using System.Threading;
@@ -63,17 +113,36 @@ public sealed class PluginManifestTests : IDisposable
                 }
             }
             """, MetadataReference.CreateFromImage(privateDependency));
-        File.WriteAllBytes(Path.Combine(m_root, "EntryPlugin.dll"), entry);
+        File.WriteAllBytes(Path.Combine(root, "EntryPlugin.dll"), entry);
         PluginManifest manifest = new()
         {
             schemaVersion = 1, assembly = "EntryPlugin.dll", entryType = "Entry", plugin = new("dynamic.plugin", "1.0.0", [new("dynamic.transform", ExtensionPort.NativeModuleTransform)]),
             assets = [Asset("EntryPlugin.dll", entry), Asset(name + ".dll", privateDependency)]
         };
-        LockedPluginManifest locked = Read(manifest);
-        WeakReference context = RunIsolated(locked);
-        for (int count = 0; context.IsAlive && count < 10; count++) { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); }
-        Assert.False(context.IsAlive);
+        string path = Path.Combine(root, "plugin.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
+        return new PluginManifestReader().Read(path);
     }
+
+    private async Task CreateAlias(string path, string target)
+    {
+        Assert.StartsWith(Path.GetFullPath(m_root) + Path.DirectorySeparatorChar, Path.GetFullPath(path), StringComparison.Ordinal);
+        Assert.StartsWith(Path.GetFullPath(m_root) + Path.DirectorySeparatorChar, Path.GetFullPath(target), StringComparison.Ordinal);
+        if (OperatingSystem.IsWindows())
+        {
+            string executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
+            string command = "$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path '" + path.Replace("'", "''", StringComparison.Ordinal)
+                + "' -Target '" + target.Replace("'", "''", StringComparison.Ordinal) + "' | Out-Null";
+            var result = await ProcessExecutor.ExecuteAsync(executable,
+                ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(command))],
+                m_root, TimeSpan.FromSeconds(30));
+            Assert.True(result.exitCode == 0, result.standardOutput + Environment.NewLine + result.standardError);
+            Assert.NotNull(new DirectoryInfo(path).LinkTarget);
+        }
+        else Directory.CreateSymbolicLink(path, target);
+    }
+
+    private static void DeleteAlias(string path) { if (OperatingSystem.IsWindows()) Directory.Delete(path); else File.Delete(path); }
 
     [Theory]
     [InlineData("../outside.dll")]

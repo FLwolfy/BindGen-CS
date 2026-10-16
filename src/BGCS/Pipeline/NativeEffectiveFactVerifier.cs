@@ -25,7 +25,8 @@ internal sealed class NativeEffectiveFactVerifier(
     GenerationInputTracker? inputTracker,
     ImmutableDictionary<string, string>? sourcePathMappings = null,
     ImmutableArray<WorkerPluginActivation> workerPlugins = default,
-    CacheFingerprintContext? workerPluginContext = null
+    CacheFingerprintContext? workerPluginContext = null,
+    Action<SourceSnapshot>? captureVerificationInputs = null
 )
 {
     private readonly ImmutableArray<NativeStringProofReceipt>.Builder m_literalProofs = ImmutableArray.CreateBuilder<NativeStringProofReceipt>();
@@ -53,6 +54,7 @@ internal sealed class NativeEffectiveFactVerifier(
             arguments = arguments,
             pathBase = pathBase,
             preamble = effectiveSource.preamble,
+            declarationPrelude = effectiveSource.declarationPrelude,
             sourcePathMappings = sourcePathMappings ?? ImmutableDictionary<string, string>.Empty,
             workerPlugins = workerPlugins.IsDefault ? [] : workerPlugins,
             workerPluginContext = workerPluginContext is null ? null : new(workerPluginContext.configuration, workerPluginContext.pathBase, parserTarget),
@@ -83,13 +85,19 @@ internal sealed class NativeEffectiveFactVerifier(
                 searchDirectories = parsed.snapshot.searchDirectories.Where(input => !Private(input.path)).ToImmutableArray(),
                 absentInputs = parsed.snapshot.absentInputs.Where(input => !Private(input.path)).ToImmutableArray()
             };
-            tracked?.CaptureArgumentInputs(retained);
+            CaptureInputs(retained);
             if (parsed.executionInputs is SourceSnapshot execution)
             {
                 if (!SourceSnapshotVerifier.Matches(execution, cancellationToken)) throw new IOException("Effective-source parser execution resources changed during verification.");
-                tracked?.CaptureArgumentInputs(execution);
+                CaptureInputs(execution);
             }
             if (inputTracker is null && tracked is not null) await tracked.VerifyAsync(cancellationToken).ConfigureAwait(false);
+
+            void CaptureInputs(SourceSnapshot snapshot)
+            {
+                if (captureVerificationInputs is not null) captureVerificationInputs(snapshot);
+                else tracked?.CaptureArgumentInputs(snapshot);
+            }
         }
         finally
         {

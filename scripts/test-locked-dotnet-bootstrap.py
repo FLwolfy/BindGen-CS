@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import copy
 from importlib.util import module_from_spec, spec_from_file_location
 import io
 import json
@@ -15,12 +16,16 @@ import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
+import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = spec_from_file_location('locked_dotnet_bootstrap', Path(__file__).with_name('setup-locked-dotnet.py'))
 bootstrap = module_from_spec(spec)
 spec.loader.exec_module(bootstrap)
+smoke_spec = spec_from_file_location('gnu_smoke', Path(__file__).with_name('verify-gnu-smoke.py'))
+gnu_smoke = module_from_spec(smoke_spec)
+smoke_spec.loader.exec_module(gnu_smoke)
 
 
 class LockedDotnetBootstrapTests(unittest.TestCase):
@@ -145,7 +150,7 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         self.assertEqual(['existing-path', str(self.destination.resolve())], path_file.read_text().splitlines())
 
     def test_all_workflow_bootstraps_use_python_then_exact_archive_then_strict_check(self):
-        counts = {'ci.yml': 6, 'packages.yml': 1, 'publish-bgcs-runtime-nuget.yml': 1}
+        counts = {'ci.yml': 7, 'packages.yml': 1, 'publish-bgcs-runtime-nuget.yml': 1}
         for name, expected in counts.items():
             with self.subTest(workflow=name):
                 workflow = (ROOT / '.github/workflows' / name).read_text()
@@ -161,6 +166,84 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
                     self.assertIn('--install-dir "${{ runner.temp }}/bgcs-dotnet"', job)
                     observed += 1
                 self.assertEqual(expected, observed)
+
+    def test_early_gnu_job_is_independent_locked_real_and_keeps_all_existing_gates(self):
+        workflow = (ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8')
+        blocks = dict(re.findall(r'^  ([a-zA-Z0-9_-]+):\s*\n(.*?)(?=^  [a-zA-Z0-9_-]+:\s*$|\Z)',
+                                 workflow, re.MULTILINE | re.DOTALL))
+        self.assertTrue({'wasm-invocation', 'native-aot-invocation', 'build-and-test', 'host-shards',
+                         'host-completeness', 'acceptance'} <= set(blocks))
+        job = blocks['gnu-compatibility-smoke']
+        self.assertIn('runs-on: ubuntu-24.04', job)
+        self.assertNotRegex(job, re.compile(r'^    (?:needs|if|continue-on-error):', re.MULTILINE))
+        self.assertIn('BGCS_CPP2C_CXX: g++', job)
+        self.assertIn('BGCS_CC: gcc', job)
+        self.assertIn('BGCS_REQUIRE_GNU_SOURCE_VIEW: "1"', job)
+        self.assertIn('gcc --version', job)
+        self.assertIn('g++ --version', job)
+        self.assertLess(job.index('scripts/setup-locked-dotnet.py'), job.index('dotnet restore tests/BGCS.Tests/'))
+        self.assertIn('dotnet build tests/BGCS.Tests/BGCS.Tests.csproj', job)
+        self.assertNotIn('dotnet build BindGen-CS.slnx', job)
+        self.assertIn('scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/', job)
+        self.assertIn('scripts/verify-gnu-smoke.py --print-filter', job)
+        self.assertIn('--trx artifacts/gnu-smoke/gnu-smoke.trx', job)
+        self.assertIn('if: always()', job)
+        self.assertIn('path: artifacts/gnu-smoke', job)
+        expression = gnu_smoke.filter_expression()
+        self.assertEqual(6, len(gnu_smoke.METHODS))
+        self.assertEqual(9, len(gnu_smoke.REQUIRED_CASES))
+        self.assertIn('FullyQualifiedName=' + gnu_smoke.BRANCH + '&DisplayName~gnu', expression)
+        for method in gnu_smoke.METHODS:
+            self.assertIn('FullyQualifiedName=' + method, expression)
+            class_name, member = method.removeprefix('BGCS.Tests.').split('.')
+            self.assertIn('public async Task ' + member + '(',
+                          (ROOT / 'tests/BGCS.Tests' / (class_name + '.cs')).read_text(encoding='utf-8'))
+        gates = json.loads((ROOT / 'eng/acceptance/required-release-gates.json').read_text(encoding='utf-8'))
+        self.assertTrue(gates['requireAllObservedJobsSuccessful'])
+
+    def gnu_receipt(self):
+        tree = ET.Element('TestRun')
+        definitions, results = ET.SubElement(tree, 'TestDefinitions'), ET.SubElement(tree, 'Results')
+        for index, (display, method) in enumerate(gnu_smoke.REQUIRED_CASES.items()):
+            identifier = 'case-' + str(index)
+            definition = ET.SubElement(definitions, 'UnitTest', id=identifier)
+            class_name, member = method.rsplit('.', 1)
+            ET.SubElement(definition, 'TestMethod', className=class_name, name=member)
+            ET.SubElement(results, 'UnitTestResult', testId=identifier, testName=display, outcome='Passed')
+        summary = ET.SubElement(tree, 'ResultSummary')
+        ET.SubElement(summary, 'Counters', total='9', executed='9', passed='9', failed='0', error='0', timeout='0', aborted='0', notExecuted='0')
+        return tree
+
+    def test_early_gnu_trx_requires_exact_literals_fqns_and_successful_complete_execution(self):
+        original = self.gnu_receipt()
+        path = self.root / 'gnu.trx'
+        ET.ElementTree(original).write(path, encoding='utf-8')
+        verified = gnu_smoke.verify(path)
+        self.assertEqual(9, len(verified['cases']))
+        self.assertFalse(verified['releaseCertification'])
+        for fault in ('missing', 'duplicate', 'skipped', 'foreign-branch', 'wrong-fqn', 'extra-definition', 'failed-counter', 'run-error'):
+            with self.subTest(fault=fault):
+                tree = copy.deepcopy(original)
+                results = tree.find('Results')
+                if fault == 'missing':
+                    results.remove(results[0])
+                elif fault == 'duplicate':
+                    results.append(copy.deepcopy(results[0]))
+                elif fault == 'skipped':
+                    results[0].set('outcome', 'NotExecuted')
+                elif fault == 'foreign-branch':
+                    next(item for item in results if item.get('testName').startswith(gnu_smoke.BRANCH)).set('testName', gnu_smoke.BRANCH + '(family: "clang")')
+                elif fault == 'wrong-fqn':
+                    tree.find('TestDefinitions')[0].find('TestMethod').set('name', 'DifferentMethod')
+                elif fault == 'extra-definition':
+                    ET.SubElement(ET.SubElement(tree.find('TestDefinitions'), 'UnitTest', id='extra'), 'TestMethod', className='Unrelated', name='Passing')
+                elif fault == 'failed-counter':
+                    tree.find('ResultSummary/Counters').set('failed', '1')
+                else:
+                    ET.SubElement(tree, 'RunInfo', outcome='Error')
+                ET.ElementTree(tree).write(path, encoding='utf-8')
+                with self.assertRaises(RuntimeError):
+                    gnu_smoke.verify(path)
 
 
 if __name__ == '__main__':

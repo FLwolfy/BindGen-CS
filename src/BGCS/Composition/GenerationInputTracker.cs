@@ -29,7 +29,7 @@ internal sealed class GenerationInputTracker(
     private readonly List<ExtensionFingerprint> m_fingerprints = [];
     private readonly HashSet<string> m_unfingerprinted = new(StringComparer.Ordinal);
     private readonly HashSet<string> m_cacheIneligibilityReasons = new(StringComparer.Ordinal);
-    private readonly List<Func<CancellationToken, ValueTask>> m_observations = [];
+    private readonly List<Observation> m_observations = [];
 
     internal IReadOnlyList<SourceSnapshot> snapshots => m_snapshots;
     internal IReadOnlyList<SourceSnapshot> nativeSourceSnapshots => m_nativeSourceSnapshots;
@@ -75,7 +75,10 @@ internal sealed class GenerationInputTracker(
                 throw new InvalidDataException("The worker failed to disable an extension without a complete fingerprint.");
     }
 
-    internal void CaptureObservation(Func<CancellationToken, ValueTask> verify) => m_observations.Add(verify);
+    internal void CaptureObservation(
+        Func<CancellationToken, ValueTask> verify,
+        SourceSnapshot? preflight = null
+    ) => m_observations.Add(new(verify, preflight));
 
     internal void CaptureNativeSourceObservation(
         string targetId,
@@ -158,8 +161,17 @@ internal sealed class GenerationInputTracker(
     {
         if (SourceSnapshotBatch.GetMismatch(VerificationSnapshots(), cancellationToken) is string beforeMismatch)
             throw new IOException("An extension's declared external inputs changed during generation. " + beforeMismatch);
-        foreach (Func<CancellationToken, ValueTask> verify in m_observations)
-            await verify(cancellationToken).ConfigureAwait(false);
+        bool first = true;
+        foreach (Observation observation in m_observations)
+        {
+            // The first callback immediately follows the complete batch above.
+            // Every preceding callback is an external operation: later native
+            // observations must independently recheck their own preconditions.
+            if (!first && observation.preflight is { } preflight && !SourceSnapshotVerifier.Matches(preflight, cancellationToken))
+                throw new IOException("Native source-view inputs changed before compiler observation replay.");
+            await observation.verify(cancellationToken).ConfigureAwait(false);
+            first = false;
+        }
     }
 
     // Enumerate at the verification fence, after any observation callbacks have
@@ -168,7 +180,16 @@ internal sealed class GenerationInputTracker(
     {
         foreach (SourceSnapshot item in m_snapshots) yield return item;
         foreach (SourceSnapshot item in m_nativeSourceSnapshots) yield return item;
+        // A precondition remains an obligation even if a future internal caller
+        // did not capture the same snapshot through another input path.
+        foreach (Observation observation in m_observations)
+            if (observation.preflight is { } preflight) yield return preflight;
     }
+
+    private sealed record Observation(
+        Func<CancellationToken, ValueTask> verify,
+        SourceSnapshot? preflight
+    );
 
     internal sealed record ExtensionFingerprint(
         string serviceType,

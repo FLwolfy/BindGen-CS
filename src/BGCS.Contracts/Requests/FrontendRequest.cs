@@ -39,6 +39,8 @@ public sealed record FrontendRequest(
     public string preamble { get; init; } = string.Empty;
     /// <summary>Gets explicit declarations placed after entry headers, including template instantiations.</summary>
     public string postamble { get; init; } = string.Empty;
+    /// <summary>Gets an optional dependency declaration prelude isolated from the macros of the frozen native entry source.</summary>
+    public NativeDeclarationPrelude? declarationPrelude { get; init; }
     /// <summary>Gets whether macro facts are collected.</summary>
     public bool parseMacros { get; init; } = true;
     /// <summary>Gets whether native documentation is collected.</summary>

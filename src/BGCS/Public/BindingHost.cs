@@ -225,7 +225,13 @@ public sealed partial class BindingHost : IAsyncDisposable
                     break;
             }
             result ??= new(module, parsed.snapshot, diagnostics);
-            result = result with { target = target, argumentInputs = argumentInputs, preparedFrontend = resolved };
+            result = result with
+            {
+                target = target,
+                argumentInputs = argumentInputs,
+                preparedFrontend = resolved,
+                requiresNativeCompilerProof = parsed.requiresNativeCompilerProof
+            };
         }
         catch (OperationCanceledException exception) when (cancellation.IsCancellationRequested)
         {

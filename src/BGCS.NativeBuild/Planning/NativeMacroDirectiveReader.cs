@@ -9,6 +9,21 @@ namespace BGCS.NativeBuild.Planning;
 // accepted only when complete replacement-token sequences match exactly.
 internal static class NativeMacroDirectiveReader
 {
+    internal sealed record Directive(
+        string operation,
+        string name,
+        string text,
+        int start,
+        int length,
+        int line
+    );
+
+    internal static ImmutableArray<Directive> ReadDirectives(string source)
+    {
+        var directives = ImmutableArray.CreateBuilder<Directive>();
+        _ = ReadCore(source, false, true, null, directives);
+        return directives.ToImmutable();
+    }
     internal sealed record Definition(
         string name,
         string replacement,
@@ -41,7 +56,8 @@ internal static class NativeMacroDirectiveReader
         string original,
         bool msvcMacroDump,
         bool rawStrings,
-        ISet<string>? changedNames
+        ISet<string>? changedNames,
+        ImmutableArray<Directive>.Builder? directives = null
     ) {
         StringBuilder joined = new();
         List<int> offsets = [], lines = [];
@@ -84,11 +100,29 @@ internal static class NativeMacroDirectiveReader
             }
             int endOffset = position < offsets.Count ? offsets[position] : original.Length;
             string directive = text[start..position];
+            string operation = Operation(directive);
+            if (operation is "define" or "undef" or "pragma")
+                directives?.Add(new(operation, ChangedName(directive) ?? string.Empty,
+                    original.Substring(offsets[start], endOffset - offsets[start]), offsets[start], endOffset - offsets[start], firstLine));
             if (changedNames is not null && ChangedName(directive) is string changed) changedNames.Add(changed);
             if (Parse(directive, firstLine, offsets[start], endOffset - offsets[start], msvcMacroDump, rawStrings) is { } definition) result.Add(definition);
             whitespaceOnly = false;
         }
         return result.ToImmutable();
+    }
+
+    private static string Operation(string directive)
+    {
+        int position = 1;
+        while (position < directive.Length)
+        {
+            if (char.IsWhiteSpace(directive[position])) position++;
+            else if (CommentEnd(directive, position) is int comment) position = comment;
+            else break;
+        }
+        int start = position;
+        while (position < directive.Length && (char.IsAsciiLetter(directive[position]) || directive[position] == '_')) position++;
+        return directive[start..position];
     }
 
     private static string? ChangedName(string directive)

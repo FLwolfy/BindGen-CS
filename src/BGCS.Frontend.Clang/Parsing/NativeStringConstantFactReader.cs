@@ -6,6 +6,7 @@ using System.Text;
 using BGCS.Contracts.Common;
 using BGCS.Contracts.Native;
 using BGCS.Frontend.Clang.Utilities;
+using BGCS.Frontend.Clang.Model.Metadata;
 using ClangSharp.Interop;
 
 namespace BGCS.Frontend.Clang.Parsing;
@@ -16,8 +17,9 @@ internal static class NativeStringConstantFactReader
     internal static unsafe IReadOnlyDictionary<string, long> ReadLiteralExtents(
         CXIndex index,
         string[] arguments,
-        CXTranslationUnit input
+        CppCompilation compilation
     ) {
+        CXTranslationUnit input = compilation.translationUnit;
         // Sema rewrites an array initializer's StringLiteral.Type to the
         // destination array type. That size cannot bound getBytes(): a padded
         // destination has more elements than the independently stored literal.
@@ -43,7 +45,7 @@ internal static class NativeStringConstantFactReader
         using CXUnsavedFile file = CXUnsavedFile.Create(CppParser.C_CPPASTROOTFILENAME, source.ToString());
         ReadOnlySpan<CXUnsavedFile> files = stackalloc CXUnsavedFile[] { file };
         using CXTranslationUnit probe = CXTranslationUnit.Parse(index, CppParser.C_CPPASTROOTFILENAME,
-            arguments, files, CXTranslationUnit_Flags.CXTranslationUnit_None);
+            arguments, files, CppParser.ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_None));
         for (uint item = 0; item < probe.NumDiagnostics; item++)
         {
             using CXDiagnostic diagnostic = probe.GetDiagnostic(item);

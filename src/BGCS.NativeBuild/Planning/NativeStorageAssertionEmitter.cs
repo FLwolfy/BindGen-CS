@@ -69,6 +69,10 @@ public sealed class NativeStorageAssertionEmitter
         StringBuilder fieldChecks = new();
         int fieldIndex = 0;
         HashSet<string> emitted = new(StringComparer.Ordinal);
+        Dictionary<BGCS.Contracts.Common.StableId, bool> accessibleDeclarations = [];
+        Dictionary<BGCS.Contracts.Common.StableId, bool> nameableTypes = [];
+        HashSet<BGCS.Contracts.Common.StableId> pendingDeclarations = [];
+        HashSet<BGCS.Contracts.Common.StableId> pendingTypes = [];
         foreach (NativeType type in module.types)
         {
             if (type.size is not > 0 || type.alignment is not > 0) continue;
@@ -132,11 +136,11 @@ public sealed class NativeStorageAssertionEmitter
                         continue;
                     }
                     if (field.type is not { } fieldType) throw new InvalidOperationException("A named native field omitted its exact parsed type identity.");
-                    if (ContainsAnonymousType(fieldType, []))
+                    if (ContainsAnonymousType(fieldType, []) || !Nameable(fieldType))
                     {
                         NativeType storage = module.GetType(fieldType);
                         if (storage.size is > 0) Check("sizeof(((" + spelling + "*)0)->" + field.name + ")", storage.size.Value, "native anonymous field storage size");
-                        fieldChecks.AppendLine("/* Anonymous field type identity is verified against effective native source facts. */");
+                        fieldChecks.AppendLine("/* Unnameable field type identity is verified against effective native source facts. */");
                         continue;
                     }
                     string alias = "bgcs_verified_field_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);
@@ -165,7 +169,38 @@ public sealed class NativeStorageAssertionEmitter
         }
 
         bool Accessible(NativeDeclaration declaration)
-            => declaration.visibility is not ("Private" or "Protected") && (declaration.parent is null || Accessible(module.GetDeclaration(declaration.parent.Value)));
+        {
+            if (accessibleDeclarations.TryGetValue(declaration.id, out bool accessible)) return accessible;
+            if (!pendingDeclarations.Add(declaration.id)) throw new InvalidOperationException("Native storage verification encountered a cyclic declaration accessibility graph.");
+            try
+            {
+                accessible = declaration.visibility is not ("Private" or "Protected")
+                    && (declaration.parent is null || Accessible(module.GetDeclaration(declaration.parent.Value)))
+                    && declaration.templateArguments.All(argument => argument.type is not { } type || Nameable(type));
+                accessibleDeclarations.Add(declaration.id, accessible);
+                return accessible;
+            }
+            finally { pendingDeclarations.Remove(declaration.id); }
+        }
+        bool Nameable(BGCS.Contracts.Common.StableId identity)
+        {
+            if (nameableTypes.TryGetValue(identity, out bool nameable)) return nameable;
+            if (!pendingTypes.Add(identity)) throw new InvalidOperationException("Native storage verification encountered a cyclic type accessibility graph.");
+            try
+            {
+                NativeType type = module.GetType(identity);
+                // Aliases are rendered through their element graph, so a
+                // private alias of int does not make that frozen int unnameable.
+                nameable = (type.category is not (NativeTypeCategory.Record or NativeTypeCategory.Enumeration)
+                        || type.declaration is not { } declaration || Accessible(module.GetDeclaration(declaration)))
+                    && (type.elementType is not { } element || Nameable(element))
+                    && (type.returnType is not { } result || Nameable(result))
+                    && type.parameterTypes.All(Nameable);
+                nameableTypes.Add(identity, nameable);
+                return nameable;
+            }
+            finally { pendingTypes.Remove(identity); }
+        }
         bool ConcreteOwners(NativeDeclaration declaration)
         {
             HashSet<BGCS.Contracts.Common.StableId> visited = [];

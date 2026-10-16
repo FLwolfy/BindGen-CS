@@ -26,6 +26,8 @@ internal sealed class SourceContributionCapture : IDisposable
     private static readonly StringComparer s_paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private readonly ImmutableArray<FileEntry> m_files;
     private readonly FileStream m_storeLease;
+    private readonly string m_temporaryRoot;
+    private readonly string m_physicalTemporaryRoot;
     private bool m_disposed;
     internal string storeRoot { get; }
     internal ImmutableArray<string> headers { get; }
@@ -37,11 +39,15 @@ internal sealed class SourceContributionCapture : IDisposable
     private SourceContributionCapture(
         string storeRoot,
         ImmutableArray<FileEntry> files,
-        FileStream storeLease
+        FileStream storeLease,
+        string temporaryRoot,
+        string physicalTemporaryRoot
     ) {
         this.storeRoot = storeRoot;
         m_files = files;
         m_storeLease = storeLease;
+        m_temporaryRoot = temporaryRoot;
+        m_physicalTemporaryRoot = physicalTemporaryRoot;
         headers = files.Where(file => file.Artifact.role == SourceContributionRole.PublicHeader && file.Artifact.exposeToBindings)
             .Select(file => Physical(file.Relative)).ToImmutableArray();
         exposedHeaders = files.Where(file => file.Artifact.role == SourceContributionRole.PublicHeader && file.Artifact.exposeToBindings)
@@ -108,13 +114,16 @@ internal sealed class SourceContributionCapture : IDisposable
                     if (paths.Contains(file.Relative[..slash])) throw new InvalidOperationException("Generated artifact file and directory paths overlap.");
             if (ordered.Length == 0) return null;
             string digest = StoreDigest(configuration.library.id, source.target.targetId.value, ordered);
-            string parent = Path.Combine(Path.GetTempPath(), "BGCS", "source-inputs", "v1");
+            string temporaryRoot = Path.GetFullPath(Path.GetTempPath());
+            string physicalTemporaryRoot = PhysicalPathResolver.Resolve(temporaryRoot);
+            string parent = Path.Combine(physicalTemporaryRoot, "BGCS", "source-inputs", "v1");
             RejectLinks(parent);
             Directory.CreateDirectory(parent);
             string root = Path.Combine(parent, digest);
             FileStream lease = await AcquireAsync(Path.Combine(parent, digest + ".lock"), cancellationToken).ConfigureAwait(false);
             try
             {
+                VerifyTemporaryRoot(temporaryRoot, physicalTemporaryRoot);
                 RejectLinks(root);
                 if (!Directory.Exists(root))
                 {
@@ -162,7 +171,8 @@ internal sealed class SourceContributionCapture : IDisposable
                     }
                 }
                 VerifyStore(root, ordered);
-                captured = new(root, ordered.ToImmutableArray(), lease);
+                VerifyTemporaryRoot(temporaryRoot, physicalTemporaryRoot);
+                captured = new(root, ordered.ToImmutableArray(), lease, temporaryRoot, physicalTemporaryRoot);
                 inputs.CaptureArgumentInputs(captured.snapshot);
                 return captured;
             }
@@ -211,7 +221,7 @@ internal sealed class SourceContributionCapture : IDisposable
         string target,
         bool managed
     ) {
-        VerifyStore(storeRoot, m_files);
+        Verify();
         ImmutableArray<ArtifactDescriptor>.Builder result = ImmutableArray.CreateBuilder<ArtifactDescriptor>();
         foreach (FileEntry file in m_files.Where(file => (file.Artifact.role == SourceContributionRole.ManagedSource) == managed))
         {
@@ -239,7 +249,20 @@ internal sealed class SourceContributionCapture : IDisposable
         return source with { files = source.files.Where(file => !managed.Contains(file.path)).ToImmutableArray() };
     }
 
-    internal void Verify() => VerifyStore(storeRoot, m_files);
+    internal void Verify()
+    {
+        VerifyTemporaryRoot(m_temporaryRoot, m_physicalTemporaryRoot);
+        VerifyStore(storeRoot, m_files);
+        VerifyTemporaryRoot(m_temporaryRoot, m_physicalTemporaryRoot);
+    }
+
+    private static void VerifyTemporaryRoot(
+        string logical,
+        string physical
+    ) {
+        if (!s_paths.Equals(PhysicalPathResolver.Resolve(logical), physical))
+            throw new IOException("The generated input temporary root changed its physical identity.");
+    }
     private string Physical(string relative) => Path.GetFullPath(relative, storeRoot);
 
     internal static void ValidateServiceId(string id)
@@ -379,7 +402,7 @@ internal sealed class SourceContributionCapture : IDisposable
         m_disposed = true;
         try
         {
-            VerifyStore(storeRoot, m_files);
+            Verify();
             HashSet<string> directories = new(s_paths) { storeRoot };
             foreach (FileEntry file in m_files)
             {

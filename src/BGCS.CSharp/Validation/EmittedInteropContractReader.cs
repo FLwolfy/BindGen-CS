@@ -38,6 +38,7 @@ public sealed class EmittedInteropContractReader
         Dictionary<string, TypeSyntax> expectedTypes = new(StringComparer.Ordinal);
         string context = string.Join(".", plan.api.@namespace.Split('.').Select(part => part.TrimStart('@'))) + "." + plan.contextName.TrimStart('@');
         List<CompilationUnitSyntax> roots = [];
+        List<string> sourceTexts = [];
         foreach ((string path, string text) in sources)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -45,21 +46,27 @@ public sealed class EmittedInteropContractReader
             Diagnostic[] errors = tree.GetDiagnostics(cancellationToken).Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
             if (errors.Length != 0) throw new InvalidOperationException("A processed C# artifact is syntactically invalid: " + string.Join("; ", errors.Select(error => error.ToString())));
             roots.Add((CompilationUnitSyntax)tree.GetRoot(cancellationToken));
+            sourceTexts.Add(text);
         }
         if (plan.api.emitNativeMetadata) roots = NativeMetadataSyntaxDecorator.VerifyAndRemove(plan, roots);
         // Build indexes from the actual processed syntax on every verification.
-        // Import attributes can occur outside methods, including local functions
-        // and lambdas, so the traversal deliberately includes complete bodies.
+        // Bodies can contain local-function and lambda attributes. Only omit
+        // their index traversal when the original text rules out every attribute
+        // recognized here; parsing and later body/assignment checks stay complete.
         List<ClassDeclarationSyntax> classes = [];
         List<DelegateDeclarationSyntax> delegates = [];
         List<BaseTypeDeclarationSyntax> storageTypes = [];
         List<MethodDeclarationSyntax> collectedImports = [];
         bool hasImportAttribute = false;
-        foreach (CompilationUnitSyntax root in roots)
+        for (int sourceIndex = 0; sourceIndex < roots.Count; sourceIndex++)
         {
+            CompilationUnitSyntax root = roots[sourceIndex];
             cancellationToken.ThrowIfCancellationRequested();
+            bool inspectBodies = plan.api.emitNativeMetadata || !CanSkipBodyIndex(sourceTexts[sourceIndex], cancellationToken);
+            Func<SyntaxNode, bool>? descend = inspectBodies ? null
+                : static node => node is not BlockSyntax and not ArrowExpressionClauseSyntax and not EqualsValueClauseSyntax;
             int visited = 0;
-            foreach (SyntaxNode node in root.DescendantNodes())
+            foreach (SyntaxNode node in root.DescendantNodes(descendIntoChildren: descend))
             {
                 if ((++visited & 1023) == 0) cancellationToken.ThrowIfCancellationRequested();
                 if (node is BaseTypeDeclarationSyntax storageType) storageTypes.Add(storageType);
@@ -518,8 +525,29 @@ public sealed class EmittedInteropContractReader
         AttributeArgumentSyntax[] matches = arguments.Arguments.Where(argument => argument.NameEquals?.Name.Identifier.ValueText == name).ToArray();
         return matches.Length == 1 ? matches[0].Expression : null;
     }
-    private static bool IsImportName(NameSyntax name) => name.ToString().EndsWith("DllImport", StringComparison.Ordinal) || name.ToString().EndsWith("LibraryImport", StringComparison.Ordinal)
-        || name.ToString().EndsWith("DllImportAttribute", StringComparison.Ordinal) || name.ToString().EndsWith("LibraryImportAttribute", StringComparison.Ordinal);
+    private static bool CanSkipBodyIndex(
+        string source,
+        CancellationToken cancellationToken
+    ) {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (source.Contains("NativeName", StringComparison.Ordinal) || source.Contains("DllImport", StringComparison.Ordinal)
+            || source.Contains("LibraryImport", StringComparison.Ordinal)) return false;
+        for (int index = 0; index < source.Length; index++)
+        {
+            if ((index & 4095) == 0) cancellationToken.ThrowIfCancellationRequested();
+            char character = source[index];
+            // Identifier ValueText also removes literal Unicode formatting characters.
+            // Reject non-ASCII text and escape introducers to cover both spellings.
+            if (character > 127 || character == '\\' && index + 1 < source.Length && source[index + 1] is 'u' or 'U') return false;
+        }
+        return true;
+    }
+    private static bool IsImportName(NameSyntax name)
+    {
+        string identifier = name.GetLastToken().ValueText;
+        return identifier.EndsWith("DllImport", StringComparison.Ordinal) || identifier.EndsWith("LibraryImport", StringComparison.Ordinal)
+            || identifier.EndsWith("DllImportAttribute", StringComparison.Ordinal) || identifier.EndsWith("LibraryImportAttribute", StringComparison.Ordinal);
+    }
     private static bool IsConventionName(NameSyntax name) => name.ToString().EndsWith("UnmanagedCallConv", StringComparison.Ordinal)
         || name.ToString().EndsWith("UnmanagedCallConvAttribute", StringComparison.Ordinal);
     private static string FullName(ClassDeclarationSyntax type)

@@ -3084,6 +3084,7 @@ class BGCS.Contracts.Requests.EmissionRequest [sealed; interfaces=System.IEquata
 class BGCS.Contracts.Requests.FrontendRequest [sealed; interfaces=System.IEquatable<BGCS.Contracts.Requests.FrontendRequest>]
   ctor(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Inputs.SourceLanguage language, System.Collections.Immutable.ImmutableArray<System.String> headers)
   property System.Collections.Immutable.ImmutableArray<System.String> arguments { get; init }
+  property BGCS.Contracts.Requests.NativeDeclarationPrelude declarationPrelude { get; init }
   property System.Collections.Immutable.ImmutableArray<System.String> defines { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Targets.HeaderSearchPath> headerSearchPaths { get; init }
   property System.Collections.Immutable.ImmutableArray<System.String> headers { get; init }
@@ -3123,6 +3124,7 @@ class BGCS.Contracts.Requests.FrontendResult [sealed; interfaces=System.IEquatab
   ctor(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Inputs.SourceSnapshot snapshot)
   property BGCS.Contracts.Inputs.SourceSnapshot executionInputs { get; init }
   property BGCS.Contracts.Native.NativeModule module { get; init }
+  property System.Boolean requiresNativeCompilerProof { get; init }
   property BGCS.Contracts.Inputs.SourceSnapshot snapshot { get; init }
   method BGCS.Contracts.Requests.FrontendResult <Clone>$()
   method System.Boolean Equals(BGCS.Contracts.Requests.FrontendResult other) [virtual; final]
@@ -3410,6 +3412,18 @@ enum BGCS.Contracts.Requests.NativeDeclarationCategory [sealed; underlying=Syste
   field BGCS.Contracts.Requests.NativeDeclarationCategory Records [static; const=1]
   field BGCS.Contracts.Requests.NativeDeclarationCategory TypeAliases [static; const=4]
   field System.Int32 value__
+class BGCS.Contracts.Requests.NativeDeclarationPrelude [sealed; interfaces=System.IEquatable<BGCS.Contracts.Requests.NativeDeclarationPrelude>]
+  ctor(System.String source, System.Collections.Immutable.ImmutableArray<System.String> headers)
+  property System.Collections.Immutable.ImmutableArray<System.String> headers { get; init }
+  property System.String source { get; init }
+  method BGCS.Contracts.Requests.NativeDeclarationPrelude <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Requests.NativeDeclarationPrelude other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Requests.NativeDeclarationPrelude left, BGCS.Contracts.Requests.NativeDeclarationPrelude right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Requests.NativeDeclarationPrelude left, BGCS.Contracts.Requests.NativeDeclarationPrelude right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String source, out System.Collections.Immutable.ImmutableArray<System.String> headers)
 class BGCS.Contracts.Requests.NativeDependencyFile [sealed; interfaces=System.IEquatable<BGCS.Contracts.Requests.NativeDependencyFile>]
   ctor(System.String path, BGCS.Contracts.Requests.NativeDependencyFormat format, System.String source)
   property BGCS.Contracts.Requests.NativeDependencyFormat format { get; init }
@@ -3597,6 +3611,7 @@ class BGCS.Contracts.Requests.NativeSourceViewResult [sealed; interfaces=System.
   ctor(System.String expandedSource, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Requests.NativeSourceMacro> macros, BGCS.Contracts.Inputs.SourceSnapshot inputs)
   property System.String compilerFamily { get; init }
   property System.String compilerIdentity { get; init }
+  property BGCS.Contracts.Requests.NativeDeclarationPrelude declarationPrelude { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics { get; init }
   property System.String expandedSource { get; init }
   property BGCS.Contracts.Inputs.SourceSnapshot inputs { get; init }

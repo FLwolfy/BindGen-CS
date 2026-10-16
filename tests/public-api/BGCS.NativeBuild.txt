@@ -67,6 +67,9 @@ class BGCS.NativeBuild.Planning.MsvcBuildProvider [sealed; interfaces=BGCS.Contr
 class BGCS.NativeBuild.Planning.NativeBuildProviderResolver [sealed]
   ctor()
   method BGCS.Contracts.Ports.INativeBuildProvider Resolve(BGCS.Contracts.Targets.NativeTargetDescriptor target, System.String providerId, System.String buildToolPath [optional; default=null], System.String auxiliaryToolPath [optional; default=null])
+class BGCS.NativeBuild.Planning.NativeCanonicalAssertionEmitter [sealed]
+  ctor()
+  method System.String Emit(BGCS.Contracts.Native.NativeModule module, System.Collections.Immutable.ImmutableArray<System.String> headers, System.String preamble [optional; default=""], System.String postamble [optional; default=""])
 class BGCS.NativeBuild.Planning.NativeEffectiveFactArguments [abstract; sealed]
   method System.Collections.Immutable.ImmutableArray<System.String> Resolve(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.NativeBuild.Planning.NativeFactInputEmitter [sealed]
@@ -102,7 +105,7 @@ class BGCS.NativeBuild.Validation.NativeArtifactVerifier [abstract; sealed]
 class BGCS.NativeBuild.Validation.NativeEffectiveSourceAdapter [abstract; sealed]
   method System.String ParserPreamble(System.String compilerFamily, BGCS.Contracts.Inputs.SourceLanguage language) [static]
   method System.String PreserveSystemHeaderMarkers(System.String source, System.Collections.Immutable.ImmutableArray<System.String> systemDirectories) [static]
-  method System.Threading.Tasks.ValueTask<System.ValueTuple<System.String,System.String>> PrepareAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.Threading.Tasks.ValueTask<System.ValueTuple<System.String,System.String,BGCS.Contracts.Requests.NativeDeclarationPrelude>> PrepareAsync(BGCS.Contracts.Requests.NativeBuildPlan plan, BGCS.Contracts.Requests.NativePreprocessingOperation operation, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.NativeBuild.Validation.NativeSourceFactComparer [sealed]
   ctor()
   method System.Boolean RequiresVerification(BGCS.Contracts.Native.NativeModule module) [static]

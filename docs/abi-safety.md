@@ -200,6 +200,33 @@ different conventions or profile changes are rejected. Other import paths
 retain their explicit convention strategy. This bounded choice is covered by
 the same actual browser AOT fixture, not a generated-output patch.
 
+## Bounded GNU declaration adaptation
+
+GNU C++ SDK headers can contain compiler extensions that differ from the pinned
+Clang frontend. Only complete leading toolchain include trees with actual
+dependency and system-origin evidence can become an isolated declaration prelude.
+User tokens still come from the selected GNU compiler, and a separate `-dM`
+operation supplies its final macro state. The worker owns the prelude PCH until
+fact extraction finishes and clears its macro environment before parsing the
+already expanded user tokens. PCH files, Clang handles and AST types remain
+outside Contracts.
+
+This is a bounded capability: later interleaved SDK includes, nested user headers
+inside SDK trees, unproved pack/pragma history, user builtin changes and
+include-entry macros depending on contextual builtins are rejected explicitly.
+Restructure the header boundary or supply an appropriate frontend/native shim.
+Equal-sized substitute types cannot establish GNU type identity.
+
+Prelude-derived facts carry `requiresNativeCompilerProof`. Before publication,
+`generate`, `bridge` and every `build` mode require the selected native compiler
+to check original named canonical types, variable types, enum values and selected
+scalar constants, and compile storage guards and the bridge. Constants are frozen
+before support headers; floating-point values use exact IEEE bits. Final native
+build flags retain their separate effective-fact and string-byte checks. Object
+construction can involve relocatable linking; these checks do not certify final
+library linking, invocation or every ABI. Unsupported exposed types fail rather
+than treating private opaque implementation types as publicly nameable.
+
 ## Callback addresses with unsupported invocation signatures
 
 Complete supported fixed callback prototypes use exact unmanaged function

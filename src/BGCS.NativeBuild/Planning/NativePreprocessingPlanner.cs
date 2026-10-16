@@ -105,7 +105,11 @@ internal static class NativePreprocessingPlanner
         }
         if (family == "msvc") arguments.AddRange(["/P", "/Fi" + output, "/sourceDependencies", dependencies]);
         else if (family == "clang-cl") arguments.AddRange(["/P", "/Fi" + output, "/clang:-MD", "/clang:-MF", "/clang:" + dependencies]);
-        else if (family is "clang" or "gnu") arguments.AddRange(["-E", "-o", output, "-MD", "-MF", dependencies]);
+        else if (family is "clang" or "gnu")
+        {
+            arguments.AddRange(["-E", "-o", output, "-MD", "-MF", dependencies]);
+            if (family == "gnu" && unit.language == SourceLanguage.Cpp) arguments.Add("-dD");
+        }
         else throw new NotSupportedException("The native compiler family has no exact preprocessing command: " + family);
         NativeBuildCommand command = scan.command with
         {

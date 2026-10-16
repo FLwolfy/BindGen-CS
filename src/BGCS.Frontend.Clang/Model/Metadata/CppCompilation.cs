@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using BGCS.Contracts.Inputs;
 using BGCS.Frontend.Clang.Model.Types;
 using BGCS.Frontend.Clang.Parsing;
 using BGCS.Frontend.Clang.Collections;
@@ -18,6 +20,8 @@ namespace BGCS.Frontend.Clang.Model.Metadata;
 internal class CppCompilation : CppGlobalDeclarationContainer, IDisposable
 {
     private CXTranslationUnit m_translationUnit;
+    internal ImmutableArray<InputDependency> declarationPreludeInputs { get; set; } = [];
+    internal string[] declarationPreludeFiles { get; set; } = [];
     internal Dictionary<CppPrimitiveType, PrimitiveTypeFacts> primitiveFacts { get; } = [];
     internal Dictionary<CppType, NativeStorageFacts> storageFacts { get; } = new(ReferenceEqualityComparer.Instance);
     internal Dictionary<CppClass, bool?> defaultConstructionFacts { get; } = new(ReferenceEqualityComparer.Instance);
