@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace BGCS.NativeBuild.Planning;
@@ -8,6 +9,8 @@ namespace BGCS.NativeBuild.Planning;
 // line directive; its bytes must never participate in path normalization.
 internal static class NativeLineDirectiveReader
 {
+    private static readonly UTF8Encoding s_utf8 = new(false, true);
+
     internal readonly record struct Directive(
         int start,
         int length,
@@ -89,9 +92,32 @@ internal static class NativeLineDirectiveReader
             char value = source[position++];
             if (value == '\\')
             {
+                if (position < end && source[position] is >= '0' and <= '7')
+                {
+                    // Clang/GNU quote non-ASCII filename bytes as octal UTF-8.
+                    // Decode only this metadata field, never language literals.
+                    List<byte> bytes = [];
+                    while (true)
+                    {
+                        int octet = 0, digits = 0;
+                        while (position < end && digits < 3 && source[position] is >= '0' and <= '7')
+                        {
+                            octet = octet * 8 + source[position++] - '0';
+                            digits++;
+                        }
+                        if (octet > byte.MaxValue || octet is 0 or 10 or 13) return null;
+                        bytes.Add((byte)octet);
+                        if (position + 1 >= end || source[position] != '\\' || source[position + 1] is not (>= '0' and <= '7')) break;
+                        position++;
+                    }
+                    try { file.Append(s_utf8.GetString(bytes.ToArray())); }
+                    catch (DecoderFallbackException) { return null; }
+                    continue;
+                }
                 if (position >= end || source[position] is not ('\\' or '"')) return null;
                 value = source[position++];
             }
+            if (value is '\0' or '\r' or '\n') return null;
             file.Append(value);
         }
         if (position >= end) return null;

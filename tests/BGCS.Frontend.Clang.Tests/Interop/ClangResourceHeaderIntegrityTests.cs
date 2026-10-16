@@ -12,6 +12,15 @@ namespace BGCS.Frontend.Clang.Tests;
 public sealed class ClangResourceHeaderIntegrityTests
 {
     [Fact]
+    public void ARelativeCacheCannotWriteIntoTheNativeInvocationDirectory()
+    {
+        string relative = "bgcs-relative-parser-cache-" + Guid.NewGuid().ToString("N");
+        Assert.False(Directory.Exists(relative));
+        Assert.Throws<ArgumentException>(() => Extract(Bundle(), relative));
+        Assert.False(Directory.Exists(relative));
+    }
+
+    [Fact]
     public void ExistingExtraction_IsReusedOnlyAfterCompleteContentVerification()
     {
         WithCache((cache, bundle) =>

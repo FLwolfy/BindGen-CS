@@ -99,10 +99,14 @@ combined UTF-16 bit pattern 4325441. Supplementary scalars, strict invalid
 Unicode handling, terminators and native code-unit lengths are checked
 separately.
 
-The current friendly temporary-input route requires read-only, zero-terminated,
-explicitly nonretaining call lifetime with known null policy, and no independent
-length-parameter protocol. Other raw text protocols require explicit supported
-projection/shim rather than pretending all contracts use that route.
+Friendly temporary string inputs require a read-only, explicitly nonretaining
+synchronous call lifetime and an explicit null policy. They support either zero
+termination without a length channel, or explicitly nonterminated counted input
+with one independent plain integer input-length parameter. The counted route
+checks encoding width and byte order, byte/code-unit length units, a positive
+code-unit bound and the native integer range before invocation. Shared counts,
+fixed-length inputs, retained/asynchronous text and competing address protocols
+require a separately supported projection/shim; eligible raw ABI remains available.
 
 ## Buffers, ownership, callbacks and async
 

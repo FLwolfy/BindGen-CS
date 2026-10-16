@@ -85,10 +85,18 @@ public sealed partial class TypedBridgeEmitter
         Dictionary<StableId, BridgeType> types,
         StringBuilder source
     ) {
+        BridgeType[] records = module.types.Where(type => type.kind == BridgeTypeKind.Record).ToArray();
+        if (records.Length == 0) return;
+        string[] proofTokens = ["__builtin_offsetof", "static_assert", "sizeof", "alignof", "std", "is_standard_layout", "is_trivially_copyable", "is_same", "decltype", "declval", "value"];
+        foreach (string token in proofTokens)
+            source.Append("#if defined(").Append(token).Append(")\n#error BGCS DTO storage proof token is macro-defined: ").Append(token).Append("\n#endif\n");
+        // Public headers may customize offsetof, and the Windows SDK macro is
+        // not a constant expression under Clang. Use the compiler operation
+        // independently for both the original record and its fixed C carrier.
         HashSet<StableId> inputs = module.exports.SelectMany(export => export.parameters)
             .Where(parameter => parameter.conversion == BridgeConversionKind.RecordCopy)
             .Select(parameter => types[parameter.type].elementType!.Value).ToHashSet();
-        foreach (BridgeType record in module.types.Where(type => type.kind == BridgeTypeKind.Record))
+        foreach (BridgeType record in records)
         {
             string native = NativeTypeSpelling.Format(module.source, record.nativeType!.Value);
             BridgeRecord storage = record.recordStorage!;
@@ -101,8 +109,8 @@ public sealed partial class TypedBridgeEmitter
             foreach (BridgeRecordField field in storage.fields)
             {
                 NativeDeclaration original = module.source.GetDeclaration(field.declaration);
-                source.Append("static_assert(offsetof(").Append(native).Append(", ").Append(original.name).Append(") == ").Append(field.offset)
-                    .Append(" && offsetof(").Append(record.cName).Append(", ").Append(field.name).Append(") == ").Append(field.offset)
+                source.Append("static_assert(__builtin_offsetof(").Append(native).Append(", ").Append(original.name).Append(") == ").Append(field.offset)
+                    .Append(" && __builtin_offsetof(").Append(record.cName).Append(", ").Append(field.name).Append(") == ").Append(field.offset)
                     .Append(", \"BGCS DTO field offset changed\");\n")
                     .Append("static_assert(std::is_same<decltype(std::declval<").Append(native).Append("&>().").Append(original.name).Append("), ")
                     .Append(FieldType(original.type!.Value)).Append(">::value, \"BGCS DTO field type changed\");\n");

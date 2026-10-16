@@ -74,7 +74,7 @@ public sealed class NativeConfiguredFamilyTests
                         using var api = {{factory}};
                         if (api.SumVectorWithSequence(new int[] {20,22}) != 42) return 1;
                         if (api.SumArrayWithSequence(new int[] {10,12,20}) != 42) return 2;
-                        if (api.SumTextWithSequence(new byte[] {65,0,195,169}) != 429) return 3;
+                        if (api.SumTextWithSequence("A\0é") != 429) return 3;
                         int[] values={20,22};
                         if(api.SumSpanWithSequence(values)!=42 || values[0]!=21 || values[1]!=23) return 4;
                         bool rejected=false;

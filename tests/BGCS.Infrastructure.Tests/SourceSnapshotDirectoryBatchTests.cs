@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
-using System.Reflection;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,12 +11,10 @@ using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.IO;
 using Xunit;
 
-namespace BGCS.Tests;
+namespace BGCS.Infrastructure.Tests;
 
 public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
 {
-    private static readonly MethodInfo s_verify = typeof(BindingHost).Assembly.GetType("BGCS.Composition.SourceSnapshotBatch", throwOnError: true)!
-        .GetMethod("GetMismatch", BindingFlags.Static | BindingFlags.NonPublic)!;
     private readonly string m_root = Path.Combine(Path.GetTempPath(), "bgcs-directory-fence-" + Guid.NewGuid().ToString("N"));
     private readonly List<string> m_links = [];
 
@@ -33,10 +29,10 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
         DirectoryInputDependency observed = DirectoryMembershipDigest.Capture(m_root, [excluded, unused]);
         SourceSnapshot first = new([], [observed]) { excludedDirectories = ImmutableArray.Create(excluded, unused) };
         SourceSnapshot second = new([], [observed with { }]) { excludedDirectories = ImmutableArray.Create(excluded, unused) };
-        Assert.Null(Verify([first, second]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([first, second]));
         // Reordered queries remain separate identities even when exclusions happen to commute.
         SourceSnapshot reordered = second with { excludedDirectories = ImmutableArray.Create(unused, excluded) };
-        Assert.Null(Verify([first, reordered]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([first, reordered]));
     }
 
     [Theory]
@@ -55,8 +51,8 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
             _ => actual with { path = Path.Combine(m_root, "other") }
         };
         SourceSnapshot valid = new([], [actual]), invalid = new([], [wrong]);
-        Assert.NotNull(Verify([valid, invalid]));
-        Assert.NotNull(Verify([invalid, valid]));
+        Assert.NotNull(SourceSnapshotBatch.GetMismatch([valid, invalid]));
+        Assert.NotNull(SourceSnapshotBatch.GetMismatch([invalid, valid]));
     }
 
     [Fact]
@@ -67,19 +63,19 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
         DirectoryInputDependency actual = DirectoryMembershipDigest.Capture(m_root, [excluded]);
         SourceSnapshot first = new([], [actual]) { excludedDirectories = [excluded] };
         SourceSnapshot conflicting = first with { excludedDirectories = [] };
-        Assert.Null(Verify([first, first with { excludedDirectories = [excluded] }]));
-        Assert.NotNull(Verify([first, conflicting]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([first, first with { excludedDirectories = [excluded] }]));
+        Assert.NotNull(SourceSnapshotBatch.GetMismatch([first, conflicting]));
     }
 
     [Fact]
     public void ANewFenceRechecksMembershipAfterAnArbitraryExtensionIsAdded()
     {
         SourceSnapshot observed = new([], [DirectoryMembershipDigest.Capture(m_root)]);
-        Assert.Null(Verify([observed, observed]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([observed, observed]));
         File.WriteAllText(Path.Combine(m_root, "added.unrecognized-extension"), "new candidate");
-        Assert.NotNull(Verify([observed, observed]));
+        Assert.NotNull(SourceSnapshotBatch.GetMismatch([observed, observed]));
         SourceSnapshot refreshed = new([], [DirectoryMembershipDigest.Capture(m_root)]);
-        Assert.Null(Verify([refreshed, refreshed]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([refreshed, refreshed]));
     }
 
     [Fact]
@@ -88,11 +84,11 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
         string missing = Path.Combine(m_root, "later.any");
         SourceSnapshot first = new([], [DirectoryMembershipDigest.Capture(m_root)]);
         SourceSnapshot second = first with { absentInputs = [new(missing, PhysicalPathResolver.Resolve(missing))] };
-        Assert.Null(Verify([first, second]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([first, second]));
         // Keep membership valid independently, isolating the absent-input obligation.
         File.WriteAllText(missing, "now present");
         DirectoryInputDependency current = DirectoryMembershipDigest.Capture(m_root);
-        Assert.NotNull(Verify([first with { searchDirectories = [current] }, second with { searchDirectories = [current] }]));
+        Assert.NotNull(SourceSnapshotBatch.GetMismatch([first with { searchDirectories = [current] }, second with { searchDirectories = [current] }]));
     }
 
     [Theory]
@@ -116,7 +112,7 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
             "null-directory" => valid with { searchDirectories = [null!] },
             _ => valid with { absentInputs = [null!] }
         };
-        Assert.Contains("uninitialized or null", Verify([valid, invalid]));
+        Assert.Contains("uninitialized or null", SourceSnapshotBatch.GetMismatch([valid, invalid]));
     }
 
     [Fact]
@@ -125,7 +121,7 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
         SourceSnapshot snapshot = new([], [DirectoryMembershipDigest.Capture(m_root)]);
         using CancellationTokenSource cancellation = new();
         cancellation.Cancel();
-        Assert.Throws<OperationCanceledException>(() => Verify([snapshot, snapshot], cancellation.Token));
+        Assert.Throws<OperationCanceledException>(() => SourceSnapshotBatch.GetMismatch([snapshot, snapshot], cancellation.Token));
     }
 
     [Fact]
@@ -137,8 +133,8 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
         await Link(Path.Combine(include, "escape"), outside);
         DirectoryInputDependency observed = DirectoryMembershipDigest.Capture(include, [outside]);
         SourceSnapshot excluded = new([], [observed]) { excludedDirectories = [outside] };
-        Assert.Null(Verify([excluded, excluded]));
-        Assert.NotNull(Verify([excluded, excluded with { excludedDirectories = [] }]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([excluded, excluded]));
+        Assert.NotNull(SourceSnapshotBatch.GetMismatch([excluded, excluded with { excludedDirectories = [] }]));
     }
 
     [Fact]
@@ -149,17 +145,10 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
         string alias = Path.Combine(m_root, "alias");
         await Link(alias, first);
         SourceSnapshot snapshot = new([], [DirectoryMembershipDigest.Capture(alias)]);
-        Assert.Null(Verify([snapshot, snapshot]));
+        Assert.Null(SourceSnapshotBatch.GetMismatch([snapshot, snapshot]));
         DeleteLink(alias); m_links.Remove(alias);
         await Link(alias, second);
-        Assert.NotNull(Verify([snapshot, snapshot]));
-    }
-
-    private static string? Verify(IEnumerable<SourceSnapshot> snapshots, CancellationToken cancellationToken = default)
-    {
-        try { return (string?)s_verify.Invoke(null, [snapshots, cancellationToken]); }
-        catch (TargetInvocationException failure) when (failure.InnerException is not null)
-        { ExceptionDispatchInfo.Capture(failure.InnerException).Throw(); throw; }
+        Assert.NotNull(SourceSnapshotBatch.GetMismatch([snapshot, snapshot]));
     }
 
     private async Task Link(string path, string target)

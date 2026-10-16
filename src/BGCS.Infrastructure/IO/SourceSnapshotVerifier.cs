@@ -42,7 +42,11 @@ public static class SourceSnapshotVerifier
                 if (File.Exists(input.path) || Directory.Exists(input.path) || PhysicalPathResolver.Resolve(input.path) != input.resolvedPath)
                     return "An absent input was created or redirected: " + input.path;
             }
-            if (snapshot.files.Length >= 64 || snapshot.files.Any(dependency => dependency.length >= 8388608))
+            bool parallel = snapshot.files.Length >= 64 || snapshot.files.Any(dependency => dependency.length >= 8388608);
+            using ThreadLocal<PhysicalPathResolver.ResolutionScope>? parallelPaths = parallel
+                ? new(() => new(), trackAllValues: true) : null;
+            PhysicalPathResolver.ResolutionScope? sequentialPaths = !parallel && !snapshot.files.IsEmpty ? new() : null;
+            if (parallel)
             {
                 string?[] mismatches = new string?[snapshot.files.Length];
                 ExceptionDispatchInfo?[] failures = new ExceptionDispatchInfo?[snapshot.files.Length];
@@ -53,7 +57,7 @@ public static class SourceSnapshotVerifier
                     TaskScheduler = TaskScheduler.Default
                 }, index =>
                 {
-                    try { mismatches[index] = FileMismatch(snapshot.files[index], cancellationToken); }
+                    try { mismatches[index] = FileMismatch(snapshot.files[index], parallelPaths!.Value!, cancellationToken); }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
                     catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
                     { mismatches[index] = "An input dependency could not be read: " + failure.Message; }
@@ -69,10 +73,16 @@ public static class SourceSnapshotVerifier
             }
             else
                 foreach (InputDependency dependency in snapshot.files)
-                    if (FileMismatch(dependency, cancellationToken) is string mismatch) return mismatch;
+                    if (FileMismatch(dependency, sequentialPaths!, cancellationToken) is string mismatch) return mismatch;
             foreach (DirectoryInputDependency directory in snapshot.searchDirectories)
                 if (directory != DirectoryMembershipDigest.Capture(directory.path, snapshot.excludedDirectories, cancellationToken))
                     return "Include or library search membership changed: " + directory.path;
+            // Scopes belong only to this verification call, and parallel workers
+            // never share their mutable observations. Re-read every observed
+            // component without reuse before accepting the complete snapshot.
+            if (parallelPaths is not null)
+                foreach (PhysicalPathResolver.ResolutionScope paths in parallelPaths.Values) paths.Verify(cancellationToken);
+            else sequentialPaths?.Verify(cancellationToken);
             return null;
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
@@ -83,10 +93,11 @@ public static class SourceSnapshotVerifier
 
     private static string? FileMismatch(
         InputDependency dependency,
+        PhysicalPathResolver.ResolutionScope paths,
         CancellationToken cancellationToken
     ) {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!File.Exists(dependency.path) || !string.Equals(dependency.resolvedPath, PhysicalPathResolver.Resolve(dependency.path), StringComparison.Ordinal))
+        if (!File.Exists(dependency.path) || !string.Equals(dependency.resolvedPath, paths.Resolve(dependency.path, cancellationToken), StringComparison.Ordinal))
             return "An input file disappeared or was redirected: " + dependency.path;
         using FileStream file = new(dependency.path, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.SequentialScan);
         if (file.Length != dependency.length || !string.Equals(dependency.digest.value, Convert.ToHexString(SHA256.HashData(file)).ToLowerInvariant(), StringComparison.Ordinal))

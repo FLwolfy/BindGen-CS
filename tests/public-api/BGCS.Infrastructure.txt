@@ -135,6 +135,8 @@ class BGCS.Infrastructure.IO.OutputDirectoryTransaction [sealed; interfaces=Syst
   method System.Void Dispose() [virtual; final]
 class BGCS.Infrastructure.IO.PhysicalPathResolver [abstract; sealed]
   method System.String Resolve(System.String path) [static]
+class BGCS.Infrastructure.IO.SourceSnapshotBatch [abstract; sealed]
+  method System.String GetMismatch(System.Collections.Generic.IEnumerable<BGCS.Contracts.Inputs.SourceSnapshot> snapshots, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.Infrastructure.IO.SourceSnapshotVerifier [abstract; sealed]
   method System.Boolean Matches(BGCS.Contracts.Inputs.SourceSnapshot snapshot, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
   method System.String GetMismatch(BGCS.Contracts.Inputs.SourceSnapshot snapshot, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]

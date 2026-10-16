@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Ports;
+using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Requests;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Common;
@@ -41,8 +42,6 @@ public sealed class FrontendWorkerClient : IFrontend
         string root = Path.GetDirectoryName(m_workerPath)!;
         string manifestPath = Path.Combine(root, "worker-assets.manifest.json");
         if (!File.Exists(manifestPath)) throw new NotSupportedException("Frontend caching requires a verified deployed worker asset manifest.");
-        _ = WorkerAssetLocator.Locate(root);
-        var manifest = new WorkerAssetDeployer().ReadManifest(manifestPath);
         ImmutableDictionary<string, string> environment;
         lock (m_environmentGate)
         {
@@ -73,17 +72,19 @@ public sealed class FrontendWorkerClient : IFrontend
         string? selectedHost = ResolveHost(m_dotnetPath, environment);
         if (selectedHost is null || !PhysicalPathResolver.Resolve(selectedHost).Equals(PhysicalPathResolver.Resolve(expectedHost), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             throw new NotSupportedException("Frontend caching requires the worker's dotnet host to match the captured generator runtime installation.");
-        using (JsonDocument configuration = JsonDocument.Parse(File.ReadAllText(Path.ChangeExtension(m_workerPath, ".runtimeconfig.json"))))
+        var deployment = new WorkerAssetDeployer().CaptureVerifiedDeployment(root, RuntimeInformation.RuntimeIdentifier,
+            Path.ChangeExtension(m_workerPath, ".runtimeconfig.json"),
+            [new(selectedHost, ExternalInputKind.File), new(runtimeDirectory, ExternalInputKind.Directory),
+                new(Path.Combine(shared.Parent.FullName, "host", "fxr"), ExternalInputKind.Directory)], cancellationToken);
+        WorkerAssetManifest manifest = deployment.Manifest;
+        SourceSnapshot snapshot = deployment.Snapshot;
+        using (JsonDocument configuration = JsonDocument.Parse(deployment.RuntimeConfiguration))
         {
             JsonElement options = configuration.RootElement.GetProperty("runtimeOptions");
             if (!options.TryGetProperty("framework", out JsonElement framework) || framework.GetProperty("name").GetString() != "Microsoft.NETCore.App"
                 || options.TryGetProperty("frameworks", out _) || options.TryGetProperty("includedFrameworks", out _))
                 throw new NotSupportedException("Frontend caching requires exactly one shared Microsoft.NETCore.App worker framework.");
         }
-        ImmutableArray<DeclaredExternalInput> files = manifest.artifacts.Select(artifact => new DeclaredExternalInput(Path.Combine(root, artifact.relativePath), ExternalInputKind.File))
-            .Append(new(manifestPath, ExternalInputKind.File)).Append(new(selectedHost, ExternalInputKind.File))
-            .Append(new(runtimeDirectory, ExternalInputKind.Directory)).Append(new(Path.Combine(shared.Parent.FullName, "host", "fxr"), ExternalInputKind.Directory)).ToImmutableArray();
-        SourceSnapshot snapshot = new ExternalInputSnapshotBuilder().Capture(files, root, cancellationToken);
         lock (m_environmentGate)
         {
             m_cacheDotnetPath = selectedHost;

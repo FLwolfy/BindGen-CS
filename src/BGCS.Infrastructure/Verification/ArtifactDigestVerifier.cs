@@ -64,7 +64,7 @@ public sealed class ArtifactDigestVerifier
     internal static void RejectLinkedAncestors(string path)
         => OwnedPathBoundary.RejectPhysicalLinks(path);
 
-    private static IEnumerable<string> EnumerateFiles(string directory)
+    internal static IEnumerable<string> EnumerateFiles(string directory)
     {
         foreach (string entry in Directory.EnumerateFileSystemEntries(directory))
         {

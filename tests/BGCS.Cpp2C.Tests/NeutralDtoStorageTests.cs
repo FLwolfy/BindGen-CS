@@ -37,9 +37,44 @@ public sealed class NeutralDtoStorageTests
         Assert.Contains("std::bit_cast<::Sample::Packet>", source);
         Assert.Contains("std::memcpy(static_cast<void*>(bgcs_result)", source);
         Assert.Contains("A DTO boolean field must be zero or one", source);
-        Assert.Contains("offsetof(::Sample::Packet, flags)", source);
+        Assert.Contains("__builtin_offsetof(::Sample::Packet, flags)", source);
         Assert.Contains("std::is_standard_layout<::Sample::Packet>::value", source);
         Assert.Contains(plan.languageRequirements, requirement => requirement.feature == "bridge.dto-copy" && requirement.minimumStandard == 20);
+    }
+
+    [Fact]
+    public void DtoOffsetsKeepIndependentCompilerChecksForNativeAndCarrierFields()
+    {
+        CppBridgeModule plan = Plan();
+        Sink sink = new();
+        new TypedBridgeEmitter().Emit(plan, sink, "fixture");
+        string source = sink.files["src/fixture.cpp"];
+        foreach (BridgeType record in plan.types.Where(type => type.kind == BridgeTypeKind.Record))
+            foreach (BridgeRecordField field in record.recordStorage!.fields)
+            {
+                NativeDeclaration original = plan.source.GetDeclaration(field.declaration);
+                string native = "::" + plan.source.GetType(record.nativeType!.Value).spelling;
+                Assert.Contains("static_assert(__builtin_offsetof(" + native + ", " + original.name + ") == " + field.offset
+                    + " && __builtin_offsetof(" + record.cName + ", " + field.name + ") == " + field.offset
+                    + ", \"BGCS DTO field offset changed\");", source);
+            }
+        Assert.DoesNotContain("static_assert(offsetof(", source);
+    }
+
+    [Theory]
+    [InlineData("__builtin_offsetof")]
+    [InlineData("static_assert")]
+    [InlineData("is_same")]
+    public void DtoProofTokensAreRejectedAfterUserFragmentsAndBeforeAssertions(string token)
+    {
+        CppBridgeModule plan = Plan() with { postamble = "#define " + token + "(...) 0" };
+        Sink sink = new();
+        new TypedBridgeEmitter().Emit(plan, sink, "fixture");
+        string source = sink.files["src/fixture.cpp"];
+        int definition = source.IndexOf(plan.postamble, StringComparison.Ordinal);
+        int guard = source.IndexOf("#if defined(" + token + ")\n#error BGCS DTO storage proof token is macro-defined: " + token, StringComparison.Ordinal);
+        int assertion = source.IndexOf("static_assert(std::is_standard_layout", StringComparison.Ordinal);
+        Assert.True(definition >= 0 && guard > definition && assertion > guard);
     }
 
     [Theory]

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using BGCS.Configuration;
 using BGCS.Contracts.Bridge;
 using BGCS.Contracts.Inputs;
+using BGCS.Contracts.Native;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -69,8 +70,10 @@ public sealed class NativeCppDtoStorageTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    [Fact]
-    public async Task SameSizedNativeDtoFieldDrift_RejectsFinalBuildAndPreservesPublication()
+    [Theory]
+    [InlineData("type")]
+    [InlineData("offset")]
+    public async Task SameSizedNativeDtoFieldDrift_RejectsFinalBuildAndPreservesPublication(string drift)
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-cpp-dto-drift-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -82,14 +85,39 @@ public sealed class NativeCppDtoStorageTests
             BuildResult first = await host.BuildAsync(new(new(configuration, root)));
             Assert.True(first.success, first.GetDiagnosticSummary());
             var before = Directory.EnumerateFiles(first.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(first.outputRoot, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
-            configuration = configuration with { nativeBuild = configuration.nativeBuild with { compilerArguments = ["-DBGCS_DTO_FIELD_FLOAT=1"] } };
+            string definition = drift == "type" ? "BGCS_DTO_FIELD_FLOAT" : "BGCS_DTO_FIELD_REORDERED";
+            configuration = configuration with { nativeBuild = configuration.nativeBuild with { compilerArguments = ["-D" + definition + "=1"] } };
+            NativeModule original = Assert.Single(first.generation.targetModels).bridge!.source;
+            AnalysisResult observed = await host.AnalyzeAsync(new(["dto.hpp"], SourceLanguage.Cpp, root)
+            { arguments = configuration.nativeBuild.compilerArguments, parseMacros = false });
+            Assert.True(observed.success, observed.GetDiagnosticSummary());
+            var expected = CountFacts(original);
+            var actual = CountFacts(observed.module!);
+            Assert.Equal(expected.RecordType.size, actual.RecordType.size);
+            Assert.Equal(expected.RecordType.alignment, actual.RecordType.alignment);
+            Assert.Equal(expected.FieldType.size, actual.FieldType.size);
+            Assert.Equal("Int", expected.FieldType.primitiveKind);
+            Assert.Equal(0L, expected.Field.offset);
+            Assert.Equal(drift == "type" ? "Float" : "Int", actual.FieldType.primitiveKind);
+            Assert.Equal(drift == "type" ? 0L : 4L, actual.Field.offset);
             BuildResult changed = await host.BuildAsync(new(new(configuration, root)));
             Assert.False(changed.success);
-            Assert.Contains("field", changed.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
+            string cause = drift == "type" ? "exact native type or storage facts" : "field identity, position or bitfield width";
+            Assert.True(changed.GetDiagnosticSummary().Contains("Native effective source facts differ from the generated contract: Demo::Inner.count (" + cause + ").", StringComparison.Ordinal),
+                changed.GetDiagnosticSummary());
             var after = Directory.EnumerateFiles(first.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(first.outputRoot, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
             Assert.Equal(before.OrderBy(pair => pair.Key), after.OrderBy(pair => pair.Key));
         }
         finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private static (NativeDeclaration Field, NativeType FieldType, NativeType RecordType) CountFacts(NativeModule module)
+    {
+        NativeDeclaration record = Assert.Single(module.declarations, declaration => declaration.kind == "Class" && declaration.qualifiedName == "Demo::Inner");
+        NativeDeclaration field = Assert.Single(record.children.Select(module.GetDeclaration), declaration => declaration.kind == "Field" && declaration.name == "count");
+        NativeType type = module.GetType(field.type!.Value);
+        while (type.category == NativeTypeCategory.Alias) type = module.GetType(type.elementType!.Value);
+        return (field, type, module.GetType(record.type!.Value));
     }
 
     private static BindingConfiguration Configuration(string runtime) => new()
@@ -170,13 +198,18 @@ public sealed class NativeCppDtoStorageTests
 
     private const string Header = """
         #include <stdint.h>
+        #include <stddef.h>
         namespace Demo {
         #ifdef BGCS_DTO_FIELD_FLOAT
         using Count = float;
         #else
         using Count = int;
         #endif
+        #ifdef BGCS_DTO_FIELD_REORDERED
+        struct Inner { bool active; bool flags[2]; Count count; };
+        #else
         struct Inner { Count count; bool active; bool flags[2]; };
+        #endif
         struct Packet { uint8_t prefix; Inner inner; int values[3]; };
         struct Standalone { int number; };
         struct View { void* data; const void* context; int length; };
@@ -187,6 +220,11 @@ public sealed class NativeCppDtoStorageTests
         inline Aligned TransformAligned(Aligned value) { ++value.number; return value; }
         inline View EchoView(View value) { return value; }
         }
+        // Reproduce the Windows UCRT macro even on other compiler hosts.
+        // This expression is not constexpr under Clang; DTO proofs must use
+        // the compiler's independent offset primitive instead.
+        #undef offsetof
+        #define offsetof(s,m) ((::size_t)&reinterpret_cast<char const volatile&>((((s*)0)->m)))
         """;
 
     private static string WorkerRoot()

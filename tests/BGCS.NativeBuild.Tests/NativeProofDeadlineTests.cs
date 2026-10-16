@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Requests;
+using BGCS.Contracts.Targets;
 using BGCS.NativeBuild.Execution;
 using BGCS.NativeBuild.Planning;
 using BGCS.Platforms.Targeting;
@@ -77,9 +78,17 @@ public sealed class NativeProofDeadlineTests
                 ?? throw new InvalidOperationException("The effective-source deadline gate requires its real installed Clang compiler.");
             string scratch = Path.Combine(m_root, "scratch");
             Directory.CreateDirectory(scratch);
-            NativeBuildRequest request = new(new TargetResolver().Resolve(new(new("host"))), [new(source, SourceLanguage.C, "c17")], scratch,
-                Path.Combine(scratch, OperatingSystem.IsWindows() ? "native.obj" : "native.o")) { outputKind = NativeOutputKind.Object };
+            NativeTargetDescriptor identity = new TargetResolver().Resolve(new(new("host")));
+            // This self-contained object proves callback cancellation, independently
+            // of SDK header discovery covered by the native provider matrix.
+            NativeTargetDescriptor target = new(identity.targetId, identity.platformId, identity.architectureId, identity.abiId, identity.triple,
+                new(compilerPath: compiler), identity.capabilities, identity.byteOrder);
+            NativeBuildRequest request = new(target, [new(source, SourceLanguage.C, "c17")], scratch,
+                Path.Combine(scratch, OperatingSystem.IsWindows() ? "native.obj" : "native.o"))
+            { outputKind = NativeOutputKind.Object, compilerArguments = ["-nostdinc"], linkerArguments = ["-nostdlib"] };
             plan = new CompilerBuildProvider("clang", compiler).Plan(request, CancellationToken.None);
+            Assert.Equal(m_root, Assert.Single(plan.includeSearchDirectories));
+            Assert.Empty(plan.argumentInputs.searchDirectories);
         }
 
         internal async ValueTask CheckPreprocessedSourceAsync(NativePreprocessingOperation operation, CancellationToken cancellationToken)

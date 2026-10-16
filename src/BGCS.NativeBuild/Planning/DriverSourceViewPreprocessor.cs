@@ -104,7 +104,10 @@ internal static class DriverSourceViewPreprocessor
         string? frontendPath = NativeBuildToolDiscovery.FindExecutable(reportedPath);
         if (frontendPath is null) throw new NotSupportedException("The selected native compiler did not identify its existing language frontend: " + reportedProgram);
         ImmutableArray<DeclaredExternalInput>.Builder componentInputs = ImmutableArray.CreateBuilder<DeclaredExternalInput>();
-        componentInputs.Add(new(compiler, ExternalInputKind.File)); componentInputs.Add(new(frontendPath, ExternalInputKind.File));
+        componentInputs.Add(new(compiler, ExternalInputKind.File));
+        // Clang commonly reports this exact driver path as its frontend. Keep
+        // distinct logical spellings and aliases as independent dependencies.
+        if (!StringComparer.Ordinal.Equals(compiler, frontendPath)) componentInputs.Add(new(frontendPath, ExternalInputKind.File));
         string[] componentDirectories = new[] { compiler, frontendPath }.Select(path => Path.GetDirectoryName(PhysicalPathResolver.Resolve(path))!).Distinct(Paths).ToArray();
         if (OperatingSystem.IsWindows())
             foreach (string directory in componentDirectories)
@@ -121,8 +124,7 @@ internal static class DriverSourceViewPreprocessor
             throw new NotSupportedException("The selected native compiler did not produce the required final -dM macro state.");
         var macroFacts = await Macros(source, native, plan, root, definitions.Where(definition => definition.name != marker).ToImmutableArray(), cancellationToken).ConfigureAwait(false);
         ImmutableArray<BindingDiagnostic> diagnostics = NativeSourceViewDiagnostics.Read(executed.executions, source).AddRange(macroFacts.diagnostics);
-        if (!SourceSnapshotVerifier.Matches(executed.inputSnapshot, cancellationToken) || !SourceSnapshotVerifier.Matches(components, cancellationToken)
-            || !SourceSnapshotVerifier.Matches(expandedArguments.snapshot, cancellationToken))
+        if (SourceSnapshotBatch.GetMismatch([executed.inputSnapshot, components, expandedArguments.snapshot], cancellationToken) is not null)
             throw new IOException("Native driver components or source inputs changed during source-view extraction.");
         SourceSnapshot retained = new(executed.inputSnapshot.files.Concat(executed.argumentInputs.files).Concat(components.files).Concat(expandedArguments.snapshot.files)
                 .Where(dependency => !Within(dependency.path, root)).DistinctBy(dependency => dependency.path, Paths).ToImmutableArray(),

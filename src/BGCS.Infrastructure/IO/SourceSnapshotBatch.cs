@@ -4,16 +4,27 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using BGCS.Contracts.Inputs;
-using BGCS.Infrastructure.IO;
 
-namespace BGCS.Composition;
+namespace BGCS.Infrastructure.IO;
 
-internal static class SourceSnapshotBatch
+/// <summary>Verifies snapshots at one input boundary while reading each exactly repeated dependency once.</summary>
+/// <remarks>Every call creates an independent verification scope. No result is retained across compiler,
+/// plugin or other external operations. File equality includes logical and physical paths, byte length
+/// and digest. Directory equality also includes the complete ordered exclusion list; absence checks
+/// and malformed collection checks remain obligations of every snapshot.</remarks>
+public static class SourceSnapshotBatch
 {
-    internal static string? GetMismatch(
+    /// <summary>Returns the first input mismatch while sharing exact file and directory checks within this call.</summary>
+    /// <param name="snapshots">The snapshots in their required validation order.</param>
+    /// <param name="cancellationToken">Cancels dependency reads and traversal.</param>
+    /// <returns>The first actionable mismatch, or null when all snapshots still match.</returns>
+    /// <exception cref="ArgumentNullException">The snapshot sequence or one of its snapshots is null.</exception>
+    /// <exception cref="OperationCanceledException">Cancellation is requested while processing the batch.</exception>
+    public static string? GetMismatch(
         IEnumerable<SourceSnapshot> snapshots,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken = default
     ) {
+        ArgumentNullException.ThrowIfNull(snapshots);
         // This set belongs to one verification fence, never an entire request.
         // Record equality includes both paths, byte length and content digest;
         // contradictory observations of the same file must still be checked.

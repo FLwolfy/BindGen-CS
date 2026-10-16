@@ -142,6 +142,7 @@ public sealed class NeutralGenerationHostTests
         await using BindingHost failing = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
             .AddArtifactProcessor("corrupt", 0, () => corrupt = new("corrupt", 0, changeAbi: true)).Build();
         GenerationResult failure = await failing.GenerateAsync(new(configuration, scratch.root));
+        Assert.True(corrupt!.changedAbi, "The processor must change an actual native export before exercising the final contract guard.");
         Assert.False(failure.success);
         Assert.Contains("actual", failure.GetDiagnosticSummary());
         Assert.True(corrupt!.disposed);
@@ -186,6 +187,7 @@ public sealed class NeutralGenerationHostTests
         public string id => identity;
         public int priority => order;
         public bool disposed { get; private set; }
+        public bool changedAbi { get; private set; }
         public IArtifactEditor? retained { get; private set; }
         public string? path { get; private set; }
         public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
@@ -195,7 +197,8 @@ public sealed class NeutralGenerationHostTests
             {
                 path = artifact.relativePath;
                 string original = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken);
-                string revised = changeAbi ? original.Replace("Cdecl", "Stdcall", StringComparison.Ordinal) : original + "\n// processed candidate\n";
+                string revised = changeAbi ? original.Replace("\"echo\"", "\"echo_tampered\"", StringComparison.Ordinal) : original + "\n// processed candidate\n";
+                changedAbi |= changeAbi && !string.Equals(original, revised, StringComparison.Ordinal);
                 await request.content.ReplaceTextAsync(artifact.relativePath, revised, cancellationToken);
             }
             if (addHelper)

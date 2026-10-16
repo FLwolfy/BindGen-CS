@@ -82,9 +82,11 @@ holder 必须可不抛异常地复制。Unique 按值参数从源 holder 移走�
 必须返回准确的 alternative，`index()` 必须返回有界无符号整数。生成代码先检查当前
 分支，再调用成员；不会假设 `std::get` 适用于自定义类型。
 
-Path 另需显式配置 `"pathFormat": "genericUtf8"`。`generic_u8string()` 必须返回
-可按 count 访问、code unit 为一字节整数的结果；编码与 separator 行为由用户明确
-声明。UTF-16 结果不能通过一字节协议，不会猜测平台 `wchar_t` 的编码。
+Path 另需显式选择 `"pathFormat": "genericUtf8"` 对应 `generic_u8string()`，
+或 `"pathFormat": "nativeUtf8"` 对应 `u8string()`。前者选择通用分隔符，后者保留
+目标平台的原生分隔符。两者均须返回可按 count 访问、code unit 为一字节整数的结果；
+编码与 separator 行为仍由用户明确声明。UTF-16 结果不能通过一字节协议，既不猜测
+平台 `wchar_t` 的编码，也不推定系统窄字符编码。
 
 Duration 必须有具体的 representation 与正值有界 `std::ratio` 模板事实。原生编译
 检查公开的 `rep`、`period`、规范化分子分母和准确的 `count()` 结果。Time-point
@@ -154,7 +156,8 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 索引返回原生错误。上限包含终止符，本身不能证明任意内存可读。编码、可读生命周期
 和终止符仍是明确的用户断言，receiver constness 保持实际 getter 的事实。
 
-可选的复制构造断言允许显式请求返回标量或 void 的 sequence-input adapter。
+可选的复制构造断言允许显式请求返回标量、void，或具有完整 creating-call 清理配对的
+新建拥有型默认标准文本值的 sequence-input adapter。
 适配器从计数输入复制出带终止符的临时存储，拒绝内嵌零以及达到扫描上限的长度，
 再在该次调用内构造真正的原生类。不得保留临时存储地址；const-reference 输入
 还需普通的 call/nonretention 断言。data/length 文本契约会保留，但原生 helper
@@ -192,7 +195,7 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 
 `span` 借用具有相同原生元素类型的存储。借用 span 或 const-reference 临时值要求明确 `retainsArgument: false` 与 `lifetime: "call"`，证据仍是用户断言。可写 span 映射为 `Span<T>`，const 元素映射为 `ReadOnlySpan<T>`。bool、enum 和 C++ 独立宽字符类型不能借用规范化载体。原生编译另行检查借用元素的类型身份。
 
-当前有限适配支持返回标量或 void 的普通调用。构造、自定义调用/结果表达式和 pointer/reference/record 返回需要额外的参数逃逸协议。可变或 rvalue 对象引用保留 raw。拥有型对象方法在同步 handle 调用外固定 span，只在 lambda 内捕获整数地址与检查后的长度；固定作用域覆盖完整调用，不捕获 ref struct。
+当前有限适配支持返回标量或 void 的普通调用。另一个严格限定的情形是按值返回新建的默认标准 `basic_string` 或 `filesystem::path`：结果必须以拥有型值表示，具备准确的析构配对和 creating-call 清理证明。不接受借用、pointer/reference、自定义文本或其他容器结果。构造及自定义调用/结果表达式仍需自己的协议。可变或 rvalue 对象引用保留 raw。拥有型对象方法在同步 handle 调用外固定 span，只在 lambda 内捕获整数地址与检查后的长度；固定作用域覆盖完整调用，不捕获 ref struct。
 
 ## 单值 recipe
 

@@ -24,7 +24,12 @@ internal static class ClangResourceHeaders
     private static string Extract()
     {
         using Stream resource = typeof(ClangResourceHeaders).Assembly.GetManifestResourceStream(C_RESOURCE_NAME) ?? throw new InvalidOperationException("The parser's Clang resource headers are missing from its assembly.");
-        string cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BGCS", "ClangResources");
+        // A new Unix profile may not have its data directory yet. The default
+        // GetFolderPath option then returns an empty string, which would put
+        // this cache in the caller's current native-source directory.
+        string data = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
+        if (!Path.IsPathFullyQualified(data)) throw new IOException("The locked parser resource cache requires an absolute local application-data directory.");
+        string cache = Path.Combine(data, "BGCS", "ClangResources");
         return EnsureExtracted(resource, cache);
     }
 
@@ -36,6 +41,7 @@ internal static class ClangResourceHeaders
     ) {
         ArgumentNullException.ThrowIfNull(resource);
         ArgumentException.ThrowIfNullOrWhiteSpace(cacheRoot);
+        if (!Path.IsPathFullyQualified(cacheRoot)) throw new ArgumentException("The parser resource cache requires an absolute directory.", nameof(cacheRoot));
         if (!resource.CanSeek) throw new ArgumentException("The locked parser resource stream must support seeking.", nameof(resource));
         resource.Position = 0;
         string hash = Convert.ToHexString(SHA256.HashData(resource));

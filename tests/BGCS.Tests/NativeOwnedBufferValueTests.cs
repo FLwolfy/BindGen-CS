@@ -71,8 +71,11 @@ public sealed class NativeOwnedBufferValueTests
                         using var api={{create}};
                         int input=2,state=19,output;
                         if(api.Process(in input,ref state,out output)!=42 || state!=21 || output!=42)return 1;
-                        input=-1; state=19;
+                        // Native failure leaves the directly borrowed output untouched.
+                        input=-1; state=19; output=0;
                         try{api.Process(in input,ref state,out output);return 2;}catch(global::BGCS.Runtime.NativeCallException){if(state!=19 || output!=0)return 3;}
+                        output=77;
+                        try{api.Process(in input,ref state,out output);return 10;}catch(global::BGCS.Runtime.NativeCallException){if(state!=19 || output!=77)return 11;}
                         int seed=40;
                         using var widget=api.CreateWidget(in seed);
                         input=2;state=19;

@@ -77,7 +77,7 @@ public sealed class NativeStorageAssertionEmitter
             if (type.category == NativeTypeCategory.Primitive) spelling = module.language == SourceLanguage.C && type.primitiveKind == "Bool" ? "_Bool" : type.spelling;
             else if (type.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration && declaration is not null
                 && declaration.name.Length != 0 && ConcreteOwners(declaration) && Accessible(declaration))
-                spelling = module.language == SourceLanguage.C ? type.spelling : declaration.qualifiedName;
+                spelling = module.language == SourceLanguage.C ? callableAssertions.RenderStorageType(type.id, string.Empty) : declaration.qualifiedName;
             if (spelling is null || !Regex.IsMatch(spelling, "^[A-Za-z_][A-Za-z0-9_: <>*,]*$", RegexOptions.CultureInvariant) || !emitted.Add(spelling)) continue;
             Check("sizeof(" + spelling + ")", type.size.Value, "native storage size");
             Check(alignment + "(" + spelling + ")", type.alignment.Value, "native storage alignment");

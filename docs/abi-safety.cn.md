@@ -56,7 +56,7 @@ Windows x64 的普通小聚合按大小分类；System V AMD64 还根据真实�
 
 两字节 `wchar_t` 可采用明确 UTF-16 契约，四字节需要 UTF-32。`"AB"` 的 UTF-32 首个 code point 是 65，不能把两个 UTF-16 合并成 4325441。补充平面字符、严格非法 Unicode 处理、终止符与原生长度单位需分别验证。
 
-当前临时输入字符串投影要求 read-only、零终止、明确不保留地址的调用 lifetime、明确 null 策略，而且没有独立 length 参数协议。其他 raw 文本协议需要明确支持的 projection/shim，不能伪装成该临时路径。
+临时输入字符串投影要求 read-only、明确不保留地址的同步调用 lifetime，以及明确的 null 策略。支持无长度通道的零终止输入，或明确不带终止符、具有一个独立普通整数输入长度参数的计数输入。计数路径在原生调用前核对编码宽度、字节序、字节／code-unit 长度单位、正值 code-unit 上限及原生整数范围。共享计数、固定长度、保留地址／异步文本和相互冲突的地址协议需要另行支持的 projection/shim；可表达的 raw ABI 仍然保留。
 
 ## Buffer、所有权、callback 与 async
 

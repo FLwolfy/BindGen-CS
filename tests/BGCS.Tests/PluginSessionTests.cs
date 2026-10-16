@@ -102,7 +102,35 @@ public sealed class PluginSessionTests
             };
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
+            TargetInspection inspected = Assert.Single(result.targetModels);
+            Assert.Equal("custom-wasm32", inspected.native.targetId);
+            Assert.Equal(4, inspected.native.pointerSize);
+            Assert.Equal(NativeByteOrder.LittleEndian, inspected.native.byteOrder);
             Assert.True(File.Exists(Path.Combine(result.outputRoot, "custom-wasm32", "metadata", "abi.manifest.json")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task CustomBrowserTargetWithoutByteOrder_CannotPublishAnAssumedAbi()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-plugin-target-unknown-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root, "custom.h"), "/* Explicit neutral frontend fixture input. */");
+        try
+        {
+            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<FrontendPlugin>()
+                .AddTargetProvider("probe.unknown-wasm", () => new CustomTarget(() => { }, NativeByteOrder.Unknown)).Build();
+            BindingConfiguration configuration = new()
+            {
+                schemaVersion = 1, library = new() { id = "custom", nativeName = "custom" }, source = new() { headers = ["custom.h"] },
+                targets = [new() { id = "custom-wasm32" }], cache = new() { enabled = false }
+            };
+            GenerationResult result = await host.GenerateAsync(new(configuration, root));
+            Assert.False(result.success);
+            Assert.False(result.published);
+            Assert.Contains("little-endian wasm32", result.GetDiagnosticSummary(), StringComparison.Ordinal);
+            Assert.False(Directory.Exists(result.outputRoot));
         }
         finally { Directory.Delete(root, recursive: true); }
     }
@@ -326,11 +354,11 @@ public sealed class PluginSessionTests
         public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => registry.RegisterFactory<INativeTargetProvider>("probe.target", () => new CustomTarget(() => { }));
     }
 
-    private sealed class CustomTarget(Action dispose) : INativeTargetProvider, IDisposable
+    private sealed class CustomTarget(Action dispose, NativeByteOrder byteOrder = NativeByteOrder.LittleEndian) : INativeTargetProvider, IDisposable
     {
         public bool TryResolve(NativeTargetRequest request, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out NativeTargetDescriptor? target)
         {
-            target = request.targetId.value == "custom-wasm32" ? new(request.targetId, "emscripten", "wasm32", "emscripten", "wasm32-unknown-emscripten", request.toolchain) : null;
+            target = request.targetId.value == "custom-wasm32" ? new(request.targetId, "emscripten", "wasm32", "emscripten", "wasm32-unknown-emscripten", request.toolchain, byteOrder: byteOrder) : null;
             return target is not null;
         }
         public void Dispose() => dispose();

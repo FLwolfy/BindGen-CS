@@ -49,7 +49,7 @@ Ordinary C inputs preserve one original native parameter each. An expanded param
 
 The verifier rejects missing, duplicate, unrelated, or out-of-order bindings. The emitter substitutes only declared names and invokes the native callable once. A group cannot infer ownership or a managed pinning protocol. The recipe form is `cpp.typeLowerings[].abiParameters`; the cookbook contains complete examples.
 
-Finite standard sequence adapters use `BridgeArgumentGroup.standardSequence` instead of a source-expression template. The model records the exact original element, compiler extent, copy/borrow operation, and evidence. Additional exports link to a preserved primary through `inputAdapterOf`; exact data/length coverage and unchanged scalar/void result identity are checked before emission. See the cookbook for `cpp.sequenceInputAdapters` and its explicit borrowing constraints.
+Finite standard sequence adapters use `BridgeArgumentGroup.standardSequence` instead of a source-expression template. The model records the exact original element, compiler extent, copy/borrow operation, and evidence. Additional exports link to a preserved primary through `inputAdapterOf`; exact data/length coverage and unchanged result identity are checked before emission. Results are limited to scalar/void or a fresh owned default-standard `basic_string`/`filesystem::path` value with its complete destruction pair and creating-call cleanup proof. Borrowed, pointer/reference, custom-text and other container results remain unavailable through this adapter, as do construction and custom invocation/result expressions. See the cookbook for `cpp.sequenceInputAdapters` and its explicit borrowing constraints.
 
 ## Operations, ownership, and errors
 

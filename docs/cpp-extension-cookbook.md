@@ -92,10 +92,12 @@ A custom variant additionally declares `"variantAccess": "memberGet"`. Its const
 bounded unsigned integral result. Generated access checks the active index before
 calling the member. BGCS does not assume that `std::get` accepts a custom type.
 
-A path binding explicitly declares `"pathFormat": "genericUtf8"`. Its
-`generic_u8string()` result needs counted, integral one-byte code units; the encoding
-and separator behavior are explicit user assertions. UTF-16 results fail the
-one-byte protocol. No platform-native `wchar_t` encoding is guessed.
+A path binding explicitly selects `"pathFormat": "genericUtf8"` for
+`generic_u8string()` or `"pathFormat": "nativeUtf8"` for `u8string()`. The former
+selects generic separators; the latter preserves the target's native separators.
+Both results need counted, integral one-byte code units; encoding and separator
+behavior remain explicit user assertions. UTF-16 results fail the one-byte protocol.
+Neither platform-native `wchar_t` nor the system narrow-character encoding is guessed.
 
 Duration bindings require concrete representation and positive bounded `std::ratio`
 template arguments. Native compilation checks the public `rep`, `period`, normalized
@@ -176,8 +178,9 @@ The limit includes the terminator and is not proof that arbitrary storage is
 readable. Encoding, readable lifetime and termination remain explicit user claims.
 Receiver constness follows the actual getter; no mutable operation is fabricated.
 
-The optional copying-constructor assertion permits an explicitly requested scalar
-or void sequence-input adapter. The adapter copies counted units into terminated
+The optional copying-constructor assertion permits an explicitly requested sequence-input
+adapter returning a scalar, void, or a fresh owned default-standard text value with its
+complete creating-call cleanup pair. The adapter copies counted units into terminated
 temporary storage, rejects embedded zeros and counts at or beyond the scan bound,
 and constructs the actual native class within the call. No native pointer may
 retain that temporary. Const-reference input also needs the ordinary explicit
@@ -217,7 +220,7 @@ The primary opaque export stays available. An additional export carries an eleme
 
 `span` borrows identical native element storage. A borrowed span or const-reference temporary requires explicit `retainsArgument: false` and `lifetime: "call"`; this remains a user assertion. Writable native spans project to `Span<T>` and const element spans to `ReadOnlySpan<T>`. Distinct bool, enum, and wide-character C++ types cannot borrow normalized carriers. Native compilation independently checks borrowed element type identity.
 
-These adapters support ordinary calls returning scalars or void. Constructors, custom invocation/result expressions, and pointer/reference/record results need an explicit escaping-argument protocol. Mutable or rvalue object references stay raw. Owned-object calls pin spans outside their synchronous handle invocation and capture integral addresses plus checked bounds, so pinning remains active through the call without capturing a ref struct.
+These adapters support ordinary calls returning scalars or void. A narrow additional case accepts a fresh by-value default-standard `basic_string` or `filesystem::path` result represented as an owned value, with its exact destruction pair and creating-call cleanup proof. It does not accept borrowed, pointer/reference, custom-text or other container results. Constructors and custom invocation/result expressions still need their own protocol. Mutable or rvalue object references stay raw. Owned-object calls pin spans outside their synchronous handle invocation and capture integral addresses plus checked bounds, so pinning remains active through the call without capturing a ref struct.
 
 ## A fixed value recipe
 

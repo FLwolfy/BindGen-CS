@@ -49,7 +49,7 @@ flowchart TD
 
 验证器拒绝缺失、重复、无关或乱序绑定；emitter 只替换声明的名称，执行一次原生调用。参数组不能推断所有权或托管 pinning 协议。声明式入口为 `cpp.typeLowerings[].abiParameters`，完整配置见实战手册。
 
-有限标准序列适配使用 `BridgeArgumentGroup.standardSequence`，无需拼接 source-expression 模板。模型保存准确元素类型、编译器 extent、复制/借用操作和证据。新增导出通过 `inputAdapterOf` 关联保留的原导出；生成前检查完整 data/length 覆盖与不变的标量/void 结果身份。`cpp.sequenceInputAdapters` 配置和明确的借用限制见实战手册。
+有限标准序列适配使用 `BridgeArgumentGroup.standardSequence`，无需拼接 source-expression 模板。模型保存准确元素类型、编译器 extent、复制/借用操作和证据。新增导出通过 `inputAdapterOf` 关联保留的原导出；生成前检查完整 data/length 覆盖与不变的结果身份。结果仅限标量/void，或具备完整析构配对和 creating-call 清理证明的新建拥有型默认标准 `basic_string`/`filesystem::path` 值。此适配器仍不接受借用、pointer/reference、自定义文本及其他容器结果，也不处理构造和自定义调用/结果表达式。`cpp.sequenceInputAdapters` 配置和明确的借用限制见实战手册。
 
 ## 操作、所有权与异常
 

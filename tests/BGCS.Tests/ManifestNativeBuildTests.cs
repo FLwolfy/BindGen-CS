@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using BGCS.Configuration;
 using BGCS.Contracts.Bridge;
 using BGCS.Contracts.Inputs;
+using BGCS.Contracts.Native;
 using BGCS.Contracts.Ports;
 using BGCS.Contracts;
 using BGCS.Contracts.Plugins;
@@ -422,10 +423,19 @@ public sealed class ManifestNativeBuildTests
             {
                 nativeBuild = configuration.nativeBuild with { compilerArguments = ["-DBGCS_ALTER_SIGNATURE=1"] }
             };
+            TargetInspection inspection = Assert.Single(first.generation.targetModels);
+            NativeType originalReturn = NativeFactDriftAssertions.Return(inspection.native);
+            Assert.Equal("Int", originalReturn.primitiveKind);
+            Assert.Equal(4, originalReturn.size);
+            NativeModule effective = await NativeFactDriftAssertions.ObserveAsync(host, divergent, temporary, inspection.resolvedTarget!, divergent.nativeBuild.compilerArguments);
+            NativeType changedReturn = NativeFactDriftAssertions.Return(effective);
+            Assert.Equal("Float", changedReturn.primitiveKind);
+            Assert.Equal(originalReturn.size, changedReturn.size);
+            NativeDeclaration effectiveFunction = Assert.Single(effective.declarations, declaration => declaration.kind == "Function" && declaration.name == "twice");
+            NativeDeclaration effectiveParameter = Assert.Single(effectiveFunction.children.Select(effective.GetDeclaration), declaration => declaration.kind == "Parameter");
+            Assert.Equal("Float", NativeFactDriftAssertions.Canonical(effective, effectiveParameter.type!.Value).primitiveKind);
             BuildResult rejected = await host.BuildAsync(new(new(divergent, temporary)));
-            Assert.False(rejected.success);
-            Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.message.Contains("storage.assertions", StringComparison.Ordinal)
-                || diagnostic.message.Contains("bridge.cpp", StringComparison.Ordinal));
+            NativeFactDriftAssertions.Reject(rejected, "twice (callable signature)");
             AssertArtifactsEqual(previous, first.outputRoot);
         }
         finally { Directory.Delete(temporary, recursive: true); }
@@ -451,9 +461,19 @@ public sealed class ManifestNativeBuildTests
             Assert.True(first.success, first.GetDiagnosticSummary());
             Dictionary<string, byte[]> previous = ReadArtifacts(first.outputRoot);
             BindingConfiguration divergent = configuration with { nativeBuild = configuration.nativeBuild with { compilerArguments = ["-DBGCS_ALTER_ENUM_SIGN=1"] } };
+            TargetInspection inspection = Assert.Single(first.generation.targetModels);
+            NativeType originalEnum = NativeFactDriftAssertions.Return(inspection.native);
+            Assert.Equal(NativeTypeCategory.Enumeration, originalEnum.category);
+            NativeType originalInteger = NativeFactDriftAssertions.Canonical(inspection.native, originalEnum.elementType!.Value);
+            Assert.Equal(true, originalInteger.isSigned);
+            NativeModule effective = await NativeFactDriftAssertions.ObserveAsync(host, divergent, temporary, inspection.resolvedTarget!, divergent.nativeBuild.compilerArguments);
+            NativeType changedEnum = NativeFactDriftAssertions.Return(effective);
+            NativeType changedInteger = NativeFactDriftAssertions.Canonical(effective, changedEnum.elementType!.Value);
+            Assert.Equal(false, changedInteger.isSigned);
+            Assert.Equal(originalEnum.size, changedEnum.size);
+            Assert.Equal(originalInteger.size, changedInteger.size);
             BuildResult rejected = await host.BuildAsync(new(new(divergent, temporary)));
-            Assert.False(rejected.success);
-            Assert.Contains("native enum underlying type differs from parsed facts", rejected.GetDiagnosticSummary());
+            NativeFactDriftAssertions.Reject(rejected, "NativeState.element (exact native type or storage facts)");
             AssertArtifactsEqual(previous, first.outputRoot);
         }
         finally { Directory.Delete(temporary, recursive: true); }
@@ -474,9 +494,17 @@ public sealed class ManifestNativeBuildTests
             Assert.True(first.success, first.GetDiagnosticSummary());
             Dictionary<string, byte[]> previous = ReadArtifacts(first.outputRoot);
             BindingConfiguration divergent = configuration with { nativeBuild = configuration.nativeBuild with { compilerArguments = ["-funsigned-char"] } };
+            TargetInspection inspection = Assert.Single(first.generation.targetModels);
+            NativeType originalChar = NativeFactDriftAssertions.Return(inspection.native);
+            Assert.Equal("Char", originalChar.primitiveKind);
+            Assert.Equal(true, originalChar.isSigned);
+            NativeModule effective = await NativeFactDriftAssertions.ObserveAsync(host, divergent, temporary, inspection.resolvedTarget!, divergent.nativeBuild.compilerArguments);
+            NativeType changedChar = NativeFactDriftAssertions.Return(effective);
+            Assert.Equal("Char", changedChar.primitiveKind);
+            Assert.Equal(false, changedChar.isSigned);
+            Assert.Equal(originalChar.size, changedChar.size);
             BuildResult rejected = await host.BuildAsync(new(new(divergent, temporary)));
-            Assert.False(rejected.success);
-            Assert.Contains("native integral signedness differs from parsed facts", rejected.GetDiagnosticSummary());
+            NativeFactDriftAssertions.Reject(rejected, "twice (callable signature)");
             AssertArtifactsEqual(previous, first.outputRoot);
         }
         finally { Directory.Delete(temporary, recursive: true); }

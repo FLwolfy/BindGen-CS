@@ -30,6 +30,7 @@ public sealed class ExternalInputSnapshotBuilder
         Dictionary<string, InputDependency> files = new(comparer);
         Dictionary<string, DirectoryInputDependency> directories = new(comparer);
         Dictionary<string, MissingInputDependency> missing = new(comparer);
+        PhysicalPathResolver.ResolutionScope? paths = null;
         foreach (DeclaredExternalInput input in inputs)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -55,7 +56,7 @@ public sealed class ExternalInputSnapshotBuilder
                 while (pending.TryPop(out string? directory))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!visited.Add(PhysicalPathResolver.Resolve(directory))) continue;
+                    if (!visited.Add((paths ??= new()).Resolve(directory, cancellationToken))) continue;
                     foreach (FileSystemInfo entry in new DirectoryInfo(directory).EnumerateFileSystemInfos())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -68,13 +69,16 @@ public sealed class ExternalInputSnapshotBuilder
         SourceSnapshot snapshot = new(files.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray(),
             directories.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray())
         { absentInputs = missing.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray() };
+        // Recheck the capture-local component observations independently before
+        // the existing second complete byte, absence and membership verification.
+        paths?.Verify(cancellationToken);
         if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken)) throw new IOException("External inputs changed while their snapshot was being captured.");
         return snapshot;
 
         void AddFile(string path)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string physical = PhysicalPathResolver.Resolve(path);
+            string physical = (paths ??= new()).Resolve(path, cancellationToken);
             using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.SequentialScan);
             InputDependency dependency = new(path, physical, stream.Length, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(stream))));
             if (files.TryGetValue(path, out InputDependency? previous) && previous != dependency) throw new IOException("An external file changed during dependency discovery.");

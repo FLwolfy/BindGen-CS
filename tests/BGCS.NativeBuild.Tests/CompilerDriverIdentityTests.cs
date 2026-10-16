@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using BGCS.Contracts.Inputs;
@@ -28,7 +29,13 @@ public sealed class CompilerDriverIdentityTests
             string compiler = ToolchainDiscovery.FindCompiler(SourceLanguage.C, "clang")
                 ?? (OperatingSystem.IsWindows() && File.Exists("C:/Program Files/LLVM/bin/clang.exe") ? "C:/Program Files/LLVM/bin/clang.exe" : null)
                 ?? throw new InvalidOperationException("The native driver identity fixture requires the installed Clang gate compiler.");
-            var compiled = await ProcessExecutor.ExecuteAsync(compiler, ["--no-default-config", source, "-o", executable], root, TimeSpan.FromMinutes(2));
+            NativeTargetDescriptor host = ToolchainResolver.ResolveToolchain(
+                new TargetResolver().Resolve(new(new NativeTargetId("host"), new(compilerPath: compiler))), SourceLanguage.C, "clang");
+            List<string> arguments = ["--no-default-config"];
+            foreach (string include in host.toolchain.systemIncludeFolders) { arguments.Add("-isystem"); arguments.Add(include); }
+            arguments.AddRange([source, "-o", executable]);
+            foreach (string directory in host.toolchain.libraryDirectories) { arguments.Add("-L"); arguments.Add(directory); }
+            var compiled = await ProcessExecutor.ExecuteAsync(compiler, arguments, root, TimeSpan.FromMinutes(2));
             Assert.True(compiled.exitCode == 0 && !compiled.timedOut, compiled.standardOutput + compiled.standardError);
             Assert.Equal(family, ToolchainDiscovery.GetCompilerDriverFamily(SourceLanguage.C, executable));
             NativeTargetDescriptor declared = new TargetResolver().Resolve(new(new NativeTargetId("linux-x64-gnu"), new(compilerPath: executable)));

@@ -30,6 +30,7 @@ using BGCS.Contracts.Targets;
 using BGCS.Infrastructure.Publishing;
 using BGCS.Composition;
 using BGCS.Infrastructure.Caching;
+using BGCS.Infrastructure.IO;
 
 namespace BGCS;
 
@@ -180,10 +181,11 @@ public sealed partial class BindingHost
                 }
             }
             using ArtifactPublisher publisher = new(output, configuration.library.id, protectedInputs, cancellation.Token);
-            StringComparison publicationPathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
             string normalizedPreviewOutput = output.Replace('\\', '/').TrimEnd('/');
             string[] normalizedCandidateOrigins = [publisher.candidateRoot.Replace('\\', '/').TrimEnd('/'),
                 Path.GetRelativePath(request.baseDirectory, publisher.candidateRoot).Replace('\\', '/').TrimEnd('/')];
+            CandidateMetadataNormalizer metadataNormalizer = new(normalizedCandidateOrigins, logicalOutput,
+                request.previewOutputRoot is null ? null : normalizedPreviewOutput, OperatingSystem.IsWindows());
             FrontendGenerationCache primaryFrontendCache = new(reusableEmissionCache, unavailableCacheReason, extensionInputs, cacheEvidence, pendingCacheEntries);
             DirectoryArtifactSink rootSink = new(publisher.candidateRoot);
             HashSet<string> concreteTargets = new(StringComparer.Ordinal);
@@ -999,10 +1001,11 @@ public sealed partial class BindingHost
                 cancellation.Token.ThrowIfCancellationRequested();
                 JsonNode? document = JsonSerializer.SerializeToNode(value, value is BGCS.Contracts.Requests.NativeBuildManifest
                     ? BGCS.Infrastructure.Workers.WorkerProtocol.jsonOptions : null);
-                NormalizeCandidatePaths(document);
+                metadataNormalizer.Normalize(document);
                 string text = (document?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) ?? "null") + "\n";
-                rootSink.WriteText(path, text);
-                artifacts.Add(new(path, "application/json", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text))))));
+                byte[] content = Encoding.UTF8.GetBytes(text);
+                rootSink.WriteBytes(path, content);
+                artifacts.Add(new(path, "application/json", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(content)))));
             }
 
             void RejectFormalOutputReads(SourceSnapshot snapshot)
@@ -1019,38 +1022,6 @@ public sealed partial class BindingHost
                 }
             }
 
-            void NormalizeCandidatePaths(JsonNode? node)
-            {
-                if (node is JsonObject properties)
-                    foreach (string name in properties.Select(property => property.Key).ToArray())
-                    {
-                        if (properties[name] is JsonValue scalar && scalar.TryGetValue(out string? text)) properties[name] = Logical(text);
-                        else NormalizeCandidatePaths(properties[name]);
-                        if (name == "excludedDirectories" && properties[name] is JsonArray excluded)
-                            properties[name] = new JsonArray(excluded.Select(value => value!.GetValue<string>()).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
-                                .Select(value => (JsonNode?)JsonValue.Create(value)).ToArray());
-                    }
-                else if (node is JsonArray values)
-                    for (int index = 0; index < values.Count; index++)
-                    {
-                        if (values[index] is JsonValue scalar && scalar.TryGetValue(out string? text)) values[index] = Logical(text);
-                        else NormalizeCandidatePaths(values[index]);
-                    }
-
-                string? Logical(string? text)
-                {
-                    if (text is null) return null;
-                    string candidate = text.Replace('\\', '/');
-                    if (request.previewOutputRoot is not null && candidate.TrimEnd('/').Equals(normalizedPreviewOutput, publicationPathComparison))
-                        return logicalOutput;
-                    foreach (string normalized in normalizedCandidateOrigins)
-                    {
-                        if (candidate.Equals(normalized, publicationPathComparison)) return "artifact:/";
-                        if (candidate.StartsWith(normalized + "/", publicationPathComparison)) return "artifact:/" + candidate[(normalized.Length + 1)..];
-                    }
-                    return text;
-                }
-            }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { throw; }
         catch (Exception failure)

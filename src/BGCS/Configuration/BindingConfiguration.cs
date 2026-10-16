@@ -57,7 +57,7 @@ public sealed record BindingConfiguration
 /// <summary>Declares typed C++ bridge inputs before native parsing.</summary>
 public sealed record CppConfiguration
 {
-    /// <summary>Gets exact user-asserted String, Vector, Span, Array and Optional template protocols without substituting native storage.</summary>
+    /// <summary>Gets exact user-asserted finite string, sequence, associative, optional, variant, expected, smart pointer, path and chrono protocols without substituting native storage.</summary>
     public ImmutableArray<CppFamilyBinding> familyBindings { get; init; } = [];
     /// <summary>Gets concrete class and fixed function template instantiations.</summary>
     public TemplateInstantiationRequest templateInstantiations { get; init; } = new();

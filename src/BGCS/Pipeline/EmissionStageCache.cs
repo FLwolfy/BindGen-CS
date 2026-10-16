@@ -96,7 +96,7 @@ internal static class EmissionStageCache
         });
         using MemoryStream bytes = new();
         using (Utf8JsonWriter writer = new(bytes)) Canonical(identity, writer);
-        return new(Convert.ToHexStringLower(SHA256.HashData(bytes.ToArray())));
+        return new(Convert.ToHexStringLower(SHA256.HashData(bytes.GetBuffer().AsSpan(0, checked((int)bytes.Length)))));
     }
 
     private static void Canonical(

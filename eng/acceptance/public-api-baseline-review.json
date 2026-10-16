@@ -46,9 +46,9 @@
     {
       "assembly": "BGCS.Infrastructure",
       "baseline": "tests/public-api/BGCS.Infrastructure.txt",
-      "sha256": "30236412f0972dec1307ccd4388ad094f79cc8a65d48ea0adce932a258787cc8",
-      "lines": 338,
-      "exportedTypes": 50
+      "sha256": "a21ff019908042470a867e03610631bf205f02579634952bb1d7121ce6aa7d52",
+      "lines": 340,
+      "exportedTypes": 51
     },
     {
       "assembly": "BGCS.Platforms",
@@ -95,6 +95,7 @@
   ],
   "reviewedPreReleaseChanges": [
     "NativeBuildCommand.outputEncoding stores an optional neutral encoding name in the immutable command plan and receipt. Null retains the platform default; Meson explicitly selects UTF-8.",
-    "ProcessExecutor.ExecuteAsync accepts a final optional Encoding argument for both redirected streams. Existing tools retain their default decoding; no Python or Meson heuristic enters Infrastructure."
+    "ProcessExecutor.ExecuteAsync accepts a final optional Encoding argument for both redirected streams. Existing tools retain their default decoding; no Python or Meson heuristic enters Infrastructure.",
+    "SourceSnapshotBatch.GetMismatch shares exact-record file and complete directory-query verification within one fence across Host and NativeBuild. Each later fence remains fresh; contradictory records, ordered exclusions, absence and cancellation remain independent. No legacy alias or production friend access is added."
   ]
 }

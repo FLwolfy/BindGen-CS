@@ -119,6 +119,9 @@ internal sealed class NativeCallableAssertionEmitter(NativeModule module)
             case NativeTypeCategory.Record:
             case NativeTypeCategory.Enumeration:
                 string spelling = module.language == SourceLanguage.C && type.primitiveKind == "Bool" ? "_Bool" : type.spelling;
+                if (module.language == SourceLanguage.C && type.category == NativeTypeCategory.Record
+                    && type.declaration is StableId recordIdentity && module.GetDeclaration(recordIdentity) is { name.Length: > 0 } record)
+                    spelling = record.role switch { "Struct" => "struct " + record.name, "Union" => "union " + record.name, _ => spelling };
                 if (spelling.Any(character => character is ';' or '{' or '}' or '\r' or '\n' or '\0')) throw new ArgumentException("The native callable type cannot be represented by a controlled declarator.");
                 return (qualifiers + " " + spelling + " " + declarator).Trim();
             default:

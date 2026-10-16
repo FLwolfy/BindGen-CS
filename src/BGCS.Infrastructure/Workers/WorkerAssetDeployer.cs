@@ -1,13 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Common;
+using BGCS.Contracts.Inputs;
+using BGCS.Infrastructure.IO;
 using BGCS.Infrastructure.Publishing;
 using BGCS.Infrastructure.Verification;
 
@@ -81,6 +85,131 @@ public sealed class WorkerAssetDeployer
             ?? throw new IOException("The worker asset manifest is empty.");
     }
 
+    internal (WorkerAssetManifest Manifest, SourceSnapshot Snapshot, string RuntimeConfiguration) CaptureVerifiedDeployment(
+        string root,
+        string hostRid,
+        string runtimeConfigurationPath,
+        IEnumerable<DeclaredExternalInput> extraExecutionInputs,
+        CancellationToken cancellationToken
+    ) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(root);
+        ArgumentNullException.ThrowIfNull(extraExecutionInputs);
+        string source = Path.GetFullPath(root);
+        OwnedPathBoundary boundary = new(source);
+        // Reject linked deployment members before reading even the small JSON
+        // inputs. This traversal is shared with ordinary artifact verification.
+        HashSet<string> initialFiles = ReadFileSet();
+        byte[] manifestBytes = Read("worker-assets.manifest.json", 16 * 1024 * 1024);
+        WorkerAssetManifest manifest;
+        using (MemoryStream stream = new(manifestBytes, writable: false))
+            manifest = JsonSerializer.Deserialize<WorkerAssetManifest>(stream,
+                new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
+                ?? throw new IOException("The worker asset manifest is empty.");
+        ValidateManifest(manifest, hostRid);
+        Dictionary<string, ArtifactDescriptor> expected = new(StringComparer.OrdinalIgnoreCase);
+        foreach (ArtifactDescriptor artifact in manifest.artifacts)
+        {
+            string relative = ArtifactDigestVerifier.ValidateRelativePath(artifact.relativePath);
+            if (!expected.TryAdd(relative, artifact)) throw new IOException($"Duplicate artifact path '{relative}'.");
+        }
+        HashSet<string> additional = new(StringComparer.OrdinalIgnoreCase) { "worker-assets.manifest.json" };
+        if (File.Exists(Path.Combine(source, ".bgcs-artifacts.json"))) additional.Add(".bgcs-artifacts.json");
+        if (additional.Overlaps(expected.Keys)) throw new IOException("An artifact path is also reserved as publication metadata.");
+        VerifyFileSet(initialFiles);
+        const string dependenciesPath = "BGCS.Frontend.Clang.Worker.deps.json";
+        string runtimeRelative = ArtifactDigestVerifier.ValidateRelativePath(Path.GetRelativePath(source, runtimeConfigurationPath));
+        byte[] dependencyBytes = Read(dependenciesPath);
+        byte[] runtimeBytes = Read(runtimeRelative);
+        ValidateManagedDependencies(source, manifest, Text(dependencyBytes));
+
+        ImmutableArray<DeclaredExternalInput> inputs = expected.Keys
+            .Select(relative => new DeclaredExternalInput(Path.Combine(source, ActualSpelling(relative)), ExternalInputKind.File))
+            .Append(new(Path.Combine(source, "worker-assets.manifest.json"), ExternalInputKind.File))
+            .Concat(extraExecutionInputs).ToImmutableArray();
+        // Capture includes its existing independent post-capture Matches pass.
+        // No digest is memoized across that fence or any later verification.
+        SourceSnapshot snapshot = new ExternalInputSnapshotBuilder().Capture(inputs, source, cancellationToken);
+        StringComparer pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        Dictionary<string, InputDependency> observed = snapshot.files.ToDictionary(input => input.path, pathComparer);
+        foreach (var entry in expected)
+            if (Observation(entry.Key).digest != entry.Value.digest)
+                throw new IOException($"Artifact content digest mismatch: '{entry.Key}'.");
+        VerifyRead("worker-assets.manifest.json", manifestBytes);
+        VerifyRead(dependenciesPath, dependencyBytes);
+        VerifyRead(runtimeRelative, runtimeBytes);
+        boundary.Verify();
+        VerifyFileSet(ReadFileSet());
+        boundary.Verify();
+        return (manifest, snapshot, Text(runtimeBytes));
+
+        HashSet<string> ReadFileSet()
+        {
+            boundary.Verify();
+            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string file in ArtifactDigestVerifier.EnumerateFiles(boundary.physicalPath))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string relative = Path.GetRelativePath(boundary.physicalPath, file).Replace('\\', '/');
+                if (!seen.Add(relative)) throw new IOException($"Artifact case collision at '{relative}'.");
+            }
+            boundary.Verify();
+            return seen;
+        }
+        void VerifyFileSet(HashSet<string> seen)
+        {
+            foreach (string relative in seen)
+                if (!expected.ContainsKey(relative) && !additional.Contains(relative))
+                    throw new IOException($"Unlisted artifact '{relative}' cannot be published.");
+            foreach (string relative in expected.Keys.Concat(additional))
+                if (!seen.Contains(relative)) throw new IOException($"Required artifact '{relative}' is missing.");
+        }
+        byte[] Read(
+            string relative,
+            int maximumBytes = int.MaxValue
+        ) {
+            cancellationToken.ThrowIfCancellationRequested();
+            boundary.Verify();
+            string path = Path.Combine(boundary.physicalPath, relative);
+            OwnedPathBoundary.RejectPhysicalLinks(path);
+            using FileStream stream = File.OpenRead(path);
+            if (stream.Length > maximumBytes) throw new IOException("The worker asset input exceeds its size limit.");
+            byte[] bytes = new byte[checked((int)stream.Length)];
+            stream.ReadExactly(bytes);
+            boundary.Verify();
+            return bytes;
+        }
+        InputDependency Observation(string relative)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string actual = ActualSpelling(relative);
+            string logical = Path.GetFullPath(Path.Combine(source, actual));
+            if (!observed.TryGetValue(logical, out InputDependency? input)
+                || !pathComparer.Equals(input.resolvedPath, Path.GetFullPath(Path.Combine(boundary.physicalPath, actual))))
+                throw new IOException($"A worker asset changed its physical identity during capture: '{relative}'.");
+            return input;
+        }
+        string ActualSpelling(string relative)
+        {
+            if (!initialFiles.TryGetValue(relative, out string? actual))
+                throw new IOException($"Required artifact '{relative}' is missing.");
+            return actual;
+        }
+        void VerifyRead(
+            string relative,
+            byte[] bytes
+        ) {
+            InputDependency input = Observation(relative);
+            if (input.length != bytes.LongLength || input.digest.value != Convert.ToHexStringLower(SHA256.HashData(bytes)))
+                throw new IOException($"A worker asset changed between reading and snapshot capture: '{relative}'.");
+        }
+        static string Text(byte[] bytes)
+        {
+            using MemoryStream stream = new(bytes, writable: false);
+            using StreamReader reader = new(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            return reader.ReadToEnd();
+        }
+    }
+
     private static void ValidateManifest(
         WorkerAssetManifest manifest,
         string hostRid
@@ -103,9 +232,10 @@ public sealed class WorkerAssetDeployer
 
     private static void ValidateManagedDependencies(
         string source,
-        WorkerAssetManifest manifest
+        WorkerAssetManifest manifest,
+        string? capturedText = null
     ) {
-        using JsonDocument dependencies = JsonDocument.Parse(File.ReadAllText(Path.Combine(source, "BGCS.Frontend.Clang.Worker.deps.json")));
+        using JsonDocument dependencies = JsonDocument.Parse(capturedText ?? File.ReadAllText(Path.Combine(source, "BGCS.Frontend.Clang.Worker.deps.json")));
         string target = dependencies.RootElement.GetProperty("runtimeTarget").GetProperty("name").GetString() ?? throw new IOException("The worker dependency target is missing.");
         WorkerDependencyClosure.Verify(dependencies.RootElement.GetProperty("targets").GetProperty(target), manifest);
     }
