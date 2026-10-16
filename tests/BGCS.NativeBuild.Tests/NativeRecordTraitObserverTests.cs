@@ -155,7 +155,7 @@ public sealed class NativeRecordTraitObserverTests
         string proof = Path.Combine(fixture.root, "check.cpp");
         await File.WriteAllTextAsync(proof, "#include \"" + fixture.header.Replace('\\', '/') + "\"\nstatic_assert(__is_standard_layout(Observed) == " + (fact.isStandardLayout ? "1" : "0") + ");\n");
         NativeBuildPlan check = new CompilerBuildProvider("gnu", fixture.target.toolchain.compilerPath!).Plan(new(fixture.target,
-            [new(proof, SourceLanguage.Cpp, "c++23")], Path.Combine(fixture.root, "check"), Path.Combine(fixture.root, "check.o"))
+            [new(proof, SourceLanguage.Cpp, "c++23")], Path.Combine(fixture.root, "check"), Path.Combine(fixture.root, "check", "check.o"))
         { outputKind = NativeOutputKind.Object, systemIncludeDirectories = fixture.target.toolchain.systemIncludeFolders.Concat(fixture.target.toolchain.cxxSystemIncludeFolders).ToImmutableArray() }, CancellationToken.None);
         NativeBuildExecutionResult result = await new PlannedNativeBuildExecutor().ExecuteWithDependenciesAsync(check, TimeSpan.FromSeconds(90));
         Assert.All(result.executions, execution => Assert.Equal(0, execution.exitCode));
