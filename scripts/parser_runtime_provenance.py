@@ -6,8 +6,11 @@ import argparse
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
+import shutil
 import struct
 import subprocess
+import tempfile
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -141,6 +144,46 @@ def verify_supplemental(root: Path, directory: Path, expected_revision: str) -> 
     return manifest
 
 
+def stage_worker(root: Path, directory: Path, worker_output: Path, expected_revision: str) -> dict:
+    """Install only the explicitly verified Intel resource closure into its worker build output."""
+    directory = directory.resolve()
+    worker_output = worker_output.resolve()
+    if not (worker_output / "BGCS.Frontend.Clang.Worker.dll").is_file():
+        raise RuntimeError("Intel parser staging requires the completed worker output assembly.")
+    if directory.is_relative_to(worker_output) or worker_output.is_relative_to(directory):
+        raise RuntimeError("The Intel parser source and worker output must have separate owned roots.")
+    manifest = verify_supplemental(root, directory, expected_revision)
+    destination = worker_output / "runtimes/osx-x64/native"
+    if destination.is_symlink() or destination.resolve() != destination:
+        raise RuntimeError("The owned worker parser destination cannot traverse a linked path.")
+    if destination.exists() and any(path.is_symlink() for path in destination.rglob("*")):
+        raise RuntimeError("The owned worker parser destination contains an unexpected symbolic link.")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".bgcs-parser-stage-", dir=destination.parent))
+    previous = destination.with_name(".bgcs-parser-previous-" + uuid.uuid4().hex)
+    try:
+        for relative in [entry["path"] for entry in manifest["artifacts"]] + ["runtime-provenance.json"]:
+            target = staging / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(directory / relative, target)
+        verify_supplemental(root, staging, expected_revision)
+        verify_supplemental(root, directory, expected_revision)
+        if destination.exists():
+            destination.rename(previous)
+        try:
+            staging.rename(destination)
+        except BaseException:
+            if previous.exists():
+                previous.rename(destination)
+            raise
+        if previous.exists():
+            shutil.rmtree(previous)
+        return manifest
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
+
+
 def verify_native_components(directory: Path, components, actual: dict[str, Path]) -> None:
     if not isinstance(components, list) or not components:
         raise RuntimeError("The Intel parser lacks actual native component dependency/license provenance.")
@@ -260,19 +303,24 @@ def create(root: Path, directory: Path, clang_source: Path, llvm_version: str, h
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("create", "verify"))
+    parser.add_argument("mode", choices=("create", "verify", "stage-worker"))
     parser.add_argument("directory", type=Path)
     parser.add_argument("--clang-source", type=Path)
     parser.add_argument("--llvm-version")
     parser.add_argument("--homebrew-info", type=Path)
     parser.add_argument("--llvm-prefix", type=Path)
     parser.add_argument("--native-origins", type=Path)
+    parser.add_argument("--worker-output", type=Path)
     args = parser.parse_args()
     if args.mode == "create":
         if not args.clang_source or not args.llvm_version or not args.homebrew_info or not args.llvm_prefix or not args.native_origins:
             parser.error("Creating actual Intel provenance requires its source checkout, LLVM version and captured Homebrew inputs.")
         manifest = create(ROOT, args.directory.resolve(), args.clang_source.resolve(), args.llvm_version, args.homebrew_info.resolve(),
                           args.llvm_prefix.resolve(), args.native_origins.resolve())
+    elif args.mode == "stage-worker":
+        if args.worker_output is None:
+            parser.error("Intel worker staging requires its explicit completed output root.")
+        manifest = stage_worker(ROOT, args.directory, args.worker_output, git_head(ROOT))
     else:
         manifest = verify_supplemental(ROOT, args.directory.resolve(), git_head(ROOT))
     print("Verified actual Intel parser provenance and " + str(len(manifest["artifacts"])) + " file digests.")

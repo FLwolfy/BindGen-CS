@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Inputs;
@@ -34,6 +35,8 @@ public sealed class NativeProviderExecutionTests
     public async Task WindowsProvidersCompileMixedC17Cpp23AndInvoke(string providerId)
     {
         if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64) return;
+        string? parentPythonUtf8 = Environment.GetEnvironmentVariable("PYTHONUTF8");
+        string? parentPythonEncoding = Environment.GetEnvironmentVariable("PYTHONIOENCODING");
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs provider 验收 & 50% " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         nint module = 0;
@@ -67,6 +70,27 @@ public sealed class NativeProviderExecutionTests
             };
             var provider = new NativeBuildProviderResolver().Resolve(target, providerId);
             NativeBuildPlan plan = provider.Plan(request, CancellationToken.None);
+            if (providerId == "meson")
+            {
+                Assert.All(plan.commands, command =>
+                {
+                    Assert.Equal("1", command.environmentOverrides["PYTHONUTF8"]);
+                    Assert.Equal("utf-8", command.environmentOverrides["PYTHONIOENCODING"]);
+                    Assert.Equal("utf-8", command.outputEncoding);
+                    Assert.Null(command.environmentOverrides["INCLUDE"]);
+                });
+                // Native construction receipts persist this same complete plan;
+                // encoding belongs to its identity, not the invoking test shell.
+                JsonElement frozen = JsonSerializer.SerializeToElement(plan);
+                Assert.All(frozen.GetProperty("commands").EnumerateArray(), command =>
+                {
+                    JsonElement environment = command.GetProperty("environmentOverrides");
+                    Assert.Equal("1", environment.GetProperty("PYTHONUTF8").GetString());
+                    Assert.Equal("utf-8", environment.GetProperty("PYTHONIOENCODING").GetString());
+                    Assert.Equal("utf-8", command.GetProperty("outputEncoding").GetString());
+                });
+            }
+            else Assert.All(plan.commands, command => Assert.Null(command.outputEncoding));
             Assert.Equal(2, plan.dependencyFiles.Length);
             Assert.Equal(facts, Assert.Single(plan.preprocessingOperations, operation => operation.preprocessingOnly).source);
             Assert.DoesNotContain(plan.commands, command => command.inputFiles.Contains(facts));
@@ -88,6 +112,15 @@ public sealed class NativeProviderExecutionTests
                 }, verificationSources: [c, cpp]);
             Assert.Equal(2, verifiedSources);
             Assert.All(result.executions, operation => Assert.Equal(0, operation.exitCode));
+            if (providerId == "meson")
+            {
+                Assert.True(result.executions[^1].standardOutput.Contains("验收", StringComparison.Ordinal),
+                    "Meson install stdout must preserve the actual Unicode output path. Full captured stdout JSON:\n"
+                    + JsonSerializer.Serialize(result.executions[^1].standardOutput) + "\nFull captured stderr JSON:\n"
+                    + JsonSerializer.Serialize(result.executions[^1].standardError));
+                Assert.Equal(parentPythonUtf8, Environment.GetEnvironmentVariable("PYTHONUTF8"));
+                Assert.Equal(parentPythonEncoding, Environment.GetEnvironmentVariable("PYTHONIOENCODING"));
+            }
             Assert.Contains(result.inputSnapshot.files, input => string.Equals(input.path, dependency, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
             Assert.Contains(result.inputSnapshot.files, input => string.Equals(input.path, facts, StringComparison.OrdinalIgnoreCase));
             Assert.True(SourceSnapshotVerifier.Matches(result.inputSnapshot));

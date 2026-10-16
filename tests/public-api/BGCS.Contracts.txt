@@ -3267,6 +3267,7 @@ class BGCS.Contracts.Requests.NativeBuildCommand [sealed; interfaces=System.IEqu
   property System.String id { get; init }
   property System.Collections.Immutable.ImmutableArray<System.String> inputFiles { get; init }
   property System.Nullable<BGCS.Contracts.Requests.NativeLinkTraceFormat> linkDependencyTrace { get; init }
+  property System.String outputEncoding { get; init }
   property System.Collections.Immutable.ImmutableArray<System.String> outputFiles { get; init }
   property System.String workingDirectory { get; init }
   method BGCS.Contracts.Requests.NativeBuildCommand <Clone>$()

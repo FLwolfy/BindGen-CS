@@ -24,12 +24,13 @@ public sealed class ArtifactPublicationReader
     ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryId);
-        string absolute = Path.GetFullPath(outputRoot);
-        if (!Directory.Exists(absolute)) return [];
-        ArtifactDigestVerifier.RejectLinkedAncestors(absolute);
+        OwnedPathBoundary boundary = new(outputRoot);
+        string absolute = boundary.physicalPath;
+        if (!Directory.Exists(absolute)) { boundary.Verify(); return []; }
         using FileStream publicationLock = DirectoryPublicationLease.Acquire(absolute, TimeSpan.FromSeconds(30), cancellationToken);
-        if (!Directory.Exists(absolute)) return [];
-        if (!Directory.EnumerateFileSystemEntries(absolute).Any()) return [];
+        boundary.Verify();
+        if (!Directory.Exists(absolute)) { boundary.Verify(); return []; }
+        if (!Directory.EnumerateFileSystemEntries(absolute).Any()) { boundary.Verify(); return []; }
         string manifestPath = Path.Combine(absolute, ".bgcs-artifacts.json");
         ArtifactDigestVerifier.RejectLinkedAncestors(manifestPath);
         if (!File.Exists(manifestPath)) throw new IOException("The existing output has no BGCS artifact ownership manifest.");
@@ -38,6 +39,7 @@ public sealed class ArtifactPublicationReader
             throw new IOException("The existing output does not match the expected BGCS publication owner.");
         cancellationToken.ThrowIfCancellationRequested();
         new ArtifactDigestVerifier().Verify(absolute, owner.artifacts, [".bgcs-artifacts.json"]);
+        boundary.Verify();
         return owner.artifacts;
     }
 }

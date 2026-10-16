@@ -70,6 +70,11 @@ public sealed class PlannedNativeBuildExecutor
         ArgumentNullException.ThrowIfNull(plan);
         if (plan.commands.IsDefaultOrEmpty) throw new ArgumentException("A native build plan has no operations.", nameof(plan));
         if (plan.preprocessingOperations.IsDefault) throw new ArgumentException("Native preprocessing operations must be initialized.", nameof(plan));
+        // Resolve declared encodings before generating inputs or launching any
+        // compiler. Invalid names cannot leave a partially executed plan.
+        foreach (NativeBuildCommand command in plan.commands.Concat(plan.dependencyScans.Select(scan => scan.command))
+            .Concat(plan.preprocessingOperations.Select(operation => operation.command)).Concat(plan.linkDependencyScans.Select(scan => scan.command)))
+            _ = OutputEncoding(command);
         ImmutableArray<NativePreprocessingOperation> proofs = plan.preprocessingOperations.Where(operation => preprocessOnly || operation.preprocessingOnly).ToImmutableArray();
         if (preprocessOnly && proofs.IsEmpty) throw new ArgumentException("Native source view requires at least one exact preprocessing operation.", nameof(plan));
         if (sourceVerifier is not null)
@@ -131,7 +136,7 @@ public sealed class PlannedNativeBuildExecutor
             if (remaining <= TimeSpan.Zero) throw new TimeoutException("The native build deadline elapsed before dependency discovery.");
             Directory.CreateDirectory(scan.command.workingDirectory);
             ProcessExecutionResult scanResult = await ProcessExecutor.ExecuteAsync(scan.command.executable, scan.command.arguments, scan.command.workingDirectory, remaining,
-                cancellationToken, environmentOverrides: scan.command.environmentOverrides).ConfigureAwait(false);
+                cancellationToken, environmentOverrides: scan.command.environmentOverrides, outputEncoding: OutputEncoding(scan.command)).ConfigureAwait(false);
             results.Add(scanResult);
             if (scanResult.timedOut || scanResult.exitCode != 0) throw new InvalidOperationException($"Native dependency operation '{scan.command.id}' failed: {scanResult.standardOutput}{Environment.NewLine}{scanResult.standardError}");
         }
@@ -151,7 +156,8 @@ public sealed class PlannedNativeBuildExecutor
             TimeSpan remaining = timeout - elapsed.Elapsed;
             if (remaining <= TimeSpan.Zero) throw new TimeoutException("The native deadline elapsed before effective-source fact verification.");
             ProcessExecutionResult preprocessed = await ProcessExecutor.ExecuteAsync(proof.command.executable, proof.command.arguments,
-                proof.command.workingDirectory, remaining, cancellationToken, environmentOverrides: proof.command.environmentOverrides).ConfigureAwait(false);
+                proof.command.workingDirectory, remaining, cancellationToken, environmentOverrides: proof.command.environmentOverrides,
+                outputEncoding: OutputEncoding(proof.command)).ConfigureAwait(false);
             results.Add(preprocessed);
             if (preprocessed.timedOut || preprocessed.exitCode != 0)
                 throw new InvalidOperationException("Native effective-source preprocessing failed: " + preprocessed.standardOutput + Environment.NewLine + preprocessed.standardError);
@@ -206,7 +212,7 @@ public sealed class PlannedNativeBuildExecutor
                 if (probeDeadline <= TimeSpan.Zero) throw new TimeoutException("The native build deadline elapsed before linker dependency discovery.");
                 Directory.CreateDirectory(probe.workingDirectory);
                 ProcessExecutionResult probeResult = await ProcessExecutor.ExecuteAsync(probe.executable, probe.arguments, probe.workingDirectory, probeDeadline, cancellationToken,
-                    environmentOverrides: probe.environmentOverrides).ConfigureAwait(false);
+                    environmentOverrides: probe.environmentOverrides, outputEncoding: OutputEncoding(probe)).ConfigureAwait(false);
                 results.Add(probeResult);
                 if (probeResult.timedOut || probeResult.exitCode != 0) throw new InvalidOperationException($"Native linker dependency operation '{probe.id}' failed: {probeResult.standardOutput}{Environment.NewLine}{probeResult.standardError}");
                 foreach (string output in probe.outputFiles)
@@ -223,7 +229,7 @@ public sealed class PlannedNativeBuildExecutor
             if (remaining <= TimeSpan.Zero) throw new TimeoutException("The native build deadline elapsed before the next operation.");
             Directory.CreateDirectory(command.workingDirectory);
             ProcessExecutionResult result = await ProcessExecutor.ExecuteAsync(command.executable, command.arguments, command.workingDirectory, remaining, cancellationToken,
-                environmentOverrides: command.environmentOverrides).ConfigureAwait(false);
+                environmentOverrides: command.environmentOverrides, outputEncoding: OutputEncoding(command)).ConfigureAwait(false);
             results.Add(result);
             if (result.timedOut || result.exitCode != 0) throw new InvalidOperationException($"Native operation '{command.id}' failed: {result.standardOutput}{Environment.NewLine}{result.standardError}");
             foreach (string output in command.outputFiles)
@@ -244,6 +250,9 @@ public sealed class PlannedNativeBuildExecutor
         if (!SourceSnapshotVerifier.Matches(plan.argumentInputs, cancellationToken)) throw new IOException("Native response-file argument inputs changed during construction.");
         return new(results.ToImmutable(), snapshot) { argumentInputs = plan.argumentInputs };
     }
+
+    private static Encoding? OutputEncoding(NativeBuildCommand command)
+        => command.outputEncoding is string name ? Encoding.GetEncoding(name) : null;
 
     private static InputDependency CaptureFile(
         string path,

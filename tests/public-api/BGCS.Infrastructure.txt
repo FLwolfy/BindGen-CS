@@ -83,7 +83,7 @@ class BGCS.Infrastructure.Execution.ProcessExecutionResult [sealed; interfaces=S
   method System.String ToString() [virtual]
   method System.Void Deconstruct(out System.Int32 exitCode, out System.String standardOutput, out System.String standardError, out System.Boolean timedOut)
 class BGCS.Infrastructure.Execution.ProcessExecutor [abstract; sealed]
-  method System.Threading.Tasks.Task<BGCS.Infrastructure.Execution.ProcessExecutionResult> ExecuteAsync(System.String executable, System.Collections.Generic.IReadOnlyList<System.String> arguments, System.String workingDirectory, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken [optional; default=null], System.Int32 maximumCapturedCharacters [optional; default=16777216], System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> environmentOverrides [optional; default=null]) [static]
+  method System.Threading.Tasks.Task<BGCS.Infrastructure.Execution.ProcessExecutionResult> ExecuteAsync(System.String executable, System.Collections.Generic.IReadOnlyList<System.String> arguments, System.String workingDirectory, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken [optional; default=null], System.Int32 maximumCapturedCharacters [optional; default=16777216], System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> environmentOverrides [optional; default=null], System.Text.Encoding outputEncoding [optional; default=null]) [static]
 class BGCS.Infrastructure.IO.ConfigurationPath [abstract; sealed]
   method System.String Resolve(System.String value, System.String baseDirectory, System.Boolean allowCommandName) [static]
 class BGCS.Infrastructure.IO.DirectoryMembershipDigest [abstract; sealed]

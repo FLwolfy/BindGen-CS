@@ -36,6 +36,7 @@ public static class ProcessExecutor
     /// The positive per-stream capture limit; larger output is drained and then rejected rather than silently truncated.
     /// </param>
     /// <param name="environmentOverrides">Explicit child-only environment changes; null values remove inherited variables.</param>
+    /// <param name="outputEncoding">The declared encoding for both redirected output streams, or null to preserve the platform default.</param>
     /// <returns>
     /// The exit status and captured output. Timeout returns a result with <c>timedOut</c> set;
     /// caller cancellation throws after process cleanup completes.
@@ -65,7 +66,8 @@ public static class ProcessExecutor
         TimeSpan timeout,
         CancellationToken cancellationToken = default,
         int maximumCapturedCharacters = 16 * 1024 * 1024,
-        IReadOnlyDictionary<string, string?>? environmentOverrides = null
+        IReadOnlyDictionary<string, string?>? environmentOverrides = null,
+        Encoding? outputEncoding = null
     ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentNullException.ThrowIfNull(arguments);
@@ -85,6 +87,11 @@ public static class ProcessExecutor
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        if (outputEncoding is not null)
+        {
+            start.StandardOutputEncoding = outputEncoding;
+            start.StandardErrorEncoding = outputEncoding;
+        }
         foreach (string argument in arguments)
             start.ArgumentList.Add(argument);
         if (environmentOverrides is not null)

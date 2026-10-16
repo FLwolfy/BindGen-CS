@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Common;
+using BGCS.Infrastructure.IO;
 using BGCS.Infrastructure.Publishing;
 using Xunit;
 
@@ -83,7 +84,8 @@ public sealed class ArtifactSetPublisherTests
         {
             string directory = Path.Combine(temporary, "package"), file = Path.Combine(temporary, "native.dll");
             Publish(directory, file, "previous");
-            string identity = (OperatingSystem.IsWindows() ? directory.ToUpperInvariant() : directory) + "\nfixture\nTrue";
+            string physicalDirectory = PhysicalPathResolver.Resolve(directory);
+            string identity = (OperatingSystem.IsWindows() ? physicalDirectory.ToUpperInvariant() : physicalDirectory) + "\nfixture\nTrue";
             string journal = Path.Combine(temporary, ".bgcs-set-publication-" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(identity))) + ".json");
             string candidate;
             using (ArtifactSetPublisher interrupted = new([new(directory, "fixture")]))
@@ -91,7 +93,7 @@ public sealed class ArtifactSetPublisherTests
                 candidate = interrupted.GetCandidatePath(directory);
                 File.WriteAllText(Path.Combine(candidate, "asset.txt"), "candidate", new UTF8Encoding(false));
                 var current = ImmutableArray.Create(new ArtifactDescriptor("asset.txt", "text/plain", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("candidate"))))));
-                var recorded = new { schemaVersion = 1, state = "prepared", entries = new[] { new { destination = new ArtifactSetDestination(directory, "fixture"), candidate,
+                var recorded = new { schemaVersion = 1, state = "prepared", entries = new[] { new { destination = new ArtifactSetDestination(physicalDirectory, "fixture"), candidate,
                     backup = (string?)null, previous = interrupted.ReadExistingArtifacts(directory), current } } };
                 File.WriteAllText(journal, JsonSerializer.Serialize(recorded), new UTF8Encoding(false));
             }

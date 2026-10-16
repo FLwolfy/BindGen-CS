@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BGCS.Contracts.Artifacts;
+using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Publishing;
 
@@ -35,27 +36,38 @@ internal static class PublicationJournalStorage
         string path,
         T value
     ) {
+        OwnedPathBoundary boundary = new(path);
+        path = boundary.physicalPath;
         string temporary = path + ".tmp";
+        OwnedPathBoundary.RejectPhysicalLinks(temporary);
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(value, options);
+        Exception? failure = null;
+        bool ownsTemporary = false;
         try
         {
             using (FileStream stream = new(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
+                ownsTemporary = true;
                 stream.Write(bytes);
                 stream.Flush(flushToDisk: true);
             }
+            boundary.Verify();
+            OwnedPathBoundary.RejectPhysicalLinks(temporary);
             File.Move(temporary, path, overwrite: true);
+            ownsTemporary = false;
+            boundary.Verify();
         }
-        finally
-        {
-            if (File.Exists(temporary)) File.Delete(temporary);
-        }
+        catch (Exception error) { failure = error; throw; }
+        finally { OwnedFileCleanup.Delete(ownsTemporary ? temporary : null, failure); }
     }
 
     internal static T Read<T>(string path)
     {
-        using FileStream stream = File.OpenRead(path);
+        OwnedPathBoundary boundary = new(path);
+        using FileStream stream = File.OpenRead(boundary.physicalPath);
         if (stream.Length > 16 * 1024 * 1024) throw new IOException("A publication manifest exceeds its size limit.");
-        return JsonSerializer.Deserialize<T>(stream, options) ?? throw new IOException("A publication manifest is empty.");
+        T value = JsonSerializer.Deserialize<T>(stream, options) ?? throw new IOException("A publication manifest is empty.");
+        boundary.Verify();
+        return value;
     }
 }

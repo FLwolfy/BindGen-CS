@@ -13,7 +13,7 @@ internal static class DirectoryPublicationLease
     internal static string GetPath(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
-        string destination = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string destination = new OwnedPathBoundary(directory).physicalPath;
         string parent = Path.GetDirectoryName(destination)
             ?? throw new ArgumentException("The output path must have a parent directory.", nameof(directory));
         return Path.Combine(parent, "." + Path.GetFileName(destination) + ".bgcs-lock");
@@ -30,22 +30,27 @@ internal static class DirectoryPublicationLease
         if (timeout < TimeSpan.Zero && timeout != Timeout.InfiniteTimeSpan)
             throw new ArgumentOutOfRangeException(nameof(timeout));
         cancellationToken.ThrowIfCancellationRequested();
-        string path = GetPath(directory);
+        OwnedPathBoundary boundary = new(directory);
+        string path = GetPath(boundary.physicalPath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         long started = Stopwatch.GetTimestamp();
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            boundary.Verify();
+            OwnedPathBoundary.RejectPhysicalLinks(path);
             try
             {
                 // Retain the inode after release so every process continues to contend for the same lock.
                 FileStream lease = new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-                if (cancellationToken.IsCancellationRequested)
+                try
                 {
-                    lease.Dispose();
+                    boundary.Verify();
+                    OwnedPathBoundary.RejectPhysicalLinks(path);
                     cancellationToken.ThrowIfCancellationRequested();
+                    return lease;
                 }
-                return lease;
+                catch { lease.Dispose(); throw; }
             }
             catch (IOException exception) when (IsSharingViolation(exception))
             {

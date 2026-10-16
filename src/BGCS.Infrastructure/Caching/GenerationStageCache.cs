@@ -17,6 +17,7 @@ public sealed class GenerationStageCache
 {
     private const int C_REVISION = 2;
     private readonly string m_root;
+    private readonly OwnedPathBoundary m_boundary;
     private readonly long m_maximumBytes;
     private readonly int m_maximumEntryBytes;
 
@@ -35,7 +36,8 @@ public sealed class GenerationStageCache
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         if (maximumBytes <= 0 || maximumEntryBytes <= 0 || maximumEntryBytes > 268435456 || maximumBytes < maximumEntryBytes)
             throw new ArgumentOutOfRangeException(nameof(maximumBytes), "Cache budgets must be positive and contain at least one bounded entry.");
-        m_root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        m_boundary = new(root);
+        m_root = m_boundary.physicalPath;
         if (string.Equals(m_root, Path.GetPathRoot(m_root)?.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("A cache directory cannot be a volume root.", nameof(root));
         m_maximumBytes = maximumBytes;
@@ -97,7 +99,11 @@ public sealed class GenerationStageCache
             }
             if (entry.seal != Seal(entry.revision, entry.key, entry.artifacts))
                 throw new InvalidDataException("The cached artifact set failed its complete descriptor seal verification.");
+            RejectLinks();
+            RejectLink(path);
             File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
+            RejectLinks();
+            RejectLink(path);
             artifacts = verified.ToImmutable();
             return true;
         }
@@ -144,6 +150,7 @@ public sealed class GenerationStageCache
         Directory.CreateDirectory(m_root);
         using FileStream cacheLease = AcquireCacheLease(cancellationToken);
         string temporary = Path.Combine(m_root, ".write-" + Guid.NewGuid().ToString("N") + ".tmp");
+        Exception? failure = null;
         try
         {
             using (FileStream stream = new(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -157,9 +164,11 @@ public sealed class GenerationStageCache
             RejectLink(entry);
             File.Move(temporary, entry, overwrite: true);
             Prune(cancellationToken);
+            RejectLinks();
             return true;
         }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        catch (Exception error) { failure = error; throw; }
+        finally { OwnedFileCleanup.Delete(temporary, failure); }
     }
 
     private void Prune(CancellationToken cancellationToken)
@@ -215,13 +224,10 @@ public sealed class GenerationStageCache
     }
     private void RejectLinks()
     {
-        for (string? path = m_root; path is not null; path = Path.GetDirectoryName(path)) RejectLink(path);
+        m_boundary.Verify();
     }
     private static void RejectLink(string path)
-    {
-        if ((File.Exists(path) || Directory.Exists(path)) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("A generation cache cannot traverse symbolic links or reparse points.");
-    }
+        => OwnedPathBoundary.RejectLink(path);
     private sealed record Entry(
         int revision,
         string key,

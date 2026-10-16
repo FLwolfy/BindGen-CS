@@ -39,14 +39,23 @@ internal static class NativeMetadataSyntaxDecorator
         if (!plan.api.emitNativeMetadata)
         {
             foreach (CompilationUnitSyntax root in roots)
-                if (root.DescendantNodes().OfType<AttributeSyntax>().Any(IsMetadata))
-                    throw new InvalidOperationException("Native name attributes appeared outside their exact checked canonical signature or while metadata was disabled.");
+                foreach (AttributeSyntax attribute in root.DescendantNodes().OfType<AttributeSyntax>())
+                    VerifyDisabledAttribute(attribute);
             return roots;
         }
         Rewriter rewriter = new(plan, verify: true);
         List<CompilationUnitSyntax> stripped = roots.Select(root => (CompilationUnitSyntax)rewriter.Visit(root)!).ToList();
         rewriter.Complete();
         return stripped;
+    }
+
+    // The final contract reader calls this for every actual attribute during its
+    // complete syntax-index traversal, retaining the same disabled-mode guard
+    // without a second traversal over all method bodies.
+    internal static void VerifyDisabledAttribute(AttributeSyntax attribute)
+    {
+        if (IsMetadata(attribute))
+            throw new InvalidOperationException("Native name attributes appeared outside their exact checked canonical signature or while metadata was disabled.");
     }
 
     private sealed class Rewriter(

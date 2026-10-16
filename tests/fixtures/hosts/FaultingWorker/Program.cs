@@ -9,6 +9,12 @@ using BGCS.Infrastructure.Workers;
 
 Stream input = Console.OpenStandardInput();
 Stream output = Console.OpenStandardOutput();
+if (args.Length > 0 && args[0] == "--exit-probe") return;
+if (args.Length > 0 && args[0] == "--zombie-probe")
+{
+    await HoldExitedNativeChildAsync(args[1]);
+    return;
+}
 if (args.Length > 0 && args[0] == "--child")
 {
     await Task.Delay(Timeout.Infinite);
@@ -31,6 +37,7 @@ switch (envelope.request.headers[0])
         await Task.Delay(Timeout.Infinite);
         break;
     case "child":
+        PublishProcessId(envelope.request.headers[1] + ".worker", Environment.ProcessId);
         ProcessStartInfo start = new(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };
         if (Path.GetFileNameWithoutExtension(Environment.ProcessPath) == "dotnet")
             start.ArgumentList.Add(typeof(Program).Assembly.Location);
@@ -67,6 +74,55 @@ static void PublishProcessId(string path, int processId)
 {
     File.WriteAllText(path + ".tmp", processId.ToString());
     File.Move(path + ".tmp", path);
+}
+
+static async Task HoldExitedNativeChildAsync(string marker)
+{
+    if (!OperatingSystem.IsLinux()) throw new PlatformNotSupportedException("The zombie probe requires Linux /proc.");
+    int child = SpawnExitedNativeChild();
+    try
+    {
+        PublishProcessId(marker, child);
+        _ = await Console.In.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30));
+    }
+    finally { ReapNativeChild(child); }
+}
+
+static unsafe int SpawnExitedNativeChild()
+{
+    // Use posix_spawn rather than fork: no managed code executes in a forked
+    // child, and this native child is intentionally outside Process's reaper.
+    nint library = NativeLibrary.Load("libc.so.6");
+    try
+    {
+        var spawn = (delegate* unmanaged[Cdecl]<int*, byte*, void*, void*, byte**, byte**, int>)NativeLibrary.GetExport(library, "posix_spawn");
+        byte* program = stackalloc byte[] { (byte)'/', (byte)'b', (byte)'i', (byte)'n', (byte)'/', (byte)'t', (byte)'r', (byte)'u', (byte)'e', 0 };
+        byte** arguments = stackalloc byte*[2];
+        arguments[0] = program;
+        arguments[1] = null;
+        byte** environment = stackalloc byte*[1];
+        environment[0] = null;
+        int child = 0;
+        int result = spawn(&child, program, null, null, arguments, environment);
+        if (result != 0) throw new IOException("The native Linux exit probe could not start /bin/true: " + result);
+        return child;
+    }
+    finally { NativeLibrary.Free(library); }
+}
+
+static unsafe void ReapNativeChild(int child)
+{
+    nint library = NativeLibrary.Load("libc.so.6");
+    try
+    {
+        var wait = (delegate* unmanaged[Cdecl]<int, int*, int, int>)NativeLibrary.GetExport(library, "waitpid");
+        var error = (delegate* unmanaged[Cdecl]<int*>)NativeLibrary.GetExport(library, "__errno_location");
+        int status = 0, result;
+        do { result = wait(child, &status, 0); }
+        while (result < 0 && *error() == 4); // EINTR leaves the child available for the required explicit reap.
+        if (result != child || status != 0) throw new IOException("The native Linux exit probe did not reap its exact successful child.");
+    }
+    finally { NativeLibrary.Free(library); }
 }
 
 static unsafe void AbortFromNativeRuntime()

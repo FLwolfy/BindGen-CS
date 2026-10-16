@@ -46,15 +46,45 @@ public sealed class EmittedInteropContractReader
             if (errors.Length != 0) throw new InvalidOperationException("A processed C# artifact is syntactically invalid: " + string.Join("; ", errors.Select(error => error.ToString())));
             roots.Add((CompilationUnitSyntax)tree.GetRoot(cancellationToken));
         }
-        roots = NativeMetadataSyntaxDecorator.VerifyAndRemove(plan, roots);
-        ClassDeclarationSyntax[] contexts = roots.SelectMany(root => root.DescendantNodes().OfType<ClassDeclarationSyntax>()).Where(type => FullName(type) == context).ToArray();
+        if (plan.api.emitNativeMetadata) roots = NativeMetadataSyntaxDecorator.VerifyAndRemove(plan, roots);
+        // Build indexes from the actual processed syntax on every verification.
+        // Import attributes can occur outside methods, including local functions
+        // and lambdas, so the traversal deliberately includes complete bodies.
+        List<ClassDeclarationSyntax> classes = [];
+        List<DelegateDeclarationSyntax> delegates = [];
+        List<BaseTypeDeclarationSyntax> storageTypes = [];
+        List<MethodDeclarationSyntax> collectedImports = [];
+        bool hasImportAttribute = false;
+        foreach (CompilationUnitSyntax root in roots)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int visited = 0;
+            foreach (SyntaxNode node in root.DescendantNodes())
+            {
+                if ((++visited & 1023) == 0) cancellationToken.ThrowIfCancellationRequested();
+                if (node is BaseTypeDeclarationSyntax storageType) storageTypes.Add(storageType);
+                if (node is ClassDeclarationSyntax declaration) classes.Add(declaration);
+                else if (node is DelegateDeclarationSyntax callback) delegates.Add(callback);
+                else if (node is MethodDeclarationSyntax method
+                    && method.AttributeLists.SelectMany(list => list.Attributes).Any(attribute => IsImportName(attribute.Name))) collectedImports.Add(method);
+                if (node is AttributeSyntax attribute)
+                {
+                    if (!plan.api.emitNativeMetadata) NativeMetadataSyntaxDecorator.VerifyDisabledAttribute(attribute);
+                    if (IsImportName(attribute.Name)) hasImportAttribute = true;
+                }
+            }
+        }
+        ILookup<string, ClassDeclarationSyntax> classDeclarations = classes.ToLookup(FullName, StringComparer.Ordinal);
+        ILookup<string, DelegateDeclarationSyntax> delegateDeclarations = delegates.ToLookup(type => FullName(type, type.Identifier.ValueText), StringComparer.Ordinal);
+        ILookup<string, BaseTypeDeclarationSyntax> storageDeclarations = storageTypes.ToLookup(type => FullName(type, type.Identifier.ValueText), StringComparer.Ordinal);
+        MethodDeclarationSyntax[] allImports = collectedImports.ToArray();
+        ClassDeclarationSyntax[] contexts = classDeclarations[context].ToArray();
         if (contexts.Length == 0) throw new InvalidOperationException("The emitted ABI context is absent from the complete candidate source set.");
         PhysicalImportContractVerifier.Verify(plan, contexts, libraryName);
         if (plan.api.nestGeneratedTypesInApi)
         {
             string ownerName = CSharpGeneratedTypeScope.DeclarationNamespace(plan.api).Replace("@", string.Empty, StringComparison.Ordinal);
-            ClassDeclarationSyntax[] owners = roots.SelectMany(root => root.DescendantNodes().OfType<ClassDeclarationSyntax>())
-                .Where(type => FullName(type) == ownerName).ToArray();
+            ClassDeclarationSyntax[] owners = classDeclarations[ownerName].ToArray();
             if (owners.Length == 0 || owners.Any(owner => !owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PublicKeyword))
                 || !owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword))
                 || owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.StaticKeyword)) != (plan.api.style == BGCS.Contracts.Managed.ManagedApiStyle.Static)
@@ -66,8 +96,7 @@ public sealed class EmittedInteropContractReader
         foreach (CSharpAbiDelegatePlan declaration in plan.abiDelegates)
         {
             string name = CSharpGeneratedTypeScope.DeclarationNamespace(plan.api).Replace("@", string.Empty, StringComparison.Ordinal) + "." + declaration.name.TrimStart('@');
-            DelegateDeclarationSyntax[] actual = roots.SelectMany(root => root.DescendantNodes().OfType<DelegateDeclarationSyntax>())
-                .Where(type => FullName(type, type.Identifier.ValueText) == name).ToArray();
+            DelegateDeclarationSyntax[] actual = delegateDeclarations[name].ToArray();
             MemberDeclarationSyntax expected = SyntaxFactory.ParseMemberDeclaration(AbiDelegateEmitter.Emit(declaration))!;
             if (actual.Length != 1 || !SyntaxFactory.AreEquivalent(actual[0], expected))
                 throw new InvalidOperationException("A named native delegate changed its exact callback prototype, convention or public type identity: " + declaration.name);
@@ -122,7 +151,7 @@ public sealed class EmittedInteropContractReader
         if (plan.sharedContext is { } shared)
         {
             string facadeName = string.Join(".", plan.api.@namespace.Split('.').Select(part => part.TrimStart('@'))) + "." + shared.name.TrimStart('@');
-            ClassDeclarationSyntax[] facades = roots.SelectMany(root => root.DescendantNodes().OfType<ClassDeclarationSyntax>()).Where(type => FullName(type) == facadeName).ToArray();
+            ClassDeclarationSyntax[] facades = classDeclarations[facadeName].ToArray();
             if (facades.Length == 0 || facades.Any(type => !type.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PublicKeyword))
                 || !type.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.StaticKeyword)) || !type.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword))))
                 throw new InvalidOperationException("The explicitly shared static facade is absent or changed its lifetime style.");
@@ -224,10 +253,6 @@ public sealed class EmittedInteropContractReader
                     throw new InvalidOperationException("An emitted native literal changed its exact Unicode value or readonly code units: " + constant.name);
             }
         }
-        ILookup<string, BaseTypeDeclarationSyntax> storageDeclarations = roots.SelectMany(root => root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
-            .ToLookup(type => FullName(type, type.Identifier.ValueText), StringComparer.Ordinal);
-        MethodDeclarationSyntax[] allImports = roots.SelectMany(root => root.DescendantNodes().OfType<MethodDeclarationSyntax>())
-            .Where(method => method.AttributeLists.SelectMany(list => list.Attributes).Any(attribute => IsImportName(attribute.Name))).ToArray();
         ILookup<(string Owner, string Name), MethodDeclarationSyntax> importDeclarations = allImports
             .Where(method => method.Parent is ClassDeclarationSyntax)
             .ToLookup(method => (FullName((ClassDeclarationSyntax)method.Parent!), method.Identifier.ValueText));
@@ -341,7 +366,7 @@ public sealed class EmittedInteropContractReader
         }
         if (plan.importMode == BindingImportMode.FunctionTable)
         {
-            if (plan.staticExportTable is null && roots.SelectMany(root => root.DescendantNodes().OfType<AttributeSyntax>()).Any(attribute => IsImportName(attribute.Name)))
+            if (plan.staticExportTable is null && hasImportAttribute)
                 throw new InvalidOperationException("A function-table candidate contains undeclared runtime imports.");
             FieldDeclarationSyntax[] fields = contexts.SelectMany(type => type.Members.OfType<FieldDeclarationSyntax>()).ToArray();
             AssignmentExpressionSyntax[] assignments = contexts.SelectMany(type => type.Members.OfType<ConstructorDeclarationSyntax>())

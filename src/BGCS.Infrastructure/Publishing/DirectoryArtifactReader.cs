@@ -18,6 +18,7 @@ public sealed class DirectoryArtifactReader : IArtifactReader
 {
     private readonly FrozenDictionary<string, ArtifactDescriptor> m_artifacts;
     private readonly string m_root;
+    private readonly OwnedPathBoundary m_boundary;
     private readonly int m_limit;
 
     /// <summary>Captures a finite declared candidate set independently of a mutable manifest collection.</summary>
@@ -32,7 +33,8 @@ public sealed class DirectoryArtifactReader : IArtifactReader
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         ArgumentNullException.ThrowIfNull(artifacts);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumArtifactBytes);
-        m_root = Path.GetFullPath(root);
+        m_boundary = new(root);
+        m_root = m_boundary.physicalPath;
         m_limit = maximumArtifactBytes;
         m_artifacts = artifacts.ToFrozenDictionary(artifact => artifact.relativePath, StringComparer.Ordinal);
         foreach (string path in m_artifacts.Keys) _ = Resolve(path);
@@ -53,6 +55,7 @@ public sealed class DirectoryArtifactReader : IArtifactReader
         if (stream.Length != bytes.Length || new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))) != expected.digest)
             throw new IOException("The candidate artifact changed after its content identity was declared.");
         cancellationToken.ThrowIfCancellationRequested();
+        _ = Resolve(relativePath);
         return bytes;
     }
 
@@ -65,15 +68,14 @@ public sealed class DirectoryArtifactReader : IArtifactReader
 
     private string Resolve(string relativePath)
     {
+        m_boundary.Verify();
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
         if (Path.IsPathRooted(relativePath) || relativePath.Contains('\\') || relativePath.Split('/').AnyInvalidSegment())
             throw new ArgumentException("A candidate read requires an exact portable relative path.", nameof(relativePath));
         string path = Path.GetFullPath(relativePath, m_root);
         StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         if (!path.StartsWith(Path.TrimEndingDirectorySeparator(m_root) + Path.DirectorySeparatorChar, comparison)) throw new ArgumentException("The candidate read escapes its root.");
-        for (string? current = path; current is not null; current = Path.GetDirectoryName(current))
-            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("A candidate read cannot traverse a symbolic link.");
+        OwnedPathBoundary.RejectPhysicalLinks(path);
         if (!string.Equals(PhysicalPathResolver.Resolve(path), path, comparison)) throw new IOException("A candidate read changed physical identity.");
         return path;
     }

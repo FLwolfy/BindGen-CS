@@ -91,7 +91,11 @@ public sealed class MesonBuildProvider : INativeBuildProvider, INativeBuildPrere
             }
         }).ToImmutableArray();
         generated.Add(new("meson-project/meson.build", text.ToString()));
-        ImmutableDictionary<string, string?> environment = NativeBuildEnvironment.cleanCompiler.SetItem("NINJA", m_ninja);
+        // Meson's Python commands print native paths to redirected streams.
+        // Freeze UTF-8 in the child plan instead of inheriting a Windows ANSI
+        // code page that cannot represent otherwise valid source/output paths.
+        ImmutableDictionary<string, string?> environment = NativeBuildEnvironment.cleanCompiler.SetItem("NINJA", m_ninja)
+            .SetItem("PYTHONUTF8", "1").SetItem("PYTHONIOENCODING", "utf-8");
         return direct with
         {
             providerId = id,
@@ -101,10 +105,10 @@ public sealed class MesonBuildProvider : INativeBuildProvider, INativeBuildPrere
             generatedInputFiles = generated.ToImmutable(),
             dependencyScans = scans,
             linkDependencyScans = direct.linkDependencyScans.Select(scan => scan with { finalCommandId = "build" }).ToImmutableArray(),
-            commands = [new("configure", m_meson, ["setup", build, project, "--backend=ninja", "--buildtype=release"], request.workingDirectory) { environmentOverrides = environment },
-                new("objects", m_meson, ["compile", "-C", build, "-j", "2", "bgcs_native_objects"], request.workingDirectory) { environmentOverrides = environment },
-                new("build", m_meson, ["compile", "-C", build, "-j", "2"], request.workingDirectory) { environmentOverrides = environment, linkDependencyTrace = direct.commands[^1].linkDependencyTrace },
-                new("install", m_meson, ["install", "-C", build, "--no-rebuild"], request.workingDirectory) { outputFiles = [request.outputFile], environmentOverrides = environment }]
+            commands = [new("configure", m_meson, ["setup", build, project, "--backend=ninja", "--buildtype=release"], request.workingDirectory) { environmentOverrides = environment, outputEncoding = "utf-8" },
+                new("objects", m_meson, ["compile", "-C", build, "-j", "2", "bgcs_native_objects"], request.workingDirectory) { environmentOverrides = environment, outputEncoding = "utf-8" },
+                new("build", m_meson, ["compile", "-C", build, "-j", "2"], request.workingDirectory) { environmentOverrides = environment, outputEncoding = "utf-8", linkDependencyTrace = direct.commands[^1].linkDependencyTrace },
+                new("install", m_meson, ["install", "-C", build, "--no-rebuild"], request.workingDirectory) { outputFiles = [request.outputFile], environmentOverrides = environment, outputEncoding = "utf-8" }]
         };
     }
     private const string ProcessRunner = """

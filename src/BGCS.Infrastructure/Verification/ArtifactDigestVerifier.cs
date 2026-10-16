@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using BGCS.Contracts.Artifacts;
+using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Verification;
 
@@ -21,8 +22,8 @@ public sealed class ArtifactDigestVerifier
         IEnumerable<string>? additionalFiles = null
     ) {
         ArgumentNullException.ThrowIfNull(artifacts);
-        string directory = Path.GetFullPath(root);
-        RejectLinkedAncestors(directory);
+        OwnedPathBoundary boundary = new(root);
+        string directory = boundary.physicalPath;
         Dictionary<string, ArtifactDescriptor> expected = new(StringComparer.OrdinalIgnoreCase);
         foreach (ArtifactDescriptor artifact in artifacts)
         {
@@ -38,12 +39,13 @@ public sealed class ArtifactDigestVerifier
             if (!seen.Add(path)) throw new IOException($"Artifact case collision at '{path}'.");
             if (additional.Contains(path)) continue;
             if (!expected.TryGetValue(path, out ArtifactDescriptor? artifact)) throw new IOException($"Unlisted artifact '{path}' cannot be published.");
-            using FileStream stream = File.OpenRead(file);
+            using FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.SequentialScan);
             string hash = Convert.ToHexStringLower(SHA256.HashData(stream));
             if (hash != artifact.digest.value) throw new IOException($"Artifact content digest mismatch: '{path}'.");
         }
         foreach (string required in expected.Keys.Concat(additional))
             if (!seen.Contains(required)) throw new IOException($"Required artifact '{required}' is missing.");
+        boundary.Verify();
     }
 
     /// <summary>Validates and normalizes a portable artifact-relative identity without accessing the filesystem.</summary>
@@ -60,11 +62,7 @@ public sealed class ArtifactDigestVerifier
     }
 
     internal static void RejectLinkedAncestors(string path)
-    {
-        for (string? current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
-            if ((Directory.Exists(current) || File.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException($"Publication cannot traverse a linked path: '{current}'.");
-    }
+        => OwnedPathBoundary.RejectPhysicalLinks(path);
 
     private static IEnumerable<string> EnumerateFiles(string directory)
     {

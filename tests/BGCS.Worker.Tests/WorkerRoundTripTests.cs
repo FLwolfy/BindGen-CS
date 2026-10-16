@@ -168,7 +168,7 @@ public sealed class WorkerRoundTripTests
         try
         {
             var files = Directory.EnumerateFiles(source).Where(path => path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".deps.json", StringComparison.Ordinal) || path.EndsWith(".runtimeconfig.json", StringComparison.Ordinal))
-                .Concat(Directory.EnumerateFiles(Path.Combine(source, "runtimes", hostRid, "native")));
+                .Concat(Directory.EnumerateFiles(Path.Combine(source, "runtimes", hostRid, "native"), "*", SearchOption.AllDirectories));
             WorkerAssetManifest manifest = new(1, hostRid, WorkerProtocol.C_PARSER_IDENTITY, files.Select(path =>
             {
                 using FileStream stream = File.OpenRead(path);

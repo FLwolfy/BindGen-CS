@@ -85,4 +85,64 @@ public sealed class EmittedInteropContractTests
         })).ToArray();
         Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan, edited, request.libraryName));
     }
+
+    [Theory]
+    [InlineData("[DllImport(\"hidden\")] delegate int Hidden();")]
+    [InlineData("class Extra { [LibraryImport(\"hidden\")] public int Value; }")]
+    [InlineData("class Extra { public int Value { [DllImport(\"hidden\")] get => 0; } }")]
+    [InlineData("class Extra { public void Method() { [DllImport(\"hidden\")] static extern int Hidden(); } }")]
+    [InlineData("class Extra { public void Method() { System.Func<int> hidden = [DllImport(\"hidden\")] () => 0; } }")]
+    [InlineData("struct Extra { public class Nested { [DllImport(\"hidden\")] public static extern int Hidden(); } }")]
+    [InlineData("record Extra { [LibraryImport(\"hidden\")] public static partial int Hidden(); }")]
+    [InlineData("[assembly: Foreign.DllImportAttribute(\"hidden\")] class Extra {}")]
+    public async Task IndexedFunctionTableValidationRetainsTheGlobalImportAttributeGuard(string addition)
+    {
+        NeutralBackendTests.MemorySink sink = new();
+        EmissionRequest request = new("native_fixture", sink);
+        var model = NeutralBackendTests.Model();
+        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        sink.sources.Add("Additional.cs", addition);
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan,
+            sink.sources.Select(source => (source.Key, source.Value)), request.libraryName));
+        Assert.Contains("undeclared runtime imports", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("class Extra { const string Text = \"[DllImport(\\\"hidden\\\")]\"; }")]
+    [InlineData("#if BGCS_INACTIVE_IMPORT\n[DllImport(\"hidden\")] class Hidden {}\n#endif\nclass Extra {}")]
+    public async Task IndexedFunctionTableValidationIgnoresOnlySyntaxInertImportText(string addition)
+    {
+        NeutralBackendTests.MemorySink sink = new();
+        EmissionRequest request = new("native_fixture", sink);
+        var model = NeutralBackendTests.Model();
+        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        sink.sources.Add("Additional.cs", addition);
+        new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
+    }
+
+    [Fact]
+    public async Task ConcurrentValidationKeepsActualCandidateIndexesIndependentForTheSamePathsAndPlan()
+    {
+        NeutralBackendTests.MemorySink sink = new();
+        EmissionRequest request = new("native_fixture", sink);
+        var model = NeutralBackendTests.Model();
+        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        (string Path, string Text)[] original = sink.sources.Select(source => (source.Key, source.Value)).ToArray();
+        (string Path, string Text)[] changed = original.Select(source => (source.Path,
+            source.Text + "\n[Foreign.NativeNameAttribute] class UnexpectedMetadata {}\n")).ToArray();
+        EmittedInteropContractReader reader = new();
+        await Task.WhenAll(Enumerable.Range(0, 12).Select(index => Task.Run(() =>
+        {
+            if (index % 2 == 0) reader.Verify(plan, original, request.libraryName);
+            else
+            {
+                InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => reader.Verify(plan, changed, request.libraryName));
+                Assert.Contains("while metadata was disabled", failure.Message, StringComparison.Ordinal);
+            }
+        })));
+        reader.Verify(plan, original, request.libraryName);
+    }
 }

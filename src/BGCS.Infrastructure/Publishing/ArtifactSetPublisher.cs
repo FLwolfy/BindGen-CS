@@ -31,6 +31,7 @@ public sealed class ArtifactSetPublisher : IDisposable
     private const string C_FILEOWNER = ".bgcs-artifact.json";
     private readonly ImmutableArray<ArtifactSetDestination> m_destinations;
     private readonly Dictionary<string, string> m_candidates;
+    private readonly List<OwnedPathBoundary> m_boundaries = [];
     private readonly List<FileStream> m_locks = [];
     private readonly string m_journal;
     private bool m_committed;
@@ -46,7 +47,12 @@ public sealed class ArtifactSetPublisher : IDisposable
     ) {
         ArgumentNullException.ThrowIfNull(destinations);
         StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        m_destinations = destinations.Select(destination => destination with { path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination.path)) })
+        m_destinations = destinations.Select(destination =>
+            {
+                OwnedPathBoundary boundary = new(destination.path);
+                m_boundaries.Add(boundary);
+                return destination with { path = boundary.physicalPath };
+            })
             .OrderBy(destination => DirectoryPublicationLease.GetPath(destination.path), comparer).ToImmutableArray();
         if (m_destinations.IsEmpty) throw new ArgumentException("A publication set requires at least one destination.", nameof(destinations));
         m_candidates = new(comparer);
@@ -59,7 +65,7 @@ public sealed class ArtifactSetPublisher : IDisposable
             foreach (ArtifactSetDestination other in m_destinations.Take(index))
                 if (Overlaps(destination.path, other.path)) throw new ArgumentException("Artifact publication destinations overlap.", nameof(destinations));
             foreach (string input in protectedInputs ?? [])
-                if (Overlaps(destination.path, Path.GetFullPath(input))) throw new IOException("Artifact publication overlaps a protected native input: " + input);
+                if (Overlaps(destination.path, PhysicalPathResolver.Resolve(input))) throw new IOException("Artifact publication overlaps a protected native input: " + input);
         }
         string identity = string.Join('\n', m_destinations.Select(destination => (OperatingSystem.IsWindows() ? destination.path.ToUpperInvariant() : destination.path)
             + "\n" + destination.libraryId + "\n" + destination.isDirectory));
@@ -67,6 +73,7 @@ public sealed class ArtifactSetPublisher : IDisposable
         try
         {
             foreach (ArtifactSetDestination destination in m_destinations) m_locks.Add(DirectoryPublicationLease.Acquire(destination.path, TimeSpan.FromMinutes(5), cancellationToken));
+            VerifyBoundaries();
             Recover();
             foreach (ArtifactSetDestination destination in m_destinations)
             {
@@ -82,12 +89,19 @@ public sealed class ArtifactSetPublisher : IDisposable
     /// <param name="destination">The complete formal file or directory destination.</param>
     /// <returns>The private unpublished candidate file or directory.</returns>
     public string GetCandidatePath(string destination)
-        => m_candidates.TryGetValue(Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination)), out string? candidate) ? candidate : throw new ArgumentException("The destination is outside this publication set.", nameof(destination));
+    {
+        VerifyBoundaries();
+        return m_candidates.TryGetValue(new OwnedPathBoundary(destination).physicalPath, out string? candidate) ? candidate : throw new ArgumentException("The destination is outside this publication set.", nameof(destination));
+    }
     /// <summary>Reads existing verified artifact identities while this set retains their publication locks.</summary>
     /// <param name="destination">The exactly named formal destination.</param>
     /// <returns>The complete existing artifact collection, or empty for absent output.</returns>
     public ImmutableArray<ArtifactDescriptor> ReadExistingArtifacts(string destination)
-        => ReadExisting(m_destinations.Single(item => Equal(item.path, Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination)))));
+    {
+        VerifyBoundaries();
+        string physical = new OwnedPathBoundary(destination).physicalPath;
+        return ReadExisting(m_destinations.Single(item => Equal(item.path, physical)));
+    }
     /// <summary>Gets a cleanup error after complete publication; retained journal recovery retries cleanup.</summary>
     public Exception? cleanupFailure { get; private set; }
     /// <summary>Verifies all candidates, journals their full identities and installs the set with rollback on failure.</summary>
@@ -100,11 +114,16 @@ public sealed class ArtifactSetPublisher : IDisposable
         ObjectDisposedException.ThrowIf(m_disposed, this);
         if (m_committed) throw new InvalidOperationException("An artifact set cannot commit twice.");
         ArgumentNullException.ThrowIfNull(artifacts);
+        VerifyBoundaries();
+        Dictionary<string, ImmutableArray<ArtifactDescriptor>> physicalArtifacts = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        foreach (var entry in artifacts)
+            if (!physicalArtifacts.TryAdd(new OwnedPathBoundary(entry.Key).physicalPath, entry.Value))
+                throw new IOException("A publication manifest repeats one physical destination through aliases.");
         List<SetEntry> entries = [];
         foreach (ArtifactSetDestination destination in m_destinations)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!artifacts.TryGetValue(destination.path, out ImmutableArray<ArtifactDescriptor> expected) || expected.IsDefaultOrEmpty) throw new IOException("A publication destination has no complete artifact manifest.");
+            if (!physicalArtifacts.TryGetValue(destination.path, out ImmutableArray<ArtifactDescriptor> expected) || expected.IsDefaultOrEmpty) throw new IOException("A publication destination has no complete artifact manifest.");
             string candidate = m_candidates[destination.path];
             ImmutableArray<ArtifactDescriptor> previous = ReadExisting(destination);
             Verify(candidate, destination, expected, ownerRequired: false);
@@ -114,21 +133,24 @@ public sealed class ArtifactSetPublisher : IDisposable
         }
         SetJournal journal = new(1, "prepared", entries.ToImmutableArray());
         cancellationToken.ThrowIfCancellationRequested();
+        VerifyBoundaries();
         PublicationJournalStorage.Write(m_journal, journal);
         try
         {
             foreach (SetEntry entry in journal.entries)
             {
+                VerifyBoundaries();
                 if (entry.backup is not null) Move(entry.destination.path, entry.backup, entry.destination.isDirectory);
                 Move(entry.candidate, entry.destination.path, entry.destination.isDirectory);
                 Verify(entry.destination.path, entry.destination, entry.current, ownerRequired: true);
+                VerifyBoundaries();
             }
             PublicationJournalStorage.Write(m_journal, journal with { state = "committed" });
             m_committed = true;
         }
         catch (Exception failure)
         {
-            try { Recover(); }
+            try { Recover(verifyBoundaries: false); }
             catch (Exception rollback) { throw new AggregateException("Artifact set installation failed and recovery requires the retained journal.", failure, rollback); }
             throw;
         }
@@ -171,8 +193,9 @@ public sealed class ArtifactSetPublisher : IDisposable
         Verify(destination.path, destination, result, ownerRequired: true);
         return result;
     }
-    private void Recover()
+    private void Recover(bool verifyBoundaries = true)
     {
+        if (verifyBoundaries) VerifyBoundaries();
         RejectLinks(m_journal);
         string temporaryJournal = m_journal + ".tmp";
         RejectLinks(temporaryJournal);
@@ -315,8 +338,10 @@ public sealed class ArtifactSetPublisher : IDisposable
     private static void RejectLinks(string path)
     {
         ArtifactDigestVerifier.RejectLinkedAncestors(path);
-        for (string? current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
-            if (new FileInfo(current).LinkTarget is not null) throw new IOException("Artifact publication cannot follow a symbolic link.");
+    }
+    private void VerifyBoundaries()
+    {
+        foreach (OwnedPathBoundary boundary in m_boundaries) boundary.Verify();
     }
     private static bool Exists(
         string path,

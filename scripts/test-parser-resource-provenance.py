@@ -148,6 +148,66 @@ class ParserResourceProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "contradicts actual delivered"):
             self.verify()
 
+    def worker_output(self):
+        output = self.root / "worker-output"
+        output.mkdir()
+        (output / "BGCS.Frontend.Clang.Worker.dll").write_bytes(b"completed worker fixture; not executed")
+        return output
+
+    def test_worker_staging_replaces_only_native_subtree_with_complete_verified_provenance(self):
+        output = self.worker_output()
+        destination = output / "runtimes/osx-x64/native"
+        destination.mkdir(parents=True)
+        (destination / "retired.dylib").write_bytes(b"stale unowned-by-next-closure bytes")
+        sibling = output / "runtimes/sibling.keep"
+        sibling.write_bytes(b"independent sibling")
+        companion = self.directory / "libcompanion.dylib"
+        companion.write_bytes((self.directory / "libclang.dylib").read_bytes())
+        self.manifest["components"][1]["files"].append({"path": companion.name, "sha256": PROVENANCE.digest(companion)})
+        self.write_manifest()
+        original = {path.relative_to(self.directory).as_posix(): path.read_bytes()
+                    for path in self.directory.rglob("*") if path.is_file()}
+
+        PROVENANCE.stage_worker(self.root, self.directory, output, "c" * 40)
+
+        actual = {path.relative_to(destination).as_posix(): path.read_bytes()
+                  for path in destination.rglob("*") if path.is_file()}
+        self.assertEqual(original, actual)
+        self.assertEqual(original, {path.relative_to(self.directory).as_posix(): path.read_bytes()
+                                    for path in self.directory.rglob("*") if path.is_file()})
+        self.assertEqual(b"independent sibling", sibling.read_bytes())
+        self.assertEqual(["native"], sorted(path.name for path in destination.parent.iterdir()))
+        self.assertEqual(self.manifest, PROVENANCE.verify_supplemental(self.root, destination, "c" * 40))
+
+    def test_worker_staging_invalid_source_preserves_previous_bytes_without_partial_output(self):
+        output = self.worker_output()
+        destination = output / "runtimes/osx-x64/native"
+        destination.mkdir(parents=True)
+        (destination / "previous.keep").write_bytes(b"published previous")
+        (self.directory / "libclang.dylib").write_bytes(b"changed after captured provenance")
+
+        with self.assertRaisesRegex(RuntimeError, "changed after its actual build"):
+            PROVENANCE.stage_worker(self.root, self.directory, output, "c" * 40)
+
+        self.assertEqual(["previous.keep"], [path.name for path in destination.iterdir()])
+        self.assertEqual(b"published previous", (destination / "previous.keep").read_bytes())
+        self.assertEqual(["native"], [path.name for path in destination.parent.iterdir()])
+
+    def test_worker_staging_requires_completed_separate_worker_output(self):
+        output = self.root / "not-a-worker"
+        output.mkdir()
+        with self.assertRaisesRegex(RuntimeError, "completed worker output"):
+            PROVENANCE.stage_worker(self.root, self.directory, output, "c" * 40)
+        (self.directory / "BGCS.Frontend.Clang.Worker.dll").write_bytes(b"not a valid separate output")
+        with self.assertRaisesRegex(RuntimeError, "separate owned roots"):
+            PROVENANCE.stage_worker(self.root, self.directory, self.directory, "c" * 40)
+
+    def test_worker_staging_rejects_stale_source_revision_before_replacing_native_output(self):
+        output = self.worker_output()
+        with self.assertRaisesRegex(RuntimeError, "current BGCS revision"):
+            PROVENANCE.stage_worker(self.root, self.directory, output, "d" * 40)
+        self.assertFalse((output / "runtimes").exists())
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

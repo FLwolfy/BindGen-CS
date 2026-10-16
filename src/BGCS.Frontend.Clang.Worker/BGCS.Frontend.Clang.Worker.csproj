@@ -10,4 +10,10 @@
     <ProjectReference Include="../BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
     <ProjectReference Include="../BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
   </ItemGroup>
+
+  <Target Name="BGCSStageVerifiedIntelParser" AfterTargets="Build" Condition="'$(BGCSParserAssetRid)' == 'osx-x64'">
+    <Error Condition="'$(BGCS_CLANG_RUNTIME_DIR)' == ''" Text="Building the Intel macOS worker requires BGCS_CLANG_RUNTIME_DIR from scripts/setup-macos-x64-clang-runtime.sh." />
+    <Error Condition="'$(TargetDir)' == ''" Text="The Intel parser requires an explicit worker build output." />
+    <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../scripts/parser_runtime_provenance.py&quot; stage-worker &quot;$(BGCS_CLANG_RUNTIME_DIR)&quot; --worker-output &quot;$(TargetDir).&quot;" />
+  </Target>
 </Project>

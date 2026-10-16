@@ -18,6 +18,7 @@ public sealed class ArtifactPublisher : IDisposable
     private const string C_OWNERSHIPFILE = ".bgcs-artifacts.json";
     private readonly OutputDirectoryTransaction m_transaction;
     private readonly string m_destination;
+    private readonly OwnedPathBoundary m_boundary;
     private readonly string m_libraryId;
     private readonly string m_journalPath;
     private readonly ArtifactDigestVerifier m_verifier = new();
@@ -38,17 +39,19 @@ public sealed class ArtifactPublisher : IDisposable
     ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryId);
-        m_destination = Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination));
+        m_boundary = new(destination);
+        m_destination = m_boundary.physicalPath;
         m_libraryId = libraryId;
         string parent = Path.GetDirectoryName(m_destination) ?? throw new IOException("A filesystem root cannot be a BGCS output directory.");
         ArtifactDigestVerifier.RejectLinkedAncestors(m_destination);
         foreach (string input in protectedInputs ?? [])
-            if (Overlap(m_destination, Path.GetFullPath(input))) throw new IOException($"Output overlaps protected input '{input}'.");
+            if (Overlap(m_destination, PhysicalPathResolver.Resolve(input))) throw new IOException($"Output overlaps protected input '{input}'.");
         string identity = OperatingSystem.IsWindows() ? m_destination.ToUpperInvariant() : m_destination;
         m_journalPath = Path.Combine(parent, ".bgcs-publication-" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(identity))) + ".json");
         m_transaction = new(m_destination, cancellationToken: cancellationToken);
         try
         {
+            m_boundary.Verify();
             Recover();
             ValidatePrevious();
         }
@@ -97,6 +100,7 @@ public sealed class ArtifactPublisher : IDisposable
         CancellationToken cancellationToken = default
     ) {
         ObjectDisposedException.ThrowIf(m_disposed, this);
+        m_boundary.Verify();
         if (m_committed) throw new InvalidOperationException("Publication has already committed.");
         ArgumentNullException.ThrowIfNull(artifacts);
         ImmutableArray<ArtifactDescriptor> snapshot = artifacts.ToImmutableArray();
@@ -121,6 +125,7 @@ public sealed class ArtifactPublisher : IDisposable
         PublicationJournalStorage.Write(Path.Combine(candidateRoot, C_OWNERSHIPFILE), owner);
         m_verifier.Verify(candidateRoot, snapshot, [C_OWNERSHIPFILE]);
         cancellationToken.ThrowIfCancellationRequested();
+        m_boundary.Verify();
         string? backup = Directory.Exists(m_destination) ? Path.Combine(Path.GetDirectoryName(m_destination)!, ".bgcs-backup-" + Guid.NewGuid().ToString("N")) : null;
         PublicationJournal journal = new(m_destination, candidateRoot, backup, m_libraryId, "prepared", snapshot);
         PublicationJournalStorage.Write(m_journalPath, journal);
@@ -130,6 +135,7 @@ public sealed class ArtifactPublisher : IDisposable
             m_transaction.InstallCandidate(backup, requireMissingDestination: backup is null);
             installed = true;
             m_verifier.Verify(m_destination, snapshot, [C_OWNERSHIPFILE]);
+            m_boundary.Verify();
             PublicationJournalStorage.Write(m_journalPath, journal with { state = "committed" });
             m_committed = true;
         }
@@ -169,6 +175,7 @@ public sealed class ArtifactPublisher : IDisposable
 
     private void ValidatePrevious()
     {
+        m_boundary.Verify();
         if (File.Exists(m_destination)) throw new IOException("The output directory is an existing file.");
         if (!Directory.Exists(m_destination) || !Directory.EnumerateFileSystemEntries(m_destination).Any()) return;
         ArtifactDigestVerifier.RejectLinkedAncestors(m_destination);
@@ -183,6 +190,7 @@ public sealed class ArtifactPublisher : IDisposable
 
     private void Recover()
     {
+        m_boundary.Verify();
         ArtifactDigestVerifier.RejectLinkedAncestors(m_journalPath);
         string temporaryJournal = m_journalPath + ".tmp";
         ArtifactDigestVerifier.RejectLinkedAncestors(temporaryJournal);

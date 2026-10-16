@@ -10,6 +10,7 @@ namespace BGCS.Infrastructure.IO;
 public sealed class OutputDirectoryTransaction : IDisposable
 {
     private readonly string m_destinationPath;
+    private readonly OwnedPathBoundary m_boundary;
     private readonly FileStream m_publicationLease;
     private readonly bool m_ownsLease;
     private bool m_committed;
@@ -42,9 +43,7 @@ public sealed class OutputDirectoryTransaction : IDisposable
         string destinationPath,
         TimeSpan? lockTimeout = null,
         CancellationToken cancellationToken = default
-    ) : this(destinationPath,
-        DirectoryPublicationLease.Acquire(destinationPath, lockTimeout ?? TimeSpan.FromMinutes(5), cancellationToken),
-        ownsLease: true)
+    ) : this(new OwnedPathBoundary(destinationPath), null, ownsLease: true, lockTimeout ?? TimeSpan.FromMinutes(5), cancellationToken)
     {
     }
 
@@ -56,25 +55,30 @@ public sealed class OutputDirectoryTransaction : IDisposable
     internal OutputDirectoryTransaction(
         string destinationPath,
         FileStream publicationLease
-    ) : this(destinationPath, publicationLease, ownsLease: false)
+    ) : this(new OwnedPathBoundary(destinationPath), publicationLease, ownsLease: false, TimeSpan.Zero, CancellationToken.None)
     {
     }
 
     private OutputDirectoryTransaction(
-        string destinationPath,
-        FileStream publicationLease,
-        bool ownsLease
+        OwnedPathBoundary boundary,
+        FileStream? publicationLease,
+        bool ownsLease,
+        TimeSpan timeout,
+        CancellationToken cancellationToken
     ) {
-        m_destinationPath = Path.GetFullPath(destinationPath);
+        m_boundary = boundary;
+        m_destinationPath = boundary.physicalPath;
         string parent = Path.GetDirectoryName(m_destinationPath)
-            ?? throw new ArgumentException("The output path must have a parent directory.", nameof(destinationPath));
-        m_publicationLease = publicationLease;
+            ?? throw new ArgumentException("The output path must have a parent directory.", nameof(boundary));
+        m_publicationLease = publicationLease ?? DirectoryPublicationLease.Acquire(m_destinationPath, timeout, cancellationToken);
         m_ownsLease = ownsLease;
         try
         {
+            m_boundary.Verify();
             // A destination fingerprint must not be repeated at every nested generation stage.
             stagingPath = Path.Combine(parent, $".bgcs-staging-{Guid.NewGuid():N}");
             Directory.CreateDirectory(stagingPath);
+            m_boundary.Verify();
         }
         catch
         {
@@ -120,6 +124,8 @@ public sealed class OutputDirectoryTransaction : IDisposable
         bool requireMissingDestination = false
     ) {
         ObjectDisposedException.ThrowIf(m_disposed, this);
+        m_boundary.Verify();
+        OwnedPathBoundary.RejectPhysicalLinks(stagingPath);
         if (m_committed)
         {
             throw new InvalidOperationException("The output directory transaction has already been committed.");
@@ -136,29 +142,35 @@ public sealed class OutputDirectoryTransaction : IDisposable
             if (requireMissingDestination)
                 throw new IOException("An output directory appeared after publication was prepared.");
             backupPath = preparedBackupPath ?? Path.Combine(Path.GetDirectoryName(m_destinationPath)!, ".bgcs-backup-" + Guid.NewGuid().ToString("N"));
+            OwnedPathBoundary.RejectPhysicalLinks(backupPath);
             DirectoryPublication.Move(m_destinationPath, backupPath);
         }
 
+        bool installed = false;
         try
         {
             DirectoryPublication.Move(stagingPath, m_destinationPath);
+            installed = true;
+            m_boundary.Verify();
             m_committed = true;
         }
         catch (Exception installationFailure)
         {
-            if (backupPath != null && !Directory.Exists(m_destinationPath) && Directory.Exists(backupPath))
+            try
             {
-                try
-                {
+                // Restore the captured physical owner even if its original alias
+                // was redirected while installation was in progress.
+                OwnedPathBoundary.RejectPhysicalLinks(m_destinationPath);
+                OwnedPathBoundary.RejectPhysicalLinks(stagingPath);
+                if (installed) DirectoryPublication.Move(m_destinationPath, stagingPath);
+                if (backupPath != null && !Directory.Exists(m_destinationPath) && Directory.Exists(backupPath))
                     DirectoryPublication.Move(backupPath, m_destinationPath);
-                }
-                catch (Exception restorationFailure)
-                {
-                    throw new AggregateException(
-                        $"Output installation failed; the previous tree remains at '{backupPath}' and could not be restored to '{m_destinationPath}'.",
-                        installationFailure,
-                        restorationFailure);
-                }
+            }
+            catch (Exception restorationFailure)
+            {
+                throw new AggregateException(
+                    $"Output installation failed; the previous tree remains at '{backupPath}' and could not be restored to '{m_destinationPath}'.",
+                    installationFailure, restorationFailure);
             }
             throw;
         }
@@ -169,6 +181,9 @@ public sealed class OutputDirectoryTransaction : IDisposable
     internal void RestorePrevious(string? backupPath)
     {
         ObjectDisposedException.ThrowIf(m_disposed, this);
+        OwnedPathBoundary.RejectPhysicalLinks(m_destinationPath);
+        OwnedPathBoundary.RejectPhysicalLinks(stagingPath);
+        if (backupPath is not null) OwnedPathBoundary.RejectPhysicalLinks(backupPath);
         if (!m_committed)
             throw new InvalidOperationException("No candidate has been installed by this transaction.");
         DirectoryPublication.Move(m_destinationPath, stagingPath);
@@ -183,6 +198,7 @@ public sealed class OutputDirectoryTransaction : IDisposable
             return;
         try
         {
+            OwnedPathBoundary.RejectPhysicalLinks(backupPath);
             Directory.Delete(backupPath, recursive: true);
         }
         catch (Exception cleanupFailure) when (cleanupFailure is IOException or UnauthorizedAccessException)
@@ -203,7 +219,10 @@ public sealed class OutputDirectoryTransaction : IDisposable
         try
         {
             if (!m_committed && Directory.Exists(stagingPath))
+            {
+                OwnedPathBoundary.RejectPhysicalLinks(stagingPath);
                 Directory.Delete(stagingPath, recursive: true);
+            }
         }
         finally
         {

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Common;
+using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Publishing;
 
@@ -16,6 +17,7 @@ namespace BGCS.Infrastructure.Publishing;
 public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
 {
     private readonly string m_root;
+    private readonly OwnedPathBoundary m_boundary;
     private readonly Dictionary<string, ArtifactDescriptor> m_artifacts;
     private readonly SemaphoreSlim m_gate = new(1, 1);
     private bool m_closed;
@@ -30,7 +32,8 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
         IEnumerable<ArtifactDescriptor> artifacts,
         string? additionPrefix = null
     ) {
-        m_root = Path.GetFullPath(root);
+        m_boundary = new(root);
+        m_root = m_boundary.physicalPath;
         m_artifacts = artifacts.ToDictionary(artifact => artifact.relativePath, StringComparer.Ordinal);
         _ = new DirectoryArtifactReader(m_root, m_artifacts.Values);
         if (additionPrefix is not null)
@@ -47,7 +50,7 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
         get
         {
             m_gate.Wait();
-            try { ObjectDisposedException.ThrowIf(m_closed, this); return m_artifacts.Values.OrderBy(artifact => artifact.relativePath, StringComparer.Ordinal).ToImmutableArray(); }
+            try { ObjectDisposedException.ThrowIf(m_closed, this); m_boundary.Verify(); return m_artifacts.Values.OrderBy(artifact => artifact.relativePath, StringComparer.Ordinal).ToImmutableArray(); }
             finally { m_gate.Release(); }
         }
     }
@@ -61,7 +64,10 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
         try
         {
             ObjectDisposedException.ThrowIf(m_closed, this);
-            return await new DirectoryArtifactReader(m_root, m_artifacts.Values).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
+            m_boundary.Verify();
+            ReadOnlyMemory<byte> bytes = await new DirectoryArtifactReader(m_root, m_artifacts.Values).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
+            m_boundary.Verify();
+            return bytes;
         }
         finally { m_gate.Release(); }
     }
@@ -82,28 +88,37 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
         ArgumentNullException.ThrowIfNull(content);
         await m_gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         string? temporary = null;
+        Exception? failure = null;
         try
         {
             ObjectDisposedException.ThrowIf(m_closed, this);
+            m_boundary.Verify();
             if (!m_artifacts.TryGetValue(relativePath, out ArtifactDescriptor? previous)) throw new ArgumentException("Only declared candidate artifacts can be replaced.");
             if (!previous.mediaType.StartsWith("text/", StringComparison.Ordinal) && previous.mediaType != "application/json") throw new ArgumentException("A text processor cannot replace a binary candidate.");
             _ = await new DirectoryArtifactReader(m_root, m_artifacts.Values).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
             byte[] bytes = new UTF8Encoding(false, true).GetBytes(content);
             if (bytes.Length > 256 * 1024 * 1024) throw new IOException("A replacement text artifact exceeds the complete candidate read limit.");
             string destination = Path.GetFullPath(relativePath, m_root);
+            OwnedPathBoundary.RejectPhysicalLinks(destination);
             temporary = Path.Combine(Path.GetDirectoryName(destination)!, ".bgcs-edit-" + Guid.NewGuid().ToString("N"));
+            OwnedPathBoundary.RejectPhysicalLinks(temporary);
             await File.WriteAllBytesAsync(temporary, bytes, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
+            m_boundary.Verify();
+            OwnedPathBoundary.RejectPhysicalLinks(destination);
+            OwnedPathBoundary.RejectPhysicalLinks(temporary);
             File.Move(temporary, destination, overwrite: true);
             temporary = null;
             ArtifactDescriptor replacement = previous with { digest = new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))) };
             m_artifacts[relativePath] = replacement;
+            m_boundary.Verify();
             return replacement;
         }
+        catch (Exception error) { failure = error; throw; }
         finally
         {
-            if (temporary is not null && File.Exists(temporary)) File.Delete(temporary);
-            m_gate.Release();
+            try { OwnedFileCleanup.Delete(temporary, failure); }
+            finally { m_gate.Release(); }
         }
     }
 
@@ -118,9 +133,11 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(mediaType);
         await m_gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         string? installed = null;
+        Exception? failure = null;
         try
         {
             ObjectDisposedException.ThrowIf(m_closed, this);
+            m_boundary.Verify();
             if (m_additionPrefix is null || !relativePath.StartsWith(m_additionPrefix, StringComparison.Ordinal)) throw new ArgumentException("An additional artifact must remain inside the stage's owned output prefix.");
             if (!mediaType.StartsWith("text/", StringComparison.Ordinal) && mediaType != "application/json") throw new ArgumentException("A text processing stage cannot add binary candidates.");
             if (m_artifacts.Keys.Any(path => string.Equals(path, relativePath, StringComparison.OrdinalIgnoreCase))) throw new InvalidOperationException("The additional candidate path conflicts with an existing artifact.");
@@ -131,13 +148,15 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             installed = new DirectoryArtifactSink(m_root).WriteBytes(relativePath, bytes);
             m_artifacts.Add(relativePath, artifact);
+            m_boundary.Verify();
             installed = null;
             return artifact;
         }
+        catch (Exception error) { failure = error; throw; }
         finally
         {
-            if (installed is not null && File.Exists(installed)) File.Delete(installed);
-            m_gate.Release();
+            try { OwnedFileCleanup.Delete(installed, failure); }
+            finally { m_gate.Release(); }
         }
     }
 
@@ -150,12 +169,17 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
         try
         {
             ObjectDisposedException.ThrowIf(m_closed, this);
+            m_boundary.Verify();
             if (!m_artifacts.TryGetValue(relativePath, out ArtifactDescriptor? previous)) throw new ArgumentException("Only a declared text candidate can be removed.");
             if (!previous.mediaType.StartsWith("text/", StringComparison.Ordinal) && previous.mediaType != "application/json") throw new ArgumentException("A text processing stage cannot remove binary candidates.");
             _ = await new DirectoryArtifactReader(m_root, m_artifacts.Values).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            File.Delete(Path.GetFullPath(relativePath, m_root));
+            m_boundary.Verify();
+            string destination = Path.GetFullPath(relativePath, m_root);
+            OwnedPathBoundary.RejectPhysicalLinks(destination);
+            File.Delete(destination);
             m_artifacts.Remove(relativePath);
+            m_boundary.Verify();
         }
         finally { m_gate.Release(); }
     }

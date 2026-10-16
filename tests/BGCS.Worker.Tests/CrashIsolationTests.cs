@@ -65,7 +65,7 @@ public sealed class CrashIsolationTests
         {
             await Assert.ThrowsAsync<TimeoutException>(async () =>
                 await CreateClient(TimeSpan.FromSeconds(2)).ParseAsync(Request("hang", pidFile), CancellationToken.None));
-            AssertProcessStopped(int.Parse(await File.ReadAllTextAsync(pidFile)));
+            await AssertProcessStoppedAsync(int.Parse(await File.ReadAllTextAsync(pidFile)));
         }
         finally { File.Delete(pidFile); File.Delete(pidFile + ".tmp"); }
     }
@@ -85,9 +85,11 @@ public sealed class CrashIsolationTests
             while (!File.Exists(pidFile))
                 await Task.Delay(20, startup.Token);
             int processId = int.Parse(await File.ReadAllTextAsync(pidFile));
+            int workerId = mode == "child" ? int.Parse(await File.ReadAllTextAsync(pidFile + ".worker")) : processId;
             cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => parse);
-            AssertProcessStopped(processId);
+            await AssertProcessStoppedAsync(workerId);
+            await AssertProcessStoppedAsync(processId);
         }
         finally
         {
@@ -99,17 +101,117 @@ public sealed class CrashIsolationTests
             }
             File.Delete(pidFile);
             File.Delete(pidFile + ".tmp");
+            File.Delete(pidFile + ".worker");
+            File.Delete(pidFile + ".worker.tmp");
         }
     }
 
-    private static void AssertProcessStopped(int processId)
+    [Fact]
+    public async Task TerminationProbeRejectsALiveProcessAndRecognizesActualKernelTermination()
     {
+        Assert.False(HasProcessStopped(Environment.ProcessId, out string live), live);
+        string marker = Path.Combine(Path.GetTempPath(), "bgcs-exit-probe-" + Guid.NewGuid().ToString("N"));
+        ProcessStartInfo start = new(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true
+        };
+        start.ArgumentList.Add(WorkerPath());
+        start.ArgumentList.Add(OperatingSystem.IsLinux() ? "--zombie-probe" : "--exit-probe");
+        start.ArgumentList.Add(marker);
+        using Process parent = Process.Start(start)!;
+        try
+        {
+            using CancellationTokenSource startup = new(TimeSpan.FromSeconds(10));
+            if (OperatingSystem.IsLinux())
+            {
+                while (!File.Exists(marker)) await Task.Delay(20, startup.Token);
+                int zombieId = int.Parse(await File.ReadAllTextAsync(marker, startup.Token));
+                string state;
+                while (!HasProcessStopped(zombieId, out state)) await Task.Delay(20, startup.Token);
+                Assert.Contains("state=Z", state, StringComparison.Ordinal);
+                using Process zombie = Process.GetProcessById(zombieId);
+                Assert.False(zombie.HasExited); // Non-child HasExited uses kill(pid, 0), which also succeeds for zombies.
+                Assert.False(parent.HasExited); // Its native parent has deliberately not called waitpid yet.
+                await AssertProcessStoppedAsync(zombieId);
+            }
+            else
+            {
+                await parent.WaitForExitAsync(startup.Token);
+                Assert.True(HasProcessStopped(parent.Id, out string stopped), stopped);
+            }
+        }
+        finally
+        {
+            if (!parent.HasExited)
+            {
+                // The Linux probe explicitly reaps its native child before exiting.
+                await parent.StandardInput.WriteLineAsync("reap");
+                parent.StandardInput.Close();
+                try { await parent.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)); }
+                finally { if (!parent.HasExited) parent.Kill(entireProcessTree: true); }
+            }
+            File.Delete(marker);
+            File.Delete(marker + ".tmp");
+        }
+        Assert.Equal(0, parent.ExitCode);
+    }
+
+    [Theory]
+    [InlineData('R', false)]
+    [InlineData('S', false)]
+    [InlineData('D', false)]
+    [InlineData('T', false)]
+    [InlineData('t', false)]
+    [InlineData('Z', true)]
+    [InlineData('X', true)]
+    [InlineData('x', true)]
+    public void LinuxStateProbePreservesEveryLiveStateAndParsesParenthesesInTheProcessName(char state, bool stopped)
+        => Assert.Equal(stopped, IsTerminatedLinuxState("42 (name ) with (brackets)) " + state + " 1 2 3", 42, out _));
+
+    private static async Task AssertProcessStoppedAsync(int processId)
+    {
+        Stopwatch wait = Stopwatch.StartNew();
+        string observation;
+        while (!HasProcessStopped(processId, out observation) && wait.Elapsed < TimeSpan.FromSeconds(5))
+            await Task.Delay(20);
+        Assert.True(HasProcessStopped(processId, out observation), $"Worker process {processId} survived cancellation: {observation}");
+    }
+
+    private static bool HasProcessStopped(int processId, out string observation)
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            try
+            {
+                // A zombie has already stopped executing and released its descriptors;
+                // only its parent's exit-status bookkeeping remains in /proc.
+                return IsTerminatedLinuxState(File.ReadAllText($"/proc/{processId}/stat"), processId, out observation);
+            }
+            catch (FileNotFoundException) { observation = "PID absent from /proc"; return true; }
+            catch (DirectoryNotFoundException) { observation = "PID absent from /proc"; return true; }
+            catch (IOException) when (!Directory.Exists($"/proc/{processId}")) { observation = "PID removed during /proc read"; return true; }
+        }
         try
         {
             using Process process = Process.GetProcessById(processId);
-            Assert.True(process.HasExited, $"Worker process {processId} survived cancellation.");
+            bool exited = process.HasExited;
+            observation = "HasExited=" + exited;
+            return exited;
         }
-        catch (ArgumentException) { /* The OS has already removed the terminated process. */ }
+        catch (ArgumentException) { observation = "PID absent from process table"; return true; }
+    }
+
+    private static bool IsTerminatedLinuxState(string stat, int processId, out string observation)
+    {
+        int opening = stat.IndexOf('('), closing = stat.LastIndexOf(')');
+        if (opening < 1 || closing <= opening || closing + 3 >= stat.Length || stat[closing + 1] != ' ' || stat[closing + 3] != ' '
+            || !int.TryParse(stat.AsSpan(0, opening).Trim(), out int actualId) || actualId != processId)
+            throw new InvalidDataException("The Linux process state has no valid PID/name/state record.");
+        char state = stat[closing + 2];
+        observation = "Linux state=" + state + "; " + stat[..(closing + 1)];
+        return state is 'Z' or 'X' or 'x';
     }
 
     private static FrontendRequest Request(string mode, string? pidFile = null)
@@ -119,12 +221,15 @@ public sealed class CrashIsolationTests
     }
 
     private static FrontendWorkerClient CreateClient(TimeSpan? timeout = null, string parserIdentity = WorkerProtocol.C_PARSER_IDENTITY)
+        => new(WorkerPath(), timeout ?? TimeSpan.FromSeconds(15), parserIdentity: parserIdentity);
+
+    private static string WorkerPath()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "src", "BGCS.Frontend.Clang.Worker")))
             directory = directory.Parent;
         string root = directory?.FullName ?? throw new InvalidOperationException("The test repository is unavailable.");
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return new(Path.Combine(root, "tests", "fixtures", "hosts", "FaultingWorker", "bin", configuration, "net10.0", "FaultingWorker.dll"), timeout ?? TimeSpan.FromSeconds(15), parserIdentity: parserIdentity);
+        return Path.Combine(root, "tests", "fixtures", "hosts", "FaultingWorker", "bin", configuration, "net10.0", "FaultingWorker.dll");
     }
 }

@@ -77,6 +77,8 @@ public sealed record NativeBuildCommand(
     public NativeLinkTraceFormat? linkDependencyTrace { get; init; }
     /// <summary>Gets explicit child environment changes; null removes an inherited variable.</summary>
     public ImmutableDictionary<string, string?> environmentOverrides { get; init; } = ImmutableDictionary<string, string?>.Empty;
+    /// <summary>Gets the .NET encoding name for captured standard output and error; null preserves the platform default.</summary>
+    public string? outputEncoding { get; init; }
     /// <summary>Gets explicit inputs on which this operation depends.</summary>
     public ImmutableArray<string> inputFiles { get; init; } = [];
     /// <summary>Gets files that the operation must produce.</summary>

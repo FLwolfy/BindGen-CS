@@ -130,8 +130,8 @@ internal static class NativeSourceViewFrontend
                     { timeoutSeconds = checked((int)Math.Ceiling(timeout.TotalSeconds)) }, token).ConfigureAwait(false);
                     if (view.observationFingerprint != current.observationFingerprint)
                         throw new IOException("Native compiler source-view observations changed during generation; dynamic or absolute header queries and final macro state must remain identical.");
-                    if (!SourceSnapshotVerifier.Matches(view.inputs, token) || !SourceSnapshotVerifier.Matches(current.inputs, token))
-                        throw new IOException("Native source-view inputs changed during compiler observation replay.");
+                    if (SourceSnapshotBatch.GetMismatch([view.inputs, current.inputs], token) is string mismatch)
+                        throw new IOException("Native source-view inputs changed during compiler observation replay. " + mismatch);
                 }
                 finally { Directory.Delete(replay, recursive: true); }
             }

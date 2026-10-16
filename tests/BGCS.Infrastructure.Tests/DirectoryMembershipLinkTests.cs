@@ -59,7 +59,7 @@ public sealed class DirectoryMembershipLinkTests : IDisposable
         Assert.Equal(expected, before.digest);
         SourceSnapshot snapshot = new([], [before]);
         Assert.True(SourceSnapshotVerifier.Matches(snapshot));
-        Directory.Delete(one);
+        DeleteAlias(one);
         m_links.Remove(one);
         await CreateAlias(one, second);
         Assert.Equal(second, PhysicalPathResolver.Resolve(one));
@@ -133,7 +133,14 @@ public sealed class DirectoryMembershipLinkTests : IDisposable
 
     public void Dispose()
     {
-        for (int index = m_links.Count - 1; index >= 0; index--) Directory.Delete(m_links[index]);
+        for (int index = m_links.Count - 1; index >= 0; index--) DeleteAlias(m_links[index]);
         Directory.Delete(m_root, recursive: true);
+    }
+
+    private static void DeleteAlias(string path)
+    {
+        // Unix unlink must not resolve a dangling or cyclic directory symlink.
+        if (OperatingSystem.IsWindows()) Directory.Delete(path);
+        else File.Delete(path);
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Native;
@@ -74,14 +75,15 @@ public sealed class NativeStringCompilerVerifier
             arguments.AddRange(family is "msvc" or "clang-cl" ? ["/TP", "/std:c++latest", "/Zs"] : ["-x", "c++", "-std=c++23", "-fsyntax-only"]);
             arguments.Add(input);
             ProcessExecutionResult checkedLiterals = await ProcessExecutor.ExecuteAsync(operation.command.executable, arguments, operation.command.workingDirectory,
-                TimeSpan.FromSeconds(300), cancellationToken, environmentOverrides: operation.command.environmentOverrides).ConfigureAwait(false);
+                TimeSpan.FromSeconds(300), cancellationToken, environmentOverrides: operation.command.environmentOverrides,
+                outputEncoding: operation.command.outputEncoding is string encoding ? Encoding.GetEncoding(encoding) : null).ConfigureAwait(false);
             if (checkedLiterals.timedOut || checkedLiterals.exitCode != 0)
                 throw new InvalidOperationException("Native execution-character string verification failed: " + checkedLiterals.standardOutput + Environment.NewLine + checkedLiterals.standardError);
             if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken) || !SourceSnapshotVerifier.Matches(expanded.snapshot, cancellationToken)
                 || !SourceSnapshotVerifier.Matches(plan.argumentInputs, cancellationToken))
                 throw new IOException("The exact native string proof input or original compiler argument resources changed during verification.");
             NativeBuildCommand proofCommand = new("native-literal-proof", operation.command.executable, arguments.ToImmutableArray(), operation.command.workingDirectory)
-            { environmentOverrides = operation.command.environmentOverrides, inputFiles = [input] };
+            { environmentOverrides = operation.command.environmentOverrides, outputEncoding = operation.command.outputEncoding, inputFiles = [input] };
             return new(proofCommand, source, snapshot.files.Single().digest,
                 NativeStringAssertionEmitter.SelectConstants(expected).Select(declaration => declaration.id).ToImmutableArray(), expanded.snapshot, checkedLiterals);
         }

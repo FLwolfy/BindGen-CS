@@ -9,6 +9,7 @@ using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Targets;
 using BGCS.Contracts.Common;
 using BGCS.Contracts.Requests;
+using BGCS.Infrastructure.IO;
 using BGCS.Platforms.Targeting;
 using Xunit;
 
@@ -104,9 +105,20 @@ public sealed class NativeBuildCommandTests
         string compiler = ToolchainDiscovery.FindCompiler(SourceLanguage.Cpp, driver)
             ?? throw new InvalidOperationException("The launch desktop matrix requires a Clang driver for cross-target plan verification.");
         CommandResult result = Run(directory, "bridge.manifest.json", "--compiler", compiler, "--dry-run", "--json");
-        Assert.True(result.ExitCode == 0, result.Error);
         using JsonDocument document = JsonDocument.Parse(result.Output);
-        Assert.Equal("clang", document.RootElement.GetProperty("plan").GetProperty("providerId").GetString());
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.True(result.ExitCode == 0, result.Error);
+            Assert.True(document.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal("clang", document.RootElement.GetProperty("plan").GetProperty("providerId").GetString());
+        }
+        else
+        {
+            Assert.Equal(1, result.ExitCode);
+            Assert.False(document.RootElement.GetProperty("success").GetBoolean());
+            Assert.Contains("A Windows MSVC-targeting Clang driver requires a matching Visual C++ SDK.", result.Error, StringComparison.Ordinal);
+            Assert.Empty(Directory.GetFiles(directory.Path, "*.dll", SearchOption.AllDirectories));
+        }
     }
 
     [Fact]
@@ -154,9 +166,11 @@ public sealed class NativeBuildCommandTests
             extern "C" EXPORT int bgcs_sample(void) { return 42; }
             """, Encoding.UTF8);
         byte[] bytes = File.ReadAllBytes(source);
+        string physicalSource = Path.Combine(PhysicalPathResolver.Resolve(directory.Path), "sample.cpp");
+        Assert.Equal(physicalSource, PhysicalPathResolver.Resolve(source));
         NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId(targetId)));
         return new("sample", "sample", target, [new(source, SourceLanguage.Cpp, "c++23")], [],
-            [new(source, source, bytes.LongLength, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))))], ["bgcs_sample"]);
+            [new(source, physicalSource, bytes.LongLength, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))))], ["bgcs_sample"]);
     }
 
     private static CommandResult Run(TestDirectory directory, params string[] args)

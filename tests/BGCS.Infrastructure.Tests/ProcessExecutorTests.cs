@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Infrastructure.Execution;
@@ -12,6 +13,26 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class ProcessExecutorTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAsync_DecodesRawChildStreamsWithExplicitEncodingOrExistingDefault(bool unicode)
+    {
+        DirectoryInfo? repository = new(AppContext.BaseDirectory);
+        while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
+        Assert.NotNull(repository);
+        string configuration = typeof(ProcessExecutorTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
+        string fixture = Path.Combine(repository.FullName, "tests", "fixtures", "hosts", "ProcessProbe", "bin", configuration, "net10.0", "ProcessProbe.dll");
+        string output = unicode ? "验收🙂 café" : "unchanged ASCII stdout";
+        string error = unicode ? "错误λ stderr" : "unchanged ASCII stderr";
+        ProcessExecutionResult result = await ProcessExecutor.ExecuteAsync(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet",
+            [fixture, "raw-utf8", output, error], repository.FullName, TimeSpan.FromSeconds(20), outputEncoding: unicode ? Encoding.UTF8 : null);
+        Assert.Equal(7, result.exitCode);
+        Assert.False(result.timedOut);
+        Assert.Equal(output, result.standardOutput);
+        Assert.Equal(error, result.standardError);
+    }
+
     [Fact]
     public async Task ExecuteAsync_ChildEnvironmentCanOverrideAndRemoveValuesWithoutChangingTheParent()
     {

@@ -19,6 +19,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
 {
     private readonly SortedDictionary<string, OutputDirectoryTransaction> m_transactions;
     private readonly IReadOnlyDictionary<string, string> m_stagingPaths;
+    private readonly OwnedPathBoundary[] m_boundaries;
     private bool m_committed;
     private bool m_faulted;
     private bool m_disposed;
@@ -44,18 +45,22 @@ public sealed class OutputDirectorySetTransaction : IDisposable
         if (timeout < TimeSpan.Zero && timeout != Timeout.InfiniteTimeSpan)
             throw new ArgumentOutOfRangeException(nameof(lockTimeout));
         StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        string[] paths = destinationPaths.Select(NormalizePath).OrderBy(path => path, comparer).ToArray();
+        var captured = destinationPaths.Select(path => (logical: Path.GetFullPath(path), boundary: new OwnedPathBoundary(path)))
+            .OrderBy(entry => entry.boundary.physicalPath, comparer).ToArray();
+        m_boundaries = captured.Select(entry => entry.boundary).ToArray();
+        string[] paths = m_boundaries.Select(boundary => boundary.physicalPath).ToArray();
         ValidatePaths(paths, comparer);
         m_transactions = new(comparer);
         Stopwatch elapsed = Stopwatch.StartNew();
         try
         {
-            foreach (string path in paths)
+            foreach (var entry in captured)
             {
                 TimeSpan remaining = timeout == Timeout.InfiniteTimeSpan ? timeout : timeout - elapsed.Elapsed;
                 if (remaining < TimeSpan.Zero && timeout != Timeout.InfiniteTimeSpan)
                     remaining = TimeSpan.Zero;
-                m_transactions.Add(path, new(path, remaining, cancellationToken));
+                entry.boundary.Verify();
+                m_transactions.Add(entry.boundary.physicalPath, new(entry.logical, remaining, cancellationToken));
             }
         }
         catch (Exception acquisitionFailure)
@@ -89,6 +94,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
     public string GetStagingPath(string destinationPath)
     {
         ObjectDisposedException.ThrowIf(m_disposed, this);
+        foreach (OwnedPathBoundary boundary in m_boundaries) boundary.Verify();
         return m_stagingPaths.TryGetValue(NormalizePath(destinationPath), out string? path)
             ? path : throw new ArgumentException("The output path does not participate in this transaction.", nameof(destinationPath));
     }
@@ -104,6 +110,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
     public void Commit()
     {
         ObjectDisposedException.ThrowIf(m_disposed, this);
+        foreach (OwnedPathBoundary boundary in m_boundaries) boundary.Verify();
         if (m_committed || m_faulted)
             throw new InvalidOperationException("An output set can attempt publication only once.");
         List<(OutputDirectoryTransaction transaction, string? backup)> installed = [];
@@ -176,7 +183,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
     private static string NormalizePath(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        string fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string fullPath = new OwnedPathBoundary(path).physicalPath;
         if (Path.GetDirectoryName(fullPath) == null)
             throw new ArgumentException("An output path must have a parent directory.", nameof(path));
         return fullPath;

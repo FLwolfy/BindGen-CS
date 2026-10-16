@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using BGCS.Contracts.Artifacts;
+using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Publishing;
 
@@ -10,6 +11,7 @@ namespace BGCS.Infrastructure.Publishing;
 public sealed class DirectoryArtifactSink : IArtifactSink
 {
     private readonly string m_root;
+    private readonly OwnedPathBoundary m_boundary;
     private readonly HashSet<string> m_paths = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Captures a staging root without creating or publishing it.</summary>
@@ -18,8 +20,8 @@ public sealed class DirectoryArtifactSink : IArtifactSink
     public DirectoryArtifactSink(string root)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
-        m_root = Path.GetFullPath(root);
-        RejectLinkedAncestors(m_root);
+        m_boundary = new(root);
+        m_root = m_boundary.physicalPath;
     }
 
     /// <inheritdoc/>
@@ -27,6 +29,7 @@ public sealed class DirectoryArtifactSink : IArtifactSink
         string relativePath,
         string content
     ) {
+        m_boundary.Verify();
         ArgumentNullException.ThrowIfNull(content);
         return WriteBytes(relativePath, new UTF8Encoding(false).GetBytes(content));
     }
@@ -36,6 +39,7 @@ public sealed class DirectoryArtifactSink : IArtifactSink
         string relativePath,
         ReadOnlyMemory<byte> content
     ) {
+        m_boundary.Verify();
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
         string normalized = relativePath.Replace('\\', '/');
         if (Path.IsPathRooted(normalized) || normalized.Split('/').AnyInvalidSegment())
@@ -54,16 +58,16 @@ public sealed class DirectoryArtifactSink : IArtifactSink
             RejectLink(current);
         }
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        m_boundary.Verify();
+        OwnedPathBoundary.RejectPhysicalLinks(destination);
         using FileStream stream = new(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         stream.Write(content.Span);
+        m_boundary.Verify();
         return destination;
     }
 
     private static void RejectLink(string path)
-    {
-        if ((File.Exists(path) || Directory.Exists(path)) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException($"Artifact output cannot traverse a symbolic link: '{path}'.");
-    }
+        => OwnedPathBoundary.RejectLink(path);
 
     private static void RejectLinkedAncestors(string path)
     {

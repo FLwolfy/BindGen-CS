@@ -24,6 +24,15 @@ public static class ToolchainResolver
         string? driverHint = null
     ) {
         ArgumentNullException.ThrowIfNull(target);
+        if (target.toolchain.compilerPath is null && (driverHint is null or "auto" or "cmake" or "meson"))
+        {
+            NativeTargetDescriptor host = new TargetResolver().Resolve(new(new NativeTargetId("host")));
+            // A host driver does not establish foreign SDK or preprocessing semantics.
+            // With no selected cross-compiler, detached parsing uses the declared target
+            // and its explicit headers; native construction still resolves its own provider.
+            if (target.platformId != host.platformId || target.architectureId != host.architectureId || target.abiId != host.abiId)
+                return target;
+        }
         string? compiler = target.toolchain.compilerPath is string explicitCompiler ? ToolchainDiscovery.FindCompiler(language, explicitCompiler)
             : driverHint is "msvc" or "msbuild" ? MsvcToolchainDiscovery.FindCompiler(target.architectureId)
             : driverHint == "clang-cl" ? ToolchainDiscovery.FindCompiler(language, "clang-cl") ?? (File.Exists("C:/Program Files/LLVM/bin/clang-cl.exe") ? "C:/Program Files/LLVM/bin/clang-cl.exe" : null)

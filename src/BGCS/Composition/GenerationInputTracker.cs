@@ -149,12 +149,12 @@ internal sealed class GenerationInputTracker(
 
     internal async ValueTask VerifyAsync(CancellationToken cancellationToken)
     {
-        foreach (SourceSnapshot snapshot in AllSnapshots())
-            if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken)) throw new IOException("An extension's declared external inputs changed during generation.");
+        if (SourceSnapshotBatch.GetMismatch(AllSnapshots(), cancellationToken) is string beforeMismatch)
+            throw new IOException("An extension's declared external inputs changed during generation. " + beforeMismatch);
         foreach (Func<CancellationToken, ValueTask> verify in m_observations)
             await verify(cancellationToken).ConfigureAwait(false);
-        foreach (SourceSnapshot snapshot in AllSnapshots())
-            if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken)) throw new IOException("A declared input changed while compiler observations were revalidated.");
+        if (SourceSnapshotBatch.GetMismatch(AllSnapshots(), cancellationToken) is string afterMismatch)
+            throw new IOException("A declared input changed while compiler observations were revalidated. " + afterMismatch);
 
         IEnumerable<SourceSnapshot> AllSnapshots()
         {

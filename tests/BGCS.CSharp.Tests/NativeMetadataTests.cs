@@ -106,6 +106,84 @@ public sealed class NativeMetadataTests
     }
 
     [Theory]
+    [InlineData(BindingImportMode.FunctionTable)]
+    [InlineData(BindingImportMode.DllImport)]
+    [InlineData(BindingImportMode.LibraryImport)]
+    public async Task IndexedMetadataMatchesShuffledExportsAndStillRejectsTheLastChangedAnnotation(BindingImportMode mode)
+    {
+        ManagedApiModel original = NeutralBackendTests.Model();
+        InteropType integer = original.interop.types[0];
+        var functions = Enumerable.Range(0, 257).Select(index => new InteropFunction(new("metadata-" + index), "native_operation_" + index,
+            integer.id, [new(new("argument-" + index), "value", integer.id)], "C")
+        { sourceQualifiedName = "native::operation_" + index }).ToImmutableArray();
+        InteropModule module = new(original.interop.libraryId, original.interop.targetId, original.interop.pointerSize,
+            original.interop.types, functions, []) { byteOrder = original.interop.byteOrder };
+        ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.MetadataIndex", "NativeApi")
+        { emitNativeMetadata = true }, CancellationToken.None);
+        NeutralBackendTests.MemorySink sink = new();
+        EmissionRequest request = Request(mode, false, sink);
+        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        InteropModule reordered = new(module.libraryId, module.targetId, module.pointerSize, module.types,
+            module.functions.Reverse().ToImmutableArray(), []) { byteOrder = module.byteOrder };
+        plan = plan with { api = model with { interop = reordered } };
+        new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
+
+        string key = Assert.Single(sink.sources.Keys, path => path.EndsWith(".Raw.g.cs", StringComparison.Ordinal));
+        CompilationUnitSyntax root = CSharpSyntaxTree.ParseText(sink.sources[key]).GetCompilationUnitRoot();
+        MethodDeclarationSyntax[] raw = root.DescendantNodes().OfType<MethodDeclarationSyntax>()
+            .Where(method => method.AttributeLists.SelectMany(list => list.Attributes).Any(IsNative)).ToArray();
+        Assert.Equal(functions.Length, raw.Length);
+        foreach (CSharpMethodPlan operation in plan.methods)
+        {
+            MethodDeclarationSyntax actual = Assert.Single(raw, method => method.Identifier.ValueText == operation.name.TrimStart('@'));
+            Assert.Equal(functions.Single(function => function.id == operation.nativeExport).sourceQualifiedName,
+                Value(actual.AttributeLists.Single(list => list.Target is null && list.Attributes.Any(IsNative)).Attributes.Single()));
+        }
+        MethodDeclarationSyntax last = Assert.Single(raw, method => method.Identifier.ValueText == plan.methods[^1].name.TrimStart('@'));
+        AttributeSyntax annotation = last.AttributeLists.Single(list => list.Target is null && list.Attributes.Any(IsNative)).Attributes.Single();
+        sink.sources[key] = root.ReplaceNode(annotation.ArgumentList!.Arguments[1].Expression,
+            SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal("different-native-operation"))).ToFullString();
+        Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan,
+            sink.sources.Select(source => (source.Key, source.Value)), request.libraryName));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task IndexedMetadataDoesNotAcceptMissingOrDuplicatedNativeExportIdentities(bool duplicate)
+    {
+        ManagedApiModel model = Model(true, false);
+        NeutralBackendTests.MemorySink sink = new();
+        EmissionRequest request = Request(BindingImportMode.FunctionTable, false, sink);
+        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        InteropModule module = model.interop;
+        InteropModule changed = new(module.libraryId, module.targetId, module.pointerSize, module.types,
+            duplicate ? module.functions.Add(module.functions[0]) : module.functions.RemoveAt(0), module.diagnostics)
+        { byteOrder = module.byteOrder };
+        plan = plan with { api = model with { interop = changed } };
+        Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan,
+            sink.sources.Select(source => (source.Key, source.Value)), request.libraryName));
+    }
+
+    [Theory]
+    [InlineData(BindingImportMode.FunctionTable)]
+    [InlineData(BindingImportMode.DllImport)]
+    [InlineData(BindingImportMode.LibraryImport)]
+    public async Task MetadataIndexesPreserveTheIndependentUninitializedPhysicalPlanRejection(BindingImportMode mode)
+    {
+        ManagedApiModel model = Model(true, false);
+        NeutralBackendTests.MemorySink sink = new();
+        EmissionRequest request = Request(mode, false, sink);
+        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request) with { physicalImports = default };
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan,
+            sink.sources.Select(source => (source.Key, source.Value)), request.libraryName));
+        Assert.Contains("physical native import carriers", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task PackageAndClosedSourceAttributesCompileWithWarningsAsErrorsAndHaveTypedFacts(bool sourceRuntime)

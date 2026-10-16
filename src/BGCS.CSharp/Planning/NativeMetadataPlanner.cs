@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using BGCS.Contracts.Common;
 using BGCS.Contracts.Interop;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -16,22 +18,32 @@ internal static class NativeMetadataPlanner
             return ImmutableDictionary<string, NativeCallMetadata>.Empty;
         string context = string.Join(".", plan.api.@namespace.Split('.').Select(part => part.TrimStart('@'))) + "." + plan.contextName.TrimStart('@');
         ImmutableDictionary<string, NativeCallMetadata>.Builder result = ImmutableDictionary.CreateBuilder<string, NativeCallMetadata>(StringComparer.Ordinal);
+        ILookup<StableId, InteropFunction> functions = plan.api.interop.functions.ToLookup(function => function.id);
+        // Default/uninitialized physical plans are rejected by the independent
+        // physical-contract verifier; metadata must not turn that rejection into
+        // an incidental enumeration failure or read unused table transports.
+        ILookup<int, CSharpPhysicalImportPlan> physicalImports = (plan.importMode == BGCS.Contracts.BindingImportMode.FunctionTable || plan.physicalImports.IsDefault
+            ? ImmutableArray<CSharpPhysicalImportPlan>.Empty : plan.physicalImports).ToLookup(import => import.methodIndex);
+        Dictionary<string, string> canonicalTypes = new(StringComparer.Ordinal);
         for (int index = 0; index < plan.methods.Length; index++)
         {
             CSharpMethodPlan method = plan.methods[index];
-            InteropFunction function = plan.api.interop.functions.Single(function => function.id == method.nativeExport);
+            // Preserve Single's missing/duplicate rejection while indexing the
+            // complete immutable input once, rather than scanning every export
+            // again for every emitted call during annotation and final checking.
+            InteropFunction function = functions[method.nativeExport].Single();
             if (function.parameters.Length != method.parameterTypes.Length)
                 throw new InvalidOperationException("Native metadata cannot infer a different raw parameter mapping.");
             NativeCallMetadata metadata = new(function.sourceQualifiedName ?? function.sourceName ?? function.exportName,
                 plan.api.interop.GetType(function.returnType).nativeName,
                 function.parameters.Select(parameter => new NativeParameterMetadata(parameter.sourceName ?? parameter.name,
                     plan.api.interop.GetType(parameter.type).nativeName)).ToImmutableArray());
-            result.Add(Key(context + ".RawApi", method.name.TrimStart('@'), method.parameterTypes), metadata);
+            result.Add(Key(context + ".RawApi", method.name.TrimStart('@'), method.parameterTypes, canonicalTypes), metadata);
             if (plan.importMode != BGCS.Contracts.BindingImportMode.FunctionTable)
             {
-                CSharpPhysicalImportPlan? physical = plan.physicalImports.SingleOrDefault(import => import.methodIndex == index);
+                CSharpPhysicalImportPlan? physical = physicalImports[index].SingleOrDefault();
                 result.Add(Key(context + ".NativeImports", physical?.declarationName ?? "Function" + index,
-                    physical?.parameterTypes ?? method.parameterTypes), metadata);
+                    physical?.parameterTypes ?? method.parameterTypes, canonicalTypes), metadata);
             }
         }
         return result.ToImmutable();
@@ -51,9 +63,21 @@ internal static class NativeMetadataPlanner
     private static string Key(
         string owner,
         string name,
-        ImmutableArray<string> parameters
-    )
-        => owner + "." + name + "(" + string.Join(",", parameters.Select(type => Compact(SyntaxFactory.ParseTypeName(type)))) + ")";
+        ImmutableArray<string> parameters,
+        Dictionary<string, string> canonicalTypes
+    ) {
+        return owner + "." + name + "(" + string.Join(",", parameters.Select(Canonical)) + ")";
+
+        string Canonical(string type)
+        {
+            if (!canonicalTypes.TryGetValue(type, out string? canonical))
+            {
+                canonical = Compact(SyntaxFactory.ParseTypeName(type));
+                canonicalTypes.Add(type, canonical);
+            }
+            return canonical;
+        }
+    }
     private static string Compact(SyntaxNode node) => string.Concat(node.DescendantTokens().Select(token => token.Text));
 }
 

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Common;
+using BGCS.Infrastructure.IO;
 using BGCS.Infrastructure.Publishing;
 using BGCS.Infrastructure.Verification;
 using Xunit;
@@ -147,14 +148,18 @@ public sealed class ArtifactPublicationTests
         string candidate = Path.Combine(scratch.root, ".bgcs-staging-" + Guid.NewGuid().ToString("N"));
         string backup = Path.Combine(scratch.root, ".bgcs-backup-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(candidate);
+        // Recovery records identify the physical owner, while public calls retain the host's logical spelling.
+        string physicalOutput = PhysicalPathResolver.Resolve(scratch.output);
+        candidate = PhysicalPathResolver.Resolve(candidate);
+        backup = PhysicalPathResolver.Resolve(backup);
         ImmutableArray<ArtifactDescriptor> artifacts = [Descriptor("new.cs", "candidate")];
         new DirectoryArtifactSink(candidate).WriteText("new.cs", "candidate");
         File.WriteAllText(Path.Combine(candidate, ".bgcs-artifacts.json"), JsonSerializer.Serialize(new { schemaVersion = 1, libraryId = "example", artifacts }));
         Directory.Move(scratch.output, backup);
         if (candidateInstalled) Directory.Move(candidate, scratch.output);
-        string identity = OperatingSystem.IsWindows() ? scratch.output.ToUpperInvariant() : scratch.output;
+        string identity = OperatingSystem.IsWindows() ? physicalOutput.ToUpperInvariant() : physicalOutput;
         string journal = Path.Combine(scratch.root, ".bgcs-publication-" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(identity))) + ".json");
-        File.WriteAllText(journal, JsonSerializer.Serialize(new { destination = scratch.output, candidate, backup, libraryId = "example", state, artifacts }));
+        File.WriteAllText(journal, JsonSerializer.Serialize(new { destination = physicalOutput, candidate, backup, libraryId = "example", state, artifacts }));
         using (ArtifactPublisher recovered = new(scratch.output, "example"))
         {
             string expected = state == "committed" ? "new.cs" : "old.cs";

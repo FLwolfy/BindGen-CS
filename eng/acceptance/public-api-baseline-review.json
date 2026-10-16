@@ -25,8 +25,8 @@
     {
       "assembly": "BGCS.Contracts",
       "baseline": "tests/public-api/BGCS.Contracts.txt",
-      "sha256": "0c66e78085f750633c8fdf1dc501e369c2ced1dbbb38addfd88ac48c72824e7f",
-      "lines": 3840,
+      "sha256": "ab89167804f6b23901c321598a5b9a4b35eb14714729e10462081a8342e396d0",
+      "lines": 3841,
       "exportedTypes": 296
     },
     {
@@ -46,7 +46,7 @@
     {
       "assembly": "BGCS.Infrastructure",
       "baseline": "tests/public-api/BGCS.Infrastructure.txt",
-      "sha256": "c9ce0da4d13106499aac2b35a63130f928cb5c34a5d9fa94c81e462af29dd0f6",
+      "sha256": "30236412f0972dec1307ccd4388ad094f79cc8a65d48ea0adce932a258787cc8",
       "lines": 338,
       "exportedTypes": 50
     },
@@ -92,5 +92,9 @@
       "lines": 13,
       "exportedTypes": 4
     }
+  ],
+  "reviewedPreReleaseChanges": [
+    "NativeBuildCommand.outputEncoding stores an optional neutral encoding name in the immutable command plan and receipt. Null retains the platform default; Meson explicitly selects UTF-8.",
+    "ProcessExecutor.ExecuteAsync accepts a final optional Encoding argument for both redirected streams. Existing tools retain their default decoding; no Python or Meson heuristic enters Infrastructure."
   ]
 }

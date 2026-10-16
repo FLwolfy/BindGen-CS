@@ -1,8 +1,18 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 
+if (args[0] == "raw-utf8")
+{
+    using Stream output = Console.OpenStandardOutput();
+    using Stream error = Console.OpenStandardError();
+    output.Write(Encoding.UTF8.GetBytes(args[1]));
+    error.Write(Encoding.UTF8.GetBytes(args[2]));
+    Environment.ExitCode = 7;
+    return;
+}
 if (args[0] == "child")
 {
     Console.WriteLine("Inherited pipe is open.");
