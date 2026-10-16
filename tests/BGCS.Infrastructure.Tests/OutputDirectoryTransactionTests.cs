@@ -79,7 +79,7 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
     }
 
     [Fact]
-    public void PersistentCandidateReadersPreserveBothTreesAndPermitRetryAfterRelease()
+    public async Task PersistentCandidateReadersPreserveBothTreesAndPermitRetryAfterRelease()
     {
         if (!OperatingSystem.IsWindows())
             return;
@@ -91,11 +91,26 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
         File.WriteAllText(candidate, "candidate");
         using var reader = new FileStream(candidate, FileMode.Open, FileAccess.Read, FileShare.Read);
         Stopwatch elapsed = Stopwatch.StartNew();
-        Exception? failure = Record.Exception(publication.Commit);
+        // The production window bounds retry attempts, not OS rename/rollback
+        // latency or scheduling. Keep an independent hang watchdog instead.
+        Task<Exception?> commit = Task.Factory.StartNew<Exception?>(() => Record.Exception(publication.Commit),
+            CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        Exception? failure;
+        try { failure = await commit.WaitAsync(TimeSpan.FromSeconds(30)); }
+        catch (TimeoutException)
+        {
+            // Unblock and observe this same operation before disposing its trees.
+            reader.Dispose();
+            await commit.WaitAsync(TimeSpan.FromSeconds(30));
+            throw;
+        }
         Assert.True(failure is IOException or UnauthorizedAccessException);
-        Assert.InRange(elapsed.Elapsed, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5));
+        Assert.Contains(failure!.HResult & 0xffff, new[] { 5, 32, 33 });
+        Assert.True(elapsed.Elapsed >= TimeSpan.FromSeconds(2), "Persistent sharing violations must exhaust the native rename retry window.");
         Assert.Equal("previous", File.ReadAllText(Path.Combine(output, "value.txt")));
         Assert.Equal("candidate", File.ReadAllText(candidate));
+        Assert.Single(Directory.GetDirectories(m_root, ".bgcs-staging-*"));
+        Assert.Empty(Directory.GetDirectories(m_root, ".bgcs-backup-*"));
         reader.Dispose();
         publication.Commit();
         Assert.Equal("candidate", File.ReadAllText(Path.Combine(output, "value.txt")));

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
@@ -61,6 +62,7 @@ public sealed class CandidateMetadataNormalizerTests
         new Normalizer(s_origins, C_LOGICAL, previewOutput, ignoreCase).Apply(actual);
         Previous(expected, s_origins, C_LOGICAL, previewOutput, ignoreCase);
         Assert.Equal(Written(expected), Written(actual));
+        Assert.Equal(Written(expected), new Normalizer(s_origins, C_LOGICAL, previewOutput, ignoreCase).Write(Element(origin)));
     }
 
     [Fact]
@@ -143,12 +145,18 @@ public sealed class CandidateMetadataNormalizerTests
         new Normalizer(s_origins, C_LOGICAL, null, false).Apply(actual);
         Previous(expected, s_origins, C_LOGICAL, null, false);
         Assert.Equal(Written(expected), Written(actual));
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Equal(Written(expected), new Normalizer(s_origins, C_LOGICAL, null, false).Write(document.RootElement));
     }
 
     [Theory]
     [InlineData("[null]")]
     [InlineData("[42]")]
     [InlineData("[[\"C:/Private/path\"]]")]
+    [InlineData("[false]")]
+    [InlineData("[{}]")]
+    [InlineData("[42,{\"excludedDirectories\":[null]}]")]
+    [InlineData("[{\"excludedDirectories\":[42]},null]")]
     public void MalformedExclusionsRetainTheExistingFailureInsteadOfBeingIgnored(string exclusions)
     {
         string json = "{\"value\":\"C:/Private/changed\",\"excludedDirectories\":" + exclusions + "}";
@@ -158,6 +166,101 @@ public sealed class CandidateMetadataNormalizerTests
         Assert.NotNull(oldFailure);
         Assert.NotNull(newFailure);
         Assert.Equal(oldFailure.GetType(), newFailure.GetType());
+        using JsonDocument document = JsonDocument.Parse(json);
+        Exception? streamingFailure = Record.Exception(() => new Normalizer(s_origins, C_LOGICAL, null, false).Write(document.RootElement));
+        Assert.NotNull(streamingFailure);
+        Assert.Equal(oldFailure.GetType(), streamingFailure.GetType());
+    }
+
+    [Theory]
+    [InlineData("{\"same\":1,\"same\":2}")]
+    [InlineData("{\"same\":1,\"\\u0073ame\":2}")]
+    [InlineData("{\"before\":{\"excludedDirectories\":[null]},\"same\":1,\"same\":2}")]
+    [InlineData("{\"before\":{\"excludedDirectories\":[null]},\"after\":{\"same\":1,\"same\":2}}")]
+    [InlineData("{\"before\":{\"same\":1,\"same\":2},\"after\":{\"excludedDirectories\":[null]}}")]
+    public void StreamingRetainsDuplicatePropertyAndNestedNormalizationFailurePrecedence(string json)
+    {
+        JsonNode? expected = JsonNode.Parse(json);
+        Exception? oldFailure = Record.Exception(() => Previous(expected, s_origins, C_LOGICAL, null, false));
+        using JsonDocument document = JsonDocument.Parse(json);
+        Exception? streamingFailure = Record.Exception(() => new Normalizer(s_origins, C_LOGICAL, null, false).Write(document.RootElement));
+        Assert.NotNull(oldFailure);
+        Assert.NotNull(streamingFailure);
+        Assert.Equal(oldFailure.GetType(), streamingFailure.GetType());
+    }
+
+    [Theory]
+    [InlineData(63, false)]
+    [InlineData(64, false)]
+    [InlineData(65, false)]
+    [InlineData(65, true)]
+    public void StreamingUsesTheSameEffectiveWriterDepthAndNormalizationBeforeWriteFailure(int depth, bool malformed)
+    {
+        string nested = new string('[', depth) + "0" + new string(']', depth);
+        string json = malformed ? "{\"deep\":" + nested + ",\"excludedDirectories\":[null]}" : nested;
+        JsonNode? expected = JsonNode.Parse(json, documentOptions: new() { MaxDepth = 128 });
+        byte[]? expectedBytes = null, actualBytes = null;
+        Exception? oldFailure = Record.Exception(() =>
+        {
+            Previous(expected, s_origins, C_LOGICAL, null, false);
+            expectedBytes = Written(expected);
+        });
+        using JsonDocument document = JsonDocument.Parse(json, new() { MaxDepth = 128 });
+        Exception? streamingFailure = Record.Exception(() => actualBytes = new Normalizer(s_origins, C_LOGICAL, null, false).Write(document.RootElement));
+        Assert.Equal(oldFailure?.GetType(), streamingFailure?.GetType());
+        if (oldFailure is null) Assert.Equal(expectedBytes, actualBytes);
+        else Assert.Null(actualBytes);
+        if (malformed) Assert.IsType<NullReferenceException>(streamingFailure);
+    }
+
+    [Fact]
+    public void StreamingPreservesPropertyOrderNumericLexemesAndOnlyDeduplicatesTheExactExclusionName()
+    {
+        const string json = "{\"z\":1e+03,\"A\":1.2300,\"a\":-0,\"fraction\":-0.0,\"large\":1e9999,\"excludedDirectories\":[\"C:/Private/native\",\"../.bgcs-staging/native\"],\"ExcludedDirectories\":[\"C:/Private/native\",\"../.bgcs-staging/native\"]}";
+        JsonNode? expected = JsonNode.Parse(json);
+        Previous(expected, s_origins, C_LOGICAL, null, false);
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Equal(Written(expected), new Normalizer(s_origins, C_LOGICAL, null, false).Write(document.RootElement));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StreamingFreezesOriginOrderAndPreviewPriority(bool reverse)
+    {
+        string[] origins = reverse ? ["C:/Private/Nested", "C:/Private"] : ["C:/Private", "C:/Private/Nested"];
+        string[] frozen = origins.ToArray();
+        Normalizer normalizer = new(origins, C_LOGICAL, "C:/Private/Nested", true);
+        origins[0] = "C:/Different";
+        const string json = "{\"preview\":\"c:\\\\private\\\\Nested\\\\\\\\\",\"child\":\"C:/Private/Nested/value\",\"sibling\":\"C:/PrivateSibling/value\"}";
+        JsonNode? expected = JsonNode.Parse(json);
+        Previous(expected, frozen, C_LOGICAL, "C:/Private/Nested", true);
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Equal(Written(expected), normalizer.Write(document.RootElement));
+    }
+
+    [Fact]
+    public async Task StreamingASecondDocumentAndConcurrentDocumentsDoesNotReuseMutableState()
+    {
+        Normalizer normalizer = new(s_origins, C_LOGICAL, "C:/Preview", true);
+        JsonNode? expected = Source("serialized");
+        Previous(expected, s_origins, C_LOGICAL, "C:/Preview", true);
+        byte[] expectedBytes = Written(expected);
+        using JsonDocument empty = JsonDocument.Parse("{\"excludedDirectories\":[]}");
+        _ = normalizer.Write(empty.RootElement);
+        byte[][] results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() => normalizer.Write(Element("serialized")))));
+        Assert.All(results, actual => Assert.Equal(expectedBytes, actual));
+    }
+
+    [Fact]
+    public void StreamingSupportsTheActualWorkerManifestSerializerOptionsAndConverters()
+    {
+        var value = new { kind = BGCS.Contracts.Inputs.SourceLanguage.Cpp, path = "C:/Private/native", excludedDirectories = new[] { "C:/Private", "../.bgcs-staging" } };
+        JsonSerializerOptions options = BGCS.Infrastructure.Workers.WorkerProtocol.jsonOptions;
+        JsonNode? expected = JsonSerializer.SerializeToNode(value, options);
+        Previous(expected, s_origins, C_LOGICAL, null, false);
+        JsonElement document = JsonSerializer.SerializeToElement(value, options);
+        Assert.Equal(Written(expected), new Normalizer(s_origins, C_LOGICAL, null, false).Write(document));
     }
 
     [Fact]
@@ -179,6 +282,14 @@ public sealed class CandidateMetadataNormalizerTests
     private static JsonNode? Source(string origin)
         => origin == "parsed" ? JsonNode.Parse(C_SOURCE) : JsonSerializer.SerializeToNode(JsonSerializer.Deserialize<Dictionary<string, object?>>(C_SOURCE),
             origin == "relaxed" ? new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping } : null);
+
+    private static JsonElement Element(string origin)
+    {
+        if (origin != "parsed") return JsonSerializer.SerializeToElement(JsonSerializer.Deserialize<Dictionary<string, object?>>(C_SOURCE),
+            origin == "relaxed" ? new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping } : null);
+        using JsonDocument document = JsonDocument.Parse(C_SOURCE);
+        return document.RootElement.Clone();
+    }
 
     private static byte[] Written(JsonNode? document)
         => Encoding.UTF8.GetBytes((document?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) ?? "null") + "\n");
@@ -223,6 +334,7 @@ public sealed class CandidateMetadataNormalizerTests
         private static readonly Type s_type = typeof(BindingHost).Assembly.GetType("BGCS.CandidateMetadataNormalizer", throwOnError: true)!;
         private static readonly ConstructorInfo s_constructor = s_type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single();
         private static readonly MethodInfo s_normalize = s_type.GetMethod("Normalize", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        private static readonly MethodInfo s_write = s_type.GetMethod("WriteNormalized", BindingFlags.Instance | BindingFlags.NonPublic)!;
         private readonly object m_value;
         internal Normalizer(IEnumerable<string> origins, string logicalOutput, string? previewOutput, bool ignoreCase)
             => m_value = s_constructor.Invoke([origins, logicalOutput, previewOutput, ignoreCase]);
@@ -231,6 +343,18 @@ public sealed class CandidateMetadataNormalizerTests
             try { s_normalize.Invoke(m_value, [document]); }
             catch (TargetInvocationException failure) when (failure.InnerException is not null)
             { ExceptionDispatchInfo.Capture(failure.InnerException).Throw(); throw; }
+        }
+        internal byte[] Write(JsonElement document)
+        {
+            using MemoryStream bytes = new();
+            using (Utf8JsonWriter writer = new(bytes, new() { Indented = true, MaxDepth = 64 }))
+            {
+                try { s_write.Invoke(m_value, [document, writer]); }
+                catch (TargetInvocationException failure) when (failure.InnerException is not null)
+                { ExceptionDispatchInfo.Capture(failure.InnerException).Throw(); throw; }
+            }
+            bytes.WriteByte((byte)'\n');
+            return bytes.ToArray();
         }
     }
 }

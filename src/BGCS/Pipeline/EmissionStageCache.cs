@@ -94,32 +94,67 @@ internal static class EmissionStageCache
                 targets = definition.Targets.Select(item => item.Id).ToArray()
             }
         });
-        using MemoryStream bytes = new();
+        return CanonicalDigest(identity);
+    }
+
+    private static ContentDigest CanonicalDigest(JsonElement identity)
+    {
+        // Hash the exact canonical byte sequence as it is written, rather than
+        // retaining another complete copy of a potentially large model.
+        using SHA256 hash = SHA256.Create();
+        using CryptoStream bytes = new(Stream.Null, hash, CryptoStreamMode.Write);
         using (Utf8JsonWriter writer = new(bytes)) Canonical(identity, writer);
-        return new(Convert.ToHexStringLower(SHA256.HashData(bytes.GetBuffer().AsSpan(0, checked((int)bytes.Length)))));
+        bytes.FlushFinalBlock();
+        return new(Convert.ToHexStringLower(hash.Hash!));
     }
 
     private static void Canonical(
         JsonElement element,
         Utf8JsonWriter writer
     ) {
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            writer.WriteStartObject();
-            foreach (JsonProperty property in element.EnumerateObject().OrderBy(property => property.Name, StringComparer.Ordinal))
+        // Buffers belong to this invocation and recursion depth. Sibling
+        // objects reuse them, without retaining another object's property
+        // values or allocating LINQ sorting arrays for every model node.
+        List<List<(string Name, JsonElement Value, int Ordinal)>> levels = [];
+        Write(element, 0);
+
+        void Write(
+            JsonElement current,
+            int depth
+        ) {
+            if (current.ValueKind == JsonValueKind.Object)
             {
-                writer.WritePropertyName(property.Name);
-                Canonical(property.Value, writer);
+                while (levels.Count <= depth) levels.Add([]);
+                List<(string Name, JsonElement Value, int Ordinal)> properties = levels[depth];
+                properties.Clear();
+                foreach (JsonProperty property in current.EnumerateObject())
+                    properties.Add((property.Name, property.Value, properties.Count));
+                properties.Sort(static (
+                    left,
+                    right
+                ) => {
+                    int name = StringComparer.Ordinal.Compare(left.Name, right.Name);
+                    // OrderBy was stable: duplicate JSON property names must
+                    // preserve their original relative order as well.
+                    return name != 0 ? name : left.Ordinal.CompareTo(right.Ordinal);
+                });
+                writer.WriteStartObject();
+                foreach (var property in properties)
+                {
+                    writer.WritePropertyName(property.Name);
+                    Write(property.Value, depth + 1);
+                }
+                writer.WriteEndObject();
+                properties.Clear();
             }
-            writer.WriteEndObject();
+            else if (current.ValueKind == JsonValueKind.Array)
+            {
+                writer.WriteStartArray();
+                foreach (JsonElement item in current.EnumerateArray()) Write(item, depth + 1);
+                writer.WriteEndArray();
+            }
+            else current.WriteTo(writer);
         }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            writer.WriteStartArray();
-            foreach (JsonElement item in element.EnumerateArray()) Canonical(item, writer);
-            writer.WriteEndArray();
-        }
-        else element.WriteTo(writer);
     }
 
     internal sealed class CapturingSink(

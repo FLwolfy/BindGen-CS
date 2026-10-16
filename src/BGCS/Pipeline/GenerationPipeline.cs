@@ -6,7 +6,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -939,22 +938,37 @@ public sealed partial class BindingHost
             if (!HasErrors())
             {
                 managedCompilation?.Verify(cancellation.Token);
-                await extensionInputs.VerifyAsync(cancellation.Token).ConfigureAwait(false);
-                foreach (SourceContributionCapture capture in sourceContributions) capture.Verify();
-                foreach (SourceSnapshot external in extensionInputs.snapshots)
+                await extensionInputs.VerifyBeforeAndReplayAsync(cancellation.Token).ConfigureAwait(false);
+                bool parsedInputPhase = false;
+                if (SourceSnapshotBatch.GetMismatch(FinalInputSnapshots(), cancellation.Token) is string mismatch)
+                    throw new IOException((parsedInputPhase
+                        ? "Native file bytes or include-search membership changed during generation; the candidate cannot be published. "
+                        : "A declared input changed while compiler observations were revalidated. ") + mismatch);
+
+                IEnumerable<SourceSnapshot> FinalInputSnapshots()
                 {
-                    RejectFormalOutputReads(external);
-                    string destination = BGCS.Infrastructure.IO.PhysicalPathResolver.Resolve(logicalOutput).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-                    foreach (DirectoryInputDependency directory in external.searchDirectories)
+                    // The batch verifies each yielded snapshot before advancing
+                    // this private Host iterator. Keep the sealed, read-only
+                    // store/path checks between the original two sequences so
+                    // duplicate input checks share one fence without changing
+                    // first-failure precedence or invoking an extension here.
+                    foreach (SourceSnapshot snapshot in extensionInputs.VerificationSnapshots()) yield return snapshot;
+                    foreach (SourceContributionCapture capture in sourceContributions) capture.Verify();
+                    foreach (SourceSnapshot external in extensionInputs.snapshots)
                     {
-                        string sourceDirectory = directory.resolvedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                        if (destination.Equals(sourceDirectory, comparison) || destination.StartsWith(sourceDirectory + Path.DirectorySeparatorChar, comparison))
-                            throw new IOException("A declared extension input directory overlaps the formal output it would replace.");
+                        RejectFormalOutputReads(external);
+                        string destination = BGCS.Infrastructure.IO.PhysicalPathResolver.Resolve(logicalOutput).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+                        foreach (DirectoryInputDependency directory in external.searchDirectories)
+                        {
+                            string sourceDirectory = directory.resolvedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                            if (destination.Equals(sourceDirectory, comparison) || destination.StartsWith(sourceDirectory + Path.DirectorySeparatorChar, comparison))
+                                throw new IOException("A declared extension input directory overlaps the formal output it would replace.");
+                        }
                     }
+                    parsedInputPhase = true;
+                    foreach (SourceSnapshot snapshot in parsedInputs) yield return snapshot;
                 }
-                if (SourceSnapshotBatch.GetMismatch(parsedInputs, cancellation.Token) is string mismatch)
-                    throw new IOException("Native file bytes or include-search membership changed during generation; the candidate cannot be published. " + mismatch);
                 foreach (InputDependency input in request.configurationInputs)
                 {
                     cancellation.Token.ThrowIfCancellationRequested();
@@ -999,11 +1013,13 @@ public sealed partial class BindingHost
                 T value
             ) {
                 cancellation.Token.ThrowIfCancellationRequested();
-                JsonNode? document = JsonSerializer.SerializeToNode(value, value is BGCS.Contracts.Requests.NativeBuildManifest
+                JsonElement document = JsonSerializer.SerializeToElement(value, value is BGCS.Contracts.Requests.NativeBuildManifest
                     ? BGCS.Infrastructure.Workers.WorkerProtocol.jsonOptions : null);
-                metadataNormalizer.Normalize(document);
-                string text = (document?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) ?? "null") + "\n";
-                byte[] content = Encoding.UTF8.GetBytes(text);
+                using MemoryStream bytes = new();
+                using (Utf8JsonWriter writer = new(bytes, new() { Indented = true, MaxDepth = 64 }))
+                    metadataNormalizer.WriteNormalized(document, writer);
+                bytes.WriteByte((byte)'\n');
+                byte[] content = bytes.ToArray();
                 rootSink.WriteBytes(path, content);
                 artifacts.Add(new(path, "application/json", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(content)))));
             }

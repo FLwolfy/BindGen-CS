@@ -138,7 +138,7 @@ public sealed class PlannedNativeBuildExecutor
             ProcessExecutionResult scanResult = await ProcessExecutor.ExecuteAsync(scan.command.executable, scan.command.arguments, scan.command.workingDirectory, remaining,
                 cancellationToken, environmentOverrides: scan.command.environmentOverrides, outputEncoding: OutputEncoding(scan.command)).ConfigureAwait(false);
             results.Add(scanResult);
-            if (scanResult.timedOut || scanResult.exitCode != 0) throw new InvalidOperationException($"Native dependency operation '{scan.command.id}' failed: {scanResult.standardOutput}{Environment.NewLine}{scanResult.standardError}");
+            VerifyExecution(scan.command, scanResult, $"Native dependency operation '{scan.command.id}'", timeout, remaining, elapsed.Elapsed);
         }
         string dependencyOrigin = plan.scratchDirectory ?? plan.commands[0].workingDirectory;
         ImmutableArray<string> dependencyPaths = BuildDependencyCollector.Read(plan.dependencyScans.Select(scan => scan.dependencyFile), dependencyOrigin, cancellationToken);
@@ -159,8 +159,7 @@ public sealed class PlannedNativeBuildExecutor
                 proof.command.workingDirectory, remaining, cancellationToken, environmentOverrides: proof.command.environmentOverrides,
                 outputEncoding: OutputEncoding(proof.command)).ConfigureAwait(false);
             results.Add(preprocessed);
-            if (preprocessed.timedOut || preprocessed.exitCode != 0)
-                throw new InvalidOperationException("Native effective-source preprocessing failed: " + preprocessed.standardOutput + Environment.NewLine + preprocessed.standardError);
+            VerifyExecution(proof.command, preprocessed, "Native effective-source preprocessing", timeout, remaining, elapsed.Elapsed);
             if (!File.Exists(proof.outputFile)) throw new FileNotFoundException("The native compiler did not produce its declared effective source.", proof.outputFile);
             NativeDependencyFile proofDependencies = proof.dependencyFile ?? throw new NotSupportedException("Independent native preprocessing requires its own actual compiler dependency output.");
             NativeDependencyScan[] proofScans = plan.dependencyScans.Where(scan => string.Equals(Path.GetFullPath(scan.dependencyFile.source), Path.GetFullPath(proof.source), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)).ToArray();
@@ -220,7 +219,7 @@ public sealed class PlannedNativeBuildExecutor
                 ProcessExecutionResult probeResult = await ProcessExecutor.ExecuteAsync(probe.executable, probe.arguments, probe.workingDirectory, probeDeadline, cancellationToken,
                     environmentOverrides: probe.environmentOverrides, outputEncoding: OutputEncoding(probe)).ConfigureAwait(false);
                 results.Add(probeResult);
-                if (probeResult.timedOut || probeResult.exitCode != 0) throw new InvalidOperationException($"Native linker dependency operation '{probe.id}' failed: {probeResult.standardOutput}{Environment.NewLine}{probeResult.standardError}");
+                VerifyExecution(probe, probeResult, $"Native linker dependency operation '{probe.id}'", timeout, probeDeadline, elapsed.Elapsed);
                 foreach (string output in probe.outputFiles)
                     if (!File.Exists(output)) throw new FileNotFoundException("The linker probe did not produce its declared candidate output.", output);
                 linkDependencies = BuildDependencyCollector.ReadLinkTrace(probeResult.standardOutput + "\n" + probeResult.standardError, traceFormat, probe.workingDirectory);
@@ -237,7 +236,7 @@ public sealed class PlannedNativeBuildExecutor
             ProcessExecutionResult result = await ProcessExecutor.ExecuteAsync(command.executable, command.arguments, command.workingDirectory, remaining, cancellationToken,
                 environmentOverrides: command.environmentOverrides, outputEncoding: OutputEncoding(command)).ConfigureAwait(false);
             results.Add(result);
-            if (result.timedOut || result.exitCode != 0) throw new InvalidOperationException($"Native operation '{command.id}' failed: {result.standardOutput}{Environment.NewLine}{result.standardError}");
+            VerifyExecution(command, result, $"Native operation '{command.id}'", timeout, remaining, elapsed.Elapsed);
             foreach (string output in command.outputFiles)
                 if (!File.Exists(output)) throw new FileNotFoundException($"Native operation '{command.id}' did not produce its declared output.", output);
             if (command.linkDependencyTrace is NativeLinkTraceFormat finalTrace)
@@ -255,6 +254,21 @@ public sealed class PlannedNativeBuildExecutor
         if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken)) throw new IOException("Native input bytes or include candidates changed during construction.");
         if (!SourceSnapshotVerifier.Matches(plan.argumentInputs, cancellationToken)) throw new IOException("Native response-file argument inputs changed during construction.");
         return new(results.ToImmutable(), snapshot) { argumentInputs = plan.argumentInputs };
+    }
+
+    private static void VerifyExecution(
+        NativeBuildCommand command,
+        ProcessExecutionResult result,
+        string operation,
+        TimeSpan timeout,
+        TimeSpan launchAllowance,
+        TimeSpan elapsed
+    ) {
+        if (!result.timedOut && result.exitCode == 0) return;
+        string status = FormattableString.Invariant($"{operation} failed: timedOut={result.timedOut}; exitCode={result.exitCode}; executable='{command.executable}'; shared deadline={timeout.TotalSeconds:F3}s; elapsed={elapsed.TotalSeconds:F3}s; launch allowance={launchAllowance.TotalSeconds:F3}s.");
+        string message = status + Environment.NewLine + result.standardOutput + Environment.NewLine + result.standardError;
+        if (result.timedOut) throw new TimeoutException(message);
+        throw new InvalidOperationException(message);
     }
 
     private static Encoding? OutputEncoding(NativeBuildCommand command)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -103,22 +104,28 @@ public sealed class ProcessExecutorTests
         string directory = Path.Combine(Path.GetTempPath(), "bgcs-process-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         string marker = Path.Combine(directory, "pid.txt");
-        string quotedMarker = marker.Replace("'", "''", StringComparison.Ordinal);
-        string command = OperatingSystem.IsWindows()
-            ? $"[System.IO.File]::WriteAllText('{quotedMarker}', $PID.ToString()); [System.Threading.Thread]::Sleep(60000)"
-            : $"printf '%s' $$ > '{quotedMarker}'; sleep 60";
-        (string executable, string[] arguments) = Shell(command);
+        DirectoryInfo? repository = new(AppContext.BaseDirectory);
+        while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
+        Assert.NotNull(repository);
+        string configuration = typeof(ProcessExecutorTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
+        string fixture = Path.Combine(repository.FullName, "tests", "fixtures", "hosts", "ProcessProbe", "bin", configuration, "net10.0", "ProcessProbe.dll");
         using var cancellation = new CancellationTokenSource();
+        Task<ProcessExecutionResult> execution = ProcessExecutor.ExecuteAsync(
+            Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet", [fixture, "wait-ready", marker],
+            directory, cancel ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(10), cancellation.Token);
+        int? acceptedProcessId = null;
         try
         {
-            Task<ProcessExecutionResult> execution = ProcessExecutor.ExecuteAsync(
-                executable, arguments, directory, cancel ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(10), cancellation.Token);
             if (cancel)
             {
-                Stopwatch wait = Stopwatch.StartNew();
-                while (!File.Exists(marker) && wait.Elapsed < TimeSpan.FromSeconds(10))
+                // Cancellation exercises work whose readiness is acknowledged,
+                // rather than assuming shell/runtime startup fits ten seconds.
+                while (!File.Exists(marker))
+                {
+                    Assert.False(execution.IsCompleted, "The child exited before acknowledging readiness.");
                     await Task.Delay(20);
-                Assert.True(File.Exists(marker));
+                }
+                acceptedProcessId = int.Parse(File.ReadAllText(marker), CultureInfo.InvariantCulture);
                 cancellation.Cancel();
                 await Assert.ThrowsAnyAsync<OperationCanceledException>(() => execution);
             }
@@ -128,12 +135,17 @@ public sealed class ProcessExecutorTests
                 Assert.True(result.timedOut);
                 Assert.Equal(-1, result.exitCode);
             }
-            Assert.True(File.Exists(marker));
-            int processId = int.Parse(File.ReadAllText(marker));
-            Assert.False(IsRunning(processId));
+            // A process deadline includes startup and can expire before entry.
+            // Whenever the child reached entry, its real PID must be gone.
+            if (acceptedProcessId is null && File.Exists(marker))
+                acceptedProcessId = int.Parse(File.ReadAllText(marker), CultureInfo.InvariantCulture);
+            if (acceptedProcessId is int processId) Assert.False(IsRunning(processId));
         }
         finally
         {
+            cancellation.Cancel();
+            try { await execution; }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
             Directory.Delete(directory, recursive: true);
         }
     }

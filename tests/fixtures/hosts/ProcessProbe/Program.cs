@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Globalization;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,6 +18,14 @@ if (args[0] == "child")
 {
     Console.WriteLine("Inherited pipe is open.");
     await Task.Delay(TimeSpan.FromSeconds(30));
+    return;
+}
+if (args[0] == "wait-ready")
+{
+    string pending = args[1] + ".pending";
+    File.WriteAllText(pending, Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+    File.Move(pending, args[1]);
+    await Task.Delay(TimeSpan.FromMinutes(1));
     return;
 }
 ProcessStartInfo start = new(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };

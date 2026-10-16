@@ -12,6 +12,7 @@ internal static class FunctionContainerPlanner
         EmissionRequest request
     ) {
         if (plan.api.functionContainers.IsDefault) throw new ArgumentException("Function containers must be initialized.");
+        if (plan.api.functionContainers.IsEmpty) return [];
         var signatures = SharedContextPlanner.CreateMethods(plan with { aliases = [] }, request);
         ImmutableArray<CSharpFunctionContainerPlan>.Builder result = ImmutableArray.CreateBuilder<CSharpFunctionContainerPlan>();
         foreach (var container in plan.api.functionContainers)

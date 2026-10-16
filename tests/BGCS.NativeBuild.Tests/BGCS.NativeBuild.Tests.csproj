@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/BGCS.NativeBuild/BGCS.NativeBuild.csproj" />
+    <ProjectReference Include="../fixtures/hosts/ProcessProbe/ProcessProbe.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

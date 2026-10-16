@@ -149,18 +149,25 @@ internal sealed class GenerationInputTracker(
 
     internal async ValueTask VerifyAsync(CancellationToken cancellationToken)
     {
-        if (SourceSnapshotBatch.GetMismatch(AllSnapshots(), cancellationToken) is string beforeMismatch)
+        await VerifyBeforeAndReplayAsync(cancellationToken).ConfigureAwait(false);
+        if (SourceSnapshotBatch.GetMismatch(VerificationSnapshots(), cancellationToken) is string afterMismatch)
+            throw new IOException("A declared input changed while compiler observations were revalidated. " + afterMismatch);
+    }
+
+    internal async ValueTask VerifyBeforeAndReplayAsync(CancellationToken cancellationToken)
+    {
+        if (SourceSnapshotBatch.GetMismatch(VerificationSnapshots(), cancellationToken) is string beforeMismatch)
             throw new IOException("An extension's declared external inputs changed during generation. " + beforeMismatch);
         foreach (Func<CancellationToken, ValueTask> verify in m_observations)
             await verify(cancellationToken).ConfigureAwait(false);
-        if (SourceSnapshotBatch.GetMismatch(AllSnapshots(), cancellationToken) is string afterMismatch)
-            throw new IOException("A declared input changed while compiler observations were revalidated. " + afterMismatch);
+    }
 
-        IEnumerable<SourceSnapshot> AllSnapshots()
-        {
-            foreach (SourceSnapshot item in m_snapshots) yield return item;
-            foreach (SourceSnapshot item in m_nativeSourceSnapshots) yield return item;
-        }
+    // Enumerate at the verification fence, after any observation callbacks have
+    // completed. Never retain successful checks across those callbacks.
+    internal IEnumerable<SourceSnapshot> VerificationSnapshots()
+    {
+        foreach (SourceSnapshot item in m_snapshots) yield return item;
+        foreach (SourceSnapshot item in m_nativeSourceSnapshots) yield return item;
     }
 
     internal sealed record ExtensionFingerprint(
