@@ -71,7 +71,12 @@ internal sealed class NativeModuleBuilder
 
     private StableId AddType(CppType type)
     {
-        if (type is CppEnum && type.cursor.kind != 0 && !m_compilation!.storageFacts.ContainsKey(type))
+        // A declaration need not occur in a signature or field. Capture its
+        // compiler spelling here as well: bare C record tags and anonymous
+        // typedef records occupy different namespaces and cannot be invented
+        // from the model's display name.
+        if ((type is CppEnum || m_request.language == SourceLanguage.C && type is CppClass)
+            && type.cursor.kind != 0 && !m_compilation!.storageFacts.ContainsKey(type))
             CaptureCanonicalStorage(type, type.cursor.Type.CanonicalType.UnqualifiedType, new(ReferenceEqualityComparer.Instance));
         bool hasStorage = m_compilation!.storageFacts.TryGetValue(type, out NativeStorageFacts storage);
         // Display names deliberately abbreviate named pointees/aliases. Their
@@ -512,6 +517,22 @@ internal sealed class NativeModuleBuilder
     ) {
         if (m_request.language != SourceLanguage.Cpp || element.cursor.kind == 0 || element is not ICppMember member) return fallback;
         CXCursor owner = element.cursor.SemanticParent;
+        if (element is CppEnumItem && owner.Kind == CXCursorKind.CXCursor_EnumDecl)
+        {
+            if (owner.EnumDecl_IsScoped)
+            {
+                string enumeration = CXUtil.GetTypeSpelling(owner.Type.CanonicalType);
+                if (string.IsNullOrWhiteSpace(enumeration) || enumeration.Contains("(anonymous", StringComparison.Ordinal))
+                    throw new InvalidOperationException("A scoped native enumeration omitted its compiler-qualified type spelling.");
+                if (enumeration.StartsWith("enum ", StringComparison.Ordinal)) enumeration = enumeration[5..];
+                return m_sourcePaths.MapCompilerProvenance(enumeration + "::" + member.name);
+            }
+            // Unscoped and anonymous enum values are injected into the enum's
+            // enclosing scope. The generic fullParentName walk stops at enums.
+            if (element.parent is CppEnum enumerationOwner)
+                fallback = string.IsNullOrEmpty(enumerationOwner.fullParentName) ? member.name : enumerationOwner.fullParentName + "::" + member.name;
+            owner = owner.SemanticParent;
+        }
         if (owner.Kind is not (CXCursorKind.CXCursor_ClassDecl or CXCursorKind.CXCursor_StructDecl or CXCursorKind.CXCursor_UnionDecl)
             || owner.IsAnonymous || owner.Type.kind == CXTypeKind.CXType_Invalid) return fallback;
         string spelling = CXUtil.GetTypeSpelling(owner.Type.CanonicalType);

@@ -14,6 +14,8 @@ public sealed class NeutralVirtualCallbackTests
     public void DetachedVirtualInterface_ProducesExactStatusResultSlotsAndFiniteSource()
     {
         var plan = new VirtualCallbackPlanner().Plan(Module(), new("calculator", "Sample::Calculator"));
+        Assert.Equal("#include <cstdint>\n#include <memory>\n#include <stdexcept>\n#include <utility>\n", VirtualCallbackPlanner.preamble);
+        Assert.DoesNotContain("#include", plan.source.text);
         var slot = Assert.Single(plan.slots);
         Assert.Equal("int32_t", slot.result!.cType);
         Assert.Equal("int32_t", Assert.Single(slot.parameters).cType);

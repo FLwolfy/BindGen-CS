@@ -19,6 +19,69 @@ namespace BGCS.NativeBuild.Tests;
 
 public sealed class NativeCanonicalAssertionTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecursiveRecordAliasesAndCallbacksKeepExactNativeProofsRegardlessOfDeclarationOrder(bool recordFirst)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-canonical-recursive-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string header = Path.Combine(root, "recursive.hpp"), source = Path.Combine(root, "proof.cpp");
+            await File.WriteAllTextAsync(header, """
+                struct Node;
+                #ifdef BGCS_RECURSIVE_ALIAS_CONST
+                using NodePtr = const Node*;
+                #else
+                using NodePtr = Node*;
+                #endif
+                using NodePtrAlias = NodePtr;
+                using NodeConstPointer = NodePtr const;
+                using NodeCallback = void(*)(NodePtrAlias);
+                struct Node { NodePtrAlias next; NodeCallback notify; };
+                """);
+            var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp, "clang");
+            NativeModule module = RecursiveModule(target.targetId.value, target.triple, recordFirst);
+            string proof = new NativeCanonicalAssertionEmitter().Emit(module, [header]);
+            foreach (string alias in new[] { "NodePtr", "NodePtrAlias", "NodeConstPointer", "NodeCallback" })
+                Assert.Contains("std::is_same<::" + alias + ",", proof);
+            await File.WriteAllTextAsync(source, proof);
+            ImmutableArray<string> arguments = ["--no-default-config", "--target=" + target.triple, "-std=c++23", "-fsyntax-only", "-Werror", source,
+                .. target.toolchain.arguments,
+                .. (target.toolchain.sysRoot is string sysroot ? new[] { "--sysroot=" + sysroot } : []),
+                .. target.toolchain.systemIncludeFolders.Concat(target.toolchain.cxxSystemIncludeFolders).SelectMany(directory => new[] { "-isystem", directory })];
+            var compiled = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments, root, TimeSpan.FromSeconds(60));
+            Assert.False(compiled.timedOut);
+            Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);
+            var drift = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments.Add("-DBGCS_RECURSIVE_ALIAS_CONST=1"), root, TimeSpan.FromSeconds(60));
+            Assert.False(drift.timedOut);
+            Assert.NotEqual(0, drift.exitCode);
+            Assert.Contains("alias canonical type differs", drift.standardOutput + drift.standardError);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void ADeclaredRecordDoesNotExcuseAnAliasCycleInsideItsPublicSdkFields()
+    {
+        NativeModule original = RecursiveModule("proof", "x86_64-unknown-linux-gnu", recordFirst: false);
+        StableId first = new("bad-first"), second = new("bad-second"), field = new("bad-field");
+        NativeDeclaration record = original.GetDeclaration(new("node-decl"));
+        // Only the user alias reaches this SDK declaration. Its public field
+        // closure still has to reject the malformed alias-only cycle.
+        ImmutableArray<NativeDeclaration> declarations = original.declarations.Select(declaration => declaration.id == record.id
+            ? declaration with { children = declaration.children.Add(field), isSystemDeclaration = true } : declaration).ToImmutableArray()
+            .Add(new(field, "Field", "broken", "Node::broken", first, new("recursive.hpp", 1, 1))
+                { parent = record.id, visibility = "Public", isSystemDeclaration = true });
+        ImmutableArray<NativeType> types = original.types
+            .Add(new(first, NativeTypeCategory.Alias, "BadFirst", 8, 8) { elementType = second })
+            .Add(new(second, NativeTypeCategory.Alias, "BadSecond", 8, 8) { elementType = first });
+        NativeModule malformed = new(original.targetId, original.triple, original.pointerSize, types, declarations, []) { language = SourceLanguage.Cpp };
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => new NativeCanonicalAssertionEmitter().Emit(malformed, ["recursive.hpp"]));
+        Assert.Equal("A cyclic native type graph prevents canonical verification.", failure.Message);
+    }
+
     [Fact]
     public async Task PrivateSdkAliasFactsStayPrivateWhileReachablePublicAliasesKeepIndependentCanonicalProofs()
     {
@@ -184,6 +247,44 @@ public sealed class NativeCanonicalAssertionTests
         NativeModule changed = new(original.targetId, original.triple, original.pointerSize, types.ToImmutableArray(), declarations.ToImmutableArray(), []) { language = SourceLanguage.Cpp };
         if (failure is "alias-cycle" or "owner-cycle") Assert.Throws<InvalidOperationException>(() => new NativeCanonicalAssertionEmitter().Emit(changed, ["native.hpp"]));
         else Assert.Throws<NotSupportedException>(() => new NativeCanonicalAssertionEmitter().Emit(changed, ["native.hpp"]));
+    }
+
+    private static NativeModule RecursiveModule(
+        string target,
+        string triple,
+        bool recordFirst
+    ) {
+        StableId node = new("node"), pointer = new("node-pointer"), alias = new("node-alias"), chain = new("node-alias-chain"), qualified = new("node-qualified");
+        StableId constAlias = new("node-const-alias"), callback = new("node-callback"), callbackPointer = new("node-callback-pointer"), callable = new("node-callable"), empty = new("void");
+        StableId record = new("node-decl"), next = new("node-next"), notify = new("node-notify");
+        SourceLocation location = new("recursive.hpp", 1, 1);
+        ImmutableArray<NativeType> types =
+        [
+            new(node, NativeTypeCategory.Record, "Node", 16, 8) { declaration = record },
+            new(pointer, NativeTypeCategory.Pointer, "Node*", 8, 8) { elementType = node },
+            new(alias, NativeTypeCategory.Alias, "NodePtr", 8, 8) { elementType = pointer, declaration = new("node-alias-decl") },
+            new(chain, NativeTypeCategory.Alias, "NodePtrAlias", 8, 8) { elementType = alias, declaration = new("node-chain-decl") },
+            new(qualified, NativeTypeCategory.Qualified, "Node* const", 8, 8) { elementType = pointer, qualifier = "Const" },
+            new(constAlias, NativeTypeCategory.Alias, "NodeConstPointer", 8, 8) { elementType = qualified, declaration = new("node-const-decl") },
+            new(empty, NativeTypeCategory.Primitive, "void", 0, null) { primitiveKind = "Void" },
+            new(callable, NativeTypeCategory.Function, "void(Node*)", null, null) { returnType = empty, parameterTypes = [chain], callingConvention = "C" },
+            new(callbackPointer, NativeTypeCategory.Pointer, "void(*)(Node*)", 8, 8) { elementType = callable },
+            new(callback, NativeTypeCategory.Alias, "NodeCallback", 8, 8) { elementType = callbackPointer, declaration = new("node-callback-decl") }
+        ];
+        NativeDeclaration owner = new(record, "Class", "Node", "Node", node, location)
+            { role = "Struct", isCompleteDefinition = true, children = [next, notify] };
+        ImmutableArray<NativeDeclaration> aliases =
+        [
+            new(new("node-alias-decl"), "Typedef", "NodePtr", "NodePtr", alias, location),
+            new(new("node-chain-decl"), "Typedef", "NodePtrAlias", "NodePtrAlias", chain, location),
+            new(new("node-const-decl"), "Typedef", "NodeConstPointer", "NodeConstPointer", constAlias, location),
+            new(new("node-callback-decl"), "Typedef", "NodeCallback", "NodeCallback", callback, location)
+        ];
+        ImmutableArray<NativeDeclaration> declarations = recordFirst ? ImmutableArray.Create(owner).AddRange(aliases) : aliases.Add(owner);
+        declarations = declarations
+            .Add(new(next, "Field", "next", "Node::next", chain, location) { parent = record, visibility = "Public" })
+            .Add(new(notify, "Field", "notify", "Node::notify", callback, location) { parent = record, visibility = "Public" });
+        return new(target, triple, 8, types, declarations, []) { language = SourceLanguage.Cpp };
     }
 
     private static NativeModule Module(string target, string triple)

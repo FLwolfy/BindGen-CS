@@ -31,7 +31,7 @@ public sealed record TemplateInstantiationRequest
     public ImmutableArray<FunctionTemplateInstantiation> functions { get; init; } = [];
 }
 
-/// <summary>Describes the finite declarations added after original headers for explicit template selections.</summary>
+/// <summary>Describes the support input and finite declarations surrounding original headers for explicit template selections.</summary>
 /// <param name="postamble">The validated native parse declarations.</param>
 /// <param name="functionWrappers">The fixed wrapper qualified names by user-facing identity.</param>
 /// <param name="concreteTypes">The requested concrete source-language type names.</param>
@@ -39,4 +39,8 @@ public sealed record TemplateInstantiationPlan(
     string postamble,
     ImmutableDictionary<string, string> functionWrappers,
     ImmutableArray<string> concreteTypes
-);
+)
+{
+    /// <summary>Gets planner-owned support includes placed after the user preamble and before original headers.</summary>
+    public string preamble { get; init; } = string.Empty;
+}

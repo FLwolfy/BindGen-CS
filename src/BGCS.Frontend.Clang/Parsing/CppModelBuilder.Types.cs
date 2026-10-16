@@ -24,6 +24,17 @@ internal unsafe partial class CppModelBuilder
         CXType type,
         CXCursor parent
     ) {
+        if (type.kind == CXTypeKind.CXType_Unexposed)
+        {
+            CXType canonical = type.CanonicalType;
+            // A substituted char8_t remains unexposed even after canonicalization.
+            // Its qualifiers can exist only on that canonical view; retain them
+            // before the builtin fallback returns the shared primitive projection.
+            if (canonical.UnqualifiedType.TypeClass == CX_TypeClass.CX_TypeClass_Builtin
+                && CXUtil.GetTypeSpelling(canonical.UnqualifiedType) == "char8_t")
+                type = canonical;
+        }
+
         // The unqualified projection can be shared by many const/volatile
         // uses. Its canonical spelling must describe that base projection;
         // qualifiers are captured on the explicit view wrappers below.

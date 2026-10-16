@@ -17,6 +17,7 @@ public sealed class NeutralTemplateInstantiationTests
         TemplateInstantiationPlan plan = new TemplateInstantiationPlanner().Plan(new()
         { types = [new("pointer", "Demo::Selector<float*>"), new("reference", "Demo::Selector<int&>"), new("array", "Demo::Selector<int[3]>")] });
         Assert.Equal(3, plan.concreteTypes.Length);
+        Assert.Empty(plan.preamble);
         Assert.Contains("Demo::Selector<float*>", plan.concreteTypes);
         Assert.Throws<ArgumentException>(() => new TemplateInstantiationPlanner().Plan(new() { types = [new("outer", "Demo::Selector<int>*")] }));
     }
@@ -29,6 +30,8 @@ public sealed class NeutralTemplateInstantiationTests
             types = [new("integer-box", "Demo::Box<int>")],
             functions = [new("twice", "Demo::Twice<int>", "int", ["int"]), new("write", "Demo::Write<int>", "void", ["int&"])]
         });
+        Assert.Equal("#include <utility>\n", plan.preamble);
+        Assert.DoesNotContain("#include", plan.postamble);
         Assert.Contains("template class Demo::Box<int>;", plan.postamble);
         Assert.Contains("inline int function_", plan.postamble);
         Assert.Contains("using bgcs_signature = int (*)(int); auto bgcs_target = static_cast<bgcs_signature>(&::Demo::Twice<int>)", plan.postamble);

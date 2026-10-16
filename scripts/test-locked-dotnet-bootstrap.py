@@ -190,8 +190,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         self.assertIn('if: always()', job)
         self.assertIn('path: artifacts/gnu-smoke', job)
         expression = gnu_smoke.filter_expression()
-        self.assertEqual(6, len(gnu_smoke.METHODS))
-        self.assertEqual(9, len(gnu_smoke.REQUIRED_CASES))
+        self.assertEqual(15, len(gnu_smoke.METHODS))
+        self.assertEqual(37, len(gnu_smoke.REQUIRED_CASES))
         self.assertIn('FullyQualifiedName=' + gnu_smoke.BRANCH + '&DisplayName~gnu', expression)
         for method in gnu_smoke.METHODS:
             self.assertIn('FullyQualifiedName=' + method, expression)
@@ -211,7 +211,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
             ET.SubElement(definition, 'TestMethod', className=class_name, name=member)
             ET.SubElement(results, 'UnitTestResult', testId=identifier, testName=display, outcome='Passed')
         summary = ET.SubElement(tree, 'ResultSummary')
-        ET.SubElement(summary, 'Counters', total='9', executed='9', passed='9', failed='0', error='0', timeout='0', aborted='0', notExecuted='0')
+        count = str(len(gnu_smoke.REQUIRED_CASES))
+        ET.SubElement(summary, 'Counters', total=count, executed=count, passed=count, failed='0', error='0', timeout='0', aborted='0', notExecuted='0')
         return tree
 
     def test_early_gnu_trx_requires_exact_literals_fqns_and_successful_complete_execution(self):
@@ -219,7 +220,7 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         path = self.root / 'gnu.trx'
         ET.ElementTree(original).write(path, encoding='utf-8')
         verified = gnu_smoke.verify(path)
-        self.assertEqual(9, len(verified['cases']))
+        self.assertEqual(37, len(verified['cases']))
         self.assertFalse(verified['releaseCertification'])
         for fault in ('missing', 'duplicate', 'skipped', 'foreign-branch', 'wrong-fqn', 'extra-definition', 'failed-counter', 'run-error'):
             with self.subTest(fault=fault):

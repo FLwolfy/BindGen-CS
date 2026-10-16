@@ -16,7 +16,17 @@ DTO = PREFIX + 'NativeCppDtoStorageTests.CompilerProvenDtos_PreserveNestedAndArr
 DRIFT = PREFIX + 'NativeCppDtoStorageTests.SameSizedNativeDtoFieldDrift_RejectsFinalBuildAndPreservesPublication'
 TYPEDEF = PREFIX + 'NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation'
 C_BUILD = PREFIX + 'NeutralNativeBuildTests.CBuild_UsesC17AndPreservesPreviousOutputWhenCompilationOrExportsFail'
-METHODS = (STANDARD, BRANCH, DTO, DRIFT, TYPEDEF, C_BUILD)
+TEMPLATES = PREFIX + 'NativeStandardLoweringTests.ExplicitClassAndFunctionTemplates_UseConcreteWorkerFactsAndRealNativeExports'
+FAMILIES = PREFIX + 'NativeConfiguredFamilyTests.ActualCustomFamiliesKeepTheirTypeAndUseCheckedNativeOperations'
+FAMILY_DRIFT = PREFIX + 'NativeConfiguredFamilyTests.IncompatibleNativeProtocolFailsAndPreservesPreviousPublication'
+VIRTUAL_CALLBACKS = PREFIX + 'NativeManagedVirtualCallbackTests.GeneratedStaticThunksRetainIndependentTargetsAndCloseOnlyAfterNativeQuiescence'
+EXTENDED_FAMILIES = PREFIX + 'NativeConfiguredExtendedFamilyTests.CustomOwnersVariantsPathsAndClocksUseNativeProtocolsWithoutInventedLifetimes'
+EXTENDED_DRIFT = PREFIX + 'NativeConfiguredExtendedFamilyTests.IncompatibleOwnerVariantPathAndPeriodProofsCannotReplaceTheLastCompleteOutput'
+BITFIELD = PREFIX + 'ManifestNativeBuildTests.FinalNativeNonAddressableStorageCannotDriftWhileSizeAndPublicSignaturesStayEqual'
+ENUM_DRIFT = PREFIX + 'ManifestNativeBuildTests.NativeEnumUnderlyingSignednessDriftCannotReplaceVerifiedOutputWhenTheEnumNameAndSizeMatch'
+SEQUENCES = PREFIX + 'NativeCppSequenceTests.TypedSequences_PreserveRawExports_CopyValuesAndPinBorrowedCalls'
+METHODS = (STANDARD, BRANCH, DTO, DRIFT, TYPEDEF, C_BUILD, TEMPLATES, FAMILIES, FAMILY_DRIFT,
+           VIRTUAL_CALLBACKS, EXTENDED_FAMILIES, EXTENDED_DRIFT, BITFIELD, ENUM_DRIFT, SEQUENCES)
 REQUIRED_CASES = {
     STANDARD: STANDARD,
     BRANCH + '(family: "gnu")': BRANCH,
@@ -27,6 +37,18 @@ REQUIRED_CASES = {
     TYPEDEF + '(singleFile: False)': TYPEDEF,
     TYPEDEF + '(singleFile: True)': TYPEDEF,
     C_BUILD: C_BUILD,
+    TEMPLATES: TEMPLATES,
+    **{FAMILIES + '(mode: ' + mode + ', sourceRuntime: ' + source + ')': FAMILIES
+       for mode in ('FunctionTable', 'DllImport', 'LibraryImport') for source in ('False', 'True')},
+    **{FAMILY_DRIFT + '(mutation: "' + mutation + '")': FAMILY_DRIFT
+       for mutation in ('element', 'macro', 'reserve')},
+    **{method + '(mode: ' + mode + ', sourceRuntime: ' + source + ')': method
+       for method in (VIRTUAL_CALLBACKS, EXTENDED_FAMILIES)
+       for mode in ('FunctionTable', 'DllImport', 'LibraryImport') for source in ('False', 'True')},
+    EXTENDED_DRIFT: EXTENDED_DRIFT,
+    **{BITFIELD + '(privateField: ' + value + ')': BITFIELD for value in ('False', 'True')},
+    ENUM_DRIFT: ENUM_DRIFT,
+    **{SEQUENCES + '(runtimeMode: "' + mode + '")': SEQUENCES for mode in ('package', 'source')},
 }
 
 

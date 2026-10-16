@@ -311,7 +311,16 @@ public sealed class NativeStandardLoweringTests
         BridgeExport? constructor = null;
         try
         {
+            await File.WriteAllTextAsync(Path.Combine(root, "before.hpp"), """
+                #ifndef BGCS_TEMPLATE_USER_PREAMBLE
+                #error BGCS_TEMPLATE_USER_PREAMBLE_MISSING
+                #endif
+                #define BGCS_TEMPLATE_FIRST_HEADER 1
+                """);
             await File.WriteAllTextAsync(Path.Combine(root, "fixture.hpp"), """
+                #ifndef BGCS_TEMPLATE_FIRST_HEADER
+                #error BGCS_TEMPLATE_HEADER_ORDER_CHANGED
+                #endif
                 namespace Demo {
                 template<typename T> class Box {
                 public:
@@ -330,7 +339,7 @@ public sealed class NativeStandardLoweringTests
             {
                 schemaVersion = 1,
                 library = new() { id = "templates", nativeName = "templates_bridge" },
-                source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
+                source = new() { language = SourceLanguage.Cpp, headers = ["before.hpp", "fixture.hpp"], preamble = "#define BGCS_TEMPLATE_USER_PREAMBLE 1\n", parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 cpp = new() { templateInstantiations = new() { types = [new("integer-box", "Demo::Box<int>"), new("full-selector", "Demo::Selector<int>"), new("partial-selector", "Demo::Selector<float*>")], functions = [new("twice", "Demo::Twice<int>", "int", ["int"]), new("take", "Demo::Take<int>", "int", ["int&&"])] } },
                 api = new() { @namespace = "Generated.Templates", name = "TemplatesApi" },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
@@ -345,6 +354,8 @@ public sealed class NativeStandardLoweringTests
             library = NativeLibrary.Load(binary);
             T Function<T>(BridgeExport export) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, export.name));
             string storageAssertions = await File.ReadAllTextAsync(Path.Combine(target, "native", "src", "storage.assertions.cpp"));
+            AssertInputOrder(storageAssertions);
+            AssertInputOrder(await File.ReadAllTextAsync(Path.Combine(target, "native", "src", "facts.input.hpp")));
             Assert.Contains("&Demo::Box<int>::Read", storageAssertions);
             Assert.DoesNotContain("&Demo::Box::Read", storageAssertions);
             Assert.True(plan.exports.Any(export => export.operation.kind == BridgeOperationKind.Construct), string.Join(Environment.NewLine, plan.source.declarations
@@ -410,6 +421,19 @@ public sealed class NativeStandardLoweringTests
             }
             if (library != 0) NativeLibrary.Free(library);
             Directory.Delete(root, recursive: true);
+        }
+
+        static void AssertInputOrder(string source)
+        {
+            int userPreamble = source.IndexOf("#define BGCS_TEMPLATE_USER_PREAMBLE 1", StringComparison.Ordinal);
+            Assert.True(userPreamble >= 0, source);
+            int support = source.IndexOf("#include <utility>", userPreamble, StringComparison.Ordinal);
+            Assert.True(support > userPreamble, source);
+            int firstHeader = source.IndexOf("before.hpp", support, StringComparison.Ordinal);
+            Assert.True(firstHeader > support, source);
+            int secondHeader = source.IndexOf("fixture.hpp", firstHeader, StringComparison.Ordinal);
+            Assert.True(secondHeader > firstHeader, source);
+            Assert.DoesNotContain("#include <utility>", source[(secondHeader + "fixture.hpp".Length)..]);
         }
     }
 

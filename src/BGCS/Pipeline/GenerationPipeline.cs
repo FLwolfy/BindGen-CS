@@ -202,6 +202,10 @@ public sealed partial class BindingHost
                 TemplateInstantiationPlan? templates = source.language == SourceLanguage.Cpp
                     && (!configuration.cpp.templateInstantiations.types.IsEmpty || !configuration.cpp.templateInstantiations.functions.IsEmpty)
                     ? templatePlanner.Plan(configuration.cpp.templateInstantiations) : null;
+                string supportPreamble = (templates?.preamble ?? string.Empty)
+                    + (source.language == SourceLanguage.Cpp && !configuration.cpp.virtualCallbacks.IsEmpty ? VirtualCallbackPlanner.preamble : string.Empty);
+                if (supportPreamble.Length != 0)
+                    source = source with { preamble = source.preamble + "\n" + supportPreamble };
                 string nativePostamble = source.postamble + (templates is null ? string.Empty : "\n" + templates.postamble);
                 if (source.language == SourceLanguage.Cpp && !configuration.cpp.sequenceInputAdapters.IsEmpty)
                     nativePostamble += StandardPathInputProbe.postamble;

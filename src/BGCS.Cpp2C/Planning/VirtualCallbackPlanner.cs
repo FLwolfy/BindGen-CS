@@ -16,10 +16,13 @@ namespace BGCS.Cpp2C.Planning;
 /// <summary>Generates finite native virtual adapters and raw callback ABI contracts from detached facts.</summary>
 public sealed class VirtualCallbackPlanner
 {
+    /// <summary>Gets fixed proxy support includes placed after the user preamble and before original headers, including the first interface parse.</summary>
+    public static string preamble => "#include <cstdint>\n#include <memory>\n#include <stdexcept>\n#include <utility>\n";
+
     /// <summary>Plans a concrete native proxy whose callback slots cannot propagate managed exceptions across C.</summary>
     /// <param name="module">The original detached C++ declarations.</param>
     /// <param name="request">The exact explicitly selected native interface.</param>
-    /// <returns>The typed slot contracts and content-identified declarations passed through a second ordinary worker parse.</returns>
+    /// <returns>The typed slot contracts and content-identified declarations passed through a second ordinary worker parse with <see cref="preamble"/> before the original headers.</returns>
     public CppVirtualProxyPlan Plan(
         NativeModule module,
         VirtualCallbackRequest request
@@ -45,7 +48,7 @@ public sealed class VirtualCallbackPlanner
         string className = "Proxy_" + suffix, factoryName = "Create_" + suffix;
         string callMacro = "BGCS_CALLBACK_CALL_" + suffix.ToUpperInvariant();
         ImmutableArray<VirtualCallbackSlot>.Builder slots = ImmutableArray.CreateBuilder<VirtualCallbackSlot>();
-        StringBuilder source = new("#include <cstdint>\n#include <memory>\n#include <stdexcept>\n#include <utility>\n");
+        StringBuilder source = new();
         source.Append("#if defined(_WIN32)\n#define ").Append(callMacro).Append(" __cdecl\n#else\n#define ").Append(callMacro).Append("\n#endif\n")
             .AppendLine("namespace BGCSGeneratedCallbacks {").Append("class ").Append(className).Append(" final : public ::").Append(owner.qualifiedName).AppendLine(" {")
             .AppendLine("    void* m_userData;");

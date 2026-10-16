@@ -36,7 +36,7 @@ public sealed class TemplateInstantiationPlanner
                 throw new ArgumentException("A class-template request must name one unique concrete specialization.", nameof(request));
             declarations.Append("template class ").Append(type.nativeType).Append(";\n");
         }
-        if (request.functions.Length != 0) declarations.Append("#include <utility>\nnamespace BGCSGeneratedTemplates {\n");
+        if (request.functions.Length != 0) declarations.Append("namespace BGCSGeneratedTemplates {\n");
         foreach (FunctionTemplateInstantiation function in request.functions)
         {
             ArgumentNullException.ThrowIfNull(function);
@@ -65,7 +65,10 @@ public sealed class TemplateInstantiationPlanner
             declarations.Append("); }\n");
         }
         if (request.functions.Length != 0) declarations.Append("}\n");
-        return new(declarations.ToString(), wrappers.ToImmutable(), request.types.Select(type => type.nativeType).ToImmutableArray());
+        return new(declarations.ToString(), wrappers.ToImmutable(), request.types.Select(type => type.nativeType).ToImmutableArray())
+        {
+            preamble = request.functions.IsEmpty ? string.Empty : "#include <utility>\n"
+        };
 
         void Identity(string id)
         {

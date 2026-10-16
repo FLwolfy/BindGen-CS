@@ -25,9 +25,9 @@
     {
       "assembly": "BGCS.Contracts",
       "baseline": "tests/public-api/BGCS.Contracts.txt",
-      "sha256": "ab89167804f6b23901c321598a5b9a4b35eb14714729e10462081a8342e396d0",
-      "lines": 3841,
-      "exportedTypes": 296
+      "sha256": "9fc3636f69e989990fce2fe581d49cf3b5211be57b030d82fcdcfefdafaf81e8",
+      "lines": 3857,
+      "exportedTypes": 297
     },
     {
       "assembly": "BGCS.Runtime",
@@ -39,8 +39,8 @@
     {
       "assembly": "BGCS",
       "baseline": "tests/public-api/BGCS.txt",
-      "sha256": "7ec316edb6b2693372c97dda5be44321e65aae3bdc13ba72f9da6a256c4aadbc",
-      "lines": 984,
+      "sha256": "12a7f86a6a2fcdf3030da46dd689e88e0251bb747b5bab2514722410ecdcd1b6",
+      "lines": 985,
       "exportedTypes": 69
     },
     {
@@ -67,8 +67,8 @@
     {
       "assembly": "BGCS.Cpp2C",
       "baseline": "tests/public-api/BGCS.Cpp2C.txt",
-      "sha256": "3d759a1d99a132fe720931f7eac9cad5f554225441b7660ef58acdf913e1f2ce",
-      "lines": 59,
+      "sha256": "bc1c62a29f85644573edb0fa64665dd87f1a3276fb5edbc563052b8423296c6e",
+      "lines": 60,
       "exportedTypes": 13
     },
     {
@@ -81,9 +81,9 @@
     {
       "assembly": "BGCS.NativeBuild",
       "baseline": "tests/public-api/BGCS.NativeBuild.txt",
-      "sha256": "6b9e0a1eaf184afec857c777c84286606e16a705fec818b15683660e937c145c",
-      "lines": 128,
-      "exportedTypes": 25
+      "sha256": "ee1f3f364a41e5d1e5d0b6b0011fb8e031f6cad6aece9716802b27a171f6d8fc",
+      "lines": 131,
+      "exportedTypes": 26
     },
     {
       "assembly": "BGCS.Frontend.Clang",
@@ -96,6 +96,9 @@
   "reviewedPreReleaseChanges": [
     "NativeBuildCommand.outputEncoding stores an optional neutral encoding name in the immutable command plan and receipt. Null retains the platform default; Meson explicitly selects UTF-8.",
     "ProcessExecutor.ExecuteAsync accepts a final optional Encoding argument for both redirected streams. Existing tools retain their default decoding; no Python or Meson heuristic enters Infrastructure.",
-    "SourceSnapshotBatch.GetMismatch shares exact-record file and complete directory-query verification within one fence across Host and NativeBuild. Each later fence remains fresh; contradictory records, ordered exclusions, absence and cancellation remain independent. No legacy alias or production friend access is added."
+    "SourceSnapshotBatch.GetMismatch shares exact-record file and complete directory-query verification within one fence across Host and NativeBuild. Each later fence remains fresh; contradictory records, ordered exclusions, absence and cancellation remain independent. No legacy alias or production friend access is added.",
+    "TemplateInstantiationPlan.preamble carries planner-owned C++ support includes separately from post-header instantiation declarations. Host retains user preamble order and places support headers before original headers and the first parse; exact source, snapshots and native proofs use that composition.",
+    "VirtualCallbackPlanner.preamble exposes the fixed support includes required before original interface headers. Proxy source contains declarations only; native bridge emission and repeated fact parsing retain the same dependency and lifetime contracts.",
+    "Synchronize the review hashes with the already committed c7a787a prelude and selected-compiler proof API review: neutral NativeDeclarationPrelude, propagated requiresNativeCompilerProof, canonical assertion emitter and the effective-source prelude result. This is metadata for previously reviewed snapshots, not additional runtime API changes."
   ]
 }

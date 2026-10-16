@@ -36,6 +36,9 @@ public sealed class NativeManagedVirtualCallbackTests
         try
         {
             await File.WriteAllTextAsync(Path.Combine(root, "calculator.hpp"), """
+                #ifndef BGCS_VIRTUAL_USER_PREAMBLE
+                #error BGCS_VIRTUAL_USER_PREAMBLE_MISSING
+                #endif
                 namespace Demo {
                 inline int live = 0;
                 class Calculator {
@@ -58,7 +61,7 @@ public sealed class NativeManagedVirtualCallbackTests
             {
                 schemaVersion = 1,
                 library = new() { id = "managed_callbacks", nativeName = "managed_callbacks", bridgeExportPrefix = "managed_callbacks" },
-                source = new() { language = SourceLanguage.Cpp, headers = ["calculator.hpp"], parseMacros = false },
+                source = new() { language = SourceLanguage.Cpp, headers = ["calculator.hpp"], preamble = "#define BGCS_VIRTUAL_USER_PREAMBLE 1\n", parseMacros = false },
                 cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator") { releaseThreadDomain = "any" }] },
                 api = new() { @namespace = "Generated.Virtual", name = "VirtualApi", importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
@@ -72,6 +75,15 @@ public sealed class NativeManagedVirtualCallbackTests
             BuildResult result = await host.BuildAsync(new(new(configuration, root)));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string targetRoot = Assert.Single(Directory.GetDirectories(result.outputRoot));
+            string factInput = await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "src", "facts.input.hpp"));
+            int userPreamble = factInput.IndexOf("#define BGCS_VIRTUAL_USER_PREAMBLE 1", StringComparison.Ordinal);
+            Assert.True(userPreamble >= 0, factInput);
+            int support = factInput.IndexOf(BGCS.Cpp2C.Planning.VirtualCallbackPlanner.preamble, userPreamble, StringComparison.Ordinal);
+            Assert.True(support > userPreamble, factInput);
+            int userHeader = factInput.IndexOf("calculator.hpp", support, StringComparison.Ordinal);
+            Assert.True(userHeader > support, factInput);
+            Assert.Contains("namespace BGCSGeneratedCallbacks", factInput[userHeader..]);
+            Assert.DoesNotContain("#include", factInput[(userHeader + "calculator.hpp".Length)..]);
             string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
             using JsonDocument manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(targetRoot, "metadata", "abi.manifest.json")));
             Assert.Single(manifest.RootElement.GetProperty("managedVirtualProxies").EnumerateArray());

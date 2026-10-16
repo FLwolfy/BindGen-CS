@@ -23,7 +23,7 @@ public sealed class NativeCanonicalAssertionEmitter
     /// <param name="postamble">Original source input after the headers.</param>
     /// <returns>A complete supplementary C++ compilation unit; floating-point bit proofs require native C++20 bit-cast support.</returns>
     /// <exception cref="NotSupportedException">An exposed fact has no implemented independent canonical proof, including a public user bitfield or special scalar.</exception>
-    /// <exception cref="InvalidOperationException">The detached graph contains a cycle or omits a required type identity.</exception>
+    /// <exception cref="InvalidOperationException">The detached graph contains a declarator or owner cycle, or omits a required type identity.</exception>
     public string Emit(
         NativeModule module,
         ImmutableArray<string> headers,
@@ -36,6 +36,7 @@ public sealed class NativeCanonicalAssertionEmitter
         Dictionary<StableId, NativeType> types = module.types.ToDictionary(type => type.id);
         Dictionary<StableId, NativeDeclaration> declarations = module.declarations.ToDictionary(declaration => declaration.id);
         HashSet<StableId> completedTypes = [], pendingTypes = [], visitedDeclarations = [], pendingOwners = [];
+        Queue<NativeDeclaration> recordDeclarations = new();
         Dictionary<StableId, bool> accessible = [];
         HashSet<string> guards = new(StringComparer.Ordinal)
         {
@@ -50,6 +51,23 @@ public sealed class NativeCanonicalAssertionEmitter
         int index = 0;
         foreach (NativeDeclaration declaration in module.declarations.Where(declaration => !declaration.isSystemDeclaration && Accessible(declaration) && Concrete(declaration)))
             VisitDeclaration(declaration);
+        // A named record closes a C++ declarator. Its public declaration graph
+        // may refer back through the pointer or alias currently being proved.
+        // Traverse that closure only after the complete declarator has finished;
+        // no re-entry into a pending alias/pointer/function shape is permitted.
+        while (recordDeclarations.Count != 0)
+        {
+            NativeDeclaration owner = recordDeclarations.Dequeue();
+            foreach (NativeTemplateArgument argument in owner.templateArguments)
+                if (argument.type is StableId argumentType) VisitType(argumentType);
+            foreach (NativeBaseClass parent in owner.baseClasses.Where(parent => parent.visibility is not ("Private" or "Protected"))) VisitType(parent.type);
+            foreach (NativeDeclaration child in owner.children.Select(Declaration))
+            {
+                // Opaque SDK implementation fields are not a managed layout
+                // contract. Keep their effective facts, without naming them.
+                if (Accessible(child)) VisitDeclaration(child);
+            }
+        }
 
         StringBuilder source = new("/* BGCS supplementary native canonical proofs; compilation is required. */\n");
         source.Append(preamble).Append('\n');
@@ -127,23 +145,8 @@ public sealed class NativeCanonicalAssertionEmitter
                     throw new NotSupportedException("The selected type has no independent canonical proof: " + type.spelling);
                 if (type.category == NativeTypeCategory.Record)
                 {
-                    // A record can legitimately contain a pointer to itself.
-                    // Only that declaration edge closes recursive object graphs;
-                    // alias and declarator cycles above remain invalid.
-                    completedTypes.Add(identity);
                     if (type.declaration is not StableId record) throw new InvalidOperationException("A canonical record omitted its declaration.");
-                    NativeDeclaration owner = Declaration(record);
-                    foreach (NativeTemplateArgument argument in owner.templateArguments)
-                        if (argument.type is StableId argumentType) VisitType(argumentType);
-                    foreach (NativeBaseClass parent in owner.baseClasses.Where(parent => parent.visibility is not ("Private" or "Protected"))) VisitType(parent.type);
-                    foreach (NativeDeclaration child in owner.children.Select(Declaration))
-                    {
-                        // Opaque SDK implementation fields are not a managed
-                        // layout contract. Keep their effective facts intact,
-                        // but do not name or recursively project private state.
-                        if (!Accessible(child)) continue;
-                        VisitDeclaration(child);
-                    }
+                    recordDeclarations.Enqueue(Declaration(record));
                 }
                 if (type.elementType is StableId element) VisitType(element);
                 if (type.returnType is StableId returned) VisitType(returned);

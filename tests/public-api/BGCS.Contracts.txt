@@ -774,6 +774,7 @@ class BGCS.Contracts.Bridge.TemplateInstantiationPlan [sealed; interfaces=System
   property System.Collections.Immutable.ImmutableArray<System.String> concreteTypes { get; init }
   property System.Collections.Immutable.ImmutableDictionary<System.String,System.String> functionWrappers { get; init }
   property System.String postamble { get; init }
+  property System.String preamble { get; init }
   method BGCS.Contracts.Bridge.TemplateInstantiationPlan <Clone>$()
   method System.Boolean Equals(BGCS.Contracts.Bridge.TemplateInstantiationPlan other) [virtual; final]
   method System.Boolean Equals(System.Object obj) [virtual]

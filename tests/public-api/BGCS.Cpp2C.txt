@@ -47,6 +47,7 @@ class BGCS.Cpp2C.Planning.TemplateInstantiationPlanner [sealed]
   method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Common.StableId> SelectCallables(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Bridge.TemplateInstantiationPlan plan)
 class BGCS.Cpp2C.Planning.VirtualCallbackPlanner [sealed]
   ctor()
+  property System.String preamble { get } [static]
   method BGCS.Contracts.Bridge.CppVirtualProxyPlan Plan(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Bridge.VirtualCallbackRequest request)
 class BGCS.Cpp2C.Recipes.LoweringRecipeCompiler [sealed]
   ctor()
