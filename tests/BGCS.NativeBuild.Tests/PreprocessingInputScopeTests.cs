@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -130,7 +131,8 @@ public sealed class PreprocessingInputScopeTests
             Assert.Contains(view.inputs.files, file => file.path == compiler);
             Assert.Null(SourceSnapshotVerifier.GetMismatch(view.inputs));
             DateTime stamp = File.GetLastWriteTimeUtc(compiler);
-            using (FileStream file = new(compiler, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            long length = new FileInfo(compiler).Length;
+            using (FileStream file = await OpenOwnedCompilerForMutationAsync(compiler))
             {
                 file.Seek(-1, SeekOrigin.End);
                 int last = file.ReadByte();
@@ -139,9 +141,27 @@ public sealed class PreprocessingInputScopeTests
                 file.WriteByte((byte)(last ^ 1));
             }
             File.SetLastWriteTimeUtc(compiler, stamp);
+            Assert.Equal(length, new FileInfo(compiler).Length);
+            Assert.Equal(stamp, File.GetLastWriteTimeUtc(compiler));
             Assert.Equal("Input file bytes changed: " + compiler, SourceSnapshotVerifier.GetMismatch(view.inputs));
         }
         finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private static async Task<FileStream> OpenOwnedCompilerForMutationAsync(string compiler)
+    {
+        // Wait only for exclusive ownership of this fixture copy. Never retry
+        // preprocessing or change which compiler bytes the snapshot verifies.
+        Stopwatch readiness = Stopwatch.StartNew();
+        while (true)
+        {
+            try { return new(compiler, FileMode.Open, FileAccess.ReadWrite, FileShare.None); }
+            catch (IOException failure) when (OperatingSystem.IsWindows()
+                && (failure.HResult & 0xffff) is 32 or 33 && readiness.Elapsed < TimeSpan.FromSeconds(5))
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50));
+            }
+        }
     }
 
     private static string InstalledClang()
