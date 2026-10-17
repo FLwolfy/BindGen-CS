@@ -302,6 +302,37 @@ jobs:
       - name: Verify grouped configuration documentation against the built Tool schema
         run: python scripts/generate-config-docs.py --configuration Release --check
 
+      - name: Check the fresh embedded worker host before the full macOS matrix
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          unset Platform PLATFORM platform
+          python scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-build --no-restore -m:1 -nr:false --filter "FullyQualifiedName=BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend" --results-directory artifacts/embedded-worker-preflight --logger "trx;LogFileName=embedded-worker.trx" --logger "console;verbosity=detailed"
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse('artifacts/embedded-worker-preflight/embedded-worker.trx').getroot()
+          expected = 'BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend'
+          results = root.findall('{*}Results/{*}UnitTestResult')
+          definitions = root.findall('{*}TestDefinitions/{*}UnitTest')
+          counters = root.find('{*}ResultSummary/{*}Counters')
+          if len(results) != 1 or len(definitions) != 1 or counters is None:
+              raise SystemExit('The embedded worker preflight did not execute exactly one case.')
+          result, definition = results[0], definitions[0]
+          method = definition.find('{*}TestMethod')
+          if (result.get('outcome') != 'Passed' or result.get('testName') != expected
+                  or result.get('testId') != definition.get('id') or method is None
+                  or method.get('className', '') + '.' + method.get('name', '') != expected):
+              raise SystemExit('The embedded worker preflight changed, skipped or failed its required case.')
+          if (any(counters.get(key) != '1' for key in ('total', 'executed', 'passed'))
+                  or any(counters.get(key) != '0' for key in ('failed', 'error', 'timeout', 'aborted', 'notExecuted'))
+                  or any(info.get('outcome') == 'Error' for info in root.findall('.//{*}RunInfo'))):
+              raise SystemExit('The embedded worker preflight contains incomplete or failed execution evidence.')
+          print('Verified the exact fresh embedded worker host within its unchanged 60-second deadline.')
+          PY
+        env:
+          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
+          BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
+
       - name: Test managed and native runtime matrix
         shell: bash
         run: |
@@ -318,7 +349,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.target }}
-          path: '**/TestResults/*.trx'
+          path: |
+            **/TestResults/*.trx
+            artifacts/embedded-worker-preflight
 
       - name: Build structured Host discovery driver
         shell: bash

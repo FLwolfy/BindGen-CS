@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.IO;
 using System.Text;
@@ -19,10 +20,28 @@ internal static class Program
             await File.WriteAllTextAsync(absolute, schema, new UTF8Encoding(false));
             return 0;
         }
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(arguments[0]).Build();
-        GenerationResult result = await host.GenerateAsync(GenerationRequest.FromFile(arguments[1]));
-        bool frontendLoaded = AppDomain.CurrentDomain.GetAssemblies().Any(assembly => assembly.GetName().Name == "BGCS.Frontend.Clang");
+        Stopwatch elapsed = Stopwatch.StartNew();
+        ReportPhase("entry");
+        GenerationResult result;
+        bool frontendLoaded;
+        await using (BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(arguments[0]).Build())
+        {
+            ReportPhase("host-built");
+            GenerationRequest request = GenerationRequest.FromFile(arguments[1]);
+            ReportPhase("request-loaded");
+            ReportPhase("generation-start");
+            result = await host.GenerateAsync(request);
+            ReportPhase("generation-completed");
+            frontendLoaded = AppDomain.CurrentDomain.GetAssemblies().Any(assembly => assembly.GetName().Name == "BGCS.Frontend.Clang");
+        }
+        ReportPhase("dispose-completed");
         Console.WriteLine(JsonSerializer.Serialize(new { result.success, result.outputRoot, frontendLoaded, diagnosticSummary = result.GetDiagnosticSummary() }));
         return result.success && !frontendLoaded ? 0 : 1;
+
+        void ReportPhase(string phase)
+        {
+            Console.Error.WriteLine($"Embedded SDK host phase={phase}, elapsed={elapsed.Elapsed}.");
+            Console.Error.Flush();
+        }
     }
 }

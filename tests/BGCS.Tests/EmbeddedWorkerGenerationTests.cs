@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -27,8 +28,12 @@ public sealed class EmbeddedWorkerGenerationTests
             await File.WriteAllTextAsync(input, "{\"schemaVersion\":1,\"library\":{\"id\":\"example\",\"nativeName\":\"example\"},\"source\":{\"language\":\"c\",\"headers\":[\"native.h\"]},\"api\":{\"namespace\":\"Generated.Example\",\"name\":\"NativeApi\"},\"cache\":{\"enabled\":false}}");
             string? root = Environment.GetEnvironmentVariable("DOTNET_ROOT");
             string dotnet = string.IsNullOrEmpty(root) ? "dotnet" : Path.Combine(root, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
-            var result = await ProcessExecutor.ExecuteAsync(dotnet, [host, worker, input], temporary, TimeSpan.FromSeconds(60));
-            Assert.True(result.exitCode == 0, result.standardOutput + Environment.NewLine + result.standardError);
+            Stopwatch elapsed = Stopwatch.StartNew();
+            ProcessExecutionResult result = await ProcessExecutor.ExecuteAsync(dotnet, [host, worker, input], temporary, TimeSpan.FromSeconds(60));
+            string details = $"Embedded SDK host exitCode={result.exitCode}, timedOut={result.timedOut}, elapsed={elapsed.Elapsed}."
+                + Environment.NewLine + result.standardOutput + Environment.NewLine + result.standardError;
+            Assert.False(result.timedOut, details);
+            Assert.True(result.exitCode == 0, details);
             using JsonDocument output = JsonDocument.Parse(result.standardOutput.Trim());
             Assert.True(output.RootElement.GetProperty("success").GetBoolean(), output.RootElement.GetProperty("diagnosticSummary").GetString());
             Assert.False(output.RootElement.GetProperty("frontendLoaded").GetBoolean());
