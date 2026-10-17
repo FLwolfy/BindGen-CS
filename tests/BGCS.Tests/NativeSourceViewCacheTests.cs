@@ -93,7 +93,8 @@ public sealed class NativeSourceViewCacheTests
             GenerationDiffResult unchanged = await host.DiffAsync(request);
             Assert.True(unchanged.success, string.Join(Environment.NewLine, unchanged.diagnostics.Select(diagnostic => diagnostic.message)));
             Assert.True(unchanged.changes.IsEmpty, "Consecutive warm verification fields (only top-level cache omitted):\n" + receiptComparison
-                + "\nDiff changes: " + string.Join("; ", unchanged.changes.Select(change => change.ToString())));
+                + "\nDiff changes: " + string.Join("; ", unchanged.changes.Select(change => change.ToString()))
+                + "\nDiff diagnostics: " + string.Join(Environment.NewLine, unchanged.diagnostics.Select(diagnostic => diagnostic.message)));
             Assert.Empty(unchanged.changes);
             Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(warm.outputRoot, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal));
             foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(path));

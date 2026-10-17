@@ -64,6 +64,12 @@ Cause: The native declaration has no proven C# storage or by-value calling repre
 
 Resolution: Inspect the detailed type, layout or calling restriction. Use an explicit pointer-based native bridge or shim, or select an independently verified compatible runtime/import profile; do not replace the native type based only on equal size.
 
+## BGCS-DIFF-METADATA — Generated metadata contains logical field changes
+
+Cause: Diff found non-cache metadata changes and reports a bounded sample of their JSON paths and previous/current values.
+
+Resolution: Review the reported fields against the intended input or configuration change. Unchanged requests should preserve logical verification evidence; do not ignore changed ABI or input records merely because generated source text is unchanged.
+
 ## BGCS-DIFF-OUTPUT — Existing output cannot be compared safely
 
 Cause: Diff could not read or verify the previous owned publication before comparing it with candidate generation.

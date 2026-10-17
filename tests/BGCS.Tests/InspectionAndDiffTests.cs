@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
+using BGCS.Contracts;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Native;
 using BGCS.Contracts.Ports;
@@ -82,6 +83,51 @@ public sealed class InspectionAndDiffTests
     }
 
     [Fact]
+    public async Task Diff_ExplainsBoundedNonCacheMetadataChangesWithoutChangingOutput()
+    {
+        using Scratch scratch = new();
+        const string oldPrefix = "previous-validator-";
+        const string newPrefix = "current-validator-";
+        string oldMessage = oldPrefix + new string('x', 240);
+        string newMessage = newPrefix + new string('y', 240);
+        await using BindingHost original = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
+            .AddValidator("metadata-probe", 0, () => new MetadataValidator(0, oldMessage)).Build();
+        await using BindingHost changed = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
+            .AddValidator("metadata-probe", 7, () => new MetadataValidator(7, newMessage)).Build();
+        GenerationRequest request = new(Configuration(), scratch.root);
+        GenerationResult published = await original.GenerateAsync(request);
+        Assert.True(published.success, published.GetDiagnosticSummary());
+        var before = Directory.GetFiles(published.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes, StringComparer.Ordinal);
+
+        GenerationDiffResult difference = await changed.DiffAsync(request);
+        Assert.True(difference.success, string.Join(Environment.NewLine, difference.diagnostics.Select(diagnostic => diagnostic.message)));
+        Assert.Contains(difference.changes, change => change.kind == ArtifactChangeKind.Changed && change.relativePath.EndsWith("/metadata/verification.json", StringComparison.Ordinal));
+        Assert.Contains(difference.changes, change => change.kind == ArtifactChangeKind.Changed && change.relativePath == "generation.report.json");
+        BindingDiagnostic verification = Assert.Single(difference.diagnostics.Where(diagnostic => diagnostic.code == "BGCS-DIFF-METADATA"
+            && diagnostic.message.StartsWith("Metadata changed in 'emscripten-wasm32-emscripten/metadata/verification.json'", StringComparison.Ordinal)));
+        Assert.Equal(BindingDiagnosticSeverity.Information, verification.severity);
+        Assert.Contains("$[\"validationGates\"][0][\"priority\"]: 0 -> 7", verification.message);
+        BindingDiagnostic report = Assert.Single(difference.diagnostics.Where(diagnostic => diagnostic.code == "BGCS-DIFF-METADATA"
+            && diagnostic.message.StartsWith("Metadata changed in 'generation.report.json'", StringComparison.Ordinal)));
+        Assert.Equal(BindingDiagnosticSeverity.Information, report.severity);
+        Assert.Contains("[\"message\"]:", report.message);
+        Assert.Contains(oldPrefix, report.message);
+        Assert.Contains(newPrefix, report.message);
+        Assert.DoesNotContain(oldMessage, report.message);
+        Assert.DoesNotContain(newMessage, report.message);
+        string[] lines = report.message.Split(Environment.NewLine);
+        Assert.Equal(13, lines.Length);
+        foreach (string line in lines.Skip(1))
+        {
+            string[] values = line[(line.IndexOf(": ", StringComparison.Ordinal) + 2)..].Split(" -> ", StringSplitOptions.None);
+            Assert.Equal(2, values.Length);
+            Assert.All(values, value => Assert.InRange(value.Length, 1, 180));
+        }
+        Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(published.outputRoot, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal));
+        foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(path));
+    }
+
+    [Fact]
     public async Task Diff_RejectsCorruptOrUnownedPreviousOutput()
     {
         using Scratch scratch = new();
@@ -136,6 +182,16 @@ public sealed class InspectionAndDiffTests
         source = new() { headers = ["native.h"] }, targets = [new() { id = "emscripten-wasm32-emscripten" }],
         api = new() { @namespace = "Example", name = "NativeApi" }, cache = new() { enabled = false }
     };
+    private sealed class MetadataValidator(int order, string message) : IGenerationValidator
+    {
+        public string id => "metadata-probe";
+        public int priority => order;
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(Enumerable.Range(0, 20).Select(index => new BindingDiagnostic(BindingDiagnosticSeverity.Information, message + index)).ToImmutableArray());
+        }
+    }
     private sealed class ScalarFrontend : IFrontend
     {
         public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)

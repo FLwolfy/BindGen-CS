@@ -26,7 +26,7 @@ namespace BGCS.NativeBuild.Validation;
 /// <summary>Acquires selected-native constexpr record traits through exact target-object symbol sizes, without executing target code.</summary>
 public sealed class NativeRecordTraitObserver
 {
-    private const int C_RECIPE_REVISION = 4;
+    private const int C_RECIPE_REVISION = 5;
     private const string C_SYMBOL_PREFIX = "bgcs_native_record_trait_";
     private const string C_TYPE_PATTERN = @"\A(?:::)?[A-Za-z_][A-Za-z_0-9 :<>,*&]*\z";
 
@@ -238,8 +238,11 @@ public sealed class NativeRecordTraitObserver
                 },
                 environment,
                 files = snapshots.SelectMany(snapshot => snapshot.files).Where(file => !Private(file.path))
-                    .Distinct().OrderBy(file => file.path, StringComparer.Ordinal)
                     .Select(file => new { path = Normalize(file.path), resolvedPath = Normalize(file.resolvedPath), file.length, file.digest })
+                    .Distinct().OrderBy(file => file.path, StringComparer.Ordinal)
+                    .ThenBy(file => file.resolvedPath, StringComparer.Ordinal)
+                    .ThenBy(file => file.length)
+                    .ThenBy(file => file.digest.value, StringComparer.Ordinal)
             };
             observation = new(facts, [], Digest(JsonSerializer.SerializeToUtf8Bytes(fingerprint)), evidence);
             Verify();

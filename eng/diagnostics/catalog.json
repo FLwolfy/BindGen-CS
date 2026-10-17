@@ -112,6 +112,17 @@
       }
     },
     {
+      "code": "BGCS-DIFF-METADATA",
+      "title": "Generated metadata contains logical field changes",
+      "cause": "Diff found non-cache metadata changes and reports a bounded sample of their JSON paths and previous/current values.",
+      "resolution": "Review the reported fields against the intended input or configuration change. Unchanged requests should preserve logical verification evidence; do not ignore changed ABI or input records merely because generated source text is unchanged.",
+      "zh": {
+        "title": "生成元数据存在逻辑字段变化",
+        "cause": "Diff 发现缓存运行信息之外的元数据变化，并报告有限数量的 JSON 路径及变化前后的值。",
+        "resolution": "核对这些字段是否符合预期的输入或配置修改。请求未变时逻辑验证证据应保持一致；不能因为生成源码未变就忽略 ABI 或输入记录的变化。"
+      }
+    },
+    {
       "code": "BGCS-DIFF-OUTPUT",
       "title": "Existing output cannot be compared safely",
       "cause": "Diff could not read or verify the previous owned publication before comparing it with candidate generation.",

@@ -117,6 +117,64 @@ public sealed class NativeRecordTraitObserverTests
     }
 
     [Fact]
+    public async Task AuthenticatedArtifactRootsCannotReorderTheStableExternalInputIdentity()
+    {
+        using Fixture fixture = new();
+        string[] candidates = [Path.Combine(fixture.root, "a-candidate"), Path.Combine(fixture.root, "z-candidate")];
+        string[] sources = candidates.Select(candidate => Path.Combine(candidate, "source.cpp")).ToArray();
+        string[] queries = candidates.Select(candidate => Path.Combine(candidate, "query")).ToArray();
+        string source = "#include \"" + fixture.header.Replace('\\', '/') + "\"\n";
+        foreach (string path in sources)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllTextAsync(path, source);
+        }
+        Assert.True(StringComparer.Ordinal.Compare(sources[0], fixture.header) < 0);
+        Assert.True(StringComparer.Ordinal.Compare(sources[1], fixture.header) > 0);
+        Assert.Equal(await File.ReadAllBytesAsync(sources[0]), await File.ReadAllBytesAsync(sources[1]));
+        NativeRecordTraitObservation[] observations = new NativeRecordTraitObservation[2];
+        for (int index = 0; index < candidates.Length; index++)
+        {
+            string scratch = Path.Combine(candidates[index], "preprocessing");
+            NativeBuildRequest request = new(fixture.target, [new(sources[index], SourceLanguage.Cpp, "c++23")], scratch, Path.Combine(scratch, "unused.o"))
+            {
+                outputKind = NativeOutputKind.Object,
+                argumentWorkingDirectory = fixture.root,
+                compilerArguments = ["-g"],
+                snapshotExcludedDirectories = candidates.ToImmutableArray()
+            };
+            NativeBuildPlan plan = new CompilerBuildProvider("clang", fixture.target.toolchain.compilerPath!).Plan(request, CancellationToken.None)
+                with { snapshotExcludedDirectories = request.snapshotExcludedDirectories };
+            await new PlannedNativeBuildExecutor().PreprocessWithDependenciesAsync(plan, TimeSpan.FromSeconds(90));
+            NativePreprocessingOperation operation = Assert.Single(plan.preprocessingOperations);
+            ContentDigest digest = new(Convert.ToHexStringLower(SHA256.HashData(await File.ReadAllBytesAsync(operation.outputFile))));
+            ImmutableDictionary<string, string> origins = ImmutableDictionary<string, string>.Empty
+                .Add(candidates[index] + Path.DirectorySeparatorChar, "native-artifacts/")
+                .SetItem(PhysicalPathResolver.Resolve(candidates[index]) + Path.DirectorySeparatorChar, "native-artifacts/");
+            observations[index] = await new NativeRecordTraitObserver().ObserveAsync(plan, operation, digest, fixture.module,
+                queries[index], TimeSpan.FromSeconds(90), sourcePathMappings: origins);
+            Assert.Contains(observations[index].inputs.SelectMany(snapshot => snapshot.files), input => input.path == sources[index]);
+            Assert.DoesNotContain(observations[index].inputs.SelectMany(snapshot => snapshot.files), input => input.path == sources[1 - index]);
+            Assert.Contains(observations[index].inputs.SelectMany(snapshot => snapshot.files), input => input.path == fixture.header);
+            NativeRecordTraitEvidence evidence = Assert.IsType<NativeRecordTraitEvidence>(observations[index].evidence);
+            Assert.Equal(0, evidence.inspection.exitCode);
+            Assert.All(evidence.execution.executions, execution => Assert.True(execution.exitCode == 0 && !execution.timedOut));
+        }
+        Assert.Equal(Assert.Single(observations[0].facts), Assert.Single(observations[1].facts));
+        Assert.All(observations, observation => Assert.All(observation.inputs, snapshot => Assert.True(SourceSnapshotVerifier.Matches(snapshot))));
+
+        DateTime timestamp = File.GetLastWriteTimeUtc(fixture.header);
+        long length = new FileInfo(fixture.header).Length;
+        string original = await File.ReadAllTextAsync(fixture.header);
+        await File.WriteAllTextAsync(fixture.header, original.Replace("int   x", "float x", StringComparison.Ordinal));
+        File.SetLastWriteTimeUtc(fixture.header, timestamp);
+        Assert.Equal(length, new FileInfo(fixture.header).Length);
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(fixture.header));
+        Assert.All(observations, observation => Assert.Contains(observation.inputs, snapshot => !SourceSnapshotVerifier.Matches(snapshot)));
+        Assert.Equal(observations[0].observationFingerprint, observations[1].observationFingerprint);
+    }
+
+    [Fact]
     public async Task PrivateQueryRootDoesNotNormalizeAnUnrelatedNearPrefixDirectory()
     {
         using Fixture fixture = new();
