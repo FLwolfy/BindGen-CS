@@ -117,7 +117,8 @@ public sealed class WorkspaceExecutionTests
         ConcurrentQueue<string> parsed = new();
         await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(parsed, probe: probe)).Build();
         BindingWorkspace workspace = new([Project(scratch.root, "dependent", ["first", "second"]), Project(scratch.root, "first", []), Project(scratch.root, "second", [])], parallelism: 2);
-        WorkspaceResult result = await host.GenerateWorkspaceAsync(workspace);
+        using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(30));
+        WorkspaceResult result = await host.GenerateWorkspaceAsync(workspace, cancellation.Token);
         Assert.True(result.success, string.Join(Environment.NewLine, result.diagnostics.Select(diagnostic => diagnostic.message)));
         Assert.Equal(2, probe.maximum);
         Assert.Equal("dependent", parsed.Last());
@@ -184,7 +185,8 @@ public sealed class WorkspaceExecutionTests
             {
                 int active = Interlocked.Increment(ref probe.active);
                 lock (probe) probe.maximum = Math.Max(probe.maximum, active);
-                try { await Task.Delay(150, cancellationToken); }
+                if (active == 2) probe.overlap.TrySetResult();
+                try { await probe.overlap.Task.WaitAsync(cancellationToken); }
                 finally { Interlocked.Decrement(ref probe.active); }
             }
             NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
@@ -195,7 +197,12 @@ public sealed class WorkspaceExecutionTests
         }
     }
 
-    private sealed class ConcurrencyProbe { internal int active; internal int maximum; }
+    private sealed class ConcurrencyProbe
+    {
+        internal readonly TaskCompletionSource overlap = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal int active;
+        internal int maximum;
+    }
     private sealed class Scratch : IDisposable
     {
         internal readonly string root = Path.Combine(Path.GetTempPath(), "bgcs-workspace-" + Guid.NewGuid().ToString("N"));
