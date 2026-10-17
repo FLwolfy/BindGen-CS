@@ -24,22 +24,25 @@ public sealed class GnuDeclarationPreludeTests
         NativeTargetDescriptor? target = Installed(); if (target is null) return;
         using Fixture fixture = new();
         await File.WriteAllTextAsync(fixture.header, "#include <cstddef>\nstruct DebugRecord { int value; };\n");
-        FrontendRequest request = fixture.Request(target) with { arguments = ["-g"] };
-        NativeSourceViewResult view = await fixture.Prepare(request, "debug-first");
+        string scratch = Directory.CreateDirectory(Path.Combine(fixture.root, "debug-scratch")).FullName;
+        // Both native attempts and the detached parser input belong to one
+        // declared private scope before the first include-membership capture.
+        FrontendRequest request = fixture.Request(target) with { arguments = ["-g"], snapshotExcludedDirectories = [scratch] };
+        NativeSourceViewResult view = await fixture.Prepare(request, Path.Combine("debug-scratch", "first"));
         Assert.NotNull(view.declarationPrelude);
         Assert.NotNull(view.compilation);
         string raw = await File.ReadAllTextAsync(view.compilation.operation.outputFile);
         Assert.Contains(raw.Split('\n'), line => line.StartsWith("# 1 \"", StringComparison.Ordinal) && line.TrimEnd('\r').EndsWith("//\"", StringComparison.Ordinal));
-        string frozen = Path.Combine(fixture.root, "debug-first", "frozen.hpp");
+        string frozen = Path.Combine(scratch, "first", "frozen.hpp");
         await File.WriteAllTextAsync(frozen, view.expandedSource);
         FrontendResult parsed = await new FrontendWorkerClient(WorkerPath(), TimeSpan.FromSeconds(90)).ParseAsync(request with
         {
             headers = [frozen], declarationPrelude = view.declarationPrelude, arguments = [],
-            parseMacros = false, snapshotExcludedDirectories = [Path.Combine(fixture.root, "debug-first")]
+            parseMacros = false, snapshotExcludedDirectories = [scratch]
         }, CancellationToken.None);
         Assert.DoesNotContain(parsed.module.diagnostics, diagnostic => diagnostic.isFailure);
         Assert.Contains(parsed.module.declarations, declaration => declaration.qualifiedName == "DebugRecord" && declaration.isCompleteDefinition);
-        NativeSourceViewResult replay = await fixture.Prepare(request, "debug-second");
+        NativeSourceViewResult replay = await fixture.Prepare(request, Path.Combine("debug-scratch", "second"));
         Assert.Equal(view.observationFingerprint, replay.observationFingerprint);
         Assert.Equal(raw, await File.ReadAllTextAsync(view.compilation.operation.outputFile));
         Assert.True(SourceSnapshotVerifier.Matches(view.inputs));

@@ -30,7 +30,8 @@ internal sealed class NativeEffectiveFactVerifier(
     ImmutableDictionary<string, string>? sourcePathMappings = null,
     ImmutableArray<WorkerPluginActivation> workerPlugins = default,
     CacheFingerprintContext? workerPluginContext = null,
-    Action<SourceSnapshot>? captureVerificationInputs = null
+    Action<SourceSnapshot>? captureVerificationInputs = null,
+    NativeRecordTraitOrigins? traitOrigins = null
 )
 {
     private readonly ImmutableArray<NativeStringProofReceipt>.Builder m_literalProofs = ImmutableArray.CreateBuilder<NativeStringProofReceipt>();
@@ -39,7 +40,8 @@ internal sealed class NativeEffectiveFactVerifier(
     internal async ValueTask VerifyAsync(
         NativeBuildPlan plan,
         NativePreprocessingOperation operation,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        string? ownedProofRoot = null
     ) {
         if (operation.language != sourceFacts.language) throw new InvalidOperationException("Effective native fact verification changed the selected source language.");
         NativeTargetDescriptor target = plan.target;
@@ -105,13 +107,16 @@ internal sealed class NativeEffectiveFactVerifier(
             {
                 string traitScratch = plan.scratchDirectory
                     ?? throw new InvalidDataException("The GNU effective-source record-trait observation omitted its native working directory.");
+                NativeRecordTraitOrigins.Capture? origins = traitOrigins?.Authenticate(plan, ownedProofRoot,
+                    sourcePathMappings ?? ImmutableDictionary<string, string>.Empty, cancellationToken);
                 NativeRecordTraitObservation observation = await new NativeRecordTraitObserver().ObserveAsync(plan, operation, preprocessedDigest!.Value,
                     parsed.module, Path.Combine(PhysicalPathResolver.Resolve(traitScratch), "record-traits-" + Guid.NewGuid().ToString("N")), TimeSpan.FromSeconds(300), cancellationToken,
-                    sourcePathMappings: sourcePathMappings).ConfigureAwait(false);
+                    sourcePathMappings: origins?.observer ?? sourcePathMappings).ConfigureAwait(false);
                 observedModule = NativeRecordTraitApplication.Apply(parsed.module, observation);
                 tracked ??= new(JsonSerializer.SerializeToElement(new { plan.target, purpose = "nativeRecordTraits" }), pathBase);
                 tracked.CaptureNativeRecordTraits(target.targetId.value, observation, traitScratch,
-                    sourcePathMappings ?? ImmutableDictionary<string, string>.Empty);
+                    origins?.files ?? sourcePathMappings ?? ImmutableDictionary<string, string>.Empty,
+                    ownedDirectoryRoles: origins?.directories);
                 if (captureVerificationInputs is not null)
                     foreach (SourceSnapshot snapshot in observation.inputs) captureVerificationInputs(snapshot);
             }

@@ -26,7 +26,7 @@ namespace BGCS.NativeBuild.Validation;
 /// <summary>Acquires selected-native constexpr record traits through exact target-object symbol sizes, without executing target code.</summary>
 public sealed class NativeRecordTraitObserver
 {
-    private const int C_RECIPE_REVISION = 1;
+    private const int C_RECIPE_REVISION = 3;
     private const string C_SYMBOL_PREFIX = "bgcs_native_record_trait_";
     private const string C_TYPE_PATTERN = @"\A(?:::)?[A-Za-z_][A-Za-z_0-9 :<>,*&]*\z";
 
@@ -39,7 +39,7 @@ public sealed class NativeRecordTraitObserver
     /// <param name="timeout">One deadline for argument capture, object compilation, inspection and verification.</param>
     /// <param name="cancellationToken">Cancels native children and input verification.</param>
     /// <param name="symbolToolPath">An optional exact existing inspector path; otherwise llvm-nm or nm is resolved explicitly.</param>
-    /// <param name="sourcePathMappings">Authenticated caller-owned origins used only to stabilize the query identity.</param>
+    /// <param name="sourcePathMappings">Authenticated exact file origins or trailing-separator directory prefixes used only to stabilize the query identity.</param>
     /// <returns>Native traits, retained external input obligations and execution evidence; no linked or invoked target artifact is claimed.</returns>
     /// <exception cref="NotSupportedException">The compiler, source shape, symbol format or object representation cannot prove the query.</exception>
     /// <exception cref="InvalidOperationException">A native operation fails or the completed operation and model disagree.</exception>
@@ -316,9 +316,27 @@ public sealed class NativeRecordTraitObserver
         string Normalize(string value)
         {
             foreach ((string path, string logical) in (sourcePathMappings ?? ImmutableDictionary<string, string>.Empty).OrderByDescending(pair => pair.Key.Length))
-                value = value.Replace(path, logical, PathComparison);
-            value = value.Replace(root, "native-record-traits:/", PathComparison);
-            return plan.scratchDirectory is string callerRoot ? value.Replace(callerRoot, "native-input:/", PathComparison) : value;
+                if (Path.EndsInDirectorySeparator(path))
+                {
+                    if (PathEqual(value, Path.TrimEndingDirectorySeparator(path))) return logical.TrimEnd('/', '\\');
+                    if (value.StartsWith(path, PathComparison)) return logical + value[path.Length..];
+                }
+                else if (PathEqual(value, path)) return logical;
+            value = OwnedRoot(value, root, "native-record-traits:/");
+            return plan.scratchDirectory is string callerRoot ? OwnedRoot(value, callerRoot, "native-input:/") : value;
+        }
+        static string OwnedRoot(
+            string value,
+            string physical,
+            string logical
+        ) {
+            foreach (string spelling in new[] { Path.TrimEndingDirectorySeparator(physical), Path.TrimEndingDirectorySeparator(physical).Replace('\\', '/') }.Distinct())
+            {
+                if (PathEqual(value, spelling)) return logical.TrimEnd('/');
+                string prefix = spelling + (spelling.Contains('\\') ? "\\" : "/");
+                if (value.StartsWith(prefix, PathComparison)) return logical + value[prefix.Length..];
+            }
+            return value;
         }
     }
 

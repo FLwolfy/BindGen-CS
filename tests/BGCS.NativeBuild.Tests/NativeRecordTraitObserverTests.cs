@@ -90,6 +90,95 @@ public sealed class NativeRecordTraitObserverTests
     }
 
     [Fact]
+    public async Task DebugObjectsKeepStableQueryIdentityAcrossAuthenticatedArtifactRoots()
+    {
+        using Fixture first = new();
+        using Fixture second = new();
+        NativeRecordTraitObservation[] observations = new NativeRecordTraitObservation[2];
+        int index = 0;
+        foreach (Fixture fixture in new[] { first, second })
+        {
+            var prepared = await fixture.Prepare(arguments: ["-g", "-I", fixture.root]);
+            ImmutableDictionary<string, string> origins = ImmutableDictionary<string, string>.Empty
+                .Add(fixture.root + Path.DirectorySeparatorChar, "native-artifacts/")
+                .SetItem(PhysicalPathResolver.Resolve(fixture.root) + Path.DirectorySeparatorChar, "native-artifacts/");
+            observations[index++] = await new NativeRecordTraitObserver().ObserveAsync(prepared.plan, prepared.operation, prepared.digest,
+                fixture.module, Path.Combine(fixture.root, "query"), TimeSpan.FromSeconds(90), sourcePathMappings: origins);
+        }
+        Assert.Equal(Assert.Single(observations[0].facts), Assert.Single(observations[1].facts));
+        Assert.Equal(observations[0].observationFingerprint, observations[1].observationFingerprint);
+        NativeRecordTraitEvidence firstProof = Assert.IsType<NativeRecordTraitEvidence>(observations[0].evidence);
+        NativeRecordTraitEvidence secondProof = Assert.IsType<NativeRecordTraitEvidence>(observations[1].evidence);
+        Assert.NotEqual(firstProof.objectDigest, secondProof.objectDigest);
+        Assert.All(observations, observation => Assert.All(observation.inputs, snapshot => Assert.True(SourceSnapshotVerifier.Matches(snapshot))));
+        await File.AppendAllTextAsync(first.header, "// altered artifact bytes\n");
+        Assert.Contains(observations[0].inputs, snapshot => !SourceSnapshotVerifier.Matches(snapshot));
+    }
+
+    [Fact]
+    public async Task PrivateQueryRootDoesNotNormalizeAnUnrelatedNearPrefixDirectory()
+    {
+        using Fixture fixture = new();
+        string first = Path.Combine(fixture.root, "query"), second = Path.Combine(fixture.root, "query-other");
+        string external = first + "-external";
+        Directory.CreateDirectory(external);
+        var prepared = await fixture.Prepare(arguments: ["-g", "-I", external], additionalExclusions: [second]);
+        NativeRecordTraitObservation before = await new NativeRecordTraitObserver().ObserveAsync(prepared.plan, prepared.operation,
+            prepared.digest, fixture.module, first, TimeSpan.FromSeconds(90));
+        NativeRecordTraitObservation after = await new NativeRecordTraitObserver().ObserveAsync(prepared.plan, prepared.operation,
+            prepared.digest, fixture.module, second, TimeSpan.FromSeconds(90));
+        Assert.Equal(before.observationFingerprint, after.observationFingerprint);
+        // The same presumed source and compiler working directory may produce
+        // identical debug objects. The actual query executions must still use
+        // their own physical outputs, independently of the stable identity.
+        NativeRecordTraitEvidence firstProof = Assert.IsType<NativeRecordTraitEvidence>(before.evidence);
+        NativeRecordTraitEvidence secondProof = Assert.IsType<NativeRecordTraitEvidence>(after.evidence);
+        Assert.NotEqual(firstProof.plan.outputFile, secondProof.plan.outputFile);
+        Assert.All(new[] { firstProof, secondProof }, proof =>
+        {
+            Assert.Equal(0, proof.inspection.exitCode);
+            Assert.False(proof.inspection.timedOut);
+            Assert.NotEmpty(proof.execution.executions);
+            Assert.All(proof.execution.executions, execution => Assert.True(execution.exitCode == 0 && !execution.timedOut));
+        });
+        Assert.All(before.inputs.Concat(after.inputs), snapshot => Assert.True(SourceSnapshotVerifier.Matches(snapshot)));
+    }
+
+    [Fact]
+    public async Task UnusedFileAndDirectoryOriginsCannotRewriteNearPathsOrSemanticOptions()
+    {
+        using Fixture fixture = new();
+        string unused = Path.Combine(fixture.root, "unused.hpp");
+        string owned = Path.Combine(fixture.root, "owned");
+        string near = unused + "-external";
+        await File.WriteAllTextAsync(unused, "// unused declared file\n");
+        Directory.CreateDirectory(owned);
+        Directory.CreateDirectory(near);
+        string fileOption = "-fdebug-prefix-map=" + unused + "=unchanged-file";
+        string directoryOption = "-fdebug-prefix-map=" + owned + Path.DirectorySeparatorChar + "child=unchanged-directory";
+        ImmutableArray<string> arguments = ["-g", "-I", near, fileOption, directoryOption];
+        if (!OperatingSystem.IsWindows())
+        {
+            string embedded = Path.Combine(fixture.root, "unrelated") + owned + "/child";
+            Directory.CreateDirectory(embedded);
+            arguments = arguments.AddRange(ImmutableArray.Create("-I", embedded));
+        }
+        var prepared = await fixture.Prepare(arguments: arguments);
+        NativeRecordTraitObservation before = await fixture.Observe(prepared);
+        ImmutableDictionary<string, string> origins = ImmutableDictionary<string, string>.Empty
+            .Add(unused, "declared-unused.hpp").Add(owned + Path.DirectorySeparatorChar, "declared-directory/");
+        NativeRecordTraitObservation after = await new NativeRecordTraitObserver().ObserveAsync(prepared.plan, prepared.operation, prepared.digest,
+            fixture.module, Path.Combine(fixture.root, "query"), TimeSpan.FromSeconds(90), sourcePathMappings: origins);
+        Assert.Equal(before.observationFingerprint, after.observationFingerprint);
+        Assert.Equal(Assert.Single(before.facts), Assert.Single(after.facts));
+        NativeRecordTraitEvidence evidence = Assert.IsType<NativeRecordTraitEvidence>(after.evidence);
+        Assert.Contains(fileOption, Assert.Single(evidence.plan.commands).arguments);
+        Assert.Contains(directoryOption, Assert.Single(evidence.plan.commands).arguments);
+        Assert.DoesNotContain(after.inputs.SelectMany(snapshot => snapshot.files), file => file.path == unused);
+        Assert.All(before.inputs.Concat(after.inputs), snapshot => Assert.True(SourceSnapshotVerifier.Matches(snapshot)));
+    }
+
+    [Fact]
     public async Task LtoCannotSilentlySubstituteAnUninspectableObject()
     {
         using Fixture fixture = new();
@@ -192,16 +281,20 @@ public sealed class NativeRecordTraitObserverTests
             { language = SourceLanguage.Cpp };
         }
 
-        internal async Task<(NativeBuildPlan plan, NativePreprocessingOperation operation, ContentDigest digest)> Prepare()
+        internal async Task<(NativeBuildPlan plan, NativePreprocessingOperation operation, ContentDigest digest)> Prepare(
+            ImmutableArray<string> arguments = default,
+            ImmutableArray<string> additionalExclusions = default
+        )
         {
             string source = Path.Combine(root, "source.cpp");
-            await File.WriteAllTextAsync(source, "#include \"" + header.Replace('\\', '/') + "\"\n");
+            await File.WriteAllTextAsync(source, "#include \"observed.hpp\"\n");
             string scratch = Path.Combine(root, "preprocessing");
             NativeBuildRequest request = new(target, [new(source, SourceLanguage.Cpp, "c++23")], scratch, Path.Combine(scratch, "unused.o"))
             {
-                outputKind = NativeOutputKind.Object, snapshotExcludedDirectories = [scratch, Path.Combine(root, "query"), Path.Combine(root, "inspector")],
+                outputKind = NativeOutputKind.Object, snapshotExcludedDirectories = new[] { scratch, Path.Combine(root, "query"), Path.Combine(root, "inspector") }
+                    .Concat(additionalExclusions.IsDefault ? [] : additionalExclusions).ToImmutableArray(),
                 systemIncludeDirectories = target.toolchain.systemIncludeFolders.Concat(target.toolchain.cxxSystemIncludeFolders).ToImmutableArray(),
-                compilerArguments = target.toolchain.arguments.ToImmutableArray()
+                compilerArguments = target.toolchain.arguments.ToImmutableArray().AddRange(arguments.IsDefault ? [] : arguments)
             };
             NativeBuildPlan plan = new CompilerBuildProvider(m_family,
                 target.toolchain.compilerPath!, linker: m_family == "gnu" ? null : target.toolchain.linkerPath).Plan(request, CancellationToken.None) with { snapshotExcludedDirectories = request.snapshotExcludedDirectories };

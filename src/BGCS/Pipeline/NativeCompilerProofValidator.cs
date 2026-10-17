@@ -124,7 +124,7 @@ internal sealed class NativeCompilerProofValidator
                         index == 0 ? (
                             operation,
                             token
-                        ) => factVerifier.VerifyAsync(plan, operation, token) : null,
+                        ) => factVerifier.VerifyAsync(plan, operation, token, root) : null,
                         index == 0 ? [factsInput] : []).ConfigureAwait(false);
                 }
                 catch (InvalidOperationException failure)

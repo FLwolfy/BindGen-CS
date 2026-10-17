@@ -114,7 +114,8 @@ internal sealed class GenerationInputTracker(
         BGCS.NativeBuild.Validation.NativeRecordTraitObservation observation,
         string ownedScratchDirectory,
         IReadOnlyDictionary<string, string> sourcePathMappings,
-        ContentDigest? sourceObservation = null
+        ContentDigest? sourceObservation = null,
+        IReadOnlyDictionary<string, string>? ownedDirectoryRoles = null
     ) {
         if (observation.inputs.IsDefault || observation.facts.IsDefault)
             throw new InvalidDataException("The native record-trait observation omitted its frozen facts or execution inputs.");
@@ -125,8 +126,7 @@ internal sealed class GenerationInputTracker(
         StringComparer paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         string scratch = Path.GetFullPath(ownedScratchDirectory);
         object[] evidence = observation.inputs.Select(snapshot => (object)NativeSourceInputIdentity.Evidence(snapshot, sourcePathMappings,
-            snapshot.excludedDirectories.Select(directory => paths.Equals(Path.GetFullPath(directory), scratch)
-                ? "native-record-traits:/source-scratch" : directory))).ToArray();
+            snapshot.excludedDirectories.Select(ExcludedRole))).ToArray();
         m_nativeSourceSnapshots.AddRange(observation.inputs);
         m_nativeSourceKeys.Add(new { kind = "nativeRecordTraits", state, inputs = keys });
         m_nativeSourceEvidence.Add(new { kind = "nativeRecordTraits", state, observation.facts, inputs = evidence });
@@ -138,6 +138,18 @@ internal sealed class GenerationInputTracker(
         }
         using FileStream implementation = File.OpenRead(location);
         m_fingerprints.Add(new("BGCS.NativeRecordTraits", Convert.ToHexStringLower(SHA256.HashData(implementation)), targetId, state));
+
+        string ExcludedRole(string directory)
+        {
+            string absolute = Path.GetFullPath(directory);
+            if (ownedDirectoryRoles is not null)
+                foreach (var role in ownedDirectoryRoles)
+                    if (paths.Equals(absolute, role.Key)) return role.Value;
+                    else if (absolute.StartsWith(role.Key + Path.DirectorySeparatorChar,
+                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                        return role.Value + Path.GetRelativePath(role.Key, absolute).Replace('\\', '/');
+            return paths.Equals(absolute, scratch) ? "native-record-traits:/source-scratch" : directory;
+        }
     }
 
     internal void DisableCaching(IEnumerable<string> reasons)

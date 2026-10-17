@@ -55,7 +55,8 @@ internal sealed class NativeCandidateBuilder
         Func<IFrontend>? proofFrontendFactory = null,
         ImmutableArray<string> factVerificationSources = default,
         ImmutableDictionary<string, string>? sourcePathMappings = null,
-        FrontendRequest? preparedFrontend = null
+        FrontendRequest? preparedFrontend = null,
+        NativeRecordTraitOrigins? traitOrigins = null
     ) {
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-native-build-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
@@ -119,7 +120,8 @@ internal sealed class NativeCandidateBuilder
                     NativeEffectiveFactVerifier? verifier = sourceFacts is not null && NativeSourceFactComparer.RequiresVerification(sourceFacts)
                         ? new(sourceFacts, preparedFrontend?.retainFunctionBodies ?? throw new InvalidOperationException("Native source verification requires its exact prepared frontend body-retention option."),
                             proofFrontendFactory ?? throw new InvalidOperationException("Generated native record contracts require an independent effective-source frontend."),
-                            baseDirectory, inputTracker, sourcePathMappings, preparedFrontend?.workerPlugins ?? [], preparedFrontend?.workerPluginContext) : null;
+                            baseDirectory, inputTracker, sourcePathMappings, preparedFrontend?.workerPlugins ?? [], preparedFrontend?.workerPluginContext,
+                            traitOrigins: traitOrigins) : null;
                     NativeBuildExecutionResult executed = await new PlannedNativeBuildExecutor().ExecuteWithDependenciesAsync(plan, TimeSpan.FromSeconds(configuration.execution.nativeBuildTimeoutSeconds), cancellationToken,
                         verifier is null ? null : (
                             operation,

@@ -781,7 +781,8 @@ public sealed partial class BindingHost
                         NativeEffectiveFactVerifier factVerifier = new(selectedModule, prepared.retainFunctionBodies,
                             registry.Frontend, request.baseDirectory, extensionInputs,
                             new NativeGeneratedInputRelocation(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot).SourcePathMappings(publisher.candidateRoot),
-                            prepared.workerPlugins, prepared.workerPluginContext, effectiveProofInputs.Add);
+                            prepared.workerPlugins, prepared.workerPluginContext, effectiveProofInputs.Add,
+                            new NativeRecordTraitOrigins(publisher.candidateRoot, artifacts.ToImmutable()));
                         NativeCompilerProofValidator.Result proof = await new NativeCompilerProofValidator().VerifyAsync(
                             nativeConfiguration, analysis.target!, prepared,
                             artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal)
@@ -863,7 +864,8 @@ public sealed partial class BindingHost
                         selectedModule, registry.Frontend,
                         artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal) && artifact.mediaType is "text/x-c-header" or "text/x-c++-header")
                             .Select(artifact => Path.Combine(publisher.candidateRoot, artifact.relativePath)).ToImmutableArray(),
-                        new NativeGeneratedInputRelocation(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot).SourcePathMappings(publisher.candidateRoot), analysis.preparedFrontend).ConfigureAwait(false);
+                        new NativeGeneratedInputRelocation(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot).SourcePathMappings(publisher.candidateRoot), analysis.preparedFrontend,
+                        new NativeRecordTraitOrigins(publisher.candidateRoot, artifacts.ToImmutable())).ConfigureAwait(false);
                     artifacts.Add(nativeResult.artifact);
                     nativeLinked = nativeResult.linked;
                     nativeBuildPerformed = true;

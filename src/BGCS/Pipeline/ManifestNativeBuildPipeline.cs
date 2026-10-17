@@ -179,7 +179,8 @@ public sealed partial class BindingHost
                         manifest.generatedDirectories.SelectMany(directory => directory.files.Where(file => file.logicalSourcePath is not null)
                             .Select(file => new KeyValuePair<string, string>(NativeBuildManifestLoader.Resolve(directory.path + "/" + file.relativePath, loaded.artifactRoot), file.logicalSourcePath!)))
                             .ToImmutableDictionary(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal),
-                        manifest.workerPlugins, manifest.workerPluginContext) : null;
+                        manifest.workerPlugins, manifest.workerPluginContext,
+                        traitOrigins: new NativeRecordTraitOrigins(loaded.artifactRoot, manifest.artifacts)) : null;
                 NativeBuildExecutionResult execution = await new PlannedNativeBuildExecutor().ExecuteWithDependenciesAsync(plan, TimeSpan.FromSeconds(request.timeoutSeconds), cancellation.Token,
                     factVerifier is null ? null : (
                         operation,
