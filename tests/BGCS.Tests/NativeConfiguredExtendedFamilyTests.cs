@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Analysis.Bridge;
 using BGCS.Configuration;
@@ -78,7 +79,10 @@ public sealed class NativeConfiguredExtendedFamilyTests
                 public static unsafe class ExtendedConsumer {
                     public static int Run(string binary) {
                         using var api={{factory}};
-                        {{ConsumerBody(bridge, plan)}}
+                        for (int pass=0;pass<2;++pass) {
+                            try { {{ConsumerBody(bridge, plan)}} }
+                            catch(Exception failure) { throw new InvalidOperationException("configured protocol pass " + pass + ": " + failure.Message, failure); }
+                        }
                         return 42;
                     }
                 }
@@ -133,10 +137,16 @@ public sealed class NativeConfiguredExtendedFamilyTests
             && bridge.source.GetDeclaration(declaration).qualifiedName == "extended::" + name);
         CSharpMethodPlan errorRelease = plan.methods.Single(method => method.exportName == bridge.errorReleaseExport);
         string releaseErrorCall = "api.Raw." + errorRelease.name + "((" + errorRelease.parameterTypes[0] + ")error);error=0;";
-        void Success(string invocation, string condition = "") => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
-            .Append(condition.Length == 0 ? "" : " || " + condition).AppendLine(")throw new InvalidOperationException(\"configured native operation\");");
+        void Success(string invocation, string condition = "", string actual = "") => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
+            .Append(condition.Length == 0 ? "" : " || " + condition).Append(")throw new InvalidOperationException(")
+            .Append(JsonSerializer.Serialize("configured native operation: " + invocation + "; condition: " + condition))
+            .Append(" + \"; error=\" + error")
+            .Append(actual.Length == 0 ? "" : " + \"; actual=\" + (" + actual + ")").AppendLine(");");
         void Failure(string invocation) => source.Append("if(").Append(invocation)
             .AppendLine("==0 || error==0)throw new InvalidOperationException(\"missing configured state failure\");").AppendLine(releaseErrorCall);
+        source.AppendLine("int destroyedBefore=0;{nint error=0;try{");
+        Success(Call(Native("Destroyed"), "&destroyedBefore", "&error"));
+        source.Append("}finally{if(error!=0){").Append(releaseErrorCall).AppendLine("}}}");
         foreach (string factory in new[] { "MakeUnique", "MakeShared", "MakeVariantInt", "MakeVariantDouble", "MakePath", "MakeDuration", "MakeMoment" })
         {
             BridgeExport make = Native(factory);
@@ -200,7 +210,7 @@ public sealed class NativeConfiguredExtendedFamilyTests
             source.AppendLine("} }");
         }
         source.AppendLine("{int released=0;nint error=0;");
-        Success(Call(Native("Destroyed"), "&released", "&error"), "released!=2");
+        Success(Call(Native("Destroyed"), "&released", "&error"), "released!=checked(destroyedBefore+2)", "\"before=\"+destroyedBefore+\", after=\"+released");
         source.AppendLine("}");
         return source.ToString();
     }

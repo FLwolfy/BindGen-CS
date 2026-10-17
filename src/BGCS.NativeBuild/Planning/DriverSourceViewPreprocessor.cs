@@ -149,16 +149,17 @@ internal static class DriverSourceViewPreprocessor
             ImmutableArray<string> authenticated = ToolchainDiscovery.DiscoverHeaderSearchPaths(source.language, compiler, source.target.toolchain.sysRoot)
                 .Select(entry => entry.path).ToImmutableArray();
             (tokens, declarationPrelude) = NativeGnuDeclarationPrelude.Extract(rawTrace, authenticated,
-                executed.inputSnapshot.files.Select(file => file.path).ToImmutableArray(), cancellationToken);
+                executed.inputSnapshot.files.Select(file => file.path).ToImmutableArray(), original.source, original.command.workingDirectory, cancellationToken);
         }
         string normalized = sourceIdentity.Normalize(tokens);
         string identity = version.standardOutput + version.standardError;
         byte[] observation = JsonSerializer.SerializeToUtf8Bytes(new
         {
-            revision = 5,
+            revision = 6,
             diagnosticLocale = new { LC_ALL = "C" },
             family,
             identity,
+            workingDirectory = original.command.workingDirectory,
             compilerInputs = components.files.OrderBy(component => component.path, StringComparer.Ordinal).ToImmutableArray(),
             source = normalized,
             nativeTrace = sourceIdentity.Normalize(rawTrace),

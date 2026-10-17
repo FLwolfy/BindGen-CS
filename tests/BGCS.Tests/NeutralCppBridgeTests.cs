@@ -47,9 +47,9 @@ public sealed class NeutralCppBridgeTests
         try
         {
             await File.WriteAllTextAsync(Path.Combine(temporary, "widget.hpp"), """
-                #include "dependency.hpp"
                 #include <stdexcept>
                 #include <cstdint>
+                #include "dependency.hpp"
                 namespace Sample {
                 class Quantity { public: explicit Quantity(int value) : m_value(value) {} explicit operator int() const { return m_value; } private: int m_value; };
                 inline Quantity add_quantity(Quantity left, Quantity right) { return Quantity(static_cast<int>(left) + static_cast<int>(right)); }
@@ -59,7 +59,7 @@ public sealed class NeutralCppBridgeTests
                 struct Second { int tag = 7; };
                 class Widget : public First, public Second {
                 public:
-                    explicit Widget(int value) : m_value(value) {}
+                    explicit Widget(int value) : m_value(dependency_only(value)) {}
                     ~Widget() noexcept = default;
                     int Add(int delta) const { if (delta < 0) throw std::runtime_error("negative"); return m_value + delta; }
                     static uint64_t Identity(uint64_t value) { if (value == 1) throw std::runtime_error("identity failure"); return value; }

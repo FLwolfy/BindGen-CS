@@ -26,8 +26,10 @@ BITFIELD = PREFIX + 'ManifestNativeBuildTests.FinalNativeNonAddressableStorageCa
 ENUM_DRIFT = PREFIX + 'ManifestNativeBuildTests.NativeEnumUnderlyingSignednessDriftCannotReplaceVerifiedOutputWhenTheEnumNameAndSizeMatch'
 SEQUENCES = PREFIX + 'NativeCppSequenceTests.TypedSequences_PreserveRawExports_CopyValuesAndPinBorrowedCalls'
 NATIVE_TRAITS = PREFIX + 'NativeSourceViewCacheTests.GnuRecordTraitsAreReacquiredBeforeWarmReuseAndRemainStableWithDebugObjects'
+NEUTRAL_BRIDGE = PREFIX + 'NeutralCppBridgeTests.CppHost_ReparsesTypedBridgeAndPreservesOwnedResultsBeforeManagedCompilation'
 METHODS = (STANDARD, BRANCH, DTO, DRIFT, TYPEDEF, C_BUILD, TEMPLATES, FAMILIES, FAMILY_DRIFT,
-           VIRTUAL_CALLBACKS, EXTENDED_FAMILIES, EXTENDED_DRIFT, BITFIELD, ENUM_DRIFT, SEQUENCES, NATIVE_TRAITS)
+           VIRTUAL_CALLBACKS, EXTENDED_FAMILIES, EXTENDED_DRIFT, BITFIELD, ENUM_DRIFT, SEQUENCES, NATIVE_TRAITS,
+           NEUTRAL_BRIDGE)
 REQUIRED_CASES = {
     STANDARD: STANDARD,
     BRANCH + '(family: "gnu")': BRANCH,
@@ -51,6 +53,7 @@ REQUIRED_CASES = {
     ENUM_DRIFT: ENUM_DRIFT,
     **{SEQUENCES + '(runtimeMode: "' + mode + '")': SEQUENCES for mode in ('package', 'source')},
     NATIVE_TRAITS: NATIVE_TRAITS,
+    **{NEUTRAL_BRIDGE + '(manifestPlugin: ' + value + ')': NEUTRAL_BRIDGE for value in ('False', 'True')},
 }
 
 

@@ -34,7 +34,7 @@ public static class NativeEffectiveSourceAdapter
                 .Select(entry => entry.path).ToImmutableArray();
             var dependencies = BuildDependencyCollector.Read([operation.dependencyFile ?? throw new InvalidOperationException("GNU source adaptation requires actual preprocessing dependencies.")],
                 operation.command.workingDirectory, cancellationToken).ToImmutableArray();
-            var extracted = NativeGnuDeclarationPrelude.Extract(trace, roots, dependencies, cancellationToken);
+            var extracted = NativeGnuDeclarationPrelude.Extract(trace, roots, dependencies, operation.source, operation.command.workingDirectory, cancellationToken);
             string adaptedDestination = operation.outputFile + ".facts.hpp";
             await File.WriteAllTextAsync(adaptedDestination, extracted.source, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
             return (adaptedDestination, string.Empty, extracted.prelude);

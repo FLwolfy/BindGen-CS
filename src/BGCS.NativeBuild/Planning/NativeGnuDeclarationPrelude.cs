@@ -19,6 +19,8 @@ internal static class NativeGnuDeclarationPrelude
         string trace,
         ImmutableArray<string> authenticatedRoots,
         ImmutableArray<string> dependencyFiles,
+        string sourceFile,
+        string workingDirectory,
         CancellationToken cancellationToken = default
     ) {
         StringComparer paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -26,6 +28,7 @@ internal static class NativeGnuDeclarationPrelude
         HashSet<string> dependencies = dependencyFiles.Select(Path.GetFullPath).ToHashSet(paths);
         List<NativeLineDirectiveReader.Directive> markers = [];
         _ = NativeLineDirectiveReader.Rewrite(trace, directive => { markers.Add(directive); return null; });
+        int workingDirectoryMarker = WorkingDirectoryMarker();
         var macros = NativeMacroDirectiveReader.ReadDirectives(trace);
         var events = markers.Select(marker => (marker.start, marker.length, marker: (NativeLineDirectiveReader.Directive?)marker, macro: (NativeMacroDirectiveReader.Directive?)null))
             .Concat(macros.Select(macro => (macro.start, macro.length, marker: (NativeLineDirectiveReader.Directive?)null, macro: (NativeMacroDirectiveReader.Directive?)macro)))
@@ -46,6 +49,15 @@ internal static class NativeGnuDeclarationPrelude
             bool folding = foldDepth >= 0;
             if (item.marker is { } marker)
             {
+                if (marker.start == workingDirectoryMarker)
+                {
+                    // GCC -g implies -fworking-directory. This authenticated
+                    // second preamble marker describes debug provenance, not a
+                    // dependency or include edge. The raw native buffer remains
+                    // unchanged for its digest, query and observation identity.
+                    position = item.start + item.length;
+                    continue;
+                }
                 bool foldedReturn = false;
                 if (marker.msvc) throw Refuse("mixed line directive dialects");
                 bool enter = (marker.flags & 1) != 0, leave = (marker.flags & 2) != 0;
@@ -141,6 +153,27 @@ internal static class NativeGnuDeclarationPrelude
         Chunk(trace.Length);
         if (stack.Count != 0 || foldDepth >= 0) throw Refuse("an incomplete include tree");
         return (frozen.ToString(), headers.Count == 0 ? null : new(prelude.ToString(), headers.ToImmutableArray()));
+
+        int WorkingDirectoryMarker()
+        {
+            if (markers.Count < 2 || !markers[1].file.EndsWith("//", StringComparison.Ordinal)) return -1;
+            var first = markers[0];
+            var directory = markers[1];
+            string path = directory.file[..^2];
+            if (markers.Count < 3 || first.msvc || directory.msvc || first.lineNumber != "0" || directory.lineNumber != "1"
+                || first.flags != 0 || directory.flags != 0 || markers[2].msvc || markers[2].flags != 0
+                || markers[2].lineNumber != "0" || markers[2].file != "<built-in>"
+                || string.IsNullOrWhiteSpace(sourceFile) || !Path.IsPathFullyQualified(sourceFile)
+                || string.IsNullOrWhiteSpace(workingDirectory) || !Path.IsPathFullyQualified(workingDirectory)
+                || !Path.IsPathFullyQualified(first.file) || !Path.IsPathFullyQualified(path)
+                || !paths.Equals(Path.GetFullPath(first.file), Path.GetFullPath(sourceFile))
+                || !paths.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)), Path.TrimEndingDirectorySeparator(Path.GetFullPath(workingDirectory)))
+                || !trace.AsSpan(0, first.start).Trim().IsEmpty
+                || !trace.AsSpan(first.start + first.length, directory.start - first.start - first.length).Trim().IsEmpty
+                || !trace.AsSpan(directory.start + directory.length, markers[2].start - directory.start - directory.length).Trim().IsEmpty)
+                throw Refuse("unmatched compiler working-directory preamble metadata");
+            return directory.start;
+        }
 
         void Chunk(int end)
         {
