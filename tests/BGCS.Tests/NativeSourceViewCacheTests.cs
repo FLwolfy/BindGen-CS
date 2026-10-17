@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -78,9 +79,21 @@ public sealed class NativeSourceViewCacheTests
             await AssertTraits(warm, true);
             Assert.Equal(managed, Managed(warm));
             foreach ((string path, byte[] bytes) in generatedSources) Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(warm.outputRoot, path)));
+            string verificationPath = Path.Combine(warm.outputRoot, Assert.Single(warm.targetModels).targetId, "metadata", "verification.json");
+            string warmVerification = await File.ReadAllTextAsync(verificationPath);
+            GenerationResult repeated = await host.GenerateAsync(request);
+            Assert.True(repeated.success, repeated.GetDiagnosticSummary());
+            ExpectStage(repeated, "primaryFrontend", "hit");
+            ExpectStage(repeated, "csharpEmission", "hit");
+            await AssertTraits(repeated, true);
+            Assert.Equal(managed, Managed(repeated));
+            string receiptComparison = ReceiptDifferences(warmVerification, await File.ReadAllTextAsync(verificationPath));
+            Assert.True(receiptComparison == "No non-cache field differences.", "Consecutive warm verification fields (only top-level cache omitted):\n" + receiptComparison);
             var before = Directory.GetFiles(warm.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes);
             GenerationDiffResult unchanged = await host.DiffAsync(request);
             Assert.True(unchanged.success, string.Join(Environment.NewLine, unchanged.diagnostics.Select(diagnostic => diagnostic.message)));
+            Assert.True(unchanged.changes.IsEmpty, "Consecutive warm verification fields (only top-level cache omitted):\n" + receiptComparison
+                + "\nDiff changes: " + string.Join("; ", unchanged.changes.Select(change => change.ToString())));
             Assert.Empty(unchanged.changes);
             Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(warm.outputRoot, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal));
             foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(path));
@@ -93,6 +106,51 @@ public sealed class NativeSourceViewCacheTests
             ExpectStage(changed, "primaryFrontend", "miss");
             ExpectStage(changed, "csharpEmission", "miss");
             await AssertTraits(changed, false);
+
+            static string ReceiptDifferences(string previousJson, string currentJson)
+            {
+                using JsonDocument previousDocument = JsonDocument.Parse(previousJson), currentDocument = JsonDocument.Parse(currentJson);
+                List<string> differences = [];
+                Compare(previousDocument.RootElement, currentDocument.RootElement, "$");
+                return differences.Count == 0 ? "No non-cache field differences." : string.Join(Environment.NewLine, differences);
+
+                void Compare(JsonElement left, JsonElement right, string path)
+                {
+                    if (differences.Count == 12) return;
+                    if (left.ValueKind != right.ValueKind) { Add(path, Short(left), Short(right)); return; }
+                    if (left.ValueKind == JsonValueKind.Object)
+                    {
+                        var oldProperties = left.EnumerateObject().ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal);
+                        var newProperties = right.EnumerateObject().ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal);
+                        foreach (string name in oldProperties.Keys.Union(newProperties.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal))
+                        {
+                            if (differences.Count == 12) break;
+                            if (path == "$" && name == "cache") continue;
+                            string child = path + "[" + JsonSerializer.Serialize(name) + "]";
+                            if (!oldProperties.TryGetValue(name, out JsonElement oldValue)) Add(child, "<missing>", Short(newProperties[name]));
+                            else if (!newProperties.TryGetValue(name, out JsonElement newValue)) Add(child, Short(oldValue), "<missing>");
+                            else Compare(oldValue, newValue, child);
+                        }
+                    }
+                    else if (left.ValueKind == JsonValueKind.Array)
+                    {
+                        if (left.GetArrayLength() != right.GetArrayLength())
+                            Add(path + ".Length", left.GetArrayLength().ToString(), right.GetArrayLength().ToString());
+                        for (int index = 0; index < Math.Min(left.GetArrayLength(), right.GetArrayLength()) && differences.Count < 12; index++)
+                            Compare(left[index], right[index], path + "[" + index + "]");
+                    }
+                    else if (!JsonElement.DeepEquals(left, right)) Add(path, Short(left), Short(right));
+                }
+                void Add(string path, string left, string right)
+                {
+                    if (differences.Count < 12) differences.Add(path + ": " + left + " -> " + right);
+                }
+                static string Short(JsonElement value)
+                {
+                    string text = value.GetRawText();
+                    return text.Length <= 180 ? text : text[..180] + "...";
+                }
+            }
 
             async Task AssertTraits(
                 GenerationResult result,

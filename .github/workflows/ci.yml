@@ -48,6 +48,12 @@ jobs:
           unset Platform PLATFORM platform
           dotnet restore tests/BGCS.Tests/BGCS.Tests.csproj 2>&1 | tee artifacts/gnu-smoke/restore.log
           dotnet build tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-restore -m:2 -nr:false 2>&1 | tee artifacts/gnu-smoke/build.log
+      - name: Check repeated GNU debug verification identity before the full smoke matrix
+        shell: bash
+        run: |
+          set -o pipefail
+          unset Platform PLATFORM platform
+          python scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-build --no-restore -m:1 -nr:false --filter "FullyQualifiedName=BGCS.Tests.NativeSourceViewCacheTests.GnuRecordTraitsAreReacquiredBeforeWarmReuseAndRemainStableWithDebugObjects" --results-directory artifacts/gnu-smoke --logger "trx;LogFileName=warm-identity.trx" --logger "console;verbosity=detailed" 2>&1 | tee artifacts/gnu-smoke/warm-identity.log
       - name: Exercise GNU standard values native observations DTO drift and C typedefs
         shell: bash
         run: |
