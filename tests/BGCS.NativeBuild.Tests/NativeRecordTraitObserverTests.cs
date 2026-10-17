@@ -98,12 +98,13 @@ public sealed class NativeRecordTraitObserverTests
         int index = 0;
         foreach (Fixture fixture in new[] { first, second })
         {
-            var prepared = await fixture.Prepare(arguments: ["-g", "-I", fixture.root]);
+            string query = Path.Combine(fixture.root, "query-" + index);
+            var prepared = await fixture.Prepare(arguments: ["-g", "-I", fixture.root], additionalExclusions: [query]);
             ImmutableDictionary<string, string> origins = ImmutableDictionary<string, string>.Empty
                 .Add(fixture.root + Path.DirectorySeparatorChar, "native-artifacts/")
                 .SetItem(PhysicalPathResolver.Resolve(fixture.root) + Path.DirectorySeparatorChar, "native-artifacts/");
             observations[index++] = await new NativeRecordTraitObserver().ObserveAsync(prepared.plan, prepared.operation, prepared.digest,
-                fixture.module, Path.Combine(fixture.root, "query"), TimeSpan.FromSeconds(90), sourcePathMappings: origins);
+                fixture.module, query, TimeSpan.FromSeconds(90), sourcePathMappings: origins);
         }
         Assert.Equal(Assert.Single(observations[0].facts), Assert.Single(observations[1].facts));
         Assert.Equal(observations[0].observationFingerprint, observations[1].observationFingerprint);

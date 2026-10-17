@@ -26,7 +26,7 @@ namespace BGCS.NativeBuild.Validation;
 /// <summary>Acquires selected-native constexpr record traits through exact target-object symbol sizes, without executing target code.</summary>
 public sealed class NativeRecordTraitObserver
 {
-    private const int C_RECIPE_REVISION = 3;
+    private const int C_RECIPE_REVISION = 4;
     private const string C_SYMBOL_PREFIX = "bgcs_native_record_trait_";
     private const string C_TYPE_PATTERN = @"\A(?:::)?[A-Za-z_][A-Za-z_0-9 :<>,*&]*\z";
 
@@ -315,6 +315,15 @@ public sealed class NativeRecordTraitObserver
         }
         string Normalize(string value)
         {
+            // Private query roles are more specific than an authenticated
+            // artifact/proof ancestor. Preserve that role before projecting it.
+            string owned = OwnedRoot(value, root, "native-record-traits:/");
+            if (owned != value) return owned;
+            if (plan.scratchDirectory is string callerRoot)
+            {
+                owned = OwnedRoot(value, callerRoot, "native-input:/");
+                if (owned != value) return owned;
+            }
             foreach ((string path, string logical) in (sourcePathMappings ?? ImmutableDictionary<string, string>.Empty).OrderByDescending(pair => pair.Key.Length))
                 if (Path.EndsInDirectorySeparator(path))
                 {
@@ -322,8 +331,7 @@ public sealed class NativeRecordTraitObserver
                     if (value.StartsWith(path, PathComparison)) return logical + value[path.Length..];
                 }
                 else if (PathEqual(value, path)) return logical;
-            value = OwnedRoot(value, root, "native-record-traits:/");
-            return plan.scratchDirectory is string callerRoot ? OwnedRoot(value, callerRoot, "native-input:/") : value;
+            return value;
         }
         static string OwnedRoot(
             string value,
