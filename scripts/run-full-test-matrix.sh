@@ -107,6 +107,10 @@ log "Production source ownership, declaration style and public documentation"
   --configuration "${CONFIGURATION}" --no-build -- validate documentation "${ROOT_DIR}/src"
 touch "${GATE_DIR}/architecture" "${GATE_DIR}/style" "${GATE_DIR}/documentation"
 
+log "Strict performance and cache budget before the long native-consumer baseline"
+bash "${ROOT_DIR}/scripts/test-performance-budget.sh"
+touch "${GATE_DIR}/performance"
+
 log "Layer 1: Auto-discovered test projects under tests/"
 TEST_PROJECTS=()
 while IFS= read -r project_path; do
@@ -181,10 +185,6 @@ fi
 log "Layer 4: Reviewed public API compatibility baseline"
 SKIP_RESTORE_BUILD=1 bash "${ROOT_DIR}/scripts/test-public-api-snapshot.sh"
 touch "${GATE_DIR}/api-compatibility"
-
-log "Layer 6: Performance and cache budget"
-bash "${ROOT_DIR}/scripts/test-performance-budget.sh"
-touch "${GATE_DIR}/performance"
 
 log "Layer 7: License and vulnerability policy"
 bash "${ROOT_DIR}/scripts/test-supply-chain-policy.sh"

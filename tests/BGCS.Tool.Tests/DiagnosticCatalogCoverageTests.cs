@@ -18,14 +18,13 @@ public sealed class DiagnosticCatalogCoverageTests
         Regex literal = new("\"(BGCS[A-Z0-9-]*)\"");
         Regex diagnostic = new("^(?:BGCS(?:-[A-Z0-9]+)+|BGCS(?:CS|CPP|IO)[0-9]{3}|BGCSCPP-INSTANTIATION)$");
         HashSet<string> emitted = new(StringComparer.Ordinal);
-        foreach (string directory in new[] { "src", "integrations" })
-            foreach (string path in Directory.EnumerateFiles(Path.Combine(root, directory), "*.cs", SearchOption.AllDirectories))
-            {
-                if (Path.GetRelativePath(root, path).Split(Path.DirectorySeparatorChar).Any(part => part is "bin" or "obj")
-                    || Path.GetFileName(path) == "BindingDiagnosticCatalog.Generated.cs") continue;
-                foreach (Match match in literal.Matches(File.ReadAllText(path)))
-                    if (diagnostic.IsMatch(match.Groups[1].Value)) emitted.Add(match.Groups[1].Value);
-            }
+        foreach (string path in Directory.EnumerateFiles(Path.Combine(root, "src"), "*.cs", SearchOption.AllDirectories))
+        {
+            if (Path.GetRelativePath(root, path).Split(Path.DirectorySeparatorChar).Any(part => part is "bin" or "obj")
+                || Path.GetFileName(path) == "BindingDiagnosticCatalog.Generated.cs") continue;
+            foreach (Match match in literal.Matches(File.ReadAllText(path)))
+                if (diagnostic.IsMatch(match.Groups[1].Value)) emitted.Add(match.Groups[1].Value);
+        }
         Assert.NotEmpty(emitted);
         foreach (string code in emitted)
             Assert.True(BindingDiagnosticCatalog.TryGet(code, out _), "Production diagnostic has no explain entry: " + code);

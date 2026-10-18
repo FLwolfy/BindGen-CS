@@ -336,7 +336,10 @@ def main() -> None:
             # usage after repeated certification. This run owns and removes both caches.
             environment_overrides["NUGET_PACKAGES"] = str(work / "packages")
             environment_overrides["NUGET_HTTP_CACHE_PATH"] = str(work / "nuget-http-cache")
+            environment_overrides["NUGET_SCRATCH"] = str(work / "nuget-scratch")
+            environment_overrides["DOTNET_CLI_HOME"] = str(work / "dotnet-cli-home")
             report["restoreIsolation"] = {"privateGlobalPackages": True, "privateHttpCache": True,
+                                          "privateScratch": True, "privateCliHome": True,
                                           "disposedWithConsumerWorkspace": True}
             nuget = ET.Element("configuration")
             sources = ET.SubElement(nuget, "packageSources")
