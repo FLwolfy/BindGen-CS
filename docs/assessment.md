@@ -32,7 +32,7 @@ proof and release certification separately.
 An ordinary extension references `BGCS.Contracts` and registers typed ports through
 `IBindingPlugin`. Use `ICppTypeLowering` for type semantics, `IManagedApiTransform` for
 managed presentation, `ISourceContributor` for generated inputs, `INativeTargetProvider`
-for a target and `INativeBuildProvider` for construction. A finite recipe or native shim
+for a target. Native construction belongs to external build systems. A finite recipe or native shim
 may be enough for a project-specific C++ conversion.
 
 A manifest declares compatibility, IDs/priorities, settings schema and locked assets.
@@ -60,7 +60,7 @@ pretending that every ABI is universal.
 
 Frontend creates detached native facts; Analysis evaluates selection, layout, semantics
 and safety; Cpp2C produces a checked C ABI; CSharp emits from interop/managed models;
-NativeBuild handles construction/assets; Runtime handles calls/lifetimes. Host composes
+External tools own native builds; Runtime handles calls/lifetimes. Host composes
 these modules. CLI/MSBuild enter the same pipeline.
 
 Contracts and Runtime reference no other BGCS project. Ordinary lowering does not

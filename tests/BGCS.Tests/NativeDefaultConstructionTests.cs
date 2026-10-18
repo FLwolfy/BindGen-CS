@@ -29,7 +29,7 @@ public sealed class NativeDefaultConstructionTests
             await File.WriteAllTextAsync(Path.Combine(root, "default.hpp"), Header);
             BindingConfiguration configuration = Configuration(runtimeMode);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
             CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
@@ -45,35 +45,12 @@ public sealed class NativeDefaultConstructionTests
             Assert.Null(plan.source.declarations.Single(declaration => declaration.kind == "Class" && declaration.qualifiedName == "Demo::Incomplete").isDefaultConstructible);
             string bridge = await File.ReadAllTextAsync(Path.Combine(target, "native", "src", "bgcs_default.cpp"));
             Assert.Contains("std::is_default_constructible<::Demo::DefaultBox>::value", bridge);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             Invoke(Path.Combine(target, "managed"), binary, runtimeMode);
         }
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    [Fact]
-    public async Task DeletedImplicitConstructorUnderFinalNativeFlags_RejectsBuildAndPreservesPublication()
-    {
-        string root = Path.Combine(Path.GetTempPath(), "bgcs-default-flags-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        try
-        {
-            await File.WriteAllTextAsync(Path.Combine(root, "default.hpp"), Header);
-            BindingConfiguration configuration = Configuration("package");
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult initial = await host.BuildAsync(new(new(configuration, root)));
-            Assert.True(initial.success, initial.GetDiagnosticSummary());
-            string[] paths = Directory.GetFiles(initial.outputRoot, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
-            var previous = paths.ToDictionary(path => Path.GetRelativePath(initial.outputRoot, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal);
-            BindingConfiguration changed = configuration with { nativeBuild = configuration.nativeBuild with { compilerArguments = ["-DBGCS_BLOCK_DEFAULT=1"] } };
-            BuildResult rejected = await host.BuildAsync(new(new(changed, root)));
-            Assert.False(rejected.success);
-            Assert.Contains("default", rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
-            Assert.Equal(previous.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(initial.outputRoot, "*", SearchOption.AllDirectories).Select(path => Path.GetRelativePath(initial.outputRoot, path)).Order(StringComparer.Ordinal));
-            foreach (var file in previous) Assert.Equal(file.Value, Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(initial.outputRoot, file.Key)))));
-        }
-        finally { Directory.Delete(root, recursive: true); }
-    }
 
     private static BindingConfiguration Configuration(string runtimeMode) => new()
     {
@@ -81,7 +58,7 @@ public sealed class NativeDefaultConstructionTests
         source = new() { language = SourceLanguage.Cpp, headers = ["default.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.DefaultConstruction", name = "DefaultApi" },
         semantics = new() { ownedResults = [new() { function = "Demo::DefaultBox::DefaultBox()", releaseThreadDomain = "any" }] },
-        runtime = new() { mode = runtimeMode }, nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+        runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
     };
 
     private static void Invoke(string sources, string binary, string runtimeMode)

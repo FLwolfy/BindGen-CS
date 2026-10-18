@@ -93,10 +93,7 @@ API 需要不同的声明。独立托管辅助类型可以使用自己的类型�
 `#include "contributions/<service>/<path>"` 引用贡献的头文件。
 
 原生逻辑来源固定为 `contributions/<service>/<path>`，不依赖物理暂存目录。
-文件、完整目录成员、hash 和原生编译输入进入统一 artifact/build manifest。
-临时源码 store 释放后，独立 native-build 使用发布且已锁定的输入。
-托管辅助源码参与相同的候选编译与最终导入契约复核；单文件模式把它合入
-`Bindings.cs`。无效贡献、托管编译失败或原生构建失败都不会替换上一套完整输出。
+文件、完整目录成员和 hash 进入生成 artifact manifest。外部构建消费发布的原生源码与头文件。托管辅助源码参与最终语法与导入契约复核；单文件模式把它合入 `Bindings.cs`。无效贡献不会替换上一套完整输出；消费者编译与原生构建由外部构建系统验证。
 
 每个原始目标解析在查询 parser cache 之前调用贡献服务一次；bridge reparse 不会
 再次调用。生成字节参与缓存阶段身份，即使服务申报的私有指纹没有改变，也不会复用
@@ -140,7 +137,7 @@ translation-unit 句柄不会延长其生命周期；不能保存这些句柄或
 下游普通扩展只接收已脱离 native 生命周期的中立模型。
 
 每次解析都会调用贡献服务。通过 `context.request.purpose` 区分中立的
-`SourceAnalysis`、`BridgeVerification` 与 `NativeBuildVerification`，不要根据
+`SourceAnalysis` 与 `BridgeVerification`，不要根据
 临时目录或文件名猜测阶段。只处理原始源码的服务应在验证请求中返回原模型。
 跳过贡献仍然执行插件激活、输入捕获和指纹核对；生成桥接的 ABI 也保留独立验证。
 

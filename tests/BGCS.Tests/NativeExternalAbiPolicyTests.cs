@@ -57,15 +57,16 @@ public sealed class NativeExternalAbiPolicyTests
                         .Add("point_size", "Size").Add("point_alignment", "Alignment").Add("by_value", "ByValue"),
                     externalTypes = [new() { nativeType = "Point", managedType = "System.Numerics.Vector2",
                         fields = ImmutableDictionary<string, string>.Empty.Add("x", "X").Add("y", "Y") }] },
-                nativeBuild = new() { mode = "sources", sources = ["point.c"] },
+
                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             var projection = Assert.Single(target.managed!.externalTypeProjections);
-            Assert.Equal(8, projection.managedStorage!.size);
+            Assert.Null(projection.managedStorage);
+            Assert.Equal(8, projection.managedShape!.fields.Sum(field => field.size));
             Assert.Equal(16, target.interop.GetType(projection.nativeType).size);
             Assert.Equal(16, target.interop.GetType(projection.nativeType).alignment);
             Assert.Equal(0, target.interop.GetType(projection.nativeType).fields.Single(field => field.name == "x").offset);
@@ -74,7 +75,7 @@ public sealed class NativeExternalAbiPolicyTests
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string factory = mode == BindingImportMode.FunctionTable ? "PointApi.Load(binary)" : "PointApi.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"),
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName, $$"""
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName, $$"""
                 using BGCS.Runtime;
                 using Generated.ExternalPolicyNative;
                 public static unsafe class PointerShimConsumer {
@@ -93,9 +94,9 @@ public sealed class NativeExternalAbiPolicyTests
                 """, "PointerShimConsumer", root, sourceRuntime: false));
             var previous = Snapshot(built.outputRoot);
             BindingConfiguration unsafeValue = configuration with { source = configuration.source with { selection = new() } };
-            BuildResult refused = await host.BuildAsync(new(new(unsafeValue, root)));
+            GenerationResult refused = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(unsafeValue, root));
             Assert.False(refused.success);
-            Assert.False(refused.generation.published);
+            Assert.False(refused.published);
             Assert.Contains("calling-ABI evidence", refused.GetDiagnosticSummary(), StringComparison.Ordinal);
             Assert.Contains("pointer bridge", refused.GetDiagnosticSummary(), StringComparison.Ordinal);
             Assert.Equal(previous.OrderBy(pair => pair.Key), Snapshot(built.outputRoot).OrderBy(pair => pair.Key));

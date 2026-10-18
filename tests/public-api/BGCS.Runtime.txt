@@ -4,13 +4,6 @@ struct BGCS.Runtime.Aapcs64VaList [sealed]
   field System.IntPtr stack
   field System.Int32 vectorRegisterOffset
   field System.IntPtr vectorRegisterTop
-struct BGCS.Runtime.Atomic`1 [sealed; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.Numerics.IBinaryInteger<T>|System.ValueType; unmanaged T]
-  ctor(T value)
-  property T value { get; set }
-  method System.Boolean CompareAndSwap(T expected, T newValue)
-  method T Add(T amount)
-  method T Decrement()
-  method T Increment()
 class BGCS.Runtime.Bitfield [abstract; sealed]
   method System.Int64 GetSigned(System.ReadOnlySpan<System.Byte> raw, System.Int32 offset, System.Int32 bitWidth) [static]
   method T GetSigned(T raw, System.Int32 offset, System.Int32 bitWidth) [static; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
@@ -121,17 +114,6 @@ interface BGCS.Runtime.INativeModuleProvider [abstract; interfaces=System.IDispo
 interface BGCS.Runtime.INativeReleaseDispatcher [abstract]
   method System.Boolean CheckAccess() [abstract; virtual]
   method System.Void Post(System.Action cleanup) [abstract; virtual]
-struct BGCS.Runtime.Iterator`1 [sealed; generic T=NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType; unmanaged T]
-  field System.UIntPtr index
-  field T* ptr
-  ctor(T* ptr, System.UIntPtr index [optional; default=0])
-  property T* current { get }
-  method System.Boolean Equals(BGCS.Runtime.Iterator<T> other)
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Runtime.Iterator<T> left, BGCS.Runtime.Iterator<T> right) [static]
-  method System.Boolean op_Inequality(BGCS.Runtime.Iterator<T> left, BGCS.Runtime.Iterator<T> right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.Void MoveNext()
 class BGCS.Runtime.ModuleBorrowedNativeHandle [sealed; base=System.Runtime.InteropServices.SafeHandle; interfaces=System.IDisposable]
   ctor(System.IntPtr address, BGCS.Runtime.NativeModuleLease module)
   property System.Boolean IsInvalid { get } [virtual]

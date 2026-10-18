@@ -12,7 +12,6 @@
     <Project Path="src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj" />
     <Project Path="src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
     <Project Path="src/BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
-    <Project Path="src/BGCS.NativeBuild/BGCS.NativeBuild.csproj" />
     <Project Path="src/BGCS.Platforms/BGCS.Platforms.csproj" />
     <Project Path="src/BGCS.Runtime/BGCS.Runtime.csproj" />
     <Project Path="src/BGCS.Tool/BGCS.Tool.csproj" />
@@ -28,7 +27,6 @@
     <Project Path="tests/BGCS.Frontend.Clang.Tests/BGCS.Frontend.Clang.Tests.csproj" />
     <Project Path="tests/BGCS.Infrastructure.Tests/BGCS.Infrastructure.Tests.csproj" />
     <Project Path="tests/BGCS.MSBuild.Tests/BGCS.MSBuild.Tests.csproj" />
-    <Project Path="tests/BGCS.NativeBuild.Tests/BGCS.NativeBuild.Tests.csproj" />
     <Project Path="tests/BGCS.Platforms.Tests/BGCS.Platforms.Tests.csproj" />
     <Project Path="tests/BGCS.Runtime.Tests/BGCS.Runtime.Tests.csproj" />
     <Project Path="tests/BGCS.Tests/BGCS.Tests.csproj" />
@@ -47,5 +45,9 @@
     <Project Path="tests/fixtures/hosts/ProcessProbe/ProcessProbe.csproj" />
     <Project Path="tests/fixtures/plugins/ClangFactPlugin/ClangFactPlugin.csproj" />
     <Project Path="tests/fixtures/plugins/NeutralLoweringPlugin/NeutralLoweringPlugin.csproj" />
+  </Folder>
+  <Folder Name="/Repository tools/">
+    <Project Path="eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" />
+    <Project Path="tests/BGCS.RepositoryTools.Tests/BGCS.RepositoryTools.Tests.csproj" />
   </Folder>
 </Solution>

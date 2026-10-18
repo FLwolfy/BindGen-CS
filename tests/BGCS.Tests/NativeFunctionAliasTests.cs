@@ -54,18 +54,18 @@ public sealed class NativeFunctionAliasTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["alias.c"] },
+
                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             Assert.Equal("add", Assert.Single(target.interop.functions).exportName);
             Assert.Equal(target.interop.functions[0].id, Assert.Single(target.interop.functionAliases).nativeFunction);
             Assert.Equal(2, target.managed!.aliases.Length);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed, new(configuration.library.nativeName, new NoWrites())
             { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Aliases.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime });
             Assert.Single(plan.methods);

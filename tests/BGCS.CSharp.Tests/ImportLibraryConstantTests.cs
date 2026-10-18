@@ -30,7 +30,7 @@ public sealed class ImportLibraryConstantTests
         ManagedApiModel model = Model("Vendor.LibraryNames.Native") with
         { emitLibraryNameConstant = false, style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance };
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { importMode = mode, managedCompilation = Inputs(ConsumerSource),
+        EmissionRequest request = new("native", sink) { importMode = mode, managedProjection = Inputs(ConsumerSource),
             includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.LibraryConstant.Runtime" : "BGCS.Runtime" };
         CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
@@ -53,33 +53,34 @@ public sealed class ImportLibraryConstantTests
     }
 
     [Theory]
-    [InlineData("Native", ConsumerSource)]
-    [InlineData("Vendor.LibraryNames.Native()", ConsumerSource)]
-    [InlineData("Vendor.LibraryNames.Native; class Escape {}", ConsumerSource)]
-    [InlineData("Vendor.LibraryNames<string>.Native", ConsumerSource)]
-    [InlineData("alias::Vendor.LibraryNames.Native", ConsumerSource)]
-    [InlineData("Vendor.LibraryNames.Missing", ConsumerSource)]
-    [InlineData("Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public const string Native=\"wrong\";} }")]
-    [InlineData("Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public static readonly string Native=\"native\";} }")]
-    [InlineData("Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public static string Native=>\"native\";} }")]
-    [InlineData("Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public const string? Native=null;} }")]
-    [InlineData("Generated.LibraryConstant.LibraryNames.Native", "namespace Generated.LibraryConstant {public static class LibraryNames {public const string Native=\"native\";} }")]
-    public void MissingMutableMismatchedOrInjectedReferencesFailBeforeEmission(string reference, string source)
+    [InlineData("unqualified", "Native", ConsumerSource)]
+    [InlineData("invocation", "Vendor.LibraryNames.Native()", ConsumerSource)]
+    [InlineData("injection", "Vendor.LibraryNames.Native; class Escape {}", ConsumerSource)]
+    [InlineData("generic", "Vendor.LibraryNames<string>.Native", ConsumerSource)]
+    [InlineData("alias", "alias::Vendor.LibraryNames.Native", ConsumerSource)]
+    [InlineData("missing", "Vendor.LibraryNames.Missing", ConsumerSource)]
+    [InlineData("mismatch", "Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public const string Native=\"wrong\";} }")]
+    [InlineData("readonly", "Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public static readonly string Native=\"native\";} }")]
+    [InlineData("property", "Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public static string Native=>\"native\";} }")]
+    [InlineData("null", "Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public const string? Native=null;} }")]
+    [InlineData("generated", "Generated.LibraryConstant.LibraryNames.Native", "namespace Generated.LibraryConstant {public static class LibraryNames {public const string Native=\"native\";} }")]
+    public void MissingMutableMismatchedOrInjectedReferencesFailBeforeEmission(string caseId, string reference, string source)
     {
+        Assert.NotEmpty(caseId);
         NeutralBackendTests.MemorySink sink = new();
         Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(Model(reference),
-            new("native", sink) { importMode = BindingImportMode.DllImport, managedCompilation = Inputs(source) }));
+            new("native", sink) { importMode = BindingImportMode.DllImport, managedProjection = Inputs(source) }));
         Assert.Empty(sink.sources);
     }
 
     [Fact]
     public void FunctionTableDoesNotSilentlyIgnoreAStaticImportConstant()
         => Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(Model("Vendor.LibraryNames.Native"),
-            new("native", new NeutralBackendTests.MemorySink()) { managedCompilation = Inputs(ConsumerSource) }));
+            new("native", new NeutralBackendTests.MemorySink()) { managedProjection = Inputs(ConsumerSource) }));
 
     private const string ConsumerSource = "namespace Vendor {public static class LibraryNames {public const string Native=\"native\";public const string Other=\"native\";} }";
 
-    private static ManagedCompilationInputs Inputs(string source)
+    private static ManagedProjectionInputs Inputs(string source)
     {
         byte[] image = Encoding.UTF8.GetBytes(source);
         return new() { sources = [new(Path.Combine(Path.GetTempPath(), "bgcs-import-constant.cs"),

@@ -103,16 +103,16 @@ public sealed class NativePointerCarrierTests
                     zeroTerminated = true, retainsPointer = false, allowsNull = false }],
                     valueParameters = [new() { function = "address_read_after", parameter = "result", direction = NativeParameterDirection.Output,
                         lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }] },
-                nativeBuild = new() { mode = "sources", sources = ["addresses.c"] }, runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             Assert.All(target.interop!.functions, function => Assert.Null(function.returnOwnership));
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string context = sourceRuntime ? "AddressApiContext" : "AddressApi";
             string prefix = sourceRuntime ? "AddressApi." : string.Empty;
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";

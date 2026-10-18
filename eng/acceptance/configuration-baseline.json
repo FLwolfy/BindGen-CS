@@ -4,12 +4,6 @@
   "policy": "Frozen original configuration identities in original enumeration order. Current inventory may append new stable IDs; source correspondence and dirty local tests do not certify release parity.",
   "entries": [
     {
-      "configurationId": "CFG0001",
-      "source": "src/BGCS.Cpp2C/Configuration/BaseConfig.cs",
-      "member": "url",
-      "type": "string?"
-    },
-    {
       "configurationId": "CFG0002",
       "source": "src/BGCS.Cpp2C/Configuration/BaseConfig.cs",
       "member": "ignoredProperties",
@@ -208,24 +202,6 @@
       "type": "List<string>"
     },
     {
-      "configurationId": "CFG0035",
-      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
-      "member": "librarySearchFolders",
-      "type": "List<string>"
-    },
-    {
-      "configurationId": "CFG0036",
-      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
-      "member": "linkLibraries",
-      "type": "List<string>"
-    },
-    {
-      "configurationId": "CFG0037",
-      "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
-      "member": "linkerArguments",
-      "type": "List<string>"
-    },
-    {
       "configurationId": "CFG0038",
       "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
       "member": "templateInstantiations",
@@ -361,12 +337,6 @@
       "configurationId": "CFG0060",
       "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
       "member": "compilerPath",
-      "type": "string?"
-    },
-    {
-      "configurationId": "CFG0061",
-      "source": "src/BGCS/Configuration/BaseConfig.cs",
-      "member": "url",
       "type": "string?"
     },
     {
@@ -1461,5 +1431,6 @@
       "member": "parameterNames",
       "type": "List<string>"
     }
-  ]
+  ],
+  "scopeRemovals": "eng/acceptance/scope-removals.json"
 }

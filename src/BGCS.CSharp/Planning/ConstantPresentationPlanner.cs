@@ -176,7 +176,7 @@ internal static class ConstantPresentationPlanner
         CancellationToken cancellationToken
     ) {
         StringBuilder source = new("#nullable enable\n");
-        ManagedConstantCompilerInputs inputs = ManagedConstantCompilerInputs.Create(request.managedCompilation, m_frameworkReferences.Value, cancellationToken);
+        ManagedConstantCompilerInputs inputs = ManagedConstantCompilerInputs.Create(request.managedProjection, m_frameworkReferences.Value, cancellationToken);
         CSharpCompilation framework = CSharpCompilation.Create("BGCS.ConstantPresentation.Framework", inputs.sources, inputs.references);
         foreach (string ns in request.additionalUsings.Where(ns => KnownNamespace(framework.GlobalNamespace, ns)
             || plan.api.@namespace == ns || plan.api.@namespace.StartsWith(ns + ".", StringComparison.Ordinal)))

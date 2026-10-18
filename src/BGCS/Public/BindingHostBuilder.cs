@@ -34,8 +34,6 @@ public sealed class BindingHostBuilder
     private readonly Dictionary<string, (int Priority, Func<IGenerationValidator> Factory)> m_validators = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (int Priority, Func<IArtifactProcessor> Factory)> m_processors = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PluginRegistration> m_plugins = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Func<INativeBuildProvider>> m_nativeProviders = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Func<INativeArtifactPackager>> m_nativePackagers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (int Priority, Func<ISourceContributor> Factory)> m_sourceContributors = new(StringComparer.Ordinal);
 
     /// <summary>Enables the built-in target resolver and isolated Clang frontend adapter.</summary>
@@ -251,36 +249,6 @@ public sealed class BindingHostBuilder
         return this;
     }
 
-    /// <summary>Registers an independently owned native construction planner selected by explicit identity.</summary>
-    /// <param name="id">The globally unique service identity.</param>
-    /// <param name="factory">The per-session provider factory.</param>
-    /// <returns>This builder.</returns>
-    public BindingHostBuilder AddNativeBuildProvider(
-        string id,
-        Func<INativeBuildProvider> factory
-    ) {
-        PluginDescriptorValidator.ValidateId(id);
-        ArgumentNullException.ThrowIfNull(factory);
-        if (Registered(id)) throw new InvalidOperationException($"Extension service '{id}' is already registered.");
-        m_nativeProviders.Add(id, factory);
-        return this;
-    }
-
-    /// <summary>Registers an independently owned native package layout selected by explicit identity.</summary>
-    /// <param name="id">The globally unique service identity.</param>
-    /// <param name="factory">The per-session packager factory.</param>
-    /// <returns>This builder.</returns>
-    public BindingHostBuilder AddNativeArtifactPackager(
-        string id,
-        Func<INativeArtifactPackager> factory
-    ) {
-        PluginDescriptorValidator.ValidateId(id);
-        ArgumentNullException.ThrowIfNull(factory);
-        if (Registered(id)) throw new InvalidOperationException($"Extension service '{id}' is already registered.");
-        m_nativePackagers.Add(id, factory);
-        return this;
-    }
-
     /// <summary>Discovers immutable plugin metadata and creates an independent plugin for each session.</summary>
     /// <typeparam name="TPlugin">A Contracts-only neutral plugin with a public parameterless constructor.</typeparam>
     /// <param name="settings">An optional immutable plugin settings object.</param>
@@ -382,8 +350,8 @@ public sealed class BindingHostBuilder
     }
 
     private bool Registered(string id) => m_transforms.ContainsKey(id) || m_interopTransforms.ContainsKey(id) || m_managedTransforms.ContainsKey(id) || m_cppTypes.ContainsKey(id) || m_cppCallables.ContainsKey(id)
-        || m_targets.ContainsKey(id) || m_validators.ContainsKey(id) || m_processors.ContainsKey(id) || m_nativeProviders.ContainsKey(id) || m_nativePackagers.ContainsKey(id) || m_sourceContributors.ContainsKey(id)
-        || m_plugins.Values.Any(plugin => plugin.Descriptor.services.Any(service => service.id == id));
+        || m_targets.ContainsKey(id) || m_validators.ContainsKey(id) || m_processors.ContainsKey(id) || m_sourceContributors.ContainsKey(id)
+        || m_plugins.ContainsKey(id) || m_plugins.Values.Any(plugin => plugin.Descriptor.services.Any(service => service.id == id));
 
     /// <summary>Freezes the frontend composition and creates an independently owned host.</summary>
     /// <returns>The caller-owned host.</returns>
@@ -413,8 +381,6 @@ public sealed class BindingHostBuilder
             m_validators.OrderByDescending(entry => entry.Value.Priority).ThenBy(entry => entry.Key, StringComparer.Ordinal).Select(entry => new ValidatorRegistration(entry.Key, entry.Value.Priority, entry.Value.Factory)).ToImmutableArray(),
             m_processors.OrderByDescending(entry => entry.Value.Priority).ThenBy(entry => entry.Key, StringComparer.Ordinal).Select(entry => new ProcessorRegistration(entry.Key, entry.Value.Priority, entry.Value.Factory)).ToImmutableArray(),
             m_targets.OrderBy(entry => entry.Key, StringComparer.Ordinal).Select(entry => new TargetProviderRegistration(entry.Key, entry.Value)).ToImmutableArray(),
-            m_nativeProviders.OrderBy(entry => entry.Key, StringComparer.Ordinal).Select(entry => new NativeProviderRegistration(entry.Key, entry.Value)).ToImmutableArray(),
-            m_nativePackagers.OrderBy(entry => entry.Key, StringComparer.Ordinal).Select(entry => new NativePackagerRegistration(entry.Key, entry.Value)).ToImmutableArray(),
             m_sourceContributors.OrderByDescending(entry => entry.Value.Priority).ThenBy(entry => entry.Key, StringComparer.Ordinal)
                 .Select(entry => new SourceContributorRegistration(entry.Key, entry.Value.Priority, entry.Value.Factory)).ToImmutableArray(),
             plugins.ToImmutableArray())
@@ -449,8 +415,6 @@ public sealed class BindingHostBuilder
         foreach (TargetProviderRegistration service in registry.Targets) builder.m_targets.Add(service.Id, service.Factory);
         foreach (ValidatorRegistration service in registry.Validators) builder.m_validators.Add(service.Id, (service.Priority, service.Factory));
         foreach (ProcessorRegistration service in registry.Processors) builder.m_processors.Add(service.Id, (service.Priority, service.Factory));
-        foreach (NativeProviderRegistration service in registry.NativeBuildProviders) builder.m_nativeProviders.Add(service.Id, service.Factory);
-        foreach (NativePackagerRegistration service in registry.NativeArtifactPackagers) builder.m_nativePackagers.Add(service.Id, service.Factory);
         foreach (SourceContributorRegistration service in registry.SourceContributors) builder.m_sourceContributors.Add(service.Id, (service.Priority, service.Factory));
         if (includePlugins)
             foreach (PluginRegistration plugin in registry.Plugins) builder.m_plugins.Add(plugin.Descriptor.id, plugin);

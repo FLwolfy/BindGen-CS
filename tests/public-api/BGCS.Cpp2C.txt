@@ -16,6 +16,23 @@ class BGCS.Cpp2C.Emission.CppSourceWriter [sealed; interfaces=BGCS.Contracts.Art
   method System.Void WriteLine(System.String text) [virtual; final]
   method System.Void WriteLines(System.Collections.Generic.IEnumerable<System.String> lines) [virtual; final]
   method System.Void WriteLines(System.String text) [virtual; final]
+class BGCS.Cpp2C.Emission.NativeStorageAssertionEmitter [sealed]
+  ctor()
+  method System.String Emit(BGCS.Contracts.Native.NativeModule module, System.Collections.Immutable.ImmutableArray<System.String> headers, System.String preamble [optional; default=""], System.String postamble [optional; default=""])
+class BGCS.Cpp2C.Emission.StaticExportTableEmitter [abstract; sealed]
+  method BGCS.Cpp2C.Emission.StaticExportTableSource Emit(BGCS.Contracts.Interop.InteropModule module, System.Collections.Immutable.ImmutableArray<System.String> headers) [static]
+class BGCS.Cpp2C.Emission.StaticExportTableSource [sealed; interfaces=System.IEquatable<BGCS.Cpp2C.Emission.StaticExportTableSource>]
+  ctor(System.String source, BGCS.Contracts.Requests.StaticExportTableDescriptor descriptor)
+  property BGCS.Contracts.Requests.StaticExportTableDescriptor descriptor { get; init }
+  property System.String source { get; init }
+  method BGCS.Cpp2C.Emission.StaticExportTableSource <Clone>$()
+  method System.Boolean Equals(BGCS.Cpp2C.Emission.StaticExportTableSource other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Cpp2C.Emission.StaticExportTableSource left, BGCS.Cpp2C.Emission.StaticExportTableSource right) [static]
+  method System.Boolean op_Inequality(BGCS.Cpp2C.Emission.StaticExportTableSource left, BGCS.Cpp2C.Emission.StaticExportTableSource right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String source, out BGCS.Contracts.Requests.StaticExportTableDescriptor descriptor)
 class BGCS.Cpp2C.Emission.TypedBridgeEmitter [sealed]
   ctor()
   method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> Emit(BGCS.Contracts.Bridge.CppBridgeModule module, BGCS.Contracts.Artifacts.IArtifactSink sink, System.String fileStem, System.Threading.CancellationToken cancellationToken [optional; default=null])

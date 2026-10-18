@@ -26,7 +26,7 @@ internal enum AttributeKind
     /// </summary>
     TokenAttribute, //the attribute is parse from token, and the parser is slow.
     /// <summary>
-    /// An Objective-C declaration attribute.
+    /// A compiler declaration attribute.
     /// </summary>
-    ObjectiveCAttribute,
+    ClangAttribute,
 }

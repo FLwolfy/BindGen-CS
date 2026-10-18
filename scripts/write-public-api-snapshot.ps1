@@ -4,6 +4,6 @@ param(
 )
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$project = Join-Path $root 'src\BGCS.Tool\BGCS.Tool.csproj'
+$project = Join-Path $root 'eng\BGCS.RepositoryTools\BGCS.RepositoryTools.csproj'
 & dotnet run --project $project --configuration Release -- validate api-snapshot $Assembly $Output
 exit $LASTEXITCODE

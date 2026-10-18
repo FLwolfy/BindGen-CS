@@ -43,9 +43,17 @@ def source_identity() -> dict:
     }
 
 
+def verify_generator_archive(package: zipfile.ZipFile) -> None:
+    forbidden = {"bgcs.nativebuild.dll", "bgcs.repositorytools.dll", "microsoft.codeanalysis.workspaces.dll", "microsoft.codeanalysis.csharp.workspaces.dll"}
+    unexpected = sorted(name for name in package.namelist() if Path(name).name.casefold() in forbidden)
+    if unexpected:
+        raise RuntimeError("The shipped generator contains repository/native-build tooling: " + ", ".join(unexpected))
+
+
 def package_evidence(path: Path) -> dict:
     """Record the delivered binaries, rather than the current working tree's build outputs."""
     with zipfile.ZipFile(path) as package:
+        verify_generator_archive(package)
         execution = [{"path": entry.filename, "bytes": entry.file_size,
                       "sha256": hashlib.sha256(package.read(entry)).hexdigest()}
                      for entry in sorted(package.infolist(), key=lambda item: item.filename)

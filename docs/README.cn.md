@@ -21,7 +21,7 @@ BGCS 3.0 使用 .NET 10、分组版本化配置和公开的 `BindingHost` 流水
 | --- | --- |
 | 理解模块职责、依赖和流水线 | [架构](architecture.cn.md) |
 | 嵌入生成、构建、检查或工作区 | [公开 API](api.cn.md) |
-| 声明原生源码、选择 provider 并消费验证产物 | [原生构建](native-build.cn.md) |
+| 使用自己的原生系统构建和链接生成的源码 | [原生构建](native-metadata.cn.md#外部编译) |
 | 理解资源、回调 drain 和异步取消 | [Runtime 生命周期](runtime-lifetime.cn.md) |
 | 配置同步回调、返回 handle 的注册与终态异步操作 | [回调实战手册](callbacks.cn.md) |
 | 分清存储、调用 ABI 和语义证据 | [ABI 安全](abi-safety.cn.md) |

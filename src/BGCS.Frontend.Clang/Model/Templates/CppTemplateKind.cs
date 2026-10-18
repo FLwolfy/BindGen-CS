@@ -24,8 +24,4 @@ internal enum CppTemplateKind
     /// A class with full template specialized
     /// </summary>
     TemplateSpecializedClass,
-    /// <summary>
-    /// An Objective-C class template
-    /// </summary>
-    ObjCGenericClass,
 }

@@ -57,7 +57,6 @@
     ],
     "runtime.complete": [
       "Aapcs64VaList.cs",
-      "Atomic.cs",
       "Bitfield.cs",
       "Bool32.cs",
       "Bool8.cs",
@@ -70,7 +69,6 @@
       "ExternalFunctionTableProvider.cs",
       "INativeModuleProvider.cs",
       "INativeReleaseDispatcher.cs",
-      "Iterator.cs",
       "ModuleBorrowedNativeHandle.cs",
       "NativeAlignedBuffer.cs",
       "NativeAllocator.cs",
@@ -105,11 +103,7 @@
     ],
     "primitives.pointers": [
       "Pointer.cs",
-      "ConstPointer.cs",
-      "Iterator.cs"
-    ],
-    "primitives.atomic": [
-      "Atomic.cs"
+      "ConstPointer.cs"
     ],
     "primitives.bitfields": [
       "Bitfield.cs"
@@ -221,12 +215,10 @@
     "NativeCallback.cs": [],
     "NativeOperation.cs": [],
     "Aapcs64VaList.cs": [],
-    "Atomic.cs": [],
     "Bitfield.cs": [],
     "Bool32.cs": [],
     "Bool8.cs": [],
     "ConstPointer.cs": [],
-    "Iterator.cs": [],
     "NativeAlignedBuffer.cs": [],
     "NativeAotCallback.cs": [],
     "NativeCallbackRegistry.cs": [

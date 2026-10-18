@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
 using BGCS.Contracts;
@@ -47,10 +51,8 @@ public abstract class GroupedConfigurationEntryTestBase
             Assert.Equal(currentDirectory, Environment.CurrentDirectory);
             VerifyConfiguration(request.configuration, expected["configuration"]!.AsObject(), temporary);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            bool sdkBuild = expected["sdkBuild"]?.GetValue<bool>() == true;
-            GenerationResult result = sdkBuild
-                ? (await host.BuildAsync(new BuildRequest(request))).generation
-                : await host.GenerateAsync(request);
+            bool sdkBuild = expected["sdkBuild"]?.GetValue<bool>() == true || request.configuration.api.importMode == BindingImportMode.LibraryImport;
+            GenerationResult result = await host.GenerateAsync(request);
             Assert.Equal(currentDirectory, Environment.CurrentDirectory);
             bool success = expected["success"]?.GetValue<bool>() ?? true;
             if (!success)
@@ -79,8 +81,11 @@ public abstract class GroupedConfigurationEntryTestBase
                 else
                     Assert.True(sources.Length > 1, "Split output must contain distinct manifest-owned source files.");
             }
+            if (sdkBuild)
+                await CompileSdkConsumerAsync(request.configuration, sources.Select(source => Path.Combine(result.outputRoot, source.relativePath)), temporary);
             CSharpCompilation compilation = Compile(request.configuration, sources.Select(source => source.relativePath).ToArray(), texts, sdkBuild);
             VerifySymbols(compilation, expected);
+            new ArtifactDigestVerifier().Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
         }
         finally
         {
@@ -90,6 +95,50 @@ public abstract class GroupedConfigurationEntryTestBase
                 throw new InvalidOperationException("Grouped fixture cleanup path escaped its owned temporary directory.");
             Directory.Delete(resolved, recursive: true);
         }
+    }
+
+    private static async Task CompileSdkConsumerAsync(BindingConfiguration configuration, IEnumerable<string> generatedSources, string temporary)
+    {
+        string consumer = Path.Combine(temporary, "SdkConsumer");
+        Directory.CreateDirectory(consumer);
+        string[] sources = generatedSources.Concat(configuration.api.projectionInputs.sources.Select(path => Path.GetFullPath(path, temporary)))
+            .Distinct(StringComparer.Ordinal).ToArray();
+        string[] references = configuration.api.projectionInputs.references.Select(path => Path.GetFullPath(path, temporary))
+            .Concat(configuration.runtime.mode == "source" ? [] : new[] { typeof(NativeModuleSession).Assembly.Location }).Distinct(StringComparer.Ordinal).ToArray();
+        string compile = string.Join(Environment.NewLine, sources.Select(path => "<Compile Include=\"" + SecurityElement.Escape(path) + "\" />"));
+        string metadata = string.Join(Environment.NewLine, references.Select((path, index) => "<Reference Include=\"FixtureReference" + index + "\"><HintPath>" + SecurityElement.Escape(path) + "</HintPath></Reference>"));
+        await File.WriteAllTextAsync(Path.Combine(consumer, "Consumer.csproj"), $$"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>{{SecurityElement.Escape(configuration.api.framework)}}</TargetFramework>
+                <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+                <Nullable>enable</Nullable>
+                <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+                <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+                <DefineConstants>$(DefineConstants);{{SecurityElement.Escape(string.Join(';', configuration.api.projectionInputs.defines))}}</DefineConstants>
+              </PropertyGroup>
+              <ItemGroup>{{compile}}{{metadata}}</ItemGroup>
+            </Project>
+            """);
+        string? sdk = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+        string dotnet = string.IsNullOrWhiteSpace(sdk) ? "dotnet" : Path.Combine(sdk, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+        ProcessStartInfo start = new(dotnet)
+        {
+            WorkingDirectory = consumer, UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardOutput = true, RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
+        };
+        foreach (string argument in new[] { "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
+        using Process process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the grouped fixture SDK consumer.");
+        Task<string> output = process.StandardOutput.ReadToEndAsync(), error = process.StandardError.ReadToEndAsync();
+        using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(3));
+        try { await process.WaitForExitAsync(deadline.Token); }
+        finally
+        {
+            if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); }
+        }
+        Assert.True(process.ExitCode == 0, await output + Environment.NewLine + await error);
+        Assert.True(File.Exists(Path.Combine(consumer, "bin", "Debug", configuration.api.framework, "Consumer.dll")), "The real SDK did not produce the grouped consumer assembly.");
     }
 
     private static void VerifyConfiguration(BindingConfiguration configuration, JsonObject expected, string temporary)
@@ -129,7 +178,7 @@ public abstract class GroupedConfigurationEntryTestBase
             references.Distinct(StringComparer.Ordinal).Select(path => MetadataReference.CreateFromFile(path)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true, nullableContextOptions: NullableContextOptions.Enable,
                 generalDiagnosticOption: ReportDiagnostic.Error));
-        // LibraryImport's implementation is produced by the SDK source generator. Its actual WAE BuildAsync above is mandatory.
+        // LibraryImport's implementation must be produced by the real SDK source generator in the test-owned consumer above.
         if (configuration.api.importMode == BindingImportMode.LibraryImport)
             Assert.True(sdkBuild, "LibraryImport fixtures require a real SDK build, never incomplete Roslyn-only compilation.");
         else

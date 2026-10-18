@@ -71,10 +71,7 @@ public sealed class TaskHostTests
             string declaration = "#if defined(_WIN32)\n#define EXPORT __declspec(dllexport)\n#else\n#define EXPORT __attribute__((visibility(\"default\")))\n#endif\nEXPORT int echo(int value);\n";
             await File.WriteAllTextAsync(Path.Combine(temporary, "native.h"), declaration);
             await File.WriteAllTextAsync(Path.Combine(temporary, "native.c"), "#include \"native.h\"\nEXPORT int echo(int value) { return value; }\nEXPORT int added_after_warm_build(void) { return 19; }\n");
-            string nativeBuild = enabled && !designTime
-                ? ",\"nativeBuild\":{\"mode\":\"sources\",\"provider\":\"" + (OperatingSystem.IsWindows() ? "msvc" : "auto") + "\",\"sources\":[\"native.c\"]}"
-                : string.Empty;
-            await File.WriteAllTextAsync(Path.Combine(temporary, "bindgen.json"), "{\"schemaVersion\":1,\"library\":{\"id\":\"example\",\"nativeName\":\"example\"},\"source\":{\"language\":\"c\",\"headers\":[\"native.h\"]},\"api\":{\"namespace\":\"Generated.Example\"},\"runtime\":{\"mode\":\"source\"},\"cache\":{\"enabled\":false}" + nativeBuild + "}");
+            await File.WriteAllTextAsync(Path.Combine(temporary, "bindgen.json"), "{\"schemaVersion\":1,\"library\":{\"id\":\"example\",\"nativeName\":\"example\"},\"source\":{\"language\":\"c\",\"headers\":[\"native.h\"]},\"api\":{\"namespace\":\"Generated.Example\"},\"runtime\":{\"mode\":\"source\"},\"cache\":{\"enabled\":false}}");
             string source = enabled && !designTime ? "public static class Consumer { public static int Read(Generated.Example.NativeApi api) => api.Echo(17); }" : "public static class Consumer { public static int Read() => 17; }";
             await File.WriteAllTextAsync(Path.Combine(temporary, "Consumer.cs"), source);
             XElement project = new("Project", new XAttribute("Sdk", "Microsoft.NET.Sdk"), new XElement("Import", new XAttribute("Project", props)),
@@ -95,7 +92,7 @@ public sealed class TaskHostTests
             if (enabled && !designTime)
             {
                 string nativeName = OperatingSystem.IsWindows() ? "example.dll" : OperatingSystem.IsMacOS() ? "libexample.dylib" : "libexample.so";
-                Assert.True(File.Exists(Path.Combine(temporary, "bin", "Debug", "net10.0", nativeName)), "MSBuild omitted the verified native library from consumer output.");
+                Assert.False(File.Exists(Path.Combine(temporary, "bin", "Debug", "net10.0", nativeName)), "The generator task must not compile or copy a native library.");
                 string[] arguments = ["build", path, "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false"];
                 var second = await ProcessExecutor.ExecuteAsync(dotnet, arguments, temporary, TimeSpan.FromSeconds(120));
                 Assert.True(second.exitCode == 0, second.standardOutput + Environment.NewLine + second.standardError);
@@ -122,7 +119,7 @@ public sealed class TaskHostTests
                 var rebuilt = await ProcessExecutor.ExecuteAsync(dotnet, arguments, temporary, TimeSpan.FromSeconds(120));
                 Assert.True(rebuilt.exitCode == 0, rebuilt.standardOutput + Environment.NewLine + rebuilt.standardError);
                 Assert.True(File.Exists(Path.Combine(temporary, "bin", "Debug", "net10.0", "bgcs", "worker", "worker-assets.manifest.json")));
-                Assert.True(File.Exists(Path.Combine(temporary, "bin", "Debug", "net10.0", nativeName)));
+                Assert.False(File.Exists(Path.Combine(temporary, "bin", "Debug", "net10.0", nativeName)));
             }
         }
         finally { Directory.Delete(temporary, recursive: true); }

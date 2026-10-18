@@ -18,15 +18,9 @@ public sealed class NativeGeneratedClassProviderTests
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Count(out int result, out nint error);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Destroy(nint self, out nint error);
 
-    [Theory]
-    [InlineData("clang")]
-    [InlineData("msvc")]
-    [InlineData("clang-cl")]
-    [InlineData("msbuild")]
-    [Trait("Category", "WindowsNativeProvider")]
-    public async Task GeneratedClassManifestBuildsConstructsReadsAndDestroysThroughNeutralProvider(string provider)
+    [Fact]
+    public async Task GeneratedClassSourcesConstructReadAndDestroyThroughExternallyCompiledFixture()
     {
-        if (!OperatingSystem.IsWindows()) return;
         string root = Path.Combine(Path.GetTempPath(), "bgcs generated class provider 验收 & " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         nint library = 0;
@@ -51,19 +45,13 @@ public sealed class NativeGeneratedClassProviderTests
                 schemaVersion = 1,
                 library = new() { id = "provider_class", nativeName = "provider_class_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["counter.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false },
-                nativeBuild = new() { mode = "sources", provider = provider }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
             GenerationResult generated = await host.GenerateAsync(new(configuration, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());
-            string manifest = Assert.Single(Directory.GetFiles(generated.outputRoot, "bridge.manifest.json", SearchOption.AllDirectories));
-            string modelFile = Path.Combine(Path.GetDirectoryName(manifest)!, "bridge.module.json");
+            string modelFile = Assert.Single(Directory.GetFiles(generated.outputRoot, "bridge.module.json", SearchOption.AllDirectories));
             CppBridgeModule model = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(modelFile))!;
-            ManifestNativeBuildResult built = await host.NativeBuildAsync(new(manifest));
-            Assert.True(built.success, built.GetDiagnosticSummary());
-            Assert.Equal(provider, built.plan!.providerId);
-            Assert.True(built.exportEvidence!.success);
+            await NativeConsumerHarness.CompileNativeFixturesAsync(generated, root, configuration.library.nativeName);
             BridgeExport construction = Assert.Single(model.exports, export => export.operation.kind == BridgeOperationKind.Construct
                 && model.source.GetType(export.operation.ownerType!.Value).spelling == "Fixture::Counter");
             BridgeExport read = Assert.Single(model.exports, export => export.operation.declaration is { } id
@@ -71,8 +59,7 @@ public sealed class NativeGeneratedClassProviderTests
             BridgeExport count = Assert.Single(model.exports, export => export.operation.declaration is { } id
                 && model.source.GetDeclaration(id).qualifiedName == "Fixture::Count");
             BridgeExport destruction = Assert.Single(model.exports, export => export.id == construction.resultRelease);
-            Assert.All(new[] { construction, read, count, destruction }, export => Assert.Contains(export.name, built.exportEvidence.actual));
-            library = NativeLibrary.Load(built.nativeArtifact!);
+            library = NativeLibrary.Load(Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(Path.Combine(generated.outputRoot, Assert.Single(generated.targetModels).targetId)))));
             T Function<T>(BridgeExport export) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, export.name));
             Count active = Function<Count>(count);
             Assert.Equal(0, active(out int initialCount, out nint error));

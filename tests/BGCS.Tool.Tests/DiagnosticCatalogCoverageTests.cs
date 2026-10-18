@@ -51,7 +51,7 @@ public sealed class DiagnosticCatalogCoverageTests
     }
 
     [Theory]
-    [InlineData("BGCS-NATIVE-MANIFEST-BUILD")]
+    [InlineData("BGCS-GENERATION-SESSION")]
     [InlineData("BGCS-DOCTOR-WORKER")]
     [InlineData("BGCS-CACHE-MISS")]
     [InlineData("BGCS-FRIENDLY-OMITTED")]

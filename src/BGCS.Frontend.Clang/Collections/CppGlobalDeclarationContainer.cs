@@ -39,7 +39,6 @@ internal class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclaration
         this.typedefs = new CppContainerList<CppTypedef>(this);
         this.namespaces = new CppContainerList<CppNamespace>(this);
         this.attributes = [];
-        this.properties = new CppContainerList<CppProperty>(this);
         this.inclusionDirectives = new CppContainerList<CppInclusionDirective>(this);
     }
 
@@ -52,8 +51,6 @@ internal class CppGlobalDeclarationContainer : CppElement, ICppGlobalDeclaration
     public List<CppMacro> macros { get; }
     /// <inheritdoc/>
     public CppContainerList<CppField> fields { get; }
-    /// <inheritdoc/>
-    public CppContainerList<CppProperty> properties { get; }
     /// <inheritdoc/>
     public CppContainerList<CppFunction> functions { get; }
     /// <inheritdoc/>

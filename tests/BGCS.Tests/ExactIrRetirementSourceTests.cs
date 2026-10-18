@@ -41,14 +41,14 @@ public sealed class ExactIrRetirementSourceTests
                 }
             };
             await using BindingHost host = Host();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             var clone = Assert.Single(target.interop.functions);
             Assert.Equal("NativeThing_Clone", clone.exportName);
             Assert.Null(clone.returnOwnership);
             Assert.Null(clone.returnString);
-            Assert.Contains(result.generation.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP
+            Assert.Contains(result.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP
                 && diagnostic.severity == BindingDiagnosticSeverity.Warning && diagnostic.location?.file == "native.h");
             Assert.NotNull(Assert.Single(target.managed!.methods).receiver);
             CompilationUnitSyntax[] units = ManagedFiles(result).Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetCompilationUnitRoot()).ToArray();
@@ -80,7 +80,7 @@ public sealed class ExactIrRetirementSourceTests
                 }
             };
             await using BindingHost host = Host();
-            BuildResult initial = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult initial = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(initial.success, initial.GetDiagnosticSummary());
             Assert.Contains(ManagedFiles(initial).Select(File.ReadAllText), source => source.Contains("Utf8Codec.Decode(", StringComparison.Ordinal));
             Dictionary<string, string> previous = Snapshot(initial.outputRoot);
@@ -116,17 +116,17 @@ public sealed class ExactIrRetirementSourceTests
                 """);
             BindingConfiguration configuration = Configuration() with { source = Configuration().source with { parseMacros = false } };
             await using BindingHost host = Host();
-            BuildResult initial = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult initial = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(initial.success, initial.GetDiagnosticSummary());
             string[] codes = [BindingDiagnosticCodes.C_CALLBACKLIFETIME, BindingDiagnosticCodes.C_CALLBACKTHREADING];
             foreach (string code in codes)
             {
-                BindingDiagnostic warning = Assert.Single(initial.generation.diagnostics, diagnostic => diagnostic.code == code);
+                BindingDiagnostic warning = Assert.Single(initial.diagnostics, diagnostic => diagnostic.code == code);
                 Assert.Equal(BindingDiagnosticSeverity.Warning, warning.severity);
                 Assert.Equal("native.h", warning.location?.file);
                 Assert.Contains("bgcs_register:callback", warning.message, StringComparison.Ordinal);
             }
-            var register = Assert.Single(Assert.Single(initial.generation.targetModels).interop.functions, function => function.exportName == "bgcs_register");
+            var register = Assert.Single(Assert.Single(initial.targetModels).interop.functions, function => function.exportName == "bgcs_register");
             Assert.Null(Assert.Single(register.parameters).callback);
             var declarations = ManagedFiles(initial).SelectMany(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetRoot()
                 .DescendantNodes().OfType<MethodDeclarationSyntax>()).ToArray();
@@ -145,10 +145,10 @@ public sealed class ExactIrRetirementSourceTests
                 function = "bgcs_register", parameter = "callback", lifetime = NativeLifetimeKind.Call, retained = false,
                 threading = NativeCallbackThreading.CallerThread
             }] } };
-            BuildResult recovered = await host.BuildAsync(new(new(declared, root)));
+            GenerationResult recovered = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(declared, root), compileManaged: true);
             Assert.True(recovered.success, recovered.GetDiagnosticSummary());
-            Assert.DoesNotContain(recovered.generation.diagnostics, diagnostic => codes.Contains(diagnostic.code));
-            CallbackContract facts = Assert.IsType<CallbackContract>(Assert.Single(Assert.Single(recovered.generation.targetModels).interop.functions,
+            Assert.DoesNotContain(recovered.diagnostics, diagnostic => codes.Contains(diagnostic.code));
+            CallbackContract facts = Assert.IsType<CallbackContract>(Assert.Single(Assert.Single(recovered.targetModels).interop.functions,
                 function => function.exportName == "bgcs_register").parameters[0].callback);
             Assert.Equal(NativeLifetimeKind.Call, facts.lifetime.kind);
             Assert.Equal(NativeCallbackThreading.CallerThread, facts.threading);
@@ -172,11 +172,11 @@ public sealed class ExactIrRetirementSourceTests
                 output = new() { layout = "singleFile", singleFileName = "GeneratedBindings.cs" }
             };
             await using BindingHost host = Host();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string source = Assert.Single(ManagedFiles(result));
             Assert.Equal("GeneratedBindings.cs", Path.GetFileName(source));
-            var constant = Assert.Single(Assert.Single(result.generation.targetModels).interop.constants, value => value.name == "BGCS_LIMIT");
+            var constant = Assert.Single(Assert.Single(result.targetModels).interop.constants, value => value.name == "BGCS_LIMIT");
             Assert.Equal(NativeScalarConstantKind.Integer, constant.value.kind);
             Assert.Equal("42", constant.value.value);
             using MemoryStream image = Compile(File.ReadAllText(source));
@@ -208,10 +208,10 @@ public sealed class ExactIrRetirementSourceTests
         schemaVersion = 1, library = new() { id = "exact-ir", nativeName = "exact_ir_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.ExactIr", name = "ExactApi", importMode = BindingImportMode.DllImport },
-        nativeBuild = new() { mode = "none" }, cache = new() { enabled = false }
+         cache = new() { enabled = false }
     };
 
-    private static string[] ManagedFiles(BuildResult result) => Directory.GetFiles(result.outputRoot, "*.cs", SearchOption.AllDirectories);
+    private static string[] ManagedFiles(GenerationResult result) => Directory.GetFiles(result.outputRoot, "*.cs", SearchOption.AllDirectories);
     private static string CreateRoot()
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-exact-ir-retirement-" + Guid.NewGuid().ToString("N"));

@@ -50,16 +50,16 @@ public sealed class NativeMetadataTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["native.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            var target = Assert.Single(result.generation.targetModels);
+            var target = Assert.Single(result.targetModels);
             Assert.True(target.managed!.emitNativeMetadata);
             Assert.Equal("sample_add", Assert.Single(target.interop.functions).exportName);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string context = sourceRuntime ? "MetadataApiContext" : "MetadataApi";
             string runtime = sourceRuntime ? "Generated.Metadata.Runtime" : "BGCS.Runtime";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";

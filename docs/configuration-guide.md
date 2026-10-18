@@ -55,7 +55,6 @@ composed source, library identities, targets, semantics and execution limits.
     "name": "SampleApi",
     "names": { "sample_add": "Add" }
   },
-  "nativeBuild": { "mode": "sources", "sources": ["src/sample.c"] },
   "output": { "root": "Generated" }
 }
 ```
@@ -176,9 +175,9 @@ explicit field copies. For example:
       "nativeType": "NativeVector_int",
       "managedType": "Consumer.NativeVector<int>",
       "fields": { "size": "Size", "capacity": "Capacity", "data": "Data" }
-    }]
-  },
-  "managedBuild": { "sources": ["ConsumerTypes.cs"] }
+    }],
+    "projectionInputs": { "sources": ["ConsumerTypes.cs"] }
+  }
 }
 ```
 
@@ -328,27 +327,9 @@ An unsupported variadic signature needs an explicit fixed native wrapper with co
 argument promotions. A nontrivial C++ record must not be mapped to a same-sized managed
 struct merely to make generation compile.
 
-## Native and managed construction inputs
+## Static managed projection inputs
 
-`nativeBuild.mode` is `none`, `sources` or `prebuilt`. Sources include upstream implementation
-inputs and generated bridge/shim inputs. Prebuilt artifacts require an explicit matching
-`prebuiltTargetId`, format/CPU checks and required-export verification. Modes and successful
-validation stages are reported rather than inferred.
-
-The provider choices are `auto`, `clang`, `gnu`, `msvc`, `clang-cl`, `cmake`, `meson` and
-`msbuild`. `buildToolPath` and `auxiliaryToolPath` select optional build-system programs.
-Compiler/linker arguments are separate lists; libraries and search roots are explicit.
-`outputKind` chooses an allowed shared/static/object form. Providers create immutable
-argument-list plans that the unified executor runs with cancellation and bounded time.
-
-`managedBuild.references`, `sources` and `defines` declare inputs needed for managed candidate
-compilation. Keep handwritten partial types and external managed carriers in those source
-inputs or consumer projects, outside generated roots. External carrier or ABI customization
-must still satisfy checked storage/calling contracts; a name mapping alone is not evidence.
-
-`bridge` generates native-only artifacts. The neutral `bridge.manifest.json` can be consumed
-by `native-build` with explicit overrides. Embedded SDK and MSBuild requests use the same
-Host construction logic; see [native invocation tests](testing.md) and [MSBuild](msbuild.md).
+`api.projectionInputs.sources`, `references` and `defines` supply static analysis inputs for projection, compile-time constants and external managed types. They are not project build instructions. Compile handwritten partials and external types in your consumer. Compile, link and deploy native libraries and generated bridges with your external build system.
 
 ## Runtime package or source delivery
 
@@ -361,62 +342,9 @@ The package and source variants must pass the same codec, module, handle and cal
 Do not add duplicate Runtime implementations for one binding. Multiple source-runtime bindings
 use separate API-local namespaces; a custom namespace is an explicit collision responsibility.
 
-## Composition, profiles and path ownership
+## Local composition, profiles and path ownership
 
-The precedence is built-in defaults, selected named profile, ordered `extends` bases,
-current document, then explicit CLI/SDK overrides. Scalars replace; objects merge by field;
-ordinary lists replace. Values `false`, `0` and empty strings are not silently ignored;
-their validity is decided by the field's schema and final validation. Inheritance cycles fail.
-
-```json
-{
-  "schemaVersion": 1,
-  "extends": ["base.bindgen.json"],
-  "profiles": {
-    "single": { "output": { "layout": "singleFile" } }
-  },
-  "profile": "single",
-  "output": { "root": "Generated" }
-}
-```
-
-Each local document's paths retain that document's directory as their origin. CLI overrides
-use the invocation directory. Plugin settings retain their `pathBase` and value origins.
-Workspace paths are relative to the workspace document, while each binding retains its own
-base. A remote base uses an explicit object; a bare URL string never triggers a download:
-
-```json
-{
-  "schemaVersion": 1,
-  "extends": [
-    {
-      "url": "https://example.com/bgcs/base.json",
-      "sha256": "<64 hexadecimal digits identifying the exact response bytes>",
-      "pathBase": "./bindings"
-    }
-  ]
-}
-```
-
-`pathBase` explicitly identifies the local base for paths in the remote document,
-relative to the declaring document's local base or absolute. URL directories never
-become local directories and there is no current-directory fallback. A remote
-document's further local bases use that explicit base. Every document declares
-`schemaVersion: 1`; content is verified before JSON parsing or merging.
-
-Inputs and redirects require HTTPS without URI fragments or embedded credentials.
-At most five redirects and 30 seconds are allowed per remote read. Each document
-is limited to 16 MiB; composition permits 128 document visits, 64 MiB of input and
-64 inheritance levels. Remote bytes stay in this composition's memory and do not
-create a disk download cache. Conflicting content pins for one URL fail. Local
-file identities remain revalidated; remote digest/length/path-base identities are
-recorded separately rather than masquerading as local file dependencies.
-
-Embedded callers can cancel composition with `GenerationRequest.FromFileAsync(path,
-cancellationToken: token)`, `BuildRequest.FromFileAsync(...)` and
-`WorkspaceLoader.LoadAsync(...)`. A `BindingConfigurationLoader` can receive a
-caller-owned `HttpClient` for a custom HTTPS transport. Its caller manages the
-client lifetime and should disable automatic redirects.
+`extends` lists local configuration paths composed in declaration order. Paths resolve from the document which declares them; URLs are not loaded. Named profiles apply after local composition. Cycles, unknown properties and conflicts must be repaired explicitly. `GenerationRequest.FromFileAsync(path, cancellationToken: token)` supports cancellation of local reads.
 
 ## Plugin bootstrap and cache policy
 
@@ -453,7 +381,7 @@ A cache hit cannot skip this request's required build or invocation validation.
 
 ## Execution, workspaces and publication
 
-`execution` contains positive session, managed-compilation and native-build deadlines.
+`execution` contains generation/session deadlines.
 
 `execution.diagnostics` controls warning promotion at candidate gates:
 
@@ -582,7 +510,7 @@ native facts, add native enum members or change an enum's native storage width.
 Use either typed `value` or `expression` for one member. Typed values preserve
 exact integer strings and Unicode text. Expressions must be bounded C#
 compile-time expressions supported by the framework, generated constant/enum
-carriers and declared `managedBuild.sources` / `managedBuild.references`.
+carriers and declared `api.projectionInputs.sources` / `api.projectionInputs.references`.
 Statements, directives, runtime calls, undeclared consumer-only references,
 out-of-range enum values and ambiguous
 selectors fail before emission. The planner compiles assertions with warnings
@@ -610,8 +538,8 @@ assembly references retain their complete dependency requirement, including
 unselected members and type-forwarding assemblies.
 
 For example, declare a source containing `Vendor.Values.Answer` or its assembly
-under `managedBuild`, then use `"expression": "global::Vendor.Values.Answer"`.
-`managedBuild.defines` augments the plain `net10.0` validation project's framework
+under `api.projectionInputs`, then use `"expression": "global::Vendor.Values.Answer"`.
+`api.projectionInputs.defines` augments the plain `net10.0` validation project's framework
 symbols and default Debug symbols. Errors in the selected constant, its field,
 signature, alias or dependency fail generation. Unresolved bodies of handwritten
 partial methods on the generated API/context can be deferred because constant
@@ -632,8 +560,8 @@ only when enabled, and processors cannot substitute its configured value.
 
 For a declarative consumer-owned import constant, set
 `api.importLibraryNameConstant` to a qualified field such as
-`Vendor.LibraryNames.Native`, and declare its source in `managedBuild.sources`
-or its assembly in `managedBuild.references`. DllImport and LibraryImport keep
+`Vendor.LibraryNames.Native`, and declare its source in `api.projectionInputs.sources`
+or its assembly in `api.projectionInputs.references`. DllImport and LibraryImport keep
 the fully qualified field reference in their attributes. Generation compiles
 the frozen inputs without executing consumer code and requires one `const string`
 whose value exactly equals the resolved import name (`__Internal` for the browser

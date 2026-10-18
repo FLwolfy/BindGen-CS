@@ -16,43 +16,11 @@
       "type": "array",
       "default": [],
       "items": {
-        "oneOf": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "not": {
-              "pattern": "://"
-            }
-          },
-          {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "url",
-              "sha256",
-              "pathBase"
-            ],
-            "properties": {
-              "url": {
-                "type": "string",
-                "format": "uri",
-                "pattern": "^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?][^#]*)?$"
-              },
-              "sha256": {
-                "type": "string",
-                "pattern": "^[0-9a-fA-F]{64}$"
-              },
-              "pathBase": {
-                "type": "string",
-                "minLength": 1,
-                "not": {
-                  "pattern": "://"
-                },
-                "description": "Explicit local base for paths inside the remote document, relative to the declaring document's local base or absolute."
-              }
-            }
-          }
-        ]
+        "type": "string",
+        "minLength": 1,
+        "not": {
+          "pattern": "://"
+        }
       }
     },
     "profile": {
@@ -1319,6 +1287,33 @@
                   "additionalProperties": false
                 },
                 "default": []
+              },
+              "projectionInputs": {
+                "type": "object",
+                "properties": {
+                  "references": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  },
+                  "defines": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  }
+                },
+                "additionalProperties": false
               },
               "functionAliases": {
                 "type": "array",
@@ -3096,137 +3091,6 @@
             },
             "additionalProperties": false
           },
-          "nativeBuild": {
-            "type": "object",
-            "properties": {
-              "packaging": {
-                "type": "object",
-                "properties": {
-                  "enabled": {
-                    "type": "boolean",
-                    "default": false
-                  },
-                  "packager": {
-                    "type": "string",
-                    "default": "auto"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "outputKind": {
-                "enum": [
-                  "sharedLibrary",
-                  "staticLibrary",
-                  "object",
-                  null
-                ]
-              },
-              "buildToolPath": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "default": null
-              },
-              "auxiliaryToolPath": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "default": null
-              },
-              "mode": {
-                "type": "string",
-                "default": "none",
-                "enum": [
-                  "none",
-                  "sources",
-                  "prebuilt"
-                ]
-              },
-              "provider": {
-                "type": "string",
-                "default": "auto"
-              },
-              "sources": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "artifacts": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "prebuiltTargetId": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "default": null
-              },
-              "compilerArguments": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "linkerArguments": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "libraries": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "libraryDirectories": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              }
-            },
-            "additionalProperties": false
-          },
-          "managedBuild": {
-            "type": "object",
-            "properties": {
-              "references": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "sources": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "defines": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              }
-            },
-            "additionalProperties": false
-          },
           "output": {
             "type": "object",
             "properties": {
@@ -3394,18 +3258,6 @@
               "sessionTimeoutSeconds": {
                 "type": "integer",
                 "default": 1800,
-                "minimum": 1,
-                "maximum": 4294967
-              },
-              "managedCompilationTimeoutSeconds": {
-                "type": "integer",
-                "default": 600,
-                "minimum": 1,
-                "maximum": 4294967
-              },
-              "nativeBuildTimeoutSeconds": {
-                "type": "integer",
-                "default": 900,
                 "minimum": 1,
                 "maximum": 4294967
               }
@@ -4698,6 +4550,33 @@
             "additionalProperties": false
           },
           "default": []
+        },
+        "projectionInputs": {
+          "type": "object",
+          "properties": {
+            "references": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "defines": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            }
+          },
+          "additionalProperties": false
         },
         "functionAliases": {
           "type": "array",
@@ -6475,137 +6354,6 @@
       },
       "additionalProperties": false
     },
-    "nativeBuild": {
-      "type": "object",
-      "properties": {
-        "packaging": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": false
-            },
-            "packager": {
-              "type": "string",
-              "default": "auto"
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputKind": {
-          "enum": [
-            "sharedLibrary",
-            "staticLibrary",
-            "object",
-            null
-          ]
-        },
-        "buildToolPath": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null
-        },
-        "auxiliaryToolPath": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null
-        },
-        "mode": {
-          "type": "string",
-          "default": "none",
-          "enum": [
-            "none",
-            "sources",
-            "prebuilt"
-          ]
-        },
-        "provider": {
-          "type": "string",
-          "default": "auto"
-        },
-        "sources": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
-        "artifacts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
-        "prebuiltTargetId": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null
-        },
-        "compilerArguments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
-        "linkerArguments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
-        "libraries": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
-        "libraryDirectories": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        }
-      },
-      "additionalProperties": false
-    },
-    "managedBuild": {
-      "type": "object",
-      "properties": {
-        "references": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
-        "sources": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
-        "defines": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        }
-      },
-      "additionalProperties": false
-    },
     "output": {
       "type": "object",
       "properties": {
@@ -6775,18 +6523,6 @@
           "default": 1800,
           "minimum": 1,
           "maximum": 4294967
-        },
-        "managedCompilationTimeoutSeconds": {
-          "type": "integer",
-          "default": 600,
-          "minimum": 1,
-          "maximum": 4294967
-        },
-        "nativeBuildTimeoutSeconds": {
-          "type": "integer",
-          "default": 900,
-          "minimum": 1,
-          "maximum": 4294967
         }
       },
       "additionalProperties": false
@@ -6889,43 +6625,11 @@
           "type": "array",
           "default": [],
           "items": {
-            "oneOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "not": {
-                  "pattern": "://"
-                }
-              },
-              {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "url",
-                  "sha256",
-                  "pathBase"
-                ],
-                "properties": {
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "pattern": "^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?][^#]*)?$"
-                  },
-                  "sha256": {
-                    "type": "string",
-                    "pattern": "^[0-9a-fA-F]{64}$"
-                  },
-                  "pathBase": {
-                    "type": "string",
-                    "minLength": 1,
-                    "not": {
-                      "pattern": "://"
-                    },
-                    "description": "Explicit local base for paths inside the remote document, relative to the declaring document's local base or absolute."
-                  }
-                }
-              }
-            ]
+            "type": "string",
+            "minLength": 1,
+            "not": {
+              "pattern": "://"
+            }
           }
         },
         "profile": {
@@ -8192,6 +7896,33 @@
                       "additionalProperties": false
                     },
                     "default": []
+                  },
+                  "projectionInputs": {
+                    "type": "object",
+                    "properties": {
+                      "references": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
+                      "sources": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
+                      "defines": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      }
+                    },
+                    "additionalProperties": false
                   },
                   "functionAliases": {
                     "type": "array",
@@ -9969,137 +9700,6 @@
                 },
                 "additionalProperties": false
               },
-              "nativeBuild": {
-                "type": "object",
-                "properties": {
-                  "packaging": {
-                    "type": "object",
-                    "properties": {
-                      "enabled": {
-                        "type": "boolean",
-                        "default": false
-                      },
-                      "packager": {
-                        "type": "string",
-                        "default": "auto"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "outputKind": {
-                    "enum": [
-                      "sharedLibrary",
-                      "staticLibrary",
-                      "object",
-                      null
-                    ]
-                  },
-                  "buildToolPath": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "default": null
-                  },
-                  "auxiliaryToolPath": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "default": null
-                  },
-                  "mode": {
-                    "type": "string",
-                    "default": "none",
-                    "enum": [
-                      "none",
-                      "sources",
-                      "prebuilt"
-                    ]
-                  },
-                  "provider": {
-                    "type": "string",
-                    "default": "auto"
-                  },
-                  "sources": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  },
-                  "artifacts": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  },
-                  "prebuiltTargetId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "default": null
-                  },
-                  "compilerArguments": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  },
-                  "linkerArguments": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  },
-                  "libraries": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  },
-                  "libraryDirectories": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  }
-                },
-                "additionalProperties": false
-              },
-              "managedBuild": {
-                "type": "object",
-                "properties": {
-                  "references": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  },
-                  "sources": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  },
-                  "defines": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": []
-                  }
-                },
-                "additionalProperties": false
-              },
               "output": {
                 "type": "object",
                 "properties": {
@@ -10267,18 +9867,6 @@
                   "sessionTimeoutSeconds": {
                     "type": "integer",
                     "default": 1800,
-                    "minimum": 1,
-                    "maximum": 4294967
-                  },
-                  "managedCompilationTimeoutSeconds": {
-                    "type": "integer",
-                    "default": 600,
-                    "minimum": 1,
-                    "maximum": 4294967
-                  },
-                  "nativeBuildTimeoutSeconds": {
-                    "type": "integer",
-                    "default": 900,
                     "minimum": 1,
                     "maximum": 4294967
                   }
@@ -11571,6 +11159,33 @@
                 "additionalProperties": false
               },
               "default": []
+            },
+            "projectionInputs": {
+              "type": "object",
+              "properties": {
+                "references": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                },
+                "defines": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                }
+              },
+              "additionalProperties": false
             },
             "functionAliases": {
               "type": "array",
@@ -13348,137 +12963,6 @@
           },
           "additionalProperties": false
         },
-        "nativeBuild": {
-          "type": "object",
-          "properties": {
-            "packaging": {
-              "type": "object",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false
-                },
-                "packager": {
-                  "type": "string",
-                  "default": "auto"
-                }
-              },
-              "additionalProperties": false
-            },
-            "outputKind": {
-              "enum": [
-                "sharedLibrary",
-                "staticLibrary",
-                "object",
-                null
-              ]
-            },
-            "buildToolPath": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "default": null
-            },
-            "auxiliaryToolPath": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "default": null
-            },
-            "mode": {
-              "type": "string",
-              "default": "none",
-              "enum": [
-                "none",
-                "sources",
-                "prebuilt"
-              ]
-            },
-            "provider": {
-              "type": "string",
-              "default": "auto"
-            },
-            "sources": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            },
-            "artifacts": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            },
-            "prebuiltTargetId": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "default": null
-            },
-            "compilerArguments": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            },
-            "linkerArguments": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            },
-            "libraries": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            },
-            "libraryDirectories": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            }
-          },
-          "additionalProperties": false
-        },
-        "managedBuild": {
-          "type": "object",
-          "properties": {
-            "references": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            },
-            "sources": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            },
-            "defines": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": []
-            }
-          },
-          "additionalProperties": false
-        },
         "output": {
           "type": "object",
           "properties": {
@@ -13646,18 +13130,6 @@
             "sessionTimeoutSeconds": {
               "type": "integer",
               "default": 1800,
-              "minimum": 1,
-              "maximum": 4294967
-            },
-            "managedCompilationTimeoutSeconds": {
-              "type": "integer",
-              "default": 600,
-              "minimum": 1,
-              "maximum": 4294967
-            },
-            "nativeBuildTimeoutSeconds": {
-              "type": "integer",
-              "default": 900,
               "minimum": 1,
               "maximum": 4294967
             }

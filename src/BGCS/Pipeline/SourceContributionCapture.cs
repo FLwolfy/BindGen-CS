@@ -242,13 +242,6 @@ internal sealed class SourceContributionCapture : IDisposable
         return directories.IsEmpty ? [] : [new(Path.Combine(storeRoot, "native"), directories)];
     }
 
-    internal SourceSnapshot NativeInputs(SourceSnapshot source)
-    {
-        HashSet<string> managed = m_files.Where(file => file.Artifact.role == SourceContributionRole.ManagedSource)
-            .Select(file => Physical(file.Relative)).ToHashSet(s_paths);
-        return source with { files = source.files.Where(file => !managed.Contains(file.path)).ToImmutableArray() };
-    }
-
     internal void Verify()
     {
         VerifyTemporaryRoot(m_temporaryRoot, m_physicalTemporaryRoot);

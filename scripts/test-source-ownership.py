@@ -59,6 +59,15 @@ class SourceOwnershipTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'RequiredFixture.cs'):
             verify_source_ownership(self.root)
 
+    def test_example_cache_does_not_hide_other_bgcs_sources(self):
+        self.write('.gitignore', '.bgcs/\n')
+        self.write('src/Contracts/Port.cs')
+        self.write('examples/QuickStart/.bgcs/cache/entry.stage.json')
+        self.assertEqual(1, verify_source_ownership(self.root))
+        self.write('examples/QuickStart/.bgcs/RequiredPlugin.cs')
+        with self.assertRaisesRegex(RuntimeError, 'RequiredPlugin.cs'):
+            verify_source_ownership(self.root)
+
     def test_project_native_schema_and_tool_sources_cannot_be_hidden(self):
         self.write('.gitignore', 'Hidden/\n')
         expected = ('integrations/Hidden/Task.targets', 'distribution/Hidden/Product.nuspec',

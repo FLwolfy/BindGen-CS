@@ -32,7 +32,7 @@ internal enum CppFunctionFlags
     /// </summary>
     Virtual = 1 << 3,
     /// <summary>
-    /// This is a C++ or Objective-C instance method
+    /// This is a C++ instance method
     /// </summary>
     Method = 1 << 4,
     /// <summary>
@@ -59,8 +59,4 @@ internal enum CppFunctionFlags
     /// This is a deleted function
     /// </summary>
     Deleted = 1 << 10,
-    /// <summary>
-    /// This is an Objective-C class method
-    /// </summary>
-    ClassMethod = 1 << 11,
 }

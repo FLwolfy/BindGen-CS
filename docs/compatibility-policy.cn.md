@@ -22,6 +22,6 @@ BindGen-CS 维护一套当前配置、lowering 和生成契约。修改源码时
 
 ## 发布证据
 
-`bindgen-cs supply-chain` 输出确定性的 SPDX 2.3 SBOM 与 SLSA v1 provenance，记录产物 SHA-256、源码 revision、builder 身份与构建参数。发布自动化可以生成 GitHub OIDC/Sigstore attestations；只有实际取得身份并发布可验证 attestation 的授权 job 才能证明签名发布，本地执行不能替代。
+`dotnet run --project eng/BGCS.RepositoryTools -c Release -- supply-chain` 输出确定性的 SPDX 2.3 SBOM 与 SLSA v1 provenance，记录产物 SHA-256、源码 revision、builder 身份与构建参数。发布自动化可以生成 GitHub OIDC/Sigstore attestations；只有实际取得身份并发布可验证 attestation 的授权 job 才能证明签名发布，本地执行不能替代。
 
 Package 验收还需要检查公开 API、依赖许可证、漏洞、确定性包内容、干净消费者及支持目标的实际调用矩阵。未执行的宿主和架构在验收报告中明确标为未验证。

@@ -87,7 +87,7 @@ internal static class WorkerPluginPreparation
         if (SourceSnapshotVerifier.GetMismatch(captured.inputs, cancellationToken) is string mismatch)
             throw new IOException("Worker extension inputs changed before cache lookup. " + mismatch);
         inputs?.CaptureWorkerPlugins(captured, request.target);
-        inputs?.CaptureObservation(async token =>
+        inputs?.CaptureWorkerStateCheck(async token =>
         {
             WorkerPluginCapture current = await worker.CapturePluginInputsAsync(prepared, token).ConfigureAwait(false);
             if (!JsonElement.DeepEquals(JsonSerializer.SerializeToElement(captured, WorkerProtocol.jsonOptions), JsonSerializer.SerializeToElement(current, WorkerProtocol.jsonOptions)))

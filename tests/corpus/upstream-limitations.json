@@ -97,9 +97,39 @@
         "SDL_LogError",
         "SDL_LogCritical",
         "SDL_LogMessage",
-        "SDL_RenderDebugTextFormat"
+        "SDL_RenderDebugTextFormat",
+        "SDL_size_add_check_overflow_builtin",
+        "SDL_size_mul_check_overflow_builtin"
       ],
-      "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+      "reason": "Listed variadic entry points require fixed native wrappers. Exactly two compiler-only inline implementation helpers are excluded from the portable corpus; their public portable add/multiply operations remain selected. This is a Clang/native-compiler branch boundary, not an upstream library defect.",
+      "compilerConditionalHelpers": [
+        {
+          "id": "sdl-add-overflow-compiler-implementation",
+          "repository": "SDL",
+          "revision": "5f78ded3194a85ebdabc219f844811ba953b4450",
+          "header": "include/SDL3/SDL_stdinc.h",
+          "line": 6142,
+          "lastLine": 6152,
+          "headerSha256": "3215255514d7af874cfbf797ec132e493a704f34a9e27ad2c49b35ada0624297",
+          "sourceSignature": "SDL_size_add_check_overflow_builtin",
+          "portableCounterpart": "SDL_size_add_check_overflow",
+          "declaration": "#ifndef SDL_WIKI_DOCUMENTATION_SECTION\n#if SDL_HAS_BUILTIN(__builtin_add_overflow)\n/* This needs to be wrapped in an inline rather than being a direct #define,\n * the same as the call to __builtin_mul_overflow() above. */\nSDL_FORCE_INLINE bool SDL_size_add_check_overflow_builtin(size_t a, size_t b, size_t *ret)\n{\n    return (__builtin_add_overflow(a, b, ret) == 0);\n}\n#define SDL_size_add_check_overflow(a, b, ret) SDL_size_add_check_overflow_builtin(a, b, ret)\n#endif\n#endif",
+          "reason": "Compiler-conditional inline implementation detail requiring __builtin_add_overflow. Not an exported SDL DLL function and absent under MSVC. The portable SDL_size_add_check_overflow operation remains selected, wrapped and independently asserted."
+        },
+        {
+          "id": "sdl-mul-overflow-compiler-implementation",
+          "repository": "SDL",
+          "revision": "5f78ded3194a85ebdabc219f844811ba953b4450",
+          "header": "include/SDL3/SDL_stdinc.h",
+          "line": 6103,
+          "lastLine": 6114,
+          "headerSha256": "3215255514d7af874cfbf797ec132e493a704f34a9e27ad2c49b35ada0624297",
+          "sourceSignature": "SDL_size_mul_check_overflow_builtin",
+          "portableCounterpart": "SDL_size_mul_check_overflow",
+          "declaration": "#ifndef SDL_WIKI_DOCUMENTATION_SECTION\n#if SDL_HAS_BUILTIN(__builtin_mul_overflow)\n/* This needs to be wrapped in an inline rather than being a direct #define,\n * because __builtin_mul_overflow() is type-generic, but we want to be\n * consistent about interpreting a and b as size_t. */\nSDL_FORCE_INLINE bool SDL_size_mul_check_overflow_builtin(size_t a, size_t b, size_t *ret)\n{\n    return (__builtin_mul_overflow(a, b, ret) == 0);\n}\n#define SDL_size_mul_check_overflow(a, b, ret) SDL_size_mul_check_overflow_builtin(a, b, ret)\n#endif\n#endif",
+          "reason": "Compiler-conditional inline implementation detail requiring __builtin_mul_overflow. Not an exported SDL DLL function and absent under MSVC. The portable SDL_size_mul_check_overflow operation remains selected, wrapped and independently asserted."
+        }
+      ]
     }
   }
 }

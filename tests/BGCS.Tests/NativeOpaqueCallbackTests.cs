@@ -54,10 +54,10 @@ public sealed class NativeOpaqueCallbackTests
                 source = new() { language = SourceLanguage.C, headers = ["callbacks.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.OpaqueCallbacks", name = "CallbackApi", importMode = mode },
                 runtime = new() { mode = mode == BindingImportMode.LibraryImport ? "source" : "package" },
-                nativeBuild = new() { mode = "sources", sources = ["callbacks.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
             string factory = mode == BindingImportMode.FunctionTable ? "CallbackApi.Load(binary)" : "CallbackApi.Create()";
@@ -76,7 +76,7 @@ public sealed class NativeOpaqueCallbackTests
                 }
                 """;
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(target, "managed"),
-                Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin"))), "callback_fixture", probe, "OpaqueCallbackProbe", root,
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target))), "callback_fixture", probe, "OpaqueCallbackProbe", root,
                 configuration.runtime.mode == "source"));
             string metadata = await File.ReadAllTextAsync(Path.Combine(target, "metadata", "abi.manifest.json"));
             Assert.Contains("opaqueCallbackAddresses", metadata, StringComparison.Ordinal);

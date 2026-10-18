@@ -22,7 +22,7 @@ dotnet tool install --global BindGen-CS --version 3.0.0
 bindgen-cs init include/native.h --language c
 bindgen-cs doctor bindgen.json
 bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
+bindgen-cs generate bindgen.json
 ```
 
 C++ uses the same grouped configuration and `generate` command. `bridge` requests only native bridge artifacts through the Host, so it does not require a managed representation of every selected ABI.

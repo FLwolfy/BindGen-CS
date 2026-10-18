@@ -16,16 +16,14 @@ namespace BGCS.Tests;
 public sealed class NativeBufferTests
 {
     [Theory]
-    [InlineData(BindingImportMode.FunctionTable, false, "auto")]
-    [InlineData(BindingImportMode.FunctionTable, true, "auto")]
-    [InlineData(BindingImportMode.DllImport, false, "auto")]
-    [InlineData(BindingImportMode.DllImport, true, "auto")]
-    [InlineData(BindingImportMode.LibraryImport, false, "auto")]
-    [InlineData(BindingImportMode.LibraryImport, true, "auto")]
-    [InlineData(BindingImportMode.FunctionTable, true, "msvc")]
-    public async Task DeclaredBuffers_PinExactBoundsPreserveAliasingAndRejectUnsafeCalls(BindingImportMode mode, bool sourceRuntime, string provider)
+    [InlineData(BindingImportMode.FunctionTable, false)]
+    [InlineData(BindingImportMode.FunctionTable, true)]
+    [InlineData(BindingImportMode.DllImport, false)]
+    [InlineData(BindingImportMode.DllImport, true)]
+    [InlineData(BindingImportMode.LibraryImport, false)]
+    [InlineData(BindingImportMode.LibraryImport, true)]
+    public async Task DeclaredBuffers_PinExactBoundsPreserveAliasingAndRejectUnsafeCalls(BindingImportMode mode, bool sourceRuntime)
     {
-        if (provider == "msvc" && !OperatingSystem.IsWindows()) return;
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-native-buffer-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         try
@@ -71,13 +69,13 @@ public sealed class NativeBufferTests
                     Rule("increment", NativeParameterDirection.InputOutput), Rule("fill", NativeParameterDirection.Output),
                     Rule("mix", NativeParameterDirection.Input, "input"), Rule("mix", NativeParameterDirection.Output, "output"),
                     Rule("small_count", NativeParameterDirection.Input), Rule("inspect_aligned", NativeParameterDirection.Input) with { requiredAlignment = 64, allowsNull = false }] },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" }, nativeBuild = new() { mode = "sources", sources = ["buffers.c"], provider = provider }, cache = new() { enabled = false }
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },  cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, temporary)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
             Assert.True(built.success, built.GetDiagnosticSummary());
             string target = System.Linq.Enumerable.Single(Directory.GetDirectories(built.outputRoot));
-            string native = System.Linq.Enumerable.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string native = System.Linq.Enumerable.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             string consumer = Path.Combine(temporary, "Consumer");
             Directory.CreateDirectory(consumer);
             string runtime = SecurityElement.Escape(typeof(NativeModuleSession).Assembly.Location)!;

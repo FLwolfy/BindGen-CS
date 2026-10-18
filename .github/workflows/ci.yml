@@ -23,9 +23,6 @@ jobs:
       BGCS_CC: gcc
       BGCS_GNU_CXX: g++
       BGCS_GNU_CC: gcc
-      BGCS_REQUIRE_GNU_SOURCE_VIEW: "1"
-      BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
-      BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,13 +45,7 @@ jobs:
           unset Platform PLATFORM platform
           dotnet restore tests/BGCS.Tests/BGCS.Tests.csproj 2>&1 | tee artifacts/gnu-smoke/restore.log
           dotnet build tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-restore -m:2 -nr:false 2>&1 | tee artifacts/gnu-smoke/build.log
-      - name: Check repeated GNU debug verification identity before the full smoke matrix
-        shell: bash
-        run: |
-          set -o pipefail
-          unset Platform PLATFORM platform
-          python scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-build --no-restore -m:1 -nr:false --filter "FullyQualifiedName=BGCS.Tests.NativeSourceViewCacheTests.GnuRecordTraitsAreReacquiredBeforeWarmReuseAndRemainStableWithDebugObjects" --results-directory artifacts/gnu-smoke --logger "trx;LogFileName=warm-identity.trx" --logger "console;verbosity=detailed" 2>&1 | tee artifacts/gnu-smoke/warm-identity.log
-      - name: Exercise GNU standard values native observations DTO drift and C typedefs
+      - name: Exercise generated GNU standard values, DTO storage and C typedef consumers
         shell: bash
         run: |
           set -o pipefail
@@ -107,23 +98,26 @@ jobs:
       - name: Install and verify locked native WebAssembly workload
         run: python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/wasm.json
 
-      - name: Validate real neutral Wasm archive and relocatable native plans
+      - name: Compile the explicit native fixture with the selected Wasm workload
         shell: bash
         run: |
-          python - <<'PY'
+          python - <<'PYCODE'
           import json, os, subprocess
           from pathlib import Path
           environment = {key: value for key, value in os.environ.items() if key.casefold() != 'platform'}
           query = subprocess.check_output(['dotnet', 'msbuild', 'tests/wasm/Consumer.project.xml', '-nologo',
               '-getProperty:EmscriptenSdkToolsPath,EmscriptenCacheSdkCacheDir'], text=True, env=environment)
           properties = json.loads(query)['Properties']
-          environment['BGCS_WASM_SDK_TOOLS_ROOT'] = properties['EmscriptenSdkToolsPath']
-          environment['BGCS_WASM_CACHE_TOOLS_ROOT'] = str(Path(properties['EmscriptenCacheSdkCacheDir']).parent.parent)
-          environment['BGCS_REQUIRE_WASM_NATIVE'] = '1'
-          subprocess.run(['dotnet', 'test', 'tests/BGCS.NativeBuild.Tests/BGCS.NativeBuild.Tests.csproj',
-              '-c', 'Release', '-m:1', '-nodeReuse:false', '--filter', 'Category=WasmNativeProvider',
-              '--logger', 'trx'], check=True, env=environment)
-          PY
+          compiler = Path(properties['EmscriptenSdkToolsPath']) / 'bin' / ('clang.exe' if os.name == 'nt' else 'clang')
+          sysroot = Path(properties['EmscriptenCacheSdkCacheDir']) / 'sysroot'
+          if not compiler.is_file() or not sysroot.is_dir(): raise RuntimeError('Missing locked workload compiler/sysroot.')
+          output = Path('artifacts/wasm-fixture-compile'); output.mkdir(parents=True, exist_ok=True)
+          source = output / 'fixture.c'; source.write_text('int fixture_add(int a, int b) { return a+b; }\n')
+          target = output / 'fixture.o'
+          subprocess.run([str(compiler), '--target=wasm32-unknown-emscripten', '--sysroot=' + str(sysroot),
+              '-std=c17', '-c', str(source), '-o', str(target)], check=True, env=environment)
+          if target.read_bytes()[:4] != b'\0asm': raise RuntimeError('Fixture compiler produced no Wasm object.')
+          PYCODE
 
       - name: Generate, link, and invoke all import modes in a browser
         if: matrix.deployment == 'interpreter'
@@ -167,7 +161,7 @@ jobs:
             artifacts/wasm-acceptance/**/Consumer.csproj
             artifacts/wasm-acceptance/**/Native/*
             artifacts/wasm-negative
-            tests/BGCS.NativeBuild.Tests/TestResults/*.trx
+            artifacts/wasm-fixture-compile
 
   native-aot-invocation:
     name: Independent NativeAOT invocation (${{ matrix.os }})
@@ -239,15 +233,12 @@ jobs:
         include:
           - os: ubuntu-24.04
             target: linux-x64-gnu
-            require-windows-providers: "0"
             cpp-compiler: g++
           - os: windows-2022
             target: windows-x64-msvc
-            require-windows-providers: "1"
             cpp-compiler: ""
           - os: macos-15-intel
             target: macos-x64-darwin
-            require-windows-providers: "0"
             cpp-compiler: clang++
     runs-on: ${{ matrix.os }}
 
@@ -271,9 +262,6 @@ jobs:
 
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-
-      - name: Install locked Meson native-provider prerequisite
-        run: python -m pip install --disable-pip-version-check meson==1.8.3
 
       - name: Build missing ClangSharp 20 runtime for macOS Intel
         if: runner.os == 'macOS'
@@ -331,7 +319,6 @@ jobs:
           PY
         env:
           BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
-          BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
 
       - name: Test managed and native runtime matrix
         shell: bash
@@ -339,10 +326,7 @@ jobs:
           unset Platform PLATFORM platform
           python scripts/compiler_test_environment.py -- dotnet test BindGen-CS.slnx --configuration Release --no-build -m:1 -nr:false --logger trx --logger "console;verbosity=normal" --filter "FullyQualifiedName!~BGCS.Tests."
         env:
-          BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
           BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
-          BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
-          BGCS_REQUIRE_GNU_SOURCE_VIEW: ${{ runner.os == 'Linux' && '1' || '' }}
 
       - name: Upload test results
         if: always()
@@ -398,15 +382,12 @@ jobs:
           - target: linux-x64-gnu
             os: ubuntu-24.04
             compiler: g++
-            windows-providers: "0"
           - target: windows-x64-msvc
             os: windows-2022
             compiler: ""
-            windows-providers: "1"
           - target: macos-x64-darwin
             os: macos-15-intel
             compiler: clang++
-            windows-providers: "0"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -431,15 +412,10 @@ jobs:
         with:
           name: host-execution-${{ matrix.target }}
           path: artifacts/host-test-assets
-      - name: Install locked Meson provider prerequisite
-        run: python -m pip install --disable-pip-version-check meson==1.8.3
       - name: Discover and run the exact deterministic Host case partition
         run: python scripts/run-host-test-shards.py run --assets artifacts/host-test-assets --shard ${{ matrix.shard }} --output artifacts/host-test-shards
         env:
-          BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.windows-providers }}
           BGCS_CPP2C_CXX: ${{ matrix.compiler }}
-          BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
-          BGCS_REQUIRE_GNU_SOURCE_VIEW: ${{ runner.os == 'Linux' && '1' || '' }}
       - name: Upload actual shard report and independent TRX
         if: always()
         uses: actions/upload-artifact@v4
@@ -460,15 +436,12 @@ jobs:
           - target: linux-x64-gnu
             os: ubuntu-24.04
             compiler: g++
-            windows-providers: "0"
           - target: windows-x64-msvc
             os: windows-2022
             compiler: ""
-            windows-providers: "1"
           - target: macos-x64-darwin
             os: macos-15-intel
             compiler: clang++
-            windows-providers: "0"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -521,15 +494,12 @@ jobs:
         include:
           - os: ubuntu-24.04
             target: linux-x64-gnu
-            require-windows-providers: "0"
             cpp-compiler: g++
           - os: windows-2022
             target: windows-x64-msvc
-            require-windows-providers: "1"
             cpp-compiler: ""
           - os: macos-15-intel
             target: macos-x64-darwin
-            require-windows-providers: "0"
             cpp-compiler: clang++
     runs-on: ${{ matrix.os }}
 
@@ -558,9 +528,6 @@ jobs:
         run: >-
           python -m pip install --disable-pip-version-check --only-binary=:all:
           --require-hashes -r scripts/requirements-performance.txt
-
-      - name: Install locked Meson native-provider prerequisite
-        run: python -m pip install --disable-pip-version-check meson==1.8.3
 
       - name: Use the exact accepted Intel parser supplement
         if: runner.os == 'macOS'
@@ -592,10 +559,7 @@ jobs:
         env:
           CONFIGURATION: "Release"
           BGCS_HOST_SHARD_EVIDENCE: ${{ github.workspace }}/artifacts/host-test-complete/raw
-          BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS: ${{ matrix.require-windows-providers }}
           BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
-          BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
-          BGCS_REQUIRE_GNU_SOURCE_VIEW: ${{ runner.os == 'Linux' && '1' || '' }}
 
       - name: Upload acceptance evidence
         if: always()

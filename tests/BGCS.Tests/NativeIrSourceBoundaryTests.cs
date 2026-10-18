@@ -47,12 +47,12 @@ public sealed class NativeIrSourceBoundaryTests
                 api = new() { @namespace = "Generated.IrSource", name = "SourceApi", importMode = mode },
                 semantics = new() { callbackParameters = [new() { function = "NativeInvoke", parameter = "callback", lifetime = NativeLifetimeKind.Call,
                     retained = false, threading = NativeCallbackThreading.CallerThread, failureReturn = "-1" }] },
-                nativeBuild = new() { mode = "none" }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = Host();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             NativeDeclaration declaration = Assert.Single(target.native.declarations, declaration => declaration.name == "NativeInvoke");
             if (OperatingSystem.IsWindows()) Assert.Contains(declaration.attributes, attribute => attribute.Contains("dllimport", StringComparison.OrdinalIgnoreCase));
             Assert.Single(target.native.types, type => type.category == NativeTypeCategory.Alias && type.spelling == "NativeHandler");

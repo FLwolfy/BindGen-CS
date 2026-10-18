@@ -74,23 +74,16 @@ Owned result 要有匹配的 release function/domain 和 lifetime。非零借用
 
 可变参数和无明确 prototype 的调用要求固定签名 native wrapper。FunctionTable 不提供任意 varargs；存在 `va_list` 载体不等于通用可移植调用实现。
 
-## 桥接与实际编译器验证
+## 桥接源码与独立消费者验证
 
-C++ operation 表达构造、析构、native cast、参数/返回转换和异常边界。多继承采用真实原生 cast，不假定对象地址相同。异常在支持的 C ABI status/error 边界停止，cleanup 保持明确 allocator 所有权。
+类型化 operation 表达构造、析构、原生 cast、参数/返回转换和异常边界。多继承使用原生 cast；C++ 异常在 C status/error 边界停止，清理保留明确的 allocator 所有权。
 
-生成 C header 重新解析后比较导出名称、参数和返回。所有权/error/lifetime 按稳定身份合并，不因重解析丢失。受控源码 fragment 声明精确内容和输入，并接受 bridge 与原生构建检查。
+BGCS 重新解析生成的 C header，核对导出签名，并按稳定身份合并 ownership/error/lifetime 语义。
+需要的存储与调用签名断言作为源码输出，由消费者编译。生成阶段不调用编译器 driver、GCC/MSVC 预处理、对象编译或托管消费者测量程序。
+事实描述明确配置的 Clang 解析环境，下游构建必须保持头文件、宏、packing 和 ABI 相容。仓库的独立消费 fixture 自行编译并真实调用生成结果，以验证这些假设。
 
-源码构建比较有效声明，并用实际选择的编译器编译 trait/layout guard。Header、response/config、可执行文件、库和搜索输入锁定且发布前复核，以检测 parser/builder 的宏和布局差异。这不能代替真实 round trip。预编译输入需要明确目标来源和验证，仅检查 CPU 格式不能证明 libc ABI。
-
-有效声明把参数书写形式的数组维度与调整后的 pointer 调用签名分别保存，同时核对 inline、definition 和 linkage 事实。已选择的标量对象宏只在预处理输入中物化：实际原生编译器先展开自己的头文件分支与宏定义，事实 frontend 再核对 scalar kind、宽度、符号与值；const variable 直接比较其值。IEEE 值比较精确位模式，因此正零和负零不同。这些 frontend 常量保持 Declared 证据，不能据此声称已经独立证明所有编译器的浮点算术与优化行为。
-
-MSVC 预处理的 line directive 不携带 Clang 的 system-header 标记。事实 adapter 只对已解析 SDK include 根恢复该元数据，保留源码 token 和用户头分类；它还用仅供 parser 的非 builtin 名称保留一个冲突的 MSVC intrinsic 声明。少量未实现的 dependent type/member intrinsic 可出现在未实例化的 SDK 模板中；任何具体实例化都触发硬错误，包括 SFINAE，不能采用猜测值。未知 intrinsic、parser 无法求值的具体使用以及不匹配声明都阻止构建。这一有界兼容机制不表示 Clang 能解析任意 MSVC/GCC 扩展。
-
-GNU C++ 的系统头可能包含与固定 Clang frontend 不同的编译器扩展。适配器只允许把用户声明之前、具有实际依赖和系统来源证据的完整工具链头文件树转成独立声明前导。用户 token 仍来自所选 GNU 编译器，最终宏状态通过独立 `-dM` 操作取得。前导声明在 worker 私有 PCH 中存活至事实提取结束；清除它的宏环境后才解析已经展开的用户 token。PCH、Clang 句柄和专有 AST 不进入 Contracts。
-
-这条路径不是任意 GCC 源码转换：交错在用户声明之后的工具链 include、工具链头中嵌套的用户头、无法证明的 pack/pragma 历史、用户修改 compiler builtin，或依赖动态 builtin 的 include-entry 宏都会被明确拒绝。调用者应调整头文件边界或提供能准确描述该语言扩展的 frontend/shim；不能用相同大小的浮点类型替换 GNU 特殊类型来通过解析。
-
-使用声明前导的事实带有 `requiresNativeCompilerProof`。Host 在 `generate`、`bridge` 和所有 `build` 模式发布前，都要求实际所选原生编译器检查原始命名类型的规范身份、变量类型、枚举和已选择标量常量，并编译 storage guard 与 bridge。常量在支持头文件载入前冻结，浮点值比较精确 IEEE 位。最终构建参数另行接受有效事实和字符串字节检查。对象构建可能需要 relocatable link；这些证明既不表示完成最终库链接，也不表示真实调用或全部 ABI 已认证。无法证明的公开类型明确失败，私有 opaque 实现不会被当作可公开命名的原生类型。
+不支持的输入与缺少可靠按值 ABI 依据的签名明确拒绝。静态字段绑定只证明 scalar copy 的类型相容，不证明 CLR 实测布局或原生调用等价。
+需要时使用合适的 frontend、pointer 或原生 shim；生成器不运行编译器兼容重写，也不猜测同大小类型替代。
 
 ## Import 与最终源码
 
@@ -99,16 +92,6 @@ FunctionTable、DllImport 和 LibraryImport 共享 interop/语义模型，但各
 Processor 在最终源码契约验证前运行，缓存命中也复核实际 import 签名、layout 和 convention strategy。能编译的 rewrite 不能暗改冻结 ABI。
 
 浏览器 wasm32 使用类型化静态模块能力。只有已验证 browser static profile 的 Cdecl LibraryImport 可省略冗余显式 convention metadata；不同约定或 profile 改动被拒绝。其他 import 保留显式策略。该有限选择由同一真实浏览器 AOT fixture 验证，不修改生成输出绕过测试。
-
-## 所选编译器的记录属性
-
-Clang 与 GCC 对同一套 C++ 标准库声明的 `standard-layout` 等属性可能给出不同结果。GNU 声明前导路径因此在 lowering 前，用实际选择的原生编译器取得可命名、具体、可访问记录的默认可构造、标准布局和可平凡复制属性。查询复用已经完成的原生预处理操作及其精确字节，不重新包含头文件或改变 `__BASE_FILE__` 的求值上下文。
-
-这些 constexpr 布尔值编译成大小分别为 1 或 2 的独立符号。观察器验证对象的目标身份，再用已锁定的 `llvm-nm` 或 `nm` 读取精确符号大小，不运行目标程序。当前只接受可验证独立数据符号大小的 ELF 对象；COFF、Mach-O、LTO、缺失或重复符号及不支持的大小明确失败，不从相邻地址猜测值。
-
-原始 Clang 解析缓存保持原样；冷解析、缓存恢复和最终有效源码复核都在消费记录属性前应用当前原生观察。完整源码观察身份与查询规则、事实及工具输入身份共同参与缓存和发布前复核。带有私有路径或能力 nonce 的原始源码、对象 hash 是单次执行证据，不冒充稳定输出身份。这里只更新三个已查询属性，类型、大小、对齐、字段及独立 canonical/layout/bridge 编译断言仍然必需；对象探针不证明最终链接或实际调用。
-
-此机制不会重写用户基于编译器特有 trait 的任意 `static_assert`、模板分支或声明。如果这些用户 token 在 Clang 中不可解析，或产生与所选原生编译器不同的声明，仍然明确失败；需要匹配的 frontend 或显式原生 shim。
 
 ## 验收证据
 

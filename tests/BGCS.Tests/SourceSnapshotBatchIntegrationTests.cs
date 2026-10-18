@@ -100,38 +100,6 @@ public sealed class SourceSnapshotBatchIntegrationTests
         AssertSnapshot(fixture.output, before);
     }
 
-    [Fact]
-    public async Task WarmCandidateStillReplaysUntrackedAbsoluteHeaderQueriesBeforePublication()
-    {
-        using WorkerPluginFixture fixture = new();
-        string directory = Directory.CreateDirectory(Path.Combine(fixture.root, "absolute-query")).FullName;
-        string optional = Path.Combine(directory, "feature.h");
-        string literal = optional.Replace('\\', '/');
-        File.WriteAllText(Path.Combine(fixture.source, "native.h"), $$"""
-            #if __has_include("{{literal}}")
-            double read_value(void);
-            #else
-            int read_value(void);
-            #endif
-            """);
-        bool mutate = false;
-        await using BindingHost host = fixture.Builder().AddValidator("batch-mutation", 0,
-            () => new MutationValidator(() => { if (mutate) File.WriteAllText(optional, "/* newly observed absolute input */\n"); })).Build();
-        GenerationRequest request = fixture.Request();
-        await Warm(host, request);
-        Dictionary<string, byte[]> before = Snapshot(fixture.output);
-        mutate = true;
-        GenerationResult rejected = await host.GenerateAsync(request);
-        Assert.False(rejected.success);
-        Assert.Contains("Native compiler source-view observations changed", rejected.GetDiagnosticSummary());
-        Assert.True(File.Exists(optional));
-        AssertSnapshot(fixture.output, before);
-        mutate = false;
-        File.Delete(optional);
-        GenerationResult recovered = await host.GenerateAsync(request);
-        Assert.True(recovered.success, recovered.GetDiagnosticSummary());
-        AssertHits(recovered);
-    }
 
     private static async Task Warm(BindingHost host, GenerationRequest request)
     {

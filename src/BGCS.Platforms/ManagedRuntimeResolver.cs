@@ -1,7 +1,5 @@
 using System;
-using System.Linq;
 using BGCS.Contracts;
-using BGCS.Contracts.Requests;
 using BGCS.Contracts.Targets;
 using BGCS.Contracts.Native;
 using BGCS.Platforms.Capabilities;
@@ -14,12 +12,10 @@ public static class ManagedRuntimeResolver
     /// <summary>Resolves symbol acquisition and lifecycle constraints for a concrete runtime/target pair.</summary>
     /// <param name="target">The concrete native ABI.</param>
     /// <param name="runtime">The consumer's explicit managed execution model.</param>
-    /// <param name="outputKind">The native consumption form, or null for the target's declared default.</param>
     /// <returns>The implemented runtime profile, without a certification claim.</returns>
     public static ManagedRuntimeProfile Resolve(
         NativeTargetDescriptor target,
-        ManagedRuntimeKind runtime,
-        NativeOutputKind? outputKind = null
+        ManagedRuntimeKind runtime
     ) {
         ArgumentNullException.ThrowIfNull(target);
         if (runtime == ManagedRuntimeKind.BrowserWasm && (target.platformId != "emscripten" || target.architectureId != "wasm32" || target.abiId != "emscripten"))
@@ -28,12 +24,9 @@ public static class ManagedRuntimeResolver
         if (target.platformId == "emscripten" && runtime != ManagedRuntimeKind.BrowserWasm || target.platformId != "emscripten" && runtime == ManagedRuntimeKind.BrowserWasm)
             throw new NotSupportedException("Browser Wasm requires an Emscripten wasm32 native target and its static native adapter.");
         TargetCapabilities capabilities = PlatformCapabilityCatalog.Get(target);
-        NativeOutputKind actualOutput = outputKind ?? capabilities.defaultOutputKind;
-        if (!Enum.IsDefined(actualOutput) || !capabilities.outputKinds.Contains(actualOutput))
-            throw new NotSupportedException("The native output form is absent from the target's implemented construction mechanisms.");
-        bool staticModule = !capabilities.supportsDynamicModules || actualOutput != NativeOutputKind.SharedLibrary;
+        bool staticModule = !capabilities.supportsDynamicModules;
         if (staticModule && runtime == ManagedRuntimeKind.CoreClr) throw new NotSupportedException("This static native target requires its AOT or browser runtime profile.");
-        return new(target.targetId.value + "/" + runtime.ToString() + "/" + actualOutput.ToString(), runtime, staticModule ? NativeModuleMechanism.StaticAdapter : NativeModuleMechanism.DynamicLibrary,
+        return new(target.targetId.value + "/" + runtime.ToString() + "/" + (staticModule ? "Static" : "Dynamic"), runtime, staticModule ? NativeModuleMechanism.StaticAdapter : NativeModuleMechanism.DynamicLibrary,
             [BindingImportMode.FunctionTable, BindingImportMode.DllImport, BindingImportMode.LibraryImport], runtime != ManagedRuntimeKind.CoreClr, runtime != ManagedRuntimeKind.BrowserWasm)
         {
             functionPointerTransport = runtime == ManagedRuntimeKind.BrowserWasm ? ManagedFunctionPointerTransport.BrowserWasm32TableIndex : ManagedFunctionPointerTransport.Typed,

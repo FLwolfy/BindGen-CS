@@ -41,7 +41,7 @@ def main() -> None:
     selector.add_argument('--feature')
     selector.add_argument('--configuration')
     args = parser.parse_args()
-    document = json.loads(args.input.read_text())
+    document = json.loads(args.input.read_text(encoding='utf-8'))
     collection, key, selected = ('features', 'featureId', args.feature) if args.feature else ('configurations', 'configurationId', args.configuration)
     rows = [row for group in document['groups'] for row in group[collection] if row[key] == selected]
     if len(rows) != 1:

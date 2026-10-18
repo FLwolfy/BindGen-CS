@@ -13,7 +13,7 @@ using ClangSharp.Interop;
 namespace BGCS.Frontend.Clang.Model.Declarations;
 
 /// <summary>
-/// An Objective-C block function (e.g `void (^)(int arg1, int arg2)`) or C++ function type (e.g `void (*)(int arg1, int arg2)`)
+/// A C or C++ function type (e.g `void (*)(int arg1, int arg2)`).
 /// </summary>
 internal abstract class CppFunctionTypeBase : CppTypeDeclaration
 {
@@ -24,7 +24,7 @@ internal abstract class CppFunctionTypeBase : CppTypeDeclaration
     /// The borrowed Clang cursor, valid only while its compilation remains alive; default creates a synthetic node.
     /// </param>
     /// <param name="kind">
-    /// The native function or Objective-C block category.
+    /// The native function category.
     /// </param>
     /// <param name="returnType">
     /// The non-null borrowed native result type.
@@ -68,15 +68,7 @@ internal abstract class CppFunctionTypeBase : CppTypeDeclaration
         var builder = new StringBuilder();
         builder.Append(this.returnType.GetDisplayName());
         builder.Append(' ');
-        // Don't complicate with a virtual methods, hardcode derived cases here
-        if (this.typeKind == CppTypeKind.ObjCBlockFunction)
-        {
-            builder.Append("(^)(");
-        }
-        else
-        {
-            builder.Append("(*)(");
-        }
+        builder.Append("(*)(");
 
         for (var i = 0; i < this.parameters.Count; i++)
         {

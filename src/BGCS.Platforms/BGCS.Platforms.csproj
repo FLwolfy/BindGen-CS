@@ -7,6 +7,5 @@
 
   <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
-    <ProjectReference Include="../BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

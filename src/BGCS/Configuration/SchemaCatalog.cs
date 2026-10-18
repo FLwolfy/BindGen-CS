@@ -97,29 +97,7 @@ public sealed class SchemaCatalog
         {
             ["type"] = "array",
             ["default"] = new JsonArray(),
-            ["items"] = new JsonObject
-            {
-                ["oneOf"] = new JsonArray(
-                new JsonObject { ["type"] = "string", ["minLength"] = 1, ["not"] = new JsonObject { ["pattern"] = "://" } },
-                new JsonObject
-                {
-                    ["type"] = "object",
-                    ["additionalProperties"] = false,
-                    ["required"] = new JsonArray("url", "sha256", "pathBase"),
-                    ["properties"] = new JsonObject
-                    {
-                        ["url"] = new JsonObject { ["type"] = "string", ["format"] = "uri", ["pattern"] = "^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?][^#]*)?$" },
-                        ["sha256"] = new JsonObject { ["type"] = "string", ["pattern"] = "^[0-9a-fA-F]{64}$" },
-                        ["pathBase"] = new JsonObject
-                        {
-                            ["type"] = "string",
-                            ["minLength"] = 1,
-                            ["not"] = new JsonObject { ["pattern"] = "://" },
-                            ["description"] = "Explicit local base for paths inside the remote document, relative to the declaring document's local base or absolute."
-                        }
-                    }
-                })
-            }
+            ["items"] = new JsonObject { ["type"] = "string", ["minLength"] = 1, ["not"] = new JsonObject { ["pattern"] = "://" } }
         };
         JsonObject version = (JsonObject)properties["schemaVersion"]!;
         version["const"] = 1;
@@ -155,7 +133,6 @@ public sealed class SchemaCatalog
         sourceProcessors["items"]!["properties"]!["paths"]!["minItems"] = 1;
         sourceProcessors["items"]!["properties"]!["paths"]!["maxItems"] = 64;
         sourceProcessors["items"]!["properties"]!["paths"]!["uniqueItems"] = true;
-        Constrain("nativeBuild", "mode", "none", "sources", "prebuilt");
         ((JsonObject)properties["cache"]!["properties"]!["maximumBytes"]!)["minimum"] = 1;
         ((JsonObject)properties["cache"]!["properties"]!["maximumEntryBytes"]!)["minimum"] = 1;
         ((JsonObject)properties["cache"]!["properties"]!["maximumEntryBytes"]!)["maximum"] = 268435456;
@@ -175,7 +152,7 @@ public sealed class SchemaCatalog
         enumDefinition["properties"]!["values"]!["items"]!["required"] = new JsonArray("name", "value");
         enumDefinition["properties"]!["values"]!["items"]!["properties"]!["name"]!["minLength"] = 1;
         enumDefinition["properties"]!["values"]!["items"]!["properties"]!["value"]!["pattern"] = "^-?(0|[1-9][0-9]*)$";
-        foreach (string timeout in new[] { "sessionTimeoutSeconds", "managedCompilationTimeoutSeconds", "nativeBuildTimeoutSeconds" })
+        foreach (string timeout in new[] { "sessionTimeoutSeconds" })
         {
             JsonObject schema = (JsonObject)properties["execution"]!["properties"]![timeout]!;
             schema["minimum"] = 1;

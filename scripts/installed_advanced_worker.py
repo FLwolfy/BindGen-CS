@@ -53,7 +53,7 @@ def prepare(dotnet: str, version: str, root: Path, work: Path, evidence: Path, r
         "schemaVersion": 1, "library": {"id": "advanced_worker", "nativeName": "advanced_worker"},
         "source": {"language": "c", "headers": [str(source / "native.h")], "parseMacros": False},
         "api": {"namespace": "Package.AdvancedWorker", "name": "NativeApi"},
-        "runtime": {"mode": "package"}, "nativeBuild": {"mode": "none"},
+        "runtime": {"mode": "package"},
         "output": {"root": str(work / "advanced-sdk-generated")},
         "cache": {"directory": str(work / "advanced-worker-cache")},
         "extensions": {"plugins": [str(manifest)], "options": {"clang.fixture": {"values": {"externalFile": str(external)}}}}

@@ -80,17 +80,17 @@ public sealed class NativeCountedStringInputTests
                     Text("counted_utf16le", NativeTextEncoding.Utf16, 2, NativeTextByteOrder.LittleEndian, NativeLengthUnit.CodeUnits),
                     Text("counted_utf16be", NativeTextEncoding.Utf16, 2, NativeTextByteOrder.BigEndian, NativeLengthUnit.CodeUnits),
                     Text("counted_utf32be", NativeTextEncoding.Utf32, 4, NativeTextByteOrder.BigEndian, NativeLengthUnit.Bytes)] },
-                nativeBuild = new() { mode = "sources", sources = ["text.c"] }, runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            Assert.DoesNotContain(built.generation.diagnostics, diagnostic => diagnostic.code == "BGCS-FRIENDLY-OMITTED");
-            string targetRoot = Path.Combine(built.outputRoot, Assert.Single(built.generation.targetModels).targetId);
+            Assert.DoesNotContain(built.diagnostics, diagnostic => diagnostic.code == "BGCS-FRIENDLY-OMITTED");
+            string targetRoot = Path.Combine(built.outputRoot, Assert.Single(built.targetModels).targetId);
             string factory = mode == BindingImportMode.FunctionTable ? "TextApi.Load(binary)" : "TextApi.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"),
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName, $$"""
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName, $$"""
                 using System;
                 using System.Text;
                 using Generated.CountedNative;

@@ -145,28 +145,6 @@
       }
     },
     {
-      "code": "BGCS-DOCTOR-NATIVE",
-      "title": "Native build prerequisite is unavailable",
-      "cause": "A declared native artifact, compiler, linker, build-system executable or target prerequisite is unavailable or invalid.",
-      "resolution": "Supply the exact missing tool/artifact or correct nativeBuild and target settings, then rerun doctor; BGCS does not silently download or substitute a different ABI.",
-      "zh": {
-        "title": "原生构建前提不可用",
-        "cause": "声明的原生产物、编译器、链接器、构建工具或目标前提缺失或无效。",
-        "resolution": "提供确切缺失项，或修正 nativeBuild 与目标设置后重试 doctor；BGCS 不会静默下载或替换另一种 ABI。"
-      }
-    },
-    {
-      "code": "BGCS-DOCTOR-NATIVE-PENDING",
-      "title": "Custom provider prerequisite check is pending",
-      "cause": "Doctor resolved a native provider but has no complete executable prerequisite contract for that custom provider.",
-      "resolution": "Implement the neutral prerequisite provider contract or independently verify the declared tools; this status is not evidence that a native build ran.",
-      "zh": {
-        "title": "自定义 provider 的前提检查待完成",
-        "cause": "Doctor 已解析原生 provider，但该自定义 provider 未提供完整可执行前提契约。",
-        "resolution": "实现中立前提检查契约，或独立验证声明的工具；此状态不表示已经执行原生构建。"
-      }
-    },
-    {
       "code": "BGCS-DOCTOR-TARGET",
       "title": "Native target cannot be resolved",
       "cause": "The requested target, SDK, sysroot or toolchain cannot be resolved from the explicit configuration and installed environment.",
@@ -211,17 +189,6 @@
       }
     },
     {
-      "code": "BGCS-FRONTEND-NATIVE",
-      "title": "Selected native compiler reported a preprocessing diagnostic",
-      "cause": "The selected MSVC, GNU or Clang compiler reported a warning, note or error while establishing the effective source view; the original compiler message, severity and available source position are retained.",
-      "resolution": "Inspect the original compiler message and source position, then correct the header, macro definitions or compiler arguments as appropriate. The frontend console threshold controls display only; structured diagnostics retain these messages and the configured diagnostic policy still applies.",
-      "zh": {
-        "title": "所选原生编译器报告预处理诊断",
-        "cause": "所选 MSVC、GNU 或 Clang 编译器在建立实际生效的源码视图时报告了警告、说明或错误；保留编译器原始消息、严重程度和可用源码位置。",
-        "resolution": "根据编译器原始消息和源码位置，按需修正头文件、宏定义或编译器参数。frontend 控制台阈值只控制显示；结构化诊断继续保留这些消息，配置的诊断策略仍然生效。"
-      }
-    },
-    {
       "code": "BGCS-GENERATION-SESSION",
       "title": "Generation session could not complete",
       "cause": "A required generation, lowering, ABI planning, plugin, validation or publication stage failed.",
@@ -244,28 +211,6 @@
       }
     },
     {
-      "code": "BGCS-MANAGED-COMPILE",
-      "title": "Candidate managed code failed compilation",
-      "cause": "The generated candidate and declared managed inputs did not compile under the requested validation settings.",
-      "resolution": "Inspect the retained compiler output; fix generation/configuration or required references and source helpers before publication. Do not hand-edit formal generated files.",
-      "zh": {
-        "title": "候选托管代码编译失败",
-        "cause": "生成候选及声明的托管输入未能按请求的验证设置完成编译。",
-        "resolution": "检查保留的编译日志，修正生成、配置、引用或辅助源码后再发布，不要手工修改正式生成文件。"
-      }
-    },
-    {
-      "code": "BGCS-NATIVE-CANDIDATE-CLEANUP",
-      "title": "Native build candidate cleanup failed",
-      "cause": "An independently owned native build candidate could not release its temporary artifacts.",
-      "resolution": "Close the reported compiler/file handles and retry cleanup only for the exact owned candidate; check the build result before assuming publication succeeded.",
-      "zh": {
-        "title": "原生构建候选清理失败",
-        "cause": "独立拥有的原生构建候选无法释放临时产物。",
-        "resolution": "关闭日志中对应的编译器或文件句柄，仅清理确切受管理候选，并查看构建结果确认是否已发布。"
-      }
-    },
-    {
       "code": "BGCS-NATIVE-GRAPH",
       "title": "Native fact graph is inconsistent",
       "cause": "Detached native declarations or types contain missing, duplicate, cyclic or incompatible graph facts.",
@@ -274,50 +219,6 @@
         "title": "原生事实图不一致",
         "cause": "分离后的原生声明或类型包含缺失、重复、循环或不相容的事实。",
         "resolution": "修正产生该事实的 frontend 或原生变换，不要用默认类型或布局值掩盖错误后继续生成。"
-      }
-    },
-    {
-      "code": "BGCS-NATIVE-MACRO-ORIGIN",
-      "title": "Native macro has no unique original definition",
-      "cause": "The effective native compiler preprocessing preserved a user macro's final replacement, but the included source definitions do not establish one unique original source location. The macro value is retained with unknown origin rather than an invented location.",
-      "resolution": "Inspect the configured defines, conditional redefinitions and included headers to identify the intended original definition. Remove ambiguity or provide an explicit configured definition when source attribution is required; do not interpret the preserved final value as verified declaration provenance.",
-      "zh": {
-        "title": "原生宏无法确定唯一的原始定义",
-        "cause": "实际原生编译器的预处理保留了用户宏的最终替换值，但包含的源码定义无法确定唯一的原始位置。宏值仍被保留，来源标记为未知，不伪造源码位置。",
-        "resolution": "检查配置中的宏定义、条件重定义和包含的头文件，确定预期的原始定义。如果需要源码归属，请消除歧义或明确配置定义；不要将保留的最终值解释为已验证的声明来源。"
-      }
-    },
-    {
-      "code": "BGCS-NATIVE-MANIFEST-BUILD",
-      "title": "Standalone native manifest build failed",
-      "cause": "The published neutral native manifest or its locked source, toolchain, plugin, ABI or export checks failed during native-build.",
-      "resolution": "Read the detailed build failure; restore unchanged declared inputs and matching tools, or regenerate the manifest after an intentional input change. Do not edit manifest hashes to bypass validation.",
-      "zh": {
-        "title": "独立原生 manifest 构建失败",
-        "cause": "native-build 中已发布的中立 manifest 或其锁定源码、工具链、插件、ABI、导出检查失败。",
-        "resolution": "查看详细构建错误，恢复未变更输入与匹配工具，或在有意修改输入后重新生成 manifest；不要修改 hash 绕过验证。"
-      }
-    },
-    {
-      "code": "BGCS-NATIVE-SCRATCH-CLEANUP",
-      "title": "Native scratch directory cleanup failed",
-      "cause": "The native build scratch workspace could not be removed after its execution.",
-      "resolution": "Release the reported process/file handles and clean only the exact owned scratch directory; the diagnostic severity identifies whether a result had already been published.",
-      "zh": {
-        "title": "原生临时工作目录清理失败",
-        "cause": "原生构建结束后无法移除临时工作目录。",
-        "resolution": "释放对应进程或文件句柄，仅清理确切受管理临时目录；诊断级别会反映结果是否已经发布。"
-      }
-    },
-    {
-      "code": "BGCS-NATIVE-SERVICE-RELEASE",
-      "title": "Native build extension release failed",
-      "cause": "A native build provider or packaging service failed while releasing its session-owned state.",
-      "resolution": "Fix the failing extension cleanup and its native/process handles; inspect the recorded result rather than treating disposal failure as successful certification.",
-      "zh": {
-        "title": "原生构建扩展释放失败",
-        "cause": "原生构建 provider 或包装服务释放会话状态时失败。",
-        "resolution": "修复扩展清理及其原生、进程句柄，依据记录结果判断状态，不要把释放失败当作验收成功。"
       }
     },
     {

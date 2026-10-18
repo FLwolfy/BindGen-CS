@@ -20,9 +20,6 @@
   "runtime": {
     "mode": "source"
   },
-  "nativeBuild": {
-    "mode": "none"
-  },
   "output": {
     "root": "Generated",
     "layout": "singleFile"

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,15 +14,12 @@ using BGCS.Infrastructure.IO;
 
 namespace BGCS.Configuration;
 
-internal sealed class ConfigurationComposer(HttpClient? httpClient = null)
+internal sealed class ConfigurationComposer
 {
     private const string C_VALUE_ORIGINS = "__bgcsValuePathBases";
     private readonly JsonSerializerOptions m_options = BindingConfigurationLoader.CreateSerializerOptions();
     private readonly HashSet<string> m_active = new(StringComparer.Ordinal);
     private readonly Dictionary<string, InputDependency> m_inputs = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-    private readonly Dictionary<string, PinnedConfigurationInput> m_remoteInputs = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, (ContentDigest Digest, byte[] Content)> m_remoteContents = new(StringComparer.Ordinal);
-    private readonly RemoteConfigurationReader m_remoteReader = new(httpClient);
     private int m_documents;
     private long m_totalBytes;
 
@@ -64,8 +60,7 @@ internal sealed class ConfigurationComposer(HttpClient? httpClient = null)
             pair => pair.Value with { valuePathBases = origins[pair.Key] }, StringComparer.Ordinal)
             }
         };
-        return new(new BindingConfigurationLoader().ValidateAndFreeze(value), m_inputs.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray())
-        { remoteInputs = m_remoteInputs.Values.OrderBy(input => input.url.AbsoluteUri, StringComparer.Ordinal).ThenBy(input => input.pathBase, StringComparer.Ordinal).ToImmutableArray() };
+        return new(new BindingConfigurationLoader().ValidateAndFreeze(value), m_inputs.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray());
     }
 
     private async Task<JsonObject> ReadAsync(
@@ -77,35 +72,22 @@ internal sealed class ConfigurationComposer(HttpClient? httpClient = null)
         cancellationToken.ThrowIfCancellationRequested();
         if (depth >= 64) throw new JsonException("Configuration inheritance exceeds 64 documents in one dependency path.");
         if (++m_documents > 128) throw new JsonException("Configuration composition exceeds the 128-document limit.");
-        string? path = reference.path is string local ? Path.GetFullPath(local, declaringDirectory) : null;
-        string directory = path is not null ? Path.GetDirectoryName(path)! : Path.GetFullPath(reference.pathBase!, declaringDirectory);
-        string identity = path is not null ? "file:" + (OperatingSystem.IsWindows() ? path.ToUpperInvariant() : path)
-            : "https:" + reference.url!.AbsoluteUri + "|" + directory;
-        if (!m_active.Add(identity)) throw new ArgumentException("Configuration inheritance contains a cycle at '" + (path ?? reference.url!.GetLeftPart(UriPartial.Path)) + "'.");
+        string path = Path.GetFullPath(reference.path, declaringDirectory);
+        string directory = Path.GetDirectoryName(path)!;
+        string identity = OperatingSystem.IsWindows() ? path.ToUpperInvariant() : path;
+        if (!m_active.Add(identity)) throw new ArgumentException("Configuration inheritance contains a cycle at '" + path + "'.");
         try
         {
-            byte[] content;
-            if (path is not null)
+            await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
+            using MemoryStream bytes = new();
+            byte[] buffer = new byte[64 * 1024];
+            int count;
+            while ((count = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) != 0)
             {
-                await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
-                content = await RemoteConfigurationReader.ReadBoundedAsync(stream, cancellationToken).ConfigureAwait(false);
+                if (bytes.Length + count > 16 * 1024 * 1024) throw new IOException("A configuration exceeds the 16 MiB input limit.");
+                bytes.Write(buffer, 0, count);
             }
-            else
-            {
-                Uri remoteUrl = reference.url ?? throw new JsonException("A remote base reference requires an HTTPS URL.");
-                string url = remoteUrl.AbsoluteUri;
-                if (m_remoteContents.TryGetValue(url, out var previousRemote))
-                {
-                    if (previousRemote.Digest != reference.digest!.Value) throw new IOException("One remote configuration URL has conflicting content pins.");
-                    content = previousRemote.Content;
-                }
-                else
-                {
-                    content = await m_remoteReader.ReadAsync(remoteUrl, reference.digest!.Value, cancellationToken).ConfigureAwait(false);
-                    m_remoteContents.Add(url, (reference.digest.Value, content));
-                }
-                m_remoteInputs[identity] = new(remoteUrl, reference.digest!.Value, content.Length, directory);
-            }
+            byte[] content = bytes.ToArray();
             m_totalBytes = checked(m_totalBytes + content.Length);
             if (m_totalBytes > 64 * 1024 * 1024) throw new IOException("Composed configuration inputs exceed the 64 MiB byte budget.");
             ContentDigest digest = new(Convert.ToHexStringLower(SHA256.HashData(content)));
@@ -184,22 +166,13 @@ internal sealed class ConfigurationComposer(HttpClient? httpClient = null)
         foreach (string property in new[] { "includeHeaders", "excludeHeaders" })
             if (root["source"]?["selection"]?[property] is JsonArray headers) NormalizeArray(headers);
         foreach ((string group, string property) in new[] { ("source", "headers"), ("source", "includeDirectories"), ("source", "systemIncludeDirectories"),
-            ("nativeBuild", "sources"), ("nativeBuild", "artifacts"), ("nativeBuild", "libraryDirectories"), ("managedBuild", "references"), ("managedBuild", "sources"), ("extensions", "plugins") })
+            ("extensions", "plugins") })
             if (root[group]?[property] is JsonArray paths) NormalizeArray(paths);
         foreach ((string group, string property) in new[] { ("output", "root"), ("cache", "directory") })
             if (root[group]?[property] is JsonValue value) root[group]![property] = Path.GetFullPath(value.GetValue<string>(), directory);
-        if (root["nativeBuild"]?["libraries"] is JsonArray libraries)
-            for (int index = 0; index < libraries.Count; index++)
-            {
-                string library = libraries[index]?.GetValue<string>() ?? throw new JsonException("A native library cannot be null.");
-                if (library.Contains('/') || library.Contains('\\') || Path.HasExtension(library)) libraries[index] = Path.GetFullPath(library, directory);
-            }
-        foreach (string property in new[] { "buildToolPath", "auxiliaryToolPath" })
-            if (root["nativeBuild"]?[property] is JsonValue executable)
-            {
-                string tool = executable.GetValue<string>();
-                if (tool.Contains('/') || tool.Contains('\\') || Path.IsPathRooted(tool)) root["nativeBuild"]![property] = Path.GetFullPath(tool, directory);
-            }
+        if (root["api"]?["projectionInputs"] is JsonObject projectionInputs)
+            foreach (string property in new[] { "references", "sources" })
+                if (projectionInputs[property] is JsonArray paths) NormalizeArray(paths);
         if (root["cpp"]?["nativeShims"] is JsonArray shims)
             foreach (JsonNode? shim in shims)
                 foreach (string property in new[] { "publicHeaders", "sourceFiles" })

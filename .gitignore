@@ -24,6 +24,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+*.lib
+*.exp
 
 # .NET Core
 project.lock.json
@@ -47,6 +49,7 @@ ScaffoldingReadMe.txt
 *~
 CodeCoverage/
 .bindgen-cache/
+.bgcs/
 __pycache__/
 
 # MSBuild Binary and Structured Log

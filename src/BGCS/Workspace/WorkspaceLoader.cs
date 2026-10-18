@@ -41,7 +41,7 @@ public sealed class WorkspaceLoader
     /// <param name="path">The local workspace document.</param>
     /// <param name="cancellationToken">Cancels local and explicitly pinned HTTPS configuration reads.</param>
     /// <param name="configurationLoader">An optional caller-owned configuration transport policy.</param>
-    /// <returns>The validated dependency graph with local and remote project provenance.</returns>
+    /// <returns>The validated dependency graph with local project provenance.</returns>
     public async Task<BindingWorkspace> LoadAsync(
         string path,
         CancellationToken cancellationToken = default,

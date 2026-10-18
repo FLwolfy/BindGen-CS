@@ -81,9 +81,9 @@ public sealed class BindingWorkspace
             GenerationRequest request = project.request;
             outputs.Add((project.id, Resolve(request.configuration.output.root, request)));
             IEnumerable<string> paths = request.configuration.source.headers.Concat(request.configuration.source.includeDirectories)
-                .Concat(request.configuration.source.systemIncludeDirectories).Concat(request.configuration.nativeBuild.sources)
-                .Concat(request.configuration.nativeBuild.artifacts).Concat(request.configuration.nativeBuild.libraryDirectories)
-                .Concat(request.configuration.managedBuild.sources).Concat(request.configuration.managedBuild.references)
+                .Concat(request.configuration.source.systemIncludeDirectories)
+
+                .Concat(request.configuration.api.projectionInputs.sources).Concat(request.configuration.api.projectionInputs.references)
                 .Concat(request.configurationInputs.Select(input => input.path)).Concat(request.pluginInputs.Select(input => input.path))
                 .Append(request.configuration.cache.directory);
             foreach (string path in paths) inputs.Add((project.id, Resolve(path, request)));

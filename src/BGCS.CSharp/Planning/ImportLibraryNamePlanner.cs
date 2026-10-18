@@ -26,7 +26,7 @@ internal static class ImportLibraryNamePlanner
                 || node is AliasQualifiedNameSyntax alias && alias.Alias.Identifier.ValueText != "global")
             || name is not (QualifiedNameSyntax or AliasQualifiedNameSyntax))
             throw new ArgumentException("An import library constant requires a bounded qualified identifier, without statements, aliases or type arguments.");
-        ManagedConstantCompilerInputs inputs = ManagedConstantCompilerInputs.Create(request.managedCompilation,
+        ManagedConstantCompilerInputs inputs = ManagedConstantCompilerInputs.Create(request.managedProjection,
             ConstantPresentationPlanner.frameworkReferences, cancellationToken);
         const string fieldName = "__BGCSImportLibraryConstant";
         string contextNamespace = CSharpNames.Namespace(plan.api.@namespace);

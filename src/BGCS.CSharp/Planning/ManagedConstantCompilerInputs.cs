@@ -23,7 +23,7 @@ internal sealed class ManagedConstantCompilerInputs
     private const long C_TOTAL_BYTES = 512L * 1024 * 1024;
     private const int C_IMAGE_BYTES = 64 * 1024 * 1024;
     private const int C_SOURCE_BYTES = 16 * 1024 * 1024;
-    private static readonly ConditionalWeakTable<ManagedCompilationInputs, ManagedConstantCompilerInputs> m_prepared = new();
+    private static readonly ConditionalWeakTable<ManagedProjectionInputs, ManagedConstantCompilerInputs> m_prepared = new();
     private readonly ImmutableArray<(MetadataReference Reference, ManagedAssemblyInput Input)> m_images;
 
     private ManagedConstantCompilerInputs(
@@ -38,7 +38,7 @@ internal sealed class ManagedConstantCompilerInputs
     internal CSharpParseOptions parseOptions { get; }
 
     internal static ManagedConstantCompilerInputs Create(
-        ManagedCompilationInputs? inputs,
+        ManagedProjectionInputs? inputs,
         ImmutableArray<MetadataReference> framework,
         CancellationToken cancellationToken
     ) {
@@ -48,7 +48,7 @@ internal sealed class ManagedConstantCompilerInputs
     }
 
     private static ManagedConstantCompilerInputs Prepare(
-        ManagedCompilationInputs inputs,
+        ManagedProjectionInputs inputs,
         ImmutableArray<MetadataReference> framework,
         CancellationToken cancellationToken
     ) {

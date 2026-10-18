@@ -13,7 +13,7 @@ public sealed class NativeToolchainDescriptor
     /// Copies toolchain inputs without requiring the compiler to run on the generator host.
     /// </summary>
     /// <param name = "compilerPath">
-    /// The compiler driver path or executable name, or null for provider discovery.
+    /// An optional compiler installation path used only as a read-only SDK location hint.
     /// </param>
     /// <param name = "sysRoot">
     /// The target SDK root, or null when no SDK is supplied.
@@ -30,10 +30,8 @@ public sealed class NativeToolchainDescriptor
     /// <param name="cxxSystemIncludeFolders">
     /// Target C++ standard library directories, excluded from C parsing; null represents an empty set.
     /// </param>
-    /// <param name="sdkVersion">The exact SDK version selected for parsing and native construction.</param>
+    /// <param name="sdkVersion">The exact SDK version selected for parsing.</param>
     /// <param name="compilerVersion">The exact compiler version selected by discovery.</param>
-    /// <param name="linkerPath">The matching linker path, when discovery selects one.</param>
-    /// <param name="libraryDirectories">The exact target SDK library search paths.</param>
     public NativeToolchainDescriptor(
         string? compilerPath = null,
         string? sysRoot = null,
@@ -42,9 +40,7 @@ public sealed class NativeToolchainDescriptor
         IEnumerable<string>? arguments = null,
         IEnumerable<string>? cxxSystemIncludeFolders = null,
         string? sdkVersion = null,
-        string? compilerVersion = null,
-        string? linkerPath = null,
-        IEnumerable<string>? libraryDirectories = null
+        string? compilerVersion = null
     ) {
         this.compilerPath = compilerPath;
         this.sysRoot = sysRoot;
@@ -54,8 +50,6 @@ public sealed class NativeToolchainDescriptor
         this.cxxSystemIncludeFolders = Copy(cxxSystemIncludeFolders);
         this.sdkVersion = sdkVersion;
         this.compilerVersion = compilerVersion;
-        this.linkerPath = linkerPath;
-        this.libraryDirectories = Copy(libraryDirectories);
     }
 
     /// <summary>
@@ -86,10 +80,6 @@ public sealed class NativeToolchainDescriptor
     public string? sdkVersion { get; }
     /// <summary>Gets the exact resolved compiler version.</summary>
     public string? compilerVersion { get; }
-    /// <summary>Gets the resolved linker paired with the compiler.</summary>
-    public string? linkerPath { get; }
-    /// <summary>Gets target SDK library directories in search order.</summary>
-    public IReadOnlyList<string> libraryDirectories { get; }
 
     private static IReadOnlyList<string> Copy(IEnumerable<string>? values)
     {

@@ -48,13 +48,13 @@ public sealed class NativeCppOverloadTests
                 api = new() { @namespace = "Generated.NativeOverloads", name = "OverloadApi" },
                 semantics = new() { ownedResults = [new() { function = "Demo::Counter::Counter(int)", releaseThreadDomain = "any" },
                     new() { function = "Demo::Counter::Counter(double)", releaseThreadDomain = "any" }] },
-                runtime = new() { mode = "package" }, nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                runtime = new() { mode = "package" },  cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             Invoke(Path.Combine(target, "managed"), binary);
         }
         finally { Directory.Delete(root, recursive: true); }

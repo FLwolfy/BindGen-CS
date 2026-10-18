@@ -18,11 +18,6 @@
       "basis": "tests/BGCS.Frontend.Clang.Tests/Preprocessor"
     },
     {
-      "featureId": "native.objective-c-facts",
-      "owner": "BGCS.Frontend.Clang",
-      "basis": "tests/BGCS.Frontend.Clang.Tests/ObjC"
-    },
-    {
       "featureId": "native.source-and-documentation",
       "owner": "BGCS.Frontend.Clang",
       "basis": "tests/BGCS.Generation.Tests/GeneratedDocumentationTests.cs"
@@ -218,11 +213,6 @@
       "basis": "tests/BGCS.Generation.Tests/GeneratedCodeCompilationTests.cs"
     },
     {
-      "featureId": "runtime.primitives-iterators-and-atomics",
-      "owner": "BGCS.Runtime",
-      "basis": "tests/BGCS.Runtime.Tests/NativeCallbackAndAtomicTests.cs"
-    },
-    {
       "featureId": "runtime.module-handle-and-call-lifetimes",
       "owner": "BGCS.Runtime",
       "origin": "3.0 requirement"
@@ -278,19 +268,9 @@
       "origin": "3.0 requirement"
     },
     {
-      "featureId": "native-build.providers-and-artifact-validation",
-      "owner": "BGCS.NativeBuild",
-      "basis": "tests/BGCS.Cpp2C.Tests/NativeBuildProviderTests.cs"
-    },
-    {
       "featureId": "platforms.targets-sdks-and-runtime-capabilities",
       "owner": "BGCS.Platforms",
       "basis": "tests/BGCS.Frontend.Clang.Tests/Targeting"
-    },
-    {
-      "featureId": "platforms.native-assets-and-musl",
-      "owner": "BGCS.NativeBuild",
-      "basis": "tests/BGCS.Generation.Tests/AbiSafetyRegressionTests.cs"
     },
     {
       "featureId": "integration.cli-sdk-and-msbuild",
@@ -321,6 +301,17 @@
       "featureId": "extensions.source-contribution",
       "owner": "BGCS",
       "origin": "Preserve generated native/managed artifacts formerly contributed through ICppArtifactContributor using Contracts-only source contributions."
+    },
+    {
+      "featureId": "runtime.binding-primitives",
+      "owner": "BGCS.Runtime",
+      "basis": "tests/BGCS.Runtime.Tests/PointerTests.cs"
+    },
+    {
+      "featureId": "platforms.libc-and-musl-identities",
+      "owner": "BGCS.Platforms",
+      "basis": "tests/BGCS.Platforms.Tests/AutomaticToolchainTargetTests.cs"
     }
-  ]
+  ],
+  "scopeRemovals": "eng/acceptance/scope-removals.json"
 }

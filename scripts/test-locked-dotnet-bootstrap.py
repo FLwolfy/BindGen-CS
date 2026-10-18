@@ -178,7 +178,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         self.assertNotRegex(job, re.compile(r'^    (?:needs|if|continue-on-error):', re.MULTILINE))
         self.assertIn('BGCS_CPP2C_CXX: g++', job)
         self.assertIn('BGCS_CC: gcc', job)
-        self.assertIn('BGCS_REQUIRE_GNU_SOURCE_VIEW: "1"', job)
+        self.assertNotIn('BGCS_REQUIRE_GNU_SOURCE_VIEW', job)
+        self.assertNotIn('BGCS_REQUIRE_CLANG_SOURCE_VIEW', job)
         self.assertIn('gcc --version', job)
         self.assertIn('g++ --version', job)
         self.assertLess(job.index('scripts/setup-locked-dotnet.py'), job.index('dotnet restore tests/BGCS.Tests/'))
@@ -190,9 +191,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         self.assertIn('if: always()', job)
         self.assertIn('path: artifacts/gnu-smoke', job)
         expression = gnu_smoke.filter_expression()
-        self.assertEqual(17, len(gnu_smoke.METHODS))
-        self.assertEqual(40, len(gnu_smoke.REQUIRED_CASES))
-        self.assertIn('FullyQualifiedName=' + gnu_smoke.BRANCH + '&DisplayName~gnu', expression)
+        self.assertEqual(9, len(gnu_smoke.METHODS))
+        self.assertEqual(28, len(gnu_smoke.REQUIRED_CASES))
         for method in gnu_smoke.METHODS:
             self.assertIn('FullyQualifiedName=' + method, expression)
             class_name, member = method.removeprefix('BGCS.Tests.').split('.')
@@ -200,6 +200,22 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
                           (ROOT / 'tests/BGCS.Tests' / (class_name + '.cs')).read_text(encoding='utf-8'))
         gates = json.loads((ROOT / 'eng/acceptance/required-release-gates.json').read_text(encoding='utf-8'))
         self.assertTrue(gates['requireAllObservedJobsSuccessful'])
+
+    def test_generator_scope_keeps_the_complete_acceptance_runner(self):
+        runner = (ROOT / 'scripts/run-full-test-matrix.sh').read_text(encoding='utf-8')
+        first_required = runner.index("require_test_evidence BGCS.Runtime.Tests")
+        for required in ('GATE_DIR=', 'TEST_DIR=', 'log() {', 'run_tests() {',
+                         'discover_test_projects() {', 'require_test_evidence() {',
+                         'scripts/source_ownership.py', 'scripts/acceptance_evidence.py'):
+            self.assertLess(runner.index(required), first_required)
+        self.assertIn('for project_path in "${TEST_PROJECTS[@]}"; do', runner)
+        self.assertIn('scripts/run-host-test-shards.py" aggregate', runner)
+        self.assertIn('run_tests "${project_relative}"', runner)
+        self.assertIn('eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj', runner)
+        self.assertIn('MsvcBuildsAndInvokesUserClassWithStringVectorAndOptionalStorage', runner)
+        self.assertIn('scripts/test-performance-budget.sh', runner)
+        self.assertNotIn('BGCS.NativeBuild.Tests', runner)
+        self.assertNotIn('src/BGCS.Tool/BGCS.Tool.csproj', runner)
 
     def gnu_receipt(self):
         tree = ET.Element('TestRun')
@@ -220,9 +236,9 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         path = self.root / 'gnu.trx'
         ET.ElementTree(original).write(path, encoding='utf-8')
         verified = gnu_smoke.verify(path)
-        self.assertEqual(40, len(verified['cases']))
+        self.assertEqual(28, len(verified['cases']))
         self.assertFalse(verified['releaseCertification'])
-        for fault in ('missing', 'duplicate', 'skipped', 'foreign-branch', 'wrong-fqn', 'extra-definition', 'failed-counter', 'run-error'):
+        for fault in ('missing', 'duplicate', 'skipped', 'unknown-literal', 'wrong-fqn', 'extra-definition', 'failed-counter', 'run-error'):
             with self.subTest(fault=fault):
                 tree = copy.deepcopy(original)
                 results = tree.find('Results')
@@ -232,8 +248,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
                     results.append(copy.deepcopy(results[0]))
                 elif fault == 'skipped':
                     results[0].set('outcome', 'NotExecuted')
-                elif fault == 'foreign-branch':
-                    next(item for item in results if item.get('testName').startswith(gnu_smoke.BRANCH)).set('testName', gnu_smoke.BRANCH + '(family: "clang")')
+                elif fault == 'unknown-literal':
+                    next(item for item in results if item.get('testName').startswith(gnu_smoke.FAMILIES)).set('testName', gnu_smoke.FAMILIES + '(mode: Unknown, sourceRuntime: False)')
                 elif fault == 'wrong-fqn':
                     tree.find('TestDefinitions')[0].find('TestMethod').set('name', 'DifferentMethod')
                 elif fault == 'extra-definition':

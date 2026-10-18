@@ -31,7 +31,6 @@ class BGCS.AnalysisResult [sealed; interfaces=System.IEquatable<BGCS.AnalysisRes
   property BGCS.Contracts.Inputs.SourceSnapshot argumentInputs { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics { get; init }
   property BGCS.Contracts.Native.NativeModule module { get; init }
-  property System.Boolean requiresNativeCompilerProof { get; init }
   property BGCS.Contracts.Inputs.SourceSnapshot snapshot { get; init }
   property System.Boolean success { get }
   property BGCS.Contracts.Targets.NativeTargetDescriptor target { get; init }
@@ -69,15 +68,11 @@ class BGCS.BindingHost [sealed; interfaces=System.IAsyncDisposable]
   method BGCS.BindingHost CreateDefault() [static]
   method BGCS.BindingHostBuilder CreateBuilder() [static]
   method System.Threading.Tasks.Task<BGCS.AnalysisResult> AnalyzeAsync(BGCS.AnalysisRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Threading.Tasks.Task<BGCS.BuildResult> BuildAsync(BGCS.BuildRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.Task<BGCS.GenerationDiffResult> DiffAsync(BGCS.GenerationRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.Task<BGCS.GenerationResult> BridgeAsync(BGCS.GenerationRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.Task<BGCS.GenerationResult> GenerateAsync(BGCS.GenerationRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.Task<BGCS.InspectionResult> InspectAsync(BGCS.GenerationRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Threading.Tasks.Task<BGCS.ManifestNativeBuildPlanResult> PlanNativeBuildAsync(BGCS.ManifestNativeBuildRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Threading.Tasks.Task<BGCS.ManifestNativeBuildResult> NativeBuildAsync(BGCS.ManifestNativeBuildRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.Task<BGCS.WorkspaceDiffResult> DiffWorkspaceAsync(BGCS.BindingWorkspace workspace, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Threading.Tasks.Task<BGCS.WorkspaceResult> BuildWorkspaceAsync(BGCS.BindingWorkspace workspace, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.Task<BGCS.WorkspaceResult> GenerateWorkspaceAsync(BGCS.BindingWorkspace workspace, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.Task<System.Boolean> ClearOwnedOutputAsync(BGCS.GenerationRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.ValueTask DisposeAsync() [virtual; final]
@@ -90,8 +85,6 @@ class BGCS.BindingHostBuilder [sealed]
   method BGCS.BindingHostBuilder AddCppTypeLowering(System.String id, System.Int32 priority, System.Func<BGCS.Contracts.Ports.ICppTypeLowering> factory)
   method BGCS.BindingHostBuilder AddInteropTransform(System.String id, System.Int32 priority, System.Func<BGCS.Contracts.Ports.IInteropTransform> factory)
   method BGCS.BindingHostBuilder AddManagedTransform(System.String id, System.Int32 priority, System.Func<BGCS.Contracts.Ports.IManagedApiTransform> factory)
-  method BGCS.BindingHostBuilder AddNativeArtifactPackager(System.String id, System.Func<BGCS.Contracts.Ports.INativeArtifactPackager> factory)
-  method BGCS.BindingHostBuilder AddNativeBuildProvider(System.String id, System.Func<BGCS.Contracts.Ports.INativeBuildProvider> factory)
   method BGCS.BindingHostBuilder AddNativeTransform(System.String id, System.Int32 priority, System.Func<BGCS.Contracts.Ports.INativeModuleTransform> factory)
   method BGCS.BindingHostBuilder AddPluginFactory(BGCS.Contracts.Plugins.PluginDescriptor descriptor, System.Func<BGCS.Contracts.Plugins.IBindingPlugin> factory, System.Nullable<System.Text.Json.JsonElement> settings [optional; default=null], System.String pathBase [optional; default=null])
   method BGCS.BindingHostBuilder AddPluginFactory(System.Func<BGCS.Contracts.Plugins.IBindingPlugin> factory, System.Nullable<System.Text.Json.JsonElement> settings [optional; default=null], System.String pathBase [optional; default=null])
@@ -109,36 +102,6 @@ class BGCS.BindingWorkspace [sealed]
   ctor(System.Collections.Generic.IEnumerable<BGCS.WorkspaceProject> projects, System.Int32 parallelism [optional; default=2])
   property System.Int32 parallelism { get }
   property System.Collections.Immutable.ImmutableArray<BGCS.WorkspaceProject> projects { get }
-class BGCS.BuildRequest [sealed; interfaces=System.IEquatable<BGCS.BuildRequest>]
-  ctor(BGCS.GenerationRequest generation)
-  property BGCS.GenerationRequest generation { get; init }
-  method BGCS.BuildRequest <Clone>$()
-  method BGCS.BuildRequest FromFile(System.String path) [static]
-  method System.Boolean Equals(BGCS.BuildRequest other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.BuildRequest left, BGCS.BuildRequest right) [static]
-  method System.Boolean op_Inequality(BGCS.BuildRequest left, BGCS.BuildRequest right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-  method System.Threading.Tasks.Task<BGCS.BuildRequest> FromFileAsync(System.String path, System.String profile [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null], BGCS.Configuration.BindingConfigurationLoader configurationLoader [optional; default=null]) [static]
-  method System.Void Deconstruct(out BGCS.GenerationRequest generation)
-class BGCS.BuildResult [sealed; interfaces=System.IEquatable<BGCS.BuildResult>]
-  ctor(BGCS.GenerationResult generation)
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts { get }
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics { get }
-  property BGCS.GenerationResult generation { get; init }
-  property System.String outputRoot { get }
-  property System.Boolean published { get }
-  property System.Boolean success { get }
-  method BGCS.BuildResult <Clone>$()
-  method System.Boolean Equals(BGCS.BuildResult other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.BuildResult left, BGCS.BuildResult right) [static]
-  method System.Boolean op_Inequality(BGCS.BuildResult left, BGCS.BuildResult right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String GetDiagnosticSummary()
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out BGCS.GenerationResult generation)
 class BGCS.Configuration.ApiConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.ApiConfiguration>]
   ctor()
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedConstantRuleRequest> constants { get; init }
@@ -166,6 +129,7 @@ class BGCS.Configuration.ApiConfiguration [sealed; interfaces=System.IEquatable<
   property System.Boolean nestGeneratedTypesInApi { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedPointerCarrierRequest> pointerCarriers { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedPointerFunctionRequest> pointerFunctions { get; init }
+  property BGCS.Configuration.ManagedProjectionInputConfiguration projectionInputs { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedRecordRuleRequest> records { get; init }
   property System.Nullable<BGCS.Contracts.Targets.ManagedRuntimeKind> runtime { get; init }
   property BGCS.Contracts.Managed.ManagedApiStyle style { get; init }
@@ -207,8 +171,6 @@ class BGCS.Configuration.BindingConfiguration [sealed; interfaces=System.IEquata
   property System.Collections.Immutable.ImmutableArray<BGCS.Configuration.ConfigurationReference> extends { get; init }
   property BGCS.Configuration.ExtensionsConfiguration extensions { get; init }
   property BGCS.Configuration.LibraryConfiguration library { get; init }
-  property BGCS.Configuration.ManagedBuildConfiguration managedBuild { get; init }
-  property BGCS.Configuration.NativeBuildConfiguration nativeBuild { get; init }
   property BGCS.Configuration.OutputConfiguration output { get; init }
   property System.String profile { get; init }
   property System.Collections.Immutable.ImmutableDictionary<System.String,System.Text.Json.JsonElement> profiles { get; init }
@@ -226,7 +188,7 @@ class BGCS.Configuration.BindingConfiguration [sealed; interfaces=System.IEquata
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
 class BGCS.Configuration.BindingConfigurationLoader [sealed]
-  ctor(System.Net.Http.HttpClient httpClient [optional; default=null])
+  ctor()
   method BGCS.Configuration.BindingConfiguration Load(System.String path)
   method BGCS.Configuration.BindingConfiguration ValidateAndFreeze(BGCS.Configuration.BindingConfiguration configuration)
   method BGCS.Configuration.ConfigurationLoadResult LoadWithInputs(System.String path, System.String profile [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
@@ -330,7 +292,6 @@ class BGCS.Configuration.ConfigurationLoadResult [sealed; interfaces=System.IEqu
   ctor(BGCS.Configuration.BindingConfiguration configuration, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> inputs)
   property BGCS.Configuration.BindingConfiguration configuration { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> inputs { get; init }
-  property System.Collections.Immutable.ImmutableArray<BGCS.Configuration.PinnedConfigurationInput> remoteInputs { get; init }
   method BGCS.Configuration.ConfigurationLoadResult <Clone>$()
   method System.Boolean Equals(BGCS.Configuration.ConfigurationLoadResult other) [virtual; final]
   method System.Boolean Equals(System.Object obj) [virtual]
@@ -340,12 +301,8 @@ class BGCS.Configuration.ConfigurationLoadResult [sealed; interfaces=System.IEqu
   method System.String ToString() [virtual]
   method System.Void Deconstruct(out BGCS.Configuration.BindingConfiguration configuration, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> inputs)
 class BGCS.Configuration.ConfigurationReference [sealed; interfaces=System.IEquatable<BGCS.Configuration.ConfigurationReference>]
-  property System.Nullable<BGCS.Contracts.Common.ContentDigest> digest { get }
   property System.String path { get }
-  property System.String pathBase { get }
-  property System.Uri url { get }
   method BGCS.Configuration.ConfigurationReference <Clone>$()
-  method BGCS.Configuration.ConfigurationReference Https(System.Uri url, BGCS.Contracts.Common.ContentDigest sha256, System.String pathBase) [static]
   method BGCS.Configuration.ConfigurationReference Local(System.String path) [static]
   method BGCS.Configuration.ConfigurationReference op_Implicit(System.String path) [static]
   method System.Boolean Equals(BGCS.Configuration.ConfigurationReference other) [virtual; final]
@@ -388,8 +345,6 @@ class BGCS.Configuration.DiagnosticPolicyConfiguration [sealed; interfaces=Syste
 class BGCS.Configuration.ExecutionConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.ExecutionConfiguration>]
   ctor()
   property BGCS.Configuration.DiagnosticPolicyConfiguration diagnostics { get; init }
-  property System.Int32 managedCompilationTimeoutSeconds { get; init }
-  property System.Int32 nativeBuildTimeoutSeconds { get; init }
   property System.Int32 sessionTimeoutSeconds { get; init }
   method BGCS.Configuration.ExecutionConfiguration <Clone>$()
   method System.Boolean Equals(BGCS.Configuration.ExecutionConfiguration other) [virtual; final]
@@ -433,49 +388,16 @@ class BGCS.Configuration.LibraryConfiguration [sealed; interfaces=System.IEquata
   method System.Boolean op_Inequality(BGCS.Configuration.LibraryConfiguration left, BGCS.Configuration.LibraryConfiguration right) [static]
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
-class BGCS.Configuration.ManagedBuildConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.ManagedBuildConfiguration>]
+class BGCS.Configuration.ManagedProjectionInputConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.ManagedProjectionInputConfiguration>]
   ctor()
   property System.Collections.Immutable.ImmutableArray<System.String> defines { get; init }
   property System.Collections.Immutable.ImmutableArray<System.String> references { get; init }
   property System.Collections.Immutable.ImmutableArray<System.String> sources { get; init }
-  method BGCS.Configuration.ManagedBuildConfiguration <Clone>$()
-  method System.Boolean Equals(BGCS.Configuration.ManagedBuildConfiguration other) [virtual; final]
+  method BGCS.Configuration.ManagedProjectionInputConfiguration <Clone>$()
+  method System.Boolean Equals(BGCS.Configuration.ManagedProjectionInputConfiguration other) [virtual; final]
   method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Configuration.ManagedBuildConfiguration left, BGCS.Configuration.ManagedBuildConfiguration right) [static]
-  method System.Boolean op_Inequality(BGCS.Configuration.ManagedBuildConfiguration left, BGCS.Configuration.ManagedBuildConfiguration right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-class BGCS.Configuration.NativeBuildConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.NativeBuildConfiguration>]
-  ctor()
-  property System.Collections.Immutable.ImmutableArray<System.String> artifacts { get; init }
-  property System.String auxiliaryToolPath { get; init }
-  property System.String buildToolPath { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> compilerArguments { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> libraries { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> libraryDirectories { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> linkerArguments { get; init }
-  property System.String mode { get; init }
-  property System.Nullable<BGCS.Contracts.Requests.NativeOutputKind> outputKind { get; init }
-  property BGCS.Configuration.NativePackagingConfiguration packaging { get; init }
-  property System.String prebuiltTargetId { get; init }
-  property System.String provider { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> sources { get; init }
-  method BGCS.Configuration.NativeBuildConfiguration <Clone>$()
-  method System.Boolean Equals(BGCS.Configuration.NativeBuildConfiguration other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Configuration.NativeBuildConfiguration left, BGCS.Configuration.NativeBuildConfiguration right) [static]
-  method System.Boolean op_Inequality(BGCS.Configuration.NativeBuildConfiguration left, BGCS.Configuration.NativeBuildConfiguration right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-class BGCS.Configuration.NativePackagingConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.NativePackagingConfiguration>]
-  ctor()
-  property System.Boolean enabled { get; init }
-  property System.String packager { get; init }
-  method BGCS.Configuration.NativePackagingConfiguration <Clone>$()
-  method System.Boolean Equals(BGCS.Configuration.NativePackagingConfiguration other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Configuration.NativePackagingConfiguration left, BGCS.Configuration.NativePackagingConfiguration right) [static]
-  method System.Boolean op_Inequality(BGCS.Configuration.NativePackagingConfiguration left, BGCS.Configuration.NativePackagingConfiguration right) [static]
+  method System.Boolean op_Equality(BGCS.Configuration.ManagedProjectionInputConfiguration left, BGCS.Configuration.ManagedProjectionInputConfiguration right) [static]
+  method System.Boolean op_Inequality(BGCS.Configuration.ManagedProjectionInputConfiguration left, BGCS.Configuration.ManagedProjectionInputConfiguration right) [static]
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
 class BGCS.Configuration.OutputConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.OutputConfiguration>]
@@ -504,20 +426,6 @@ class BGCS.Configuration.OwnedResultConfiguration [sealed; interfaces=System.IEq
   method System.Boolean op_Inequality(BGCS.Configuration.OwnedResultConfiguration left, BGCS.Configuration.OwnedResultConfiguration right) [static]
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
-class BGCS.Configuration.PinnedConfigurationInput [sealed; interfaces=System.IEquatable<BGCS.Configuration.PinnedConfigurationInput>]
-  ctor(System.Uri url, BGCS.Contracts.Common.ContentDigest digest, System.Int64 length, System.String pathBase)
-  property BGCS.Contracts.Common.ContentDigest digest { get; init }
-  property System.Int64 length { get; init }
-  property System.String pathBase { get; init }
-  property System.Uri url { get; init }
-  method BGCS.Configuration.PinnedConfigurationInput <Clone>$()
-  method System.Boolean Equals(BGCS.Configuration.PinnedConfigurationInput other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Configuration.PinnedConfigurationInput left, BGCS.Configuration.PinnedConfigurationInput right) [static]
-  method System.Boolean op_Inequality(BGCS.Configuration.PinnedConfigurationInput left, BGCS.Configuration.PinnedConfigurationInput right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.Uri url, out BGCS.Contracts.Common.ContentDigest digest, out System.Int64 length, out System.String pathBase)
 class BGCS.Configuration.PluginSettingsConfiguration [sealed; interfaces=System.IEquatable<BGCS.Configuration.PluginSettingsConfiguration>]
   ctor()
   property System.String pathBase { get; init }
@@ -768,7 +676,6 @@ class BGCS.GenerationRequest [sealed; interfaces=System.IEquatable<BGCS.Generati
   property BGCS.Configuration.BindingConfiguration configuration { get }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> configurationInputs { get }
   property System.String configurationPath { get }
-  property System.Collections.Immutable.ImmutableArray<BGCS.Configuration.PinnedConfigurationInput> configurationRemoteInputs { get }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> pluginInputs { get }
   method BGCS.GenerationRequest <Clone>$()
   method BGCS.GenerationRequest FromFile(System.String path, System.String profile [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null], BGCS.Configuration.BindingConfigurationLoader configurationLoader [optional; default=null]) [static]
@@ -785,7 +692,6 @@ class BGCS.GenerationResult [sealed; interfaces=System.IEquatable<BGCS.Generatio
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.GenerationCacheStageResult> cacheStages { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics { get; init }
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeReferenceDescriptor> nativeReferences { get; init }
   property System.String outputRoot { get; init }
   property System.Boolean published { get; init }
   property System.Boolean success { get }
@@ -812,64 +718,9 @@ class BGCS.InspectionResult [sealed; interfaces=System.IEquatable<BGCS.Inspectio
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
   method System.Void Deconstruct(out System.Boolean success, out System.Collections.Immutable.ImmutableArray<BGCS.TargetInspection> targets, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics)
-class BGCS.ManifestNativeBuildPlanResult [sealed; interfaces=System.IEquatable<BGCS.ManifestNativeBuildPlanResult>]
-  ctor(BGCS.Contracts.Requests.NativeBuildPlan plan, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics)
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics { get; init }
-  property System.String nativeArtifact { get; init }
-  property BGCS.Contracts.Requests.NativeBuildPlan plan { get; init }
-  property System.Boolean success { get }
-  method BGCS.ManifestNativeBuildPlanResult <Clone>$()
-  method System.Boolean Equals(BGCS.ManifestNativeBuildPlanResult other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.ManifestNativeBuildPlanResult left, BGCS.ManifestNativeBuildPlanResult right) [static]
-  method System.Boolean op_Inequality(BGCS.ManifestNativeBuildPlanResult left, BGCS.ManifestNativeBuildPlanResult right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String GetDiagnosticSummary()
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out BGCS.Contracts.Requests.NativeBuildPlan plan, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics)
-class BGCS.ManifestNativeBuildRequest [sealed; interfaces=System.IEquatable<BGCS.ManifestNativeBuildRequest>]
-  ctor(System.String manifestPath)
-  property System.String auxiliaryToolPath { get; init }
-  property System.String buildToolPath { get; init }
-  property System.String compilerPath { get; init }
-  property System.String exportToolPath { get; init }
-  property System.String manifestPath { get; init }
-  property System.String outputFile { get; init }
-  property System.String packageRoot { get; init }
-  property System.String providerId { get; init }
-  property System.Int32 timeoutSeconds { get; init }
-  property System.Boolean verifyExports { get; init }
-  method BGCS.ManifestNativeBuildRequest <Clone>$()
-  method System.Boolean Equals(BGCS.ManifestNativeBuildRequest other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.ManifestNativeBuildRequest left, BGCS.ManifestNativeBuildRequest right) [static]
-  method System.Boolean op_Inequality(BGCS.ManifestNativeBuildRequest left, BGCS.ManifestNativeBuildRequest right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.String manifestPath)
-class BGCS.ManifestNativeBuildResult [sealed; interfaces=System.IEquatable<BGCS.ManifestNativeBuildResult>]
-  ctor(System.Boolean published, BGCS.Contracts.Requests.NativeBuildPlan plan, System.String nativeArtifact, BGCS.Contracts.Artifacts.NativeExportInspectionResult exportEvidence, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> packageArtifacts, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics)
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics { get; init }
-  property BGCS.Contracts.Artifacts.NativeExportInspectionResult exportEvidence { get; init }
-  property System.Collections.Immutable.ImmutableArray<BGCS.NativeBuild.Validation.NativeStringProofReceipt> literalProofs { get; init }
-  property System.String nativeArtifact { get; init }
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> packageArtifacts { get; init }
-  property BGCS.Contracts.Requests.NativeBuildPlan plan { get; init }
-  property System.Boolean published { get; init }
-  property System.Boolean success { get }
-  method BGCS.ManifestNativeBuildResult <Clone>$()
-  method System.Boolean Equals(BGCS.ManifestNativeBuildResult other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.ManifestNativeBuildResult left, BGCS.ManifestNativeBuildResult right) [static]
-  method System.Boolean op_Inequality(BGCS.ManifestNativeBuildResult left, BGCS.ManifestNativeBuildResult right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String GetDiagnosticSummary()
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.Boolean published, out BGCS.Contracts.Requests.NativeBuildPlan plan, out System.String nativeArtifact, out BGCS.Contracts.Artifacts.NativeExportInspectionResult exportEvidence, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> packageArtifacts, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics)
 class BGCS.TargetInspection [sealed; interfaces=System.IEquatable<BGCS.TargetInspection>]
   ctor(System.String targetId, BGCS.Contracts.Native.NativeModule native, BGCS.Contracts.Bridge.CppBridgeModule bridge, BGCS.Contracts.Interop.InteropModule interop, BGCS.Contracts.Managed.ManagedApiModel managed)
   property BGCS.Contracts.Bridge.CppBridgeModule bridge { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> extensionNativeBuildProviders { get; init }
   property BGCS.Contracts.Interop.InteropModule interop { get; init }
   property BGCS.Contracts.Managed.ManagedApiModel managed { get; init }
   property BGCS.Contracts.Native.NativeModule native { get; init }
@@ -883,24 +734,6 @@ class BGCS.TargetInspection [sealed; interfaces=System.IEquatable<BGCS.TargetIns
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
   method System.Void Deconstruct(out System.String targetId, out BGCS.Contracts.Native.NativeModule native, out BGCS.Contracts.Bridge.CppBridgeModule bridge, out BGCS.Contracts.Interop.InteropModule interop, out BGCS.Contracts.Managed.ManagedApiModel managed)
-class BGCS.Validation.ManagedCompilationValidator [sealed]
-  ctor()
-  method System.Threading.Tasks.Task<BGCS.Infrastructure.Execution.ProcessExecutionResult> ValidateAsync(System.Collections.Generic.IEnumerable<System.String> sources, BGCS.Configuration.BindingConfiguration configuration, System.String baseDirectory, System.Threading.CancellationToken cancellationToken)
-class BGCS.Validation.ManagedExternalTypeProbe [sealed]
-  ctor()
-  method System.Threading.Tasks.Task<BGCS.Validation.ManagedExternalTypeProbeResult> ProbeAsync(System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ExternalTypeProjection> projections, BGCS.Configuration.ManagedBuildConfiguration configuration, System.String baseDirectory, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken [optional; default=null])
-class BGCS.Validation.ManagedExternalTypeProbeResult [sealed; interfaces=System.IEquatable<BGCS.Validation.ManagedExternalTypeProbeResult>]
-  ctor(System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedTypeStorageFact> facts, BGCS.Contracts.Inputs.SourceSnapshot inputs)
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedTypeStorageFact> facts { get; init }
-  property BGCS.Contracts.Inputs.SourceSnapshot inputs { get; init }
-  method BGCS.Validation.ManagedExternalTypeProbeResult <Clone>$()
-  method System.Boolean Equals(BGCS.Validation.ManagedExternalTypeProbeResult other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Validation.ManagedExternalTypeProbeResult left, BGCS.Validation.ManagedExternalTypeProbeResult right) [static]
-  method System.Boolean op_Inequality(BGCS.Validation.ManagedExternalTypeProbeResult left, BGCS.Validation.ManagedExternalTypeProbeResult right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Managed.ManagedTypeStorageFact> facts, out BGCS.Contracts.Inputs.SourceSnapshot inputs)
 class BGCS.WorkerAssetDeployment [abstract; sealed]
   method System.Boolean Clear(System.String sourceRoot, System.String destinationRoot, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
   method System.Void Deploy(System.String sourceRoot, System.String manifestPath, System.String destinationRoot, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]

@@ -41,17 +41,17 @@ public sealed class NativeFiniteVariadicTests
                     return marker + narrow + (int)real + flag + (long long)wide + *pointer;
                 }
                 """);
-            BindingConfiguration configuration = Configuration(language, importMode) with { nativeBuild = new() { mode = "sources", sources = [nativeSource] } };
+            BindingConfiguration configuration = Configuration(language, importMode) with { };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             Assert.True(Assert.Single(target.native.declarations, declaration => declaration.kind == "Function" && declaration.name == "Analyze" && declaration.isVariadic).isVariadic);
             Assert.Contains(target.interop.functions, function => function.sourceName == "AnalyzeValues" && !function.isVariadic);
             Assert.DoesNotContain(target.interop.functions, function => function.isVariadic || function.sourceName == "Analyze");
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
             Assert.True(File.Exists(Path.Combine(targetRoot, "native", "metadata", "variadic.adapters.json")));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string factory = importMode == BindingImportMode.FunctionTable ? "VariadicApi.Load(binary)" : "VariadicApi.Create()";
             string call = language == SourceLanguage.C
                 ? "return api.Raw.AnalyzeValues(1, -3, 4.5f, (VariantFlag)7, 9, &value) == 42 ? 42 : 1;"

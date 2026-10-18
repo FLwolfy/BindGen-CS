@@ -1212,6 +1212,8 @@ class BGCS.CSharp.Projection.ManagedRecipeProjectionValidator [sealed]
   ctor()
   method BGCS.CSharp.Planning.CSharpRecipeProjectionPlan Plan(BGCS.Contracts.Managed.ManagedRecipeProjection projection, System.String carrier, System.Int32 pointerSize)
   method System.Void ValidateRecipes(System.Collections.Generic.IEnumerable<BGCS.Contracts.Bridge.TypeLoweringRecipe> recipes)
+class BGCS.CSharp.Projection.StaticExternalProjectionBinder [abstract; sealed]
+  method BGCS.Contracts.Managed.ManagedApiModel Bind(BGCS.Contracts.Managed.ManagedApiModel model, BGCS.Contracts.Requests.ManagedProjectionInputs inputs, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.CSharp.Validation.CSharpPlanningException [sealed; base=System.NotSupportedException; interfaces=System.Runtime.Serialization.ISerializable]
   ctor(BGCS.Contracts.Common.StableId nativeIdentity, System.Nullable<BGCS.Contracts.Common.SourceLocation> source, System.String message, System.Exception innerException [optional; default=null])
   property BGCS.Contracts.BindingDiagnostic diagnostic { get }

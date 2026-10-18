@@ -40,10 +40,6 @@ public sealed record BindingConfiguration
     public CppConfiguration cpp { get; init; } = new();
     /// <summary>Gets package or standalone runtime delivery.</summary>
     public RuntimeConfiguration runtime { get; init; } = new();
-    /// <summary>Gets native construction inputs; generation alone does not execute a build.</summary>
-    public NativeBuildConfiguration nativeBuild { get; init; } = new();
-    /// <summary>Gets additional managed inputs used only for candidate compilation validation.</summary>
-    public ManagedBuildConfiguration managedBuild { get; init; } = new();
     /// <summary>Gets output layout choices.</summary>
     public OutputConfiguration output { get; init; } = new();
     /// <summary>Gets cache policy.</summary>
@@ -203,6 +199,8 @@ public sealed record ApiConfiguration
     public int defaultOverloadLimit { get; init; } = 128;
     /// <summary>Gets checked field-copy projections into consumer types without replacing raw native ABI carriers.</summary>
     public ImmutableArray<ExternalTypeConfiguration> externalTypes { get; init; } = [];
+    /// <summary>Gets explicit metadata and source inputs for static projection analysis without building or executing consumers.</summary>
+    public ManagedProjectionInputConfiguration projectionInputs { get; init; } = new();
     /// <summary>Gets additional managed names for existing exports, source signatures or unambiguous qualified functions.</summary>
     public ImmutableArray<ManagedFunctionAliasRequest> functionAliases { get; init; } = [];
     /// <summary>Gets named instance views of existing friendly operations without duplicating imports.</summary>
@@ -412,48 +410,8 @@ public sealed record StringResultConfiguration
     public int maximumCodeUnits { get; init; } = 1048576;
 }
 
-/// <summary>Declares upstream source or prebuilt native inputs separately from managed generation.</summary>
-public sealed record NativeBuildConfiguration
-{
-    /// <summary>Gets optional native asset preparation performed inside the validated build candidate.</summary>
-    public NativePackagingConfiguration packaging { get; init; } = new();
-    /// <summary>Gets the native output form; null selects the target's normal dynamic or static consumption form.</summary>
-    public NativeOutputKind? outputKind { get; init; }
-    /// <summary>Gets an optional explicit build-system executable path.</summary>
-    public string? buildToolPath { get; init; }
-    /// <summary>Gets an optional explicit build-system executor or archive tool path.</summary>
-    public string? auxiliaryToolPath { get; init; }
-    /// <summary>Gets none, sources or prebuilt native build mode.</summary>
-    public string mode { get; init; } = "none";
-    /// <summary>Gets the native build provider identity.</summary>
-    public string provider { get; init; } = "auto";
-    /// <summary>Gets upstream native source files.</summary>
-    public ImmutableArray<string> sources { get; init; } = [];
-    /// <summary>Gets declared prebuilt native artifacts.</summary>
-    public ImmutableArray<string> artifacts { get; init; } = [];
-    /// <summary>Gets the explicit concrete ABI declaration for a prebuilt artifact.</summary>
-    public string? prebuiltTargetId { get; init; }
-    /// <summary>Gets additional native compiler arguments.</summary>
-    public ImmutableArray<string> compilerArguments { get; init; } = [];
-    /// <summary>Gets additional linker arguments.</summary>
-    public ImmutableArray<string> linkerArguments { get; init; } = [];
-    /// <summary>Gets native library dependencies.</summary>
-    public ImmutableArray<string> libraries { get; init; } = [];
-    /// <summary>Gets native library search directories.</summary>
-    public ImmutableArray<string> libraryDirectories { get; init; } = [];
-}
-
-/// <summary>Selects native asset preparation without treating it as clean-install platform certification.</summary>
-public sealed record NativePackagingConfiguration
-{
-    /// <summary>Gets whether build prepares native package assets in the owned candidate; default is false.</summary>
-    public bool enabled { get; init; }
-    /// <summary>Gets the exact registered asset packager identity, or auto for an unambiguous custom service or the built-in packager.</summary>
-    public string packager { get; init; } = "auto";
-}
-
-/// <summary>Declares managed validation dependencies separately from generated public API choices.</summary>
-public sealed record ManagedBuildConfiguration
+/// <summary>Declares immutable metadata and source inputs for static managed projection analysis.</summary>
+public sealed record ManagedProjectionInputConfiguration
 {
     /// <summary>Gets explicit managed assembly reference paths.</summary>
     public ImmutableArray<string> references { get; init; } = [];
@@ -496,10 +454,6 @@ public sealed record ExecutionConfiguration
     public DiagnosticPolicyConfiguration diagnostics { get; init; } = new();
     /// <summary>Gets the total generation session timeout in seconds.</summary>
     public int sessionTimeoutSeconds { get; init; } = 1800;
-    /// <summary>Gets the deadline for one candidate managed compilation.</summary>
-    public int managedCompilationTimeoutSeconds { get; init; } = 600;
-    /// <summary>Gets the shared native compiler and linker deadline.</summary>
-    public int nativeBuildTimeoutSeconds { get; init; } = 900;
 }
 
 /// <summary>Promotes selected warnings into publication-blocking errors without downgrading errors.</summary>

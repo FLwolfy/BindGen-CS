@@ -22,7 +22,7 @@ public sealed class DoctorCommandTests
         Assert.False(result.RootElement.GetProperty("success").GetBoolean());
         Assert.Equal("missing", result.RootElement.GetProperty("worker").GetProperty("status").GetString());
         Assert.False(result.RootElement.GetProperty("worker").GetProperty("parseExecuted").GetBoolean());
-        Assert.False(result.RootElement.GetProperty("nativeBuildExecuted").GetBoolean());
+        Assert.False(result.RootElement.GetProperty("generationExecuted").GetBoolean());
     }
 
     [Fact]
@@ -89,53 +89,15 @@ public sealed class DoctorCommandTests
         {
             schemaVersion = 1, library = new { id = "doctor_probe", nativeName = "doctor_probe" },
             source = new { language = "c", headers = new[] { "native.h" } },
-            nativeBuild = new { mode = "none", provider = "cmake", buildToolPath = "unused-missing-cmake" },
             cache = new { enabled = false }
         }));
         using JsonDocument result = scenario.Doctor(0, "bindgen.json");
         Assert.True(result.RootElement.GetProperty("inspectionExecuted").GetBoolean());
         Assert.True(result.RootElement.GetProperty("targetValidated").GetBoolean());
-        Assert.False(result.RootElement.GetProperty("nativeBuildExecuted").GetBoolean());
-        JsonElement prerequisite = Assert.Single(result.RootElement.GetProperty("prerequisites").EnumerateArray());
-        Assert.Equal("notRequested", prerequisite.GetProperty("status").GetString());
+        Assert.False(result.RootElement.GetProperty("generationExecuted").GetBoolean());
         JsonElement target = Assert.Single(result.RootElement.GetProperty("inspection").GetProperty("targets").EnumerateArray());
         Assert.Equal(JsonValueKind.Object, target.GetProperty("resolvedTarget").ValueKind);
         Assert.False(Directory.Exists(Path.Combine(scenario.root, "Generated")));
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void ConfiguredDoctor_RejectsMissingOrWrongBuildToolWithoutPublishing(bool wrongTool)
-    {
-        using Scenario scenario = new();
-        scenario.CopyActualWorker();
-        string host = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? Path.GetFullPath(Path.Combine(
-            Path.GetDirectoryName(typeof(object).Assembly.Location)!, "..", "..", "..",
-            OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
-        File.WriteAllText(Path.Combine(scenario.root, "native.h"), "int native_add(int left, int right);\n");
-        File.WriteAllText(Path.Combine(scenario.root, "native.c"), "int native_add(int left, int right) { return left + right; }\n");
-        File.WriteAllText(Path.Combine(scenario.root, "bindgen.json"), JsonSerializer.Serialize(new
-        {
-            schemaVersion = 1, library = new { id = "doctor_probe", nativeName = "doctor_probe" },
-            source = new { language = "c", headers = new[] { "native.h" } },
-            nativeBuild = new
-            {
-                mode = "sources", provider = "cmake", sources = new[] { "native.c" },
-                buildToolPath = wrongTool ? host : Path.Combine(scenario.root, "missing-cmake"),
-                auxiliaryToolPath = host
-            },
-            cache = new { enabled = false }
-        }));
-        using JsonDocument result = scenario.Doctor(1, "bindgen.json");
-        JsonElement readiness = Assert.Single(result.RootElement.GetProperty("prerequisites").EnumerateArray());
-        Assert.False(readiness.GetProperty("ready").GetBoolean());
-        Assert.Equal("unavailable", readiness.GetProperty("status").GetString());
-        Assert.False(result.RootElement.GetProperty("nativeBuildExecuted").GetBoolean());
-        Assert.False(Directory.Exists(Path.Combine(scenario.root, "Generated")));
-        if (wrongTool)
-            Assert.Contains(result.RootElement.GetProperty("diagnostics").EnumerateArray(),
-                item => item.GetProperty("message").GetString()!.Contains("numeric version", StringComparison.Ordinal));
     }
 
     private sealed class Scenario : IDisposable

@@ -22,9 +22,9 @@ public sealed class NeutralSourceFactParityTests
         try
         {
             await using BindingHost host = Host();
-            BuildResult result = await host.BuildAsync(new(new(Configuration(singleFile), root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(Configuration(singleFile), root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             Assert.DoesNotContain(target.native.declarations, declaration => declaration.name == "hidden_helper");
             Assert.Equal("observe", Assert.Single(target.interop.functions).exportName);
             Assert.DoesNotContain(target.interop.functions, function => function.exportName == "hidden_helper");
@@ -74,15 +74,15 @@ public sealed class NeutralSourceFactParityTests
         try
         {
             await using BindingHost host = Host();
-            BuildRequest request = new(new(Configuration(false), root));
-            BuildResult initial = await host.BuildAsync(request);
+            GenerationRequest request = new(Configuration(false), root);
+            GenerationResult initial = await NativeConsumerHarness.GenerateAndCompileAsync(host, request, compileManaged: true);
             Assert.True(initial.success, initial.GetDiagnosticSummary());
             Dictionary<string, string> previous = Snapshot(initial.outputRoot);
             await File.AppendAllTextAsync(Path.Combine(root, "native.h"),
                 "\ntypedef _Complex double NativeComplex;\nNativeComplex unsupported_complex(NativeComplex value);\n");
-            BuildResult rejected = await host.BuildAsync(request);
+            GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, request, compileManaged: true);
             Assert.False(rejected.success);
-            Assert.Contains(rejected.generation.diagnostics, diagnostic =>
+            Assert.Contains(rejected.diagnostics, diagnostic =>
                 diagnostic.message.Contains("NativeComplex", StringComparison.Ordinal)
                     || diagnostic.message.Contains("unsupported_complex", StringComparison.Ordinal));
             Dictionary<string, string> after = Snapshot(initial.outputRoot);
@@ -99,7 +99,7 @@ public sealed class NeutralSourceFactParityTests
             selection = new() { excludeDeclarations = ["hidden_helper"] } },
         api = new() { @namespace = "Generated.SourceFacts", name = "FactsApi" },
         output = new() { layout = singleFile ? "singleFile" : "split", singleFileName = "SourceFacts.cs" },
-        nativeBuild = new() { mode = "none" }, cache = new() { enabled = false }
+         cache = new() { enabled = false }
     };
 
     private static string CreateInput()

@@ -75,15 +75,15 @@ public sealed class NativeOwnedInstanceCallbackTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             Assert.Equal(6, target.interop.functions.SelectMany(function => function.parameters).Count(parameter => parameter.callback is not null));
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string context = sourceRuntime ? "OwnedApiContext" : "OwnedApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             string runtime = sourceRuntime ? "Generated.OwnedCallbacks.Runtime" : "BGCS.Runtime";

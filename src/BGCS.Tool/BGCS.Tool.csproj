@@ -29,10 +29,6 @@
     <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
   </ItemGroup>
 
-  <ItemGroup Label="Package dependencies">
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
-  </ItemGroup>
-
   <ItemGroup Label="Package content">
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <None Include="../BGCS.Frontend.Clang/Resources/Clang/LICENSE.txt" Pack="true" PackagePath="licenses/clang-resource/LICENSE.txt" />

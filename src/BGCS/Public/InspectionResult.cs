@@ -25,8 +25,6 @@ public sealed record TargetInspection(
     /// <summary>Gets the resolved target and pinned toolchain already used for native fact extraction, or null for caller-created inspection data.</summary>
     public NativeTargetDescriptor? resolvedTarget { get; init; }
 
-    /// <summary>Gets the frozen extension native build provider identities available during this inspection.</summary>
-    public ImmutableArray<string> extensionNativeBuildProviders { get; init; } = [];
 }
 
 /// <summary>Reports a complete generation inspection without replacing formal output.</summary>

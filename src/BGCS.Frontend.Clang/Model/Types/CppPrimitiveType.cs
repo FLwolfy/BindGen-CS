@@ -89,22 +89,6 @@ internal sealed class CppPrimitiveType : CppType
     /// </summary>
     public static readonly CppPrimitiveType longDouble = new CppPrimitiveType(CppPrimitiveKind.LongDouble);
     /// <summary>
-    /// ObjC `id` type.
-    /// </summary>
-    public static readonly CppPrimitiveType objCId = new CppPrimitiveType(CppPrimitiveKind.ObjCId);
-    /// <summary>
-    /// ObjC `SEL` type.
-    /// </summary>
-    public static readonly CppPrimitiveType objCSel = new CppPrimitiveType(CppPrimitiveKind.ObjCSel);
-    /// <summary>
-    /// ObjC `Class` type.
-    /// </summary>
-    public static readonly CppPrimitiveType objCClass = new CppPrimitiveType(CppPrimitiveKind.ObjCClass);
-    /// <summary>
-    /// ObjC `Object` type.
-    /// </summary>
-    public static readonly CppPrimitiveType objCObject = new CppPrimitiveType(CppPrimitiveKind.ObjCObject);
-    /// <summary>
     /// Unsigned 128 bits integer type.
     /// </summary>
     public static readonly CppPrimitiveType uInt128 = new CppPrimitiveType(CppPrimitiveKind.UInt128);
@@ -222,12 +206,6 @@ internal sealed class CppPrimitiveType : CppType
             case CppPrimitiveKind.LongDouble:
                 sizeOf = 8;
                 break;
-            case CppPrimitiveKind.ObjCId:
-            case CppPrimitiveKind.ObjCSel:
-            case CppPrimitiveKind.ObjCClass:
-            case CppPrimitiveKind.ObjCObject:
-                sizeOf = 8; // Valid only for 64 bits
-                break;
             case CppPrimitiveKind.UInt128:
             case CppPrimitiveKind.Int128:
                 sizeOf = 16;
@@ -267,10 +245,6 @@ internal sealed class CppPrimitiveType : CppType
             CppPrimitiveKind.Bool => "bool",
             CppPrimitiveKind.Int128 => "System.Int128",
             CppPrimitiveKind.UInt128 => "System.UInt128",
-            CppPrimitiveKind.ObjCId => "ObjCId",
-            CppPrimitiveKind.ObjCSel => "ObjCSel",
-            CppPrimitiveKind.ObjCClass => "ObjCClass",
-            CppPrimitiveKind.ObjCObject => "ObjCObject",
             CppPrimitiveKind.Float16 => "System.Half",
             CppPrimitiveKind.BFloat16 => "BFloat16",
             _ => throw new InvalidOperationException($"Unhandled PrimitiveKind: {this.kind}")
@@ -377,22 +351,6 @@ internal sealed class CppPrimitiveType : CppType
         {
             CXTypeKind.CXType_LongDouble,
             global::BGCS.Frontend.Clang.Model.Types.CppPrimitiveType.longDouble
-        },
-        {
-            CXTypeKind.CXType_ObjCId,
-            global::BGCS.Frontend.Clang.Model.Types.CppPrimitiveType.objCId
-        },
-        {
-            CXTypeKind.CXType_ObjCSel,
-            global::BGCS.Frontend.Clang.Model.Types.CppPrimitiveType.objCSel
-        },
-        {
-            CXTypeKind.CXType_ObjCClass,
-            global::BGCS.Frontend.Clang.Model.Types.CppPrimitiveType.objCClass
-        },
-        {
-            CXTypeKind.CXType_ObjCObject,
-            global::BGCS.Frontend.Clang.Model.Types.CppPrimitiveType.objCObject
         },
         {
             CXTypeKind.CXType_Int128,

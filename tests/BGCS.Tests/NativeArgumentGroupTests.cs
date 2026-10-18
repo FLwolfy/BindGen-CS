@@ -47,11 +47,10 @@ public sealed class NativeArgumentGroupTests
                     parameterExpression = "{nativeType}({data}, static_cast<std::size_t>({length}))"
                 }] },
                 api = new() { @namespace = "Generated.Arguments", name = "ArgumentsApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
             CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
@@ -62,7 +61,7 @@ public sealed class NativeArgumentGroupTests
             JsonElement contract = abi.RootElement.GetProperty("module").GetProperty("functions").EnumerateArray()
                 .Single(function => function.GetProperty("sourceQualifiedName").ValueKind == JsonValueKind.String && function.GetProperty("sourceQualifiedName").GetString() == "Demo::Sum");
             Assert.Equal(3, contract.GetProperty("error").GetProperty("evidence").GetProperty("level").GetInt32());
-            string binary = Path.Combine(target, "native", "bin", OperatingSystem.IsWindows() ? "arguments_bridge.dll" : OperatingSystem.IsMacOS() ? "libarguments_bridge.dylib" : "libarguments_bridge.so");
+            string binary = Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? "arguments_bridge.dll" : OperatingSystem.IsMacOS() ? "libarguments_bridge.dylib" : "libarguments_bridge.so");
             library = NativeLibrary.Load(binary);
             data = Marshal.AllocHGlobal(3 * sizeof(int));
             Marshal.Copy(new[] { 10, 11, 12 }, 0, data, 3);

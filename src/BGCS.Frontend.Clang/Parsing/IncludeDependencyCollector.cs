@@ -36,24 +36,12 @@ internal static unsafe class IncludeDependencyCollector
         compilation.translationUnit.GetInclusions(visitor, default);
         GC.KeepAlive(visitor);
         if (failure is not null) throw new IOException("Parsed source provenance could not be collected.", failure);
-        paths.ExceptWith(compilation.declarationPreludeFiles);
-        paths.UnionWith(compilation.declarationPreludeInputs.Select(input => input.path));
         return paths.OrderBy(path => path, StringComparer.Ordinal).ToArray();
     }
 
     internal static ImmutableArray<InputDependency> Collect(CppCompilation compilation)
     {
-        var owned = compilation.declarationPreludeFiles.ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-        ImmutableArray<InputDependency> parsed = Collect(compilation.translationUnit).Where(input => !owned.Contains(input.path)).ToImmutableArray();
-        if (!SourceSnapshotVerifier.Matches(new(compilation.declarationPreludeInputs, [])))
-            throw new IOException("Declaration prelude inputs changed before detached fact extraction completed.");
-        return parsed.Concat(compilation.declarationPreludeInputs).GroupBy(input => input.path,
-            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).Select(group =>
-            {
-                InputDependency first = group.First();
-                if (group.Any(input => input != first)) throw new IOException("Prelude and consumer read different native dependency bytes: " + first.path);
-                return first;
-            }).OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray();
+        return Collect(compilation.translationUnit);
     }
 
     internal static ImmutableArray<InputDependency> Collect(CXTranslationUnit translationUnit)

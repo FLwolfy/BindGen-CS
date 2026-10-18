@@ -94,19 +94,19 @@ public sealed class NativeBooleanValueParameterTests
                     borrowedParameters = [new() { function = "switch_set", parameter = "self", lifetime = NativeLifetimeKind.Call, retainsPointer = false }]
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["flags.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             var boolean = Assert.Single(target.interop.types, type => type.primitiveKind == "Bool");
             Assert.Equal(1, boolean.size);
             Assert.Equal(1, boolean.alignment);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string factory = mode == BindingImportMode.FunctionTable ? "FlagApi.Load(binary)" : "FlagApi.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"),
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName, $$"""
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName, $$"""
                 using System;
                 using Generated.NativeBooleanBorrow;
                 public static unsafe class FlagConsumer {

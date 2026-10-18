@@ -31,10 +31,10 @@ public sealed class NativeCppSequenceTests
             await File.WriteAllTextAsync(Path.Combine(root, "sequences.hpp"), Header);
             BindingConfiguration configuration = Configuration(runtimeMode);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             CppBridgeModule model = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
             BridgeExport[] adapters = model.exports.Where(export => export.inputAdapterOf is not null).ToArray();
             Assert.Equal(10, adapters.Length);
@@ -85,7 +85,7 @@ public sealed class NativeCppSequenceTests
         cpp = new() { sequenceInputAdapters = [Request("Demo::SumVector"), Request("Demo::SumArray"), Request("Demo::SumString"), Request("Demo::SumUtf8"),
             Request("Demo::SumBool"), Request("Demo::SumSpan", true), Request("Demo::SumConstSpan", true), Request("Demo::SumFixedSpan", true),
             Request("Demo::SumRef", true), Request("Demo::Receiver::Sum")] },
-        runtime = new() { mode = runtimeMode }, nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+        runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
     };
 
     private static SequenceInputAdapterRequest Request(string function, bool call = false) => new(function,

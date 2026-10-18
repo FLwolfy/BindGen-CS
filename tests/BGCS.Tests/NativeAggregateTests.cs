@@ -34,10 +34,10 @@ public sealed class NativeAggregateTests
                 api = new() { @namespace = "Generated.AggregateFixture", name = "AggregateApi", importMode = mode },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime && mode == BindingImportMode.LibraryImport ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["aggregates.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
             string factory = mode == BindingImportMode.FunctionTable ? "AggregateApi.Load(binary)" : "AggregateApi.Create()";
@@ -80,7 +80,7 @@ public sealed class NativeAggregateTests
                 }
                 """;
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(target, "managed"),
-                Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin"))), "aggregate_fixture", probe, "AggregateProbe", root, sourceRuntime));
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target))), "aggregate_fixture", probe, "AggregateProbe", root, sourceRuntime));
         }
         finally { Directory.Delete(root, recursive: true); }
     }

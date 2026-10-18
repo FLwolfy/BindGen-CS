@@ -40,9 +40,6 @@
       }
     ]
   },
-  "nativeBuild": {
-    "mode": "sources"
-  },
   "output": {
     "root": "Generated"
   }

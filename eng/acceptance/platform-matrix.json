@@ -201,14 +201,6 @@
       },
       "executionMappings": [
         {
-          "path": "tests/BGCS.NativeBuild.Tests/WasmNativeExecutionTests.cs",
-          "method": "WorkloadCompilerBuildsMixedC17Cpp23WithIndependentDependenciesAndExports",
-          "stages": [
-            "NativeLinked"
-          ],
-          "requiresEnvironment": "BGCS_REQUIRE_WASM_NATIVE=1"
-        },
-        {
           "script": "scripts/test-wasm-bindings.py",
           "stages": [
             "ManagedCompiled",
@@ -225,7 +217,7 @@
         }
       ],
       "constraints": [
-        "Static archive/object references carry an exact import module identity matching .NET NativeFileReference registration.",
+        "The external consuming project registers and links native object/archive references with the import identity required by generated bindings; BGCS emits source only.",
         "LibraryImport uses the explicitly resolved browser default Cdecl convention profile.",
         "Chromium evidence does not certify Firefox or Safari."
       ]
@@ -249,7 +241,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -271,7 +263,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -293,7 +285,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -315,7 +307,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -337,7 +329,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -359,7 +351,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -381,7 +373,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -403,7 +395,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -425,7 +417,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -447,7 +439,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -469,7 +461,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     },
     {
@@ -491,7 +483,7 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/toolchain and asset mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
       ]
     }
   ],
@@ -505,20 +497,12 @@
       "scope": "target triple/layout and C++ SDK include-order parsing regressions; no target invocation or package certification"
     },
     {
-      "path": "tests/BGCS.NativeBuild.Tests/TargetCapabilityTests.cs",
-      "scope": "opaque identities, declared mechanisms and GNU/musl RID separation"
-    },
-    {
-      "path": "tests/BGCS.NativeBuild.Tests/NativeReferenceTests.cs",
-      "scope": "runtime-specific typed asset references and import module identity"
-    },
-    {
-      "path": "tests/BGCS.NativeBuild.Tests/StaticArtifactTests.cs",
-      "scope": "native binary identity, byte order and rejection of incompatible RID assumptions"
-    },
-    {
       "path": "tests/BGCS.Tests/StaticManagedAdapterTests.cs",
       "scope": "generated managed-to-native static-table protocol on desktop; not Wasm/AOT certification"
+    },
+    {
+      "path": "tests/BGCS.Platforms.Tests/AutomaticToolchainTargetTests.cs",
+      "scope": "Explicit and automatically discovered parse SDK inputs, separate target identities and module capabilities; no native asset packaging claim."
     }
   ],
   "receiptRequirements": [
@@ -539,7 +523,8 @@
   ],
   "knownLimits": [
     "Source/model byte-order facts never default Unknown to verified LittleEndian.",
-    "NativeTargetId is an opaque identity; binary layout and NuGet RID mapping use explicit platform/CPU/ABI facts.",
+    "NativeTargetId is an opaque identity; generation uses explicit platform/CPU/ABI facts; native distribution belongs to the consumer.",
     "Postponed platforms remain visibly uncertified until their real matrix completes."
-  ]
+  ],
+  "responsibilityBoundary": "BGCS resolves target facts, parses and generates sources. ManagedCompiled, NativeLinked and Invoked describe independent repository consumer tests; Packaged describes BGCS product installation. They are not product build, link or native asset packaging services."
 }

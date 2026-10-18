@@ -152,7 +152,7 @@ def main() -> None:
             for language, header, namespace, output in (("c", "native.h", "PublicRelease.C", "GeneratedC"), ("cpp", "widget.hpp", "PublicRelease.Cpp", "GeneratedCpp")):
                 config = {"schemaVersion": 1, "library": {"id": "public_probe", "nativeName": "public_probe"},
                     "source": {"language": language, "headers": [str(inputs / header)], "parseMacros": False},
-                    "api": {"namespace": namespace, "name": "Api"}, "nativeBuild": {"mode": "none"},
+                    "api": {"namespace": namespace, "name": "Api"},
                     "output": {"root": str(sdk / output)}, "cache": {"enabled": False}}
                 (sdk / (language + ".json")).write_text(json.dumps(config), encoding="utf-8")
             (sdk / "Program.cs").write_text('''using System;

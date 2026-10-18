@@ -18,7 +18,6 @@
 | `BGCS.Analysis` | 声明闭包、ABI/存储分析、语义证据与安全资格 |
 | `BGCS.Cpp2C` | 规划 C++ lowering 与 C 头文件辅助导出，生成类型化桥接操作 |
 | `BGCS.CSharp` | 托管 API 投影、导入/转换/清理规划与 C# 输出 |
-| `BGCS.NativeBuild` | 原生构建计划、执行、导出检查与资产包装 |
 | `BGCS.Runtime` | 独立消费者的模块会话、lease、句柄、缓冲区、编码与回调 |
 | `BGCS` | 默认组合、配置、扩展、会话、工作区与公开 Host |
 | `BGCS.Tool` | 将 CLI 参数与取消映射为 Host 请求，呈现结果 |
@@ -38,7 +37,6 @@ flowchart TB
     Host --> Analysis[BGCS.Analysis]
     Host --> Cpp[BGCS.Cpp2C]
     Host --> CSharp[BGCS.CSharp]
-    Host --> NativeBuild[BGCS.NativeBuild]
     Host --> Runtime[BGCS.Runtime]
     Infrastructure --> Contracts
     Platforms --> Contracts
@@ -48,9 +46,6 @@ flowchart TB
     Cpp --> Analysis
     CSharp --> Contracts
     CSharp --> Analysis
-    NativeBuild --> Contracts
-    NativeBuild --> Infrastructure
-    NativeBuild --> Platforms
     Worker[BGCS.Frontend.Clang.Worker] --> Contracts
     Worker --> Infrastructure
     Worker --> Frontend[BGCS.Frontend.Clang]
@@ -100,7 +95,7 @@ C++ 与 C 使用相同配置入口和 Host。C++ operation 表达构造、析构
 
 C 的 inline/内部链接函数不自动成为动态导出。生成的辅助 header/source 必须编译进配置的原生模块，prebuilt 模式检查实际适配导出。Windows 的辅助 DLL 不会继承依赖 DLL 的其他导出；源码构建计划与独立原生 manifest 必须明确携带辅助输入。
 
-`generate` 完成本次要求的模型、安全与源码契约检查后发布源码。`build` 还在候选目录完成托管编译与已配置原生输入验证，再替换正式输出。`nativeBuild.mode=none` 必须明确记录原生构建未验证。生成成功不代表已经完成原生链接或调用。
+`generate` 在模型、安全和源码契约检查后发布源码。消费者编译 C#，并通过外部系统构建、链接与部署原生库；生成成功不代表调用已经验证。
 
 ## 宿主、目标、SDK 与运行环境分离
 
@@ -147,7 +142,7 @@ Runtime 包独立于生成器与解析器依赖。源码模式使用版本化闭
 
 配置组合保留显式 false、零值和列表语义，每个本地文件使用自己的路径基准。HTTPS 基础配置必须显式提供 URL、SHA-256 和本地 `pathBase`，远程来源与本地依赖分别记录。请求创建与工作区加载在生成前就传递取消。读取声明的配置不会安装 SDK 或编译器。
 
-阶段缓存复用当前主要用于原始 frontend 结果与符合条件的 C# emission。Key 包括实现、worker、资源、目标/工具链、冻结配置、源码/include 成员关系及扩展输入。未知指纹禁用受影响复用；变换、产物处理器与请求的验证仍执行。缓存命中不能跳过原生构建或调用，也不能把源码复用描述为已经完成 native-build cache。
+阶段缓存复用当前主要用于原始 frontend 结果与符合条件的 C# emission。Key 包括实现、worker、资源、目标/工具链、冻结配置、源码/include 成员关系及扩展输入。未知指纹禁用受影响复用；变换、产物处理器与请求的验证仍执行。生成缓存命中不能证明外部原生编译或调用已经通过。
 
 缓存条目为不可变完整文件集合，损坏时作为 miss。候选产物经过拥有权检查、稳定锁和恢复 journal 后发布，必需验证失败时保留上一次完整输出。输入/输出/缓存重叠、路径逃逸和产物冲突失败。多个目录的发布需要锁与 manifest 协议，普通文件系统不提供任意跨目录天然原子事务。
 

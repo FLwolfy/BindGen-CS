@@ -271,9 +271,6 @@ public sealed class PluginSessionTests
         {
             trace.Add(identity);
             Assert.Equal(request.target.targetId.value, request.interop.targetId);
-            Assert.False(request.managedCompiled);
-            Assert.False(request.nativeLinked);
-            Assert.False(request.nativeArtifactVerified);
             string abi = await request.content.ReadTextAsync(request.artifacts.Single(artifact => artifact.relativePath.EndsWith("abi.manifest.json", StringComparison.Ordinal)).relativePath, cancellationToken);
             Assert.Contains(request.interop.targetId, abi);
             await Assert.ThrowsAsync<ArgumentException>(() => request.content.ReadTextAsync("undeclared", cancellationToken).AsTask());

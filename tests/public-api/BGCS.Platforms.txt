@@ -1,15 +1,7 @@
-class BGCS.Platforms.Assets.NativeOutputLayout [abstract; sealed]
-  method System.String ResolveFilename(System.String libraryName, BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Requests.NativeOutputKind kind) [static]
-  method System.String ResolveImportModuleName(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Targets.ManagedRuntimeProfile runtime, System.String configuredNativeName, System.String nativeArtifactFilename [optional; default=null]) [static]
-class BGCS.Platforms.Assets.NativeReferenceCatalog [abstract; sealed]
-  method BGCS.Contracts.Artifacts.NativeReferenceDescriptor Create(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Targets.ManagedRuntimeProfile runtime, BGCS.Contracts.Requests.NativeOutputKind outputKind, BGCS.Contracts.Artifacts.ArtifactDescriptor artifact, System.String configuredNativeName) [static]
-class BGCS.Platforms.Assets.RuntimeIdentifierMapper [abstract; sealed]
-  method System.String Map(BGCS.Contracts.Targets.NativeTargetDescriptor target) [static]
-  method System.String Map(BGCS.Contracts.Targets.NativeTargetId targetId) [static]
 class BGCS.Platforms.Capabilities.PlatformCapabilityCatalog [abstract; sealed]
   method BGCS.Contracts.Targets.TargetCapabilities Get(BGCS.Contracts.Targets.NativeTargetDescriptor target) [static]
 class BGCS.Platforms.ManagedRuntimeResolver [abstract; sealed]
-  method BGCS.Contracts.Targets.ManagedRuntimeProfile Resolve(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Targets.ManagedRuntimeKind runtime, System.Nullable<BGCS.Contracts.Requests.NativeOutputKind> outputKind [optional; default=null]) [static]
+  method BGCS.Contracts.Targets.ManagedRuntimeProfile Resolve(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Targets.ManagedRuntimeKind runtime) [static]
 class BGCS.Platforms.Targeting.Providers.AppleNativeTargetProvider [sealed; interfaces=BGCS.Contracts.Targets.INativeTargetProvider]
   ctor()
   method System.Boolean TryResolve(BGCS.Contracts.Targets.NativeTargetRequest request, out BGCS.Contracts.Targets.NativeTargetDescriptor target) [virtual; final]
@@ -27,17 +19,11 @@ class BGCS.Platforms.Targeting.TargetResolver [sealed]
   ctor(System.Collections.Generic.IEnumerable<BGCS.Contracts.Targets.INativeTargetProvider> providers)
   method BGCS.Contracts.Targets.NativeTargetDescriptor Resolve(BGCS.Contracts.Targets.NativeTargetRequest request)
   method System.Collections.Generic.IReadOnlyList<BGCS.Contracts.Targets.INativeTargetProvider> CreateBuiltInProviders() [static]
-class BGCS.Platforms.Targeting.ToolchainDiscovery [abstract; sealed]
-  method System.Collections.Generic.IReadOnlyList<BGCS.Contracts.Targets.HeaderSearchPath> DiscoverHeaderSearchPaths(BGCS.Contracts.Inputs.SourceLanguage parserKind, System.String compilerPath, System.String sysRoot) [static]
-  method System.Collections.Generic.IReadOnlyList<System.String> DiscoverSystemIncludeFolders(BGCS.Contracts.Inputs.SourceLanguage parserKind, System.String compilerPath [optional; default=null], System.String sysRoot [optional; default=null]) [static]
-  method System.String FindAppleSdkRoot(System.String sdkName) [static]
-  method System.String FindCompiler(BGCS.Contracts.Inputs.SourceLanguage parserKind, System.String explicitPath [optional; default=null]) [static]
-  method System.String GetCompilerDriverFamily(BGCS.Contracts.Inputs.SourceLanguage parserKind, System.String compilerPath) [static]
-  method System.String GetCompilerFingerprint(BGCS.Contracts.Inputs.SourceLanguage parserKind, System.String compilerPath [optional; default=null]) [static]
 class BGCS.Platforms.Toolchains.AndroidNdkDiscovery [abstract; sealed]
   method BGCS.Contracts.Targets.NativeTargetDescriptor Resolve(System.String ndkRoot, System.String architecture, System.Int32 apiLevel) [static]
 class BGCS.Platforms.Toolchains.AppleSdkDiscovery [abstract; sealed]
   method BGCS.Contracts.Targets.NativeTargetDescriptor Resolve(BGCS.Contracts.Targets.NativeTargetId targetId, System.String sdkRoot, System.String compilerPath [optional; default=null]) [static]
+  method System.String FindInstalledRoot(System.String sdkName) [static]
 class BGCS.Platforms.Toolchains.EmscriptenSdkDiscovery [abstract; sealed]
   method BGCS.Contracts.Targets.NativeTargetDescriptor Resolve(System.String emsdkRoot) [static]
   method BGCS.Contracts.Targets.NativeTargetDescriptor ResolveWorkload(System.String sdkToolsRoot, System.String cacheToolsRoot) [static]
@@ -45,12 +31,10 @@ class BGCS.Platforms.Toolchains.MsvcToolchainDiscovery [abstract; sealed]
   method BGCS.Platforms.Toolchains.MsvcToolchainInfo Resolve(System.String compiler, System.String architecture, System.String sdkRoot [optional; default=null], System.String sdkVersion [optional; default=null]) [static]
   method System.String FindCompiler(System.String architecture) [static]
 class BGCS.Platforms.Toolchains.MsvcToolchainInfo [sealed; interfaces=System.IEquatable<BGCS.Platforms.Toolchains.MsvcToolchainInfo>]
-  ctor(System.String compiler, System.String linker, System.Version compilerVersion, System.String sdkRoot, System.String sdkVersion, System.Collections.Immutable.ImmutableArray<System.String> includeDirectories, System.Collections.Immutable.ImmutableArray<System.String> libraryDirectories)
+  ctor(System.String compiler, System.Version compilerVersion, System.String sdkRoot, System.String sdkVersion, System.Collections.Immutable.ImmutableArray<System.String> includeDirectories)
   property System.String compiler { get; init }
   property System.Version compilerVersion { get; init }
   property System.Collections.Immutable.ImmutableArray<System.String> includeDirectories { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> libraryDirectories { get; init }
-  property System.String linker { get; init }
   property System.String sdkRoot { get; init }
   property System.String sdkVersion { get; init }
   method BGCS.Platforms.Toolchains.MsvcToolchainInfo <Clone>$()
@@ -60,7 +44,7 @@ class BGCS.Platforms.Toolchains.MsvcToolchainInfo [sealed; interfaces=System.IEq
   method System.Boolean op_Inequality(BGCS.Platforms.Toolchains.MsvcToolchainInfo left, BGCS.Platforms.Toolchains.MsvcToolchainInfo right) [static]
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.String compiler, out System.String linker, out System.Version compilerVersion, out System.String sdkRoot, out System.String sdkVersion, out System.Collections.Immutable.ImmutableArray<System.String> includeDirectories, out System.Collections.Immutable.ImmutableArray<System.String> libraryDirectories)
+  method System.Void Deconstruct(out System.String compiler, out System.Version compilerVersion, out System.String sdkRoot, out System.String sdkVersion, out System.Collections.Immutable.ImmutableArray<System.String> includeDirectories)
 class BGCS.Platforms.Toolchains.ToolchainResolver [abstract; sealed]
-  method BGCS.Contracts.Targets.NativeTargetDescriptor ResolveToolchain(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Inputs.SourceLanguage language, System.String driverHint [optional; default=null]) [static]
+  method BGCS.Contracts.Targets.NativeTargetDescriptor ResolveToolchain(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Inputs.SourceLanguage language) [static]
   method System.Collections.Generic.IReadOnlyList<BGCS.Contracts.Targets.HeaderSearchPath> ResolveHeaderSearchPaths(BGCS.Contracts.Targets.NativeTargetDescriptor target, BGCS.Contracts.Inputs.SourceLanguage language) [static]

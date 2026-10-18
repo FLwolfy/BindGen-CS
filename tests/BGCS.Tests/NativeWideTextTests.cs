@@ -76,12 +76,12 @@ public sealed class NativeWideTextTests
                 schemaVersion = 1, library = new() { id = "wide", nativeName = "wide_fixture" },
                 source = new() { headers = ["wide.h"], language = SourceLanguage.C, parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeWide", name = "WideApi" }, runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                semantics = new() { stringParameters = rules.ToImmutable() }, nativeBuild = new() { mode = "sources", sources = ["wide.c"] }, cache = new() { enabled = false }
+                semantics = new() { stringParameters = rules.ToImmutable() },  cache = new() { enabled = false }
             };
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             Invoke(Path.Combine(target, "managed"), binary, width);
         }
         finally { Directory.Delete(root, recursive: true); }

@@ -157,12 +157,16 @@ public sealed class NeutralGenerationHostTests
         await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
             .AddArtifactProcessor("helper", 0, () => new ProbeProcessor("helper", 0, addHelper: true)).Build();
         BindingConfiguration configuration = Configuration() with { runtime = new() { mode = "source" } };
-        BuildResult result = await host.BuildAsync(new(new(configuration, scratch.root)));
+        GenerationRequest request = new(configuration, scratch.root);
+        GenerationResult result = await host.GenerateAsync(request);
         Assert.True(result.success, result.GetDiagnosticSummary());
+        await NativeConsumerHarness.CompileManagedAsync(result, request);
         Assert.Contains(result.artifacts, artifact => artifact.relativePath.EndsWith("/managed/Helpers/ExtensionHelper.g.cs", StringComparison.Ordinal));
         new ArtifactDigestVerifier().Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
-        BuildResult single = await host.BuildAsync(new(new(configuration with { output = new() { root = "Single", layout = "singleFile" } }, scratch.root)));
+        GenerationRequest singleRequest = new(configuration with { output = new() { root = "Single", layout = "singleFile" } }, scratch.root);
+        GenerationResult single = await host.GenerateAsync(singleRequest);
         Assert.True(single.success, single.GetDiagnosticSummary());
+        await NativeConsumerHarness.CompileManagedAsync(single, singleRequest);
         ArtifactDescriptor composed = Assert.Single(single.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp"));
         Assert.EndsWith("/managed/Bindings.cs", composed.relativePath);
         Assert.Contains("class ExtensionHelper", File.ReadAllText(Path.Combine(single.outputRoot, composed.relativePath)));
@@ -277,8 +281,10 @@ public sealed class NeutralGenerationHostTests
                 zeroTerminated = true, retainsPointer = retains, allowsNull = false }] }
         };
         await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend(text: true)).Build();
-        BuildResult result = await host.BuildAsync(new(new(configuration, scratch.root)));
+        GenerationRequest request = new(configuration, scratch.root);
+        GenerationResult result = await host.GenerateAsync(request);
         Assert.True(result.success, result.GetDiagnosticSummary());
+        await NativeConsumerHarness.CompileManagedAsync(result, request);
         string methods = File.ReadAllText(Path.Combine(result.outputRoot, "emscripten-wasm32-emscripten/managed/Api/NativeApi.Methods.g.cs"));
         if (retains)
         {
@@ -304,10 +310,10 @@ public sealed class NeutralGenerationHostTests
         Assert.Contains("delegate* unmanaged[Cdecl]<int, int>", managed);
         using JsonDocument receipt = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.outputRoot, "emscripten-wasm32-emscripten/metadata/verification.json")));
         Assert.True(receipt.RootElement.GetProperty("generated").GetBoolean());
-        Assert.False(receipt.RootElement.GetProperty("managedCompiled").GetBoolean());
-        Assert.False(receipt.RootElement.GetProperty("nativeLinked").GetBoolean());
-        Assert.False(receipt.RootElement.GetProperty("invoked").GetBoolean());
-        Assert.False(receipt.RootElement.GetProperty("packaged").GetBoolean());
+        Assert.False(receipt.RootElement.TryGetProperty("managedCompiled", out _));
+        Assert.False(receipt.RootElement.TryGetProperty("nativeLinked", out _));
+        Assert.False(receipt.RootElement.TryGetProperty("invoked", out _));
+        Assert.False(receipt.RootElement.TryGetProperty("packaged", out _));
     }
 
     [Fact]
@@ -345,28 +351,6 @@ public sealed class NeutralGenerationHostTests
         Assert.DoesNotContain("namespace BGCS.Runtime", source);
     }
 
-    [Fact]
-    public async Task BuildAsync_CompilesBeforePublicationAndKeepsThePreviousOutputOnFailure()
-    {
-        using Scratch scratch = new();
-        BindingConfiguration configuration = Configuration() with { runtime = new() { mode = "source" } };
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build();
-        BuildResult success = await host.BuildAsync(new(new(configuration, scratch.root)));
-        Assert.True(success.success, success.GetDiagnosticSummary());
-        string receiptPath = Path.Combine(success.outputRoot, "emscripten-wasm32-emscripten/metadata/verification.json");
-        string before = File.ReadAllText(receiptPath);
-        using (JsonDocument receipt = JsonDocument.Parse(before))
-            Assert.True(receipt.RootElement.GetProperty("managedCompiled").GetBoolean());
-        string broken = Path.Combine(scratch.root, "broken.cs");
-        File.WriteAllText(broken, "public class Broken { this is not CSharp; }");
-        BindingConfiguration invalid = configuration with { managedBuild = new() { sources = ["broken.cs"] } };
-        BuildResult failure = await host.BuildAsync(new(new(invalid, scratch.root)));
-        Assert.False(failure.success);
-        Assert.False(failure.published);
-        Assert.Contains(failure.diagnostics, diagnostic => diagnostic.code == "BGCS-MANAGED-COMPILE");
-        Assert.Equal(before, File.ReadAllText(receiptPath));
-        Assert.Empty(Directory.GetDirectories(scratch.root, ".bgcs-staging-*"));
-    }
 
     [Fact]
     public void NewConfiguration_StrictlyRejectsUnknownNestedFieldsAndOldFlatInputs()

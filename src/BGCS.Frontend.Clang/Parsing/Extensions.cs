@@ -296,6 +296,6 @@ internal static class Extensions
         this in CXCursor cursor,
         CppElement element
     ) {
-        return cursor.IsDefinition || element is CppInclusionDirective || element is CppClass cppClass && (cppClass.classKind == CppClassKind.ObjCInterface || cppClass.classKind == CppClassKind.ObjCProtocol || cppClass.classKind == CppClassKind.ObjCInterfaceCategory);
+        return cursor.IsDefinition || element is CppInclusionDirective;
     }
 }

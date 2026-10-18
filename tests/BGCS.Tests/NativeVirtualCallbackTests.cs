@@ -61,11 +61,10 @@ public sealed class NativeVirtualCallbackTests
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator")] },
                 api = new() { @namespace = "Generated.Virtual", name = "VirtualApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
             plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
@@ -79,7 +78,7 @@ public sealed class NativeVirtualCallbackTests
             Assert.Equal("void*", Assert.Single(referenceSlot.parameters).cType);
             Assert.True(plan.source.GetDeclaration(referenceSlot.nativeMethod).isVolatile);
             Assert.False(plan.source.GetDeclaration(referenceSlot.nativeMethod).isNoThrow);
-            InteropModule interop = Assert.Single(result.generation.targetModels).interop;
+            InteropModule interop = Assert.Single(result.targetModels).interop;
             new BGCS.Analysis.Bridge.VirtualProxyProtocolVerifier().Verify(interop);
             VirtualProxyContract protocol = Assert.Single(interop.virtualProxies);
             Assert.Equal(proxy.id, protocol.name);
@@ -124,7 +123,7 @@ public sealed class NativeVirtualCallbackTests
             Assert.Throws<InvalidOperationException>(() => new BGCS.Analysis.Bridge.CppBridgeOperationVerifier().Verify(wrongFactorySlot));
             Assert.DoesNotContain(plan.exports, export => export.operation.declaration is { } id
                 && plan.source.GetDeclaration(id).qualifiedName.StartsWith(proxy.proxyType + "::", StringComparison.Ordinal));
-            string binary = Path.Combine(target, "native", "bin", OperatingSystem.IsWindows() ? "virtual_bridge.dll" : OperatingSystem.IsMacOS() ? "libvirtual_bridge.dylib" : "libvirtual_bridge.so");
+            string binary = Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? "virtual_bridge.dll" : OperatingSystem.IsMacOS() ? "libvirtual_bridge.dylib" : "libvirtual_bridge.so");
             library = NativeLibrary.Load(binary);
             T Function<T>(BridgeExport export) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, export.name));
             ReleaseError releaseError = Marshal.GetDelegateForFunctionPointer<ReleaseError>(NativeLibrary.GetExport(library, plan.errorReleaseExport));

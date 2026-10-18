@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "libraryId": "cimguizmo",
+  "platform": "windows-x64",
+  "sourceNormalization": "quoted-locked-corpus-include-root-v1",
+  "selectionPolicySha256": "5645a77020cbec654f0b5df100702cbbdd06bf5e172bc970a7f9e1cd79e44100",
+  "omittedDeclarations": {
+    "excludedDeclarations": [
+      "igText",
+      "igTextColored",
+      "igTextDisabled",
+      "igTextWrapped",
+      "igLabelText",
+      "igBulletText",
+      "igTreeNode_StrStr",
+      "igTreeNode_Ptr",
+      "igTreeNodeEx_StrStr",
+      "igTreeNodeEx_Ptr",
+      "igSetTooltip",
+      "igSetItemTooltip",
+      "igLogText",
+      "igDebugLog",
+      "igImFormatString",
+      "igImFormatStringToTempBuffer",
+      "igTextAligned",
+      "ImGuiTextBuffer_appendf"
+    ],
+    "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+  },
+  "sources": {
+    "windows-x64-msvc/managed/Bindings.cs": "64524b8c2ffac45747b5ae14551fe71dce916bd2e0dbc24164992ec044c05d13"
+  },
+  "publicApiSha256": "0009e21b363e9bd9584ebf6b268714f2e48d438a146c908f91527cb036ada4a9"
+}

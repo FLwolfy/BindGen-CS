@@ -39,23 +39,15 @@
           Condition="'$(BGCSGenerateBindings)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(IsCrossTargetingBuild)' != 'true'">
     <PropertyGroup>
       <_BGCSOutputDirectory>$(IntermediateOutputPath)bgcs/$(RuntimeIdentifier)/$(BGCSNativeTarget)</_BGCSOutputDirectory>
-      <_BGCSConsumerPublishAot>false</_BGCSConsumerPublishAot>
-      <_BGCSConsumerPublishAot Condition="'$(PublishAot)' == 'true'">true</_BGCSConsumerPublishAot>
     </PropertyGroup>
     <Error Condition="'$(BGCSMSBuildTaskAssembly)' == ''" Text="The BGCS SDK TaskHost assets are unavailable. Deploy the SDK assets before enabling generation." />
     <BGCS.MSBuild.GenerateBindingsTask ConfigFile="$(BGCSConfig)"
                                       ProjectDirectory="$(MSBuildProjectDirectory)"
                                       OutputDirectory="$(_BGCSOutputDirectory)"
                                       WorkerAssetRoot="$(BGCSWorkerAssetRoot)"
-                                      NativeTarget="$(BGCSNativeTarget)"
-                                      BuildNative="$(BGCSBuildNative)"
-                                      PublishAot="$(_BGCSConsumerPublishAot)">
+                                      NativeTarget="$(BGCSNativeTarget)">
       <Output TaskParameter="ArtifactManifest" PropertyName="BGCSArtifactManifest" />
       <Output TaskParameter="LibraryId" PropertyName="_BGCSLibraryId" />
-      <Output TaskParameter="NativeFileReferences" ItemName="_BGCSNativeFileReference" />
-      <Output TaskParameter="NativeReferences" ItemName="_BGCSNativeReference" />
-      <Output TaskParameter="NativeLibraryFiles" ItemName="_BGCSNativeLibrary" />
-      <Output TaskParameter="NativeAotLibraries" ItemName="_BGCSNativeAotLibrary" />
     </BGCS.MSBuild.GenerateBindingsTask>
     <BGCS.MSBuild.ReadArtifactManifestTask OutputDirectory="$([System.IO.Path]::GetFullPath('$(_BGCSOutputDirectory)', '$(MSBuildProjectDirectory)'))" LibraryId="$(_BGCSLibraryId)">
       <Output TaskParameter="GeneratedFiles" ItemName="_BGCSGeneratedCompile" />
@@ -63,16 +55,6 @@
     <ItemGroup>
       <Compile Remove="@(_BGCSGeneratedCompile)" />
       <Compile Include="@(_BGCSGeneratedCompile)" />
-      <NativeFileReference Include="@(_BGCSNativeFileReference)" />
-      <NativeReference Include="@(_BGCSNativeReference)" />
-      <NativeLibrary Include="@(_BGCSNativeAotLibrary)" />
-      <Content Include="@(_BGCSNativeLibrary)" Link="%(_BGCSNativeLibrary.Filename)%(_BGCSNativeLibrary.Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-      <!-- AssignTargetPaths runs before CoreCompile. These late manifest inputs need
-           their assigned copy/publish form as well as their public Content identity. -->
-      <ContentWithTargetPath Include="@(_BGCSNativeLibrary)"
-                             TargetPath="%(_BGCSNativeLibrary.Filename)%(_BGCSNativeLibrary.Extension)"
-                             CopyToOutputDirectory="PreserveNewest"
-                             CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
 

@@ -73,22 +73,6 @@ internal enum CppPrimitiveKind
     /// </summary>
     LongDouble,
     /// <summary>
-    /// An Objective-C `id` type.
-    /// </summary>
-    ObjCId,
-    /// <summary>
-    /// An Objective-C `SEL` type.
-    /// </summary>
-    ObjCSel,
-    /// <summary>
-    /// An Objective-C `Class` type.
-    /// </summary>
-    ObjCClass,
-    /// <summary>
-    /// An Objective-C `NSObject` type.
-    /// </summary>
-    ObjCObject,
-    /// <summary>
     /// Unsigned 128 bits integer type.
     /// </summary>
     Int128,

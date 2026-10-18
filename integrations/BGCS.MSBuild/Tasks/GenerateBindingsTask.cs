@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using BGCS.Configuration;
 using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
@@ -30,10 +29,6 @@ public sealed class GenerateBindingsTask : Task, ICancelableTask
     public string? WorkerAssetRoot { get; set; }
     /// <summary>Gets or sets the selected native target for a multi-target configuration.</summary>
     public string? NativeTarget { get; set; }
-    /// <summary>Gets or sets whether explicitly declared source/prebuilt native inputs are validated and staged.</summary>
-    public bool BuildNative { get; set; } = true;
-    /// <summary>Gets or sets whether the consumer is publishing a NativeAOT application.</summary>
-    public bool PublishAot { get; set; }
     /// <summary>Gets exact generated source items after complete candidate publication.</summary>
     [Output]
     public ITaskItem[] GeneratedFiles { get; private set; } = [];
@@ -43,19 +38,6 @@ public sealed class GenerateBindingsTask : Task, ICancelableTask
     /// <summary>Gets the publication's stable logical ownership identity.</summary>
     [Output]
     public string LibraryId { get; private set; } = string.Empty;
-    /// <summary>Gets static native inputs for browser WebAssembly.</summary>
-    [Output]
-    public ITaskItem[] NativeFileReferences { get; private set; } = [];
-    /// <summary>Gets static native inputs for Apple mobile consumers.</summary>
-    [Output]
-    public ITaskItem[] NativeReferences { get; private set; } = [];
-    /// <summary>Gets native dynamic libraries to copy beside the managed consumer.</summary>
-    [Output]
-    public ITaskItem[] NativeLibraryFiles { get; private set; } = [];
-    /// <summary>Gets archive/object inputs for the consumer's NativeAOT native linker.</summary>
-    [Output]
-    public ITaskItem[] NativeAotLibraries { get; private set; } = [];
-
     /// <inheritdoc/>
     public override bool Execute()
     {
@@ -113,9 +95,7 @@ public sealed class GenerateBindingsTask : Task, ICancelableTask
         if (!string.IsNullOrEmpty(WorkerAssetRoot)) builder.WithWorkerAssetRoot(Path.GetFullPath(WorkerAssetRoot, project));
         await using BindingHost host = builder.Build();
         GenerationRequest selectedRequest = request.WithConfiguration(configuration);
-        GenerationResult result = BuildNative && configuration.nativeBuild.mode != "none"
-            ? (await host.BuildAsync(new BuildRequest(selectedRequest), cancellationToken).ConfigureAwait(false)).generation
-            : await host.GenerateAsync(selectedRequest, cancellationToken).ConfigureAwait(false);
+        GenerationResult result = await host.GenerateAsync(selectedRequest, cancellationToken).ConfigureAwait(false);
         foreach (BindingDiagnostic diagnostic in result.diagnostics)
         {
             if (diagnostic.isFailure) Log.LogError(null, diagnostic.code, null, diagnostic.location?.file ?? input,
@@ -134,36 +114,6 @@ public sealed class GenerateBindingsTask : Task, ICancelableTask
                 item.SetMetadata("Visible", "false");
                 return (ITaskItem)item;
             }).ToArray();
-        var native = result.nativeReferences.Select(reference =>
-        {
-            if (!result.artifacts.Any(artifact => artifact.relativePath == reference.relativePath && artifact.digest == reference.digest))
-                throw new InvalidOperationException("A native reference is not part of the exact verified publication.");
-            TaskItem item = new(Path.GetFullPath(reference.relativePath, result.outputRoot));
-            item.SetMetadata("BGCSTarget", reference.target.targetId.value);
-            item.SetMetadata("BGCSRuntimeIdentifier", reference.runtimeIdentifier);
-            if (string.IsNullOrWhiteSpace(reference.importModuleName))
-                throw new InvalidOperationException("A native reference has no declared import module identity.");
-            if (reference.kind == NativeReferenceKind.BrowserNativeFile
-                && !string.Equals(reference.importModuleName, Path.GetFileNameWithoutExtension(item.ItemSpec), StringComparison.Ordinal))
-                throw new InvalidOperationException("The declared browser import module differs from the exact native reference filename.");
-            item.SetMetadata("BGCSPInvokeModule", reference.importModuleName);
-            return (Reference: reference, Item: (ITaskItem)item);
-        }).ToArray();
-        NativeFileReferences = native.Where(artifact => artifact.Reference.kind == NativeReferenceKind.BrowserNativeFile).Select(artifact => artifact.Item).ToArray();
-        NativeReferences = native.Where(artifact => artifact.Reference.kind == NativeReferenceKind.AppleStatic).Select(artifact =>
-            {
-                artifact.Item.SetMetadata("Kind", "Static");
-                artifact.Item.SetMetadata("ForceLoad", "true");
-                return artifact.Item;
-            }).ToArray();
-        NativeLibraryFiles = native.Where(artifact => artifact.Reference.kind == NativeReferenceKind.DynamicCopy)
-            .Select(artifact => artifact.Item).ToArray();
-        NativeAotLibraries = native.Where(artifact => artifact.Reference.kind == NativeReferenceKind.NativeAotLibrary)
-            .Select(artifact => artifact.Item).ToArray();
-        if (NativeAotLibraries.Length != 0 && !PublishAot)
-            throw new InvalidOperationException("Static desktop native inputs require the consuming project to enable PublishAot.");
-        if (native.Any(artifact => !Enum.IsDefined(artifact.Reference.kind)))
-            throw new InvalidOperationException("The native publication requests an unsupported integration reference kind.");
         ArtifactManifest = Path.Combine(result.outputRoot, ".bgcs-artifacts.json");
         return !Log.HasLoggedErrors;
     }

@@ -61,18 +61,18 @@ public sealed class NeutralFriendlySurfaceParityTests
                         lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false
                     }]
                 },
-                nativeBuild = new() { mode = "sources", sources = ["friendly.c"] }, cache = new() { enabled = false },
+                 cache = new() { enabled = false },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             Assert.Equal(8, target.interop.functions.Length);
             Assert.Equal("bgcs_add", Assert.Single(target.interop.functions, function => function.exportName == "bgcs_add").exportName);
             Assert.Equal("x", Assert.Single(target.managed!.methods, method => method.name == "Add").parameterNames[0]);
-            Assert.Contains(built.generation.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP
+            Assert.Contains(built.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP
                 && diagnostic.severity == BindingDiagnosticSeverity.Warning && diagnostic.message.Contains("bgcs_unproven", StringComparison.Ordinal));
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string managedRoot = Path.Combine(targetRoot, "managed");
@@ -113,7 +113,7 @@ public sealed class NeutralFriendlySurfaceParityTests
                 }
                 """;
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(managedRoot,
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName,
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName,
                 consumer, "FriendlyParityConsumer", root, sourceRuntime));
         }
         finally { Directory.Delete(root, recursive: true); }

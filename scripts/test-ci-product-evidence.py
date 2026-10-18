@@ -9,7 +9,7 @@ import zipfile
 import hashlib
 from browser_lifecycle_evidence import verify_receipt
 from cpp_acceptance_fixture import expected_lifecycle_checks
-from source_contribution_evidence import CHECK as SOURCE_CHECK, PREREQUISITES as SOURCE_CHECKS
+from source_contribution_evidence import CHECK as SOURCE_CHECK, PREREQUISITES as SOURCE_CHECKS, verify_report as verify_source_report
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('ci_product_evidence', ROOT / 'scripts/verify-ci-product-evidence.py')
@@ -84,6 +84,70 @@ def complete_reports(receipt):
 
 
 class WorkflowProductEvidenceTests(unittest.TestCase):
+    def test_partial_dirty_source_contributor_proof_requires_explicit_local_opt_in(self):
+        receipt = complete_receipt()
+        receipt['completeProductSet'] = False
+        receipt['sourceWorktreeDirty'] = True
+        report = json.loads(complete_reports(receipt)['installed-source-contributor.json'])
+        report['source']['workingTreeDirty'] = True
+        verify_source_report(report, receipt, require_clean=False)
+        with self.assertRaises(RuntimeError):
+            verify_source_report(report, receipt)
+        with self.assertRaises(RuntimeError):
+            VERIFIER.validate(receipt, 'a' * 40, 'win-x64')
+
+    def test_partial_source_contributor_opt_in_cannot_relax_full_or_undeclared_scope(self):
+        for scope in (True, None, 0, 'false'):
+            receipt = complete_receipt()
+            if scope is None:
+                del receipt['completeProductSet']
+            else:
+                receipt['completeProductSet'] = scope
+            report = json.loads(complete_reports(receipt)['installed-source-contributor.json'])
+            with self.subTest(scope=scope), self.assertRaises(RuntimeError):
+                verify_source_report(report, receipt, require_clean=False)
+
+    def test_partial_source_contributor_proof_still_requires_exact_actual_source_identity(self):
+        receipt = complete_receipt()
+        receipt['completeProductSet'] = False
+        receipt['sourceWorktreeDirty'] = True
+        report = json.loads(complete_reports(receipt)['installed-source-contributor.json'])
+        report['source']['workingTreeDirty'] = True
+        for key, value in (('revision', 'd' * 40), ('checkedOutSourceSha256', 'e' * 64),
+                           ('workingTreeDirty', False), ('workingTreeDirty', 1)):
+            changed = json.loads(json.dumps(report))
+            changed['source'][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(RuntimeError):
+                verify_source_report(changed, receipt, require_clean=False)
+        for value in (None, 1, 'true'):
+            receipt['sourceWorktreeDirty'] = value
+            with self.subTest(parent_dirty=value), self.assertRaises(RuntimeError):
+                verify_source_report(report, receipt, require_clean=False)
+        receipt['sourceWorktreeDirty'] = True
+        for parent_key, child_key, value in (('sourceRevision', 'revision', None),
+                                            ('sourceRevision', 'revision', 'not-a-revision'),
+                                            ('checkedOutSourceSha256', 'checkedOutSourceSha256', None),
+                                            ('checkedOutSourceSha256', 'checkedOutSourceSha256', 'z' * 64)):
+            changed_parent = json.loads(json.dumps(receipt))
+            changed_report = json.loads(json.dumps(report))
+            changed_parent[parent_key] = changed_report['source'][child_key] = value
+            with self.subTest(parent_identity=parent_key, value=value), self.assertRaises(RuntimeError):
+                verify_source_report(changed_report, changed_parent, require_clean=False)
+
+    def test_partial_source_contributor_proof_does_not_relax_execution_or_summary_checks(self):
+        receipt = complete_receipt()
+        receipt['completeProductSet'] = False
+        report = json.loads(complete_reports(receipt)['installed-source-contributor.json'])
+        verify_source_report(report, receipt, require_clean=False)
+        for key, value in (('success', False), ('installedProducts', False), ('manifestSha256', 'd' * 64)):
+            changed = json.loads(json.dumps(report))
+            changed[key] = value
+            with self.subTest(key=key), self.assertRaises(RuntimeError):
+                verify_source_report(changed, receipt, require_clean=False)
+        report['entries']['sdk']['phases'][1]['emission'] = 'miss'
+        with self.assertRaises(RuntimeError):
+            verify_source_report(report, receipt, require_clean=False)
+
     def test_complete_runtime_source_requires_its_actual_installed_consumption_check(self):
         receipt = complete_receipt()
         receipt['checks'].remove(VERIFIER.COMPLETE_SOURCE_CHECK)

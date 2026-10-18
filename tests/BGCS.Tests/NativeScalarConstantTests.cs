@@ -67,13 +67,13 @@ public sealed class NativeScalarConstantTests
                     names = ImmutableDictionary<string, string>.Empty.Add("MAXIMUM", "Maximum").Add("SHIFTED", "Shifted").Add("MINIMUM", "Minimum")
                         .Add("NEGATIVE_ZERO", "NegativeZero").Add("HALF", "Half").Add("FIELD_VALUE", "FieldValue") },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["constants." + extension] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             string factory = mode == BindingImportMode.FunctionTable ? "ConstantApi.Load(binary)" : "ConstantApi.Create()";
             string probe = $$"""
                 using System;

@@ -71,15 +71,52 @@ class CorpusSnapshotTests(unittest.TestCase):
         for config in (ROOT / "tests/corpus").glob("*.bindgen.json"):
             shutil.copyfile(config, configs / config.name)
         policy = json.loads((ROOT / "tests/corpus/upstream-limitations.json").read_text(encoding="utf-8"))
-        limitation, = policy["libraries"]["bimg"]["upstreamLimitations"]
         corpus = root / "upstream"
-        header = corpus / limitation["repository"] / limitation["header"]
-        header.parent.mkdir(parents=True)
-        header.write_text("\n" * (limitation["line"] - 1) + limitation["declaration"] + "\n", encoding="utf-8")
-        limitation["headerSha256"] = digest(header)
+        observations = [item for library in policy["libraries"].values()
+                        for kind in ("upstreamLimitations", "compilerConditionalHelpers") for item in library.get(kind, [])]
+        headers = {}
+        for limitation in observations:
+            header = corpus / limitation["repository"] / limitation["header"]
+            lines = headers.setdefault(header, [])
+            lines.extend([""] * max(0, limitation["lastLine"] - len(lines)))
+            body = limitation["declaration"].splitlines()
+            self.assertEqual(limitation["lastLine"] - limitation["line"] + 1, len(body))
+            lines[limitation["line"] - 1:limitation["lastLine"]] = body
+        for header, lines in headers.items():
+            header.parent.mkdir(parents=True)
+            header.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        for limitation in observations:
+            limitation["headerSha256"] = digest(corpus / limitation["repository"] / limitation["header"])
         (configs / "upstream-limitations.json").write_text(json.dumps(policy), encoding="utf-8")
-        lock = {"repositories": [{"id": limitation["repository"], "revision": limitation["revision"]}]}
+        lock = {"repositories": list({item["repository"]: {"id": item["repository"], "revision": item["revision"]} for item in observations}.values())}
+        limitation, = policy["libraries"]["bimg"]["upstreamLimitations"]
+        header = corpus / limitation["repository"] / limitation["header"]
         return root, corpus, lock, header
+
+    def test_compiler_only_helper_keeps_its_exact_branch_and_portable_operation(self):
+        root, corpus, lock, _ = self.policy_fixture()
+        selection_policy(root, lock, corpus)
+        policy_path = root / "tests/corpus/upstream-limitations.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        proof = policy["libraries"]["sdl3"]["compilerConditionalHelpers"][0]
+        proof["declaration"] = proof["declaration"].replace("#if SDL_HAS_BUILTIN", "#if FAKE_HAS_BUILTIN")
+        policy_path.write_text(json.dumps(policy), encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "exact declaration or signature changed"):
+            selection_policy(root, lock, corpus)
+
+    def test_portable_public_operation_cannot_be_added_to_helper_exclusions(self):
+        root, corpus, lock, _ = self.policy_fixture()
+        policy_path = root / "tests/corpus/upstream-limitations.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        portable = policy["libraries"]["sdl3"]["compilerConditionalHelpers"][0]["portableCounterpart"]
+        policy["libraries"]["sdl3"]["excludedDeclarations"].append(portable)
+        policy_path.write_text(json.dumps(policy), encoding="utf-8")
+        config_path = root / "tests/corpus/sdl3.bindgen.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["source"]["selection"]["excludeDeclarations"].append(portable)
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "preserve its portable public operation"):
+            selection_policy(root, lock, corpus)
 
     def test_unreviewed_broadening_of_one_overload_exclusion_fails(self):
         root, corpus, lock, _ = self.policy_fixture()

@@ -265,8 +265,6 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       BGCS_CPP2C_CXX: g++
-      BGCS_REQUIRE_CLANG_SOURCE_VIEW: "1"
-      BGCS_REQUIRE_GNU_SOURCE_VIEW: "1"
     permissions:
       contents: write
       actions: read
@@ -290,9 +288,6 @@ jobs:
 
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-
-      - name: Install locked Meson native-provider prerequisite
-        run: python -m pip install --disable-pip-version-check meson==1.8.3
 
       - name: Install selected .NET 10 browser workload
         run: python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/wasm.json
@@ -408,7 +403,7 @@ jobs:
 
       - name: Generate SPDX SBOM and SLSA provenance
         run: >-
-          dotnet run --project src/BGCS.Tool/BGCS.Tool.csproj --configuration Release --no-build --
+          dotnet run --project eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj --configuration Release --no-build --
           supply-chain artifacts/nuget --output artifacts/supply-chain
           --revision "${{ needs.release-preflight.outputs.revision }}"
           --builder-id "https://github.com/${{ github.repository }}/.github/workflows/publish-bgcs-runtime-nuget.yml@${{ github.workflow_sha }}"

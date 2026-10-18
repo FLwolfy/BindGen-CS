@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Linq;
 using System.Collections.Immutable;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Bridge;
@@ -17,11 +16,6 @@ namespace BGCS.Configuration;
 /// <summary>Reads only the strict grouped BGCS 3.0 format and freezes its declared defaults.</summary>
 public sealed class BindingConfigurationLoader
 {
-    private readonly HttpClient? m_httpClient;
-
-    /// <summary>Creates a configuration loader; only explicit pinned HTTPS references perform network reads.</summary>
-    /// <param name="httpClient">An optional caller-owned transport; automatic redirects should be disabled. The loader never disposes it.</param>
-    public BindingConfigurationLoader(HttpClient? httpClient = null) => m_httpClient = httpClient;
     private static readonly JsonSerializerOptions s_options = new()
     {
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
@@ -32,7 +26,7 @@ public sealed class BindingConfigurationLoader
 
     internal static JsonSerializerOptions CreateSerializerOptions() => new(s_options);
 
-    /// <summary>Reads a local root and its explicit local or content-pinned HTTPS bases without old-format fallback.</summary>
+    /// <summary>Reads a local root and its explicit local bases without old-format fallback.</summary>
     /// <param name="path">The native configuration path.</param>
     /// <returns>The validated immutable grouped configuration.</returns>
     /// <exception cref="JsonException">The format, enum identity or field is unknown.</exception>
@@ -43,10 +37,10 @@ public sealed class BindingConfigurationLoader
         return LoadWithInputs(path).configuration;
     }
 
-    /// <summary>Composes local or explicitly pinned HTTPS bases and a named profile with exact document provenance.</summary>
+    /// <summary>Composes local bases and a named profile with exact document provenance.</summary>
     /// <param name="path">The local root configuration.</param>
     /// <param name="profile">An explicit preset selection overriding the document selector.</param>
-    /// <param name="cancellationToken">Cancels local reads, HTTPS requests and composition.</param>
+    /// <param name="cancellationToken">Cancels local file reads and composition.</param>
     /// <returns>The effective configuration and all input content identities.</returns>
     public ConfigurationLoadResult LoadWithInputs(
         string path,
@@ -57,18 +51,18 @@ public sealed class BindingConfigurationLoader
         return LoadWithInputsAsync(path, profile, cancellationToken).GetAwaiter().GetResult();
     }
 
-    /// <summary>Asynchronously composes declared configuration inputs with bounded HTTPS reads and immutable content identities.</summary>
+    /// <summary>Asynchronously composes declared configuration inputs with bounded local reads and immutable content identities.</summary>
     /// <param name="path">The local root configuration.</param>
     /// <param name="profile">An explicit preset selection overriding the document selector.</param>
-    /// <param name="cancellationToken">Cancels file reads, network requests and composition.</param>
-    /// <returns>The validated configuration, local input closure and verified remote identities.</returns>
+    /// <param name="cancellationToken">Cancels local file reads and composition.</param>
+    /// <returns>The validated configuration, local input closure.</returns>
     public Task<ConfigurationLoadResult> LoadWithInputsAsync(
         string path,
         string? profile = null,
         CancellationToken cancellationToken = default
     ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return new ConfigurationComposer(m_httpClient).LoadAsync(path, profile, cancellationToken);
+        return new ConfigurationComposer().LoadAsync(path, profile, cancellationToken);
     }
 
     /// <summary>Applies the same configuration invariants to SDK-created immutable values.</summary>
@@ -313,8 +307,7 @@ public sealed class BindingConfigurationLoader
         ArgumentNullException.ThrowIfNull(configuration.runtime);
         ArgumentNullException.ThrowIfNull(configuration.cache);
         ArgumentNullException.ThrowIfNull(configuration.execution);
-        ArgumentNullException.ThrowIfNull(configuration.nativeBuild);
-        ArgumentNullException.ThrowIfNull(configuration.managedBuild);
+        ArgumentNullException.ThrowIfNull(configuration.api.projectionInputs);
         ArgumentNullException.ThrowIfNull(configuration.extensions);
         if (configuration.extensions.plugins.IsDefault) throw new ArgumentException("Plugin manifest inputs cannot be an uninitialized collection.");
         foreach (string plugin in configuration.extensions.plugins) ArgumentException.ThrowIfNullOrWhiteSpace(plugin);
@@ -519,14 +512,6 @@ public sealed class BindingConfigurationLoader
         if (configuration.cache.maximumBytes <= 0 || configuration.cache.maximumEntryBytes <= 0
             || configuration.cache.maximumEntryBytes > 268435456 || configuration.cache.maximumBytes < configuration.cache.maximumEntryBytes)
             throw new ArgumentException("Generation cache budgets must be positive and fit at least one entry of at most 256 MiB.");
-        if (configuration.nativeBuild.mode is not ("none" or "sources" or "prebuilt")) throw new ArgumentException("Native build mode must be none, sources or prebuilt.");
-        ArgumentNullException.ThrowIfNull(configuration.nativeBuild.packaging);
-        ArgumentException.ThrowIfNullOrWhiteSpace(configuration.nativeBuild.packaging.packager);
-        if (configuration.nativeBuild.packaging.enabled && configuration.nativeBuild.mode == "none")
-            throw new ArgumentException("Native packaging requires a declared sources or prebuilt native construction mode.");
-        if (configuration.nativeBuild.outputKind is not null && !Enum.IsDefined(configuration.nativeBuild.outputKind.Value)) throw new ArgumentException("The native output form is unknown.");
-        if (configuration.nativeBuild.buildToolPath is not null) ArgumentException.ThrowIfNullOrWhiteSpace(configuration.nativeBuild.buildToolPath);
-        if (configuration.nativeBuild.auxiliaryToolPath is not null) ArgumentException.ThrowIfNullOrWhiteSpace(configuration.nativeBuild.auxiliaryToolPath);
         ArgumentNullException.ThrowIfNull(configuration.execution.diagnostics);
         if (configuration.execution.diagnostics.errorCodes.IsDefault)
             throw new ArgumentException("Diagnostic error codes must be an initialized immutable array.");
@@ -539,12 +524,6 @@ public sealed class BindingConfigurationLoader
         }
         if (configuration.execution.sessionTimeoutSeconds <= 0 || configuration.execution.sessionTimeoutSeconds > 4_294_967)
             throw new ArgumentException("The generation session timeout must be positive and fit the cancellation timer range.");
-        if (configuration.execution.managedCompilationTimeoutSeconds <= 0 || configuration.execution.managedCompilationTimeoutSeconds > 4_294_967)
-            throw new ArgumentException("The managed compilation timeout must be positive and fit the cancellation timer range.");
-        if (configuration.execution.nativeBuildTimeoutSeconds <= 0 || configuration.execution.nativeBuildTimeoutSeconds > 4_294_967)
-            throw new ArgumentException("The native build timeout must be positive and fit the cancellation timer range.");
-        if (configuration.nativeBuild.mode == "prebuilt" && configuration.nativeBuild.artifacts.Length != 1)
-            throw new ArgumentException("Prebuilt mode requires one explicit artifact for the selected native target.");
         string standard = configuration.source.languageStandard ?? (configuration.source.language == BGCS.Contracts.Inputs.SourceLanguage.Cpp ? "c++23" : "c17");
         ArgumentException.ThrowIfNullOrWhiteSpace(standard);
         bool cppStandard = standard.StartsWith("c++", StringComparison.Ordinal) || standard.StartsWith("gnu++", StringComparison.Ordinal);

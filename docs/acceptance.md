@@ -95,12 +95,11 @@ bindgen-cs init path/to/header.h
 bindgen-cs doctor
 bindgen-cs validate
 bindgen-cs generate
-bindgen-cs build
+bindgen-cs generate
 ```
 
-`doctor` reports toolchain and resource problems; `validate` checks configuration and neutral contracts without replacing output. `generate` follows the unified C/C++ pipeline, including a C++ bridge when required. `build` compiles candidate managed output and performs configured native source/prebuilt validation before joint publication. `bridge` and `native-build` remain explicit requests into the same Host. Safety/C++ rejections identify a concrete configuration or source repair.
+`doctor` reports toolchain and resource problems; `validate` checks configuration and neutral contracts without replacing output. `generate` follows the unified C/C++ pipeline, including a C++ bridge when required. `bridge` emits native bridge sources; consumer compilation, native linking and deployment use external builds. Safety/C++ rejections identify a concrete configuration or source repair.
 
-`nativeBuild.mode: none` does not request construction of a product native library; it does not skip source preprocessing or required independent native fact proofs.
 For example, parser results using a GNU SDK declaration prelude require the selected native compiler to independently check types, layout and constants before publication, including through `generate` and `bridge`.
 Reports distinguish product construction/linking from the actual `nativeFactProofRequired` and `nativeFactProof` results.
 A fact proof is not product-linking or invocation evidence.

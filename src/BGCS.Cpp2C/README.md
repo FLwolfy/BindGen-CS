@@ -1,10 +1,10 @@
 # BGCS.Cpp2C
 
-`BGCS.Cpp2C` is the C++ bridge implementation inside the complete `BGCS` SDK and `BindGen-CS` tool. Its neutral planner consumes an immutable `NativeModule`, creates typed operations, and emits a C header and C++ implementation. The Host reparses that header in the isolated worker, verifies the actual exports, and restores the bridge's ownership and error contracts before C# generation.
+`BGCS.Cpp2C` is the C++ bridge implementation inside the complete `BGCS` SDK and `BindGen-CS` tool. Its neutral planner consumes an immutable `NativeModule`, creates typed operations, and emits a C header and C++ implementation. The Host reparses that header in the isolated worker, verifies the declared bridge exports, and restores the bridge's ownership and error contracts before C# generation.
 
 Consumers install `BGCS` for the complete SDK or `BindGen-CS` for the command-line tool. This implementation project is not a separate product package. Standard lowering plugins reference `BGCS.Contracts`; they do not need Clang AST types.
 
-## Generate and build
+## Generate and consume
 
 The same grouped configuration serves C and C++:
 
@@ -19,19 +19,17 @@ The same grouped configuration serves C and C++:
     "includeDirectories": ["include"]
   },
   "api": { "namespace": "Example.Widget", "name": "WidgetApi" },
-  "nativeBuild": { "mode": "sources", "sources": ["src/widget.cpp"] },
   "output": { "root": "Generated", "layout": "split" }
 }
 ```
 
 ```bash
 bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
 ```
 
-`generate` automatically produces the bridge and managed bindings. `build` additionally compiles the configured native inputs and validates the managed candidates before publishing the joint result. `bridge` explicitly requests native bridge artifacts without requiring the C# backend.
+`generate` produces the bridge and managed bindings. `bridge` requests bridge sources without the C# backend. Compile and link the emitted native sources with the upstream implementation in your own build system, and compile generated C# in your consumer project. BGCS does not perform those builds or deploy native libraries.
 
-SDK callers use `BindingHost.GenerateAsync`, `BuildAsync`, or `BridgeAsync`. The parser executes in an independent worker process; this planner does not retain parser handles.
+SDK callers use `BindingHost.GenerateAsync` or `BridgeAsync`. The parser executes in an independent worker process; this planner does not retain parser handles.
 
 ## Native contracts
 
@@ -47,7 +45,7 @@ These protocols expose raw operations. Managed string, buffer, ownership, and ca
 
 Natural managed names retain ordinary C++ calls, use `Create<Type>` for construction, and use finite operator names. Overloads are validated by C# parameter signatures before emission. Original `sourceSignature` selectors retain parameter types and member qualifiers, including concrete template owner names; exact adapter exports opt into alternate input semantics.
 
-Implicit default construction has a finite operation rather than an invented source function. The frontend records a nullable compiler-evaluated constructibility fact for accessible complete user records. Only true facts in the selected handle graph produce a default-construction export, with its actual destruction pair and deterministic `<Owner>::<Name>()` selector. Native build independently compiles `new Owner()` and a default-constructibility assertion using the final arguments. This fact does not prove release-thread independence or replace final native compilation.
+Implicit default construction has a finite operation rather than an invented source function. The frontend records a nullable compiler-evaluated constructibility fact for accessible complete user records. Only true facts in the selected handle graph produce a default-construction export, with its actual destruction pair and deterministic `<Owner>::<Name>()` selector. The consuming native build must compile the emitted `new Owner()` with its actual target arguments. This fact does not prove release-thread independence or replace final native compilation.
 
 ## Explicit templates, recipes, and shims
 
@@ -57,7 +55,7 @@ Implicit default construction has a finite operation rather than an invented sou
 
 An optional `managedProjection` specifies a managed type, input/output expressions, and a required namespace. The C# backend validates all configured projections, including unmatched rules, and preserves exact raw carriers. Native-size aliases resolve from the parsed target pointer width.
 
-`cpp.nativeShims` declares project-owned public C-linkage headers, implementation sources, and exact exports. Headers pass through the worker, sources through the normal native build provider, and selected symbols are checked against detached declarations. BGCS does not infer undeclared shim lifetimes or allocators.
+`cpp.nativeShims` declares project-owned public C-linkage headers, implementation sources, and exact exports. Headers pass through the worker, sources are published for the caller's external native build, and selected symbols are checked against detached declarations. BGCS does not infer undeclared shim lifetimes or allocators.
 
 `cpp.virtualCallbacks` selects an abstract native interface. A second C++ worker parse verifies a finite proxy and factory. Metadata records exact Cdecl callback slots with user data, fixed inputs, status returns, and optional result outputs. Callback failures become caught native exceptions. Raw callback addresses must remain valid until proxy release. An explicit `releaseThreadDomain: "any"` assertion permits the managed registration projection; the caller supplies a stop-and-join operation that prevents new native calls and drains every complete proxy execution before destruction. The assertion remains user evidence. Unknown retention or cleanup domains retain the raw API with an explanation instead of an unsafe owning registration. Unsupported exception or type shapes are rejected.
 
@@ -65,6 +63,6 @@ Standard-library holders also keep their cleanup thread domain unknown unless a 
 
 ## Artifacts and validation
 
-Native output contains `include/<prefix>.h`, `src/<prefix>.cpp`, `metadata/bridge.module.json` for the typed plan, and `metadata/bridge.manifest.json` for native build inputs. The Host emits the final ABI manifest and verification receipt. Platform support claims come from recorded capability and release evidence.
+Native output contains `include/<prefix>.h`, `src/<prefix>.cpp`, `metadata/bridge.module.json` for the detached typed plan. Native compilation and linking use external build inputs. The Host emits the final ABI manifest and verification receipt. Platform support claims come from recorded capability and release evidence.
 
 Neutral unit tests check operation invariants, recipe metadata, template selection, and callback slot planning. Native fixtures exercise the worker, independent C reparse, managed compilation, linking, and real invocation for standard values, concrete templates, configured conversions, native shims, virtual dispatch, and pointer-adjusting inheritance.

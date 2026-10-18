@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -8,6 +10,8 @@ using BGCS.Analysis.Bridge;
 using BGCS.Configuration;
 using BGCS.Contracts.Bridge;
 using BGCS.Contracts.Inputs;
+using BGCS.Infrastructure.Execution;
+using BGCS.Platforms.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -36,18 +40,49 @@ public sealed class NativeMsvcStandardLibraryTests
             {
                 schemaVersion = 1, library = new() { id = "msvc_stl", nativeName = "msvc_stl_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["box.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false },
-                nativeBuild = new() { mode = "sources", provider = "msvc" }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationRequest request = new(configuration, root);
+            GenerationResult built = await host.GenerateAsync(request);
             Assert.True(built.success, built.GetDiagnosticSummary());
+            await NativeConsumerHarness.CompileManagedAsync(built, request);
             string module = Assert.Single(Directory.GetFiles(built.outputRoot, "bridge.module.json", SearchOption.AllDirectories));
             CppBridgeModule bridge = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(module))!;
             BridgeExport create = Assert.Single(bridge.exports, export => export.operation.kind == BridgeOperationKind.Construct
                 && bridge.source.GetType(export.operation.ownerType!.Value).spelling == "Fixture::Box");
             destructor = Assert.Single(bridge.exports, export => export.id == create.resultRelease);
-            string binary = Assert.Single(Directory.GetFiles(built.outputRoot, "msvc_stl_bridge.dll", SearchOption.AllDirectories));
+            string targetRoot = Path.Combine(built.outputRoot, Assert.Single(built.targetModels).targetId);
+            string nativeDirectory = NativeConsumerHarness.NativeDirectory(targetRoot);
+            string intermediates = Path.Combine(nativeDirectory, "obj");
+            Directory.CreateDirectory(intermediates);
+            string binary = Path.Combine(nativeDirectory, "msvc_stl_bridge.dll");
+            string architecture = RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.X64 => "x64", Architecture.X86 => "x86", Architecture.Arm64 => "arm64",
+                _ => throw new PlatformNotSupportedException("The MSVC fixture requires a supported Windows process architecture.")
+            };
+            string compiler = MsvcToolchainDiscovery.FindCompiler(architecture) ?? throw new FileNotFoundException("The fixture requires the actual installed MSVC compiler.");
+            MsvcToolchainInfo sdk = MsvcToolchainDiscovery.Resolve(compiler, architecture);
+            string tools = Path.GetDirectoryName(compiler)!;
+            Assert.True(File.Exists(Path.Combine(tools, "link.exe")), "The selected MSVC toolset has no matching linker.");
+            string toolset = Directory.GetParent(tools)!.Parent!.Parent!.FullName;
+            List<string> arguments = ["/nologo", "/LD", "/EHsc", "/std:c++latest", "/MD", "/TP", "/utf-8", "/Zc:__cplusplus", "/Zc:preprocessor",
+                "/Fo" + intermediates + Path.DirectorySeparatorChar, "/Fd" + Path.Combine(intermediates, "compiler.pdb"), "/Fe" + binary,
+                "/I" + root, "/I" + Path.Combine(targetRoot, "native", "include")];
+            arguments.AddRange(sdk.includeDirectories.Select(path => "/I" + path));
+            arguments.AddRange(built.artifacts.Where(artifact => artifact.mediaType == "text/x-c++")
+                .Select(artifact => Path.Combine(built.outputRoot, artifact.relativePath)));
+            arguments.AddRange(["/link", "/LIBPATH:" + Path.Combine(toolset, "lib", architecture),
+                "/LIBPATH:" + Path.Combine(sdk.sdkRoot, "Lib", sdk.sdkVersion, "ucrt", architecture),
+                "/LIBPATH:" + Path.Combine(sdk.sdkRoot, "Lib", sdk.sdkVersion, "um", architecture),
+                "/IMPLIB:" + Path.Combine(intermediates, "fixture.lib"), "/PDB:" + Path.Combine(intermediates, "link.pdb")]);
+            ImmutableDictionary<string, string?> environment = ImmutableDictionary<string, string?>.Empty
+                .Add("INCLUDE", null).Add("LIB", null).Add("CL", null).Add("_CL_", null).Add("LINK", null).Add("_LINK_", null)
+                .Add("PATH", tools + Path.PathSeparator + (Environment.GetEnvironmentVariable("PATH") ?? ""));
+            var compiled = await ProcessExecutor.ExecuteAsync(compiler, arguments, root, TimeSpan.FromMinutes(3), environmentOverrides: environment);
+            Assert.False(compiled.timedOut);
+            Assert.True(compiled.exitCode == 0, compiled.standardOutput + Environment.NewLine + compiled.standardError);
+            Assert.True(File.Exists(binary), binary);
             library = NativeLibrary.Load(binary);
             T Function<T>(BridgeExport export) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, export.name));
             BridgeExport Method(string name) => Assert.Single(bridge.exports, export => export.operation.declaration is { } declaration
@@ -113,77 +148,6 @@ public sealed class NativeMsvcStandardLibraryTests
         };
         }
         """;
-
-    [Theory]
-    [InlineData("assignable-layout")]
-    [InlineData("assignable-sfinae")]
-    [InlineData("member-interconvertible")]
-    [InlineData("corresponding-member")]
-    [Trait("Category", "WindowsNativeProvider")]
-    public async Task ConcreteUnsupportedNativeIntrinsicNeverBecomesAnAssumedFact(string scenario)
-    {
-        if (!OperatingSystem.IsWindows()) return;
-        string root = Path.Combine(Path.GetTempPath(), "bgcs MSVC concrete intrinsic " + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        try
-        {
-            string source = scenario switch
-            {
-                "assignable-layout" => """
-                    #ifdef __clang__
-                    constexpr bool selected = true;
-                    #else
-                    constexpr bool selected = __is_assignable_no_precondition_check(int&, int);
-                    #endif
-                    struct Probe { int value[selected ? 1 : 2]; };
-                    """,
-                "assignable-sfinae" => """
-                    #ifdef __clang__
-                    #define CHECK(T, U) __is_assignable(T, U)
-                    #else
-                    #define CHECK(T, U) __is_assignable_no_precondition_check(T, U)
-                    #endif
-                    template<class T, std::enable_if_t<CHECK(T&, T), int> = 0> int choose(T);
-                    long choose(...);
-                    struct Probe { decltype(choose(1)) value; };
-                    """,
-                "member-interconvertible" => """
-                    struct Probe { int value; };
-                    #ifdef __clang__
-                    constexpr bool selected = true;
-                    #else
-                    constexpr bool selected = __is_pointer_interconvertible_with_class(Probe, &Probe::value);
-                    #endif
-                    static_assert(selected);
-                    """,
-                _ => """
-                    struct Probe { int value; };
-                    struct Other { int value; };
-                    #ifdef __clang__
-                    constexpr bool selected = true;
-                    #else
-                    constexpr bool selected = __is_corresponding_member(Probe, Other, &Probe::value, &Other::value);
-                    #endif
-                    static_assert(selected);
-                    """
-            };
-            await File.WriteAllTextAsync(Path.Combine(root, "probe.hpp"), "#include <type_traits>\n" + source);
-            BindingConfiguration configuration = new()
-            {
-                schemaVersion = 1, library = new() { id = "msvc_intrinsic", nativeName = "msvc_intrinsic_bridge" },
-                source = new() { language = SourceLanguage.Cpp, headers = ["probe.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
-                    selection = new() { includeDeclarations = ["Probe"] } },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false },
-                nativeBuild = new() { mode = "sources", provider = "msvc" }
-            };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
-            Assert.False(built.success);
-            Assert.Contains("BGCS effective source requires an unsupported native", built.GetDiagnosticSummary());
-            Assert.False(Directory.Exists(Path.Combine(root, "Generated")));
-        }
-        finally { Directory.Delete(root, recursive: true); }
-    }
 
     private static string WorkerRoot()
     {

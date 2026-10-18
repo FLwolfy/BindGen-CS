@@ -11,6 +11,4 @@ public enum SourceLanguage
     Cpp,
     /// <summary>C declarations and expressions.</summary>
     C,
-    /// <summary>Objective-C parsing facts; managed message dispatch is not implied.</summary>
-    ObjC
 }

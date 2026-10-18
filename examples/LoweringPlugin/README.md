@@ -6,8 +6,11 @@ From this directory:
 dotnet build BGCS.Example.LoweringPlugin.csproj --configuration Release
 python write-manifest.py
 bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
 ```
+
+Compile the emitted bridge sources and `native.hpp` with your native build system,
+then compile the generated C# in a consumer referencing `BGCS.Runtime`. The generator
+does not compile, link or deploy either consumer. See [external compilation](../../docs/native-metadata.md#external-compilation).
 
 The plugin references only `BGCS.Contracts`. The repository project reference can be
 replaced with a `PackageReference` to `BGCS.Contracts` version `3.0.0` after release.

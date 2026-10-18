@@ -1,9 +1,37 @@
 {
   "schemaVersion": 1,
-  "products": ["BGCS", "BGCS.Contracts", "BGCS.Runtime", "BindGen-CS"],
-  "symbolProducts": ["BGCS", "BGCS.Contracts", "BGCS.Runtime"],
-  "publicApiAssemblies": ["BGCS.Contracts", "BGCS.Runtime", "BGCS", "BGCS.Infrastructure", "BGCS.Platforms", "BGCS.Analysis", "BGCS.Cpp2C", "BGCS.CSharp", "BGCS.NativeBuild", "BGCS.Frontend.Clang"],
-  "technicalPackages": ["BGCS.ParserRuntime.osx-x64"],
-  "toolRuntimeIdentifiers": ["win-x64", "win-arm64", "linux-x64", "linux-arm64", "osx-x64", "osx-arm64"],
+  "products": [
+    "BGCS",
+    "BGCS.Contracts",
+    "BGCS.Runtime",
+    "BindGen-CS"
+  ],
+  "symbolProducts": [
+    "BGCS",
+    "BGCS.Contracts",
+    "BGCS.Runtime"
+  ],
+  "publicApiAssemblies": [
+    "BGCS.Contracts",
+    "BGCS.Runtime",
+    "BGCS",
+    "BGCS.Infrastructure",
+    "BGCS.Platforms",
+    "BGCS.Analysis",
+    "BGCS.Cpp2C",
+    "BGCS.CSharp",
+    "BGCS.Frontend.Clang"
+  ],
+  "technicalPackages": [
+    "BGCS.ParserRuntime.osx-x64"
+  ],
+  "toolRuntimeIdentifiers": [
+    "win-x64",
+    "win-arm64",
+    "linux-x64",
+    "linux-arm64",
+    "osx-x64",
+    "osx-arm64"
+  ],
   "maximumPackageBytes": 262144000
 }

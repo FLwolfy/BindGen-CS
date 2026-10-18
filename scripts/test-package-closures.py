@@ -46,6 +46,20 @@ class PackageClosureTests(unittest.TestCase):
         (directory / "project.assets.json").write_text(json.dumps(document), encoding="utf-8")
         return document
 
+    def test_product_archive_rejects_repository_and_retired_native_build_assemblies(self):
+        for filename in ("BGCS.RepositoryTools.dll", "BGCS.NativeBuild.dll", "Microsoft.CodeAnalysis.Workspaces.dll", "Microsoft.CodeAnalysis.CSharp.Workspaces.dll"):
+            archive = self.root / (filename + ".zip")
+            with zipfile.ZipFile(archive, "w") as package:
+                package.writestr("lib/net10.0/" + filename, b"fixture")
+            with zipfile.ZipFile(archive) as package, self.assertRaises(RuntimeError):
+                PACK.verify_generator_archive(package)
+        archive = self.root / "generator.zip"
+        with zipfile.ZipFile(archive, "w") as package:
+            package.writestr("lib/net10.0/BGCS.dll", b"fixture")
+            package.writestr("lib/net10.0/Microsoft.CodeAnalysis.CSharp.dll", b"fixture")
+        with zipfile.ZipFile(archive) as package:
+            PACK.verify_generator_archive(package)
+
     def test_advanced_frontend_reference_dependency_survives_host_decoupling(self):
         self.graph("host", ("Roslyn", "1.0.0", "roslyn"))
         self.graph("frontend", ("ClangSharp", "20.1.2.4", "clang"))

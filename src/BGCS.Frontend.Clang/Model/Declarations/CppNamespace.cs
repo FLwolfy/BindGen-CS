@@ -39,7 +39,6 @@ internal class CppNamespace : CppDeclaration, ICppMember, ICppGlobalDeclarationC
         this.typedefs = new CppContainerList<CppTypedef>(this);
         this.namespaces = new CppContainerList<CppNamespace>(this);
         this.attributes = [];
-        this.properties = new CppContainerList<CppProperty>(this);
     }
 
     /// <summary>
@@ -52,8 +51,6 @@ internal class CppNamespace : CppDeclaration, ICppMember, ICppGlobalDeclarationC
     public bool isInlineNamespace { get; set; }
     /// <inheritdoc/>
     public CppContainerList<CppField> fields { get; }
-    /// <inheritdoc/>
-    public CppContainerList<CppProperty> properties { get; }
     /// <inheritdoc/>
     public CppContainerList<CppFunction> functions { get; }
     /// <inheritdoc/>

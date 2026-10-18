@@ -34,9 +34,7 @@ public sealed class DeclarationGraph
         foreach (NativeDeclaration declaration in module.declarations)
         {
             HashSet<StableId> dependencies = declaration.children.Where(child =>
-                module.GetDeclaration(child).kind is "Field" or "Parameter" or "EnumItem"
-                || declaration.objectiveCContainer is not null && module.GetDeclaration(child).kind is ("Property" or "Function")).ToHashSet();
-            dependencies.UnionWith(ObjectiveCFactDependencies.Declarations(declaration));
+                module.GetDeclaration(child).kind is "Field" or "Parameter" or "EnumItem").ToHashSet();
             HashSet<StableId> types = [];
             if (declaration.parent is StableId parent && module.GetDeclaration(parent).kind != "Namespace")
                 dependencies.Add(parent);
@@ -49,8 +47,6 @@ public sealed class DeclarationGraph
                 AddType(argument.type);
             foreach (StableId parameter in declaration.templateParameters)
                 AddType(parameter);
-            if (declaration.objectiveCContainer is { } objectiveC)
-                foreach (StableId parameter in objectiveC.genericParameters) AddType(parameter);
             dependencies.Remove(declaration.id);
             edges.Add(declaration.id, dependencies.OrderBy(id => id.value, StringComparer.Ordinal).ToImmutableArray());
 

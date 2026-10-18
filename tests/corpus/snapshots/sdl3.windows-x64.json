@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "libraryId": "sdl3",
+  "platform": "windows-x64",
+  "sourceNormalization": "quoted-locked-corpus-include-root-v1",
+  "selectionPolicySha256": "5645a77020cbec654f0b5df100702cbbdd06bf5e172bc970a7f9e1cd79e44100",
+  "omittedDeclarations": {
+    "excludedDeclarations": [
+      "SDL_sscanf",
+      "SDL_snprintf",
+      "SDL_swprintf",
+      "SDL_asprintf",
+      "SDL_SetError",
+      "SDL_IOprintf",
+      "SDL_Log",
+      "SDL_LogTrace",
+      "SDL_LogVerbose",
+      "SDL_LogDebug",
+      "SDL_LogInfo",
+      "SDL_LogWarn",
+      "SDL_LogError",
+      "SDL_LogCritical",
+      "SDL_LogMessage",
+      "SDL_RenderDebugTextFormat",
+      "SDL_size_add_check_overflow_builtin",
+      "SDL_size_mul_check_overflow_builtin"
+    ],
+    "reason": "Listed variadic entry points require fixed native wrappers. Exactly two compiler-only inline implementation helpers are excluded from the portable corpus; their public portable add/multiply operations remain selected. This is a Clang/native-compiler branch boundary, not an upstream library defect.",
+    "compilerConditionalHelpers": [
+      {
+        "id": "sdl-add-overflow-compiler-implementation",
+        "repository": "SDL",
+        "revision": "5f78ded3194a85ebdabc219f844811ba953b4450",
+        "header": "include/SDL3/SDL_stdinc.h",
+        "line": 6142,
+        "lastLine": 6152,
+        "headerSha256": "3215255514d7af874cfbf797ec132e493a704f34a9e27ad2c49b35ada0624297",
+        "sourceSignature": "SDL_size_add_check_overflow_builtin",
+        "portableCounterpart": "SDL_size_add_check_overflow",
+        "declaration": "#ifndef SDL_WIKI_DOCUMENTATION_SECTION\n#if SDL_HAS_BUILTIN(__builtin_add_overflow)\n/* This needs to be wrapped in an inline rather than being a direct #define,\n * the same as the call to __builtin_mul_overflow() above. */\nSDL_FORCE_INLINE bool SDL_size_add_check_overflow_builtin(size_t a, size_t b, size_t *ret)\n{\n    return (__builtin_add_overflow(a, b, ret) == 0);\n}\n#define SDL_size_add_check_overflow(a, b, ret) SDL_size_add_check_overflow_builtin(a, b, ret)\n#endif\n#endif",
+        "reason": "Compiler-conditional inline implementation detail requiring __builtin_add_overflow. Not an exported SDL DLL function and absent under MSVC. The portable SDL_size_add_check_overflow operation remains selected, wrapped and independently asserted."
+      },
+      {
+        "id": "sdl-mul-overflow-compiler-implementation",
+        "repository": "SDL",
+        "revision": "5f78ded3194a85ebdabc219f844811ba953b4450",
+        "header": "include/SDL3/SDL_stdinc.h",
+        "line": 6103,
+        "lastLine": 6114,
+        "headerSha256": "3215255514d7af874cfbf797ec132e493a704f34a9e27ad2c49b35ada0624297",
+        "sourceSignature": "SDL_size_mul_check_overflow_builtin",
+        "portableCounterpart": "SDL_size_mul_check_overflow",
+        "declaration": "#ifndef SDL_WIKI_DOCUMENTATION_SECTION\n#if SDL_HAS_BUILTIN(__builtin_mul_overflow)\n/* This needs to be wrapped in an inline rather than being a direct #define,\n * because __builtin_mul_overflow() is type-generic, but we want to be\n * consistent about interpreting a and b as size_t. */\nSDL_FORCE_INLINE bool SDL_size_mul_check_overflow_builtin(size_t a, size_t b, size_t *ret)\n{\n    return (__builtin_mul_overflow(a, b, ret) == 0);\n}\n#define SDL_size_mul_check_overflow(a, b, ret) SDL_size_mul_check_overflow_builtin(a, b, ret)\n#endif\n#endif",
+        "reason": "Compiler-conditional inline implementation detail requiring __builtin_mul_overflow. Not an exported SDL DLL function and absent under MSVC. The portable SDL_size_mul_check_overflow operation remains selected, wrapped and independently asserted."
+      }
+    ]
+  },
+  "sources": {
+    "windows-x64-msvc/managed/Bindings.cs": "4c6bae9d5aae4520fc3967e97662402c3883d86b45cc50fa43689624a4c427b6",
+    "windows-x64-msvc/native/include/bgcs_sdl3_helpers.h": "c75302344992b65de3a096125e2bee143041fb356a3fac453aac8170ca487b93",
+    "windows-x64-msvc/native/src/bgcs_sdl3_helpers.c": "819775cee81d70f2c05181df9c6abe3796f51b67d03950c4f444bfe1db824e38",
+    "windows-x64-msvc/native/src/storage.assertions.c": "be03cae275d63834f775f099c77c8c05cee038be1acb79b8238ddd70ae45eb45"
+  },
+  "publicApiSha256": "25c9cc20f476fa37bd5babf1ef85d62d0eacc5a86a10a366d16e73593927e082"
+}

@@ -21,9 +21,6 @@
     "mode": "source",
     "namespace": "EntryTests.Runtime.Alt"
   },
-  "nativeBuild": {
-    "mode": "none"
-  },
   "output": {
     "root": "Generated",
     "layout": "singleFile"

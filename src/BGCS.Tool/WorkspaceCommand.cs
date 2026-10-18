@@ -13,8 +13,8 @@ internal static class WorkspaceCommand
         args = DiagnosticPresentation.Extract(args, out DiagnosticPresentation.Options diagnostics);
         bool json = args.Contains("--json", StringComparer.Ordinal);
         string[] positional = args.Where(argument => argument != "--json").ToArray();
-        if (positional.Length != 2 || positional[0] is not ("validate" or "generate" or "build" or "diff"))
-            throw new ArgumentException("workspace expects '<validate|generate|build|diff> <workspace.json> [--json]'.");
+        if (positional.Length != 2 || positional[0] is not ("validate" or "generate" or "diff"))
+            throw new ArgumentException("workspace expects '<validate|generate|diff> <workspace.json> [--json]'.");
         using CommandCancellation cancellation = new();
         return ExecuteAsync().GetAwaiter().GetResult();
 
@@ -52,9 +52,7 @@ internal static class WorkspaceCommand
                 if (json) Console.WriteLine(JsonSerializer.Serialize(new { success, projects }, GenerateCommand.JsonOptions));
                 return success ? 0 : 1;
             }
-            WorkspaceResult generated = positional[0] == "build"
-                ? await host.BuildWorkspaceAsync(workspace, cancellation.token).ConfigureAwait(false)
-                : await host.GenerateWorkspaceAsync(workspace, cancellation.token).ConfigureAwait(false);
+            WorkspaceResult generated = await host.GenerateWorkspaceAsync(workspace, cancellation.token).ConfigureAwait(false);
             cancellation.token.ThrowIfCancellationRequested();
             GenerateCommand.WriteDiagnostics(generated.diagnostics, diagnostics);
             if (json) Console.WriteLine(JsonSerializer.Serialize(generated, GenerateCommand.JsonOptions));

@@ -1,5 +1,7 @@
 # BGCS 3.0 实施状态
 
+> 2026-10-18 生成器范围：本文旧构建/provider 数量与接口记录属于历史检查点。当前产品仅生成 C/C++ 绑定与 bridge 源码，项目/原生构建、链接与打包由外部系统负责；当前范围以 README、api 与 MSBuild 文档及 scope-removals.json 为准。
+
 本文件记录实施状态，不表示发布验收完成。机器可读状态位于
 `eng/acceptance/implementation-status.json`。
 

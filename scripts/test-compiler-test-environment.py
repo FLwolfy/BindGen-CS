@@ -24,13 +24,13 @@ spec.loader.exec_module(runner)
 class CompilerTestEnvironmentTests(unittest.TestCase):
     def test_removes_every_native_injection_without_mutating_parent(self):
         parent = {name: 'ambient-' + name for name in NATIVE_INJECTION_VARIABLES}
-        parent['BGCS_REQUIRE_CLANG_SOURCE_VIEW'] = '1'
+        parent['BGCS_CUSTOM_TEST_OPTION'] = '1'
         before = dict(parent)
         isolated = isolated_native_test_environment(MappingProxyType(parent), windows=False)
-        self.assertEqual({'BGCS_REQUIRE_CLANG_SOURCE_VIEW': '1'}, isolated)
+        self.assertEqual({'BGCS_CUSTOM_TEST_OPTION': '1'}, isolated)
         self.assertEqual(before, parent)
-        isolated['BGCS_REQUIRE_CLANG_SOURCE_VIEW'] = 'changed-child'
-        self.assertEqual('1', parent['BGCS_REQUIRE_CLANG_SOURCE_VIEW'])
+        isolated['BGCS_CUSTOM_TEST_OPTION'] = 'changed-child'
+        self.assertEqual('1', parent['BGCS_CUSTOM_TEST_OPTION'])
 
     def test_windows_names_are_case_insensitive_and_posix_names_are_exact(self):
         parent = {'Include': 'sdk', 'cPaTh': 'headers', '_cL_': '/DAPPENDED=1',

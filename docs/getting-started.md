@@ -7,17 +7,15 @@
 Use the .NET 10 SDK. The generator, Runtime, tool and default consumers target
 `net10.0`; C# 14 is the source baseline. The full SDK and tool deploy a matched
 Clang worker and its native parser assets. Parsing runs in that separate process.
-The system SDK, C/C++ headers and native compiler for your target remain necessary;
-BGCS does not download them implicitly.
+Target SDK headers and sysroots are explicit parsing inputs; BGCS does not download them.
+Generation does not execute an external compiler or build a consumer. Your project
+installs and runs its compiler when compiling and linking the generated sources.
 
-The parser assets follow the **generator host**, while headers, sysroot, layout and
-native build follow the **requested target**. For example, Windows x64 can use its
-Windows worker to parse an Android ARM64 target with the Android NDK. Clang parsing
-can precede an MSVC or GNU native build when their target and SDK facts agree.
-Selecting MSVC additionally requires its installed compiler for the initial native
-source view, including when native building is disabled. `doctor` describes the
-`/Zc:preprocessor`, `/PD` and `/C` prerequisites; generation verifies them with
-actual preprocessing. See [native build](native-build.md).
+Parser assets follow the **generator host**; headers, target layout and ABI follow
+the **requested target**. Windows x64 can therefore parse an Android ARM64 target
+with its Windows worker and Android NDK headers. The downstream compiler must use
+compatible headers, defines, packing and ABI. Compiler-specific input that Clang
+cannot represent requires a suitable frontend or explicit shim.
 
 Platform resolution, generation, linking and actual invocation are separate evidence
 stages. Consult the [capability matrix](capabilities.md) and its current receipts before
@@ -86,60 +84,9 @@ retain their own path origins; ordinary lists replace inherited lists. Unknown
 fields and old flat configurations are rejected. Create a new configuration with
 `init`; 3.0 contains no legacy reader or migration wrapper.
 
-## Output and native builds
+## Output and consumer builds
 
-`generate` parses, analyses and emits a complete candidate artifact set. It validates
-models, safety, generated syntax and actual import contracts before publication.
-For C++ it also generates and reparses the C ABI bridge. Native compilation requires
-an explicit build request and declared native inputs:
-
-```json
-{
-  "nativeBuild": {
-    "mode": "sources",
-    "provider": "auto",
-    "sources": ["src/native.c"]
-  }
-}
-```
-
-Add that group to the configuration, then run:
-
-```bash
-bindgen-cs build bindgen.json
-```
-
-`build` validates managed source with warnings treated as errors and runs the
-configured native build or prebuilt verification. `nativeBuild.mode = none` explicitly
-skips native construction. Compilation, export verification and invocation are recorded
-separately; inspect the report to see which validations ran. Failed candidate validation
-does not replace the previously published complete output.
-
-A host-target output has this shape; the target ID is resolved to a concrete ABI:
-
-```text
-Generated/
-├─ .bgcs-artifacts.json    # complete owned artifact paths and digests
-├─ generation.report.json
-└─ windows-x64-msvc/
-   ├─ managed/
-   │  ├─ Imports/
-   │  ├─ Api/
-   │  └─ Types/
-   ├─ native/
-   │  ├─ include/          # C++ bridge, when needed
-   │  ├─ src/              # C++ bridge, when needed
-   │  └─ bin/              # when native build succeeded
-   └─ metadata/
-      ├─ abi.manifest.json
-      └─ verification.json
-```
-
-Use the exact generated files recorded in the root `.bgcs-artifacts.json` ownership
-manifest; `abi.manifest.json` describes ABI/projection metadata. Select one target
-for a consumer rather than compiling sources for several incompatible targets together.
-`diff` compares without replacing formal output: exit 0 means equal, 1 means a change,
-and 2 means an invalid request or a failed comparison, including corrupted owned output.
+`generate` publishes complete managed sources and any required C bridge sources. Build the native project externally and compile generated C# in your consumer; BGCS does not build projects or native libraries, package binaries or deploy them. See the [QuickStart native CMake project](../examples/QuickStart/CMakeLists.txt) and [external build guide](native-metadata.md#external-compilation).
 
 ## Consume the generated bindings
 
@@ -208,41 +155,9 @@ without declaring `.` as an include directory. Use `parseMacros` and `parseComme
 to choose whether those facts are retained. System SDK headers are distinct from the
 worker's bundled Clang builtin headers.
 
-## C++ and advanced native construction
+## C++ bridges
 
-```bash
-bindgen-cs init include/widget.hpp --language cpp
-bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
-```
-
-C++ defaults to `c++23`. Classes, methods and selected templates pass through typed
-lowering into a C ABI; raw mangled member symbols are not directly imported as C.
-Configure `cpp.typeLowerings`, `cpp.callableLowerings`, `cpp.templateInstantiations`,
-`cpp.nativeShims` or neutral plugins when your source needs explicit representation.
-A native shim can retain a project-specific C ABI while using the same worker, build
-and publication stages. Ownership assertions remain assertions, not verified evidence.
-
-The native-only bridge entry and standalone manifest build are also available:
-
-```bash
-bindgen-cs bridge bindgen.json
-bindgen-cs native-build Generated/<target>/native/metadata/bridge.manifest.json --dry-run --json
-bindgen-cs native-build Generated/<target>/native/metadata/bridge.manifest.json
-```
-
-Providers are `auto`, `clang`, `gnu`, `msvc`, `clang-cl`, `cmake`, `meson` and `msbuild`.
-Override the compiler or build-system executable with `--compiler`, `--build-tool`
-and `--auxiliary-tool`. `--output` selects the final native file;
-`--package-root` selects a separate verified native asset layout. These overrides
-resolve from the invocation directory. Manifest-contained paths retain their declared
-manifest/artifact base. Compiler execution uses argument lists and no command shell.
-Dry-run reports both the requested final native artifact and the private execution plan.
-
-A successful native build must verify required exports unless deliberately disabled
-for an exploratory request. Disabling a check does not satisfy a release gate. musl,
-GNU, static Wasm, Android and Apple native reference layouts remain target-specific;
-consult capability evidence rather than inferring a layout from a short RID.
+C++ uses the same configuration and `generate` / `bridge` entrypoints. Add emitted bridge sources and headers to your native build with the matching target ABI, SDK and compiler settings, then verify actual calls.
 
 ## Embedded SDK, plugins and MSBuild
 
@@ -258,7 +173,6 @@ if (!result.success)
     throw new InvalidOperationException(result.GetDiagnosticSummary());
 ```
 
-For managed/native candidate builds use `host.BuildAsync(BuildRequest.FromFile(...), ct)`.
 `InspectAsync`, `BridgeAsync`, `DiffAsync` and workspace methods use the same Host.
 A session freezes configuration and extension registrations before parsing begins.
 Ordinary plugins reference `BGCS.Contracts` and operate on detached facts, not Clang AST.
@@ -267,9 +181,10 @@ inputs must be fingerprinted for cache reuse.
 
 [MSBuild integration](msbuild.md) is delivered inside the full SDK and enabled with
 `BGCSGenerateBindings=true`. It uses a separate .NET TaskHost, generates into `obj`,
-and imports exact managed/native items from the manifest. `BGCSBuildNative` controls
-whether declared native inputs are also built. Design-time and outer builds skip
-binding generation by default. Installing the SDK alone does not turn generation on.
+and adds the exact manifest-owned C# files to Compile. It deploys generator worker
+resources and performs no consumer/native build, native reference or linking step.
+Design-time and outer builds skip generation by default. Installing the SDK alone
+does not turn generation on.
 
 ## Workspaces and customization
 
@@ -287,7 +202,6 @@ binding generation by default. Installing the SDK alone does not turn generation
 ```bash
 bindgen-cs workspace validate workspace.json
 bindgen-cs workspace generate workspace.json
-bindgen-cs workspace build workspace.json
 bindgen-cs workspace diff workspace.json
 ```
 

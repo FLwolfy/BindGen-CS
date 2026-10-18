@@ -14,6 +14,7 @@ using BGCS.Contracts.Common;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Interop;
 using BGCS.Contracts.Requests;
+using BGCS.Infrastructure.Execution;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -43,9 +44,9 @@ public sealed class NativeConfiguredFamilyTests
             await File.WriteAllTextAsync(Path.Combine(root, "custom.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            var target = Assert.Single(built.generation.targetModels);
+            var target = Assert.Single(built.targetModels);
             var protocols = target.interop.types.Where(type => type.valueProtocol is not null).Select(type => type.valueProtocol!).ToArray();
             foreach (NativeValueFamily family in new[] { NativeValueFamily.String, NativeValueFamily.Vector, NativeValueFamily.Array, NativeValueFamily.Span, NativeValueFamily.Optional })
             {
@@ -63,7 +64,7 @@ public sealed class NativeConfiguredFamilyTests
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             CppBridgeModule bridge = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "metadata", "bridge.module.json")))!;
             Assert.Equal(5, bridge.familyBindings.Length);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CheckNative(bridge, binary);
             string factory = mode == BindingImportMode.FunctionTable ? "FamilyApi.Load(binary)" : "FamilyApi.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, "family_fixture", $$"""
@@ -94,7 +95,7 @@ public sealed class NativeConfiguredFamilyTests
     [InlineData("element")]
     [InlineData("reserve")]
     [InlineData("macro")]
-    public async Task IncompatibleNativeProtocolFailsAndPreservesPreviousPublication(string mutation)
+    public async Task IncompatibleNativeProtocolFailsConsumerCompilation(string mutation)
     {
         string root = NewRoot();
         try
@@ -103,9 +104,8 @@ public sealed class NativeConfiguredFamilyTests
             await File.WriteAllTextAsync(header, Header);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
-            BuildResult first = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
-            string[] previous = Hashes(first.outputRoot);
             string incompatible = mutation switch
             {
                 "element" => Header.Replace("using value_type=T; //vector-element", "using value_type=float; //vector-element", StringComparison.Ordinal),
@@ -115,10 +115,27 @@ public sealed class NativeConfiguredFamilyTests
             };
             Assert.NotEqual(Header, incompatible);
             await File.WriteAllTextAsync(header, incompatible);
-            BuildResult rejected = await host.BuildAsync(new(new(configuration, root)));
-            Assert.False(rejected.success);
-            Assert.Equal(previous, Hashes(first.outputRoot));
-            Assert.Contains(mutation switch { "element" => "element type", "reserve" => "reserve", _ => "macro" }, rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
+            GenerationResult generated = await host.GenerateAsync(new(configuration, root));
+            Assert.True(generated.success, generated.GetDiagnosticSummary());
+            Assert.True(generated.published);
+            string assertion = mutation switch
+            {
+                "element" => "BGCS configured family requires exact native element type",
+                "reserve" => "BGCS configured family requires native reserve operation",
+                _ => "BGCS configured family proof token is macro-defined: is_same"
+            };
+            string assertionSource = Assert.Single(generated.artifacts.Where(artifact => artifact.mediaType == "text/x-c++")
+                .Select(artifact => Path.Combine(generated.outputRoot, artifact.relativePath)),
+                path => File.ReadAllText(path).Contains(assertion, StringComparison.Ordinal));
+            string includes = Path.Combine(generated.outputRoot, Assert.Single(generated.targetModels).targetId, "native", "include");
+            ImmutableArray<string> arguments = ["-std=c++23", "-fsyntax-only", "-I", root, "-I", includes,
+                .. NativeConsumerHarness.CompilerSdkArguments(), assertionSource];
+            var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true), arguments, root, TimeSpan.FromMinutes(1));
+            Assert.False(compiled.timedOut);
+            Assert.NotEqual(0, compiled.exitCode);
+            // A missing member cannot form decltype, so that case diagnoses the
+            // actual reserve operation before its static_assert is instantiated.
+            Assert.Contains(mutation == "reserve" ? "reserve" : assertion, compiled.standardOutput + compiled.standardError, StringComparison.Ordinal);
         }
         finally { Directory.Delete(root, recursive: true); }
     }
@@ -195,7 +212,7 @@ public sealed class NativeConfiguredFamilyTests
                 sequenceInputAdapters = [Sequence("SumVector"), Sequence("SumText"), Sequence("SumArray"), Sequence("SumSpan", true)]
             },
             runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-            nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+             cache = new() { enabled = false }
         };
     }
 

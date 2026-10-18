@@ -38,13 +38,13 @@ public sealed class NativeDynamicModuleProviderTests
                 source = new() { language = SourceLanguage.C, headers = ["module.h"], parseMacros = false,
                     includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.ModuleOwnership", name = "ModuleApi" },
-                nativeBuild = new() { mode = "sources", sources = ["module.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = Host();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            string targetRoot = Path.Combine(built.outputRoot, Assert.Single(built.generation.targetModels).targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string targetRoot = Path.Combine(built.outputRoot, Assert.Single(built.targetModels).targetId);
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             // The consumer harness keeps its primary module loaded. This independent
             // copy must reach native reference count zero for reset to be observable.
             string isolated = Path.Combine(root, "isolated-" + Path.GetFileName(binary));

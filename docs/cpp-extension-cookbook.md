@@ -320,7 +320,7 @@ cd examples/LoweringPlugin
 dotnet build BGCS.Example.LoweringPlugin.csproj --configuration Release
 python write-manifest.py
 bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
+bindgen-cs generate bindgen.json
 ```
 
 Regenerate the plugin manifest after rebuilding. It records executable/dependency hashes; plugin and service fingerprints declare private state and external inputs. Unfingerprintable services can run but disable their affected generation cache. Default factories create one service per session. Production plugins do not store Clang handles or mutate the frozen registry.
@@ -341,7 +341,6 @@ The canonical complete example is [examples/NativeShim/bindgen.json](../examples
       "exports": ["bgcs_widget_create", "bgcs_widget_destroy", "bgcs_widget_sum"]
     }]
   },
-  "nativeBuild": { "mode": "sources" }
 }
 ```
 
@@ -349,7 +348,7 @@ The public header declares fixed C-linkage prototypes; the implementation includ
 
 ```bash
 bindgen-cs bridge examples/NativeShim/bindgen.json
-bindgen-cs build examples/NativeShim/bindgen.json
+bindgen-cs generate examples/NativeShim/bindgen.json
 ```
 
 Inspect the generated `native/metadata/bridge.module.json` for the typed operations, `bridge.manifest.json` for build inputs, and the final ABI/verification metadata. Native C symbols alone do not establish correct release affinity or callback quiescence; supply those semantics explicitly before requesting owning or retained convenience wrappers.

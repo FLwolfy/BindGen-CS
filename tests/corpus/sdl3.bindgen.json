@@ -33,7 +33,9 @@
         "SDL_LogError",
         "SDL_LogCritical",
         "SDL_LogMessage",
-        "SDL_RenderDebugTextFormat"
+        "SDL_RenderDebugTextFormat",
+        "SDL_size_add_check_overflow_builtin",
+        "SDL_size_mul_check_overflow_builtin"
       ]
     },
     "defines": []
@@ -52,9 +54,6 @@
   },
   "runtime": {
     "mode": "package"
-  },
-  "nativeBuild": {
-    "mode": "none"
   },
   "output": {
     "root": "Generated",

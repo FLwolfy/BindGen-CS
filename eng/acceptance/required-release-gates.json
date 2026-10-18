@@ -112,5 +112,7 @@
         }
       }
     }
-  }
+  },
+  "scopeRemovals": "eng/acceptance/scope-removals.json",
+  "productScope": "C/C++ source generation and binding Runtime only; repository jobs independently compile/link/run generated consumer fixtures. No shipped native build provider or Objective-C gate."
 }

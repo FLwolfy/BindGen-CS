@@ -21,10 +21,6 @@ internal interface ICppDeclarationContainer : ICppContainer, ICppAttributeContai
     /// </summary>
     CppContainerList<CppField> fields { get; }
 
-    /// <summary>
-    /// Gets the properties.
-    /// </summary>
-    CppContainerList<CppProperty> properties { get; }
 
     /// <summary>
     /// Gets the functions/methods.

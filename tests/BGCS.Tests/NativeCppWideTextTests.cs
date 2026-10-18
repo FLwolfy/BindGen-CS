@@ -106,12 +106,12 @@ public sealed class NativeCppWideTextTests
                 api = new() { @namespace = "Generated.CppWide", name = "WideApi", names = names.ToImmutable() },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 semantics = new() { stringParameters = rules.ToImmutable(), ownedResults = [new() { function = "Wide::Probe::Probe", releaseThreadDomain = "any" }] },
-                nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             Invoke(Path.Combine(target, "managed"), binary, width, wchar.isSigned!.Value);
         }
         finally { Directory.Delete(root, recursive: true); }

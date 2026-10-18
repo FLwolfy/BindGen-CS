@@ -71,15 +71,15 @@ public sealed class NativeModuleBorrowedObjectTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["widget.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             Assert.Equal(NativeOwnershipKind.Borrowed, target.interop!.functions.Single(function => function.exportName == "widget_get").returnOwnership!.kind);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string native = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string concrete = sourceRuntime ? "ModuleApiContext" : "ModuleApi";
             string create = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             string shared = sourceRuntime ? $$"""

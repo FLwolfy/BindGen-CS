@@ -25,7 +25,7 @@ public sealed class RuntimeSourceFeatureConfigurationTests
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false },
                 api = new() { @namespace = "Local.Generated", name = "NativeApi" },
                 runtime = new() { mode = "source", @namespace = "Local.Generated.LocalRuntime" },
-                nativeBuild = new() { mode = "none" },
+
                 output = new() { root = "Generated", layout = singleFile ? "singleFile" : "split" },
                 cache = new() { enabled = true, directory = "Cache" }
             };
@@ -34,18 +34,19 @@ public sealed class RuntimeSourceFeatureConfigurationTests
             string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
                 .WithWorkerAssetRoot(Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0")).Build();
-            BuildResult minimal = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult minimal = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(minimal.success, minimal.GetDiagnosticSummary());
             configuration = configuration with { runtime = configuration.runtime with { sourceFeatures = ["runtime.complete"] } };
-            BuildResult complete = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult complete = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(complete.success, complete.GetDiagnosticSummary());
-            Assert.Contains(complete.generation.cacheStages, stage => stage.stage == "csharpEmission" && stage.status == "miss");
-            string[] sourceFiles = Directory.GetFiles(complete.generation.outputRoot, "*.cs", SearchOption.AllDirectories);
-            Assert.Contains(sourceFiles, path => File.ReadAllText(path).Contains("struct Atomic<T>", StringComparison.Ordinal));
+            Assert.Contains(complete.cacheStages, stage => stage.stage == "csharpEmission" && stage.status == "miss");
+            string[] sourceFiles = Directory.GetFiles(complete.outputRoot, "*.cs", SearchOption.AllDirectories);
+            Assert.Contains(sourceFiles, path => File.ReadAllText(path).Contains("class Utf32Codec", StringComparison.Ordinal));
+            Assert.DoesNotContain(sourceFiles, path => File.ReadAllText(path).Contains("struct Atomic<T>", StringComparison.Ordinal));
             if (singleFile) Assert.EndsWith("Bindings.cs", Assert.Single(sourceFiles), StringComparison.Ordinal);
-            BuildResult warm = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult warm = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(warm.success, warm.GetDiagnosticSummary());
-            Assert.Contains(warm.generation.cacheStages, stage => stage.stage == "csharpEmission" && stage.status == "hit");
+            Assert.Contains(warm.cacheStages, stage => stage.stage == "csharpEmission" && stage.status == "hit");
         }
         finally { Directory.Delete(root, recursive: true); }
     }

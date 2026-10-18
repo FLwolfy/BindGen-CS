@@ -43,6 +43,8 @@ bash "${ROOT_DIR}/scripts/test-snapshot-manifest.sh"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-tool-worker-publish.py" --dotnet "${DOTNET_CMD}"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-parser-resource-provenance.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-feature-release-evidence.py"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-readiness-review-candidates.py"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-scoped-acceptance-removals.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-global-feature-evidence.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-host-test-shards.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-compiler-test-environment.py"
@@ -51,6 +53,8 @@ bash "${ROOT_DIR}/scripts/test-snapshot-manifest.sh"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-disk-budget.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-published-product-evidence.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-corpus-snapshots.py"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-native-fixture-build.py"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-corpus-bridge.py"
 
 run_tests() {
   local project="$1"
@@ -92,11 +96,11 @@ fi
 touch "${GATE_DIR}/solution-build"
 
 log "Production source ownership, declaration style and public documentation"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
   --configuration "${CONFIGURATION}" --no-build -- validate architecture "${ROOT_DIR}"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
   --configuration "${CONFIGURATION}" --no-build -- validate style "${ROOT_DIR}/src"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+"${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
   --configuration "${CONFIGURATION}" --no-build -- validate documentation "${ROOT_DIR}/src"
 touch "${GATE_DIR}/architecture" "${GATE_DIR}/style" "${GATE_DIR}/documentation"
 
@@ -133,20 +137,15 @@ require_test_evidence BGCS.Runtime.Tests 'AsyncLifetimeTests' asynchronous-opera
 require_test_evidence BGCS.Runtime.Tests 'ModuleLeaseTests|HandleLifetimeTests' module-handle-lifetime
 touch "${GATE_DIR}/callback-async-lifetime"
 
+# The repository fixture builds its native consumer directly; this is not a BGCS provider service.
 if [[ "$(detect_snapshot_platform)" == "windows-x64" ]]; then
-  if [[ "${BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS:-0}" != "1" ]]; then
-    log "Windows x64 acceptance requires BGCS_REQUIRE_WINDOWS_NATIVE_PROVIDERS=1."
-    exit 1
-  fi
-  require_test_evidence BGCS.NativeBuild.Tests 'NativeProviderExecutionTests.*WindowsProvidersCompileMixedC17Cpp23AndInvoke' windows-native-providers
-  touch "${GATE_DIR}/windows-native-providers"
+  require_test_evidence BGCS.Tests 'NativeMsvcStandardLibraryTests.*MsvcBuildsAndInvokesUserClassWithStringVectorAndOptionalStorage' windows-native-consumer
 fi
 
 require_test_evidence BGCS.Tests 'NativeWideTextTests' native-wide-text
 require_test_evidence BGCS.Tests 'NativeBitfieldTests' native-bitfields
 require_test_evidence BGCS.Tests 'NativeBufferTests' native-buffers
 require_test_evidence BGCS.Tests 'NativeManagedEnumTests' native-managed-enums
-require_test_evidence BGCS.Tests 'NeutralNativeBuildTests' native-c-build
 touch "${GATE_DIR}/native-c-abi"
 require_test_evidence BGCS.CSharp.Tests 'NeutralBackendTests' strict-abi-planning
 require_test_evidence BGCS.CSharp.Tests 'BufferProjectionTests' strict-buffer-projection

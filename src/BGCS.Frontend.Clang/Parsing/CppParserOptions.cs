@@ -16,7 +16,6 @@ namespace BGCS.Frontend.Clang.Parsing;
 /// </summary>
 internal class CppParserOptions
 {
-    internal ClangDeclarationPrelude? declarationPrelude { get; set; }
     private List<string> m_targetSystemIncludeFolders = [];
     private List<string> m_targetAdditionalArguments = [];
     private List<string> m_targetDefines = [];

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise real native allocator pairs through Runtime buffers and generated friendly text."""
 from __future__ import annotations
+from native_fixture_build import compile_shared
 
 import argparse
 import importlib.util
@@ -64,15 +65,14 @@ def main() -> int:
             config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
             environment = {"DOTNET_ROOT": str(Path(dotnet).parent), "DOTNET_HOST_PATH": dotnet,
                            "NUGET_PACKAGES": str(work / "nuget-packages"), "NUGET_HTTP_CACHE_PATH": str(work / "nuget-http")}
-            build = json.loads(helper.run_process([*tool_command(dotnet, tool), "build", str(config_path), "--json"],
+            build = json.loads(helper.run_process([*tool_command(dotnet, tool), "generate", str(config_path), "--json"],
                 work, evidence, "native-public-build", environment_overrides=environment, separate_stderr=True))
             if build.get("success") is not True or build.get("published") is not True:
                 raise RuntimeError("The public native allocator build did not publish a validated complete candidate.")
             owned = publication(work / "Generated", "custom_allocator")
-            binaries = [work / "Generated" / artifact["relativePath"] for artifact in owned["artifacts"]
-                        if "/native/bin/" in artifact["relativePath"] and Path(artifact["relativePath"]).suffix in (".dll", ".so", ".dylib")]
-            if len(binaries) != 1:
-                raise RuntimeError("The allocator requires exactly one actually built native library.")
+            def native_run(arguments, directory, logs, label):
+                return helper.run_process(arguments, directory, logs, label, environment_overrides=environment)
+            binaries = [compile_shared(work, work / "Generated", evidence / "external-native" / helper.native_filename(), [work / "native.cpp"], native_run, evidence, compiler=compiler)]
             consumer = work / "Consumer"
             consumer.mkdir()
             for name in ("Program.cs", "Consumer.csproj"):

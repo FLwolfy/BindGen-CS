@@ -98,8 +98,8 @@ internal sealed class NativeModuleBuilder
             CppClass => NativeTypeCategory.Record,
             CppEnum => NativeTypeCategory.Enumeration,
             CppTypedef => NativeTypeCategory.Alias,
-            CppBlockFunctionType => NativeTypeCategory.Block,
             CppFunctionTypeBase => NativeTypeCategory.Function,
+            CppUnexposedType { isBlockPointer: true } => NativeTypeCategory.Block,
             CppTemplateArgument or CppTemplateParameterType or CppTemplateParameterNonType or CppTemplateParameterTemplate => NativeTypeCategory.Template,
             _ => NativeTypeCategory.Unexposed
         };
@@ -141,7 +141,8 @@ internal sealed class NativeModuleBuilder
             fact = fact with { arrayLength = m_compilation.storageFacts.TryGetValue(array, out NativeStorageFacts arrayStorage) ? arrayStorage.ArrayLength : array.size > 0 ? array.size : null };
         if (type is CppEnum enumeration)
             fact = fact with { elementType = AddType(enumeration.integerType) };
-        if (type is CppFunctionTypeBase callable)
+        CppFunctionTypeBase? callable = type as CppFunctionTypeBase ?? (type as CppUnexposedType)?.blockSignature;
+        if (callable is not null)
         {
             fact = fact with
             {
@@ -208,7 +209,6 @@ internal sealed class NativeModuleBuilder
             CppType type => type,
             CppField field => field.type,
             CppParameter parameter => parameter.type,
-            CppProperty property => property.type,
             _ => null
         };
         string qualifiedName = string.IsNullOrEmpty(element.fullParentName) ? name : element.fullParentName + "::" + name;
@@ -248,7 +248,7 @@ internal sealed class NativeModuleBuilder
                     _ => NativeLinkageKind.Unknown
                 },
                 isDeleted = function.flags.HasFlag(CppFunctionFlags.Deleted),
-                linkage = m_request.language is SourceLanguage.C or SourceLanguage.ObjC || function.isExternC ? "C" : "C++",
+                linkage = m_request.language is SourceLanguage.C || function.isExternC ? "C" : "C++",
                 referenceQualifier = function.cursor.Type.CXXRefQualifier switch
                 {
                     CXRefQualifierKind.CXRefQualifier_None => NativeReferenceQualifier.None,
@@ -293,55 +293,6 @@ internal sealed class NativeModuleBuilder
                     baseType.visibility.ToString(), baseType.isVirtual)).ToImmutableArray(),
                 templateArguments = record.templateSpecializedArguments.Select(argument => new NativeTemplateArgument(
                     argument.argKind.ToString(), argument.argString, argument.argAsType is null ? null : AddType(argument.argAsType))).ToImmutableArray()
-            };
-        }
-        if (declaration is CppClass objectiveC && ObjectiveCKind(objectiveC) != NativeObjectiveCContainerKind.Unknown)
-        {
-            NativeObjectiveCContainerKind objectiveCKind = ObjectiveCKind(objectiveC);
-            CppClass? baseInterface = objectiveC.baseTypes.Select(item => item.type).OfType<CppClass>().SingleOrDefault();
-            fact = fact with
-            {
-                baseClasses = [],
-                templateParameters = [],
-                templateArguments = [],
-                templateKind = null,
-                objectiveCContainer = new(objectiveCKind, ObjectiveCEvidence())
-                {
-                    protocols = objectiveC.objCImplementedProtocols.Select(protocol => AddDeclaration(protocol, null)).ToImmutableArray(),
-                    genericParameters = objectiveC.templateParameters.Select(AddType).ToImmutableArray(),
-                    baseInterface = baseInterface is null ? null : AddDeclaration(baseInterface, null),
-                    categoryTarget = objectiveC.objCCategoryTargetClass is null ? null : AddDeclaration(objectiveC.objCCategoryTargetClass, null),
-                    categoryName = objectiveCKind == NativeObjectiveCContainerKind.Category ? objectiveC.objCCategoryName : null
-                }
-            };
-        }
-        if (declaration is CppFunction objectiveCMethod && objectiveCMethod.cursor.Kind is CXCursorKind.CXCursor_ObjCClassMethodDecl or CXCursorKind.CXCursor_ObjCInstanceMethodDecl)
-            fact = fact with
-            {
-                linkage = "Objective-C",
-                callingConvention = null,
-                addressability = NativeCallableAddressability.Unknown,
-                addressabilityEvidence = null,
-                objectiveCMethod = new(objectiveCMethod.name,
-                    objectiveCMethod.cursor.Kind == CXCursorKind.CXCursor_ObjCClassMethodDecl ? NativeObjectiveCDispatchKind.Class : NativeObjectiveCDispatchKind.Instance,
-                    ObjectiveCEvidence())
-            };
-        if (declaration is CppProperty objectiveCProperty)
-        {
-            NativeObjectiveCPropertyAttributes? propertyAttributes = ObjectiveCAttributes(objectiveCProperty.cursor);
-            bool? classProperty = propertyAttributes is NativeObjectiveCPropertyAttributes flags ? flags.HasFlag(NativeObjectiveCPropertyAttributes.Class) : null;
-            CppFunction? Accessor(string selector) => objectiveCProperty.parent is CppClass owner && classProperty is bool classAccessor
-                ? owner.functions.SingleOrDefault(method => method.name == selector && method.flags.HasFlag(CppFunctionFlags.ClassMethod) == classAccessor)
-                : null;
-            fact = fact with
-            {
-                attributes = objectiveCProperty.attributes.Concat(objectiveCProperty.tokenAttributes).Select(attribute => attribute.ToString()).ToImmutableArray(),
-                objectiveCProperty = new(objectiveCProperty.getterName, string.IsNullOrEmpty(objectiveCProperty.setterName) ? null : objectiveCProperty.setterName, ObjectiveCEvidence())
-                {
-                    attributes = propertyAttributes,
-                    getter = Accessor(objectiveCProperty.getterName) is { } getter ? AddDeclaration(getter, parent) : null,
-                    setter = Accessor(objectiveCProperty.setterName) is { } setter ? AddDeclaration(setter, parent) : null
-                }
             };
         }
         if (declaration is CppField fieldFact)
@@ -389,49 +340,7 @@ internal sealed class NativeModuleBuilder
         return id;
     }
 
-    private static IEnumerable<ICppDeclaration> DeclarationChildren(ICppContainer container)
-        => container is CppClass record && ObjectiveCKind(record) != NativeObjectiveCContainerKind.Unknown
-            ? record.children.Concat(record.properties)
-            : container.children;
-
-    private static NativeObjectiveCContainerKind ObjectiveCKind(CppClass record) => record.classKind switch
-    {
-        CppClassKind.ObjCInterface => NativeObjectiveCContainerKind.Interface,
-        CppClassKind.ObjCProtocol => NativeObjectiveCContainerKind.Protocol,
-        CppClassKind.ObjCInterfaceCategory => NativeObjectiveCContainerKind.Category,
-        _ => NativeObjectiveCContainerKind.Unknown
-    };
-
-    private static Evidence ObjectiveCEvidence() => new(EvidenceLevel.Declared, "frontend:clang:objective-c-declaration");
-
-    private static NativeObjectiveCPropertyAttributes? ObjectiveCAttributes(CXCursor cursor)
-    {
-        if (cursor.kind == 0) return null;
-        CXObjCPropertyAttrKind native = (CXObjCPropertyAttrKind)clang.Cursor_getObjCPropertyAttributes(cursor, 0);
-        NativeObjectiveCPropertyAttributes result = NativeObjectiveCPropertyAttributes.None;
-        foreach ((CXObjCPropertyAttrKind source, NativeObjectiveCPropertyAttributes target) in new[]
-        {
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_readonly, NativeObjectiveCPropertyAttributes.ReadOnly),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_getter, NativeObjectiveCPropertyAttributes.Getter),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_assign, NativeObjectiveCPropertyAttributes.Assign),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_readwrite, NativeObjectiveCPropertyAttributes.ReadWrite),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_retain, NativeObjectiveCPropertyAttributes.Retain),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_copy, NativeObjectiveCPropertyAttributes.Copy),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_nonatomic, NativeObjectiveCPropertyAttributes.Nonatomic),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_setter, NativeObjectiveCPropertyAttributes.Setter),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_atomic, NativeObjectiveCPropertyAttributes.Atomic),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_weak, NativeObjectiveCPropertyAttributes.Weak),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_strong, NativeObjectiveCPropertyAttributes.Strong),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_unsafe_unretained, NativeObjectiveCPropertyAttributes.UnsafeUnretained),
-            (CXObjCPropertyAttrKind.CXObjCPropertyAttr_class, NativeObjectiveCPropertyAttributes.Class)
-        })
-        {
-            if ((native & source) == 0) continue;
-            result |= target;
-            native &= ~source;
-        }
-        return native == 0 ? result : null;
-    }
+    private static IEnumerable<ICppDeclaration> DeclarationChildren(ICppContainer container) => container.children;
 
     private static string EvaluateEnumValue(CppEnumItem item)
     {

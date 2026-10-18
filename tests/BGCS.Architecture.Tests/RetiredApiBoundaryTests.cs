@@ -42,4 +42,20 @@ public sealed class RetiredApiBoundaryTests
         Assert.Contains(backendTypes, type => type.FullName == "BGCS.CSharp.Processing.CSharpPreprocessor" && type.IsPublic);
         Assert.Contains(backendTypes, type => type.FullName == "BGCS.CSharp.Processing.SyntaxArtifactProcessor" && type.IsPublic);
     }
+
+    [Fact]
+    public void GeneratorSurfaceExcludesConsumerBuildAndPackagingCapabilities()
+    {
+        Assert.DoesNotContain(typeof(BindingHost).GetMethods(), method => method.Name is "BuildAsync" or "BuildWorkspaceAsync" or "NativeBuildAsync");
+        string[] retiredTypes =
+        [
+            "BGCS.BuildRequest", "BGCS.BuildResult", "BGCS.ManifestNativeBuildRequest",
+            "BGCS.Configuration.NativeBuildConfiguration", "BGCS.Configuration.ManagedBuildConfiguration"
+        ];
+        foreach (string type in retiredTypes) Assert.Null(typeof(BindingHost).Assembly.GetType(type));
+        Assert.DoesNotContain(typeof(NativeModule).Assembly.GetExportedTypes(), type =>
+            type.Name is "INativeBuildProvider" or "INativeArtifactPackager" or "NativeBuildPlan" or "NativeBuildManifest");
+        foreach (Assembly assembly in new[] { typeof(BindingHost).Assembly, typeof(CppBridgePlanner).Assembly, typeof(CSharpBackend).Assembly })
+            Assert.DoesNotContain(assembly.GetReferencedAssemblies(), reference => reference.Name is "BGCS.NativeBuild" or "BGCS.RepositoryTools");
+    }
 }

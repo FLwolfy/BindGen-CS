@@ -16,6 +16,7 @@ using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Interop;
 using BGCS.Contracts.Requests;
 using BGCS.CSharp.Planning;
+using BGCS.Infrastructure.Execution;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -37,9 +38,9 @@ public sealed class NativeConfiguredExtendedFamilyTests
             await File.WriteAllTextAsync(Path.Combine(root, "extended.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             CppBridgeModule bridge = target.bridge!;
             new CppBridgeOperationVerifier().Verify(bridge);
             foreach (NativeValueFamily family in new[] { NativeValueFamily.UniqueOwner, NativeValueFamily.SharedOwner, NativeValueFamily.Variant,
@@ -66,7 +67,7 @@ public sealed class NativeConfiguredExtendedFamilyTests
                 Assert.NotEqual("any", actual.parameters.Single(parameter => parameter.id == actual.error!.valueParameter).ownership?.releaseThreadDomain);
             }
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
                 { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Extended.Runtime" : "BGCS.Runtime" });
             string context = sourceRuntime ? "ExtendedApiContext" : "ExtendedApi";
@@ -92,7 +93,7 @@ public sealed class NativeConfiguredExtendedFamilyTests
     }
 
     [Fact]
-    public async Task IncompatibleOwnerVariantPathAndPeriodProofsCannotReplaceTheLastCompleteOutput()
+    public async Task IncompatibleOwnerVariantPathAndPeriodProtocolsFailConsumerCompilation()
     {
         string root = NewRoot();
         try
@@ -101,24 +102,32 @@ public sealed class NativeConfiguredExtendedFamilyTests
             await File.WriteAllTextAsync(header, Header);
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult first = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
-            string[] previous = Hashes(first.outputRoot);
             foreach ((string source, string cause) in new[]
             {
-                (Header.Replace("Unique(const Unique&)=delete;", "Unique(const Unique& other):m_value(other.get()?new T(*other.get()):nullptr){}", StringComparison.Ordinal), "move-only"),
+                (Header.Replace("Unique(const Unique&)=delete;", "Unique(const Unique& other):m_value(other.get()?new T(*other.get()):nullptr){}", StringComparison.Ordinal), "BGCS configured family requires move-only nonthrowing unique-owner transfer"),
                 (Header.Replace("std::variant_alternative_t<I,std::variant<T...>>& get()", "float& get()", StringComparison.Ordinal)
-                    .Replace("return *std::get_if<I>(&m_value);", "static float wrong=0;return wrong;", StringComparison.Ordinal), "variant alternative"),
-                (Header.Replace("std::u8string generic_u8string()const{return m_name;}", "std::u16string generic_u8string()const{return u\"wrong\";}", StringComparison.Ordinal), "one-byte UTF-8"),
-                (Header.Replace("using period=P;", "using period=std::ratio<1,1>;", StringComparison.Ordinal), "duration period type")
+                    .Replace("return *std::get_if<I>(&m_value);", "static float wrong=0;return wrong;", StringComparison.Ordinal), "BGCS configured family requires exact configured variant alternative 0"),
+                (Header.Replace("std::u8string generic_u8string()const{return m_name;}", "std::u16string generic_u8string()const{return u\"wrong\";}", StringComparison.Ordinal), "BGCS configured family requires one-byte UTF-8 path code units"),
+                (Header.Replace("using period=P;", "using period=std::ratio<1,1>;", StringComparison.Ordinal), "BGCS configured family requires exact native duration period type")
             })
             {
                 Assert.NotEqual(Header, source);
                 await File.WriteAllTextAsync(header, source);
-                BuildResult rejected = await host.BuildAsync(new(new(configuration, root)));
-                Assert.False(rejected.success);
-                Assert.Contains(cause, rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
-                Assert.Equal(previous, Hashes(first.outputRoot));
+                GenerationResult generated = await host.GenerateAsync(new(configuration, root));
+                Assert.True(generated.success, generated.GetDiagnosticSummary());
+                Assert.True(generated.published);
+                string assertionSource = Assert.Single(generated.artifacts.Where(artifact => artifact.mediaType == "text/x-c++")
+                    .Select(artifact => Path.Combine(generated.outputRoot, artifact.relativePath)),
+                    path => File.ReadAllText(path).Contains(cause, StringComparison.Ordinal));
+                string includes = Path.Combine(generated.outputRoot, Assert.Single(generated.targetModels).targetId, "native", "include");
+                ImmutableArray<string> arguments = ["-std=c++23", "-fsyntax-only", "-I", root, "-I", includes,
+                    .. NativeConsumerHarness.CompilerSdkArguments(), assertionSource];
+                var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true), arguments, root, TimeSpan.FromMinutes(1));
+                Assert.False(compiled.timedOut);
+                Assert.NotEqual(0, compiled.exitCode);
+                Assert.Contains(cause, compiled.standardOutput + compiled.standardError, StringComparison.Ordinal);
             }
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -234,7 +243,7 @@ public sealed class NativeConfiguredExtendedFamilyTests
             cpp = new() { familyBindings = [Binding("Unique", StandardValueKind.UniquePointer), Binding("Shared", StandardValueKind.SharedPointer), Binding("Variant", StandardValueKind.Variant),
                 Binding("Path", StandardValueKind.Path), Binding("Ticks", StandardValueKind.Duration), Binding("Moment", StandardValueKind.TimePoint)] },
             runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-            nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+             cache = new() { enabled = false }
         };
     }
 

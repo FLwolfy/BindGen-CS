@@ -122,17 +122,17 @@ public sealed class NativeAsyncOperationTests
                 api = new() { @namespace = "Generated.Operations", name = "OperationApi", importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["operation.cpp"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             AsyncContract contract = Assert.Single(target.interop.functions.Where(function => function.asynchronous is not null)).asynchronous!;
             Assert.Single(contract.retainedParameters);
             Assert.NotNull(contract.cancelFunction);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string context = sourceRuntime ? "OperationApiContext" : "OperationApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, "operation_fixture", $$"""

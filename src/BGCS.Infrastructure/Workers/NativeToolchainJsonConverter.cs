@@ -18,7 +18,7 @@ internal sealed class NativeToolchainJsonConverter : JsonConverter<NativeToolcha
         return new(ReadString(root, "compilerPath"), ReadString(root, "sysRoot"),
             ReadArray(root, "systemIncludeFolders"), ReadArray(root, "defines"),
             ReadArray(root, "arguments"), ReadArray(root, "cxxSystemIncludeFolders"),
-            ReadString(root, "sdkVersion"), ReadString(root, "compilerVersion"), ReadString(root, "linkerPath"), ReadArray(root, "libraryDirectories"));
+            ReadString(root, "sdkVersion"), ReadString(root, "compilerVersion"));
     }
 
     public override void Write(
@@ -31,8 +31,6 @@ internal sealed class NativeToolchainJsonConverter : JsonConverter<NativeToolcha
         writer.WriteString("sysRoot", value.sysRoot);
         writer.WriteString("sdkVersion", value.sdkVersion);
         writer.WriteString("compilerVersion", value.compilerVersion);
-        writer.WriteString("linkerPath", value.linkerPath);
-        WriteArray(writer, "libraryDirectories", value.libraryDirectories);
         WriteArray(writer, "systemIncludeFolders", value.systemIncludeFolders);
         WriteArray(writer, "cxxSystemIncludeFolders", value.cxxSystemIncludeFolders);
         WriteArray(writer, "defines", value.defines);

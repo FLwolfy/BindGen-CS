@@ -101,15 +101,15 @@ public sealed class NativeValueReceiverTests
                     bufferParameters = [new() { function = "value_alias", parameter = "buffer", capacityParameter = "count", direction = NativeParameterDirection.InputOutput,
                         lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false, lengthUnit = NativeLengthUnit.Elements }]
                 },
-                nativeBuild = new() { mode = "sources", sources = ["value.c"] }, runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string context = sourceRuntime ? "ValueApiContext" : "ValueApi";
             string carrier = sourceRuntime ? "ValueApi.NativeValue" : "NativeValue";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";

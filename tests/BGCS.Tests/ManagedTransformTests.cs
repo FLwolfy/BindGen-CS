@@ -28,7 +28,7 @@ public sealed class ManagedTransformTests
         List<ManagedNamesPlugin> plugins = [];
         await using BindingHost host = Builder().AddPluginFactory(metadata.descriptor, () =>
         { ManagedNamesPlugin plugin = new(); plugins.Add(plugin); return plugin; }, pathBase: scratch.root).Build();
-        BuildResult result = await host.BuildAsync(new(new(Configuration(), scratch.root)));
+        GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(Configuration(), scratch.root), compileManaged: true);
         Assert.True(result.success, result.GetDiagnosticSummary());
         Assert.NotEmpty(plugins);
         Assert.All(plugins, plugin =>
@@ -36,13 +36,13 @@ public sealed class ManagedTransformTests
             Assert.True(plugin.disposed);
             Assert.True(Assert.IsType<ManagedNamesTransform>(plugin.transform).disposed);
         });
-        TargetInspection target = Assert.Single(result.generation.targetModels);
+        TargetInspection target = Assert.Single(result.targetModels);
         Assert.Same(target.interop, target.managed!.interop);
         var native = Assert.Single(target.interop.types, type => type.category == NativeTypeCategory.Enumeration);
         Assert.Equal(new[] { "7", "9" }, native.enumValues.Select(value => value.evaluatedValue));
         ManagedType managed = Assert.Single(target.managed.types, type => type.nativeType == native.id);
         Assert.Equal(new[] { "custom_first", "custom_second" }, managed.memberNames.Select(member => member.name));
-        Assert.Contains("custom_first", ManagedSources(result.generation), StringComparison.Ordinal);
+        Assert.Contains("custom_first", ManagedSources(result), StringComparison.Ordinal);
         Assert.DoesNotContain(typeof(ManagedNamesPlugin).Assembly.GetReferencedAssemblies(), reference =>
             reference.Name?.StartsWith("BGCS", StringComparison.Ordinal) == true && reference.Name != "BGCS.Contracts");
     }

@@ -22,7 +22,7 @@ dotnet tool install --global BindGen-CS --version 3.0.0
 bindgen-cs init include/native.h --language c
 bindgen-cs doctor bindgen.json
 bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
+bindgen-cs generate bindgen.json
 ```
 
 C++ 使用同一个分组配置和 `generate` 命令。`bridge` 通过 Host 只请求原生桥接产物，不要求选中的所有 ABI 都已经存在托管表示。

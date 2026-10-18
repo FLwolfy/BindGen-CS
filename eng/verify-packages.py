@@ -25,10 +25,11 @@ import importlib.util
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_MANIFEST = json.loads((ROOT / "distribution/manifests/product-packages.json").read_text(encoding="utf-8"))
 sys.path.insert(0, str(ROOT / "scripts"))
-from acceptance_evidence import source_identity
+from acceptance_evidence import publication, source_identity
 import cpp_acceptance_fixture
 import installed_advanced_worker
 import installed_source_contributor
+from native_fixture_build import compile_shared
 from disk_budget import check_free_space, wait_for_process
 
 
@@ -223,8 +224,7 @@ def configuration(namespace: str, output: str, runtime: str = "package", single:
     return {"schemaVersion": 1, "library": {"id": "package_probe", "nativeName": "package_probe"},
             "source": {"language": "cpp" if cpp else "c", "headers": ["widget.hpp" if cpp else "native.h"]},
             "api": {"namespace": namespace, "name": "NativeApi", "names": {"native_add": "Add"}},
-            "runtime": {"mode": runtime}, "output": {"root": output, "layout": "singleFile" if single else "split"},
-            "nativeBuild": {"mode": "none" if cpp else "sources", "provider": "msvc" if os.name == "nt" else "auto", "sources": [] if cpp else ["native.c"]}}
+            "runtime": {"mode": runtime}, "output": {"root": output, "layout": "singleFile" if single else "split"}}
 
 
 def copy_installed_plugin_contract(host_output: Path, plugin_output: Path) -> None:
@@ -268,7 +268,6 @@ def verify_msbuild_build_graphs(dotnet: str, version: str, work: Path, evidence:
         (directory / "native.h").write_text("int native_add(int left, int right);\n", encoding="utf-8")
         cfg = configuration(namespace, "MustNotWriteIntoProjectSources", "source")
         cfg["library"] = {"id": identity, "nativeName": identity}
-        cfg["nativeBuild"] = {"mode": "none"}
         (directory / "bindgen.json").write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
         (directory / "Program.cs").write_text("public static class " + identity.replace("_", "") + "Consumer { public static string Describe() => typeof(" + namespace + ".NativeApi).Name; }\n", encoding="utf-8")
 
@@ -332,11 +331,14 @@ Console.WriteLine("Visual Studio2026 MSBuild.exe generated, validated, compiled 
     run(arguments, consumer, evidence, "visual-studio-net-task-host-build")
     if not (consumer / "obj/Release/net10.0/bgcs/.bgcs-artifacts.json").is_file() or (consumer / "MustNotWriteIntoProjectSources").exists():
         raise RuntimeError("Visual Studio MSBuild did not produce the isolated owned generation output.")
+    binary = compile_shared(consumer, consumer / "obj/Release/net10.0/bgcs", work / "external-native/visual-studio" / native_filename(), [consumer / "native.c"], run, evidence)
+    shutil.copyfile(binary, consumer / "bin/Release/net10.0" / native_filename())
     # The apphost uses the same deliberately selected .NET10 installation as the CLI.
     run([str(consumer / "bin/Release/net10.0/Consumer.exe")], consumer, evidence, "visual-studio-native-invocation")
     run([str(executable), "Consumer.csproj", "-target:Clean", "-property:Configuration=Release", "-maxCpuCount:1", "-nodeReuse:false", "-verbosity:minimal"],
         consumer, evidence, "visual-studio-owned-clean")
     run(arguments, consumer, evidence, "visual-studio-after-clean-rebuild")
+    shutil.copyfile(binary, consumer / "bin/Release/net10.0" / native_filename())
     run([str(consumer / "bin/Release/net10.0/Consumer.exe")], consumer, evidence, "visual-studio-after-clean-native-invocation")
     report["checks"].append("installed-visual-studio2026-msbuild-exe-net-task-host-native-invocation-clean-rebuild")
 
@@ -382,7 +384,7 @@ def verify_installed_wasm_msbuild(dotnet, version, work, evidence, report, run):
             "systemIncludeDirectories": [str(sysroot / "include")],
             "cxxSystemIncludeDirectories": [str(sysroot / "include/c++/v1")]}}],
         "api": {"namespace": "Package.Wasm", "runtime": "browserWasm"},
-        "nativeBuild": {"mode": "sources", "sources": ["native.c"]}, "cache": {"enabled": False}
+        "cache": {"enabled": False}
     }, indent=2), encoding="utf-8")
     (consumer / "Program.cs").write_text('''using System;
 using System.Runtime.InteropServices.JavaScript;
@@ -410,11 +412,40 @@ internal static partial class Program
     [JSExport] public static string GetReport() => m_report;
 }
 ''', encoding="utf-8")
+    native_object = work / "external-native/wasm-msbuild/package_wasm.o"
+    native_object.parent.mkdir(parents=True, exist_ok=True)
+    run([str(compiler), "--target=wasm32-unknown-emscripten", "--sysroot=" + str(sysroot), "-x", "c", "-std=c17", "-c", str(consumer / "native.c"), "-o", str(native_object)], consumer, evidence, "installed-msbuild-external-wasm-fixture")
+    if native_object.read_bytes()[:4] != b"\0asm":
+        raise RuntimeError("The external Wasm fixture compiler produced no actual object.")
+    ET.SubElement(items, "NativeFileReference", Include=str(native_object))
+    ET.ElementTree(project).write(consumer / "Consumer.csproj", encoding="utf-8", xml_declaration=True)
     receipts = []
     try:
         browser = browser_gate.find_browser(None)
+        generated_references = []
         for aot in (False, True):
             name = "installed-msbuild-wasm-" + ("aot" if aot else "interpreter")
+            # The consumer owns native compilation. Run the installed generation
+            # task, authenticate its manifest, then explicitly link its C sources.
+            # Repeat after cleanup because the generated inputs live under obj.
+            for reference in generated_references:
+                items.remove(reference)
+            generated_references.clear()
+            ET.ElementTree(project).write(consumer / "Consumer.csproj", encoding="utf-8", xml_declaration=True)
+            run([dotnet, "msbuild", "Consumer.csproj", "-restore", "-t:BGCSGenerateBindings", "-p:Configuration=Release",
+                 "-m:1", "-nr:false"], consumer, evidence, name + "-generate-native-inputs")
+            manifests = list((consumer / "obj").rglob(".bgcs-artifacts.json"))
+            if len(manifests) != 1:
+                raise RuntimeError("The installed Wasm consumer requires one exact owned generation manifest.")
+            generated_root = manifests[0].parent
+            owned = publication(generated_root, "package_wasm")
+            native_sources = [generated_root / item["relativePath"] for item in owned["artifacts"]
+                if item["mediaType"] in ("text/x-c", "text/x-c++") and Path(item["relativePath"]).suffix in (".c", ".cpp", ".cc", ".cxx")]
+            if sum(source.name == "export.table.c" for source in native_sources) != 1:
+                raise RuntimeError("The consumer must compile the exact generated static function-table adapter.")
+            for source in native_sources:
+                generated_references.append(ET.SubElement(items, "NativeFileReference", Include=str(source)))
+            ET.ElementTree(project).write(consumer / "Consumer.csproj", encoding="utf-8", xml_declaration=True)
             published = consumer / "published"
             run([dotnet, "publish", "Consumer.csproj", "-c", "Release", "-o", str(published), "-m:1", "-nr:false",
                  "-p:RunAOTCompilation=" + str(aot).lower(), "-p:PublishTrimmed=" + str(aot).lower()], consumer, evidence, name + "-publish", timeout=1800)
@@ -422,6 +453,7 @@ internal static partial class Program
             receipts.append({"aot": aot, "sdk": sdk, "invocation": result})
             if not result.get("success") or result.get("checks") != ["installed-msbuild-static-archive"]:
                 raise RuntimeError("The installed MSBuild native archive did not complete browser invocation.")
+            publication(generated_root, "package_wasm")
             browser_gate.cpp_acceptance_fixture.cleanup_build_outputs(consumer)
             report["checks"].append(name + "-native-archive-invocation")
     finally:
@@ -566,7 +598,7 @@ foreach (string file in new[] { "Generated", "Source", "Single", "Cpp" })
 {
     Console.WriteLine("Running installed SDK request: " + file);
     GenerationRequest request = GenerationRequest.FromFile(file + ".json");
-    GenerationResult result = file == "Cpp" ? await host.GenerateAsync(request) : (await host.BuildAsync(new BuildRequest(request))).generation;
+    GenerationResult result = await host.GenerateAsync(request);
     if (!result.success) throw new InvalidOperationException(result.GetDiagnosticSummary());
     if (!result.diagnostics.Any(diagnostic => diagnostic.code == "BGCS-PACKAGE-PLUGIN")) throw new InvalidOperationException("The Contracts-only plugin did not execute.");
     if (!result.artifacts.Any(artifact => artifact.relativePath.EndsWith("/contributions/fixture.source/helpers/generated.h", StringComparison.Ordinal))) throw new InvalidOperationException("The Contracts-only source contributor's public header was omitted.");
@@ -615,17 +647,16 @@ Console.WriteLine("Installed SDK C/C++ generation and Contracts-only plugin pass
             for folder, namespace, reference in (("Generated", "Package.Probe", ["BGCS.Runtime"]), ("Source", "Package.Source", []), ("Single", "Package.Single", [])):
                 consumer = work / (folder + "Consumer")
                 managed = next((sdk / folder).glob("*/managed"))
-                binary = next((sdk / folder).glob("*/native/bin/*"))
+                binary = compile_shared(sdk, sdk / folder, work / "external-native" / folder / native_filename(), [sdk / "native.c"], run, evidence, exports=("contributed_add",))
                 extra = '<ItemGroup><Compile Include="' + str(managed / "**/*.cs") + '" /><None Include="' + str(binary) + '" Link="' + native_filename() + '" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>'
                 write_project(consumer, args.version, reference, extra)
                 complete_proof = '''unsafe
 {
     global::Package.Source.Runtime.Bool8 enabled = true;
-    global::Package.Source.Runtime.Atomic<int> number = new(41);
     int value = 42;
     global::Package.Source.Runtime.Pointer<int> pointer = new(&value);
     using var storage = new global::Package.Source.Runtime.NativeAlignedBuffer(13, 64);
-    if (!(bool)enabled || number.Increment() != 42 || *pointer.handle != 42 || (nuint)storage.address % 64 != 0 || storage.byteLength != 13)
+    if (!(bool)enabled || *pointer.handle != 42 || (nuint)storage.address % 64 != 0 || storage.byteLength != 13)
         throw new InvalidOperationException("Installed complete Runtime primitives failed.");
 }
 if (typeof(global::Package.Source.Runtime.Bool8).Assembly != typeof(NativeApi).Assembly)
@@ -668,7 +699,7 @@ Console.WriteLine("{folder} consumer native invocation passed.");
             # Verify .NET actually selects a native RID asset from a package, through the generated assembly-aware loader.
             native_package = work / "native-package"
             native_package.mkdir()
-            binary = next((sdk / "Generated").glob("*/native/bin/*"))
+            binary = work / "external-native/Generated" / native_filename()
             native_project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
             props = ET.SubElement(native_project, "PropertyGroup")
             for name, value in {"TargetFramework": "net10.0", "PackageId": "BGCS.NativeAsset.Probe", "Version": args.version, "IncludeBuildOutput": "false", "SuppressDependenciesWhenPacking": "true"}.items():
@@ -698,17 +729,15 @@ Console.WriteLine("NuGet RID asset selection and default generated loader passed
                 shutil.copyfile(sdk / "native.h", consumer / "native.h")
                 shutil.copyfile(sdk / "native.c", consumer / "native.c")
                 cfg = configuration("Package.MSBuild", "UnusedConfiguredRoot")
-                if not enabled:
-                    cfg["nativeBuild"] = {"mode": "none"}
                 cfg["runtime"] = {"mode": "source"}
                 cfg["extensions"] = {"plugins": [str(plugin_manifest_path)]}
                 (consumer / "bindgen.json").write_text(json.dumps(cfg), encoding="utf-8")
                 program = "public static class Program { public static void Main() { } }" if not enabled else '''using System;
 using Package.MSBuild;
 using NativeApi api = NativeApi.Load();
-if (api.Add(19, 23) != 42) throw new InvalidOperationException("Installed MSBuild native item deployment failed.");
+if (api.Add(19, 23) != 42) throw new InvalidOperationException("Externally built native fixture invocation failed.");
 if (api.ContributedAdd(29) != 41 || ContributedHelper.Marker != 41) throw new InvalidOperationException("Installed MSBuild did not execute the same Contracts-only source plugin manifest.");
-Console.WriteLine("Installed MSBuild generated, compiled, staged and invoked its declared native library.");
+Console.WriteLine("Installed MSBuild generated managed bindings; the consumer invoked its externally built native fixture.");
 '''
                 (consumer / "Program.cs").write_text(program, encoding="utf-8")
                 run([args.dotnet, "build", "Consumer.csproj", "--configuration", "Release", "-m:1", "-nr:false"], consumer, evidence, consumer.name)
@@ -719,14 +748,19 @@ Console.WriteLine("Installed MSBuild generated, compiled, staged and invoked its
                     raise RuntimeError("MSBuild wrote generated files into the project source tree.")
                 report["checks"].append(consumer.name)
                 if enabled:
+                    generated_root = manifests[0].parent
+                    binary = compile_shared(consumer, generated_root, work / "external-native/msbuild" / native_filename(), [consumer / "native.c"], run, evidence, exports=("contributed_add",))
                     staged_native = consumer / "bin/Release/net10.0" / native_filename()
+                    if staged_native.exists():
+                        raise RuntimeError("The generator Task unexpectedly built or deployed a native library.")
+                    shutil.copyfile(binary, staged_native)
                     if not staged_native.is_file():
                         staged_files = sorted(str(path.relative_to(consumer)) for path in (consumer / "bin/Release/net10.0").rglob("*") if path.is_file())
                         (evidence / "msbuild-native-assets.json").write_text(json.dumps(staged_files, indent=2) + "\n", encoding="utf-8")
-                        raise RuntimeError("Installed MSBuild omitted its declared native binary from the consumer output.")
+                        raise RuntimeError("The consumer did not copy its externally compiled native fixture.")
                     (evidence / "msbuild-native-assets.json").write_text(json.dumps({"file": staged_native.name, "sha256": hashlib.sha256(staged_native.read_bytes()).hexdigest()}, indent=2) + "\n", encoding="utf-8")
                     run([args.dotnet, str(consumer / "bin/Release/net10.0/Consumer.dll")], consumer, evidence, "msbuild-native-invocation")
-                    report["checks"].append("installed-msbuild-native-item-deployment-invocation")
+                    report["checks"].append("installed-msbuild-generated-source-external-native-invocation")
                     run([args.dotnet, "clean", "Consumer.csproj", "--configuration", "Release", "-m:1", "-nr:false"],
                         consumer, evidence, "msbuild-owned-clean")
                     for ownership in manifests:
@@ -760,7 +794,7 @@ Console.WriteLine("Installed MSBuild generated, compiled, staged and invoked its
                         or not bare_doctor.get("worker", {}).get("assetDigestsVerified")
                         or bare_doctor["worker"].get("parseExecuted") is not False
                         or bare_doctor.get("inspectionExecuted") is not False
-                        or bare_doctor.get("nativeBuildExecuted") is not False):
+                        or bare_doctor.get("generationExecuted") is not False):
                     raise RuntimeError("The installed tool did not report verified worker assets separately from unexecuted parsing/building.")
                 report["installedToolVersion"] = version_result
                 report["checks"].append("installed-tool-verified-worker-identity-without-parsing")
@@ -772,10 +806,9 @@ Console.WriteLine("Installed MSBuild generated, compiled, staged and invoked its
                 tool_configuration_path = probe / "bindgen.json"
                 tool_configuration = json.loads(tool_configuration_path.read_text(encoding="utf-8"))
                 tool_configuration["api"].update({"namespace": "Package.ToolSource", "name": "NativeApi", "names": {"native_add": "Add"}})
-                tool_configuration["nativeBuild"] = {"mode": "sources", "sources": ["native.c"], "provider": "msvc" if os.name == "nt" else "auto"}
                 tool_configuration["extensions"] = {"plugins": [str(plugin_manifest_path)]}
                 tool_configuration_path.write_text(json.dumps(tool_configuration, indent=2) + "\n", encoding="utf-8")
-                for command in ("doctor", "validate", "inspect", "generate", "diff", "build"):
+                for command in ("doctor", "validate", "inspect", "generate", "diff"):
                     run([str(tool), command, "bindgen.json"], probe, evidence, "tool-" + command)
                 tool_publications = list((probe / "Generated").rglob(".bgcs-artifacts.json"))
                 if len(tool_publications) != 1:
@@ -785,9 +818,7 @@ Console.WriteLine("Installed MSBuild generated, compiled, staged and invoked its
                     raise RuntimeError("The installed CLI did not execute the same Contracts-only source plugin manifest.")
                 tool_output = tool_publications[0].parent
                 tool_managed = [tool_output / item["relativePath"] for item in tool_artifacts if item["mediaType"] == "text/x-csharp"]
-                tool_native = [tool_output / item["relativePath"] for item in tool_artifacts if "/native/bin/" in item["relativePath"]]
-                if len(tool_native) != 1:
-                    raise RuntimeError("The installed CLI source-plugin build lacks its exact native binary.")
+                tool_native = [compile_shared(probe, tool_output, work / "external-native/tool" / native_filename(), [probe / "native.c"], run, evidence, exports=("contributed_add",))]
                 tool_consumer = work / "tool-source-consumer"
                 source_items = ET.Element("ItemGroup")
                 for managed_source in tool_managed:
@@ -810,21 +841,18 @@ Console.WriteLine("Installed CLI Contracts-only source contribution native invoc
                     args.version, work, evidence, source_contributor, run, write_project)
                 report["checks"].append(installed_source_contributor.CHECK)
                 from source_contribution_evidence import verify_report as verify_source_contributor_report
-                verify_source_contributor_report(json.loads((evidence / "installed-source-contributor.json").read_text(encoding="utf-8")), report)
+                verify_source_contributor_report(json.loads((evidence / "installed-source-contributor.json").read_text(encoding="utf-8")), report,
+                    require_clean=not args.sdk_only)
                 cpp_probe = work / "tool-cpp-probe"
                 cpp_probe.mkdir()
                 shutil.copyfile(sdk / "widget.hpp", cpp_probe / "widget.hpp")
                 run([str(tool), "init", "widget.hpp", "--language", "cpp"], cpp_probe, evidence, "tool-cpp-init")
                 cpp_config_path = cpp_probe / "bindgen.json"
                 cpp_config = json.loads(cpp_config_path.read_text(encoding="utf-8"))
-                cpp_config["nativeBuild"] = {"mode": "sources", "provider": "msvc" if os.name == "nt" else "auto"}
                 cpp_config_path.write_text(json.dumps(cpp_config, indent=2) + "\n", encoding="utf-8")
                 run([str(tool), "bridge", "bindgen.json"], cpp_probe, evidence, "tool-cpp-bridge")
-                native_manifest = next((cpp_probe / "Generated").rglob("bridge.manifest.json"))
-                run([str(tool), "native-build", str(native_manifest), "--dry-run", "--json"], cpp_probe, evidence, "tool-cpp-native-plan")
-                run([str(tool), "native-build", str(native_manifest)], cpp_probe, evidence, "tool-cpp-native-build")
-                run([str(tool), "build", "bindgen.json"], cpp_probe, evidence, "tool-cpp-build")
-                report["checks"].append("installed-tool-cpp-bridge-standalone-manifest-and-unified-native-build")
+                compile_shared(cpp_probe, cpp_probe / "Generated", work / "external-native/tool-cpp" / native_filename(), [], run, evidence)
+                report["checks"].append("installed-tool-cpp-bridge-external-fixture-build")
                 runtime_assembly = work / "GeneratedConsumer/bin/Release/net10.0/BGCS.Runtime.dll"
                 if not runtime_assembly.is_file():
                     raise RuntimeError("The installed Runtime product assembly is absent from its Runtime-only consumer.")

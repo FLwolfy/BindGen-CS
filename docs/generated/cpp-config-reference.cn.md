@@ -6,7 +6,7 @@
 字段为对象 schema 的必填项，并不取代组合后完整配置的语义验证；基础配置可以提供当前文档省略的值。
 `source.languageStandard = null` 在冻结时根据语言选择 `c17` 或 `c++23`。目标、工具链和扩展能力仍须实际验证。
 
-schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b917106`。
+schema SHA-256：`6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e3`。
 
 [配置指南](../configuration-guide.cn.md) | [快速开始](../getting-started.cn.md)
 

@@ -15,7 +15,7 @@ public sealed class NativeCHeaderDefaultPolicyTests
     [InlineData(BindingImportMode.FunctionTable)]
     [InlineData(BindingImportMode.DllImport)]
     [InlineData(BindingImportMode.LibraryImport)]
-    public async Task DefaultNoneAndPrebuiltBindingsLoadTheOriginalModuleWithoutHeaderHelperExports(BindingImportMode mode)
+    public async Task GeneratedBindingsLoadAnExternallyCompiledOriginalModuleWithoutHeaderHelperExports(BindingImportMode mode)
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-prebuilt-c-header-default-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -39,28 +39,14 @@ public sealed class NativeCHeaderDefaultPolicyTests
             BindingConfiguration configuration = Configuration() with { api = Configuration().api with { importMode = mode } };
             Assert.False(configuration.source.includeHeaderHelpers);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            string targetId = Assert.Single(built.generation.targetModels).targetId;
-            string builtBinary = Assert.Single(Directory.GetFiles(Path.Combine(built.outputRoot, targetId, "native", "bin")));
+            string targetId = Assert.Single(built.targetModels).targetId;
+            string builtBinary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(Path.Combine(built.outputRoot, targetId))));
             string binary = Path.Combine(root, Path.GetFileName(builtBinary));
             File.Copy(builtBinary, binary);
-            foreach (string nativeMode in new[] { "none", "prebuilt" })
             {
-                BindingConfiguration request = configuration with { nativeBuild = new()
-                {
-                    mode = nativeMode,
-                    artifacts = nativeMode == "prebuilt" ? [binary] : [],
-                    prebuiltTargetId = nativeMode == "prebuilt" ? targetId : null
-                } };
-                GenerationResult generated;
-                if (nativeMode == "prebuilt")
-                {
-                    BuildResult checkedPrebuilt = await host.BuildAsync(new(new(request, root)));
-                    Assert.True(checkedPrebuilt.success, checkedPrebuilt.GetDiagnosticSummary());
-                    generated = checkedPrebuilt.generation;
-                }
-                else generated = await host.GenerateAsync(new(request, root));
+                GenerationResult generated = await host.GenerateAsync(new(configuration, root));
                 Assert.True(generated.success, generated.GetDiagnosticSummary());
                 TargetInspection target = Assert.Single(generated.targetModels);
                 Assert.Equal("External", Assert.Single(target.interop.functions).exportName);
@@ -102,7 +88,7 @@ public sealed class NativeCHeaderDefaultPolicyTests
         schemaVersion = 1, library = new() { id = "original", nativeName = "original_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["library.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.Original", name = "OriginalApi", names = ImmutableDictionary<string, string>.Empty.Add("EXTERNAL_ALIAS", "ExternalAlias") },
-        nativeBuild = new() { mode = "sources", sources = ["library.c"] }, cache = new() { enabled = false }
+         cache = new() { enabled = false }
     };
 
     private static string WorkerRoot()

@@ -37,7 +37,6 @@ public sealed class NativeModuleVerifier
         }
         foreach (NativeDeclaration declaration in module.declarations)
         {
-            NativeObjectiveCFactVerifier.Validate(module, declaration, typeIds, declarationIds, message => Add(diagnostics, message));
             if (declaration.stringConstant is { } text)
             {
                 try { new NativeStringConstantVerifier().Verify(text); }

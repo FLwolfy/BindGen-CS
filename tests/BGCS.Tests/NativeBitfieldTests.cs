@@ -78,13 +78,13 @@ public sealed class NativeBitfieldTests
                 source = new() { language = SourceLanguage.C, headers = ["bits.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeBits", name = "BitsApi", importMode = mode },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                nativeBuild = new() { mode = "sources", sources = ["bits.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             await InvokeAsync(Path.Combine(target, "managed"), binary, mode, sourceRuntime, root);
         }
         finally { Directory.Delete(root, recursive: true); }

@@ -61,13 +61,13 @@ public sealed class NativeConstantPresentationTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["values.c"] },
+
                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            var target = Assert.Single(result.generation.targetModels);
+            var target = Assert.Single(result.targetModels);
             Assert.Equal("42", Assert.Single(target.interop.constants.Where(item => item.name == "NATIVE_VALUE")).value.value);
             var nativeEnum = Assert.Single(target.interop.types.Where(type => type.enumValues.Any(value => value.name == "NATIVE_MODE_FIRST")));
             Assert.Equal("7", nativeEnum.enumValues.Single(value => value.name == "NATIVE_MODE_FIRST").evaluatedValue);
@@ -90,7 +90,7 @@ public sealed class NativeConstantPresentationTests
             Assert.Equal((int)BGCS.Contracts.Common.EvidenceLevel.UserAsserted, first.GetProperty("presentationEvidence").GetProperty("level").GetInt32());
             Assert.True(metadata.GetProperty("managedLibrary").GetProperty("emitLibraryNameConstant").GetBoolean());
             Assert.Equal(configuration.library.nativeName, metadata.GetProperty("managedLibrary").GetProperty("nativeName").GetString());
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string context = sourceRuntime ? "PresentationApiContext" : "PresentationApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             string shared = sourceRuntime ? "if (Different(PresentationApi.NativeLibraryName, PresentationApiContext.NativeLibraryName) || Different(PresentationApi.Constants.PresentedValue, 43L)) return 7;" : "";

@@ -9,6 +9,7 @@ using BGCS.Frontend.Clang.Model.Metadata;
 using BGCS.Frontend.Clang.Model.Types;
 using BGCS.Frontend.Clang.Parsing;
 using BGCS.Platforms.Targeting;
+using BGCS.Platforms.Toolchains;
 using Xunit;
 
 namespace BGCS.Frontend.Clang.Tests;
@@ -168,7 +169,8 @@ public sealed class CppTargetTests
     [InlineData("c++23")]
     public void ConfigureForTarget_HostCpp_ShouldParseStandardLibrary(string standard)
     {
-        NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
+        NativeTargetDescriptor target = ToolchainResolver.ResolveToolchain(
+            new TargetResolver().Resolve(new(new NativeTargetId("host"))), SourceLanguage.Cpp);
         CppParserOptions options = new()
         {
             parserKind = SourceLanguage.Cpp,
@@ -206,18 +208,14 @@ public sealed class CppTargetTests
     }
 
     [Fact]
-    public void CompilerFingerprint_ShouldBeStableAndIncludeResolvedDriverIdentity()
+    public void DeclaredToolchainIdentityIsPreservedWithoutACompilerFingerprintQuery()
     {
-        string compiler = ToolchainDiscovery.FindCompiler(SourceLanguage.Cpp)
-            ?? throw new InvalidOperationException("A host C++ compiler is required for toolchain fingerprinting.");
-
-        string first = ToolchainDiscovery.GetCompilerFingerprint(SourceLanguage.Cpp, compiler);
-        string second = ToolchainDiscovery.GetCompilerFingerprint(SourceLanguage.Cpp, compiler);
-
-        Assert.Equal(first, second);
-        Assert.Contains(compiler.Replace('\\', '/'), first, StringComparison.Ordinal);
-        Assert.Contains("length:", first, StringComparison.Ordinal);
-        Assert.DoesNotContain("version:unavailable", first, StringComparison.Ordinal);
+        NativeTargetDescriptor original = new TargetResolver().Resolve(new(new("host"), new(compilerPath: "explicit-uninstalled-driver", compilerVersion: "declared-version")));
+        NativeTargetDescriptor resolved = ToolchainResolver.ResolveToolchain(original, SourceLanguage.Cpp);
+        Assert.Equal(original.targetId, resolved.targetId);
+        Assert.Equal(original.triple, resolved.triple);
+        Assert.Equal(original.toolchain.compilerPath, resolved.toolchain.compilerPath);
+        Assert.Equal(original.toolchain.compilerVersion, resolved.toolchain.compilerVersion);
     }
 
     [Theory]

@@ -56,32 +56,13 @@ GenerationRequest alternative = request.WithConfiguration(
     });
 ```
 
-配置分组包括 `library`、`source`、`targets`、`api`、`semantics`、`cpp`、`nativeBuild`、`managedBuild`、`runtime`、`output`、`extensions`、`cache` 和 `execution`，并支持 `extends` 与命名 profile。C/C++ 共享请求入口。完整约束和默认值见[生成的配置参考](generated/config-reference.cn.md)。
+配置分组包括 `library`、`source`、`targets`、`api`、`semantics`、`cpp`、`runtime`、`output`、`extensions`、`cache` 和 `execution`，并支持 `extends` 与命名 profile。C/C++ 共享请求入口。完整约束和默认值见[生成的配置参考](generated/config-reference.cn.md)。
 
 `GenerateAsync` 解析并验证脱离解析器生命周期的原生事实；C++ 还规划桥接、生成并重新解析 C header、核对桥接契约。语义和 ABI 分析、托管投影、源码生成、处理器、最终源码契约核对通过后，才发布完整候选集合。生成成功本身不证明原生链接或真实调用已经通过。
 
-## 构建与结果
+## 生成结果
 
-```csharp
-BuildResult built = await host.BuildAsync(new BuildRequest(request), cancellationToken);
-if (!built.success)
-    throw new InvalidOperationException(built.GetDiagnosticSummary());
-```
-
-`BuildRequest.FromFileAsync(path, cancellationToken: token)` 是可取消的配置读取入口，`BuildRequest.FromFile(path)` 提供同步调用。Build 将候选托管源码按 warnings-as-errors 编译，并执行声明的原生构建或预编译产物检查。`nativeBuild.mode = none` 明确省略原生构建。必需验证失败时不发布正式产物，原来完整且归 BGCS 所有的输出保留。真实调用属于单独验收阶段，实际完成的阶段以收据为准。
-
-| 生成结果属性 | 含义 |
-| --- | --- |
-| `published` | 完整候选集合已安装。 |
-| `success` | 发布成功且没有 Error/Critical 诊断。 |
-| `outputRoot` | 捕获的正式输出根。 |
-| `artifacts` | 精确逻辑路径和内容摘要。 |
-| `nativeReferences` | 根据验证过的目标、运行时和产物事实生成的原生消费引用，包含真实导入模块身份。 |
-| `cacheStages` | 单独阶段的缓存决策；命中不代表构建或调用通过。 |
-| `targetModels` | SDK 可读取的脱离解析器的模型，常规结果 JSON 不嵌入。 |
-| `diagnostics` | 完整诊断，包括服务释放失败。 |
-
-`BuildResult.generation` 保留完整生成结果，并转发成功、发布、产物和诊断属性。控制台显示阈值不改变 Host/JSON 诊断或成功状态；Error/Critical 始终属于失败。
+`GenerationResult` 的 `success`、`published`、`outputRoot`、`artifacts`、`cacheStages`、`targetModels` 和 `diagnostics` 描述生成阶段。输出集合按 owner 与 hash 验证并整体发布。消费者编译、原生编译/链接和实际调用由外部构建与验收负责；生成成功不能替代这些证据。
 
 ## 分析、检查、比较与只生成桥接
 
@@ -107,34 +88,11 @@ Analysis 请求支持明确目标和工具链、语言标准、头文件搜索�
 
 Diff 在发布锁保护下验证旧输出所有权和完整内容；无所有权、不完整或被修改的输出会失败。正式输出不改变。`hasChanges` 描述逻辑产物差异，不把运行时缓存决策当作 API 改动。
 
-## 独立原生构建
-
-中立 `bridge.manifest.json` 锁定原生构建输入；类型化桥接模型单独存为 `bridge.module.json`。
-
-```csharp
-ManifestNativeBuildRequest nativeRequest = new(
-    "/absolute/path/to/bridge.manifest.json");
-ManifestNativeBuildPlanResult plan = await host.PlanNativeBuildAsync(
-    nativeRequest, cancellationToken);
-if (!plan.success)
-    throw new InvalidOperationException(plan.GetDiagnosticSummary());
-
-ManifestNativeBuildResult native = await host.NativeBuildAsync(
-    nativeRequest, cancellationToken);
-if (!native.success)
-    throw new InvalidOperationException(native.GetDiagnosticSummary());
-```
-
-覆盖项包括 `providerId`、`compilerPath`、`buildToolPath`、`auxiliaryToolPath`、`exportToolPath`、`outputFile`、`packageRoot`、`verifyExports` 和 `timeoutSeconds`。显式覆盖路径采用绝对路径。`auto` 保留 manifest 的 provider 选择，支持稳定 ID 的自定义注册。
-
-`plan.nativeArtifact` 是声明的最终输出；编译计划内部输出仍是私有候选路径，规划不会发布。执行时核对锁定输入、必需导出和所有权。成功不代表运行调用已通过。可移植插件可以从锁定 manifest 闭包重新激活；只通过 SDK 工厂注册的插件需要匹配的 Host 注册。
-
 ## 工作区
 
 ```csharp
 BindingWorkspace workspace = new WorkspaceLoader().Load("workspace.json");
 WorkspaceResult generated = await host.GenerateWorkspaceAsync(workspace, cancellationToken);
-WorkspaceResult built = await host.BuildWorkspaceAsync(workspace, cancellationToken);
 WorkspaceDiffResult compared = await host.DiffWorkspaceAsync(workspace, cancellationToken);
 ```
 

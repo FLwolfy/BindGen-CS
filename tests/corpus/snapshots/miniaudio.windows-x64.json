@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "libraryId": "miniaudio",
+  "platform": "windows-x64",
+  "sourceNormalization": "quoted-locked-corpus-include-root-v1",
+  "selectionPolicySha256": "5645a77020cbec654f0b5df100702cbbdd06bf5e172bc970a7f9e1cd79e44100",
+  "omittedDeclarations": {
+    "excludedDeclarations": [
+      "ma_log_postf"
+    ],
+    "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+  },
+  "sources": {
+    "windows-x64-msvc/managed/Bindings.cs": "768cad9e37c2c207983292e7912f541faea25158542f49ad5089671f5ed264a2"
+  },
+  "publicApiSha256": "c81a85a0291ec17c66189f141ca72613a77089e150455d4eadb75c1871ea709e"
+}

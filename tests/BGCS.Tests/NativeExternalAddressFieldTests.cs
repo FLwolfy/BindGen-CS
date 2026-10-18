@@ -61,26 +61,27 @@ public sealed class NativeExternalAddressFieldTests
                 schemaVersion = 1, library = new() { id = "address-copy", nativeName = "address_copy_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["vectors.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
-                {
+                { projectionInputs = new() { sources = ["consumer.cs"] },
                     @namespace = "Generated.AddressCopies", name = "VectorApi", importMode = mode,
                     externalTypes = [new() { nativeType = "NativeVector_int", managedType = "Consumer.NativeVector<int>", fields = fields },
                         new() { nativeType = "NativeSigned", managedType = "Consumer.SignedAddress", fields = fields },
                         new() { nativeType = "NativeUnsigned", managedType = "Consumer.UnsignedAddress", fields = fields }]
                 },
-                managedBuild = new() { sources = ["consumer.cs"] }, nativeBuild = new() { mode = "sources", sources = ["vectors.c"] },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             Assert.All(target.managed!.externalTypeProjections, projection =>
             {
-                ManagedTypeStorageFact observed = Assert.IsType<ManagedTypeStorageFact>(projection.managedStorage);
-                Assert.Equal(EvidenceLevel.Verified, observed.evidence.level);
-                Assert.Equal(ManagedScalarKind.NativeAddress, Assert.Single(observed.fields, field => field.name == "Data").scalarKind);
-                Assert.Equal(target.interop.pointerSize, observed.probe.pointerSize);
+                Assert.Null(projection.managedStorage);
+                ManagedStaticTypeShape observed = Assert.IsType<ManagedStaticTypeShape>(projection.managedShape);
+                Assert.Equal(EvidenceLevel.Declared, observed.evidence.level);
+                ManagedStaticFieldShape address = Assert.Single(observed.fields, field => field.name == "Data");
+                Assert.Equal(ManagedScalarKind.NativeAddress, address.scalarKind);
+                Assert.Equal(target.interop.pointerSize, address.size);
             });
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string managed = Path.Combine(targetRoot, "managed");
@@ -106,7 +107,7 @@ public sealed class NativeExternalAddressFieldTests
                 {{consumerTypes}}
                 """;
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(managed,
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName,
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName,
                 consumer, "AddressCopyConsumer", root, sourceRuntime));
             if (mode == BindingImportMode.FunctionTable && !sourceRuntime)
             {
@@ -117,7 +118,7 @@ public sealed class NativeExternalAddressFieldTests
                     externalTypes = configuration.api.externalTypes.SetItem(1, configuration.api.externalTypes[1] with { managedType = "Consumer.InvalidAddress" })
                 } };
                 await File.AppendAllTextAsync(Path.Combine(root, "consumer.cs"), "\nnamespace Consumer { public struct InvalidAddress {public int Capacity;public long Data;public int Size;} }\n");
-                BuildResult rejected = await host.BuildAsync(new(new(invalid, root)));
+                GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(invalid, root));
                 Assert.False(rejected.success);
                 Assert.Contains("scalar kind, signedness and width", rejected.GetDiagnosticSummary(), StringComparison.Ordinal);
                 var after = Directory.GetFiles(built.outputRoot, "*", SearchOption.AllDirectories)

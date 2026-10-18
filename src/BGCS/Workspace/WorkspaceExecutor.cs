@@ -20,17 +20,7 @@ public sealed partial class BindingHost
         BindingWorkspace workspace,
         CancellationToken cancellationToken = default
     )
-        => ExecuteWorkspaceAsync(workspace, build: false, cancellationToken);
-
-    /// <summary>Builds each project through the same candidate validation pipeline used by the SDK.</summary>
-    /// <param name="workspace">The prevalidated frozen project graph.</param>
-    /// <param name="cancellationToken">Cancels queued and active work.</param>
-    /// <returns>Complete per-project validation outcomes.</returns>
-    public Task<WorkspaceResult> BuildWorkspaceAsync(
-        BindingWorkspace workspace,
-        CancellationToken cancellationToken = default
-    )
-        => ExecuteWorkspaceAsync(workspace, build: true, cancellationToken);
+        => ExecuteWorkspaceAsync(workspace, cancellationToken);
 
     /// <summary>Compares projects through the same prerequisite graph without replacing formal outputs.</summary>
     /// <param name="workspace">The validated frozen project graph.</param>
@@ -50,15 +40,13 @@ public sealed partial class BindingHost
 
     private async Task<WorkspaceResult> ExecuteWorkspaceAsync(
         BindingWorkspace workspace,
-        bool build,
         CancellationToken cancellationToken
     ) {
         ImmutableArray<WorkspaceExecution<GenerationResult>> results = await ExecuteWorkspaceCoreAsync(workspace,
-            async (
+            (
                 project,
                 token
-            ) => build ? (await BuildAsync(new(project.request), token).ConfigureAwait(false)).generation
-                : await GenerateAsync(project.request, token).ConfigureAwait(false), result => result.success, result => result.diagnostics, cancellationToken).ConfigureAwait(false);
+            ) => GenerateAsync(project.request, token), result => result.success, result => result.diagnostics, cancellationToken).ConfigureAwait(false);
         return new(results.Select(result => new WorkspaceProjectResult(result.projectId, result.status, result.result, result.diagnostics)).ToImmutableArray());
     }
 

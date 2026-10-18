@@ -18,16 +18,14 @@ namespace BGCS.Tests;
 public sealed class NativeOwnedResultTests
 {
     [Theory]
-    [InlineData(BindingImportMode.FunctionTable, false, "auto")]
-    [InlineData(BindingImportMode.FunctionTable, true, "auto")]
-    [InlineData(BindingImportMode.DllImport, false, "auto")]
-    [InlineData(BindingImportMode.DllImport, true, "auto")]
-    [InlineData(BindingImportMode.LibraryImport, false, "auto")]
-    [InlineData(BindingImportMode.LibraryImport, true, "auto")]
-    [InlineData(BindingImportMode.FunctionTable, true, "msvc")]
-    public async Task GeneratedOwnedResult_KeepsItsReleaseAliveAfterContextDisposal(BindingImportMode mode, bool sourceRuntime, string provider)
+    [InlineData(BindingImportMode.FunctionTable, false)]
+    [InlineData(BindingImportMode.FunctionTable, true)]
+    [InlineData(BindingImportMode.DllImport, false)]
+    [InlineData(BindingImportMode.DllImport, true)]
+    [InlineData(BindingImportMode.LibraryImport, false)]
+    [InlineData(BindingImportMode.LibraryImport, true)]
+    public async Task GeneratedOwnedResult_KeepsItsReleaseAliveAfterContextDisposal(BindingImportMode mode, bool sourceRuntime)
     {
-        if (provider == "msvc" && !OperatingSystem.IsWindows()) return;
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-owned-result-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         try
@@ -53,23 +51,13 @@ public sealed class NativeOwnedResultTests
                     names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget").Add("Widget::Live", "Live").Add("Widget::Add", "Add").Add("Widget::Set", "Set") },
                 semantics = new() { ownedResults = [new() { function = "Widget::Widget", releaseThreadDomain = "any" }] },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                nativeBuild = new() { mode = "sources", provider = provider }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, temporary)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
             Assert.True(built.success, built.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(built.outputRoot));
-            using (JsonDocument verification = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(target, "metadata", "verification.json"))))
-            {
-                JsonElement plan = verification.RootElement.GetProperty("nativeEvidence").GetProperty("construction").GetProperty("plan");
-                if (provider == "msvc")
-                {
-                    Assert.Equal("msvc", plan.GetProperty("providerId").GetString());
-                    Assert.Contains(plan.GetProperty("commands").EnumerateArray(), command => Path.GetFileName(command.GetProperty("executable").GetString()) == "cl.exe");
-                    Assert.Contains(plan.GetProperty("commands").EnumerateArray(), command => Path.GetFileName(command.GetProperty("executable").GetString()) == "link.exe");
-                }
-            }
-            string native = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             string consumer = Path.Combine(temporary, "Consumer");
             Directory.CreateDirectory(consumer);
             string runtime = SecurityElement.Escape(typeof(NativeModuleSession).Assembly.Location)!;

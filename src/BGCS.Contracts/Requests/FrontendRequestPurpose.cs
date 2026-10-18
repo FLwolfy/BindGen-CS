@@ -7,6 +7,4 @@ public enum FrontendRequestPurpose
     SourceAnalysis,
     /// <summary>Checks the emitted C ABI header against the planned native bridge.</summary>
     BridgeVerification,
-    /// <summary>Independently checks facts established by the actual native build toolchain.</summary>
-    NativeBuildVerification
 }

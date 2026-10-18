@@ -126,8 +126,6 @@ internal sealed class GenerationComposition : IAsyncDisposable
                 case ExtensionPort.BindingBackend: builder.WithBackendFactory(() => (IBindingBackend)(object)factory()); break;
                 case ExtensionPort.GenerationValidator: builder.AddValidator(id, service.priority, () => (IGenerationValidator)(object)factory()); break;
                 case ExtensionPort.ArtifactProcessor: builder.AddArtifactProcessor(id, service.priority, () => (IArtifactProcessor)(object)factory()); break;
-                case ExtensionPort.NativeBuildProvider: builder.AddNativeBuildProvider(id, () => (INativeBuildProvider)(object)factory()); break;
-                case ExtensionPort.NativeArtifactPackager: builder.AddNativeArtifactPackager(id, () => (INativeArtifactPackager)(object)factory()); break;
                 case ExtensionPort.SourceContributor: builder.AddSourceContributor(id, service.priority, () => (ISourceContributor)(object)factory()); break;
                 default: throw new InvalidOperationException("The plugin declared an unavailable neutral port.");
             }
@@ -153,8 +151,6 @@ internal sealed class GenerationComposition : IAsyncDisposable
             if (contract == typeof(IBindingBackend)) return ExtensionPort.BindingBackend;
             if (contract == typeof(IGenerationValidator)) return ExtensionPort.GenerationValidator;
             if (contract == typeof(IArtifactProcessor)) return ExtensionPort.ArtifactProcessor;
-            if (contract == typeof(INativeBuildProvider)) return ExtensionPort.NativeBuildProvider;
-            if (contract == typeof(INativeArtifactPackager)) return ExtensionPort.NativeArtifactPackager;
             if (contract == typeof(ISourceContributor)) return ExtensionPort.SourceContributor;
             throw new InvalidOperationException("A standard plugin can register only exact neutral extension interfaces.");
         }

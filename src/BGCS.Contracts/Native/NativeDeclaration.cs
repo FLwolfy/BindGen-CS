@@ -27,12 +27,6 @@ public sealed record NativeDeclaration(
     public string? documentation { get; init; }
     /// <summary>Gets detached parsed documentation sections before managed parameter naming and bridge projection.</summary>
     public SourceDocumentation? documentationContent { get; init; }
-    /// <summary>Gets detached Objective-C container facts, independently of C++ inheritance and templates.</summary>
-    public NativeObjectiveCContainer? objectiveCContainer { get; init; }
-    /// <summary>Gets an Objective-C method's selector and receiver domain without implying a C export.</summary>
-    public NativeObjectiveCMethod? objectiveCMethod { get; init; }
-    /// <summary>Gets an Objective-C property's exact accessor relationships.</summary>
-    public NativeObjectiveCProperty? objectiveCProperty { get; init; }
     /// <summary>Gets a parameter's written source type before native array/function parameter adjustment; this is documentation, not its calling ABI.</summary>
     public string? sourceTypeSpelling { get; init; }
     /// <summary>Gets a parameter's typed written form, including array dimensions, separately from its adjusted calling-ABI type.</summary>

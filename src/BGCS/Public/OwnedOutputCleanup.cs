@@ -32,11 +32,11 @@ public sealed partial class BindingHost
             var configuration = request.configuration;
             string output = Path.GetFullPath(configuration.output.root, request.baseDirectory);
             string[] protectedInputs = configuration.source.headers.Concat(configuration.source.includeDirectories).Concat(configuration.source.systemIncludeDirectories)
-                .Concat(configuration.nativeBuild.sources).Concat(configuration.nativeBuild.artifacts)
+
                 .Concat(configuration.cpp.nativeShims.SelectMany(shim => shim.publicHeaders.Concat(shim.sourceFiles)))
                 .Concat(configuration.targets.SelectMany(target => target.settings.systemIncludeDirectories.Concat(target.settings.cxxSystemIncludeDirectories)
                     .Concat(target.settings.sysRoot is null ? [] : new[] { target.settings.sysRoot })))
-                .Concat(configuration.managedBuild.sources).Concat(configuration.managedBuild.references).Append(configuration.cache.directory)
+                .Concat(configuration.api.projectionInputs.sources).Concat(configuration.api.projectionInputs.references).Append(configuration.cache.directory)
                 .Select(path => Path.GetFullPath(path, request.baseDirectory)).Concat(request.configurationInputs.SelectMany(input => new[] { input.path, input.resolvedPath }))
                 .Concat(request.pluginInputs.SelectMany(input => new[] { input.path, input.resolvedPath }))
                 .Concat(request.configurationPath is null ? [] : new[] { request.configurationPath }).ToArray();

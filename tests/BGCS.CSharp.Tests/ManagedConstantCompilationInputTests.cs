@@ -36,7 +36,7 @@ public sealed class ManagedConstantCompilationInputTests
                 }
             }
             """;
-        ManagedCompilationInputs inputs = metadata ? new() { assemblies = [AssemblyInput(name, source)] }
+        ManagedProjectionInputs inputs = metadata ? new() { assemblies = [AssemblyInput(name, source)] }
             : new() { sources = [Source(source)] };
         CSharpEmissionPlan plan = Plan(inputs);
         CSharpConstantPlan field = Assert.Single(plan.constants);
@@ -64,7 +64,7 @@ public sealed class ManagedConstantCompilationInputTests
     [Fact]
     public void UnrelatedGeneratedContextPartialMethodBodiesDoNotPretendToBeConstantDependencies()
     {
-        ManagedCompilationInputs inputs = new() { sources = [Source("""
+        ManagedProjectionInputs inputs = new() { sources = [Source("""
             namespace Vendor { public static class Values { public const long Answer = 43L; } }
             namespace Generated.External { public sealed partial class ExternalApi {
                 public string? Describe() => Raw.ToString();
@@ -86,7 +86,7 @@ public sealed class ManagedConstantCompilationInputTests
     public void InvalidInputClaimsAndSelectedDependenciesFailBeforeEmission(string invalid)
     {
         ManagedSourceInput source = Source("namespace Vendor { public static class Values { public const long Answer = 43L; } }");
-        ManagedCompilationInputs inputs = new() { sources = [source] };
+        ManagedProjectionInputs inputs = new() { sources = [source] };
         inputs = invalid switch
         {
             "digest" => inputs with { sources = [source with { digest = new(new string('0', 64)) }] },
@@ -142,7 +142,7 @@ public sealed class ManagedConstantCompilationInputTests
         string corePath = typeof(object).Assembly.Location;
         ManagedSourceInput source = Source("namespace Vendor { public static class Values { public const long Answer = "
             + (selected ? "global::Forwarded.Values.Answer" : "43L") + "; } }");
-        ManagedCompilationInputs inputs = new()
+        ManagedProjectionInputs inputs = new()
         {
             assemblies = [Framework(corePath), Framework(Path.Combine(Path.GetDirectoryName(corePath)!, "System.Runtime.dll")), facade],
             sources = [source]
@@ -162,13 +162,13 @@ public sealed class ManagedConstantCompilationInputTests
         }
     }
 
-    private static CSharpEmissionPlan Plan(ManagedCompilationInputs inputs)
+    private static CSharpEmissionPlan Plan(ManagedProjectionInputs inputs)
     {
         InteropModule interop = new("external", "windows-x64-msvc", 8, [], [], [])
         { constants = [new(new("selected"), "SELECTED", "SELECTED", new(NativeScalarConstantKind.Integer, "42", 4, true, new(EvidenceLevel.Declared, "native:compiler")), null)] };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, new("Generated.External", "ExternalApi")
         { constants = [new("SELECTED") { managedType = "long", expression = "global::Vendor.Values.Answer" }] }, CancellationToken.None);
-        return new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()) { managedCompilation = inputs });
+        return new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()) { managedProjection = inputs });
     }
 
     private static ManagedSourceInput Source(string text, string? path = null)

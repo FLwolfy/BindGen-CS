@@ -124,14 +124,14 @@ public sealed class NativeCOwnedReceiverTests
                             lengthUnit = NativeLengthUnit.Elements, direction = NativeParameterDirection.Output, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true }]
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["widget.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string native = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
             {
                 importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.COwned.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,

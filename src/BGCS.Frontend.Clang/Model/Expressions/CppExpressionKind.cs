@@ -29,10 +29,6 @@ internal enum CppExpressionKind
     /// </summary>
     Call,
     /// <summary>
-    /// An Objective-C message expression.
-    /// </summary>
-    ObjCMessage,
-    /// <summary>
     /// A block literal expression.
     /// </summary>
     Block,
@@ -161,26 +157,6 @@ internal enum CppExpressionKind
     /// </summary>
     Unary,
     /// <summary>
-    /// An Objective-C string literal.
-    /// </summary>
-    ObjCStringLiteral,
-    /// <summary>
-    /// An Objective-C type encoding expression.
-    /// </summary>
-    ObjCEncode,
-    /// <summary>
-    /// An Objective-C selector expression.
-    /// </summary>
-    ObjCSelector,
-    /// <summary>
-    /// An Objective-C protocol expression.
-    /// </summary>
-    ObjCProtocol,
-    /// <summary>
-    /// An Objective-C ownership bridge cast.
-    /// </summary>
-    ObjCBridgedCast,
-    /// <summary>
     /// A C++ template parameter pack expansion.
     /// </summary>
     PackExpansion,
@@ -193,21 +169,9 @@ internal enum CppExpressionKind
     /// </summary>
     Lambda,
     /// <summary>
-    /// An Objective-C boolean literal.
-    /// </summary>
-    ObjCBoolLiteral,
-    /// <summary>
-    /// An Objective-C current-object expression.
-    /// </summary>
-    ObjCSelf,
-    /// <summary>
     /// An OpenMP array shaping expression.
     /// </summary>
     OMPArrayShapingExpr,
-    /// <summary>
-    /// An Objective-C platform availability expression.
-    /// </summary>
-    ObjCAvailabilityCheck,
     /// <summary>
     /// A fixed-point numeric literal.
     /// </summary>

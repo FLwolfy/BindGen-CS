@@ -18,7 +18,10 @@ public sealed class SchemaCommandTests
             Assert.False(root.GetProperty("additionalProperties").GetBoolean());
             JsonElement properties = root.GetProperty("properties");
             Assert.False(properties.TryGetProperty("entryFiles", out _));
+            Assert.False(properties.TryGetProperty("nativeBuild", out _));
+            Assert.False(properties.TryGetProperty("managedBuild", out _));
             JsonElement api = properties.GetProperty("api").GetProperty("properties");
+            Assert.True(api.TryGetProperty("projectionInputs", out _));
             Assert.Equal("functionTable", api.GetProperty("importMode").GetProperty("default").GetString());
             Assert.Equal("instance", api.GetProperty("style").GetProperty("default").GetString());
             Assert.Equal("net10.0", api.GetProperty("framework").GetProperty("const").GetString());

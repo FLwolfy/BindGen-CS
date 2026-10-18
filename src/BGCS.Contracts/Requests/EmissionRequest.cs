@@ -13,7 +13,7 @@ public sealed record EmissionRequest(
 )
 {
     /// <summary>Gets an optional immutable external/framework reference and source closure for managed compile-time assertions.</summary>
-    public ManagedCompilationInputs? managedCompilation { get; init; }
+    public ManagedProjectionInputs? managedProjection { get; init; }
     /// <summary>Gets explicit namespaces imported by binding artifacts; Runtime source remains independently qualified.</summary>
     public ImmutableArray<string> additionalUsings { get; init; } = [];
     /// <summary>Gets the selected import mechanism.</summary>

@@ -30,7 +30,7 @@ public sealed class NativeCppDtoStorageTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "dto.hpp"), Header);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(Configuration(runtimeMode), root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(Configuration(runtimeMode), root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
             CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
@@ -44,7 +44,7 @@ public sealed class NativeCppDtoStorageTests
             }
             var packet = plan.types.Single(type => type.kind == BridgeTypeKind.Record && plan.source.GetType(type.nativeType!.Value).spelling == "Demo::Packet");
             Assert.Equal(new long[] { 0, 4, 12 }, packet.recordStorage!.fields.Select(field => field.offset));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             Invoke(Path.Combine(target, "managed"), binary, runtimeMode);
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -70,46 +70,6 @@ public sealed class NativeCppDtoStorageTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    [Theory]
-    [InlineData("type")]
-    [InlineData("offset")]
-    public async Task SameSizedNativeDtoFieldDrift_RejectsFinalBuildAndPreservesPublication(string drift)
-    {
-        string root = Path.Combine(Path.GetTempPath(), "bgcs-cpp-dto-drift-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        try
-        {
-            await File.WriteAllTextAsync(Path.Combine(root, "dto.hpp"), Header);
-            BindingConfiguration configuration = Configuration("package");
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult first = await host.BuildAsync(new(new(configuration, root)));
-            Assert.True(first.success, first.GetDiagnosticSummary());
-            var before = Directory.EnumerateFiles(first.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(first.outputRoot, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
-            string definition = drift == "type" ? "BGCS_DTO_FIELD_FLOAT" : "BGCS_DTO_FIELD_REORDERED";
-            configuration = configuration with { nativeBuild = configuration.nativeBuild with { compilerArguments = ["-D" + definition + "=1"] } };
-            NativeModule original = Assert.Single(first.generation.targetModels).bridge!.source;
-            AnalysisResult observed = await host.AnalyzeAsync(new(["dto.hpp"], SourceLanguage.Cpp, root)
-            { arguments = configuration.nativeBuild.compilerArguments, parseMacros = false });
-            Assert.True(observed.success, observed.GetDiagnosticSummary());
-            var expected = CountFacts(original);
-            var actual = CountFacts(observed.module!);
-            Assert.Equal(expected.RecordType.size, actual.RecordType.size);
-            Assert.Equal(expected.RecordType.alignment, actual.RecordType.alignment);
-            Assert.Equal(expected.FieldType.size, actual.FieldType.size);
-            Assert.Equal("Int", expected.FieldType.primitiveKind);
-            Assert.Equal(0L, expected.Field.offset);
-            Assert.Equal(drift == "type" ? "Float" : "Int", actual.FieldType.primitiveKind);
-            Assert.Equal(drift == "type" ? 0L : 4L, actual.Field.offset);
-            BuildResult changed = await host.BuildAsync(new(new(configuration, root)));
-            Assert.False(changed.success);
-            string cause = drift == "type" ? "exact native type or storage facts" : "field identity, position or bitfield width";
-            Assert.True(changed.GetDiagnosticSummary().Contains("Native effective source facts differ from the generated contract: Demo::Inner.count (" + cause + ").", StringComparison.Ordinal),
-                changed.GetDiagnosticSummary());
-            var after = Directory.EnumerateFiles(first.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(first.outputRoot, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
-            Assert.Equal(before.OrderBy(pair => pair.Key), after.OrderBy(pair => pair.Key));
-        }
-        finally { Directory.Delete(root, recursive: true); }
-    }
 
     private static (NativeDeclaration Field, NativeType FieldType, NativeType RecordType) CountFacts(NativeModule module)
     {
@@ -126,7 +86,7 @@ public sealed class NativeCppDtoStorageTests
         source = new() { language = SourceLanguage.Cpp, headers = ["dto.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.NativeDto", name = "DtoApi", names = ImmutableDictionary<string, string>.Empty
             .Add("Demo::Inner", "Inner").Add("Demo::Packet", "Packet").Add("Demo::Standalone", "Standalone").Add("Demo::Aligned", "Aligned").Add("Demo::View", "View") },
-        runtime = new() { mode = runtime }, nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+        runtime = new() { mode = runtime },  cache = new() { enabled = false }
     };
 
     private static void Invoke(string sources, string binary, string runtimeMode)

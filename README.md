@@ -31,7 +31,6 @@ For source use, build the checkout and replace `bindgen-cs` with the source comm
 ```bash
 dotnet build BindGen-CS.slnx -c Release
 dotnet run --project src/BGCS.Tool -c Release -- generate examples/QuickStart/bindgen.json
-dotnet run --project src/BGCS.Tool -c Release -- build examples/QuickStart/bindgen.json
 ```
 
 A native compiler and the target SDK are required for native builds. The parser's
@@ -47,7 +46,6 @@ A small C integration has one `bindgen.json`:
   "library": { "id": "example", "nativeName": "example" },
   "source": { "language": "c", "headers": ["include/native.h"] },
   "api": { "namespace": "Example.Bindings", "name": "NativeApi" },
-  "nativeBuild": { "mode": "sources", "sources": ["src/native.c"] },
   "output": { "root": "Generated", "layout": "split" }
 }
 ```
@@ -56,11 +54,10 @@ Paths in configuration are relative to its declaring document. `init` writes a
 matching schema reference. `generate` produces managed sources, optional bridge
 sources, manifests and reports under `Generated/<resolved-target>/`.
 
-`build` compiles the candidate C# with warnings as errors and builds or verifies the
-native inputs declared by `nativeBuild`. It validates required exports before
-publishing the complete artifact set. A failed validation preserves the previous
-owned output. With `nativeBuild.mode = "none"`, the report explicitly records that
-native building was not requested. Actual invocation is a separate validation stage.
+Compile the generated managed files in your consumer project. Build native library and
+bridge sources with your own CMake, compiler or application build, then deploy/link that
+library explicitly. BGCS does not compile, link, package or deploy native libraries and
+does not build consumer projects. Parsing and generation do not certify native invocation.
 
 A generated consumer targets `net10.0`, enables unsafe blocks and normally references
 `BGCS.Runtime`. Compile the selected target's `managed` files and deploy its verified
@@ -89,7 +86,7 @@ C++ construction, custom loading, runtime modes and build configuration.
 | `BindGen-CS` | Command-line tool exposing the same Host pipeline |
 
 Internal projects are bundled implementation modules. Users do not assemble extra
-feature packages for C++, lowering or native builds. Tool RID shards and parser
+feature packages for C++ or lowering. Tool RID shards and parser
 runtime packages supply the six declared desktop host resource closures.
 
 ```csharp
@@ -116,7 +113,7 @@ contracts. Size equality alone does not prove field layout, alignment or by-valu
 call compatibility. Unsupported ABI forms are rejected or require a native shim.
 
 Ordinary plugins reference `BGCS.Contracts` and implement neutral ports for targets,
-transforms, lowering, projection, output processing, building or validation.
+transforms, lowering, projection, source contribution, output processing or validation.
 Grouped `cpp` recipes, explicit template selections and native shims handle
 library-specific C++ semantics. See [Extensibility](docs/extensibility.md),
 [Configuration](docs/configuration-guide.md) and the
@@ -135,10 +132,12 @@ receipts: resolving or generating a target is not a production support claim.
 | --- | --- |
 | `init`, `schema`, `explain` | Create grouped configuration, export schema and explain diagnostics |
 | `doctor`, `validate`, `inspect` | Check prerequisites/configuration and inspect frozen models |
-| `generate`, `build` | Generate artifacts or validate declared managed/native builds |
-| `bridge`, `native-build` | Request native-only bridge output or build a verified manifest |
+| `generate` | Generate C# and any required native bridge sources |
+| `bridge` | Request native bridge sources without managed projection |
 | `diff`, `workspace` | Compare without publication or process explicit project dependencies |
-| `supply-chain`, `version` | Inspect delivery provenance and implementation identities |
+| `version` | Inspect implementation and parser identities |
+
+Repository audits and SBOM generation use the non-shipped `eng/BGCS.RepositoryTools` project. Native and consumer compilation use your external build.
 
 ```bash
 dotnet test BindGen-CS.slnx -c Release

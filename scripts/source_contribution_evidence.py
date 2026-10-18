@@ -5,7 +5,7 @@ import re
 
 CHECK = 'installed-contracts-source-plugin-same-manifest-cpp-cache-and-rollback'
 PREREQUISITES = (CHECK, 'installed-contracts-only-source-plugin-sdk-cli-and-msbuild-manifest',
-                 'installed-sdk-c-cpp-and-contracts-only-plugin', 'installed-msbuild-native-item-deployment-invocation')
+                 'installed-sdk-c-cpp-and-contracts-only-plugin', 'installed-msbuild-generated-source-external-native-invocation')
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 
 
@@ -52,10 +52,20 @@ def verify_summary(parent: dict) -> dict:
     return value
 
 
-def verify_report(report: dict, parent: dict) -> None:
+def verify_report(report: dict, parent: dict, *, require_clean: bool = True) -> None:
     summary = verify_summary(parent)
+    dirty = parent.get('sourceWorktreeDirty')
+    revision, content = parent.get('sourceRevision'), parent.get('checkedOutSourceSha256')
+    if (type(require_clean) is not bool or type(dirty) is not bool
+            or not isinstance(revision, str) or not re.fullmatch(r'[0-9a-f]{40}', revision)
+            or not isinstance(content, str) or not SHA.fullmatch(content)
+            or require_clean and dirty is not False
+            or not require_clean and parent.get('completeProductSet') is not False):
+        raise RuntimeError('Only an explicitly partial local product proof may retain a matching dirty source identity.')
+    source = report.get('source')
     if (report.get('schemaVersion') != 1 or report.get('success') is not True or report.get('installedProducts') is not True
-            or report.get('check') != CHECK or report.get('source') != {'revision': parent.get('sourceRevision'),
-                'workingTreeDirty': False, 'checkedOutSourceSha256': parent.get('checkedOutSourceSha256')}
+            or report.get('check') != CHECK or not isinstance(source, dict)
+            or type(source.get('workingTreeDirty')) is not bool
+            or source != {'revision': revision, 'workingTreeDirty': dirty, 'checkedOutSourceSha256': content}
             or any(report.get(key) != summary[key] for key in ('manifestSha256', 'pluginAssets', 'entries'))):
         raise RuntimeError('The actual archived source-contributor report contradicts its source or execution summary.')

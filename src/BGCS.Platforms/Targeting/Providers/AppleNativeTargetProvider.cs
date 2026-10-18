@@ -40,9 +40,9 @@ public sealed class AppleNativeTargetProvider : INativeTargetProvider
                 _ => "macosx"
             };
             toolchain = new NativeToolchainDescriptor(
-                toolchain.compilerPath, ToolchainDiscovery.FindAppleSdkRoot(sdk),
+                toolchain.compilerPath, BGCS.Platforms.Toolchains.AppleSdkDiscovery.FindInstalledRoot(sdk),
                 toolchain.systemIncludeFolders, toolchain.defines, toolchain.arguments, toolchain.cxxSystemIncludeFolders,
-                toolchain.sdkVersion, toolchain.compilerVersion, toolchain.linkerPath, toolchain.libraryDirectories);
+                toolchain.sdkVersion, toolchain.compilerVersion);
         }
         // The selected host driver owns its C++ library. Cross targets use the requested SDK.
         if (!string.IsNullOrWhiteSpace(toolchain.sysRoot)
@@ -52,7 +52,7 @@ public sealed class AppleNativeTargetProvider : INativeTargetProvider
             if (Directory.Exists(headers))
                 toolchain = new(toolchain.compilerPath, toolchain.sysRoot, toolchain.systemIncludeFolders,
                     toolchain.defines, toolchain.arguments, toolchain.cxxSystemIncludeFolders.Append(headers).Distinct(StringComparer.Ordinal),
-                    toolchain.sdkVersion, toolchain.compilerVersion, toolchain.linkerPath, toolchain.libraryDirectories);
+                    toolchain.sdkVersion, toolchain.compilerVersion);
         }
 
         target = new(request.targetId, resolved.platform, resolved.architecture, "darwin", triple, toolchain, byteOrder: NativeTargetFacts.ByteOrder(resolved.architecture, triple));

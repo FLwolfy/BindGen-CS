@@ -43,12 +43,12 @@ public sealed class NativeValueStringResultTests
                 cpp=new(){familyBindings=[Text("std::string",NativeTextEncoding.Utf8),Text("std::u16string",NativeTextEncoding.Utf16),Text("std::u32string",NativeTextEncoding.Utf32),
                     new(){nativeType="std::filesystem::path",family=StandardValueKind.Path,pathFormat=NativePathFormat.NativeUtf8,evidence=new(EvidenceLevel.UserAsserted,"preserve-native-separators")} ]},
                 runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},
-                nativeBuild=new(){mode="sources"},cache=new(){enabled=false}
+                cache=new(){enabled=false}
             };
             await using BindingHost host=BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built=await host.BuildAsync(new(new(configuration,root)));
+            GenerationResult built=await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration,root));
             Assert.True(built.success,built.GetDiagnosticSummary());
-            TargetInspection target=Assert.Single(built.generation.targetModels);
+            TargetInspection target=Assert.Single(built.targetModels);
             CSharpEmissionPlan plan=new CSharpEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
                 {importMode=mode,runtimeNamespace=sourceRuntime?"Generated.ValueText.Runtime":"BGCS.Runtime",maximumValueStringCodeUnits=32});
             foreach(var type in target.interop.types.Where(type=>type.valueProtocol is not null))
@@ -75,7 +75,7 @@ public sealed class NativeValueStringResultTests
                     .AppendLine(")throw new InvalidOperationException(\"counted native Unicode result\");");
             }
             string targetRoot=Path.Combine(built.outputRoot,target.targetId);
-            string binary=Assert.Single(Directory.GetFiles(Path.Combine(targetRoot,"native","bin")));
+            string binary=Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string context=sourceRuntime?"ValueApiContext":"ValueApi";
             string factoryExpression=mode==BindingImportMode.FunctionTable?"ApiContext.Load(binary)":"ApiContext.Create()";
             Assert.Equal(42,await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot,"managed"),binary,configuration.library.nativeName,$$"""

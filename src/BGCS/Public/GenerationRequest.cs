@@ -33,8 +33,6 @@ public sealed record GenerationRequest
     public string? configurationPath { get; private init; }
     /// <summary>Gets immutable content identities for the complete composed configuration closure.</summary>
     public ImmutableArray<InputDependency> configurationInputs { get; private init; } = [];
-    /// <summary>Gets verified pinned HTTPS input identities separately from local file dependencies.</summary>
-    public ImmutableArray<PinnedConfigurationInput> configurationRemoteInputs { get; private init; } = [];
     /// <summary>Gets the executable input closure of all request-declared plugins.</summary>
     public ImmutableArray<InputDependency> pluginInputs => plugins.SelectMany(plugin => plugin.inputs).ToImmutableArray();
     internal ImmutableArray<LockedPluginManifest> plugins { get; }
@@ -43,7 +41,7 @@ public sealed record GenerationRequest
     /// <summary>Reads the new configuration and resolves relative paths from its containing directory.</summary>
     /// <param name="path">The local bindgen.json input.</param>
     /// <param name="profile">An optional explicit named preset selection.</param>
-    /// <param name="cancellationToken">Cancels composition, including explicit pinned HTTPS reads.</param>
+    /// <param name="cancellationToken">Cancels composition, local reads and composition.</param>
     /// <param name="configurationLoader">An optional loader with a caller-owned HTTPS transport.</param>
     /// <returns>The independently frozen request.</returns>
     public static GenerationRequest FromFile(
@@ -54,12 +52,12 @@ public sealed record GenerationRequest
     )
         => FromFileAsync(path, profile, cancellationToken, configurationLoader).GetAwaiter().GetResult();
 
-    /// <summary>Asynchronously captures a local root, its content-pinned HTTPS bases and exact input provenance.</summary>
+    /// <summary>Asynchronously captures a local root, its local bases and exact input provenance.</summary>
     /// <param name="path">The local bindgen.json input.</param>
     /// <param name="profile">An optional explicit preset selection.</param>
     /// <param name="cancellationToken">Cancels file/network reads and composition.</param>
     /// <param name="configurationLoader">An optional loader with a caller-owned HTTPS transport.</param>
-    /// <returns>The independently frozen request with local and remote content identities.</returns>
+    /// <returns>The independently frozen request with local content identities.</returns>
     public static async Task<GenerationRequest> FromFileAsync(
         string path,
         string? profile = null,
@@ -70,7 +68,7 @@ public sealed record GenerationRequest
         string absolute = Path.GetFullPath(path);
         ConfigurationLoadResult loaded = await (configurationLoader ?? new()).LoadWithInputsAsync(absolute, profile, cancellationToken).ConfigureAwait(false);
         return new(loaded.configuration, Path.GetDirectoryName(absolute)!)
-        { configurationPath = absolute, configurationInputs = loaded.inputs, configurationRemoteInputs = loaded.remoteInputs };
+        { configurationPath = absolute, configurationInputs = loaded.inputs };
     }
 
     /// <summary>Applies immutable SDK or integration overrides while retaining the originating input and path base.</summary>
@@ -81,7 +79,6 @@ public sealed record GenerationRequest
         {
             configurationPath = this.configurationPath,
             configurationInputs = this.configurationInputs,
-            configurationRemoteInputs = this.configurationRemoteInputs,
             previewOutputRoot = this.previewOutputRoot
         };
 

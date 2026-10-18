@@ -41,21 +41,13 @@ public sealed class NativeCustomFunctionTableTests
             Assert.True(generated.success, generated.GetDiagnosticSummary());
             var selected = Assert.Single(generated.targetModels);
             string native = Path.Combine(example, "native.c"), header = Path.Combine(example, "native.h");
-            NativeBuildManifest manifest = new("custom-table-producer", "custom_table", selected.resolvedTarget!,
-                [new(native, SourceLanguage.C, "c17")], [], [Snapshot(native), Snapshot(header)],
-                ["custom_table_get", "custom_table_count", "custom_table_pointer_size", "custom_table_slot_size", "custom_table_identity", "custom_table_set_fault"])
-            {
-                includeDirectories = [example], defines = ["BGCS_CUSTOM_TABLE_TEST_FAULTS"],
-                compilerArguments = OperatingSystem.IsWindows() ? [] : ["-fvisibility=hidden"]
-            };
-            string manifestFile = Path.Combine(root, "producer.manifest.json");
-            await File.WriteAllTextAsync(manifestFile, JsonSerializer.Serialize(manifest, WorkerProtocol.jsonOptions));
-            ManifestNativeBuildResult built = await host.NativeBuildAsync(new(manifestFile));
-            Assert.True(built.success, built.GetDiagnosticSummary());
+            await NativeConsumerHarness.CompileNativeFixturesAsync(generated, root, configuration.library.nativeName,
+                [native], OperatingSystem.IsWindows() ? ["-DBGCS_CUSTOM_TABLE_TEST_FAULTS"] : ["-DBGCS_CUSTOM_TABLE_TEST_FAULTS", "-fvisibility=hidden"]);
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(Path.Combine(generated.outputRoot, selected.targetId))));
             Directory.CreateDirectory(Path.Combine(root, "Consumer"));
             File.Copy(Path.Combine(example, "Consumer", "CustomSlotTable.cs"), Path.Combine(root, "Consumer", "CustomSlotTable.cs"));
             object? answer = await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(generated.outputRoot, selected.targetId, "managed"),
-                built.nativeArtifact!, "custom_table", """
+                binary, "custom_table", """
                 using System;
                 using System.Runtime.CompilerServices;
                 using System.Runtime.InteropServices;
@@ -136,7 +128,7 @@ public sealed class NativeCustomFunctionTableTests
                 }
                 """, "CustomTableConsumer", root, sourceRuntime: false);
             Assert.Equal(42, answer);
-            string project = await File.ReadAllTextAsync(Path.Combine(root, "Consumer", "Consumer.csproj"));
+            string project = await File.ReadAllTextAsync(Path.Combine(NativeConsumerHarness.NativeDirectory(Path.Combine(generated.outputRoot, selected.targetId)), "Consumer", "Consumer.csproj"));
             Assert.Contains("BGCS.Runtime", project);
             Assert.DoesNotContain("BGCS.Contracts", project);
             Assert.DoesNotContain("BGCS.Frontend", project);

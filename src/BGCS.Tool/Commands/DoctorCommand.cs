@@ -31,7 +31,7 @@ internal static class DoctorCommand
                     framework = Environment.Version.ToString(),
                     worker,
                     inspectionExecuted = false,
-                    nativeBuildExecuted = false,
+                    generationExecuted = false,
                     targetValidated = false,
                     diagnostics
                 }, GenerateCommand.JsonOptions));
@@ -59,7 +59,7 @@ internal static class DoctorCommand
                         framework = Environment.Version.ToString(),
                         worker,
                         inspectionExecuted = false,
-                        nativeBuildExecuted = false,
+                        generationExecuted = false,
                         targetValidated = false,
                         diagnostics = worker.diagnostics
                     }, GenerateCommand.JsonOptions));
@@ -72,14 +72,9 @@ internal static class DoctorCommand
             }
             await using BindingHost host = BindingHost.CreateDefault();
             InspectionResult inspection = await host.InspectAsync(request, cancellation.token).ConfigureAwait(false);
-            ImmutableArray<DoctorPrerequisites.NativeReadiness>.Builder prerequisites = ImmutableArray.CreateBuilder<DoctorPrerequisites.NativeReadiness>();
-            foreach (TargetInspection target in inspection.targets)
-                prerequisites.Add(await DoctorPrerequisites.InspectNativeAsync(request, target, cancellation.token).ConfigureAwait(false));
             cancellation.token.ThrowIfCancellationRequested();
-            ImmutableArray<BindingDiagnostic> diagnostics = worker.diagnostics.AddRange(inspection.diagnostics)
-                .AddRange(prerequisites.SelectMany(item => item.diagnostics));
-            bool success = inspection.success && prerequisites.All(item => item.ready == true)
-                && !diagnostics.Any(item => item.isFailure);
+            ImmutableArray<BindingDiagnostic> diagnostics = worker.diagnostics.AddRange(inspection.diagnostics);
+            bool success = inspection.success && !diagnostics.Any(item => item.isFailure);
             if (options.json)
                 Console.WriteLine(JsonSerializer.Serialize(new
                 {
@@ -88,9 +83,8 @@ internal static class DoctorCommand
                     framework = Environment.Version.ToString(),
                     worker,
                     inspectionExecuted = true,
-                    nativeBuildExecuted = false,
+                    generationExecuted = false,
                     targetValidated = inspection.success,
-                    prerequisites = prerequisites.ToImmutable(),
                     inspection,
                     diagnostics
                 }, GenerateCommand.JsonOptions));
@@ -98,13 +92,7 @@ internal static class DoctorCommand
             {
                 WriteHost(worker);
                 foreach (TargetInspection target in inspection.targets)
-                    Console.WriteLine($"Inspected target: {target.targetId} ({target.native.triple}); native build and invocation were not executed.");
-                foreach (DoctorPrerequisites.NativeReadiness readiness in prerequisites)
-                {
-                    Console.WriteLine($"Native prerequisites: {readiness.targetId} / {readiness.providerId}: {readiness.status}");
-                    if (readiness.sourceViewRequired)
-                        Console.WriteLine($"Initial source view: {readiness.sourceViewPrerequisites}");
-                }
+                    Console.WriteLine($"Inspected target: {target.targetId} ({target.native.triple}); native compilation and invocation remain the caller's responsibility.");
                 GenerateCommand.WriteDiagnostics(diagnostics, options.diagnostics);
             }
             return success ? 0 : 1;

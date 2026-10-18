@@ -7,8 +7,7 @@ namespace BGCS.Tool.Commands;
 
 internal static class GenerateCommand
 {
-    internal static int Run(string[] args) => Execute(args, build: false);
-    internal static int Build(string[] args) => Execute(args, build: true);
+    internal static int Run(string[] args) => Execute(args);
 
     internal static int Diff(string[] args)
     {
@@ -30,9 +29,9 @@ internal static class GenerateCommand
     }
 
     private static int Execute(
-        string[] args,
-        bool build
-    ) {
+        string[] args
+    )
+    {
         GenerationArguments.Options options = GenerationArguments.ParseOptions(args);
         using CommandCancellation cancellation = new();
         return ExecuteAsync().GetAwaiter().GetResult();
@@ -41,13 +40,11 @@ internal static class GenerateCommand
         {
             GenerationRequest request = await GenerationArguments.CreateRequestAsync(options, cancellation.token).ConfigureAwait(false);
             await using BindingHost host = BindingHost.CreateDefault();
-            GenerationResult result = build
-                ? (await host.BuildAsync(new BuildRequest(request), cancellation.token).ConfigureAwait(false)).generation
-                : await host.GenerateAsync(request, cancellation.token).ConfigureAwait(false);
+            GenerationResult result = await host.GenerateAsync(request, cancellation.token).ConfigureAwait(false);
             cancellation.token.ThrowIfCancellationRequested();
             WriteDiagnostics(result.diagnostics, options.diagnostics);
             if (options.json) Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions));
-            else if (result.success) Console.WriteLine($"{(build ? "Built" : "Generated")} {result.artifacts.Length} artifacts in {result.outputRoot}");
+            else if (result.success) Console.WriteLine($"Generated {result.artifacts.Length} artifacts in {result.outputRoot}");
             return result.success ? 0 : 1;
         }
     }

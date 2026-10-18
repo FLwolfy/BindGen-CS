@@ -19,7 +19,7 @@ internal unsafe class FunctionDeclVisitor : MemberVisitor
     /// <summary>
     /// Gets <c>Kinds</c>.
     /// </summary>
-    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_FunctionTemplate, CXCursorKind.CXCursor_FunctionDecl, CXCursorKind.CXCursor_Constructor, CXCursorKind.CXCursor_Destructor, CXCursorKind.CXCursor_CXXMethod, CXCursorKind.CXCursor_ConversionFunction, CXCursorKind.CXCursor_ObjCClassMethodDecl, CXCursorKind.CXCursor_ObjCInstanceMethodDecl];
+    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_FunctionTemplate, CXCursorKind.CXCursor_FunctionDecl, CXCursorKind.CXCursor_Constructor, CXCursorKind.CXCursor_Destructor, CXCursorKind.CXCursor_CXXMethod, CXCursorKind.CXCursor_ConversionFunction];
 
     protected override CppElement? VisitCore(
         CXCursor cursor,
@@ -73,13 +73,9 @@ internal unsafe class FunctionDeclVisitor : MemberVisitor
             case CXCursorKind.CXCursor_FunctionTemplate:
                 ParseFuncTemplateParams(cursor, cppFunction);
                 break;
-            case CXCursorKind.CXCursor_ObjCInstanceMethodDecl:
             case CXCursorKind.CXCursor_CXXMethod:
             case CXCursorKind.CXCursor_ConversionFunction:
                 cppFunction.flags |= CppFunctionFlags.Method;
-                break;
-            case CXCursorKind.CXCursor_ObjCClassMethodDecl:
-                cppFunction.flags |= CppFunctionFlags.ClassMethod;
                 break;
             case CXCursorKind.CXCursor_Constructor:
                 cppFunction.flags |= CppFunctionFlags.Constructor;
@@ -126,14 +122,6 @@ internal unsafe class FunctionDeclVisitor : MemberVisitor
 
         // Gets the return type
         var returnType = this.builder.GetCppType(cursor.ResultType.Declaration, cursor.ResultType, cursor);
-        if (cppClass != null && cppClass.classKind == CppClassKind.ObjCInterface)
-        {
-            if (returnType is CppTypedef typedef && typedef.name == "instancetype")
-            {
-                returnType = new CppPointerType(cursor, cppClass, this.builder.rootCompilation.pointerSize);
-            }
-        }
-
         cppFunction.returnType = returnType;
         this.builder.ParseAttributes(cursor, cppFunction, true);
         cppFunction.callingConvention = cursor.Type.GetCallingConvention();

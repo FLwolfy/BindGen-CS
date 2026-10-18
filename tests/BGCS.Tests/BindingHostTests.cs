@@ -68,15 +68,15 @@ public sealed class BindingHostTests
     }
 
     [Fact]
-    public async Task ExplicitMissingCompiler_IsRejectedBeforeCreatingTheFrontend()
+    public async Task ExplicitUninstalledCompilerHint_DoesNotPreventParsing()
     {
         bool created = false;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => { created = true; throw new InvalidOperationException("The frontend must not be created."); }).Build();
-        AnalysisResult result = await host.AnalyzeAsync(AnalysisRequest.FromFiles(["native.h"]) with
-        { toolchain = new NativeToolchainDescriptor(compilerPath: Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing-compiler")) });
-        Assert.False(result.success);
-        Assert.False(created);
-        Assert.Contains(result.diagnostics, diagnostic => diagnostic.message.Contains("explicitly configured compiler", StringComparison.Ordinal));
+        string hint = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing-compiler");
+        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => { created = true; return new ProbeFrontend(() => { }); }).Build();
+        AnalysisResult result = await host.AnalyzeAsync(Request() with { toolchain = new NativeToolchainDescriptor(compilerPath: hint) });
+        Assert.True(result.success, result.GetDiagnosticSummary());
+        Assert.True(created);
+        Assert.Equal(hint, result.target!.toolchain.compilerPath);
     }
 
     [Fact]

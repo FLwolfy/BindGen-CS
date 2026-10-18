@@ -9,41 +9,45 @@ namespace BGCS.Tests;
 
 public sealed class NativeCTypedefProofTests
 {
-    [Theory]
-    [InlineData("msvc")]
-    [InlineData("clang")]
-    [InlineData("clang-cl")]
-    [Trait("Category", "WindowsNativeProvider")]
-    public async Task AnonymousTypedefAndDistinctNamedTagRetainTheirRealCProofSpellings(string provider)
+    [Fact]
+    public async Task AnonymousTypedefAndDistinctNamedTagRetainTheirRealCProofSpellings()
     {
-        if (!OperatingSystem.IsWindows()) return;
         string root = Path.Combine(Path.GetTempPath(), "bgcs C typedef proof " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
             await File.WriteAllTextAsync(Path.Combine(root, "native.h"), """
+                #if defined(_WIN32)
+                #define API __declspec(dllexport)
+                #else
+                #define API __attribute__((visibility("default")))
+                #endif
                 typedef struct { int value; } AnonymousStorage;
                 typedef struct RealTag { AnonymousStorage nested; } PublicStorage;
                 typedef enum { Zero=0, One=1 } PublicEnum;
                 typedef enum NegativeTag { Minus=-1, Plus=1 } NegativeEnum;
-                __declspec(dllexport) int enum_echo(PublicEnum value, NegativeEnum negative);
-                __declspec(dllexport) void storage_set(PublicStorage* output, int value);
+                API int enum_echo(PublicEnum value, NegativeEnum negative);
+                API void storage_set(PublicStorage* output, int value);
                 """);
             await File.WriteAllTextAsync(Path.Combine(root, "native.c"), """
                 #include "native.h"
-                __declspec(dllexport) int enum_echo(PublicEnum value, NegativeEnum negative) { return (int)value + (int)negative; }
-                __declspec(dllexport) void storage_set(PublicStorage* output, int value) { output->nested.value = value; }
+                API int enum_echo(PublicEnum value, NegativeEnum negative) { return (int)value + (int)negative; }
+                API void storage_set(PublicStorage* output, int value) { output->nested.value = value; }
                 """);
             BindingConfiguration configuration = new()
             {
                 schemaVersion = 1, library = new() { id = "typedef_proof", nativeName = "typedef_proof" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                cache = new() { enabled = false }, nativeBuild = new() { mode = "sources", provider = provider, sources = ["native.c"] }
-            };
+                cache = new() { enabled = false }};
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
-            string assertions = File.ReadAllText(Path.Combine(result.outputRoot, "windows-x64-msvc", "native", "src", "storage.assertions.c"));
+            string assertions = new BGCS.Cpp2C.Emission.NativeStorageAssertionEmitter().Emit(
+                Assert.Single(result.targetModels).native, [Path.Combine(root, "native.h")], string.Empty, string.Empty);
+            string proof = Path.Combine(root, "typedef-assertions.c");
+            await File.WriteAllTextAsync(proof, assertions);
+            await NativeConsumerHarness.RunAsync(NativeConsumerHarness.FindCompiler(false),
+                ["-std=c17", "-fsyntax-only", proof, .. NativeConsumerHarness.CompilerSdkArguments()], root);
             Assert.Contains("sizeof(AnonymousStorage)", assertions);
             Assert.DoesNotContain("sizeof(struct AnonymousStorage)", assertions);
             Assert.Contains("sizeof(struct RealTag)", assertions);

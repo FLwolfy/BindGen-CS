@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "libraryId": "bgfx",
+  "platform": "windows-x64",
+  "sourceNormalization": "quoted-locked-corpus-include-root-v1",
+  "selectionPolicySha256": "5645a77020cbec654f0b5df100702cbbdd06bf5e172bc970a7f9e1cd79e44100",
+  "omittedDeclarations": {
+    "excludedDeclarations": [
+      "bgfx_dbg_text_printf"
+    ],
+    "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+  },
+  "sources": {
+    "windows-x64-msvc/managed/Bindings.cs": "e5e542c9e50ba951e781f2314284f5d291e2ecd364f8a4a2be6a510145f677c7"
+  },
+  "publicApiSha256": "9aaa54a7635ff1940cfb713a58599da52a07883a3cc7120f22b056bed6c7602f"
+}

@@ -103,7 +103,7 @@ compiled. Native sources can include a generated header with
 
 Logical native provenance uses `contributions/<service>/<path>` independently of the
 physical staging directory. The Host records generated files, directory membership,
-digests and native compilation inputs in the ordinary artifact/build manifests. A later
+digests and native compilation inputs in the ordinary generation artifact manifests. A later
 standalone native build consumes published, verified inputs after the temporary source
 store has been released. Managed helpers enter the same candidate compilation and final
 contract checks as other generated C#; single-file output composes them into `Bindings.cs`.
@@ -158,7 +158,7 @@ not extend its lifetime; contributors must not retain those handles or use them 
 Standard downstream extensions receive only the detached model.
 
 Contributors run on each parse. Read `context.request.purpose`, whose neutral values are
-`SourceAnalysis`, `BridgeVerification` and `NativeBuildVerification`, rather than guessing
+`SourceAnalysis` and `BridgeVerification`, rather than guessing
 from temporary paths or file names. A source-only contributor should return the unchanged
 module for verification requests. Plugin activation, declared input capture and fingerprint
 checks still apply when contribution is skipped; generated bridge ABI verification retains

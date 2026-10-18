@@ -38,16 +38,15 @@ public sealed class NativeImportLibraryConstantTests
             {
                 schemaVersion = 1, library = new() { id = "import-constant", nativeName = "import_constant_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["answer.h"], includeTransitivelyReferencedHeaders = false },
-                api = new() { @namespace = "Generated.ImportConstant", name = "AnswerApi", importMode = mode,
+                api = new() { projectionInputs = new() { sources = ["LibraryNames.cs"] }, @namespace = "Generated.ImportConstant", name = "AnswerApi", importMode = mode,
                     emitLibraryNameConstant = false, importLibraryNameConstant = "Vendor.LibraryNames.Native" },
-                managedBuild = new() { sources = ["LibraryNames.cs"] }, nativeBuild = new() { mode = "sources", sources = ["answer.c"] },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = true }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            var target = Assert.Single(built.generation.targetModels);
+            var target = Assert.Single(built.targetModels);
             Assert.Equal("Vendor.LibraryNames.Native", target.managed!.importLibraryNameConstant);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string managed = Path.Combine(targetRoot, "managed");
@@ -55,7 +54,7 @@ public sealed class NativeImportLibraryConstantTests
             Assert.Contains("global::Vendor.LibraryNames.Native", all, StringComparison.Ordinal);
             Assert.DoesNotContain("public const string NativeLibraryName", all, StringComparison.Ordinal);
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(managed,
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName,
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName,
                 "using Generated.ImportConstant; public static class LibraryConstantConsumer {public static int Run(string binary){using var api=AnswerApi.Create();return api.Answer();}}\n" + consumer,
                 "LibraryConstantConsumer", root, sourceRuntime));
             if (mode == BindingImportMode.DllImport && !sourceRuntime)

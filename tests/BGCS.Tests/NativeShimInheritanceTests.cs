@@ -130,19 +130,18 @@ public sealed class NativeShimInheritanceTests
         schemaVersion = 1, library = new() { id = id, nativeName = id + "_bridge" },
         source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated." + id, name = "FixtureApi" },
-        runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-    };
+        runtime = new() { mode = "source" }, cache = new() { enabled = false }};
 
     private static async Task<(CppBridgeModule Plan, string Binary)> Build(BindingConfiguration configuration, string root)
     {
         string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
         await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
-        BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+        GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
         Assert.True(result.success, result.GetDiagnosticSummary());
         string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
         CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
         string name = configuration.library.nativeName;
-        return (plan, Path.Combine(target, "native", "bin", OperatingSystem.IsWindows() ? name + ".dll" : OperatingSystem.IsMacOS() ? "lib" + name + ".dylib" : "lib" + name + ".so"));
+        return (plan, Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? name + ".dll" : OperatingSystem.IsMacOS() ? "lib" + name + ".dylib" : "lib" + name + ".so"));
     }
 
     private static string BuildConfiguration() => AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";

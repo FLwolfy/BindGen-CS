@@ -9,8 +9,7 @@ using BGCS.Contracts.Native;
 using BGCS.Contracts.Requests;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.Workers;
-using BGCS.NativeBuild.Planning;
-using BGCS.NativeBuild.Validation;
+using BGCS.Cpp2C.Emission;
 using BGCS.Platforms.Targeting;
 using BGCS.Platforms.Toolchains;
 using Xunit;
@@ -71,7 +70,7 @@ public sealed class NativeSdkStorageAccessibilityTests
                 };
                 UserStorage* read_user();
                 """);
-            var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp, "clang");
+            var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp);
             FrontendRequest request = new(target, SourceLanguage.Cpp, [header])
             {
                 pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false
@@ -109,18 +108,20 @@ public sealed class NativeSdkStorageAccessibilityTests
                 .. (target.toolchain.sysRoot is string sysroot ? new[] { "--sysroot=" + sysroot } : []),
                 "-isystem", sdk,
                 .. target.toolchain.systemIncludeFolders.Concat(target.toolchain.cxxSystemIncludeFolders).SelectMany(directory => new[] { "-isystem", directory })];
-            var compiled = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments, root, TimeSpan.FromSeconds(60));
+            var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true), arguments, root, TimeSpan.FromSeconds(60));
             Assert.False(compiled.timedOut);
             Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);
-            var publicDrift = await ProcessExecutor.ExecuteAsync(target.toolchain.compilerPath!, arguments.Add("-DBGCS_PUBLIC_FLOAT=1"), root, TimeSpan.FromSeconds(60));
+            var publicDrift = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true), arguments.Add("-DBGCS_PUBLIC_FLOAT=1"), root, TimeSpan.FromSeconds(60));
             Assert.False(publicDrift.timedOut);
             Assert.NotEqual(0, publicDrift.exitCode);
             Assert.Contains("BGCS native field type differs", publicDrift.standardOutput + publicDrift.standardError);
 
             NativeModule changed = (await worker.ParseAsync(request with { defines = ["BGCS_PRIVATE_FLOAT=1"] }, CancellationToken.None)).module;
             Assert.DoesNotContain(changed.diagnostics, diagnostic => diagnostic.isFailure);
-            InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => new NativeSourceFactComparer().Verify(module, changed));
-            Assert.Contains("UserStorage.private_value (exact native type or storage facts)", failure.Message);
+            NativeDeclaration originalPrivate = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "UserStorage::private_value");
+            NativeDeclaration changedPrivate = Assert.Single(changed.declarations, declaration => declaration.qualifiedName == "UserStorage::private_value");
+            Assert.Equal("Int", module.GetType(originalPrivate.type!.Value).primitiveKind);
+            Assert.Equal("Float", changed.GetType(changedPrivate.type!.Value).primitiveKind);
 
             NativeDeclaration Record(string name) => Assert.Single(module.declarations, declaration => declaration.kind == "Class"
                 && declaration.name == name && declaration.isCompleteDefinition);

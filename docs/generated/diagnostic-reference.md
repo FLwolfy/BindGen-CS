@@ -82,18 +82,6 @@ Cause: Doctor could not load or validate the grouped configuration and its decla
 
 Resolution: Fix the reported schema, path, composition or plugin error before checking compiler and worker prerequisites.
 
-## BGCS-DOCTOR-NATIVE — Native build prerequisite is unavailable
-
-Cause: A declared native artifact, compiler, linker, build-system executable or target prerequisite is unavailable or invalid.
-
-Resolution: Supply the exact missing tool/artifact or correct nativeBuild and target settings, then rerun doctor; BGCS does not silently download or substitute a different ABI.
-
-## BGCS-DOCTOR-NATIVE-PENDING — Custom provider prerequisite check is pending
-
-Cause: Doctor resolved a native provider but has no complete executable prerequisite contract for that custom provider.
-
-Resolution: Implement the neutral prerequisite provider contract or independently verify the declared tools; this status is not evidence that a native build ran.
-
 ## BGCS-DOCTOR-TARGET — Native target cannot be resolved
 
 Cause: The requested target, SDK, sysroot or toolchain cannot be resolved from the explicit configuration and installed environment.
@@ -118,12 +106,6 @@ Cause: The parser worker forwarded a Clang diagnostic for the current language, 
 
 Resolution: Use the original source location and compiler message to fix declarations, macros, include directories or target SDK inputs.
 
-## BGCS-FRONTEND-NATIVE — Selected native compiler reported a preprocessing diagnostic
-
-Cause: The selected MSVC, GNU or Clang compiler reported a warning, note or error while establishing the effective source view; the original compiler message, severity and available source position are retained.
-
-Resolution: Inspect the original compiler message and source position, then correct the header, macro definitions or compiler arguments as appropriate. The frontend console threshold controls display only; structured diagnostics retain these messages and the configured diagnostic policy still applies.
-
 ## BGCS-GENERATION-SESSION — Generation session could not complete
 
 Cause: A required generation, lowering, ABI planning, plugin, validation or publication stage failed.
@@ -136,47 +118,11 @@ Cause: A compiler-established object-like macro names a source free function, bu
 
 Resolution: Preserve the exact original callable through source selection and lowering, or provide an explicit unambiguous managed projection. BGCS will not invent an export or guess an overload for the macro alias.
 
-## BGCS-MANAGED-COMPILE — Candidate managed code failed compilation
-
-Cause: The generated candidate and declared managed inputs did not compile under the requested validation settings.
-
-Resolution: Inspect the retained compiler output; fix generation/configuration or required references and source helpers before publication. Do not hand-edit formal generated files.
-
-## BGCS-NATIVE-CANDIDATE-CLEANUP — Native build candidate cleanup failed
-
-Cause: An independently owned native build candidate could not release its temporary artifacts.
-
-Resolution: Close the reported compiler/file handles and retry cleanup only for the exact owned candidate; check the build result before assuming publication succeeded.
-
 ## BGCS-NATIVE-GRAPH — Native fact graph is inconsistent
 
 Cause: Detached native declarations or types contain missing, duplicate, cyclic or incompatible graph facts.
 
 Resolution: Fix the frontend or native transform that produced the identified facts; do not continue generation with substituted default type/layout values.
-
-## BGCS-NATIVE-MACRO-ORIGIN — Native macro has no unique original definition
-
-Cause: The effective native compiler preprocessing preserved a user macro's final replacement, but the included source definitions do not establish one unique original source location. The macro value is retained with unknown origin rather than an invented location.
-
-Resolution: Inspect the configured defines, conditional redefinitions and included headers to identify the intended original definition. Remove ambiguity or provide an explicit configured definition when source attribution is required; do not interpret the preserved final value as verified declaration provenance.
-
-## BGCS-NATIVE-MANIFEST-BUILD — Standalone native manifest build failed
-
-Cause: The published neutral native manifest or its locked source, toolchain, plugin, ABI or export checks failed during native-build.
-
-Resolution: Read the detailed build failure; restore unchanged declared inputs and matching tools, or regenerate the manifest after an intentional input change. Do not edit manifest hashes to bypass validation.
-
-## BGCS-NATIVE-SCRATCH-CLEANUP — Native scratch directory cleanup failed
-
-Cause: The native build scratch workspace could not be removed after its execution.
-
-Resolution: Release the reported process/file handles and clean only the exact owned scratch directory; the diagnostic severity identifies whether a result had already been published.
-
-## BGCS-NATIVE-SERVICE-RELEASE — Native build extension release failed
-
-Cause: A native build provider or packaging service failed while releasing its session-owned state.
-
-Resolution: Fix the failing extension cleanup and its native/process handles; inspect the recorded result rather than treating disposal failure as successful certification.
 
 ## BGCS-PUBLICATION-CLEANUP — Committed publication backup cleanup failed
 

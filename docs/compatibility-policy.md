@@ -22,6 +22,6 @@ Generation and packaging prepare candidates before replacing complete outputs. F
 
 ## Release evidence
 
-`bindgen-cs supply-chain` emits deterministic SPDX 2.3 SBOM and SLSA v1 provenance payloads with artifact SHA-256 values, source revision, builder identity and build parameters. Release automation can publish GitHub OIDC/Sigstore attestations. Only an authorized release job that actually obtains the identity and publishes verifiable attestations establishes a signed release; a local run does not.
+`dotnet run --project eng/BGCS.RepositoryTools -c Release -- supply-chain` emits deterministic SPDX 2.3 SBOM and SLSA v1 provenance payloads with artifact SHA-256 values, source revision, builder identity and build parameters. Release automation can publish GitHub OIDC/Sigstore attestations. Only an authorized release job that actually obtains the identity and publishes verifiable attestations establishes a signed release; a local run does not.
 
 Package acceptance additionally checks the public API, dependency licenses, vulnerabilities, deterministic package contents, clean consumers and the supported target invocation matrix. Unexecuted hosts or architectures remain explicitly unverified in the acceptance report.

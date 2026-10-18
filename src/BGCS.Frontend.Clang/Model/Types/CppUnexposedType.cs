@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using BGCS.Frontend.Clang.Collections;
+using BGCS.Frontend.Clang.Model.Declarations;
 using BGCS.Frontend.Clang.Model.Interfaces;
 using ClangSharp.Interop;
 
@@ -39,6 +40,9 @@ internal sealed class CppUnexposedType : CppType, ICppTemplateOwner, ICppContain
     /// Full name of the unexposed type
     /// </summary>
     public string name { get; }
+    /// <summary>Identifies an unsupported block pointer from its actual compiler type kind.</summary>
+    internal bool isBlockPointer { get; init; }
+    internal CppFunctionTypeBase? blockSignature { get; init; }
     /// <inheritdoc/>
     public override int sizeOf { get; set; }
     /// <inheritdoc/>

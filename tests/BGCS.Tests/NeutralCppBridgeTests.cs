@@ -15,7 +15,6 @@ using BGCS.Contracts.Plugins;
 using BGCS.Contracts.Common;
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
-using BGCS.NativeBuild;
 using BGCS.Platforms.Targeting;
 using Xunit;
 using Microsoft.CodeAnalysis;
@@ -75,8 +74,7 @@ public sealed class NeutralCppBridgeTests
                 schemaVersion = 1, library = new() { id = "widget", nativeName = "widget_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Widget", name = "WidgetApi", names = ImmutableDictionary<string, string>.Empty.Add("Sample::Widget::Identity", "Identity").Add("Sample::echo_flags", "EchoFlags").Add("Sample::add_quantity", "AddQuantity") },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             System.Collections.Generic.List<BGCS.Tests.NeutralPlugin.QuantityPlugin> plugins = [];
             BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker);
             if (manifestPlugin)
@@ -97,7 +95,7 @@ public sealed class NeutralCppBridgeTests
             }
             else builder.AddPluginFactory(() => { var plugin = new BGCS.Tests.NeutralPlugin.QuantityPlugin(); plugins.Add(plugin); return plugin; });
             await using BindingHost host = builder.Build();
-            BuildResult result = await host.BuildAsync(new(new(input, temporary)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(input, temporary));
             Assert.True(result.success, result.GetDiagnosticSummary());
             if (!manifestPlugin)
             {
@@ -124,12 +122,12 @@ public sealed class NeutralCppBridgeTests
             var owned = abi.RootElement.GetProperty("module").GetProperty("functions").EnumerateArray().SelectMany(function => function.GetProperty("parameters").EnumerateArray())
                 .Where(parameter => parameter.GetProperty("ownership").ValueKind != JsonValueKind.Null).ToArray();
             Assert.Contains(owned, parameter => parameter.GetProperty("ownership").GetProperty("kind").GetInt32() == (int)NativeOwnershipKind.Owned);
-            string output = Path.Combine(nativeRoot, "native", "bin", OperatingSystem.IsWindows() ? "widget_bridge.dll" : OperatingSystem.IsMacOS() ? "libwidget_bridge.dylib" : "libwidget_bridge.so");
+            string output = Path.Combine(NativeConsumerHarness.NativeDirectory(nativeRoot), OperatingSystem.IsWindows() ? "widget_bridge.dll" : OperatingSystem.IsMacOS() ? "libwidget_bridge.dylib" : "libwidget_bridge.so");
             Assert.True(File.Exists(output));
             using JsonDocument verification = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(nativeRoot, "metadata", "verification.json")));
-            Assert.True(verification.RootElement.GetProperty("nativeLinked").GetBoolean());
-            Assert.True(verification.RootElement.GetProperty("nativeArtifactVerified").GetBoolean());
-            Assert.False(verification.RootElement.GetProperty("invoked").GetBoolean());
+            Assert.False(verification.RootElement.TryGetProperty("nativeLinked", out _));
+            Assert.False(verification.RootElement.TryGetProperty("nativeArtifactVerified", out _));
+            Assert.False(verification.RootElement.TryGetProperty("invoked", out _));
             if (manifestPlugin) Assert.Equal(2, verification.RootElement.GetProperty("plugins")[0].GetProperty("inputs").GetArrayLength());
             InvokeGeneratedScalarWrapper(Path.Combine(nativeRoot, "managed"), output);
             library = NativeLibrary.Load(output);

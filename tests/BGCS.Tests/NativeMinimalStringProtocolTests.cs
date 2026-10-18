@@ -36,9 +36,9 @@ public sealed class NativeMinimalStringProtocolTests
             await File.WriteAllTextAsync(Path.Combine(root, "exact.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             CppBridgeModule bridge = target.bridge!;
             Assert.All(bridge.familyBindings, binding => { Assert.Null(binding.nativeTemplate); Assert.NotNull(binding.nativeType); });
             NativeValueProtocol text = Assert.Single(target.interop.types, type => type.valueProtocol?.family == NativeValueFamily.String).valueProtocol!;
@@ -55,7 +55,7 @@ public sealed class NativeMinimalStringProtocolTests
             Assert.Equal(NativePathFormat.NativeUtf8, Assert.Single(target.interop.types, type => type.valueProtocol?.family == NativeValueFamily.Path).valueProtocol!.path!.format);
             foreach (BridgeExport owned in bridge.exports.Where(export => export.resultRelease is not null)) Assert.Null(owned.resultOwnership);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
                 { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Exact.Runtime" : "BGCS.Runtime" });
             string context = sourceRuntime ? "ExactApiContext" : "ExactApi";
@@ -87,7 +87,7 @@ public sealed class NativeMinimalStringProtocolTests
             await File.WriteAllTextAsync(header, Header);
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult first = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
             string[] previous = Hashes(first.outputRoot);
             foreach ((BindingConfiguration request, string source, string cause) in new[]
@@ -107,7 +107,7 @@ public sealed class NativeMinimalStringProtocolTests
                     Assert.Equal(previous, Hashes(first.outputRoot));
                     continue;
                 }
-                BuildResult rejected = await host.BuildAsync(new(new(request, root)));
+                GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(request, root));
                 Assert.False(rejected.success);
                 Assert.Contains(cause, rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
                 Assert.Equal(previous, Hashes(first.outputRoot));
@@ -190,7 +190,7 @@ public sealed class NativeMinimalStringProtocolTests
             new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.NativeUtf8, evidence = new(EvidenceLevel.UserAsserted, "minimal-native-UTF8-path-protocol") }],
             sequenceInputAdapters = [new("exact::CheckCopy", [new("value")])] },
         runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-        nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+         cache = new() { enabled = false }
     };
 
     private static string NewRoot() { string root = Path.Combine(Path.GetTempPath(), "bgcs-minimal-cstr-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root); return root; }

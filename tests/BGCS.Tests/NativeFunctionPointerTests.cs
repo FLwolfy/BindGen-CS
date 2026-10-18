@@ -42,17 +42,17 @@ public sealed class NativeFunctionPointerTests
                 schemaVersion = 1, library = new() { id = "callbacks", nativeName = "callback_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["callbacks.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Callbacks", name = "CallbackApi", importMode = importMode },
-                runtime = new() { mode = "source" }, nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                runtime = new() { mode = "source" },  cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            var target = Assert.Single(result.generation.targetModels);
+            var target = Assert.Single(result.targetModels);
             BridgeType signature = Assert.Single(target.bridge!.types, type => type.kind == BridgeTypeKind.Function);
             Assert.Equal(2, signature.parameterTypes.Length);
             Assert.Equal("C", signature.callingConvention);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             object? answer = await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, "callback_bridge", """
                 using System.Runtime.CompilerServices;
                 using System.Runtime.InteropServices;

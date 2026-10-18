@@ -15,6 +15,7 @@ using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Interop;
 using BGCS.Contracts.Requests;
 using BGCS.CSharp.Planning;
+using BGCS.Infrastructure.Execution;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -36,9 +37,9 @@ public sealed class NativeConfiguredAssociativeFamilyTests
             await File.WriteAllTextAsync(Path.Combine(root, "associative.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             foreach (NativeValueFamily family in new[] { NativeValueFamily.Map, NativeValueFamily.Set, NativeValueFamily.Expected })
             {
                 var values = target.interop.types.Where(type => type.valueProtocol?.family == family).Select(type => type.valueProtocol!).ToArray();
@@ -50,7 +51,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
             Assert.Equal(3, bridge.familyBindings.Length);
             new CppBridgeOperationVerifier().Verify(bridge);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string runtime = sourceRuntime ? "Generated.Associative.Runtime" : "BGCS.Runtime";
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
                 { importMode = mode, runtimeNamespace = runtime });
@@ -74,7 +75,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
     }
 
     [Fact]
-    public async Task IncompatibleAliasesAccessorsAndMacroProofTokensCannotReplacePublishedArtifacts()
+    public async Task IncompatibleAliasesAccessorsAndMacroProofTokensFailConsumerCompilation()
     {
         string root = NewRoot();
         try
@@ -83,22 +84,30 @@ public sealed class NativeConfiguredAssociativeFamilyTests
             await File.WriteAllTextAsync(header, Header);
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult first = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
-            string[] previous = Hashes(first.outputRoot);
             foreach ((string source, string cause) in new[]
             {
-                (Header.Replace("using mapped_type=V;", "using mapped_type=float;", StringComparison.Ordinal), "mapped type"),
-                (Header.Replace("const E& error()const{return m_value.error();}", "float error()const{return 0;}", StringComparison.Ordinal), "expected error access"),
-                (Header + "\n#define begin(...) bgcs_changed_proof\n", "macro")
+                (Header.Replace("using mapped_type=V;", "using mapped_type=float;", StringComparison.Ordinal), "BGCS configured family requires exact native mapped type"),
+                (Header.Replace("const E& error()const{return m_value.error();}", "float error()const{return 0;}", StringComparison.Ordinal), "BGCS configured family requires exact expected error access"),
+                (Header + "\n#define begin(...) bgcs_changed_proof\n", "BGCS configured family proof token is macro-defined: begin")
             })
             {
                 Assert.NotEqual(Header, source);
                 await File.WriteAllTextAsync(header, source);
-                BuildResult rejected = await host.BuildAsync(new(new(configuration, root)));
-                Assert.False(rejected.success);
-                Assert.Contains(cause, rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
-                Assert.Equal(previous, Hashes(first.outputRoot));
+                GenerationResult generated = await host.GenerateAsync(new(configuration, root));
+                Assert.True(generated.success, generated.GetDiagnosticSummary());
+                Assert.True(generated.published);
+                string assertionSource = Assert.Single(generated.artifacts.Where(artifact => artifact.mediaType == "text/x-c++")
+                    .Select(artifact => Path.Combine(generated.outputRoot, artifact.relativePath)),
+                    path => File.ReadAllText(path).Contains(cause, StringComparison.Ordinal));
+                string includes = Path.Combine(generated.outputRoot, Assert.Single(generated.targetModels).targetId, "native", "include");
+                ImmutableArray<string> arguments = ["-std=c++23", "-fsyntax-only", "-I", root, "-I", includes,
+                    .. NativeConsumerHarness.CompilerSdkArguments(), assertionSource];
+                var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true), arguments, root, TimeSpan.FromMinutes(1));
+                Assert.False(compiled.timedOut);
+                Assert.NotEqual(0, compiled.exitCode);
+                Assert.Contains(cause, compiled.standardOutput + compiled.standardError, StringComparison.Ordinal);
             }
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -188,7 +197,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
                 style = sourceRuntime ? BGCS.Contracts.Managed.ManagedApiStyle.Static : BGCS.Contracts.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
             cpp = new() { familyBindings = [Binding("Map", StandardValueKind.Map), Binding("Set", StandardValueKind.Set), Binding("Result", StandardValueKind.Expected)] },
             runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-            nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+             cache = new() { enabled = false }
         };
     }
 

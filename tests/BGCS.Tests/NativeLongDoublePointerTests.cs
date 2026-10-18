@@ -28,12 +28,7 @@ public sealed class NativeLongDoublePointerTests
         Directory.CreateDirectory(root);
         try
         {
-            string family = OperatingSystem.IsWindows() ? "msvc" : OperatingSystem.IsLinux() ? "gnu" : "clang";
-            string compiler = OperatingSystem.IsWindows()
-                ? MsvcToolchainDiscovery.FindCompiler(RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant())
-                    ?? throw new InvalidOperationException("The Windows long-double gate requires the actual Visual C++ toolset.")
-                : ToolchainDiscovery.FindCompiler(SourceLanguage.C, OperatingSystem.IsLinux() ? "gcc" : "/usr/bin/clang")
-                    ?? throw new InvalidOperationException("The long-double gate requires its platform's actual primary compiler.");
+            string compiler = NativeConsumerHarness.FindCompiler(false);
             await File.WriteAllTextAsync(Path.Combine(root, "extended.h"), """
                 #include <stddef.h>
                 #if defined(_WIN32)
@@ -86,12 +81,12 @@ public sealed class NativeLongDoublePointerTests
                         .Add("extended_live", "Live").Add("extended_released", "Released") },
                 semantics = new() { ownedResults = [new() { function = "extended_create", releaseFunction = "extended_destroy",
                     releaseDomain = "extended-native-allocation", releaseThreadDomain = "any" }] },
-                nativeBuild = new() { mode = "sources", provider = family, sources = ["extended.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             NativeType scalar = Assert.Single(target.native.types, type => type.category == NativeTypeCategory.Primitive && type.primitiveKind == "LongDouble");
             Assert.True(scalar.size is > 0);
             Assert.True(scalar.alignment is > 0);
@@ -99,7 +94,7 @@ public sealed class NativeLongDoublePointerTests
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string factory = mode == BindingImportMode.FunctionTable ? "ExtendedApi.Load(binary)" : "ExtendedApi.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"),
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName, $$"""
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName, $$"""
                 using System;
                 using Generated.ExtendedPointer;
                 public static unsafe class ExtendedPointerConsumer {
@@ -121,9 +116,9 @@ public sealed class NativeLongDoublePointerTests
                 """, "ExtendedPointerConsumer", root, sourceRuntime: false));
             Dictionary<string, string> previous = Snapshot(built.outputRoot);
             BindingConfiguration unproved = configuration with { source = configuration.source with { selection = new() } };
-            BuildResult refused = await host.BuildAsync(new(new(unproved, root)));
+            GenerationResult refused = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(unproved, root));
             Assert.False(refused.success);
-            Assert.False(refused.generation.published);
+            Assert.False(refused.published);
             Assert.Contains("long double", refused.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
             Assert.Contains("calling-ABI", refused.GetDiagnosticSummary(), StringComparison.Ordinal);
             Assert.Equal(previous.OrderBy(item => item.Key), Snapshot(built.outputRoot).OrderBy(item => item.Key));

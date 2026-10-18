@@ -39,10 +39,9 @@ public static class EmscriptenSdkDiscovery
         string version = File.ReadAllText(versionFile).Trim().Trim('"');
         if (!Version.TryParse(version, out _)) throw new InvalidDataException("The Emscripten version manifest has an unknown version.");
         string compiler = Path.Combine(compilerRoot, "bin", OperatingSystem.IsWindows() ? "clang++.exe" : "clang++");
-        string include = Path.Combine(sysroot, "include"), cxx = Path.Combine(include, "c++", "v1"), libraries = Path.Combine(sysroot, "lib", "wasm32-emscripten");
-        if (!File.Exists(compiler) || !new[] { sysroot, include, cxx, libraries }.All(Directory.Exists)) throw new IOException("The selected Emscripten compiler and complete sysroot must already be installed.");
-        NativeToolchainDescriptor toolchain = new(compiler, sysroot, [include], cxxSystemIncludeFolders: [cxx], sdkVersion: version,
-            libraryDirectories: [libraries]);
+        string include = Path.Combine(sysroot, "include"), cxx = Path.Combine(include, "c++", "v1");
+        if (!new[] { sysroot, include, cxx }.All(Directory.Exists)) throw new IOException("The selected Emscripten complete parser sysroot must already be installed.");
+        NativeToolchainDescriptor toolchain = new(compiler, sysroot, [include], cxxSystemIncludeFolders: [cxx], sdkVersion: version);
         return new(new("emscripten-wasm32-emscripten"), "emscripten", "wasm32", "emscripten", "wasm32-unknown-emscripten", toolchain, byteOrder: BGCS.Contracts.Native.NativeByteOrder.LittleEndian);
     }
 }

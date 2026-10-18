@@ -15,6 +15,7 @@ using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Interop;
 using BGCS.Contracts.Requests;
 using BGCS.CSharp.Planning;
+using BGCS.Infrastructure.Execution;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -36,9 +37,9 @@ public sealed class NativeConfiguredExactTypeFamilyTests
             await File.WriteAllTextAsync(Path.Combine(root, "exact.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             CppBridgeModule bridge = target.bridge!;
             Assert.All(bridge.familyBindings, binding => { Assert.Null(binding.nativeTemplate); Assert.NotNull(binding.nativeType); });
             NativeValueProtocol text = Assert.Single(target.interop.types, type => type.valueProtocol?.family == NativeValueFamily.String).valueProtocol!;
@@ -49,7 +50,7 @@ public sealed class NativeConfiguredExactTypeFamilyTests
             Assert.Equal(NativePathFormat.GenericUtf8, Assert.Single(target.interop.types, type => type.valueProtocol?.family == NativeValueFamily.Path).valueProtocol!.path!.format);
             foreach (BridgeExport owned in bridge.exports.Where(export => export.resultRelease is not null)) Assert.Null(owned.resultOwnership);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
                 { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Exact.Runtime" : "BGCS.Runtime" });
             string context = sourceRuntime ? "ExactApiContext" : "ExactApi";
@@ -72,7 +73,7 @@ public sealed class NativeConfiguredExactTypeFamilyTests
     }
 
     [Fact]
-    public async Task ConflictingAliasEncodingAndNativePathProofsPreserveThePreviousOutput()
+    public async Task ConflictingAliasesAndEncodingPreservePublicationWhileInvalidNativePathsFailConsumerCompilation()
     {
         string root = NewRoot();
         try
@@ -81,22 +82,38 @@ public sealed class NativeConfiguredExactTypeFamilyTests
             await File.WriteAllTextAsync(header, Header);
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult first = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
             string[] previous = Hashes(first.outputRoot);
             foreach ((BindingConfiguration request, string source, string cause) in new[]
             {
                 (configuration with { cpp = configuration.cpp with { familyBindings = configuration.cpp.familyBindings.Add(configuration.cpp.familyBindings[0] with { nativeType = "exact::Text" }) } }, Header, "canonical native class"),
-                (configuration with { cpp = configuration.cpp with { familyBindings = configuration.cpp.familyBindings.SetItem(0, configuration.cpp.familyBindings[0] with { stringEncoding = NativeTextEncoding.Utf16 }) } }, Header, "code-unit storage"),
-                (configuration, Header.Replace("std::u8string generic_u8string()const{return u8\"dir/\\U0001F600.txt\";}", "std::u16string generic_u8string()const{return u\"wrong\";}", StringComparison.Ordinal), "one-byte UTF-8")
+                (configuration with { cpp = configuration.cpp with { familyBindings = configuration.cpp.familyBindings.SetItem(0, configuration.cpp.familyBindings[0] with { stringEncoding = NativeTextEncoding.Utf16 }) } }, Header, "code-unit storage")
             })
             {
                 await File.WriteAllTextAsync(header, source);
-                BuildResult rejected = await host.BuildAsync(new(new(request, root)));
+                GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(request, root));
                 Assert.False(rejected.success);
                 Assert.Contains(cause, rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
                 Assert.Equal(previous, Hashes(first.outputRoot));
             }
+            string invalid = Header.Replace("std::u8string generic_u8string()const{return u8\"dir/\\U0001F600.txt\";}",
+                "std::u16string generic_u8string()const{return u\"wrong\";}", StringComparison.Ordinal);
+            Assert.NotEqual(Header, invalid);
+            await File.WriteAllTextAsync(header, invalid);
+            GenerationResult generated = await host.GenerateAsync(new(configuration, root));
+            Assert.True(generated.success, generated.GetDiagnosticSummary());
+            Assert.True(generated.published);
+            string assertionSource = Assert.Single(generated.artifacts.Where(artifact => artifact.mediaType == "text/x-c++")
+                .Select(artifact => Path.Combine(generated.outputRoot, artifact.relativePath)),
+                path => File.ReadAllText(path).Contains("one-byte UTF-8 path code units", StringComparison.Ordinal));
+            string includes = Path.Combine(generated.outputRoot, Assert.Single(generated.targetModels).targetId, "native", "include");
+            ImmutableArray<string> arguments = ["-std=c++23", "-fsyntax-only", "-I", root, "-I", includes,
+                .. NativeConsumerHarness.CompilerSdkArguments(), assertionSource];
+            var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true), arguments, root, TimeSpan.FromMinutes(1));
+            Assert.False(compiled.timedOut);
+            Assert.NotEqual(0, compiled.exitCode);
+            Assert.Contains("one-byte UTF-8 path code units", compiled.standardOutput + compiled.standardError, StringComparison.Ordinal);
         }
         finally { Directory.Delete(root, recursive: true); }
     }
@@ -160,7 +177,7 @@ public sealed class NativeConfiguredExactTypeFamilyTests
             new() { nativeType = "exact::TextAlias", family = StandardValueKind.String, stringEncoding = NativeTextEncoding.Utf8, evidence = new(EvidenceLevel.UserAsserted, "exact-UTF8-string-protocol") },
             new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.GenericUtf8, evidence = new(EvidenceLevel.UserAsserted, "exact-generic-UTF8-path-protocol") }] },
         runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-        nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+         cache = new() { enabled = false }
     };
 
     private static string NewRoot() { string root = Path.Combine(Path.GetTempPath(), "bgcs-configured-exact-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root); return root; }

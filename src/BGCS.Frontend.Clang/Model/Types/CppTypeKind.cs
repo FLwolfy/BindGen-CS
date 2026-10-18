@@ -61,17 +61,9 @@ internal enum CppTypeKind
     /// </summary>
     Unexposed,
     /// <summary>
-    /// An Objective-C block function type.
-    /// </summary>
-    ObjCBlockFunction,
-    /// <summary>
-    /// A generic type (e.g. Objective-C `MyType&lt;TArg&gt;`)
+    /// A generic native type.
     /// </summary>
     GenericType,
-    /// <summary>
-    /// An Objective-C interface with a category.
-    /// </summary>
-    ObjCInterfaceWithCategory,
     /// <summary>
     /// A template template parameter (for example <c>template &lt;typename&gt; class Container</c>).
     /// </summary>

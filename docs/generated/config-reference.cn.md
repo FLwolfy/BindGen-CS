@@ -6,7 +6,7 @@
 字段为对象 schema 的必填项，并不取代组合后完整配置的语义验证；基础配置可以提供当前文档省略的值。
 `source.languageStandard = null` 在冻结时根据语言选择 `c17` 或 `c++23`。目标、工具链和扩展能力仍须实际验证。
 
-schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b917106`。
+schema SHA-256：`6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e3`。
 
 [配置指南](../configuration-guide.cn.md) | [快速开始](../getting-started.cn.md)
 
@@ -15,10 +15,7 @@ schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b9171
 | `$schema` | `["string","null"]` | `null` | 否 |  |
 | `schemaVersion` | `"integer"` | `1`（常量） | 是 |  |
 | `extends` | `"array"` | `[]` | 否 |  |
-| `extends[]` | `["string","object"]` | — | 否 | 组合约束见完整 schema |
-| `extends[].url` | `"string"` | — | 是 | pattern="^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?][^#]*)?$"; format="uri" |
-| `extends[].sha256` | `"string"` | — | 是 | pattern="^[0-9a-fA-F]{64}$" |
-| `extends[].pathBase` | `"string"` | — | 是 | minLength=1; Explicit local base for paths inside the remote document, relative to the declaring document's local base or absolute. |
+| `extends[]` | `"string"` | — | 否 | minLength=1 |
 | `profile` | `["string","null"]` | `null` | 否 |  |
 | `profiles` | `"object"` | — | 否 |  |
 | `profiles.*` | `"object"` | — | 否 | additionalProperties=false |
@@ -277,6 +274,13 @@ schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b9171
 | `profiles.*.api.externalTypes[].managedType` | `"string"` | `""` | 否 |  |
 | `profiles.*.api.externalTypes[].fields` | `"object"` | — | 否 |  |
 | `profiles.*.api.externalTypes[].fields.*` | `"string"` | — | 否 |  |
+| `profiles.*.api.projectionInputs` | `"object"` | — | 否 | additionalProperties=false |
+| `profiles.*.api.projectionInputs.references` | `"array"` | `[]` | 否 |  |
+| `profiles.*.api.projectionInputs.references[]` | `"string"` | — | 否 |  |
+| `profiles.*.api.projectionInputs.sources` | `"array"` | `[]` | 否 |  |
+| `profiles.*.api.projectionInputs.sources[]` | `"string"` | — | 否 |  |
+| `profiles.*.api.projectionInputs.defines` | `"array"` | `[]` | 否 |  |
+| `profiles.*.api.projectionInputs.defines[]` | `"string"` | — | 否 |  |
 | `profiles.*.api.functionAliases` | `"array"` | `[]` | 否 |  |
 | `profiles.*.api.functionAliases[]` | `"object"` | — | 否 | additionalProperties=false |
 | `profiles.*.api.functionAliases[].function` | `"string"` | — | 是 |  |
@@ -606,35 +610,6 @@ schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b9171
 | `profiles.*.runtime.namespace` | `["string","null"]` | `null` | 否 |  |
 | `profiles.*.runtime.sourceFeatures` | `"array"` | `[]` | 否 |  |
 | `profiles.*.runtime.sourceFeatures[]` | `"string"` | — | 否 |  |
-| `profiles.*.nativeBuild` | `"object"` | — | 否 | additionalProperties=false |
-| `profiles.*.nativeBuild.packaging` | `"object"` | — | 否 | additionalProperties=false |
-| `profiles.*.nativeBuild.packaging.enabled` | `"boolean"` | `false` | 否 |  |
-| `profiles.*.nativeBuild.packaging.packager` | `"string"` | `"auto"` | 否 |  |
-| `profiles.*.nativeBuild.outputKind` | `["sharedLibrary","staticLibrary","object",null]` | — | 否 |  |
-| `profiles.*.nativeBuild.buildToolPath` | `["string","null"]` | `null` | 否 |  |
-| `profiles.*.nativeBuild.auxiliaryToolPath` | `["string","null"]` | `null` | 否 |  |
-| `profiles.*.nativeBuild.mode` | `["none","sources","prebuilt"]` | `"none"` | 否 |  |
-| `profiles.*.nativeBuild.provider` | `"string"` | `"auto"` | 否 |  |
-| `profiles.*.nativeBuild.sources` | `"array"` | `[]` | 否 |  |
-| `profiles.*.nativeBuild.sources[]` | `"string"` | — | 否 |  |
-| `profiles.*.nativeBuild.artifacts` | `"array"` | `[]` | 否 |  |
-| `profiles.*.nativeBuild.artifacts[]` | `"string"` | — | 否 |  |
-| `profiles.*.nativeBuild.prebuiltTargetId` | `["string","null"]` | `null` | 否 |  |
-| `profiles.*.nativeBuild.compilerArguments` | `"array"` | `[]` | 否 |  |
-| `profiles.*.nativeBuild.compilerArguments[]` | `"string"` | — | 否 |  |
-| `profiles.*.nativeBuild.linkerArguments` | `"array"` | `[]` | 否 |  |
-| `profiles.*.nativeBuild.linkerArguments[]` | `"string"` | — | 否 |  |
-| `profiles.*.nativeBuild.libraries` | `"array"` | `[]` | 否 |  |
-| `profiles.*.nativeBuild.libraries[]` | `"string"` | — | 否 |  |
-| `profiles.*.nativeBuild.libraryDirectories` | `"array"` | `[]` | 否 |  |
-| `profiles.*.nativeBuild.libraryDirectories[]` | `"string"` | — | 否 |  |
-| `profiles.*.managedBuild` | `"object"` | — | 否 | additionalProperties=false |
-| `profiles.*.managedBuild.references` | `"array"` | `[]` | 否 |  |
-| `profiles.*.managedBuild.references[]` | `"string"` | — | 否 |  |
-| `profiles.*.managedBuild.sources` | `"array"` | `[]` | 否 |  |
-| `profiles.*.managedBuild.sources[]` | `"string"` | — | 否 |  |
-| `profiles.*.managedBuild.defines` | `"array"` | `[]` | 否 |  |
-| `profiles.*.managedBuild.defines[]` | `"string"` | — | 否 |  |
 | `profiles.*.output` | `"object"` | — | 否 | additionalProperties=false |
 | `profiles.*.output.processors` | `"array"` | `[]` | 否 | maxItems=128 |
 | `profiles.*.output.processors[]` | `"object"` | — | 否 | additionalProperties=false |
@@ -667,8 +642,6 @@ schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b9171
 | `profiles.*.execution.diagnostics.errorCodes` | `"array"` | `[]` | 否 |  |
 | `profiles.*.execution.diagnostics.errorCodes[]` | `"string"` | — | 否 | minLength=1; maxLength=256; pattern="^[^\\s\\u0000-\\u001f\\u007f-\\u009f]+$" |
 | `profiles.*.execution.sessionTimeoutSeconds` | `"integer"` | `1800` | 否 | minimum=1; maximum=4294967 |
-| `profiles.*.execution.managedCompilationTimeoutSeconds` | `"integer"` | `600` | 否 | minimum=1; maximum=4294967 |
-| `profiles.*.execution.nativeBuildTimeoutSeconds` | `"integer"` | `900` | 否 | minimum=1; maximum=4294967 |
 | `profiles.*.extensions` | `"object"` | — | 否 | additionalProperties=false |
 | `profiles.*.extensions.plugins` | `"array"` | `[]` | 否 |  |
 | `profiles.*.extensions.plugins[]` | `"string"` | — | 否 |  |
@@ -931,6 +904,13 @@ schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b9171
 | `api.externalTypes[].managedType` | `"string"` | `""` | 否 |  |
 | `api.externalTypes[].fields` | `"object"` | — | 否 |  |
 | `api.externalTypes[].fields.*` | `"string"` | — | 否 |  |
+| `api.projectionInputs` | `"object"` | — | 否 | additionalProperties=false |
+| `api.projectionInputs.references` | `"array"` | `[]` | 否 |  |
+| `api.projectionInputs.references[]` | `"string"` | — | 否 |  |
+| `api.projectionInputs.sources` | `"array"` | `[]` | 否 |  |
+| `api.projectionInputs.sources[]` | `"string"` | — | 否 |  |
+| `api.projectionInputs.defines` | `"array"` | `[]` | 否 |  |
+| `api.projectionInputs.defines[]` | `"string"` | — | 否 |  |
 | `api.functionAliases` | `"array"` | `[]` | 否 |  |
 | `api.functionAliases[]` | `"object"` | — | 否 | additionalProperties=false |
 | `api.functionAliases[].function` | `"string"` | — | 是 |  |
@@ -1260,35 +1240,6 @@ schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b9171
 | `runtime.namespace` | `["string","null"]` | `null` | 否 |  |
 | `runtime.sourceFeatures` | `"array"` | `[]` | 否 |  |
 | `runtime.sourceFeatures[]` | `"string"` | — | 否 |  |
-| `nativeBuild` | `"object"` | — | 否 | additionalProperties=false |
-| `nativeBuild.packaging` | `"object"` | — | 否 | additionalProperties=false |
-| `nativeBuild.packaging.enabled` | `"boolean"` | `false` | 否 |  |
-| `nativeBuild.packaging.packager` | `"string"` | `"auto"` | 否 |  |
-| `nativeBuild.outputKind` | `["sharedLibrary","staticLibrary","object",null]` | — | 否 |  |
-| `nativeBuild.buildToolPath` | `["string","null"]` | `null` | 否 |  |
-| `nativeBuild.auxiliaryToolPath` | `["string","null"]` | `null` | 否 |  |
-| `nativeBuild.mode` | `["none","sources","prebuilt"]` | `"none"` | 否 |  |
-| `nativeBuild.provider` | `"string"` | `"auto"` | 否 |  |
-| `nativeBuild.sources` | `"array"` | `[]` | 否 |  |
-| `nativeBuild.sources[]` | `"string"` | — | 否 |  |
-| `nativeBuild.artifacts` | `"array"` | `[]` | 否 |  |
-| `nativeBuild.artifacts[]` | `"string"` | — | 否 |  |
-| `nativeBuild.prebuiltTargetId` | `["string","null"]` | `null` | 否 |  |
-| `nativeBuild.compilerArguments` | `"array"` | `[]` | 否 |  |
-| `nativeBuild.compilerArguments[]` | `"string"` | — | 否 |  |
-| `nativeBuild.linkerArguments` | `"array"` | `[]` | 否 |  |
-| `nativeBuild.linkerArguments[]` | `"string"` | — | 否 |  |
-| `nativeBuild.libraries` | `"array"` | `[]` | 否 |  |
-| `nativeBuild.libraries[]` | `"string"` | — | 否 |  |
-| `nativeBuild.libraryDirectories` | `"array"` | `[]` | 否 |  |
-| `nativeBuild.libraryDirectories[]` | `"string"` | — | 否 |  |
-| `managedBuild` | `"object"` | — | 否 | additionalProperties=false |
-| `managedBuild.references` | `"array"` | `[]` | 否 |  |
-| `managedBuild.references[]` | `"string"` | — | 否 |  |
-| `managedBuild.sources` | `"array"` | `[]` | 否 |  |
-| `managedBuild.sources[]` | `"string"` | — | 否 |  |
-| `managedBuild.defines` | `"array"` | `[]` | 否 |  |
-| `managedBuild.defines[]` | `"string"` | — | 否 |  |
 | `output` | `"object"` | — | 否 | additionalProperties=false |
 | `output.processors` | `"array"` | `[]` | 否 | maxItems=128 |
 | `output.processors[]` | `"object"` | — | 否 | additionalProperties=false |
@@ -1321,8 +1272,6 @@ schema SHA-256：`38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b9171
 | `execution.diagnostics.errorCodes` | `"array"` | `[]` | 否 |  |
 | `execution.diagnostics.errorCodes[]` | `"string"` | — | 否 | minLength=1; maxLength=256; pattern="^[^\\s\\u0000-\\u001f\\u007f-\\u009f]+$" |
 | `execution.sessionTimeoutSeconds` | `"integer"` | `1800` | 否 | minimum=1; maximum=4294967 |
-| `execution.managedCompilationTimeoutSeconds` | `"integer"` | `600` | 否 | minimum=1; maximum=4294967 |
-| `execution.nativeBuildTimeoutSeconds` | `"integer"` | `900` | 否 | minimum=1; maximum=4294967 |
 | `extensions` | `"object"` | — | 否 | additionalProperties=false |
 | `extensions.plugins` | `"array"` | `[]` | 否 |  |
 | `extensions.plugins[]` | `"string"` | — | 否 |  |

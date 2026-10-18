@@ -6,15 +6,12 @@
 
 使用 .NET 10 SDK。生成器、Runtime、工具和默认消费者都以 `net10.0` 为基线，
 源码语言基线为 C# 14。完整 SDK 和工具部署匹配的 Clang worker 与原生解析资源，
-解析在独立进程中执行。目标需要的系统 SDK、C/C++ 头文件和原生编译器仍由用户准备，
-BGCS 不会隐式下载。
+解析在独立进程中执行。目标 SDK 头文件与 sysroot 是明确的解析输入，BGCS 不会隐式下载。
+生成过程不执行外部编译器，也不构建消费项目；编译和链接生成源码所需的工具由消费项目准备和运行。
 
-解析器资源根据**生成器宿主**选择；头文件、sysroot、布局和原生构建根据**目标**选择。
-例如 Windows x64 宿主可以使用 Windows worker，加上 Android NDK，解析 Android ARM64。
-解析配置与实际目标、SDK 相容时，可以使用 Clang 解析，再使用 MSVC 或 GNU 编译。
-选择 MSVC 时，即使不执行原生构建，也需要已安装的编译器提供初始原生源码视图。
-`doctor` 说明 `/Zc:preprocessor`、`/PD` 和 `/C` 前提；生成阶段执行真实预处理验证。
-细节见[原生构建](native-build.cn.md)。
+解析器资源根据**生成器宿主**选择，头文件、目标布局和 ABI 根据**目标**选择。
+Windows x64 可以使用 Windows worker 和 Android NDK 头文件解析 Android ARM64。
+下游编译器需要使用相容的头文件、宏、packing 和 ABI；Clang 无法表达的编译器特有输入需要合适的 frontend 或显式 shim。
 
 目标解析、生成、链接、真实调用是不同的验证阶段。声明平台支持前，请检查
 [能力矩阵](capabilities.cn.md) 与对应收据。能够识别目标名称，并不证明所有 ABI、运行时
@@ -78,56 +75,9 @@ bindgen-cs init include/native.h --language c --config bindings/bindgen.json
 本地 `extends` 保留每份基础配置的路径来源，普通列表替换继承列表。未知字段和旧平铺
 配置会被拒绝。通过 `init` 创建新配置；3.0 不包含旧配置读取器或迁移包装。
 
-## 输出与原生构建
+## 输出与消费构建
 
-`generate` 完成解析、分析和完整候选产物生成；发布前验证模型、安全性、源码语法与
-实际导入契约。C++ 会自动生成并重新解析 C ABI 桥接。原生编译需要显式构建请求和
-明确声明的输入，例如在配置中加入：
-
-```json
-{
-  "nativeBuild": {
-    "mode": "sources",
-    "provider": "auto",
-    "sources": ["src/native.c"]
-  }
-}
-```
-
-然后执行：
-
-```bash
-bindgen-cs build bindgen.json
-```
-
-`build` 将警告视为错误验证托管源码，并执行配置声明的原生构建或预编译产物验证。
-`nativeBuild.mode = none` 明确跳过原生构建。编译、导出验证和调用分别记录，报告会显示
-实际执行了哪些阶段。候选验证失败时，不替换此前发布的完整产物。
-
-宿主目标的输出形态如下，目标名称会解析成具体 ABI：
-
-```text
-Generated/
-├─ .bgcs-artifacts.json    # 完整所属产物路径与摘要
-├─ generation.report.json
-└─ windows-x64-msvc/
-   ├─ managed/
-   │  ├─ Imports/
-   │  ├─ Api/
-   │  └─ Types/
-   ├─ native/
-   │  ├─ include/          # 需要 C++ 桥接时生成
-   │  ├─ src/              # 需要 C++ 桥接时生成
-   │  └─ bin/              # 原生构建成功时生成
-   └─ metadata/
-      ├─ abi.manifest.json
-      └─ verification.json
-```
-
-消费者使用根目录 `.bgcs-artifacts.json` ownership manifest 记录的准确文件集合；
-`abi.manifest.json` 描述 ABI/投影元数据。选择一个目标的托管源码，不要把
-多个不相容目标一起编译。`diff` 不替换正式产物；退出码 0 表示相同，1 表示有变化，
-2 表示请求无效或比较失败，包括已经损坏的所属输出。
+`generate` 在目标目录发布完整的托管源码和按需的 C bridge 源码。原生工程独立构建，消费者工程编译生成的 C#；BGCS 不提供项目构建、原生构建、打包或部署入口。可参考 [QuickStart 原生 CMake 工程](../examples/QuickStart/CMakeLists.txt) 和[外部构建说明](native-metadata.cn.md#外部编译)。
 
 ## 使用生成的绑定
 
@@ -192,37 +142,9 @@ SDL3 的 `SDL.h` 等聚合头文件采用分组 source 配置：
 `parseMacros` 和 `parseComments` 控制事实保留。目标 SDK 系统头与 worker 自带的
 Clang builtin headers 是不同输入。
 
-## C++ 与高级原生构建
+## C++ bridge
 
-```bash
-bindgen-cs init include/widget.hpp --language cpp
-bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
-```
-
-C++ 默认采用 `c++23`。类、成员和选定模板经过类型化 lowering 转成 C ABI，不能把
-原始 C++ 修饰符号当作 C 直接导入。需要明确表示时，配置 `cpp.typeLowerings`、
-`cpp.callableLowerings`、`cpp.templateInstantiations`、`cpp.nativeShims` 或中立插件。
-原生 shim 可以保留项目专属 C ABI，同时使用统一 worker、构建和发布阶段。
-所有权声明仍是用户声明，不会自动成为已验证证据。
-
-也保留只生成原生桥接和根据 manifest 独立构建的入口：
-
-```bash
-bindgen-cs bridge bindgen.json
-bindgen-cs native-build Generated/<target>/native/metadata/bridge.manifest.json --dry-run --json
-bindgen-cs native-build Generated/<target>/native/metadata/bridge.manifest.json
-```
-
-provider 支持 `auto`、`clang`、`gnu`、`msvc`、`clang-cl`、`cmake`、`meson`、`msbuild`。
-`--compiler`、`--build-tool`、`--auxiliary-tool` 显式选择编译器或构建系统程序。
-`--output` 选择最终原生文件，`--package-root` 选择单独的已验证原生资产布局。
-这些覆盖参数基于调用目录；manifest 内部路径保留其声明的 manifest/artifact 基准。
-编译进程使用参数列表，不调用命令 shell。dry-run 同时展示最终产物位置和实际私有执行计划。
-
-默认验证必需导出，探索性请求可以显式关闭；关闭检查不能满足发布门禁。
-musl、GNU、静态 Wasm、Android 和 Apple native reference 都有对应布局与能力证据，
-不能只根据一个短 RID 推定完全支持。
+C++ 使用相同配置与 `generate` / `bridge` 入口。将生成的 bridge 源码和头文件加入自己的原生工程，保持目标 ABI、SDK 与编译选项一致，再运行实际调用验收。
 
 ## 嵌入式 SDK、插件与 MSBuild
 
@@ -238,16 +160,15 @@ if (!result.success)
     throw new InvalidOperationException(result.GetDiagnosticSummary());
 ```
 
-需要候选托管/原生构建时调用 `host.BuildAsync(BuildRequest.FromFile(...), ct)`。
 `InspectAsync`、`BridgeAsync`、`DiffAsync` 和 workspace 方法也使用同一 Host。
 会话在解析前冻结配置和扩展注册。普通插件只引用 `BGCS.Contracts`，处理脱离解析器的
 中立事实；manifest 固定可执行文件闭包。影响产物的私有状态和外部输入必须完整提供
 指纹，才能复用对应缓存。
 
 [MSBuild 集成](msbuild.cn.md) 随完整 SDK 分发，通过 `BGCSGenerateBindings=true` 启用。
-它采用独立 .NET TaskHost，生成到 `obj`，根据 manifest 导入准确的托管和原生 item。
-`BGCSBuildNative` 控制是否构建已经声明的原生输入。默认跳过 design-time 和 outer build。
-仅安装 SDK 不会启用绑定生成。
+它采用独立 .NET TaskHost，生成到 `obj`，将 manifest 中准确的 C# 文件加入 Compile，
+并部署生成器自己的 worker 资源。它不执行消费项目或原生构建，不添加原生引用或链接步骤。
+默认跳过 design-time 和 outer build；仅安装 SDK 不会启用绑定生成。
 
 ## 工作区与定制
 
@@ -265,7 +186,6 @@ if (!result.success)
 ```bash
 bindgen-cs workspace validate workspace.json
 bindgen-cs workspace generate workspace.json
-bindgen-cs workspace build workspace.json
 bindgen-cs workspace diff workspace.json
 ```
 

@@ -31,14 +31,11 @@ internal sealed class FrontendGenerationCache(
     internal Attempt Prepare(
         FrontendRequest request,
         IFrontend frontend,
-        CancellationToken cancellationToken,
-        NativeSourceViewResult? nativeSourceView = null
+        CancellationToken cancellationToken
     ) {
         string? reason = cache is null ? disabledReason ?? "Frontend caching is disabled by configuration." : null;
         if (frontend is not FrontendWorkerClient) reason ??= "The selected frontend has no verified reusable parser stage.";
         if (inputs.cacheIneligibilityReasons.Count != 0) reason ??= string.Join(", ", inputs.cacheIneligibilityReasons.Order(StringComparer.Ordinal));
-        if (nativeSourceView is not null && nativeSourceView.macros.Any(macro => !macro.isSystem && ContainsVolatile(macro.replacement)))
-            reason ??= "Volatile or token-pasted public preprocessing definitions require fresh detached facts.";
         if (request.arguments.Any(argument => argument.Contains("pch", StringComparison.OrdinalIgnoreCase)
             || argument.Contains("module", StringComparison.OrdinalIgnoreCase) || argument.Contains("vfs", StringComparison.OrdinalIgnoreCase)
             || argument.Contains("profile", StringComparison.OrdinalIgnoreCase)))
@@ -56,22 +53,13 @@ internal sealed class FrontendGenerationCache(
                     execution.digest,
                     hostImplementation = FileDigest(typeof(BindingHost).Assembly.Location),
                     request = request with { snapshotExcludedDirectories = [] },
-                    nativeSourceView = nativeSourceView is null ? null : new
-                    {
-                        nativeSourceView.observationFingerprint,
-                        nativeSourceView.compilerFamily,
-                        nativeSourceView.compilerIdentity,
-                        implementation = FileDigest(typeof(BGCS.NativeBuild.Planning.NativeSourceViewPreprocessor).Assembly.Location),
-                        nativeSourceView.inputs.files,
-                        nativeSourceView.inputs.searchDirectories,
-                        nativeSourceView.inputs.absentInputs
-                    }
+
                 }, WorkerProtocol.jsonOptions);
                 key = new(Convert.ToHexStringLower(SHA256.HashData(bytes)));
             }
             catch (Exception failure) when (failure is NotSupportedException or IOException or UnauthorizedAccessException)
             { reason = failure.Message; }
-        Attempt attempt = new(request.target.targetId.value, key, reason) { nativeObservation = nativeSourceView is not null };
+        Attempt attempt = new(request.target.targetId.value, key, reason);
         if (reason is not null)
         {
             evidence.Add(new(attempt.targetId, "primaryFrontend", "disabled", reason));
@@ -96,7 +84,7 @@ internal sealed class FrontendGenerationCache(
                 if (miss is null && !new NativeModuleVerifier().Validate(parsed.module).Any(diagnostic => diagnostic.isFailure)
                     && !parsed.module.diagnostics.Any(diagnostic => diagnostic.isFailure))
                 {
-                    miss = nativeSourceView is null ? VolatileReason(request, parsed, cancellationToken) : null;
+                    miss = VolatileReason(request, parsed, cancellationToken);
                     if (miss is null) attempt.result = parsed;
                 }
                 else miss ??= "The cached native graph failed its independent contract verification.";
@@ -122,7 +110,7 @@ internal sealed class FrontendGenerationCache(
     ) {
         if (cache is null || attempt.reason is not null || attempt.result is not null) return;
         string? volatileReason = parsed.executionInputs is null ? "The frontend did not provide a complete parser execution-input snapshot."
-            : attempt.nativeObservation ? null : VolatileReason(request, parsed, cancellationToken);
+            : VolatileReason(request, parsed, cancellationToken);
         if (volatileReason is not null)
         {
             int index = evidence.FindLastIndex(row => row.targetId == attempt.targetId && row.stage == "primaryFrontend");
@@ -167,7 +155,6 @@ internal sealed class FrontendGenerationCache(
         string? reason
     )
     {
-        internal bool nativeObservation { get; init; }
         internal string targetId { get; } = targetId;
         internal ContentDigest key { get; } = key;
         internal string? reason { get; } = reason;

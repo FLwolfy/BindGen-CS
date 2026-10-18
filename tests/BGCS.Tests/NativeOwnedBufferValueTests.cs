@@ -55,13 +55,13 @@ public sealed class NativeOwnedBufferValueTests
                     bufferParameters = [new() { function = "Widget::Fill", parameter = "buffer", capacityParameter = "capacity", writtenCountParameter = "written",
                         lengthUnit = NativeLengthUnit.Elements, direction = NativeParameterDirection.Output, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true }]
                 },
-                nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(built.outputRoot));
-            string native = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             string create = mode == BindingImportMode.FunctionTable ? "WidgetApi.Load(binary)" : "WidgetApi.Create()";
             string consumer = $$"""
                 using System;

@@ -52,14 +52,11 @@ public sealed class NativeBridgeErrorAllocationTests
                 schemaVersion = 1, library = new() { id = "allocation", nativeName = "allocation_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["allocation.hpp"], parseMacros = false },
                 api = new() { @namespace = "Generated.ErrorAllocation", name = "AllocationApi" },
-                runtime = new() { mode = runtimeMode }, cache = new() { enabled = false },
-                nativeBuild = new() { mode = "sources", sources = ["allocation.cpp"],
-                    linkerArguments = OperatingSystem.IsLinux() ? ["-Wl,-Bsymbolic"] : [] }
-            };
+                runtime = new() { mode = runtimeMode }, cache = new() { enabled = false }};
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            var abi = Assert.Single(result.generation.targetModels).interop;
+            var abi = Assert.Single(result.targetModels).interop;
             Assert.All(abi.functions.Where(function => function.error is not null), function =>
             {
                 Assert.Equal("bridge-error-c-allocator:allocation", function.error!.errorOwnership!.allocator!.Value.value);
@@ -67,7 +64,7 @@ public sealed class NativeBridgeErrorAllocationTests
             });
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
             CppBridgeModule module = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             nint library = NativeLibrary.Load(binary);
             try
             {

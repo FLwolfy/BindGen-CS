@@ -56,16 +56,16 @@ public sealed class NativeStringLiteralConsumerTests
                 },
                 runtime = new() { mode = language == SourceLanguage.Cpp ? "source" : "package" },
                 output = new() { layout = language == SourceLanguage.Cpp ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = [source] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             Assert.Equal(8, target.interop.stringConstants.Length);
             Assert.DoesNotContain(target.interop.stringConstants, constant => constant.name == "CONTEXT_TEXT");
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string factory = importMode == BindingImportMode.FunctionTable ? "LiteralApi.Load(binary)" : "LiteralApi.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, "literal_fixture", $$"""
                 using System;

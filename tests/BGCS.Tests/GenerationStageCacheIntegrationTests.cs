@@ -38,24 +38,28 @@ public sealed class GenerationStageCacheIntegrationTests
         Assert.Equal(previous, ManagedBytes(hot));
     }
 
+
     [Fact]
-    public async Task WarmEmissionDoesNotSkipRequestedManagedCompilationOrReplaceOutputOnFailure()
+    public async Task NewIncludeCandidateInvalidatesEmissionBeforeStableInputsHitAgain()
     {
         using Scratch scratch = new();
-        string extra = Path.Combine(scratch.root, "extra.cs");
-        await File.WriteAllTextAsync(extra, "internal sealed class AdditionalConsumer { }");
-        BindingConfiguration configuration = Configuration() with { managedBuild = new() { sources = ["extra.cs"] } };
         await using BindingHost host = Builder().Build();
-        BuildRequest request = new(new(configuration, scratch.root));
-        BuildResult cold = await host.BuildAsync(request);
+        GenerationRequest request = new(Configuration(), scratch.root);
+        GenerationResult cold = await host.GenerateAsync(request);
         Assert.True(cold.success, cold.GetDiagnosticSummary());
-        byte[] report = File.ReadAllBytes(Path.Combine(cold.outputRoot, "generation.report.json"));
-        await File.WriteAllTextAsync(extra, "this is invalid C# source");
-        BuildResult failed = await host.BuildAsync(request);
-        Assert.False(failed.success);
-        Assert.Equal("miss", Assert.Single(failed.generation.cacheStages.Where(stage => stage.stage == "csharpEmission")).status);
-        Assert.Contains(failed.diagnostics, diagnostic => diagnostic.code == "BGCS-MANAGED-COMPILE");
-        Assert.Equal(report, File.ReadAllBytes(Path.Combine(cold.outputRoot, "generation.report.json")));
+        Assert.Equal("miss", Assert.Single(cold.cacheStages.Where(stage => stage.stage == "csharpEmission")).status);
+        var expected = ManagedBytes(cold);
+
+        await File.WriteAllTextAsync(Path.Combine(scratch.root, "new-include-candidate.h"), "/* New header search candidate. */\n");
+        GenerationResult changed = await host.GenerateAsync(request);
+        Assert.True(changed.success, changed.GetDiagnosticSummary());
+        Assert.Equal("miss", Assert.Single(changed.cacheStages.Where(stage => stage.stage == "csharpEmission")).status);
+        Assert.Equal(expected, ManagedBytes(changed));
+
+        GenerationResult warm = await host.GenerateAsync(request);
+        Assert.True(warm.success, warm.GetDiagnosticSummary());
+        Assert.Equal("hit", Assert.Single(warm.cacheStages.Where(stage => stage.stage == "csharpEmission")).status);
+        Assert.Equal(expected, ManagedBytes(warm));
     }
 
     [Fact]

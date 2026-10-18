@@ -55,13 +55,13 @@ public sealed class NativeCppBooleanTests
                     managedProjection = new ManagedRecipeProjection("int", "(byte)({value} != 0 ? 1 : 0)", "{value} != 0 ? 1 : 0")
                 }] : ImmutableArray<TypeLoweringRecipe>.Empty },
                 semantics = new() { ownedResults = [new() { function = "Demo::Toggle::Toggle(bool)", releaseThreadDomain = "any" }] },
-                runtime = new() { mode = runtimeMode }, nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            Invoke(Path.Combine(target, "managed"), Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin"))), runtimeMode, custom);
+            Invoke(Path.Combine(target, "managed"), Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target))), runtimeMode, custom);
         }
         finally { Directory.Delete(root, recursive: true); }
     }

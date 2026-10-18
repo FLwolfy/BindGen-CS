@@ -156,7 +156,6 @@ public sealed class WorkerFactPluginTests : IDisposable
 
     [Theory]
     [InlineData(FrontendRequestPurpose.BridgeVerification)]
-    [InlineData(FrontendRequestPurpose.NativeBuildVerification)]
     public async Task VerificationPurposeIsExplicitAndStillTracksWorkerInputs(FrontendRequestPurpose purpose)
     {
         FrontendRequest request = Create() with { purpose = purpose };

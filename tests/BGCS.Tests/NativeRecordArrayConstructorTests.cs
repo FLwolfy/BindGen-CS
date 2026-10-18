@@ -111,12 +111,12 @@ public sealed class NativeRecordArrayConstructorTests
                             direction = NativeParameterDirection.Input, lengthUnit = NativeLengthUnit.CodeUnits, lifetime = NativeLifetimeKind.Call,
                             zeroTerminated = true, retainsPointer = false, allowsNull = false }).ToImmutableArray()
                 },
-                nativeBuild = new() { mode = "sources", sources = ["thing.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            TargetInspection target = Assert.Single(built.targetModels);
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites()) { importMode = mode });
             CSharpStoragePlan storage = Assert.Single(plan.storage, carrier => carrier.name == "NativeThing");
             CSharpRecordArrayCopyPlan array = Assert.Single(storage.presentation!.arrayCopies);
@@ -146,7 +146,7 @@ public sealed class NativeRecordArrayConstructorTests
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             string shared = mode == BindingImportMode.LibraryImport ? "ThingApi.Create();if(ThingApi.Begin(\"AB\")!=42 || ThingApi.BeginAlias(\"AB\")!=42 || ThingApi.Begins.Open(\"AB\")!=42)return 15;ThingApi.Dispose();" : string.Empty;
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"),
-                Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin"))), configuration.library.nativeName, $$"""
+                Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot))), configuration.library.nativeName, $$"""
                 using System;
                 using System.Runtime.InteropServices;
                 using Generated.ArrayPresentation;

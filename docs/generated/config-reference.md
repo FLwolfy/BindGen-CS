@@ -7,7 +7,7 @@ Both languages use the same schema. Object-schema required fields do not replace
 a base document may supply an omitted value. A null language standard freezes to C17 or C++23 according to the source language.
 Target, toolchain and extension capabilities still require actual evidence.
 
-Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b917106`.
+Schema SHA-256: `6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e3`.
 
 [Configuration Guide](../configuration-guide.md) | [Getting Started](../getting-started.md)
 
@@ -16,10 +16,7 @@ Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b91710
 | `$schema` | `["string","null"]` | `null` | no |  |
 | `schemaVersion` | `"integer"` | `1` (constant) | yes |  |
 | `extends` | `"array"` | `[]` | no |  |
-| `extends[]` | `["string","object"]` | — | no | See the complete schema for composition constraints. |
-| `extends[].url` | `"string"` | — | yes | pattern="^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?][^#]*)?$"; format="uri" |
-| `extends[].sha256` | `"string"` | — | yes | pattern="^[0-9a-fA-F]{64}$" |
-| `extends[].pathBase` | `"string"` | — | yes | minLength=1; Explicit local base for paths inside the remote document, relative to the declaring document's local base or absolute. |
+| `extends[]` | `"string"` | — | no | minLength=1 |
 | `profile` | `["string","null"]` | `null` | no |  |
 | `profiles` | `"object"` | — | no |  |
 | `profiles.*` | `"object"` | — | no | additionalProperties=false |
@@ -278,6 +275,13 @@ Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b91710
 | `profiles.*.api.externalTypes[].managedType` | `"string"` | `""` | no |  |
 | `profiles.*.api.externalTypes[].fields` | `"object"` | — | no |  |
 | `profiles.*.api.externalTypes[].fields.*` | `"string"` | — | no |  |
+| `profiles.*.api.projectionInputs` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.api.projectionInputs.references` | `"array"` | `[]` | no |  |
+| `profiles.*.api.projectionInputs.references[]` | `"string"` | — | no |  |
+| `profiles.*.api.projectionInputs.sources` | `"array"` | `[]` | no |  |
+| `profiles.*.api.projectionInputs.sources[]` | `"string"` | — | no |  |
+| `profiles.*.api.projectionInputs.defines` | `"array"` | `[]` | no |  |
+| `profiles.*.api.projectionInputs.defines[]` | `"string"` | — | no |  |
 | `profiles.*.api.functionAliases` | `"array"` | `[]` | no |  |
 | `profiles.*.api.functionAliases[]` | `"object"` | — | no | additionalProperties=false |
 | `profiles.*.api.functionAliases[].function` | `"string"` | — | yes |  |
@@ -607,35 +611,6 @@ Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b91710
 | `profiles.*.runtime.namespace` | `["string","null"]` | `null` | no |  |
 | `profiles.*.runtime.sourceFeatures` | `"array"` | `[]` | no |  |
 | `profiles.*.runtime.sourceFeatures[]` | `"string"` | — | no |  |
-| `profiles.*.nativeBuild` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.nativeBuild.packaging` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.nativeBuild.packaging.enabled` | `"boolean"` | `false` | no |  |
-| `profiles.*.nativeBuild.packaging.packager` | `"string"` | `"auto"` | no |  |
-| `profiles.*.nativeBuild.outputKind` | `["sharedLibrary","staticLibrary","object",null]` | — | no |  |
-| `profiles.*.nativeBuild.buildToolPath` | `["string","null"]` | `null` | no |  |
-| `profiles.*.nativeBuild.auxiliaryToolPath` | `["string","null"]` | `null` | no |  |
-| `profiles.*.nativeBuild.mode` | `["none","sources","prebuilt"]` | `"none"` | no |  |
-| `profiles.*.nativeBuild.provider` | `"string"` | `"auto"` | no |  |
-| `profiles.*.nativeBuild.sources` | `"array"` | `[]` | no |  |
-| `profiles.*.nativeBuild.sources[]` | `"string"` | — | no |  |
-| `profiles.*.nativeBuild.artifacts` | `"array"` | `[]` | no |  |
-| `profiles.*.nativeBuild.artifacts[]` | `"string"` | — | no |  |
-| `profiles.*.nativeBuild.prebuiltTargetId` | `["string","null"]` | `null` | no |  |
-| `profiles.*.nativeBuild.compilerArguments` | `"array"` | `[]` | no |  |
-| `profiles.*.nativeBuild.compilerArguments[]` | `"string"` | — | no |  |
-| `profiles.*.nativeBuild.linkerArguments` | `"array"` | `[]` | no |  |
-| `profiles.*.nativeBuild.linkerArguments[]` | `"string"` | — | no |  |
-| `profiles.*.nativeBuild.libraries` | `"array"` | `[]` | no |  |
-| `profiles.*.nativeBuild.libraries[]` | `"string"` | — | no |  |
-| `profiles.*.nativeBuild.libraryDirectories` | `"array"` | `[]` | no |  |
-| `profiles.*.nativeBuild.libraryDirectories[]` | `"string"` | — | no |  |
-| `profiles.*.managedBuild` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.managedBuild.references` | `"array"` | `[]` | no |  |
-| `profiles.*.managedBuild.references[]` | `"string"` | — | no |  |
-| `profiles.*.managedBuild.sources` | `"array"` | `[]` | no |  |
-| `profiles.*.managedBuild.sources[]` | `"string"` | — | no |  |
-| `profiles.*.managedBuild.defines` | `"array"` | `[]` | no |  |
-| `profiles.*.managedBuild.defines[]` | `"string"` | — | no |  |
 | `profiles.*.output` | `"object"` | — | no | additionalProperties=false |
 | `profiles.*.output.processors` | `"array"` | `[]` | no | maxItems=128 |
 | `profiles.*.output.processors[]` | `"object"` | — | no | additionalProperties=false |
@@ -668,8 +643,6 @@ Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b91710
 | `profiles.*.execution.diagnostics.errorCodes` | `"array"` | `[]` | no |  |
 | `profiles.*.execution.diagnostics.errorCodes[]` | `"string"` | — | no | minLength=1; maxLength=256; pattern="^[^\\s\\u0000-\\u001f\\u007f-\\u009f]+$" |
 | `profiles.*.execution.sessionTimeoutSeconds` | `"integer"` | `1800` | no | minimum=1; maximum=4294967 |
-| `profiles.*.execution.managedCompilationTimeoutSeconds` | `"integer"` | `600` | no | minimum=1; maximum=4294967 |
-| `profiles.*.execution.nativeBuildTimeoutSeconds` | `"integer"` | `900` | no | minimum=1; maximum=4294967 |
 | `profiles.*.extensions` | `"object"` | — | no | additionalProperties=false |
 | `profiles.*.extensions.plugins` | `"array"` | `[]` | no |  |
 | `profiles.*.extensions.plugins[]` | `"string"` | — | no |  |
@@ -932,6 +905,13 @@ Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b91710
 | `api.externalTypes[].managedType` | `"string"` | `""` | no |  |
 | `api.externalTypes[].fields` | `"object"` | — | no |  |
 | `api.externalTypes[].fields.*` | `"string"` | — | no |  |
+| `api.projectionInputs` | `"object"` | — | no | additionalProperties=false |
+| `api.projectionInputs.references` | `"array"` | `[]` | no |  |
+| `api.projectionInputs.references[]` | `"string"` | — | no |  |
+| `api.projectionInputs.sources` | `"array"` | `[]` | no |  |
+| `api.projectionInputs.sources[]` | `"string"` | — | no |  |
+| `api.projectionInputs.defines` | `"array"` | `[]` | no |  |
+| `api.projectionInputs.defines[]` | `"string"` | — | no |  |
 | `api.functionAliases` | `"array"` | `[]` | no |  |
 | `api.functionAliases[]` | `"object"` | — | no | additionalProperties=false |
 | `api.functionAliases[].function` | `"string"` | — | yes |  |
@@ -1261,35 +1241,6 @@ Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b91710
 | `runtime.namespace` | `["string","null"]` | `null` | no |  |
 | `runtime.sourceFeatures` | `"array"` | `[]` | no |  |
 | `runtime.sourceFeatures[]` | `"string"` | — | no |  |
-| `nativeBuild` | `"object"` | — | no | additionalProperties=false |
-| `nativeBuild.packaging` | `"object"` | — | no | additionalProperties=false |
-| `nativeBuild.packaging.enabled` | `"boolean"` | `false` | no |  |
-| `nativeBuild.packaging.packager` | `"string"` | `"auto"` | no |  |
-| `nativeBuild.outputKind` | `["sharedLibrary","staticLibrary","object",null]` | — | no |  |
-| `nativeBuild.buildToolPath` | `["string","null"]` | `null` | no |  |
-| `nativeBuild.auxiliaryToolPath` | `["string","null"]` | `null` | no |  |
-| `nativeBuild.mode` | `["none","sources","prebuilt"]` | `"none"` | no |  |
-| `nativeBuild.provider` | `"string"` | `"auto"` | no |  |
-| `nativeBuild.sources` | `"array"` | `[]` | no |  |
-| `nativeBuild.sources[]` | `"string"` | — | no |  |
-| `nativeBuild.artifacts` | `"array"` | `[]` | no |  |
-| `nativeBuild.artifacts[]` | `"string"` | — | no |  |
-| `nativeBuild.prebuiltTargetId` | `["string","null"]` | `null` | no |  |
-| `nativeBuild.compilerArguments` | `"array"` | `[]` | no |  |
-| `nativeBuild.compilerArguments[]` | `"string"` | — | no |  |
-| `nativeBuild.linkerArguments` | `"array"` | `[]` | no |  |
-| `nativeBuild.linkerArguments[]` | `"string"` | — | no |  |
-| `nativeBuild.libraries` | `"array"` | `[]` | no |  |
-| `nativeBuild.libraries[]` | `"string"` | — | no |  |
-| `nativeBuild.libraryDirectories` | `"array"` | `[]` | no |  |
-| `nativeBuild.libraryDirectories[]` | `"string"` | — | no |  |
-| `managedBuild` | `"object"` | — | no | additionalProperties=false |
-| `managedBuild.references` | `"array"` | `[]` | no |  |
-| `managedBuild.references[]` | `"string"` | — | no |  |
-| `managedBuild.sources` | `"array"` | `[]` | no |  |
-| `managedBuild.sources[]` | `"string"` | — | no |  |
-| `managedBuild.defines` | `"array"` | `[]` | no |  |
-| `managedBuild.defines[]` | `"string"` | — | no |  |
 | `output` | `"object"` | — | no | additionalProperties=false |
 | `output.processors` | `"array"` | `[]` | no | maxItems=128 |
 | `output.processors[]` | `"object"` | — | no | additionalProperties=false |
@@ -1322,8 +1273,6 @@ Schema SHA-256: `38115c0f5a9c52e8dfd534c1e6d7a8fd098a4b71464b6c5bb972db2b1b91710
 | `execution.diagnostics.errorCodes` | `"array"` | `[]` | no |  |
 | `execution.diagnostics.errorCodes[]` | `"string"` | — | no | minLength=1; maxLength=256; pattern="^[^\\s\\u0000-\\u001f\\u007f-\\u009f]+$" |
 | `execution.sessionTimeoutSeconds` | `"integer"` | `1800` | no | minimum=1; maximum=4294967 |
-| `execution.managedCompilationTimeoutSeconds` | `"integer"` | `600` | no | minimum=1; maximum=4294967 |
-| `execution.nativeBuildTimeoutSeconds` | `"integer"` | `900` | no | minimum=1; maximum=4294967 |
 | `extensions` | `"object"` | — | no | additionalProperties=false |
 | `extensions.plugins` | `"array"` | `[]` | no |  |
 | `extensions.plugins[]` | `"string"` | — | no |  |

@@ -45,7 +45,7 @@ internal static class NativeStringConstantFactReader
         using CXUnsavedFile file = CXUnsavedFile.Create(CppParser.C_CPPASTROOTFILENAME, source.ToString());
         ReadOnlySpan<CXUnsavedFile> files = stackalloc CXUnsavedFile[] { file };
         using CXTranslationUnit probe = CXTranslationUnit.Parse(index, CppParser.C_CPPASTROOTFILENAME,
-            arguments, files, CppParser.ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_None));
+            arguments, files, CXTranslationUnit_Flags.CXTranslationUnit_None);
         for (uint item = 0; item < probe.NumDiagnostics; item++)
         {
             using CXDiagnostic diagnostic = probe.GetDiagnostic(item);

@@ -57,15 +57,15 @@ public sealed class NativeTemporaryAllocatorTests
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                 semantics = new() { stringParameters = textContracts.ToImmutable() },
-                nativeBuild = new() { mode = "sources", sources = ["native.cpp"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(repository,
                 "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0")).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             string runtime = sourceRuntime ? "Generated.TemporaryAllocator.Runtime" : "BGCS.Runtime";
             string context = sourceRuntime ? "AllocatorApiContext" : "AllocatorApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary, factory)" : "ApiContext.Create(factory)";

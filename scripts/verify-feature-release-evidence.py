@@ -14,6 +14,35 @@ from global_feature_evidence import FEATURE_ID, PROOF_ID, verify_global_features
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def scoped_removals(inventory: dict, baseline: dict, category: str, active_ids: list[str]) -> set[str]:
+    reference = inventory.get("scopeRemovals")
+    if not reference and not baseline.get("scopeRemovals"):
+        return set()
+    if reference != "eng/acceptance/scope-removals.json" or baseline.get("scopeRemovals") != reference:
+        raise RuntimeError("Scoped baseline subtraction requires its exact reviewed removal audit.")
+    path = (ROOT / reference).resolve()
+    if not path.is_relative_to(ROOT.resolve()) or not path.is_file():
+        raise RuntimeError("The reviewed scope-removal audit is missing or outside the repository.")
+    audit = json.loads(path.read_text(encoding="utf-8"))
+    revision = baseline.get("baselineRevision", baseline.get("baseline"))
+    if (audit.get("schemaVersion") != 1 or audit.get("previousBaselineRevision") != revision
+            or not audit.get("authorization") or audit.get("releaseReady") is True):
+        raise RuntimeError("Scope removal is not release certification and needs its original reviewed baseline.")
+    field = "featureId" if category == "removedFeatures" else "configurationId"
+    rows = audit.get(category)
+    if not isinstance(rows, list) or not rows:
+        raise RuntimeError("The scope-removal audit has no explicit retired identities.")
+    removed = set()
+    for row in rows:
+        identity = row.get(field)
+        if (not isinstance(identity, str) or not identity or identity in removed or identity in active_ids
+                or row.get("originalRequirement", {}).get(field) != identity or not row.get("reason")
+                or row.get("status") in ("passed", "complete", "implementationReady") or row.get("receipt") is not None):
+            raise RuntimeError("A scoped removal is duplicated, active, unexplained or incorrectly certified.")
+        removed.add(identity)
+    return removed
+
+
 def validate_feature_baseline(inventory: dict, baseline: dict) -> None:
     """Freeze the declared feature set; implementation work may only append new identities."""
     previous, current = baseline.get("features", []), inventory.get("features", [])
@@ -22,6 +51,7 @@ def validate_feature_baseline(inventory: dict, baseline: dict) -> None:
         raise RuntimeError("Feature review requires its complete frozen identity baseline.")
     old_ids = [row.get("featureId") for row in previous]
     ids = [row.get("featureId") for row in current]
+    scoped_removals(inventory, baseline, "removedFeatures", ids)
     if (any(not isinstance(identity, str) or not identity.strip() for identity in ids + old_ids)
             or len(set(ids)) != len(ids) or len(set(old_ids)) != len(old_ids) or ids[:len(old_ids)] != old_ids):
         raise RuntimeError("Feature baseline rows were omitted, duplicated, reordered or assigned different identities.")
@@ -184,10 +214,14 @@ def configuration_declarations(inventory: dict, baseline: dict) -> tuple[list[di
         raise RuntimeError("Configuration certification requires its complete frozen baseline and current inventory.")
     ids = [entry.get("configurationId") for entry in entries]
     expected_ids = [entry.get("configurationId") for entry in original]
+    if any(not isinstance(value, str) or not re.fullmatch(r"CFG[0-9]{4,}", value) for value in expected_ids):
+        raise RuntimeError("Configuration baseline has invalid stable identities.")
+    removed = scoped_removals(inventory, baseline, "removedConfiguration", ids)
+    ordered_ids = expected_ids + ["CFG" + format(index, "04d") for index in range(max(int(value[3:]) for value in expected_ids) + 1, max(int(value[3:]) for value in expected_ids) + 1 + len(ids) - len(expected_ids))] if removed else ["CFG" + format(index, "04d") for index in range(1, len(ids) + 1)]
     if (any(not isinstance(identity, str) or not re.fullmatch(r"CFG[0-9]{4,}", identity) for identity in ids)
             or len(set(ids)) != len(ids) or len(set(expected_ids)) != len(expected_ids)
             or ids[:len(expected_ids)] != expected_ids
-            or ids != ["CFG" + format(index, "04d") for index in range(1, len(ids) + 1)]):
+            or ids != ordered_ids):
         raise RuntimeError("Configuration baseline rows were omitted, duplicated, reordered or assigned unstable identities.")
     by_id = {entry["configurationId"]: entry for entry in entries}
     for previous in original:

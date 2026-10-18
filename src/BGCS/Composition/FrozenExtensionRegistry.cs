@@ -22,8 +22,6 @@ internal sealed record FrozenExtensionRegistry(
     ImmutableArray<ValidatorRegistration> Validators,
     ImmutableArray<ProcessorRegistration> Processors,
     ImmutableArray<TargetProviderRegistration> Targets,
-    ImmutableArray<NativeProviderRegistration> NativeBuildProviders,
-    ImmutableArray<NativePackagerRegistration> NativeArtifactPackagers,
     ImmutableArray<SourceContributorRegistration> SourceContributors,
     ImmutableArray<PluginRegistration> Plugins
 )
@@ -46,14 +44,6 @@ internal sealed record ProcessorRegistration(
     string Id,
     int Priority,
     Func<IArtifactProcessor> Factory
-);
-internal sealed record NativeProviderRegistration(
-    string Id,
-    Func<INativeBuildProvider> Factory
-);
-internal sealed record NativePackagerRegistration(
-    string Id,
-    Func<INativeArtifactPackager> Factory
 );
 internal sealed record SourceContributorRegistration(
     string Id,

@@ -24,6 +24,7 @@ import xml.etree.ElementTree as ET
 from acceptance_evidence import digest, publication
 from corpus import DEFAULT_LOCK, load_lock, verify
 from corpus_policy import selection_policy
+from native_fixture_build import msvc_sdk_inputs
 from cpp_acceptance_fixture import execution_identity, stage_repository_generator, tool_command
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,40 +73,48 @@ def configuration(library: str, corpus: Path, output: Path, compiler_override: s
     return value
 
 
-def compile_bridge(root: Path, manifest: dict, run) -> dict:
-    sources = [root / item["relativePath"] for item in manifest["artifacts"]
-               if item["mediaType"] in ("text/x-c", "text/x-c++") and Path(item["relativePath"]).suffix in (".c", ".cpp", ".cc", ".cxx")]
-    manifests = [root / item["relativePath"] for item in manifest["artifacts"] if item["relativePath"].endswith("/bridge.manifest.json")]
-    if not sources or len(manifests) != 1:
-        raise RuntimeError("Generated native sources require one exact neutral build manifest.")
+def compile_bridge(root: Path, manifest: dict, request: dict, run) -> dict:
+    artifacts = manifest["artifacts"]
+    native_sources = [item for item in artifacts if item["mediaType"] in ("text/x-c", "text/x-c++")
+                      and Path(item["relativePath"]).suffix in (".c", ".cpp", ".cc", ".cxx")]
+    manifests = [root / item["relativePath"] for item in artifacts if item["relativePath"].endswith("/bridge.manifest.json")]
+    if not native_sources or len(manifests) != 1:
+        raise RuntimeError("Generated native sources require one exact neutral source manifest.")
     native = json.loads(manifests[0].read_text(encoding="utf-8-sig"))
-    target = native["target"]
-    toolchain = target["toolchain"]
-    compiler = toolchain["compilerPath"]
-    if not Path(compiler).is_file():
-        raise RuntimeError("The resolved native corpus compiler is missing: " + compiler)
-    def resolve(path: str) -> str:
-        return str(root / path.removeprefix("artifact:/")) if path.startswith("artifact:/") else path
-
-    directories = [resolve(path) for path in native.get("includeDirectories", [])]
-    directories += sorted({str((root / item["relativePath"]).parent) for item in manifest["artifacts"] if item["relativePath"].endswith(".h")})
-    directories += native.get("systemIncludeDirectories", []) + toolchain.get("cxxSystemIncludeFolders", [])
+    if sorted(native["sources"], key=lambda item: item["relativePath"]) != sorted(native_sources, key=lambda item: item["relativePath"]):
+        raise RuntimeError("The neutral source manifest differs from the authenticated native source artifacts.")
+    targets = request.get("targets", [])
+    if len(targets) > 1 or targets and targets[0]["id"] != "host":
+        raise RuntimeError("The corpus native syntax fixture requires one explicitly selected host compiler.")
+    settings = targets[0].get("settings", {}) if targets else {}
+    selected = settings.get("compilerPath") or os.environ.get("BGCS_CORPUS_CXX") or os.environ.get("BGCS_CPP2C_CXX") or os.environ.get("CXX")
+    compiler = (shutil.which(selected) or (selected if Path(selected).is_file() else None)) if selected else None
+    if not compiler:
+        raise RuntimeError("The repository corpus fixture requires an explicitly selected native compiler.")
+    compiler = str(Path(compiler).resolve())
+    source = request["source"]
+    directories = source.get("includeDirectories", []) + source.get("systemIncludeDirectories", [])
+    directories += sorted({str((root / item["relativePath"]).parent) for item in native["headers"]})
+    directories += settings.get("cxxSystemIncludeDirectories", []) + settings.get("systemIncludeDirectories", [])
+    defines = source.get("defines", []) + settings.get("defines", [])
+    arguments = source.get("arguments", []) + settings.get("arguments", [])
     is_msvc = Path(compiler).name.casefold() in ("cl.exe", "cl", "clang-cl.exe", "clang-cl")
-    for index, source in enumerate(sources):
-        cpp = source.suffix != ".c"
+    if is_msvc:
+        sdk_includes, _ = msvc_sdk_inputs(dict(os.environ))
+        directories += list(map(str, sdk_includes))
+    directories = list(dict.fromkeys(directories))
+    for index, item in enumerate(native_sources):
+        native_source = root / item["relativePath"]
+        cpp = native_source.suffix != ".c"
         if is_msvc:
             prefix = [compiler, "/nologo", "/Zs", "/std:c++latest" if cpp else "/std:c17", "/TP" if cpp else "/TC", "/Zc:preprocessor"]
             if cpp: prefix += ["/EHsc", "/Zc:__cplusplus"]
         else:
-            prefix = [compiler, "-x", "c++" if cpp else "c", "-std=c++23" if cpp else "-std=c17", "-fsyntax-only"]
+            prefix = [compiler, "-x", "c++" if cpp else "c", "-std=" + native["languageStandard"], "-fsyntax-only"]
         prefix += [("/I" if is_msvc else "-I") + item for item in directories]
-        prefix += [("/D" if is_msvc else "-D") + item for item in native.get("defines", [])]
-        if not is_msvc:
-            prefix += toolchain.get("arguments", [])
-            if "clang" in Path(compiler).name.casefold(): prefix += ["--target=" + target["triple"]]
-        prefix += native.get("compilerArguments", [])
-        run([*prefix, str(source)], "bridge-syntax-" + str(index))
-    return {"compiler": compiler, "compilerSha256": digest(Path(compiler)), "translationUnits": len(sources),
+        prefix += [("/D" if is_msvc else "-D") + item for item in defines]
+        run([*prefix, *arguments, str(native_source)], "bridge-syntax-" + str(index))
+    return {"compiler": compiler, "compilerSha256": digest(Path(compiler)), "translationUnits": len(native_sources),
             "nativeLinked": False, "upstreamInvoked": False}
 
 
@@ -226,7 +235,7 @@ def main() -> int:
                     item.update(generated=True, outputRoot=str(root), artifactCount=len(owned["artifacts"]))
                     native_sources = any(entry["mediaType"] in ("text/x-c", "text/x-c++") for entry in owned["artifacts"])
                     if args.group == "cpp" or native_sources:
-                        item["nativeBridgeSyntax" if args.group == "cpp" else "nativeSourceSyntax"] = compile_bridge(root, owned, run)
+                        item["nativeBridgeSyntax" if args.group == "cpp" else "nativeSourceSyntax"] = compile_bridge(root, owned, request, run)
                     project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
                     properties = ET.SubElement(project, "PropertyGroup")
                     for key, value in {"TargetFramework": "net10.0", "AllowUnsafeBlocks": "true", "Nullable": "enable", "ImplicitUsings": "disable",
@@ -240,7 +249,7 @@ def main() -> int:
                     run([dotnet, "build", "Corpus.Generated.csproj", "-c", args.configuration, "-m:1", "-nr:false"], "managed-compile")
                     item["managedCompiled"] = True
                     api = library_evidence / "public-api.txt"
-                    run([*tool_command(dotnet, tool), "validate", "api-snapshot", str(consumer / "bin" / args.configuration / "net10.0/Corpus.Generated.dll"), str(api)], "public-api")
+                    run([dotnet, str(ROOT / "eng/BGCS.RepositoryTools/bin" / args.configuration / "net10.0/BGCS.RepositoryTools.dll"), "validate", "api-snapshot", str(consumer / "bin" / args.configuration / "net10.0/Corpus.Generated.dll"), str(api)], "public-api")
                     item["reviewedSnapshots"] = check_snapshot(library, owned, api, ROOT / "artifacts/acceptance/candidate-snapshots/corpus", root, corpus, policy)
                     unreviewed = unreviewed or not item["reviewedSnapshots"]
                     item["success"] = item["reviewedSnapshots"]

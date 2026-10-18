@@ -6,57 +6,76 @@
   "releaseReady": false,
   "evidenceScope": "Local checkpoints are pinned observations, not certification of the current or a future release revision. Historical evidence and phase logs below are retained for audit only.",
   "latestLocalEvidence": {
-    "date": "2026-10-16",
-    "referenceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
+    "date": "2026-10-18",
+    "scope": "Generator-only current local Windows source cohort; dirty/uncommitted source, no clean exact-head CI or complete release certification.",
+    "referenceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+    "sourceWorktreeDirty": true,
     "releaseCertification": false,
     "sameRevisionPlatformCiPassed": false,
     "fullProductPackageCertificationPassed": false,
-    "frontendSuite": {
-      "sourceCohortCommit": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
-      "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
-      "passed": 252,
+    "allGeneratorSuites": {
+      "passed": 3330,
       "failed": 0,
       "skipped": 0,
-      "receipt": "artifacts/implementation/test-results/anonymous-access-complete-frontend.trx"
+      "assemblies": 15,
+      "receipt": "artifacts/implementation/generator-only-verified-test-results.json",
+      "trxDirectory": "artifacts/test-results/generator-only-verified",
+      "scope": "Original verified generator-only product-source cohort, before the subsequent test-display-ID and Python receipt-validator changes; not a fresh run at the final edited source identity. Retired NativeBuild suite is historical only."
     },
-    "nativeBuildSuite": {
-      "sourceCohortCommit": "cc171550294972462bb0cdd2d4ac82b2d8c1e34c",
-      "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
-      "passed": 329,
+    "subsequentImportConstantIdentityRegression": {
+      "passed": 11,
       "failed": 0,
       "skipped": 0,
-      "receipt": "artifacts/implementation/test-results/owned-compiler-mutation-complete-native.trx"
-    },
-    "sdkOnlyPackagePreflight": {
-      "sourceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
-      "sourceWorktreeDirty": false,
-      "success": true,
-      "hostRid": "win-x64",
-      "packageVersion": "0.0.0-local.sdkpreflight20261016a",
-      "archiveCount": 6,
-      "consumerCheckCount": 14,
-      "repeatContentVerified": true,
-      "sourceAndProductionBytesStable": true,
-      "hostToolCertified": false,
-      "releaseCertification": false,
-      "receipt": "artifacts/sdk-preflight-38f4d85-20261016-76471a20f5f34c018297fe330f0816e4/local-sdk-only-preflight.json"
+      "receipt": "artifacts/implementation/test-results/import-constant-case-identities/import-constant-case-identities-eleven.trx",
+      "scope": "Only one existing theory, with finite case IDs added to preserve all11 original inputs/assertions and remove display collisions. Not added to the3330 count."
     },
     "performanceCheckpoint": {
-      "sourceRevision": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
-      "sourceWorktreeDirty": false,
       "host": "windows-x64",
       "declarations": 10000,
-      "coldElapsedSeconds": 21.26191160000053,
-      "warmWatchdogElapsedSeconds": 10.027832799998578,
-      "warmTimedOut": true,
-      "warmCompletedElapsedSeconds": null,
-      "warmBudgetSeconds": 10,
-      "budgetPassed": false,
-      "controlledReleaseRerunPending": true,
-      "sameRevisionReleaseCertification": false,
-      "receipt": "artifacts/implementation/performance-068f-anonymous-strict-current/39bbe86474da4c1d95fadfa5711ece21/report.json"
+      "coldElapsedSeconds": 16.094678900000872,
+      "warmElapsedSeconds": 6.571884199991473,
+      "coldBudgetSeconds": 60.0,
+      "warmBudgetSeconds": 10.0,
+      "budgetPassed": true,
+      "fullPipelineCacheCertified": false,
+      "releaseCertification": false,
+      "receipt": "artifacts/performance/generator-only-verified/530f64b5888e457db583652daade721b/report.json"
     },
-    "remainingExecution": "Exact-revision desktop components and complete Host partitions, controlled performance, corpus, complete installed SDK/tool/Runtime/plugin/MSBuild products, browser/NativeAOT matrices and publication proofs remain mandatory. Independent checkpoint counts must not be added into a full-suite certification."
+    "sdkOnlyPackagePreflight": {
+      "success": true,
+      "consumerCheckCount": 14,
+      "hostRid": "win-x64",
+      "sourceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+      "sourceWorktreeDirty": true,
+      "sourceBytesStable": true,
+      "completeProductSet": false,
+      "releaseCertification": false,
+      "receipt": "artifacts/verification/generator-only-local-sdk-verified/verification.json"
+    },
+    "hostPackageRepeat": {
+      "archiveCount": 8,
+      "hostRid": "win-x64",
+      "repeatContentVerified": true,
+      "sourceBytesStable": true,
+      "sourceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+      "sourceWorktreeDirty": true,
+      "completeProductSet": false,
+      "releaseCertification": false,
+      "receipt": "artifacts/packages-generator-only-host-verified/package-verification.json"
+    },
+    "installedHostProductsAttempt": {
+      "success": false,
+      "observedChecksBeforeFailure": 22,
+      "failure": "The actual archived source-contributor report contradicts its source or execution summary.",
+      "sourceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+      "sourceWorktreeDirty": true,
+      "completeProductSet": false,
+      "finalSourceSealPassed": false,
+      "releaseCertification": false,
+      "receipt": "artifacts/verification/generator-only-host-products/verification.json",
+      "fixStatus": "Default-strict receipt verifier now permits exact matching dirty source only for an explicitly partial local parent. Focused pure controls passed; installed rerun is still required."
+    },
+    "remainingExecution": "Clean exact-revision desktop/Host partitions, full installed product closure, corpus/performance/supply chain, Browser/NativeAOT matrices, VS2026 and public NuGet proofs remain required. Dirty local receipts are never same-revision release evidence."
   },
   "historicalLocalEvidence": {
     "date": "2026-10-16",
@@ -1840,6 +1859,71 @@
       "physicalFinal2Failure": "The installed tool correctly rejected an unlisted stale Newtonsoft.Json.dll in a reused publish-worker subtree. SDK and MSBuild installed consumption passed. The owned subtree replacement and exact archived worker manifest gate are fixed; 20 package closure controls pass. Fresh final3 physical verification is pending.",
       "compilerTestEnvironmentIsolation": "Six pure parent-preservation, exact-argv and ambient native-input isolation controls pass; Host shard controls pass 19/19. Production untracked-environment cache refusal and original 60/10-second budgets remain unchanged.",
       "allControlledCiGatesPending": true
+    },
+    "preGeneratorOnlyScopeCheckpoint": {
+      "date": "2026-10-16",
+      "referenceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
+      "releaseCertification": false,
+      "sameRevisionPlatformCiPassed": false,
+      "fullProductPackageCertificationPassed": false,
+      "frontendSuite": {
+        "sourceCohortCommit": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
+        "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
+        "passed": 252,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/anonymous-access-complete-frontend.trx"
+      },
+      "nativeBuildSuite": {
+        "sourceCohortCommit": "cc171550294972462bb0cdd2d4ac82b2d8c1e34c",
+        "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
+        "passed": 329,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/owned-compiler-mutation-complete-native.trx"
+      },
+      "sdkOnlyPackagePreflight": {
+        "sourceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
+        "sourceWorktreeDirty": false,
+        "success": true,
+        "hostRid": "win-x64",
+        "packageVersion": "0.0.0-local.sdkpreflight20261016a",
+        "archiveCount": 6,
+        "consumerCheckCount": 14,
+        "repeatContentVerified": true,
+        "sourceAndProductionBytesStable": true,
+        "hostToolCertified": false,
+        "releaseCertification": false,
+        "receipt": "artifacts/sdk-preflight-38f4d85-20261016-76471a20f5f34c018297fe330f0816e4/local-sdk-only-preflight.json"
+      },
+      "performanceCheckpoint": {
+        "sourceRevision": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
+        "sourceWorktreeDirty": false,
+        "host": "windows-x64",
+        "declarations": 10000,
+        "coldElapsedSeconds": 21.26191160000053,
+        "warmWatchdogElapsedSeconds": 10.027832799998578,
+        "warmTimedOut": true,
+        "warmCompletedElapsedSeconds": null,
+        "warmBudgetSeconds": 10,
+        "budgetPassed": false,
+        "controlledReleaseRerunPending": true,
+        "sameRevisionReleaseCertification": false,
+        "receipt": "artifacts/implementation/performance-068f-anonymous-strict-current/39bbe86474da4c1d95fadfa5711ece21/report.json"
+      },
+      "remainingExecution": "Exact-revision desktop components and complete Host partitions, controlled performance, corpus, complete installed SDK/tool/Runtime/plugin/MSBuild products, browser/NativeAOT matrices and publication proofs remain mandatory. Independent checkpoint counts must not be added into a full-suite certification."
+    },
+    "preGeneratorOnlySourceReadinessReview": {
+      "date": "2026-10-16",
+      "features": 64,
+      "configurationRows": 243,
+      "semanticGroups": 100,
+      "reviewCandidatesSha256": "4abb2c14de597794a5b50cfb844f3f42b65365c9bfd1649d9edb73a251fb4bcd",
+      "publicApiReview": "eng/acceptance/public-api-baseline-review.json",
+      "sourceAssertionScope": "Original identities preserved. Superseded unsafe/inert legacy policies explicitly documented; no old parser/API compatibility layer.",
+      "featureAcceptanceVerified": false,
+      "releaseCertification": false,
+      "remainingExecution": "Final clean same-revision desktop, browser/AOT, complete Host partitions, corpus/performance and actual installed products/attestations/public NuGet remain required."
     }
   },
   "phases": [
@@ -2035,15 +2119,23 @@
     "requireCurrentSourceAndActualEvidence": true
   },
   "sourceReadinessReview": {
-    "date": "2026-10-16",
-    "features": 64,
-    "configurationRows": 243,
-    "semanticGroups": 100,
-    "reviewCandidatesSha256": "4abb2c14de597794a5b50cfb844f3f42b65365c9bfd1649d9edb73a251fb4bcd",
+    "date": "2026-10-18",
+    "features": 62,
+    "configurationRows": 238,
+    "generatorOnlyPendingRowsReviewed": {
+      "features": 9,
+      "configurationRows": 31
+    },
+    "retainedPreviouslyReviewedActiveRows": {
+      "features": 53,
+      "configurationRows": 207
+    },
     "publicApiReview": "eng/acceptance/public-api-baseline-review.json",
-    "sourceAssertionScope": "Original identities preserved. Superseded unsafe/inert legacy policies explicitly documented; no old parser/API compatibility layer.",
+    "scopeRemovals": "eng/acceptance/scope-removals.json",
+    "sourceAssertionScope": "Frozen active identities and original definitions retained. The generator-only contracts and exact local assertions were reviewed; policy replacements explicitly do not claim removed legacy transports, layout inference, build services or raw ABI bypasses.",
+    "exactCaseReview": "All active test mappings match original15 local TRXs overlaid with focused11 unique import-constant cases and6 configured static-module cases. This local merged correspondence is not a new full run or same-revision CI proof.",
     "featureAcceptanceVerified": false,
     "releaseCertification": false,
-    "remainingExecution": "Final clean same-revision desktop, browser/AOT, complete Host partitions, corpus/performance and actual installed products/attestations/public NuGet remain required."
+    "remainingExecution": "Fresh clean same-revision required-host CI, complete Host partitions, corpus/performance, installed SDK/tool/MSBuild/Runtime products, Browser/NativeAOT, VS2026, attestations and public NuGet remain required."
   }
 }

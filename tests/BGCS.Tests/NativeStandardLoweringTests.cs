@@ -100,13 +100,12 @@ public sealed class NativeStandardLoweringTests
                 library = new() { id = "standard", nativeName = "standard_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Standard", name = "StandardApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            BGCS.Contracts.Interop.InteropModule interop = Assert.Single(result.generation.targetModels).interop;
+            BGCS.Contracts.Interop.InteropModule interop = Assert.Single(result.targetModels).interop;
             new BGCS.Analysis.Bridge.NativeValueProtocolVerifier().Verify(interop);
             var protocols = interop.types.Where(type => type.valueProtocol is not null).Select(type => type.valueProtocol!).ToArray();
             Assert.Contains(protocols, protocol => protocol.family == BGCS.Contracts.Interop.NativeValueFamily.String
@@ -126,7 +125,7 @@ public sealed class NativeStandardLoweringTests
             Assert.NotNull(Assert.Single(protocols, protocol => protocol.family == BGCS.Contracts.Interop.NativeValueFamily.TimePoint).clock);
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
             plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
-            string binary = Path.Combine(target, "native", "bin", OperatingSystem.IsWindows() ? "standard_bridge.dll" : OperatingSystem.IsMacOS() ? "libstandard_bridge.dylib" : "libstandard_bridge.so");
+            string binary = Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? "standard_bridge.dll" : OperatingSystem.IsMacOS() ? "libstandard_bridge.dylib" : "libstandard_bridge.so");
             library = NativeLibrary.Load(binary);
             T Function<T>(BridgeExport export) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, export.name));
             ReleaseError releaseError = Marshal.GetDelegateForFunctionPointer<ReleaseError>(NativeLibrary.GetExport(library, plan.errorReleaseExport));
@@ -342,20 +341,18 @@ public sealed class NativeStandardLoweringTests
                 source = new() { language = SourceLanguage.Cpp, headers = ["before.hpp", "fixture.hpp"], preamble = "#define BGCS_TEMPLATE_USER_PREAMBLE 1\n", parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 cpp = new() { templateInstantiations = new() { types = [new("integer-box", "Demo::Box<int>"), new("full-selector", "Demo::Selector<int>"), new("partial-selector", "Demo::Selector<float*>")], functions = [new("twice", "Demo::Twice<int>", "int", ["int"]), new("take", "Demo::Take<int>", "int", ["int&&"])] } },
                 api = new() { @namespace = "Generated.Templates", name = "TemplatesApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
             plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
-            string binary = Path.Combine(target, "native", "bin", OperatingSystem.IsWindows() ? "templates_bridge.dll" : OperatingSystem.IsMacOS() ? "libtemplates_bridge.dylib" : "libtemplates_bridge.so");
+            string binary = Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? "templates_bridge.dll" : OperatingSystem.IsMacOS() ? "libtemplates_bridge.dylib" : "libtemplates_bridge.so");
             library = NativeLibrary.Load(binary);
             T Function<T>(BridgeExport export) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, export.name));
             string storageAssertions = await File.ReadAllTextAsync(Path.Combine(target, "native", "src", "storage.assertions.cpp"));
             AssertInputOrder(storageAssertions);
-            AssertInputOrder(await File.ReadAllTextAsync(Path.Combine(target, "native", "src", "facts.input.hpp")));
             Assert.Contains("&Demo::Box<int>::Read", storageAssertions);
             Assert.DoesNotContain("&Demo::Box::Read", storageAssertions);
             Assert.True(plan.exports.Any(export => export.operation.kind == BridgeOperationKind.Construct), string.Join(Environment.NewLine, plan.source.declarations
@@ -464,18 +461,17 @@ public sealed class NativeStandardLoweringTests
                     managedProjection = new("long", "checked((int){value})", "(long){value} + 100")
                 }] },
                 api = new() { @namespace = "Generated.Recipes", name = "RecipesApi", names = ImmutableDictionary<string, string>.Empty.Add("Demo::Echo", "Echo") },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-            };
+                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
             using JsonDocument abi = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(target, "metadata", "abi.manifest.json")));
             JsonElement echo = abi.RootElement.GetProperty("module").GetProperty("functions").EnumerateArray()
                 .Single(function => function.GetProperty("sourceQualifiedName").ValueKind == JsonValueKind.String && function.GetProperty("sourceQualifiedName").GetString() == "Demo::Echo");
             Assert.Equal(3, echo.GetProperty("error").GetProperty("evidence").GetProperty("level").GetInt32());
-            string binary = Path.Combine(target, "native", "bin", OperatingSystem.IsWindows() ? "recipes_bridge.dll" : OperatingSystem.IsMacOS() ? "librecipes_bridge.dylib" : "librecipes_bridge.so");
+            string binary = Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? "recipes_bridge.dll" : OperatingSystem.IsMacOS() ? "librecipes_bridge.dylib" : "librecipes_bridge.so");
             string[] assemblyPaths = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
             CSharpCompilation compilation = CSharpCompilation.Create("GeneratedRecipes_" + Guid.NewGuid().ToString("N"),
                 Directory.GetFiles(Path.Combine(target, "managed"), "*.cs", SearchOption.AllDirectories).Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), new(LanguageVersion.CSharp14), path)),
@@ -531,11 +527,10 @@ public sealed class NativeStandardLoweringTests
                 }] },
                 api = new() { @namespace = "Generated.OwnedRecipe", name = "OwnedRecipeApi",
                     names = ImmutableDictionary<string, string>.Empty.Add("Demo::MakeToken", "CreateToken").Add("Demo::Live", "Live") },
-                runtime = new() { mode = "package" }, cache = new() { enabled = false }, nativeBuild = new() { mode = "sources" }
-            };
+                runtime = new() { mode = "package" }, cache = new() { enabled = false }};
             string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
             CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
@@ -543,7 +538,7 @@ public sealed class NativeStandardLoweringTests
             Assert.Equal("any", create.resultOwnership!.releaseThreadDomain);
             Assert.Equal(BGCS.Contracts.Common.EvidenceLevel.UserAsserted, create.resultOwnership.evidence.level);
             Assert.Equal(create.resultOwnership.releaseExport, create.resultRelease);
-            string binary = Path.Combine(target, "native", "bin", OperatingSystem.IsWindows() ? "owned_recipe_bridge.dll" : OperatingSystem.IsMacOS() ? "libowned_recipe_bridge.dylib" : "libowned_recipe_bridge.so");
+            string binary = Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? "owned_recipe_bridge.dll" : OperatingSystem.IsMacOS() ? "libowned_recipe_bridge.dylib" : "libowned_recipe_bridge.so");
             string[] paths = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
             CSharpCompilation compilation = CSharpCompilation.Create("GeneratedOwnedRecipe_" + Guid.NewGuid().ToString("N"),
                 Directory.GetFiles(Path.Combine(target, "managed"), "*.cs", SearchOption.AllDirectories).Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), new(LanguageVersion.CSharp14), path)),

@@ -5,7 +5,8 @@
   "intentionalMajorVersionChanges": [
     "Old flat configuration readers, mutable generator.lastResult/state and old method names are removed; grouped strict configuration and immutable per-request results replace them.",
     "Old arbitrary unsafe ABI bypass is replaced by explicit typed source fragments/recipes/shims with UserAsserted provenance and required shape/native verification; unsupported by-value ABI cannot be forced by a global flag.",
-    "Internal unbalanced text-operation IR is replaced by typed bridge operations; source writer remains a standalone neutral utility."
+    "Internal unbalanced text-operation IR is replaced by typed bridge operations; source writer remains a standalone neutral utility.",
+    "Generator-only scope removes remote configuration transport, native build/link/run product services, Objective-C facts, and generic Runtime atomics/iterators; scoped removals are unclaimed in scope-removals.json."
   ],
   "files": [
     {
@@ -87,9 +88,11 @@
           "exists": true
         },
         {
-          "path": "tests/BGCS.Tests/RemoteConfigurationTests.cs",
+          "path": "tests/BGCS.Tests/LocalConfigurationBoundaryTests.cs",
           "methods": [
-            "GenerationPublishesPinnedProvenanceAndAChangedPinChangesTheActualApi"
+            "RemoteInheritanceHasNoProductTransport",
+            "FormerPinnedRemoteObjectsAreRejectedRatherThanSilentlyIgnored",
+            "LocalReferencesRoundTripWithoutChangingTheirDeclaringPath"
           ],
           "exists": true
         },
@@ -994,5 +997,6 @@
     "hostReceipt": "artifacts/test-results/cpp-flat-naming-host-schema-cache-two.trx",
     "hostPassed": 2,
     "historicalFixtureFailure": "artifacts/test-results/cpp-immutable-flat-naming-thirty-three.trx"
-  }
+  },
+  "historicalScope": "Historical source/parity observations from before generator-only convergence. Paths, exists flags and local receipts describe their recorded revisions, not current implementation or requirements. Current scope is feature-inventory.json plus scope-removals.json; this is not a current architecture specification or release certificate."
 }

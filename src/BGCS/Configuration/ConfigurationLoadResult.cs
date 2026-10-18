@@ -11,6 +11,4 @@ public sealed record ConfigurationLoadResult(
     ImmutableArray<InputDependency> inputs
 )
 {
-    /// <summary>Gets exact pinned remote content identities, separate from revalidated local files.</summary>
-    public ImmutableArray<PinnedConfigurationInput> remoteInputs { get; init; } = [];
 }

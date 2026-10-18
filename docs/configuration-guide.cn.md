@@ -52,7 +52,6 @@ schema 拒绝未知内置字段。插件选项只有在 bootstrap 注册所属 n
     "name": "SampleApi",
     "names": { "sample_add": "Add" }
   },
-  "nativeBuild": { "mode": "sources", "sources": ["src/sample.c"] },
   "output": { "root": "Generated" }
 }
 ```
@@ -155,9 +154,9 @@ marshalling 能力；LibraryImport 验证也检查其生成源码。选择导入
       "nativeType": "NativeVector_int",
       "managedType": "Consumer.NativeVector<int>",
       "fields": { "size": "Size", "capacity": "Capacity", "data": "Data" }
-    }]
-  },
-  "managedBuild": { "sources": ["ConsumerTypes.cs"] }
+    }],
+    "projectionInputs": { "sources": ["ConsumerTypes.cs"] }
+  }
 }
 ```
 
@@ -279,24 +278,9 @@ callback slot 和 native proxy 生命周期协议。
 需要遵守 C argument promotion 的明确固定 native wrapper。
 非平凡 C++ record 不能只为使生成编译通过，就映射成同大小的托管结构。
 
-## 原生与托管构建输入
+## 静态托管投影输入
 
-`nativeBuild.mode` 为 `none`、`sources` 或 `prebuilt`。sources 包括上游实现、生成 bridge
-和声明 shim。prebuilt 需要明确匹配的 `prebuiltTargetId`、format/CPU 检查和必需导出
-验证。模式和实际验证阶段会记录，不靠推断。
-
-provider 为 `auto`、`clang`、`gnu`、`msvc`、`clang-cl`、`cmake`、`meson`、`msbuild`。
-`buildToolPath`、`auxiliaryToolPath` 选择可选构建系统程序。compiler/linker 参数分开，
-library 和搜索根明确列出。`outputKind` 选择允许的 shared/static/object 形式。
-provider 构造不可变参数列表计划，统一 executor 带着取消与时间限制执行。
-
-`managedBuild.references`、`sources`、`defines` 声明候选托管编译需要的输入。
-手写 partial 类型和外部 managed carrier 放在这些源码输入或消费者工程，位于生成根之外。
-自定义 carrier/ABI 仍需通过存储和调用契约；仅名称映射不算证据。
-
-`bridge` 只生成原生产物。中立 `bridge.manifest.json` 可交给带显式覆盖参数的
-`native-build`。SDK 与 MSBuild 使用同一 Host 构建逻辑；见[真实调用测试](testing.md)和
-[MSBuild](msbuild.cn.md)。
+`api.projectionInputs.sources`、`references`、`defines` 是投影、编译期常量与外部值类型分析使用的静态输入，不是构建指令。手写 partial 文件与外部类型由消费者工程自行编译。原生库与生成的 bridge 由外部构建系统编译、链接和部署。配置没有原生或托管项目构建分组。
 
 ## Runtime 包与源码交付
 
@@ -308,54 +292,9 @@ namespace 改写采用结构化方式，单文件布局可以将闭包合入 `Bi
 一份绑定避免携带重复 Runtime 实现。多个源码 Runtime 绑定默认使用各自 API namespace；
 选择自定义 namespace 时须明确处理冲突。
 
-## 组合、profile 与路径归属
+## 本地组合、profile 与路径归属
 
-优先级依次是：内置默认值、选定 named profile、有序 `extends` 基础配置、当前文档、
-显式 CLI/SDK 覆盖。标量覆盖、对象按字段合并、普通列表替换。
-`false`、`0`、空字符串不会被静默忽略；是否有效由字段 schema 与完整验证决定。
-继承环路失败。
-
-```json
-{
-  "schemaVersion": 1,
-  "extends": ["base.bindgen.json"],
-  "profiles": {
-    "single": { "output": { "layout": "singleFile" } }
-  },
-  "profile": "single",
-  "output": { "root": "Generated" }
-}
-```
-
-每份本地文档的路径保留其目录来源。CLI 覆盖基于调用目录。插件设置保留 `pathBase`
-和逐值来源。workspace 路径基于workspace文档，每份绑定继续保留自身基准。
-远程基础配置使用显式对象；单独的 URL 字符串不会触发网络读取：
-
-```json
-{
-  "schemaVersion": 1,
-  "extends": [
-    {
-      "url": "https://example.com/bgcs/base.json",
-      "sha256": "<远程文档原始字节的64位SHA-256十六进制值>",
-      "pathBase": "./bindings"
-    }
-  ]
-}
-```
-
-`pathBase` 明确指定远程文档中本地路径的基准：相对于声明该引用的文档本地基准，或使用绝对目录。
-不会将 URL 目录当作文件目录，也不会退回当前工作目录。远程文档若继续引用本地基础文件，仍按此明确基准解析。
-每份文档都声明 `schemaVersion: 1`；hash 在 JSON 解析和合并前校验。
-
-请求只接受 HTTPS，重定向仍须 HTTPS，最多五次；不接受 URI fragment 或嵌入式凭据。
-每次远程读取限 30 秒、每份文档限 16 MiB；整次组合限 128 次文档访问、64 MiB 输入和 64 层继承。
-远程字节仅在本次组合内保存，不创建磁盘下载缓存。相同 URL 的冲突 pin 会失败。
-本地输入仍保留可复核的文件身份，远程内容使用独立不可变 hash/长度/路径基准记录，不伪装成本地文件。
-
-嵌入 SDK 可用 `GenerationRequest.FromFileAsync(path, cancellationToken: token)`、`BuildRequest.FromFileAsync(...)`
-与 `WorkspaceLoader.LoadAsync(...)` 取消组合。需要自定义 HTTPS transport 时，可传入具有 caller-owned `HttpClient`
-的 `BindingConfigurationLoader`；调用方负责关闭该 client，并应禁用其自动重定向。
+`extends` 是本地配置路径列表，按声明顺序组合。路径相对于声明它的文档，URL 不被加载。命名 profile 在本地组合后应用；循环、未知字段和冲突必须明确修复。`GenerationRequest.FromFileAsync(path, cancellationToken: token)` 支持取消本地读取。
 
 ## 插件 bootstrap 与缓存策略
 
@@ -498,7 +437,7 @@ receiver 必须保留选定 record 指针或 opaque 别名的精确身份。保�
 
 同一个成员的类型化 `value` 和 `expression` 只能选一个。类型化值保留准确整数文本和
 Unicode 字符串。表达式必须是有大小限制、可使用框架、生成常量／枚举载体，以及显式声明的
-`managedBuild.sources` / `managedBuild.references` 求值的 C# 编译期表达式。
+`api.projectionInputs.sources` / `api.projectionInputs.references` 求值的 C# 编译期表达式。
 语句、预处理指令、运行时调用、未声明的消费者专有引用、枚举越界值及有歧义的
 选择器会在输出前失败。规划器以 warnings-as-errors 编译断言，读取编译器常量值并转换为确定的
 字面量；最终产物复核拒绝常量的类型、值和可见性变化。完整消费者构建仍会验证其全部引用和源码。
@@ -513,8 +452,8 @@ Host 在 emission 缓存查询前冻结每个声明的源码、程序集引用�
 没有实现或类型依赖的框架目标可以缺省；一旦选中缺失的转发类型，常量验证仍会失败。
 消费者程序集始终要求完整的引用闭包，包括未选中的成员和纯类型转发依赖。
 
-例如把包含 `Vendor.Values.Answer` 的源码或程序集加入 `managedBuild`，再声明
-`"expression": "global::Vendor.Values.Answer"`。`managedBuild.defines` 在普通 `net10.0`
+例如把包含 `Vendor.Values.Answer` 的源码或程序集加入 `api.projectionInputs`，再声明
+`"expression": "global::Vendor.Values.Answer"`。`api.projectionInputs.defines` 在普通 `net10.0`
 验证工程的框架符号和默认 Debug 符号上追加。选中常量及其字段、签名、别名、依赖中的错误会使生成失败。
 只有生成 API／上下文的手写 partial 方法体中，与常量求值无关的错误可以延后，因为常量求值无法执行
 这些方法体。`build` 仍对全部源码执行 warnings-as-errors 编译，不延后方法体错误。
@@ -529,7 +468,7 @@ Host 在 emission 缓存查询前冻结每个声明的源码、程序集引用�
 
 如需由消费者声明导入库名常量，设置
 `api.importLibraryNameConstant = "Vendor.LibraryNames.Native"`，并通过
-`managedBuild.sources` 或 `managedBuild.references` 声明其源码或程序集。
+`api.projectionInputs.sources` 或 `api.projectionInputs.references` 声明其源码或程序集。
 DllImport、LibraryImport 的属性保留完全限定的字段引用。生成时只编译冻结的输入，
 不执行消费者代码；字段必须是 `const string`，值必须精确等于最终导入名
 （浏览器静态模块为 `__Internal`）。字段缺失、可变或值不符都会阻止发布。

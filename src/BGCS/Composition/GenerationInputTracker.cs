@@ -22,24 +22,20 @@ internal sealed class GenerationInputTracker(
 {
     private readonly JsonElement m_configuration = configuration.Clone();
     private readonly List<SourceSnapshot> m_snapshots = [];
-    private readonly List<SourceSnapshot> m_nativeSourceSnapshots = [];
-    private readonly List<object> m_nativeSourceEvidence = [];
-    private readonly List<object> m_nativeSourceKeys = [];
     private readonly HashSet<object> m_declared = new(ReferenceEqualityComparer.Instance);
     private readonly List<ExtensionFingerprint> m_fingerprints = [];
     private readonly HashSet<string> m_unfingerprinted = new(StringComparer.Ordinal);
     private readonly HashSet<string> m_cacheIneligibilityReasons = new(StringComparer.Ordinal);
-    private readonly List<Observation> m_observations = [];
+    private readonly List<Func<CancellationToken, ValueTask>> m_workerStateChecks = [];
 
     internal IReadOnlyList<SourceSnapshot> snapshots => m_snapshots;
-    internal IReadOnlyList<SourceSnapshot> nativeSourceSnapshots => m_nativeSourceSnapshots;
-    internal IReadOnlyList<object> nativeSourceEvidence => m_nativeSourceEvidence;
-    internal IReadOnlyList<object> nativeSourceKeys => m_nativeSourceKeys;
     internal IReadOnlyList<ExtensionFingerprint> fingerprints => m_fingerprints;
     internal IReadOnlyCollection<string> unfingerprintedServices => m_unfingerprinted;
     internal IReadOnlyCollection<string> cacheIneligibilityReasons => m_cacheIneligibilityReasons;
 
     internal void CaptureArgumentInputs(SourceSnapshot snapshot) => m_snapshots.Add(snapshot);
+
+    internal void CaptureWorkerStateCheck(Func<CancellationToken, ValueTask> verify) => m_workerStateChecks.Add(verify);
 
     internal CacheFingerprintContext WorkerFingerprintContext(NativeTargetDescriptor target) => new(m_configuration, Path.GetFullPath(pathBase), target);
 
@@ -73,83 +69,6 @@ internal sealed class GenerationInputTracker(
         foreach (WorkerPluginFingerprint fingerprint in capture.fingerprints.Where(item => item.state is null))
             if (!capture.unfingerprintedServices.Contains(fingerprint.id))
                 throw new InvalidDataException("The worker failed to disable an extension without a complete fingerprint.");
-    }
-
-    internal void CaptureObservation(
-        Func<CancellationToken, ValueTask> verify,
-        SourceSnapshot? preflight = null
-    ) => m_observations.Add(new(verify, preflight));
-
-    internal void CaptureNativeSourceObservation(
-        string targetId,
-        ContentDigest observation,
-        SourceSnapshot snapshot,
-        string ownedScratchDirectory,
-        IReadOnlyDictionary<string, string> sourcePathMappings
-    ) {
-        m_nativeSourceSnapshots.Add(snapshot);
-        m_nativeSourceKeys.Add(NativeSourceInputIdentity.Create(snapshot, sourcePathMappings));
-        // Verification retains the real exclusion. Persisted evidence names only
-        // its private role, so the destroyed per-operation directory does not
-        // manufacture a source change in otherwise identical generation receipts.
-        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        string scratch = Path.GetFullPath(ownedScratchDirectory);
-        if (!snapshot.excludedDirectories.Any(directory => Path.GetFullPath(directory).Equals(scratch, comparison)))
-            throw new InvalidDataException("The native source observation did not retain its owned scratch exclusion.");
-        m_nativeSourceEvidence.Add(NativeSourceInputIdentity.Evidence(snapshot, sourcePathMappings,
-            snapshot.excludedDirectories.Select(directory => Path.GetFullPath(directory).Equals(scratch, comparison)
-                ? "native-source-view:/scratch" : directory)));
-        string location = typeof(BGCS.NativeBuild.Planning.NativeSourceViewPreprocessor).Assembly.Location;
-        if (string.IsNullOrEmpty(location))
-        {
-            m_cacheIneligibilityReasons.Add("The native source-view implementation has no hashable assembly file.");
-            return;
-        }
-        using FileStream implementation = File.OpenRead(location);
-        m_fingerprints.Add(new("BGCS.NativeSourceView", Convert.ToHexStringLower(SHA256.HashData(implementation)), targetId, observation));
-    }
-
-    internal void CaptureNativeRecordTraits(
-        string targetId,
-        BGCS.NativeBuild.Validation.NativeRecordTraitObservation observation,
-        string ownedScratchDirectory,
-        IReadOnlyDictionary<string, string> sourcePathMappings,
-        ContentDigest? sourceObservation = null,
-        IReadOnlyDictionary<string, string>? ownedDirectoryRoles = null
-    ) {
-        if (observation.inputs.IsDefault || observation.facts.IsDefault)
-            throw new InvalidDataException("The native record-trait observation omitted its frozen facts or execution inputs.");
-        _ = new ContentDigest(observation.observationFingerprint.value);
-        byte[] identity = JsonSerializer.SerializeToUtf8Bytes(new { sourceObservation, observation.observationFingerprint });
-        ContentDigest state = new(Convert.ToHexStringLower(SHA256.HashData(identity)));
-        object[] keys = observation.inputs.Select(snapshot => NativeSourceInputIdentity.Create(snapshot, sourcePathMappings)).ToArray();
-        StringComparer paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        string scratch = Path.GetFullPath(ownedScratchDirectory);
-        object[] evidence = observation.inputs.Select(snapshot => (object)NativeSourceInputIdentity.Evidence(snapshot, sourcePathMappings,
-            snapshot.excludedDirectories.Select(ExcludedRole))).ToArray();
-        m_nativeSourceSnapshots.AddRange(observation.inputs);
-        m_nativeSourceKeys.Add(new { kind = "nativeRecordTraits", state, inputs = keys });
-        m_nativeSourceEvidence.Add(new { kind = "nativeRecordTraits", state, observation.facts, inputs = evidence });
-        string location = typeof(BGCS.NativeBuild.Validation.NativeRecordTraitObserver).Assembly.Location;
-        if (string.IsNullOrEmpty(location))
-        {
-            m_cacheIneligibilityReasons.Add("The native record-trait observer has no hashable assembly file.");
-            return;
-        }
-        using FileStream implementation = File.OpenRead(location);
-        m_fingerprints.Add(new("BGCS.NativeRecordTraits", Convert.ToHexStringLower(SHA256.HashData(implementation)), targetId, state));
-
-        string ExcludedRole(string directory)
-        {
-            string absolute = Path.GetFullPath(directory);
-            if (ownedDirectoryRoles is not null)
-                foreach (var role in ownedDirectoryRoles)
-                    if (paths.Equals(absolute, role.Key)) return role.Value;
-                    else if (absolute.StartsWith(role.Key + Path.DirectorySeparatorChar,
-                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                        return role.Value + Path.GetRelativePath(role.Key, absolute).Replace('\\', '/');
-            return paths.Equals(absolute, scratch) ? "native-record-traits:/source-scratch" : directory;
-        }
     }
 
     internal void DisableCaching(IEnumerable<string> reasons)
@@ -195,44 +114,13 @@ internal sealed class GenerationInputTracker(
 
     internal async ValueTask VerifyAsync(CancellationToken cancellationToken)
     {
-        await VerifyBeforeAndReplayAsync(cancellationToken).ConfigureAwait(false);
-        if (SourceSnapshotBatch.GetMismatch(VerificationSnapshots(), cancellationToken) is string afterMismatch)
-            throw new IOException("A declared input changed while compiler observations were revalidated. " + afterMismatch);
+        if (SourceSnapshotBatch.GetMismatch(m_snapshots, cancellationToken) is string mismatch)
+            throw new IOException("An extension's declared external inputs changed during generation. " + mismatch);
+        foreach (Func<CancellationToken, ValueTask> verify in m_workerStateChecks)
+            await verify(cancellationToken).ConfigureAwait(false);
+        if (m_workerStateChecks.Count != 0 && SourceSnapshotBatch.GetMismatch(m_snapshots, cancellationToken) is string afterMismatch)
+            throw new IOException("Declared inputs changed during worker extension state verification. " + afterMismatch);
     }
-
-    internal async ValueTask VerifyBeforeAndReplayAsync(CancellationToken cancellationToken)
-    {
-        if (SourceSnapshotBatch.GetMismatch(VerificationSnapshots(), cancellationToken) is string beforeMismatch)
-            throw new IOException("An extension's declared external inputs changed during generation. " + beforeMismatch);
-        bool first = true;
-        foreach (Observation observation in m_observations)
-        {
-            // The first callback immediately follows the complete batch above.
-            // Every preceding callback is an external operation: later native
-            // observations must independently recheck their own preconditions.
-            if (!first && observation.preflight is { } preflight && !SourceSnapshotVerifier.Matches(preflight, cancellationToken))
-                throw new IOException("Native source-view inputs changed before compiler observation replay.");
-            await observation.verify(cancellationToken).ConfigureAwait(false);
-            first = false;
-        }
-    }
-
-    // Enumerate at the verification fence, after any observation callbacks have
-    // completed. Never retain successful checks across those callbacks.
-    internal IEnumerable<SourceSnapshot> VerificationSnapshots()
-    {
-        foreach (SourceSnapshot item in m_snapshots) yield return item;
-        foreach (SourceSnapshot item in m_nativeSourceSnapshots) yield return item;
-        // A precondition remains an obligation even if a future internal caller
-        // did not capture the same snapshot through another input path.
-        foreach (Observation observation in m_observations)
-            if (observation.preflight is { } preflight) yield return preflight;
-    }
-
-    private sealed record Observation(
-        Func<CancellationToken, ValueTask> verify,
-        SourceSnapshot? preflight
-    );
 
     internal sealed record ExtensionFingerprint(
         string serviceType,

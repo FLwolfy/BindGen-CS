@@ -13,9 +13,37 @@ public sealed record ExternalTypeProjection(
     ImmutableArray<ExternalFieldProjection> fields
 )
 {
-    /// <summary>Gets independent managed field observations, or null before the isolated consumer probe runs.</summary>
+    /// <summary>Gets optional independently supplied managed storage observations; BGCS does not execute a consumer layout probe.</summary>
     public ManagedTypeStorageFact? managedStorage { get; init; }
+    /// <summary>Gets statically bound scalar field semantics for copying through a separate raw carrier, without asserting CLR storage layout.</summary>
+    public ManagedStaticTypeShape? managedShape { get; init; }
 }
+
+/// <summary>Describes statically resolved unmanaged value fields without offsets, alignment or runtime layout assertions.</summary>
+/// <param name="managedType">The exact configured closed consumer type.</param>
+/// <param name="fields">Every ordinary instance field with compiler-established scalar semantics.</param>
+/// <param name="evidence">Declared static binding provenance; this is not a verified runtime layout receipt.</param>
+public sealed record ManagedStaticTypeShape(
+    string managedType,
+    ImmutableArray<ManagedStaticFieldShape> fields,
+    Evidence evidence
+);
+
+/// <summary>Describes a scalar field for ordinary value assignment or address-bit copying without storage offsets.</summary>
+/// <param name="name">The exact consumer field name.</param>
+/// <param name="typeIdentity">The resolved scalar type identity.</param>
+/// <param name="scalarKind">The scalar conversion semantics.</param>
+/// <param name="size">The scalar byte width for the declared target; not an enclosing CLR layout measurement.</param>
+/// <param name="isPublic">Whether the field is publicly accessible.</param>
+/// <param name="isWritable">Whether the instance field is writable.</param>
+public sealed record ManagedStaticFieldShape(
+    string name,
+    string typeIdentity,
+    ManagedScalarKind scalarKind,
+    int size,
+    bool isPublic,
+    bool isWritable
+);
 
 /// <summary>Associates exact source identities with managed fields without depending on generated raw field names.</summary>
 /// <param name="nativeField">The native declaration identity.</param>

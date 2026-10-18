@@ -140,47 +140,24 @@ Variadic and unspecified-prototype calls require fixed-signature native
 wrappers. FunctionTable does not provide arbitrary varargs. A storage carrier
 for `va_list` is not a portable general calling implementation.
 
-## Bridge and actual compiler proof
+## Bridge source and independent consumer verification
 
-C++ bridge operations express construction, destruction, native casts,
-parameter/result conversion and exception boundaries. Multiple inheritance
-requires an actual native cast rather than assumed equal object addresses.
-Exceptions must terminate at a supported C ABI status/error boundary; catch
-and cleanup paths retain explicit allocator ownership.
+Typed bridge operations express construction, destruction, native casts, conversions
+and exception boundaries. Multiple inheritance uses a native cast. C++ exceptions
+stop at the C status/error boundary with explicit allocator cleanup.
 
-The generated C header is reparsed; export names, parameters and returns are
-compared with the planned bridge. Ownership/error/lifetime semantics merge by
-stable identity instead of disappearing during reparse. Controlled source
-fragments declare exact content/inputs and remain subject to bridge and
-native construction checks.
+BGCS reparses the generated C header and checks export signatures, then merges
+ownership/error/lifetime semantics by stable identity. Optional storage and callable
+assertions are emitted as source for the consumer to compile. Generation does not
+run compiler drivers, preprocess with GCC/MSVC, compile objects or measure a managed
+consumer. Its facts describe the declared Clang parse environment. Downstream builds
+must keep that environment and ABI compatible; independent repository fixtures
+compile and invoke generated bindings to test those assumptions.
 
-Source builds compare effective declarations and compile native trait/layout
-guards with the selected actual compiler. Header/response/config/executable/
-library/search inputs are locked and rechecked before publication. This helps
-detect parser-versus-builder differences, including target macros and layouts.
-It does not replace runtime round trips. Prebuilt artifacts need their explicit
-target provenance and checks; CPU format inspection alone cannot prove libc ABI.
-
-Effective declarations retain written parameter array dimensions separately
-from adjusted pointer signatures, as well as inline/definition/linkage facts.
-Selected scalar object macros are materialized only in a preprocessing input;
-the native compiler expands its actual header branches and definitions before
-the fact frontend checks the exact scalar kind, width, signedness and value.
-Const variable values are compared directly. IEEE values use exact bits, so
-positive and negative zero differ. These frontend-derived constants retain
-their declared evidence; they are not promoted to independent proof of every
-compiler's floating-point arithmetic or optimization behavior.
-
-MSVC preprocessing emits line directives without Clang's system-header marker.
-The fact adapter restores that metadata only for resolved SDK include roots,
-preserving source tokens and user-header classification. It also preserves an
-MSVC intrinsic declaration under a parser-only nonbuiltin name. A bounded list
-of unavailable dependent type/member intrinsics can appear in unused SDK
-templates; any concrete instantiation produces a hard error, including during
-SFINAE. No guessed intrinsic result is accepted. Unknown intrinsics, concrete
-uses that the parser cannot evaluate, and mismatched declarations fail the
-build. This compatibility boundary does not claim arbitrary MSVC/GCC source
-extensions can be parsed by Clang.
+Unsupported input or an unproved by-value calling ABI is rejected. Static field
+binding establishes scalar-copy compatibility only, never measured CLR layout or
+native calling equivalence. Use an explicit frontend or pointer/native shim where
+required; no compiler-compatibility rewrite or guessed same-size replacement runs.
 
 ## Import modes and final source checks
 
@@ -199,43 +176,6 @@ redundant explicit Cdecl metadata only for its validated browser static profile;
 different conventions or profile changes are rejected. Other import paths
 retain their explicit convention strategy. This bounded choice is covered by
 the same actual browser AOT fixture, not a generated-output patch.
-
-## Bounded GNU declaration adaptation
-
-GNU C++ SDK headers can contain compiler extensions that differ from the pinned
-Clang frontend. Only complete leading toolchain include trees with actual
-dependency and system-origin evidence can become an isolated declaration prelude.
-User tokens still come from the selected GNU compiler, and a separate `-dM`
-operation supplies its final macro state. The worker owns the prelude PCH until
-fact extraction finishes and clears its macro environment before parsing the
-already expanded user tokens. PCH files, Clang handles and AST types remain
-outside Contracts.
-
-This is a bounded capability: later interleaved SDK includes, nested user headers
-inside SDK trees, unproved pack/pragma history, user builtin changes and
-include-entry macros depending on contextual builtins are rejected explicitly.
-Restructure the header boundary or supply an appropriate frontend/native shim.
-Equal-sized substitute types cannot establish GNU type identity.
-
-Prelude-derived facts carry `requiresNativeCompilerProof`. Before publication,
-`generate`, `bridge` and every `build` mode require the selected native compiler
-to check original named canonical types, variable types, enum values and selected
-scalar constants, and compile storage guards and the bridge. Constants are frozen
-before support headers; floating-point values use exact IEEE bits. Final native
-build flags retain their separate effective-fact and string-byte checks. Object
-construction can involve relocatable linking; these checks do not certify final
-library linking, invocation or every ABI. Unsupported exposed types fail rather
-than treating private opaque implementation types as publicly nameable.
-
-## Selected native record traits
-
-Clang and GCC can classify the same C++ library declarations differently. Before lowering a GNU declaration-prelude view, BGCS acquires default-constructible, standard-layout and trivially-copyable facts for nameable, concrete, accessible records from the selected native compiler. The query consumes the exact authenticated output of the completed native preprocessing operation; it does not reinclude headers under a different `__BASE_FILE__` context.
-
-Each constexpr boolean becomes an independent data symbol of size 1 or 2. After validating the target object identity, the observer reads exact symbol sizes with a pinned `llvm-nm` or `nm`, without executing target code. This capability currently requires ELF data-symbol sizes. COFF, Mach-O, LTO, missing or duplicate symbols and unsupported sizes fail explicitly; adjacent symbol addresses are never used to guess sizes.
-
-The raw Clang parse cache is unchanged. Cold parses, cache restores and effective-source verification apply the current native observations before consuming traits. Complete source-view identity is combined with query recipe, facts and tool inputs for cache and final input verification. Raw source and object hashes containing private paths or capability nonces remain per-execution evidence rather than stable output identity. Only the three queried traits change: type identities, sizes, alignment, fields and independent canonical/layout/bridge compilation assertions remain required. An object probe does not certify final linking or invocation.
-
-This mechanism does not rewrite arbitrary user `static_assert` expressions, template branches or declarations based on compiler-specific traits. User tokens that Clang cannot parse, or declarations that disagree with the selected native compiler, still fail explicitly and require a matching frontend or an explicit native shim.
 
 ## Callback addresses with unsupported invocation signatures
 

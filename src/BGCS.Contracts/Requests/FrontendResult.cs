@@ -13,6 +13,4 @@ public sealed record FrontendResult(
 {
     /// <summary>Gets independently locked extracted parser resources, or null when the frontend has no verifiable execution-input closure.</summary>
     public SourceSnapshot? executionInputs { get; init; }
-    /// <summary>Gets whether the detached graph requires independent compilation with the selected native compiler before binding publication.</summary>
-    public bool requiresNativeCompilerProof { get; init; }
 }

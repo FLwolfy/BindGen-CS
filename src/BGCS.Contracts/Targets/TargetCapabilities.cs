@@ -1,20 +1,12 @@
-using System.Collections.Immutable;
-using BGCS.Contracts.Requests;
 
 namespace BGCS.Contracts.Targets;
 
-/// <summary>Declares implemented platform construction mechanisms independently of certification evidence.</summary>
-/// <param name="outputKinds">Native construction forms supplied by the platform adapter.</param>
-/// <param name="defaultOutputKind">The native consumption form selected by an automatic request.</param>
-/// <param name="requiresExplicitSdk">Whether the platform adapter requires a target SDK.</param>
-/// <param name="supportsDynamicModules">Whether BGCS supplies a dynamic native module path for this target family.</param>
-/// <param name="assetLayout">The native asset layout family.</param>
+/// <summary>Declares parser SDK and consumer module capabilities, independently of build tools or certification.</summary>
+/// <param name="requiresExplicitSdk">Whether parsing this target requires an explicitly selected SDK.</param>
+/// <param name="supportsDynamicModules">Whether the consumer runtime can load native modules dynamically.</param>
 public sealed record TargetCapabilities(
-    ImmutableArray<NativeOutputKind> outputKinds,
-    NativeOutputKind defaultOutputKind,
     bool requiresExplicitSdk,
-    bool supportsDynamicModules,
-    string assetLayout
+    bool supportsDynamicModules
 );
 
 /// <summary>Names an independently verified platform support stage.</summary>

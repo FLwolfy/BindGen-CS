@@ -29,7 +29,7 @@ public sealed class SourceContributionIntegrationTests
     [Theory]
     [InlineData(SourceLanguage.C, "split")]
     [InlineData(SourceLanguage.Cpp, "singleFile")]
-    public async Task ContractsOnlyManifestContributesSourcesThatSurviveStoreCleanupAndNativeBuild(SourceLanguage language, string layout)
+    public async Task ContractsOnlyManifestContributesSourcesThatSurviveStoreCleanupAndExternalFixtureCompilation(SourceLanguage language, string layout)
     {
         using Scratch scratch = new(language);
         string plugin = Path.Combine(scratch.root, "SourceFixturePlugin.dll");
@@ -45,13 +45,11 @@ public sealed class SourceContributionIntegrationTests
             new JsonSerializerOptions { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
         BindingConfiguration configuration = scratch.Configuration() with
         {
-            extensions = new() { plugins = ["plugin.json"] }, output = new() { root = "Generated", layout = layout },
-            nativeBuild = new() { mode = "sources" }
-        };
+            extensions = new() { plugins = ["plugin.json"] }, output = new() { root = "Generated", layout = layout }};
         await using BindingHost host = Builder().Build();
         GenerationRequest request = new(configuration, scratch.root);
-        BuildResult builtTogether = await host.BuildAsync(new(request));
-        GenerationResult cold = builtTogether.generation;
+        GenerationResult builtTogether = await NativeConsumerHarness.GenerateAndCompileAsync(host, request, compileManaged: true);
+        GenerationResult cold = builtTogether;
         Assert.True(cold.success, cold.GetDiagnosticSummary());
         var inspected = Assert.Single(cold.targetModels);
         var declaration = Assert.Single(inspected.native.declarations, item => item.name == "contributed_add");
@@ -61,10 +59,8 @@ public sealed class SourceContributionIntegrationTests
         Assert.Contains("ContributedHelper", string.Join("\n", managed));
         if (layout == "singleFile") Assert.Single(managed);
         Assert.Contains(cold.artifacts, artifact => artifact.relativePath.EndsWith("/native/resources/contributions/fixture.source/helpers/payload.txt", StringComparison.Ordinal));
-        string nativeManifest = Assert.Single(Directory.GetFiles(cold.outputRoot, "bridge.manifest.json", SearchOption.AllDirectories));
-        ManifestNativeBuildResult built = await host.NativeBuildAsync(new(nativeManifest));
-        Assert.True(built.success, built.GetDiagnosticSummary());
-        nint native = NativeLibrary.Load(built.nativeArtifact!);
+        string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(Path.Combine(cold.outputRoot, inspected.targetId))));
+        nint native = NativeLibrary.Load(binary);
         try
         {
             if (language == SourceLanguage.C)
@@ -149,23 +145,6 @@ public sealed class SourceContributionIntegrationTests
         Assert.True(disposed);
     }
 
-    [Fact]
-    public async Task InvalidContributedManagedSourceFailsCandidateCompilationWithoutReplacingOwnedOutput()
-    {
-        using Scratch scratch = new(SourceLanguage.C);
-        await using BindingHost initial = Builder().Build();
-        GenerationRequest request = new(scratch.Configuration(), scratch.root);
-        GenerationResult previous = await initial.GenerateAsync(request);
-        Assert.True(previous.success, previous.GetDiagnosticSummary());
-        byte[] report = await File.ReadAllBytesAsync(Path.Combine(previous.outputRoot, "generation.report.json"));
-        await using BindingHost host = Builder().AddSourceContributor("invalid-managed", 0, () => new DelegateContributor("invalid-managed", (_, _) =>
-            ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("Invalid.cs", SourceContributionRole.ManagedSource,
-                "text/x-csharp", "this is invalid C# source")], new(EvidenceLevel.Declared, "invalid managed fixture"))))).Build();
-        BuildResult rejected = await host.BuildAsync(new(request));
-        Assert.False(rejected.success);
-        Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.code == "BGCS-MANAGED-COMPILE");
-        Assert.Equal(report, await File.ReadAllBytesAsync(Path.Combine(previous.outputRoot, "generation.report.json")));
-    }
 
     private sealed class DelegateContributor(string name, Func<SourceContributionRequest, CancellationToken, ValueTask<SourceContribution>> create, Action? release = null) : ISourceContributor, IDisposable
     {

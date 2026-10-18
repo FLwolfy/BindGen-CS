@@ -19,7 +19,7 @@ if (( ${#projects[@]} == 0 )); then
   exit 1
 fi
 # The production CLI owns snapshot generation and restores its dependencies on a fresh runner.
-"${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+"${DOTNET_CMD}" build "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
   --configuration "${CONFIGURATION}"
 # Advanced frontend references are delivered independently of Host's project
 # graph and must stay in the reviewed public SDK surface after decoupling.
@@ -38,7 +38,7 @@ for project in "${projects[@]}"; do
     printf 'Public API baseline is missing: %s\n' "${baseline}" >&2
     exit 1
   fi
-  "${DOTNET_CMD}" run --project "${ROOT_DIR}/src/BGCS.Tool/BGCS.Tool.csproj" \
+  "${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
     --configuration "${CONFIGURATION}" --no-build -- validate api-snapshot "${assembly}" "${current}"
   if ! diff -u "${baseline}" "${current}"; then
     printf 'Public API changed for %s. Review the change and update the pre-release baseline deliberately.\n' "${project}" >&2

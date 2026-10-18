@@ -76,7 +76,6 @@ internal static partial class InitCommand
         Targets = new[] { new { Id = "host", Toolchain = "auto" } },
         Api = new { Namespace = "Native.Bindings", Name = "NativeApi", Style = "instance", ImportMode = "functionTable", Framework = "net10.0" },
         Runtime = new { Mode = "package" },
-        NativeBuild = new { Mode = "none", Provider = "auto" },
         Output = new { Root = "Generated", Layout = "split" },
         Cache = new { Enabled = true }
     };

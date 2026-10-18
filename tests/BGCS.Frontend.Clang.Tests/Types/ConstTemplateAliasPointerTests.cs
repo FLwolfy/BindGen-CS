@@ -20,10 +20,8 @@ namespace BGCS.Frontend.Clang.Tests;
 
 public sealed class ConstTemplateAliasPointerTests(ITestOutputHelper output)
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task InstantiatedSdkPointerAliasesPreserveCanonicalPointeeQualifiers(bool usePrelude)
+    [Fact]
+    public async Task InstantiatedSdkPointerAliasesPreserveCanonicalPointeeQualifiers()
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-const-template-alias-" + Guid.NewGuid().ToString("N"));
         string sdk = Directory.CreateDirectory(Path.Combine(root, "sdk")).FullName;
@@ -57,12 +55,12 @@ public sealed class ConstTemplateAliasPointerTests(ITestOutputHelper output)
                 VolatileUtf8Pointer read_volatile_utf8();
                 ConstVolatileUtf8Pointer read_const_volatile_utf8();
                 """;
-            await File.WriteAllTextAsync(header, (usePrelude ? string.Empty : "#include <view.hpp>\n") + declarations);
-            var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp, "clang");
+            await File.WriteAllTextAsync(header, "#include <view.hpp>\n" + declarations);
+            string compiler = FindClang();
+            var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"), new(compilerPath: compiler))), SourceLanguage.Cpp);
             FrontendRequest request = new(target, SourceLanguage.Cpp, [header])
             {
                 pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false,
-                declarationPrelude = usePrelude ? new("#include \"" + sdkHeader.Replace("\\", "\\\\", StringComparison.Ordinal) + "\"\n", [sdkHeader]) : null
             };
             NativeModule module = (await new ClangFrontend().ParseAsync(request, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
@@ -141,5 +139,20 @@ public sealed class ConstTemplateAliasPointerTests(ITestOutputHelper output)
             }
         }
         finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private static string FindClang()
+    {
+        string installed = OperatingSystem.IsWindows()
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "LLVM", "bin", "clang++.exe")
+            : OperatingSystem.IsMacOS() ? "/usr/bin/clang++" : "/usr/bin/clang++-20";
+        if (File.Exists(installed)) return installed;
+        foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string name in OperatingSystem.IsWindows() ? new[] { "clang++.exe", "clang.exe" } : new[] { "clang++-20", "clang++", "clang-20", "clang" })
+            {
+                string candidate = Path.Combine(directory, name);
+                if (File.Exists(candidate)) return Path.GetFullPath(candidate);
+            }
+        throw new FileNotFoundException("The independent native qualifier oracle requires an installed Clang driver; this is a test prerequisite, not a generator discovery service.");
     }
 }

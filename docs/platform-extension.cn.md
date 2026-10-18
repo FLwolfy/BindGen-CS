@@ -17,6 +17,8 @@
 目标 ID 是 provider 识别的身份，不是 ABI 证明。platform、architecture、ABI、triple、
 字节序及工具链必须一致；相同大小或一个 RID 名称不能证明按值调用安全。
 
+动态/静态模块能力也不决定模块名。生成器保留 `library.nativeName`；消费者负责将原生输入注册或链接为该名称。.NET 10 浏览器的 `NativeFileReference` 文件名决定 P/Invoke 模块名（例如 `api.c` / `api.a` 对应 `api`）。`__Internal` 需要消费者显式注册，不能从静态目标能力自动推断。详见[外部编译](native-metadata.cn.md#外部编译)。
+
 ## 例子：解析 iOS 设备描述
 
 当前内置 `AppleNativeTargetProvider` 区分 macOS、iOS 设备和 iOS 模拟器。
@@ -49,8 +51,7 @@ iOS 仍属于[平台矩阵](../eng/acceptance/platform-matrix.json)中的待认�
    SDK/sysroot 与 Clang builtin headers 保持各自归属。
 3. 通过 Host 的 `AddTargetProvider`，或普通插件的 `ExtensionPort.NativeTargetProvider`
    注册会话服务工厂。未知 ID 返回 `false`；多个 provider 认领相同目标时明确拒绝，不按注册顺序覆盖。
-4. 新平台族需要显式 `TargetCapabilities`，声明输出形式及动态/静态消费机制。内置构建器或资产
-   布局无法表达时，再通过 `INativeBuildProvider`、`INativeArtifactPackager` 等端口扩展。
+4. 新平台族需显式声明托管 runtime 和动态/静态调用能力；原生编译、链接和部署由使用者的外部构建系统负责。
    注册目标不会自动获得未知平台的内置 RID、托管 runtime 或按值 ABI 分类器。
 5. 共用 `NativeModule` → `CppBridgeModule`/`InteropModule` → `ManagedApiModel` 流水线。
    无法表达的 ABI 行为在所属事实、分析、构建或 runtime 边界完善；不能从宿主或大小静默猜测。
@@ -129,7 +130,6 @@ BindGen-CS.slnx
     BGCS
     BGCS.Cpp2C
     BGCS.CSharp
-    BGCS.NativeBuild
     BGCS.Runtime
     BGCS.Tool
   integrations

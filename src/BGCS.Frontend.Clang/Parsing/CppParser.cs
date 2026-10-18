@@ -110,7 +110,6 @@ internal static class CppParser
         ClangNativeRuntime.EnsureLoaded();
         options = options ?? new CppParserOptions();
         var arguments = CreateArguments(options);
-        if (options.declarationPrelude is { } declarationPrelude) arguments.AddRange(declarationPrelude.arguments);
 
         var translationFlags = CXTranslationUnit_Flags.CXTranslationUnit_None;
         // C header helpers need authoritative definition facts before we can
@@ -133,7 +132,6 @@ internal static class CppParser
             string? rootFileContent = null;
             // Build the root input source file
             var tempBuilder = new StringBuilder();
-            if (options.declarationPrelude is { } preparedPrelude) tempBuilder.Append(preparedPrelude.consumerPrefix);
             if (options.preHeaderText != null)
             {
                 tempBuilder.AppendLine(options.preHeaderText);
@@ -181,12 +179,6 @@ internal static class CppParser
             };
             var compilation = builder.rootCompilation;
             compilation.inputText = rootFileContent;
-            if (options.declarationPrelude is { } prepared)
-            {
-                compilation.declarationPreludeInputs = prepared.inputs;
-                compilation.declarationPreludeFiles = prepared.ownedFiles;
-                foreach (var diagnostic in prepared.diagnostics) compilation.diagnostics.Log(diagnostic);
-            }
             bool skipProcessing = false;
             if (translationUnit.NumDiagnostics != 0)
             {
@@ -261,7 +253,7 @@ internal static class CppParser
         const string source = "enum bgcs_wchar_probe { bgcs_wchar_signed = (wchar_t(-1) < wchar_t(0)) ? 1 : 0 };";
         using CXUnsavedFile input = CXUnsavedFile.Create(file, source);
         ReadOnlySpan<CXUnsavedFile> inputs = stackalloc CXUnsavedFile[] { input };
-        using CXTranslationUnit probe = CXTranslationUnit.Parse(index, file, arguments, inputs, ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_None));
+        using CXTranslationUnit probe = CXTranslationUnit.Parse(index, file, arguments, inputs, CXTranslationUnit_Flags.CXTranslationUnit_None);
         for (uint indexOfDiagnostic = 0; indexOfDiagnostic < probe.NumDiagnostics; indexOfDiagnostic++)
         {
             using CXDiagnostic diagnostic = probe.GetDiagnostic(indexOfDiagnostic);
@@ -320,7 +312,7 @@ internal static class CppParser
         using CXUnsavedFile input = CXUnsavedFile.Create(C_CPPASTROOTFILENAME, source.ToString());
         ReadOnlySpan<CXUnsavedFile> inputs = stackalloc CXUnsavedFile[] { input };
         using CXTranslationUnit probe = CXTranslationUnit.Parse(index, C_CPPASTROOTFILENAME, arguments, inputs,
-            ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies));
+            CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies);
         for (uint diagnosticIndex = 0; diagnosticIndex < probe.NumDiagnostics; diagnosticIndex++)
         {
             using CXDiagnostic diagnostic = probe.GetDiagnostic(diagnosticIndex);
@@ -371,7 +363,7 @@ internal static class CppParser
         static bool Accessible(CppElement element)
         {
             if (element is CppClass record && (record.visibility is CppVisibility.Private or CppVisibility.Protected
-                || record.templateKind is CppTemplateKind.TemplateClass or CppTemplateKind.PartialTemplateClass or CppTemplateKind.ObjCGenericClass)) return false;
+                || record.templateKind is CppTemplateKind.TemplateClass or CppTemplateKind.PartialTemplateClass)) return false;
             return element.parent is not CppElement parent || Accessible(parent);
         }
     }
@@ -412,14 +404,6 @@ internal static class CppParser
         return builder.ToString();
     }
 
-    internal static CXTranslationUnit_Flags ProbeFlags(
-        CppCompilation compilation,
-        CXTranslationUnit_Flags flags
-    )
-        // Libclang otherwise silently omits replay declarations when loading a
-        // PCH serialized with its detailed preprocessing record enabled.
-        => compilation.declarationPreludeFiles.Length == 0 ? flags : flags | CXTranslationUnit_Flags.CXTranslationUnit_DetailedPreprocessingRecord;
-
     internal static List<string> CreateArguments(CppParserOptions options)
     {
         var arguments = new List<string>();
@@ -445,13 +429,6 @@ internal static class CppParser
                 break;
             case SourceLanguage.C:
                 arguments.Add("-xc");
-                break;
-            case SourceLanguage.ObjC:
-                arguments.Add("-xobjective-c");
-                // Blocks are part of the Objective-C surface modeled by CppBlockFunctionType.
-                // Clang does not enable the extension uniformly for every non-Apple host,
-                // even when an Apple target triple is selected.
-                arguments.Add("-fblocks");
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

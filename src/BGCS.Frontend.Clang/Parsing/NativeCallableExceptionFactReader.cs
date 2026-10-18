@@ -46,7 +46,7 @@ internal static class NativeCallableExceptionFactReader
         using CXUnsavedFile input = CXUnsavedFile.Create(CppParser.C_CPPASTROOTFILENAME, source.ToString());
         ReadOnlySpan<CXUnsavedFile> inputs = stackalloc CXUnsavedFile[] { input };
         using CXTranslationUnit probe = CXTranslationUnit.Parse(index, CppParser.C_CPPASTROOTFILENAME, arguments, inputs,
-            CppParser.ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies));
+            CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies);
         for (uint diagnosticIndex = 0; diagnosticIndex < probe.NumDiagnostics; diagnosticIndex++)
         {
             using CXDiagnostic diagnostic = probe.GetDiagnostic(diagnosticIndex);
@@ -90,7 +90,7 @@ internal static class NativeCallableExceptionFactReader
     {
         for (CppElement? element = function; element is not null; element = element.parent as CppElement)
             if (element is CppFunction { isFunctionTemplate: true } || element is CppClass
-                { templateKind: CppTemplateKind.TemplateClass or CppTemplateKind.PartialTemplateClass or CppTemplateKind.ObjCGenericClass }) return false;
+                { templateKind: CppTemplateKind.TemplateClass or CppTemplateKind.PartialTemplateClass }) return false;
         return true;
     }
 }

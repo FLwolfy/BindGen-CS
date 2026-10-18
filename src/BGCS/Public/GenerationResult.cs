@@ -22,8 +22,6 @@ public sealed record GenerationResult(
     /// <summary>Gets detached target models for explicit SDK inspection without embedding them in routine result JSON.</summary>
     [JsonIgnore]
     public ImmutableArray<TargetInspection> targetModels { get; init; } = [];
-    /// <summary>Gets verified native consumption items selected from target facts and the managed runtime profile.</summary>
-    public ImmutableArray<NativeReferenceDescriptor> nativeReferences { get; init; } = [];
     /// <summary>Gets each explicitly scoped cache decision; a hit never certifies skipped build or invocation checks.</summary>
     public ImmutableArray<GenerationCacheStageResult> cacheStages { get; init; } = [];
     /// <summary>Gets whether generation and publication completed without errors.</summary>

@@ -23,8 +23,6 @@ public sealed record AnalysisResult(
     /// <summary>Gets response/configuration file bytes and negative lookup inputs captured before native parsing.</summary>
     public SourceSnapshot? argumentInputs { get; init; }
     internal BGCS.Contracts.Requests.FrontendRequest? preparedFrontend { get; init; }
-    /// <summary>Gets whether binding publication must compile independent selected-native assertions for these parser-adapted facts.</summary>
-    public bool requiresNativeCompilerProof { get; init; }
     /// <summary>Gets whether parsing and neutral graph verification succeeded.</summary>
     public bool success => module is not null && !diagnostics.Any(diagnostic => diagnostic.isFailure);
 

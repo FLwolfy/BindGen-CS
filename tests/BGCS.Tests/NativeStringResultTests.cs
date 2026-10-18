@@ -78,12 +78,12 @@ public sealed class NativeStringResultTests
                         lifetime = NativeLifetimeKind.Call, zeroTerminated = true, allowsNull = false, retainsPointer = false }]
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources", sources = ["text.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
             {
@@ -144,7 +144,7 @@ public sealed class NativeStringResultTests
                     private static void Check(bool condition,string name){if(!condition)throw new InvalidOperationException("Text result check failed: "+name);}
                 }
                 """;
-            string native = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), native,
                 configuration.library.nativeName, consumer, "TextResultConsumer", root, sourceRuntime));
             if (mode == BindingImportMode.FunctionTable && !sourceRuntime)
@@ -152,7 +152,7 @@ public sealed class NativeStringResultTests
                 var before = Directory.GetFiles(result.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(result.outputRoot, path), File.ReadAllBytes, StringComparer.Ordinal);
                 await using BindingHost tampering = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot())
                     .AddArtifactProcessor("string-result.tamper", 0, () => new Tamper()).Build();
-                BuildResult rejected = await tampering.BuildAsync(new(new(configuration, root)));
+                GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(tampering, new(configuration, root));
                 Assert.False(rejected.success);
                 Assert.Contains("string result", rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
                 var after = Directory.GetFiles(result.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(result.outputRoot, path), File.ReadAllBytes, StringComparer.Ordinal);

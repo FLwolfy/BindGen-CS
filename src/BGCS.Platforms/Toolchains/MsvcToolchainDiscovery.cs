@@ -5,27 +5,22 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using BGCS.Infrastructure.Execution;
 using Microsoft.Win32;
 
 namespace BGCS.Platforms.Toolchains;
 
 /// <summary>Describes explicit Visual C++ and Windows SDK paths without a developer shell.</summary>
 /// <param name="compiler">The target-specific compiler executable.</param>
-/// <param name="linker">The matching linker executable.</param>
 /// <param name="compilerVersion">The compiler's structured file version.</param>
 /// <param name="sdkRoot">The selected Windows SDK root.</param>
 /// <param name="sdkVersion">The selected Windows SDK version.</param>
 /// <param name="includeDirectories">VC, UCRT, shared and UM header paths in search order.</param>
-/// <param name="libraryDirectories">Target-specific VC, UCRT and UM library paths.</param>
 public sealed record MsvcToolchainInfo(
     string compiler,
-    string linker,
     Version compilerVersion,
     string sdkRoot,
     string sdkVersion,
-    ImmutableArray<string> includeDirectories,
-    ImmutableArray<string> libraryDirectories
+    ImmutableArray<string> includeDirectories
 );
 
 /// <summary>Locates installed Visual C++ tools and a complete Windows SDK without downloading or invoking a command shell.</summary>
@@ -45,25 +40,28 @@ public static class MsvcToolchainDiscovery
             string compiler = Path.Combine(configured, "bin", host, architecture, "cl.exe");
             if (File.Exists(compiler)) return Path.GetFullPath(compiler);
         }
-        string vswhere = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
-        if (!File.Exists(vswhere)) return null;
-        ProcessExecutionResult query = ProcessExecutor.ExecuteAsync(vswhere,
-            ["-latest", "-products", "*", "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
-            Path.GetDirectoryName(vswhere)!, TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
-        if (query.timedOut || query.exitCode != 0) throw new IOException("Visual C++ installation discovery failed: " + query.standardError);
-        string? installation = query.standardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
-        if (installation is null) return null;
-        string tools = Path.Combine(installation, "VC", "Tools", "MSVC");
-        if (!Directory.Exists(tools)) return null;
-        foreach (string root in Directory.GetDirectories(tools).OrderByDescending(path => Version.TryParse(Path.GetFileName(path), out Version? version) ? version : new Version(0, 0)))
+        // Installed metadata and environment hints are sufficient for parser SDK discovery.
+        // Do not launch vswhere, a compiler or a command shell from the generator.
+        foreach (string programFiles in new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) }.Distinct())
         {
-            string compiler = Path.Combine(root, "bin", host, architecture, "cl.exe");
-            if (File.Exists(compiler)) return Path.GetFullPath(compiler);
+            string installations = Path.Combine(programFiles, "Microsoft Visual Studio");
+            if (!Directory.Exists(installations)) continue;
+            foreach (string version in Directory.GetDirectories(installations).OrderDescending(StringComparer.Ordinal))
+                foreach (string edition in Directory.GetDirectories(version).Order(StringComparer.Ordinal))
+                {
+                    string tools = Path.Combine(edition, "VC", "Tools", "MSVC");
+                    if (!Directory.Exists(tools)) continue;
+                    foreach (string toolset in Directory.GetDirectories(tools).OrderByDescending(path => Version.TryParse(Path.GetFileName(path), out Version? value) ? value : new Version()))
+                    {
+                        string compiler = Path.Combine(toolset, "bin", host, architecture, "cl.exe");
+                        if (File.Exists(compiler)) return Path.GetFullPath(compiler);
+                    }
+                }
         }
         return null;
     }
 
-    /// <summary>Resolves matching compiler, headers and linker libraries for an installed toolchain.</summary>
+    /// <summary>Resolves matching installed parser headers for an installed toolchain.</summary>
     /// <param name="compiler">An absolute cl.exe path; it must name the requested architecture.</param>
     /// <param name="architecture">x64, x86 or arm64.</param>
     /// <param name="sdkRoot">An explicit SDK root, or null for installed Windows SDK discovery.</param>
@@ -84,9 +82,8 @@ public static class MsvcToolchainDiscovery
         if (!target.Name.Equals(architecture, StringComparison.OrdinalIgnoreCase) || target.Parent?.Parent?.Name != "bin")
             throw new InvalidOperationException("The MSVC driver directory does not match the declared target architecture.");
         string vc = target.Parent.Parent.Parent!.FullName;
-        string linker = Path.Combine(target.FullName, "link.exe");
-        string vcHeaders = Path.Combine(vc, "include"), vcLibraries = Path.Combine(vc, "lib", architecture);
-        if (!File.Exists(linker) || !Directory.Exists(vcHeaders) || !Directory.Exists(vcLibraries)) throw new IOException("The selected Visual C++ installation is incomplete.");
+        string vcHeaders = Path.Combine(vc, "include");
+        if (!Directory.Exists(vcHeaders)) throw new IOException("The selected Visual C++ installation is incomplete.");
         string root = Path.GetFullPath(sdkRoot ?? InstalledSdkRoot());
         string includes = Path.Combine(root, "Include");
         if (!Directory.Exists(includes)) throw new DirectoryNotFoundException("The Windows SDK root has no Include directory: " + root);
@@ -97,13 +94,12 @@ public static class MsvcToolchainDiscovery
         {
             string version = Path.GetFileName(versionRoot);
             string ucrt = Path.Combine(versionRoot, "ucrt"), shared = Path.Combine(versionRoot, "shared"), um = Path.Combine(versionRoot, "um");
-            string ucrtLib = Path.Combine(root, "Lib", version, "ucrt", architecture), umLib = Path.Combine(root, "Lib", version, "um", architecture);
-            if (!new[] { ucrt, shared, um, ucrtLib, umLib }.All(Directory.Exists)) continue;
+            if (!new[] { ucrt, shared, um }.All(Directory.Exists)) continue;
             FileVersionInfo metadata = FileVersionInfo.GetVersionInfo(absolute);
-            return new(absolute, linker, new(metadata.FileMajorPart, metadata.FileMinorPart, metadata.FileBuildPart, metadata.FilePrivatePart), root, version,
-                [vcHeaders, ucrt, shared, um], [vcLibraries, ucrtLib, umLib]);
+            return new(absolute, new(metadata.FileMajorPart, metadata.FileMinorPart, metadata.FileBuildPart, metadata.FilePrivatePart), root, version,
+                [vcHeaders, ucrt, shared, um]);
         }
-        throw new IOException("No complete Windows SDK headers and linker libraries exist for " + architecture + (sdkVersion is null ? "." : " at the pinned version " + sdkVersion + "."));
+        throw new IOException("No complete Windows SDK headers exist for " + architecture + (sdkVersion is null ? "." : " at the pinned version " + sdkVersion + "."));
     }
 
     [SupportedOSPlatform("windows")]

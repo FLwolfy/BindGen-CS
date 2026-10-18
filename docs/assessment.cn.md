@@ -29,7 +29,7 @@ BGCS 3.0 的分层、扩展接口与安全策略有实质实现和回归证据�
 普通扩展项目引用 `BGCS.Contracts`，实现所需端口并通过 `IBindingPlugin` 注册。
 例如，新类型语义进入 `ICppTypeLowering`，变更托管呈现进入 `IManagedApiTransform`，
 补充原生/托管源码进入 `ISourceContributor`，新目标进入 `INativeTargetProvider`，
-新构建方式进入 `INativeBuildProvider`。仅需要有限 C++ 转换时，可以先选 recipe 或 native shim。
+原生构建方式由使用者的外部构建系统负责。仅需要有限 C++ 转换时，可以先选 recipe 或 native shim。
 
 插件 manifest 声明契约范围、服务身份/优先级、设置 schema 和锁定资源；实际服务工厂按会话
 创建并释放。通过 `ICacheFingerprintProvider` 声明状态与外部输入，无完整指纹时相应缓存
@@ -51,7 +51,7 @@ MSVC/GNU 等实际预处理及独立 native proof 用来检查最终构建没有
 ## 3. 如何做到解耦
 
 Frontend 只构建中立原生事实；Analysis 判断选择、布局、语义和安全；Cpp2C 把 C++ 降为可复核
-的 C ABI；CSharp 从 interop/managed 模型生成；NativeBuild 负责构建/资产；Runtime 负责调用
+的 C ABI；CSharp 从 interop/managed 模型生成；外部工具负责原生构建；Runtime 负责调用
 与生命周期。Host 组合它们，CLI/MSBuild 只把请求接入同一个入口。
 
 Contracts/Runtime 无其他 BGCS 工程依赖；普通 lowering 不引用 Clang；解析在 worker 中。

@@ -41,7 +41,7 @@ public sealed class ExternalCarrierPlanner
 
     /// <summary>Builds one checked pair of raw-to-consumer and consumer-to-raw field-copy helpers.</summary>
     /// <param name="module">The unchanged native ABI.</param>
-    /// <param name="projection">The exact field mapping and isolated managed field observations.</param>
+    /// <param name="projection">The exact field mapping and static scalar shape or independently supplied storage observations.</param>
     /// <param name="rawCarrierType">The already planned generated raw carrier type.</param>
     /// <param name="rawFieldNames">Generated raw identifiers keyed by original native field identity.</param>
     /// <returns>The complete field-copy plan, with no change to the native import signature.</returns>
@@ -62,9 +62,11 @@ public sealed class ExternalCarrierPlanner
         {
             if (!rawFieldNames.TryGetValue(field.nativeField, out string? rawName))
                 throw new InvalidOperationException("An external projection's exact native field has no generated raw identifier.");
-            ManagedFieldStorageFact observed = projection.managedStorage!.fields.Single(item => item.name == field.managedField);
+            ManagedScalarKind scalar = projection.managedShape is { } shape
+                ? shape.fields.Single(item => item.name == field.managedField).scalarKind
+                : projection.managedStorage!.fields.Single(item => item.name == field.managedField).scalarKind;
             fields.Add(new(field.nativeField, CSharpNames.Identifier(rawName), CSharpNames.Identifier(field.managedField))
-            { isNativeAddress = observed.scalarKind == ManagedScalarKind.NativeAddress });
+            { isNativeAddress = scalar == ManagedScalarKind.NativeAddress });
         }
         string identity = projection.nativeType.value + "\n" + managed + "\n" + raw.NormalizeWhitespace().ToFullString() + "\n"
             + string.Join('\n', fields.Select(field => field.nativeField.value + "|" + field.rawField + "|" + field.managedField + "|" + field.isNativeAddress));
@@ -97,6 +99,6 @@ public sealed record CSharpExternalFieldCopyPlan(
     string managedField
 )
 {
-    /// <summary>Gets whether the independently measured fields copy address bits without changing their ownership or pointee lifetime.</summary>
+    /// <summary>Gets whether the exact scalar fields copy address bits without changing their ownership or pointee lifetime.</summary>
     public bool isNativeAddress { get; init; }
 }

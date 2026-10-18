@@ -22,7 +22,7 @@ def selection_policy(root: Path, lock: dict, corpus: Path) -> dict:
         declared = policy["libraries"][library]
         if excluded != declared["excludedDeclarations"]:
             raise RuntimeError("Corpus exclusions changed without an audited exact policy update: " + library)
-        for limitation in declared.get("upstreamLimitations", []):
+        for limitation in declared.get("upstreamLimitations", []) + declared.get("compilerConditionalHelpers", []):
             repository = repositories[limitation["repository"]]
             header = corpus / repository["id"] / limitation["header"]
             if repository["revision"] != limitation["revision"] or digest(header) != limitation["headerSha256"]:
@@ -31,5 +31,7 @@ def selection_policy(root: Path, lock: dict, corpus: Path) -> dict:
             declaration = "\n".join(lines[limitation["line"] - 1:limitation["lastLine"]]).strip()
             if declaration != limitation["declaration"].strip() or limitation["sourceSignature"] not in excluded:
                 raise RuntimeError("An upstream limitation's exact declaration or signature changed.")
+            if "portableCounterpart" in limitation and limitation["portableCounterpart"] in excluded:
+                raise RuntimeError("A compiler-only helper exclusion must preserve its portable public operation.")
     return {"schemaVersion": policy["schemaVersion"], "policySha256": digest(path), "scope": policy["scope"],
             "libraries": policy["libraries"]}

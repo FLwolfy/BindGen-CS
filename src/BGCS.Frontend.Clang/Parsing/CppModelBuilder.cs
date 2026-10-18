@@ -162,7 +162,6 @@ internal partial class CppModelBuilder : CompilationLoggerBase
             case CXEvalResultKind.CXEval_Float:
                 value = new(cursor, resultEval.AsDouble);
                 break;
-            case CXEvalResultKind.CXEval_ObjCStrLiteral:
             case CXEvalResultKind.CXEval_StrLiteral:
             case CXEvalResultKind.CXEval_CFStr:
                 value = new(cursor, resultEval.AsStr);

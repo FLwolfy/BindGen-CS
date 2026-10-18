@@ -1,6 +1,8 @@
 # BGCS 架构重构验收
 
-> 历史验收记录：本文保留 2026-10-04 旧架构与当时检查点的原始结果，不代表 BGCS 3.0 当前源码或发布认证。3.0 的十三工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
+> 2026-10-18 生成器范围：本文旧构建/provider 数量与接口记录属于历史检查点。当前产品仅生成 C/C++ 绑定与 bridge 源码，项目/原生构建、链接与打包由外部系统负责；当前范围以 README、api 与 MSBuild 文档及 scope-removals.json 为准。
+
+> 历史验收记录：本文保留 2026-10-04 旧架构与当时检查点的原始结果，不代表 BGCS 3.0 当前源码或发布认证。3.0 的当前工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
 
 [文档索引](README.cn.md) · [架构](architecture.cn.md) · [完整计划](platform-architecture-refactor-plan.cn.md) · [C# 规范](csharp-development-standard.cn.md)
 

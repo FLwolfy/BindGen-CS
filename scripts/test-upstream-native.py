@@ -19,6 +19,7 @@ import uuid
 import xml.etree.ElementTree as ET
 
 from acceptance_evidence import digest, publication, source_identity
+from native_fixture_build import compile_shared
 from corpus import load_lock, verify
 from corpus_policy import selection_policy
 from cpp_acceptance_fixture import execution_identity, stage_repository_generator, tool_command
@@ -170,9 +171,11 @@ def resolve_cmake(explicit: str | None) -> Path:
 def generated_native_inputs(generated: Path, library: str, required: bool = False) -> tuple[list[str], list[str]]:
     manifest = publication(generated, library)
     sources = [(generated / item["relativePath"]).as_posix() for item in manifest["artifacts"]
-               if item["mediaType"] in ("text/x-c", "text/x-c++")]
+               if item["mediaType"] in ("text/x-c", "text/x-c++")
+               and Path(item["relativePath"]).suffix in (".c", ".cpp", ".cc", ".cxx")]
     directories = sorted({(generated / item["relativePath"]).parent.as_posix() for item in manifest["artifacts"]
-                          if item["mediaType"] in ("text/x-c-header", "text/x-c++-header")})
+                          if item["mediaType"] in ("text/x-c", "text/x-c++", "text/x-c-header", "text/x-c++-header")
+                          and Path(item["relativePath"]).suffix in (".h", ".hpp", ".hxx")})
     if required and (not sources or not directories):
         raise RuntimeError("The C++ upstream invocation requires its complete validated generated bridge sources and headers.")
     return sources, directories
@@ -198,29 +201,32 @@ def verify_missing_upstream_definition(root: Path, generated: Path, assets: dict
     request["source"]["selection"]["includeDeclarations"] = [limitation["sourceSignature"]]
     request["source"]["selection"]["excludeDeclarations"] = []
     request["targets"] = [{"id": "host", "settings": {"compilerPath": assets["cppCompiler"]}}]
-    request["managedBuild"] = {"references": [str(runtime.resolve())]}
+    request.setdefault("api", {})["projectionInputs"] = {"references": [str(runtime.resolve())]}
     request["cache"] = {"enabled": False}
-    request["nativeBuild"] = {"mode": "sources", "provider": "auto", "libraries": [str(path) for path in static_libraries]}
-    if os.name == "nt":
-        request["nativeBuild"]["libraries"].append("psapi")
+    candidate = work / "bimg-negative-generated"
+    request["output"]["root"] = str(candidate)
+    libraries = [str(path) for path in static_libraries]
+    if os.name == "nt": libraries.append("psapi.lib")
     else:
-        request["nativeBuild"]["libraries"] += ["pthread", "m"]
-        if assets["system"] == "Linux": request["nativeBuild"]["libraries"].append("dl")
+        libraries += ["-lpthread", "-lm"]
+        if assets["system"] == "Linux": libraries.append("-ldl")
     config = work / "bimg-negative.bindgen.json"
     config.write_text(json.dumps(request, indent=2) + "\n", encoding="utf-8")
     name = "missing-definition-negative-build"
+    helper.run_process([*tool_command(dotnet, tool), "generate", str(config), "--json"], work, logs, "missing-definition-generation",
+                       environment_overrides={"DOTNET_ROOT": str(Path(dotnet).parent)}, separate_stderr=True)
+    def native_run(arguments, directory, evidence, label):
+        return helper.run_process(arguments, directory, evidence, label, environment_overrides={"DOTNET_ROOT": str(Path(dotnet).parent)})
+    _, includes = generated_native_inputs(candidate, "bimg", True)
     try:
-        helper.run_process([*tool_command(dotnet, tool), "build", str(config), "--json"], work, logs, name,
-                           environment_overrides={"DOTNET_ROOT": str(Path(dotnet).parent)}, separate_stderr=True)
+        compile_shared(work, candidate, logs / "external-native-negative" / helper.native_filename(), [], native_run, logs,
+                       compiler=assets["cppCompiler"], libraries=tuple(libraries), include_directories=tuple(Path(value) for value in [*includes, *request["source"].get("includeDirectories", []), *request["source"].get("systemIncludeDirectories", [])]))
     except RuntimeError:
-        pass
+        diagnostics = "\n".join(path.read_text(encoding="utf-8-sig", errors="replace") for path in logs.glob("external-native-negative-native-*.log"))
+        if "imageConvert" not in diagnostics or not re.search(r"unresolved|undefined|LNK2019|LNK1120|Undefined symbols", diagnostics, re.IGNORECASE):
+            raise RuntimeError("The external native negative failed before the required unresolved-symbol witness: " + diagnostics[-2000:])
     else:
-        raise RuntimeError("The upstream's undefined exact overload was incorrectly accepted by the public build.")
-    result = json.loads((logs / (name + ".log")).read_text(encoding="utf-8-sig"))
-    diagnostics = "\n".join(item["message"] for item in result.get("diagnostics", []))
-    if result.get("success") is not False or result.get("published") is not False or "imageConvert" not in diagnostics \
-            or not re.search(r"unresolved|undefined|LNK2019|LNK1120|Undefined symbols", diagnostics, re.IGNORECASE):
-        raise RuntimeError("The negative request failed before independently proving the missing upstream link symbol: " + diagnostics)
+        raise RuntimeError("The external fixture link incorrectly accepted the upstream's undefined exact overload.")
     publication(previous, "bimg")
     after = {path.relative_to(previous).as_posix(): digest(path) for path in previous.rglob("*") if path.is_file()}
     if after != before:
@@ -228,7 +234,7 @@ def verify_missing_upstream_definition(root: Path, generated: Path, assets: dict
     return {"limitationId": limitation["id"], "sourceSignature": limitation["sourceSignature"],
             "nativeLinkRejected": True, "priorPublicationPreserved": True, "priorFileCount": len(before),
             "staticLibraries": [{"path": str(path), "sha256": digest(path)} for path in static_libraries],
-            "diagnostics": result["diagnostics"], "executionIdentity": execution_identity(root, tool, runtime)}
+            "diagnostics": diagnostics, "executionIdentity": execution_identity(root, tool, runtime)}
 
 
 def main() -> int:

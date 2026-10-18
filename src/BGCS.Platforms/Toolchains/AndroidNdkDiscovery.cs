@@ -33,10 +33,10 @@ public static class AndroidNdkDiscovery
         string compiler = Path.Combine(prebuilt, "bin", OperatingSystem.IsWindows() ? "clang++.exe" : "clang++");
         string sysroot = Path.Combine(prebuilt, "sysroot"), includes = Path.Combine(sysroot, "usr", "include"), cxx = Path.Combine(includes, "c++", "v1");
         string baseTriple = architecture == "arm64" ? "aarch64-linux-android" : "x86_64-linux-android";
-        string architectureHeaders = Path.Combine(includes, baseTriple), libraries = Path.Combine(sysroot, "usr", "lib", baseTriple, apiLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        if (!File.Exists(compiler) || !new[] { sysroot, includes, cxx, architectureHeaders, libraries }.All(Directory.Exists))
-            throw new IOException("The configured NDK has no complete headers, compiler and libraries for the selected architecture/API level.");
-        NativeToolchainDescriptor toolchain = new(compiler, sysroot, [includes, architectureHeaders], cxxSystemIncludeFolders: [cxx], sdkVersion: revision, libraryDirectories: [libraries]);
+        string architectureHeaders = Path.Combine(includes, baseTriple);
+        if (!new[] { sysroot, includes, cxx, architectureHeaders }.All(Directory.Exists))
+            throw new IOException("The configured NDK has no complete parser headers for the selected architecture/API level.");
+        NativeToolchainDescriptor toolchain = new(compiler, sysroot, [includes, architectureHeaders], cxxSystemIncludeFolders: [cxx], sdkVersion: revision);
         return new(new("android-" + architecture), "android", architecture, "android", baseTriple + apiLevel.ToString(System.Globalization.CultureInfo.InvariantCulture), toolchain, byteOrder: BGCS.Contracts.Native.NativeByteOrder.LittleEndian);
     }
 }

@@ -34,8 +34,6 @@
                   "bindingBackend",
                   "generationValidator",
                   "artifactProcessor",
-                  "nativeBuildProvider",
-                  "nativeArtifactPackager",
                   "sourceContributor",
                   "managedApiTransform",
                   "frontendFactContributor"

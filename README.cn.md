@@ -28,7 +28,6 @@ C++ 使用同一个配置入口和命令，选择 `--language cpp` 并提供 C++
 ```bash
 dotnet build BindGen-CS.slnx -c Release
 dotnet run --project src/BGCS.Tool -c Release -- generate examples/QuickStart/bindgen.json
-dotnet run --project src/BGCS.Tool -c Release -- build examples/QuickStart/bindgen.json
 ```
 
 原生构建还需要对应编译器与目标 SDK。解析器携带的 builtin headers 补充目标 SDK
@@ -44,7 +43,6 @@ dotnet run --project src/BGCS.Tool -c Release -- build examples/QuickStart/bindg
   "library": { "id": "example", "nativeName": "example" },
   "source": { "language": "c", "headers": ["include/native.h"] },
   "api": { "namespace": "Example.Bindings", "name": "NativeApi" },
-  "nativeBuild": { "mode": "sources", "sources": ["src/native.c"] },
   "output": { "root": "Generated", "layout": "split" }
 }
 ```
@@ -53,10 +51,7 @@ dotnet run --project src/BGCS.Tool -c Release -- build examples/QuickStart/bindg
 `generate` 在 `Generated/<resolved-target>/` 下生成托管源码、按需的 bridge、
 manifest 和报告。
 
-`build` 将候选 C# 以 warnings-as-errors 编译，并构建或验证 `nativeBuild` 明确声明的
-原生输入，验证必要导出后再发布完整产物集合。验证失败时保留上一套已拥有的输出。
-`nativeBuild.mode = "none"` 会在报告中明确记录没有请求原生构建。
-实际运行调用是单独的验证阶段。
+生成的托管文件由消费者工程编译；原生库与 bridge 源码由自己的 CMake、编译器或应用构建系统编译，再显式部署或链接。BGCS 不构建消费者工程，也不编译、链接、打包或部署原生库。解析和生成成功不代表已经完成原生调用验证。
 
 生成绑定的消费工程使用 `net10.0`，启用 unsafe blocks，通常只引用 `BGCS.Runtime`。
 编译所选目标的 `managed` 文件并部署已验证的原生库。QuickStart 将 `bgcs_add` 映射为 `Add`：
@@ -82,7 +77,7 @@ int answer = api.Raw.Add(19, 23);
 | `BGCS.Runtime` | 生成绑定的消费支持，不依赖生成器或解析器 |
 | `BindGen-CS` | 使用同一套 Host 流水线的命令行工具 |
 
-内部工程作为实现模块随 SDK / 工具交付。用户不需要为 C++、lowering 或原生构建手动
+内部工程作为实现模块随 SDK / 工具交付。用户不需要为 C++ 或 lowering 手动
 拼装额外功能包。工具 RID 分包与解析器 runtime 包提供六种声明的桌面宿主资源闭包。
 
 ```csharp
@@ -107,7 +102,7 @@ raw ABI 始终可访问；友好字符串、buffer、拥有型对象和 callback
 无法表达的 ABI 会被拒绝，或者要求提供原生 shim。
 
 普通插件引用 `BGCS.Contracts`，通过中立端口扩展目标、模型变换、lowering、
-托管投影、产物处理、构建或验证。分组 `cpp` recipe、显式模板选择和原生 shim
+托管投影、源代码贡献、产物处理或验证。分组 `cpp` recipe、显式模板选择和原生 shim
 表达库特有的 C++ 语义。详见[扩展](docs/extensibility.cn.md)、
 [配置指南](docs/configuration-guide.cn.md)和[C++ 实战手册](docs/cpp-extension-cookbook.cn.md)。
 
@@ -122,10 +117,12 @@ raw ABI 始终可访问；友好字符串、buffer、拥有型对象和 callback
 | --- | --- |
 | `init`、`schema`、`explain` | 创建分组配置、输出 schema、解释诊断 |
 | `doctor`、`validate`、`inspect` | 检查环境和配置、查看冻结模型 |
-| `generate`、`build` | 生成产物，或验证声明的托管 / 原生构建 |
-| `bridge`、`native-build` | 仅请求 native bridge，或根据已验证 manifest 构建 |
+| `generate` | 生成 C# 与所需的 native bridge 源码 |
+| `bridge` | 仅生成 native bridge 源码，不执行托管投影 |
 | `diff`、`workspace` | 不发布地比较产物，或执行有明确项目依赖的工作区 |
-| `supply-chain`、`version` | 检查交付来源与实现身份 |
+| `version` | 检查实现与解析器身份 |
+
+仓库审计与 SBOM 使用不随产品交付的 `eng/BGCS.RepositoryTools` 工程；原生库及消费者编译由外部构建负责。
 
 ```bash
 dotnet test BindGen-CS.slnx -c Release

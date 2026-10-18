@@ -22,7 +22,7 @@ internal unsafe class FlagEnumVisitor : MemberVisitor
     ) {
         var containerContext = this.context.GetOrCreateDeclContainer(parent);
         var cppEnum = (CppEnum)containerContext.container;
-        cppEnum.attributes.Add(new CppAttribute(cursor, "flag_enum", AttributeKind.ObjectiveCAttribute));
+        cppEnum.attributes.Add(new CppAttribute(cursor, "flag_enum", AttributeKind.ClangAttribute));
         return null;
     }
 }

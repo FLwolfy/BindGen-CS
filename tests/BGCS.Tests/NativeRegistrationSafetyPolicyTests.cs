@@ -121,21 +121,21 @@ public sealed class NativeRegistrationSafetyPolicyTests
                         completionQuiescence = NativeQuiescenceKind.NoNewInvocations, successStatus = "0", retainedParameters = []
                     }] : []
                 },
-                nativeBuild = new() { mode = "sources", sources = ["registration.cpp"] },
+
                 execution = new() { diagnostics = new() { warningsAsErrors = true } },
                 cache = new() { enabled = false }
             };
             await using BindingHost host = Host();
-            BuildResult built = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
-            Assert.DoesNotContain(built.generation.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP);
-            TargetInspection target = Assert.Single(built.generation.targetModels);
+            Assert.DoesNotContain(built.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP);
+            TargetInspection target = Assert.Single(built.targetModels);
             InteropFunction start = Assert.Single(target.interop.functions, function => function.exportName == "Start");
             Assert.Null(start.returnOwnership);
             Assert.Equal(EvidenceLevel.UserAsserted, start.parameters[0].callback!.evidence.level);
             Assert.Equal(EvidenceLevel.UserAsserted, start.parameters[0].callback!.registration!.evidence.level);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string body = asynchronous ? """
                 using (var operation = api.StartAsync()) {
                     if (api.LiveCount() != 1 || operation.task.IsCompleted) return 1;

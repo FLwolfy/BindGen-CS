@@ -18,7 +18,6 @@ There are thirteen implementation projects. Project boundaries describe ownershi
 | `BGCS.Analysis` | Declaration closure, ABI/storage analysis, semantic evidence and safety eligibility |
 | `BGCS.Cpp2C` | Plan C++ lowering and C header helpers; emit typed native bridge operations |
 | `BGCS.CSharp` | Project managed APIs, plan imports/conversions/cleanup and emit C# |
-| `BGCS.NativeBuild` | Produce and execute native build plans, inspect exports and package native assets |
 | `BGCS.Runtime` | Independent consumer module sessions, leases, handles, buffers, codecs and callbacks |
 | `BGCS` | Compose defaults, configuration, extensions, sessions, workspaces and the public Host |
 | `BGCS.Tool` | Map CLI arguments and cancellation into Host requests; present results |
@@ -38,7 +37,6 @@ flowchart TB
     Host --> Analysis[BGCS.Analysis]
     Host --> Cpp[BGCS.Cpp2C]
     Host --> CSharp[BGCS.CSharp]
-    Host --> NativeBuild[BGCS.NativeBuild]
     Host --> Runtime[BGCS.Runtime]
     Infrastructure --> Contracts
     Platforms --> Contracts
@@ -48,9 +46,6 @@ flowchart TB
     Cpp --> Analysis
     CSharp --> Contracts
     CSharp --> Analysis
-    NativeBuild --> Contracts
-    NativeBuild --> Infrastructure
-    NativeBuild --> Platforms
     Worker[BGCS.Frontend.Clang.Worker] --> Contracts
     Worker --> Infrastructure
     Worker --> Frontend[BGCS.Frontend.Clang]
@@ -100,7 +95,7 @@ C++ callers use the same configuration and Host entry point as C callers. C++ br
 
 C inline/internal-linkage functions are not automatically dynamic exports. Their generated C helper header/source must be compiled into the configured native module, and prebuilt mode verifies the required adapter exports. On Windows, a helper-only DLL does not inherit the exports of its dependency DLLs. A source-build plan and a standalone native manifest must carry the helper inputs explicitly.
 
-`generate` publishes source after its required model, safety and source-contract checks. `build` additionally validates managed compilation and the configured native inputs before replacing final output. `nativeBuild.mode=none` remains explicitly unverified native construction. A successful generation receipt does not certify native linking or invocation.
+`generate` publishes source after model, safety and source-contract checks. Consumers compile C# and build/link/deploy native libraries externally; generation does not certify those operations or invocation.
 
 ## Host, target and runtime are separate
 
@@ -147,7 +142,7 @@ A standard plugin references `BGCS.Contracts` and registers typed ports. The sam
 
 Configuration composition preserves explicit false/zero/list semantics and each local document's own path base. Pinned HTTPS bases require an explicit URL, SHA-256 and local `pathBase`; remote input provenance stays separate from local file dependencies. Request creation and workspace loading propagate cancellation before generation begins. Fetching a declared configuration does not install SDKs or compilers.
 
-Generation-stage reuse currently concerns the primary frontend result and eligible C# emission. Keys account for implementation/worker/resource identities, resolved target/toolchain, frozen configuration, source/include membership and extension inputs. Unknown fingerprints disable affected reuse. Transforms, artifact processors and requested validation still execute; a cache hit cannot skip this request's native build or invocation. Native construction is not represented as a completed native-build cache merely because generated source was reused.
+Generation-stage reuse currently concerns the primary frontend result and eligible C# emission. Keys account for implementation/worker/resource identities, resolved target/toolchain, frozen configuration, source/include membership and extension inputs. Unknown fingerprints disable affected reuse. Transforms, artifact processors and requested validation still execute; a generation cache hit does not certify external native compilation or invocation.
 
 Caches contain immutable verified file sets. Corrupt entries become misses. Candidates are published through ownership checks, stable locks and a recovery journal, preserving the previous complete output on required validation failure. Input/output/cache overlap, path escape and conflicting artifact names fail. Multi-directory publication requires the documented lock/manifest protocol; ordinary filesystems do not provide a universal cross-directory atomic transaction.
 

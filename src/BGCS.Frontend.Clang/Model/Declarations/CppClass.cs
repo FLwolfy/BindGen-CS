@@ -45,10 +45,6 @@ internal class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDecl
         this.typedefs = new CppContainerList<CppTypedef>(this);
         this.templateParameters = new CppContainerList<CppType>(this);
         this.attributes = [];
-        this.objCImplementedProtocols = [];
-        this.properties = new CppContainerList<CppProperty>(this);
-        this.objCCategories = [];
-        this.objCCategoryName = string.Empty;
     }
 
     /// <summary>
@@ -61,14 +57,6 @@ internal class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDecl
     public CppTemplateKind templateKind { get; set; }
     /// <inheritdoc/>
     public string name { get; set; }
-    /// <summary>
-    /// Gets or sets the target of the Objective-C category. Null if this class is not an <see cref = "CppClassKind.ObjCInterfaceCategory"/>.
-    /// </summary>
-    public CppClass? objCCategoryTargetClass { get; set; }
-    /// <summary>
-    /// Gets or sets the name of the Objective-C category. Empty if this class is not an <see cref = "CppClassKind.ObjCInterfaceCategory"/>
-    /// </summary>
-    public string objCCategoryName { get; set; }
 
     /// <summary>
     /// Gets the current qualified record name including template parameters or concrete specialization arguments.
@@ -158,14 +146,8 @@ internal class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDecl
     /// Get the base types of this type.
     /// </summary>
     public List<CppBaseType> baseTypes { get; }
-    /// <summary>
-    /// Get the Objective-C implemented protocols.
-    /// </summary>
-    public List<CppClass> objCImplementedProtocols { get; }
     /// <inheritdoc/>
     public CppContainerList<CppField> fields { get; }
-    /// <inheritdoc/>
-    public CppContainerList<CppProperty> properties { get; }
     /// <summary>
     /// Gets the constructors of this instance.
     /// </summary>
@@ -182,10 +164,6 @@ internal class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDecl
     public CppContainerList<CppClass> classes { get; }
     /// <inheritdoc/>
     public CppContainerList<CppTypedef> typedefs { get; }
-    /// <summary>
-    /// Gets the Objective-C categories of this instance.
-    /// </summary>
-    public List<CppClass> objCCategories { get; }
     /// <inheritdoc/>
     public CppContainerList<CppType> templateParameters { get; }
     /// <summary>
@@ -244,13 +222,6 @@ internal class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDecl
             case CppClassKind.Union:
                 builder.Append("union ");
                 break;
-            case CppClassKind.ObjCInterface:
-            case CppClassKind.ObjCInterfaceCategory:
-                builder.Append("@interface ");
-                break;
-            case CppClassKind.ObjCProtocol:
-                builder.Append("@protocol ");
-                break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
@@ -296,25 +267,6 @@ internal class CppClass : CppTypeDeclaration, ICppMemberWithVisibility, ICppDecl
                     builder.Append(", ");
                 builder.Append(baseType);
             }
-        }
-
-        if (!string.IsNullOrEmpty(this.objCCategoryName))
-        {
-            builder.Append(" (").Append(this.objCCategoryName).Append(')');
-        }
-
-        if (this.objCImplementedProtocols.Count > 0)
-        {
-            builder.Append(" <");
-            for (var i = 0; i < this.objCImplementedProtocols.Count; i++)
-            {
-                var protocol = this.objCImplementedProtocols[i];
-                if (i > 0)
-                    builder.Append(", ");
-                builder.Append(protocol.name);
-            }
-
-            builder.Append('>');
         }
 
         return builder.ToString();

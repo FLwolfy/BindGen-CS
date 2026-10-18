@@ -69,13 +69,13 @@ public sealed class NativeManagedVirtualCallbackTests
                         .Add("managed_callbacks_error_release", "ReleaseError") },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string targetRoot = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            string factInput = await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "src", "facts.input.hpp"));
+            string factInput = await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "src", "storage.assertions.cpp"));
             int userPreamble = factInput.IndexOf("#define BGCS_VIRTUAL_USER_PREAMBLE 1", StringComparison.Ordinal);
             Assert.True(userPreamble >= 0, factInput);
             int support = factInput.IndexOf(BGCS.Cpp2C.Planning.VirtualCallbackPlanner.preamble, userPreamble, StringComparison.Ordinal);
@@ -84,7 +84,7 @@ public sealed class NativeManagedVirtualCallbackTests
             Assert.True(userHeader > support, factInput);
             Assert.Contains("namespace BGCSGeneratedCallbacks", factInput[userHeader..]);
             Assert.DoesNotContain("#include", factInput[(userHeader + "calculator.hpp".Length)..]);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             using JsonDocument manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(targetRoot, "metadata", "abi.manifest.json")));
             Assert.Single(manifest.RootElement.GetProperty("managedVirtualProxies").EnumerateArray());
             Assert.Empty(manifest.RootElement.GetProperty("managedVirtualProxyOmissions").EnumerateArray());

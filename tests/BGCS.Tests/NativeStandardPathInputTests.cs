@@ -39,12 +39,12 @@ public sealed class NativeStandardPathInputTests
                     style=sourceRuntime?BGCS.Contracts.Managed.ManagedApiStyle.Static:BGCS.Contracts.Managed.ManagedApiStyle.Instance,nestGeneratedTypesInApi=sourceRuntime},
                 cpp=new(){sequenceInputAdapters=[Request("paths::CheckValue"),Request("paths::CheckRef"),Request("paths::CountUnits")]},
                 runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},
-                nativeBuild=new(){mode="sources"},cache=new(){enabled=false}
+                cache=new(){enabled=false}
             };
             await using BindingHost host=BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built=await host.BuildAsync(new(new(configuration,root)));
+            GenerationResult built=await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration,root));
             Assert.True(built.success,built.GetDiagnosticSummary());
-            var target=Assert.Single(built.generation.targetModels);
+            var target=Assert.Single(built.targetModels);
             CppBridgeModule bridge=target.bridge!;
             Assert.Equal(3,bridge.exports.Count(export=>export.inputAdapterOf is not null));
             foreach(BridgeExport adapter in bridge.exports.Where(export=>export.inputAdapterOf is not null))
@@ -57,7 +57,7 @@ public sealed class NativeStandardPathInputTests
                 Assert.NotNull(text.lengthParameter);
             }
             string targetRoot=Path.Combine(built.outputRoot,target.targetId);
-            string binary=Assert.Single(Directory.GetFiles(Path.Combine(targetRoot,"native","bin")));
+            string binary=Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan=new CSharpEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
                 {importMode=mode,runtimeNamespace=sourceRuntime?"Generated.PathInput.Runtime":"BGCS.Runtime"});
             string context=sourceRuntime?"PathApiContext":"PathApi";

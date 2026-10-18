@@ -39,13 +39,13 @@ public sealed class NativeCompilerIntrinsicTests
                 schemaVersion = 1, library = new() { id = "intrinsics", nativeName = "intrinsic_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["intrinsics.h"], parseMacros = false, includeHeaderHelpers = true },
                 api = new() { @namespace = "Generated.Intrinsics", name = "IntrinsicApi" },
-                nativeBuild = new() { mode = "sources", provider = "msvc", sources = ["intrinsics.c"] },
+
                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             foreach (string name in new[] { "_ReadWriteBarrier", "__debugbreak" })
             {
                 NativeDeclaration native = Assert.Single(target.native.declarations, declaration => declaration.kind == "Function" && declaration.name == name);
@@ -53,7 +53,7 @@ public sealed class NativeCompilerIntrinsicTests
                 Assert.StartsWith("bgcs_intrinsics_helper_", Assert.Single(target.interop.functions, function => function.sourceName == name).exportName);
             }
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             object? answer = await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, "intrinsic_fixture", """
                 using Generated.Intrinsics;
                 public static unsafe class IntrinsicConsumer {

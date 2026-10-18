@@ -64,7 +64,7 @@ def main() -> int:
     missing = {}
     for directory in (ROOT / "src", ROOT / "integrations"):
         for path in directory.rglob("*.cs"):
-            if {"bin", "obj"}.intersection(path.relative_to(ROOT).parts):
+            if path == ROOT / "src/BGCS.Contracts/BindingDiagnosticCatalog.Generated.cs" or {"bin", "obj"}.intersection(path.relative_to(ROOT).parts):
                 continue
             for literal in re.findall(r'"(BGCS[A-Z0-9-]*)"', path.read_text(encoding="utf-8-sig")):
                 if CODE.fullmatch(literal) and literal not in known:

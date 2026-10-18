@@ -1,7 +1,6 @@
 <Project>
   <PropertyGroup>
     <BGCSGenerateBindings Condition="'$(BGCSGenerateBindings)' == ''">false</BGCSGenerateBindings>
-    <BGCSBuildNative Condition="'$(BGCSBuildNative)' == ''">true</BGCSBuildNative>
     <BGCSConfig Condition="'$(BGCSConfig)' == ''">bindgen.json</BGCSConfig>
     <_BGCSPackageRoot Condition="'$(_BGCSPackageRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))/</_BGCSPackageRoot>
     <BGCSMSBuildTaskAssembly Condition="'$(BGCSMSBuildTaskAssembly)' == '' and Exists('$(_BGCSPackageRoot)tools/msbuild/net10.0/BGCS.MSBuild.dll')">$(_BGCSPackageRoot)tools/msbuild/net10.0/BGCS.MSBuild.dll</BGCSMSBuildTaskAssembly>

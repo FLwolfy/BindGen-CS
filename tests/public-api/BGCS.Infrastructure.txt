@@ -320,7 +320,7 @@ class BGCS.Infrastructure.Workers.WorkerParseRequest [sealed; interfaces=System.
 class BGCS.Infrastructure.Workers.WorkerProtocol [abstract; sealed]
   field System.Int32 C_MAXIMUM_FRAME_BYTES [static; const=268435456]
   field System.String C_PARSER_IDENTITY [static; const="ClangSharp/20.1.2.4;LLVM/20"]
-  field System.Int32 C_REVISION [static; const=1]
+  field System.Int32 C_REVISION [static; const=2]
   property System.Text.Json.JsonSerializerOptions jsonOptions { get } [static]
   method System.Threading.Tasks.ValueTask WriteAsync(System.IO.Stream stream, T message, System.Threading.CancellationToken cancellationToken) [static]
   method System.Threading.Tasks.ValueTask<T> ReadAsync(System.IO.Stream stream, System.Threading.CancellationToken cancellationToken) [static]

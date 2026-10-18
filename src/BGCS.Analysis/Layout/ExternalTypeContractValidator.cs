@@ -21,6 +21,11 @@ public sealed class ExternalTypeContractValidator
     ) {
         ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(projection);
+        if (projection.managedShape is not null)
+        {
+            ValidateStaticProjection(module, projection);
+            return;
+        }
         ManagedTypeStorageFact managed = projection.managedStorage ?? throw new InvalidOperationException("An external type projection requires an isolated managed field probe.");
         if (managed.evidence.level != EvidenceLevel.Verified || managed.evidence.origin != "bgcs:managed-field-probe:v1"
             || managed.managedType != projection.managedType || !managed.isReferenceFree || managed.size <= 0 || managed.alignment <= 0)
@@ -72,8 +77,9 @@ public sealed class ExternalTypeContractValidator
         InteropModule module,
         ExternalTypeProjection projection
     ) {
-        ValidateProjection(module, projection);
-        ManagedTypeStorageFact managed = projection.managedStorage!;
+        ManagedTypeStorageFact managed = projection.managedStorage
+            ?? throw new NotSupportedException("Static scalar field binding does not establish CLR size, offsets or native storage equivalence.");
+        ValidateProjection(module, projection with { managedShape = null });
         InteropType native = Resolve(module, projection.nativeType);
         if (managed.layoutKind is not ("Sequential" or "Explicit") || native.size != managed.size || native.alignment != managed.alignment
             || managed.probe.pointerSize != module.pointerSize || managed.probe.isLittleEndian != (module.byteOrder == NativeByteOrder.LittleEndian)
@@ -82,6 +88,37 @@ public sealed class ExternalTypeContractValidator
         foreach (ExternalFieldProjection mapping in projection.fields)
             if (native.fields.Single(field => field.id == mapping.nativeField).offset != managed.fields.Single(field => field.name == mapping.managedField).offset)
                 throw new NotSupportedException("An external managed field offset differs from its exact native field.");
+    }
+
+    private static void ValidateStaticProjection(
+        InteropModule module,
+        ExternalTypeProjection projection
+    ) {
+        ManagedStaticTypeShape shape = projection.managedShape!;
+        if (shape.managedType != projection.managedType || shape.evidence is not { level: EvidenceLevel.Declared, origin: "bgcs:managed-static-field-binding:v1" }
+            || shape.fields.IsDefaultOrEmpty || projection.fields.IsDefault)
+            throw new InvalidOperationException("An external scalar field copy requires complete matching static binding facts.");
+        InteropType native = Resolve(module, projection.nativeType);
+        if (native.category != NativeTypeCategory.Record || native.recordKind != "Struct" || native.size is null or <= 0
+            || native.alignment is null or <= 0 || native.fields.IsDefaultOrEmpty || native.fields.Any(field => field.bitWidth is not null || field.offset is null))
+            throw new NotSupportedException("Static external copies require a complete ordinary native struct with addressable scalar fields.");
+        if (projection.fields.Length != native.fields.Length || shape.fields.Length != projection.fields.Length
+            || projection.fields.Select(field => field.nativeField).Distinct().Count() != projection.fields.Length
+            || projection.fields.Select(field => field.managedField).Distinct(StringComparer.Ordinal).Count() != projection.fields.Length
+            || shape.fields.Select(field => field.name).Distinct(StringComparer.Ordinal).Count() != shape.fields.Length)
+            throw new InvalidOperationException("Static external copies require one complete unique mapping of every native and managed instance field.");
+        foreach (ExternalFieldProjection mapping in projection.fields)
+        {
+            InteropField? source = native.fields.SingleOrDefault(field => field.id == mapping.nativeField);
+            ManagedStaticFieldShape? target = shape.fields.SingleOrDefault(field => field.name == mapping.managedField);
+            if (source is null || target is null || !target.isPublic || !target.isWritable)
+                throw new NotSupportedException("An external scalar field mapping must identify an accessible writable instance field.");
+            (ManagedScalarKind kind, int size) = Scalar(module, Resolve(module, source.type));
+            if (target.scalarKind != kind || target.size != size || !TypeMatches(target.typeIdentity, kind, size)
+                || kind == ManagedScalarKind.NativeAddress && module.byteOrder == NativeByteOrder.Unknown
+                || source.offset < 0 || size > native.size || source.offset > native.size - size)
+                throw new NotSupportedException("An external field copy does not preserve native scalar kind, signedness and width, or native field extent: " + mapping.managedField);
+        }
     }
 
     private static InteropType Resolve(

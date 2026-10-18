@@ -22,7 +22,7 @@ receipts. A successful local subset does not establish release readiness.
 | --- | --- |
 | Understand module ownership, dependencies and pipeline | [Architecture](architecture.md) |
 | Embed generation, building, inspection or a workspace | [Public API](api.md) |
-| Declare native sources, choose build providers and consume verified artifacts | [Native construction](native-build.md) |
+| Build and link generated sources with your own native build system | [Native construction](native-metadata.md#external-compilation) |
 | Understand resources, callback drain and asynchronous cancellation | [Runtime lifetimes](runtime-lifetime.md) |
 | Configure synchronous callbacks, returned-handle registrations and terminal operations | [Callback cookbook](callbacks.md) |
 | Distinguish storage, calling ABI and semantic evidence | [ABI safety](abi-safety.md) |

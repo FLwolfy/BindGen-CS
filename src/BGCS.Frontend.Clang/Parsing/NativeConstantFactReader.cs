@@ -78,7 +78,7 @@ internal static class NativeConstantFactReader
         // Invalid/non-expression macros are isolated in this probe. Their errors
         // never turn a valid input translation unit into a fabricated value.
         using CXTranslationUnit probe = CXTranslationUnit.Parse(index, CppParser.C_CPPASTROOTFILENAME,
-            [.. arguments, "-ferror-limit=0"], inputs, CppParser.ProbeFlags(compilation, CXTranslationUnit_Flags.CXTranslationUnit_None));
+            [.. arguments, "-ferror-limit=0"], inputs, CXTranslationUnit_Flags.CXTranslationUnit_None);
         HashSet<int> invalidLines = [];
         for (uint diagnosticIndex = 0; diagnosticIndex < probe.NumDiagnostics; diagnosticIndex++)
         {

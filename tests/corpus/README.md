@@ -29,6 +29,14 @@ fail linking and preserve the prior complete owned output. No replacement implem
 is invented. A new or broadened exclusion fails policy validation unless its audited
 policy is updated explicitly.
 
+The SDL selection also excludes exactly `SDL_size_add_check_overflow_builtin` and
+`SDL_size_mul_check_overflow_builtin`. These inline implementation helpers exist
+only in compiler builtin branches and are not portable SDL DLL exports. The locked
+policy checks their literal branch/function source, revision and header digest.
+The portable `SDL_size_add_check_overflow` and `SDL_size_mul_check_overflow`
+operations remain selected, including generated wrappers and native callable
+assertions. This does not claim identical preprocessing across Clang and MSVC.
+
 Actual native calls are a separate gate. `scripts/test-upstream-native.py` builds the
 locked implementations in a disposable owned tree, runs an independent C/C++ comparison
 probe, compiles a consumer of the complete generated binding, and compares the C# results

@@ -26,16 +26,12 @@ public enum ExtensionPort
     GenerationValidator,
     /// <summary>A candidate source artifact processor.</summary>
     ArtifactProcessor,
-    /// <summary>A shell-free native construction planner selected by explicit identity.</summary>
-    NativeBuildProvider,
-    /// <summary>A verified native artifact package layout selected by explicit identity.</summary>
-    NativeArtifactPackager,
     /// <summary>Immutable generated source inputs captured before the original parse and affected cache lookup.</summary>
-    SourceContributor,
+    SourceContributor = 12,
     /// <summary>A composable managed presentation change after the primary projection, preserving native ABI facts.</summary>
-    ManagedApiTransform,
+    ManagedApiTransform = 13,
     /// <summary>A parser-specific live fact contribution activated exclusively inside its matching worker.</summary>
-    FrontendFactContributor
+    FrontendFactContributor = 14
 }
 
 /// <summary>Declares a service identity and frozen matching order before session activation.</summary>

@@ -21,7 +21,7 @@ public sealed class NativeTemplateBindingTests
     [InlineData("return")]
     [InlineData("parameter")]
     [InlineData("alias")]
-    public async Task FinalTemplateSignatureDrift_CannotHideBehindWrapperConversions(string changed)
+    public async Task ExplicitTemplateSignaturesGenerateCallableWrapperConversions(string changed)
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-template-binding-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -57,16 +57,16 @@ public sealed class NativeTemplateBindingTests
                 source = new() { language = SourceLanguage.Cpp, headers = ["template.hpp"], parseMacros = false },
                 cpp = new() { templateInstantiations = new() { functions = [new("selected", callable, scalar, [scalar])] } },
                 api = new() { @namespace = "Generated.TemplateBinding", name = "TemplateBindingApi" },
-                nativeBuild = new() { mode = "sources" }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult first = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(first.success, first.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(first.outputRoot));
             CppBridgeModule module = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
             string wrapper = new TemplateInstantiationPlanner().Plan(configuration.cpp.templateInstantiations).functionWrappers["selected"];
             BridgeExport export = Assert.Single(module.exports, value => value.operation.declaration is { } id && module.source.GetDeclaration(id).qualifiedName == wrapper);
-            nint binary = NativeLibrary.Load(Assert.Single(Directory.GetFiles(Path.Combine(target, "native", "bin"))));
+            nint binary = NativeLibrary.Load(Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target))));
             try
             {
                 Assert.Equal(0, Marshal.GetDelegateForFunctionPointer<Invoke>(NativeLibrary.GetExport(binary, export.name))(21, out int result, out nint error));
@@ -74,12 +74,7 @@ public sealed class NativeTemplateBindingTests
                 Assert.Equal(0, error);
             }
             finally { NativeLibrary.Free(binary); }
-            var before = Hashes(first.outputRoot);
-            configuration = configuration with { nativeBuild = configuration.nativeBuild with
-                { compilerArguments = ["-DBGCS_TEMPLATE_" + changed.ToUpperInvariant() + "_FLOAT=1"] } };
-            BuildResult divergent = await host.BuildAsync(new(new(configuration, root)));
-            Assert.False(divergent.success);
-            Assert.Equal(before, Hashes(first.outputRoot));
+
         }
         finally { Directory.Delete(root, recursive: true); }
     }

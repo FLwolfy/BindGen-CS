@@ -119,9 +119,7 @@ public sealed partial class BindingHost : IAsyncDisposable
                 systemIncludeFolders: request.toolchain.systemIncludeFolders.Select(path => Path.GetFullPath(path, pathBase)),
                 cxxSystemIncludeFolders: request.toolchain.cxxSystemIncludeFolders.Select(path => Path.GetFullPath(path, pathBase)),
                 defines: request.toolchain.defines, arguments: request.toolchain.arguments,
-                sdkVersion: request.toolchain.sdkVersion, compilerVersion: request.toolchain.compilerVersion,
-                linkerPath: request.toolchain.linkerPath is null ? null : Path.GetFullPath(request.toolchain.linkerPath, pathBase),
-                libraryDirectories: request.toolchain.libraryDirectories.Select(path => Path.GetFullPath(path, pathBase)));
+                sdkVersion: request.toolchain.sdkVersion, compilerVersion: request.toolchain.compilerVersion);
             foreach (TargetProviderRegistration registration in registry.Targets)
             {
                 INativeTargetProvider provider = registration.Factory() ?? throw new InvalidOperationException($"Target provider '{registration.Id}' returned no service.");
@@ -129,14 +127,13 @@ public sealed partial class BindingHost : IAsyncDisposable
                 activeInputs.CaptureDeclared(provider, cancellation.Token);
             }
             NativeTargetDescriptor target = new TargetResolver(TargetResolver.CreateBuiltInProviders().Concat(providers)).Resolve(new(new NativeTargetId(request.targetId), toolchain, request.triple));
-            if (compiler is not null && ToolchainDiscovery.FindCompiler(request.language, toolchain.compilerPath) is null)
-                throw new FileNotFoundException("The explicitly configured compiler is unavailable; another host compiler cannot substitute its SDK or identity.", toolchain.compilerPath);
-            target = ToolchainResolver.ResolveToolchain(target, request.language, request.nativeCompilerFamily);
+            target = ToolchainResolver.ResolveToolchain(target, request.language);
             (generationComposition ?? ownedComposition!).CaptureFingerprints(target, activeInputs, cancellation.Token);
             foreach (INativeTargetProvider provider in providers) activeInputs.Capture(provider, target, cancellation.Token);
             FrontendRequest resolved = new(target, request.language, request.headers.Select(path => Path.GetFullPath(path, pathBase)).ToImmutableArray())
             {
                 purpose = applyTransforms ? FrontendRequestPurpose.SourceAnalysis : FrontendRequestPurpose.BridgeVerification,
+                usePresumedSourceLocations = true,
                 pathBase = pathBase,
                 languageStandard = request.languageStandard,
                 includeDirectories = request.includeDirectories.Select(path => Path.GetFullPath(path, pathBase)).ToImmutableArray(),
@@ -169,7 +166,7 @@ public sealed partial class BindingHost : IAsyncDisposable
             // receives exactly one expanded argument vector, without reopening its files.
             NativeToolchainDescriptor parserToolchain = new(target.toolchain.compilerPath, target.toolchain.sysRoot,
                 target.toolchain.systemIncludeFolders, target.toolchain.defines, [], target.toolchain.cxxSystemIncludeFolders,
-                target.toolchain.sdkVersion, target.toolchain.compilerVersion, target.toolchain.linkerPath, target.toolchain.libraryDirectories);
+                target.toolchain.sdkVersion, target.toolchain.compilerVersion);
             NativeTargetDescriptor parserTarget = new(target.targetId, target.platformId, target.architectureId, target.abiId,
                 target.triple, parserToolchain, target.capabilities, target.byteOrder);
             resolved = resolved with { target = parserTarget, arguments = expanded.arguments };
@@ -179,12 +176,8 @@ public sealed partial class BindingHost : IAsyncDisposable
             frontend = registry.Frontend() ?? throw new InvalidOperationException("The frontend factory returned no service.");
             activeInputs.Capture(frontend, target, cancellation.Token);
             resolved = await WorkerPluginPreparation.PrepareAsync(resolved, frontend, registry.WorkerPlugins, activeInputs, cancellation.Token).ConfigureAwait(false);
-            bool nativeView = frontend is BGCS.Infrastructure.Workers.FrontendWorkerClient
-                && BGCS.NativeBuild.Planning.NativeSourceViewPreprocessor.IsSupported(resolved);
-            FrontendGenerationCache.Attempt? cached = nativeView ? null : frontendCache?.Prepare(resolved, frontend, cancellation.Token);
-            FrontendResult parsed = cached?.result ?? (nativeView
-                ? await NativeSourceViewFrontend.ParseAsync(frontend, resolved, registry.ParseTimeout, activeInputs, cancellation.Token, frontendCache).ConfigureAwait(false)
-                : await frontend.ParseAsync(resolved, cancellation.Token).ConfigureAwait(false));
+            FrontendGenerationCache.Attempt? cached = frontendCache?.Prepare(resolved, frontend, cancellation.Token);
+            FrontendResult parsed = cached?.result ?? await frontend.ParseAsync(resolved, cancellation.Token).ConfigureAwait(false);
             if (parsed.snapshot.excludedDirectories.Any(path => !resolved.snapshotExcludedDirectories.Contains(path, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)))
                 throw new InvalidOperationException("The frontend excluded an undeclared source search directory.");
             if (BGCS.Infrastructure.IO.SourceSnapshotVerifier.GetMismatch(parsed.snapshot, cancellation.Token) is string nativeInputMismatch)
@@ -229,8 +222,7 @@ public sealed partial class BindingHost : IAsyncDisposable
             {
                 target = target,
                 argumentInputs = argumentInputs,
-                preparedFrontend = resolved,
-                requiresNativeCompilerProof = parsed.requiresNativeCompilerProof
+                preparedFrontend = resolved
             };
         }
         catch (OperationCanceledException exception) when (cancellation.IsCancellationRequested)

@@ -31,9 +31,7 @@ internal unsafe class TypedefDeclVisitor : MemberVisitor
         }
 
         var contextContainer = this.context.GetOrCreateDeclContainer(cursor.SemanticParent);
-        this.context.currentTypedefKey = fulltypeDefName;
         var underlyingTypeDefType = this.builder.GetCppType(cursor.TypedefDeclUnderlyingType.Declaration, cursor.TypedefDeclUnderlyingType, cursor);
-        this.context.currentTypedefKey = default;
         var typedefName = CXUtil.GetCursorSpelling(cursor);
         ICppDeclarationContainer? container = null;
         if (this.builder.autoSquashTypedef && underlyingTypeDefType is ICppMember cppMember && (string.IsNullOrEmpty(cppMember.name) || typedefName == cppMember.name))
@@ -55,21 +53,6 @@ internal unsafe class TypedefDeclVisitor : MemberVisitor
         this.builder.ParseTypedefAttribute(cursor, type, underlyingTypeDefType);
         // The type could have been added separately as part of the GetCppType above
         this.typedefResolver.RegisterTypedef(fulltypeDefName, type);
-        var map = this.context.mapTemplateParameterTypeToTypedefKeys;
-        // Try to remap typedef using a parameter type declared in an ObjC interface
-        if (map.Count > 0)
-        {
-            foreach (var pair in map.ToList())
-            {
-                if (pair.Value.Contains(fulltypeDefName))
-                {
-                    container = (ICppDeclarationContainer?)pair.Key.parent;
-                    map.Remove(pair.Key);
-                    break;
-                }
-            }
-        }
-
         container?.typedefs.Add((CppTypedef)type);
         // Update Span
         if (type is CppElement element)

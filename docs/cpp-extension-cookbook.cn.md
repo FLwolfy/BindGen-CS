@@ -295,7 +295,7 @@ cd examples/LoweringPlugin
 dotnet build BGCS.Example.LoweringPlugin.csproj --configuration Release
 python write-manifest.py
 bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
+bindgen-cs generate bindgen.json
 ```
 
 重编译后重新生成插件 manifest。它记录程序集和依赖 hash；插件与服务的 fingerprint 另外描述私有状态和外部输入。无法完整提供指纹的服务允许执行，但会关闭受其影响的生成缓存。默认每个会话创建独立服务。
@@ -316,15 +316,14 @@ bindgen-cs build bindgen.json
       "exports": ["bgcs_widget_create", "bgcs_widget_destroy", "bgcs_widget_sum"]
     }]
   },
-  "nativeBuild": { "mode": "sources" }
 }
 ```
 
-公开头声明固定 C-linkage 签名，实现文件包含上游 C++ 头并执行项目转换。路径相对于声明它的配置文件。Host 解析公开头、检查准确导出，并把实现文件交给普通 NativeBuild provider。
+公开头声明固定 C-linkage 签名，实现文件包含上游 C++ 头并执行项目转换。路径相对于声明它的配置文件。Host 解析公开头、检查准确导出，并发布供外部构建使用的实现文件。
 
 ```bash
 bindgen-cs bridge examples/NativeShim/bindgen.json
-bindgen-cs build examples/NativeShim/bindgen.json
+bindgen-cs generate examples/NativeShim/bindgen.json
 ```
 
 `native/metadata/bridge.module.json` 保存类型化操作，`bridge.manifest.json` 保存构建输入，最终 ABI 和 verification 元数据保存复核结果。C 导出本身不能证明释放线程域或 callback quiescence；请求拥有型和长期回调包装前需要明确相应协议。

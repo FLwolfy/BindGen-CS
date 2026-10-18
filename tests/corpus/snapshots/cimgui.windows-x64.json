@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "libraryId": "cimgui",
+  "platform": "windows-x64",
+  "sourceNormalization": "quoted-locked-corpus-include-root-v1",
+  "selectionPolicySha256": "5645a77020cbec654f0b5df100702cbbdd06bf5e172bc970a7f9e1cd79e44100",
+  "omittedDeclarations": {
+    "excludedDeclarations": [
+      "igText",
+      "igTextColored",
+      "igTextDisabled",
+      "igTextWrapped",
+      "igLabelText",
+      "igBulletText",
+      "igTreeNode_StrStr",
+      "igTreeNode_Ptr",
+      "igTreeNodeEx_StrStr",
+      "igTreeNodeEx_Ptr",
+      "igSetTooltip",
+      "igSetItemTooltip",
+      "igLogText",
+      "igDebugLog",
+      "igImFormatString",
+      "igImFormatStringToTempBuffer",
+      "igTextAligned",
+      "ImGuiTextBuffer_appendf"
+    ],
+    "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
+  },
+  "sources": {
+    "windows-x64-msvc/managed/Bindings.cs": "f429bd6f6fe1ec3d8083edebcae059bf2d48de892bd69cf530ba23e3c5753486"
+  },
+  "publicApiSha256": "1513dccaa87651d5b7c68754b192341813dc2711d16f1356a7186636342637e4"
+}

@@ -57,7 +57,7 @@ public sealed class NativeExternalProjectionTests
                 schemaVersion = 1, library = new() { id = "external", nativeName = "point_fixture" },
                 source = new() { headers = ["point.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
-                {
+                { projectionInputs = new() { sources = ["consumer-types.cs"] },
                     @namespace = "Generated.External", name = "PointApi", importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("Point::x", "nativeX").Add("transform_generic", "TransformGeneric"),
                     externalTypes =
@@ -66,22 +66,22 @@ public sealed class NativeExternalProjectionTests
                         new() { nativeType = "GenericPoint", managedType = "ExternalConsumer.Pair<float>", fields = Fields() }
                     ]
                 },
-                managedBuild = new() { sources = ["consumer-types.cs"] },
-                nativeBuild = new() { mode = "sources", sources = ["point.c"] },
+
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             Assert.Equal(2, target.managed!.externalTypeProjections.Length);
             var generic = target.managed.externalTypeProjections.Single(item => item.managedType.Contains("Pair", StringComparison.Ordinal));
-            Assert.Equal(4, generic.managedStorage!.fields.Single(field => field.name == "X").offset);
+            Assert.Null(generic.managedStorage);
+            Assert.Equal(4, generic.managedShape!.fields.Single(field => field.name == "X").size);
             Assert.Equal(0, target.interop.GetType(generic.nativeType).fields.Single(field => field.name == "x").offset);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed, new(configuration.library.nativeName, new NoWrites())
             { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.External.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
                 managedRuntime = ManagedRuntimeResolver.Resolve(target.resolvedTarget!, ManagedRuntimeKind.CoreClr) });
@@ -117,7 +117,7 @@ public sealed class NativeExternalProjectionTests
                 {
                     externalTypes = [configuration.api.externalTypes[0], configuration.api.externalTypes[1] with { managedType = "ExternalConsumer.Pair<int>" }]
                 } };
-                BuildResult rejected = await host.BuildAsync(new(new(incompatible, root)));
+                GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(incompatible, root));
                 Assert.False(rejected.success);
                 Assert.Contains("scalar kind, signedness and width", rejected.GetDiagnosticSummary(), StringComparison.Ordinal);
                 var after = Directory.GetFiles(result.outputRoot, "*", SearchOption.AllDirectories)

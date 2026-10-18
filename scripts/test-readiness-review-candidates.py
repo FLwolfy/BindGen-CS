@@ -46,7 +46,7 @@ class ReadinessCandidateTests(unittest.TestCase):
         with self.assertRaises(ValueError): expand(document, {'proposedDeclarationRef': '../outside'})
 
     def test_checked_in_compact_candidates_expand_all_exact_references(self):
-        document = json.loads((ROOT / 'eng/acceptance/readiness-review-candidates.json').read_text())
+        document = json.loads((ROOT / 'eng/acceptance/readiness-review-candidates.json').read_text(encoding='utf-8'))
         for group in document['groups']:
             for reference in group['testReviewRefs']:
                 self.assertIn(reference, document['testReviews'])
@@ -59,13 +59,13 @@ class ReadinessCandidateTests(unittest.TestCase):
                         self.assertEqual(len(mapping['requiredCases']), len(set(mapping['requiredCases'])))
 
     def test_closeout_proposal_keeps_every_frozen_identity_once_without_certification(self):
-        document = json.loads((ROOT / 'eng/acceptance/readiness-review-candidates.json').read_text())
+        document = json.loads((ROOT / 'eng/acceptance/readiness-review-candidates.json').read_text(encoding='utf-8'))
         features = [row['featureId'] for group in document['groups'] for row in group['features']]
         configurations = [row['configurationId'] for group in document['groups'] for row in group['configurations']]
         self.assertEqual(len(features), len(set(features)))
         self.assertEqual(len(configurations), len(set(configurations)))
-        self.assertEqual({row['featureId'] for row in json.loads((ROOT / 'eng/acceptance/feature-inventory.json').read_text())['features']}, set(features))
-        self.assertEqual({row['configurationId'] for row in json.loads((ROOT / 'eng/acceptance/configuration-inventory.json').read_text())['entries']}, set(configurations))
+        self.assertEqual({row['featureId'] for row in json.loads((ROOT / 'eng/acceptance/feature-inventory.json').read_text(encoding='utf-8'))['features']}, set(features))
+        self.assertEqual({row['configurationId'] for row in json.loads((ROOT / 'eng/acceptance/configuration-inventory.json').read_text(encoding='utf-8'))['entries']}, set(configurations))
         self.assertFalse(document['releaseReady'])
         self.assertFalse(document['implementationReady'])
         self.assertFalse(document['changesActualInventories'])

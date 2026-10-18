@@ -15,12 +15,4 @@ public sealed record ValidationRequest(
     InteropModule interop,
     ImmutableArray<ArtifactDescriptor> artifacts,
     IArtifactReader content
-)
-{
-    /// <summary>Gets whether this request completed managed compilation.</summary>
-    public bool managedCompiled { get; init; }
-    /// <summary>Gets whether this request performed native linking.</summary>
-    public bool nativeLinked { get; init; }
-    /// <summary>Gets whether declared native artifacts passed the requested export and binary checks.</summary>
-    public bool nativeArtifactVerified { get; init; }
-}
+);

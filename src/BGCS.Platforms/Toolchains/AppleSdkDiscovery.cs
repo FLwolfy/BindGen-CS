@@ -31,13 +31,24 @@ public static class AppleSdkDiscovery
         if (!settings.TryGetValue("CanonicalName", out string? canonical) || !canonical.StartsWith(family, StringComparison.Ordinal)
             || !settings.TryGetValue("Version", out string? version) || !System.Version.TryParse(version, out _))
             throw new InvalidDataException("The selected Apple SDK does not identify the requested device/simulator family and exact version.");
-        string compiler = ToolchainDiscovery.FindCompiler(SourceLanguage.Cpp, compilerPath) ?? throw new FileNotFoundException("The configured Apple Clang compiler is unavailable.", compilerPath);
+        string? compiler = compilerPath;
         string includes = Path.Combine(root, "usr", "include"), cxx = Path.Combine(includes, "c++", "v1");
         if (!Directory.Exists(includes)) throw new IOException("The selected Apple SDK has no system include directory.");
-        NativeToolchainDescriptor toolchain = new(compiler, root, [includes], cxxSystemIncludeFolders: Directory.Exists(cxx) ? [cxx] : [], sdkVersion: version,
-            libraryDirectories: [Path.Combine(root, "usr", "lib")]);
+        NativeToolchainDescriptor toolchain = new(compiler, root, [includes], cxxSystemIncludeFolders: Directory.Exists(cxx) ? [cxx] : [], sdkVersion: version);
         return new(target.targetId, target.platformId, target.architectureId, target.abiId, target.triple, toolchain, target.capabilities, target.byteOrder);
     }
+    /// <summary>Finds existing Apple SDK metadata without executing SDK tools.</summary>
+    /// <param name="sdkName">macosx, iphoneos or iphonesimulator.</param>
+    /// <returns>The explicitly selected or installed SDK root, or null.</returns>
+    public static string? FindInstalledRoot(string sdkName)
+    {
+        string? configured = Environment.GetEnvironmentVariable("SDKROOT");
+        if (!string.IsNullOrWhiteSpace(configured) && Directory.Exists(configured)) return Path.GetFullPath(configured);
+        string family = sdkName switch { "macosx" => "MacOSX", "iphoneos" => "iPhoneOS", "iphonesimulator" => "iPhoneSimulator", _ => throw new ArgumentException("Unknown Apple SDK family.", nameof(sdkName)) };
+        string[] roots = ["/Library/Developer/CommandLineTools/SDKs", "/Applications/Xcode.app/Contents/Developer/Platforms/" + family + ".platform/Developer/SDKs"];
+        return roots.Where(Directory.Exists).SelectMany(path => Directory.GetDirectories(path, family + "*.sdk")).OrderDescending(StringComparer.Ordinal).FirstOrDefault();
+    }
+
     private static Dictionary<string, string> ReadSettings(string root)
     {
         string json = Path.Combine(root, "SDKSettings.json"), plist = Path.Combine(root, "SDKSettings.plist");

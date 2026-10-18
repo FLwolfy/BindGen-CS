@@ -47,7 +47,6 @@ public sealed record AnalysisRequest(
     public bool retainFunctionBodies { get; init; }
     internal ImmutableArray<string> snapshotExcludedDirectories { get; init; } = [];
     internal ImmutableDictionary<string, string> sourcePathMappings { get; init; } = ImmutableDictionary<string, string>.Empty;
-    internal string? nativeCompilerFamily { get; init; }
 
     /// <summary>Copies source entries and captures their relative-path base at request creation.</summary>
     /// <param name="headers">Source entry paths.</param>

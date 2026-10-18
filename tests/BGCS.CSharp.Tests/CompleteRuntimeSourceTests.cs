@@ -19,7 +19,8 @@ public sealed class CompleteRuntimeSourceTests
     public void CompleteSourceDeliveryPreservesTheRuntimePackagesPublicTypesAndMembers()
     {
         var sources = new RuntimeSourceCatalog().GetSources(["runtime.complete"], "Local.One.Runtime");
-        Assert.Contains(sources, source => source.Path == "Runtime/Atomic.cs");
+        Assert.DoesNotContain(sources, source => source.Path == "Runtime/Atomic.cs");
+        Assert.DoesNotContain(sources, source => source.Path == "Runtime/Iterator.cs");
         Assert.Contains(sources, source => source.Path == "Runtime/NativeAlignedBuffer.cs");
         Assert.Contains(sources, source => source.Path == "Runtime/NativeCallbackRegistry.cs");
         Assert.DoesNotContain(sources, source => source.Path.EndsWith("EventHandlerList.cs", StringComparison.Ordinal));
@@ -46,16 +47,14 @@ public sealed class CompleteRuntimeSourceTests
                     {
                         if (typeof(One.Runtime.Bool8) == typeof(Two.Runtime.Bool8)) return -1;
                         One.Runtime.Bool8 enabled = true;
-                        Two.Runtime.Atomic<int> number = new(17);
-                        if (!(bool)enabled || number.Increment() != 18) return -2;
+                        if (!(bool)enabled) return -2;
                         int native = 42;
                         One.Runtime.Pointer<int> pointer = new(&native);
-                        Two.Runtime.Iterator<int> iterator = new(&native);
-                        if (*pointer.handle != 42 || *iterator.current != 42) return -3;
+                        if (*pointer.handle != 42) return -3;
                         using var storage = new One.Runtime.NativeAlignedBuffer(13, 64);
                         if ((nuint)storage.address % 64 != 0 || storage.byteLength != 13) return -4;
-                        using var text = Two.Runtime.Utf32Codec.EncodeCounted("A😀", false);
-                        if (text.encodedCodeUnitCount != 2 || *(uint*)text.pointer != 65) return -5;
+                        using var text = Two.Runtime.Utf32Codec.EncodeCounted("A\U0001F600", false);
+                        if (text.encodedCodeUnitCount != 2 || *(uint*)text.pointer != 65 || ((uint*)text.pointer)[1] != 0x1F600) return -5;
                         return native;
                     }
                 }
@@ -81,6 +80,7 @@ public sealed class CompleteRuntimeSourceTests
             Assert.NotEmpty(source.assembly.GetExportedTypes());
         }
         Assert.Throws<InvalidOperationException>(() => catalog.GetSources(["Runtime.Complete"], "Missing.Runtime"));
+        Assert.Throws<InvalidOperationException>(() => catalog.GetSources(["primitives.atomic"], "Missing.Runtime"));
     }
 
     private static string[] Surface(Assembly assembly, string sourceNamespace)

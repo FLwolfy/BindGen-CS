@@ -44,11 +44,11 @@ public sealed class NativeOwnedValueStringResultTests
                 semantics=new(){ownedResults=[new(){function="Widget::Widget(int)",releaseThreadDomain="any"}]},
                 cpp=new(){familyBindings=[new(){nativeType="std::string",family=StandardValueKind.String,stringEncoding=NativeTextEncoding.Utf8,evidence=new(EvidenceLevel.UserAsserted,"Widget-name-is-counted-UTF8") }],
                     sequenceInputAdapters=[Input("Widget::SetName"),Input("Widget::Prefix"),Input("Widget::CheckName")]},
-                runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},nativeBuild=new(){mode="sources"},cache=new(){enabled=false}
+                runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},cache=new(){enabled=false}
             };
             await using BindingHost host=BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult built=await host.BuildAsync(new(new(configuration,root)));Assert.True(built.success,built.GetDiagnosticSummary());
-            TargetInspection target=Assert.Single(built.generation.targetModels);
+            GenerationResult built=await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration,root));Assert.True(built.success,built.GetDiagnosticSummary());
+            TargetInspection target=Assert.Single(built.targetModels);
             CSharpEmissionPlan plan=new CSharpEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
                 {importMode=mode,runtimeNamespace=sourceRuntime?"Generated.OwnedValueText.Runtime":"BGCS.Runtime",maximumValueStringCodeUnits=32});
             foreach(string member in new[]{"GetName","Prefix","LongName"})
@@ -63,7 +63,7 @@ public sealed class NativeOwnedValueStringResultTests
             Assert.Equal(BridgeConversionKind.OwnedValue,prefix.resultConversion);Assert.NotNull(prefix.resultRelease);
             InteropFunction prefixFunction=target.interop.functions.Single(function=>function.id==prefix.id);
             Assert.Contains(prefixFunction.parameters,parameter=>parameter.text is {zeroTerminated:false,lengthUnit:NativeLengthUnit.CodeUnits,retainsPointer:false});
-            string targetRoot=Path.Combine(built.outputRoot,target.targetId),binary=Assert.Single(Directory.GetFiles(Path.Combine(targetRoot,"native","bin")));
+            string targetRoot=Path.Combine(built.outputRoot,target.targetId),binary=Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             using JsonDocument metadata=JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(targetRoot,"metadata","abi.manifest.json")));
             JsonElement[] described=metadata.RootElement.GetProperty("managedValueStringResults").EnumerateArray()
                 .Where(value=>value.GetProperty("receiver").ValueKind==JsonValueKind.Object).ToArray();

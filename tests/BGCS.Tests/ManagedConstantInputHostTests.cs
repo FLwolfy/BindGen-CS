@@ -30,7 +30,7 @@ public sealed class ManagedConstantInputHostTests
         using Scratch scratch = new();
         string source = Path.Combine(scratch.root, "values.cs");
         File.WriteAllText(source, Source(43));
-        BindingConfiguration configuration = Configuration() with { managedBuild = new() { sources = ["values.cs"] } };
+        BindingConfiguration configuration = Configuration() with { api = Configuration().api with { projectionInputs = new() { sources = ["values.cs"] } } };
         using VerifiedWorker worker = new();
         await using BindingHost host = Builder(worker.root).Build();
         GenerationRequest request = new(configuration, scratch.root);
@@ -48,19 +48,19 @@ public sealed class ManagedConstantInputHostTests
             #if ALTERNATE && NET10_0 && DEBUG && TRACE && NETCOREAPP3_1_OR_GREATER && NET10_0_OR_GREATER
             public const long Answer = 45L;
             #else
-            #error The generator and full SDK build must both preserve framework, Debug, TRACE and declared symbols.
+            #error The static projection must preserve framework and explicitly declared symbols.
             public const long Answer = 46L;
             #endif
             } }
             """);
-        BuildResult built = await host.BuildAsync(new(new(configuration with { managedBuild = configuration.managedBuild with { defines = ["ALTERNATE"] } }, scratch.root)));
-        Success(built.generation, "45L", "miss");
-        string receiptPath = Assert.Single(built.generation.artifacts, artifact => artifact.relativePath.EndsWith("/metadata/verification.json", StringComparison.Ordinal)).relativePath;
+        GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration with { api = configuration.api with { projectionInputs = configuration.api.projectionInputs with { defines = ["ALTERNATE", "DEBUG", "TRACE"] } } }, scratch.root), compileManaged: true);
+        Success(built, "45L", "miss");
+        string receiptPath = Assert.Single(built.artifacts, artifact => artifact.relativePath.EndsWith("/metadata/verification.json", StringComparison.Ordinal)).relativePath;
         using JsonDocument receipt = JsonDocument.Parse(File.ReadAllText(Path.Combine(built.outputRoot, receiptPath)));
-        JsonElement captured = receipt.RootElement.GetProperty("managedCompilationInputs");
+        JsonElement captured = receipt.RootElement.GetProperty("managedProjectionInputs");
         Assert.Contains(captured.GetProperty("files").EnumerateArray(), input => input.GetProperty("path").GetString() == source);
         Assert.DoesNotContain("\"image\"", captured.GetRawText(), StringComparison.Ordinal);
-        string[] symbols = receipt.RootElement.GetProperty("managedCompilationEnvironment").GetProperty("defines").EnumerateArray().Select(value => value.GetString()!).ToArray();
+        string[] symbols = receipt.RootElement.GetProperty("managedProjectionEnvironment").GetProperty("defines").EnumerateArray().Select(value => value.GetString()!).ToArray();
         Assert.All(new[] { "ALTERNATE", "TRACE", "DEBUG", "NET10_0", "NET10_0_OR_GREATER" }, symbol => Assert.Contains(symbol, symbols));
     }
 
@@ -74,7 +74,7 @@ public sealed class ManagedConstantInputHostTests
             internal static class Poison { [System.Runtime.CompilerServices.ModuleInitializer]
                 internal static void Start() => throw new System.Exception("Consumer code must never execute during generation."); }
             """);
-        BindingConfiguration configuration = Configuration() with { managedBuild = new() { references = [reference] } };
+        BindingConfiguration configuration = Configuration() with { api = Configuration().api with { projectionInputs = new() { references = [reference] } } };
         await using BindingHost host = Builder().Build();
         GenerationRequest request = new(configuration, scratch.root);
         Success(await host.GenerateAsync(request), "43L", "miss");
@@ -98,7 +98,7 @@ public sealed class ManagedConstantInputHostTests
         WriteAssembly(facade, facadeName, Source(43) + "namespace Vendor { public static class Unselected { public static VendorDependency.Token Token() => default; } }", dependency);
         string anchor = Path.Combine(fallback, "FrozenAnchor.dll");
         WriteAssembly(anchor, "FrozenAnchor", "public sealed class Anchor { }");
-        BindingConfiguration configuration = Configuration() with { managedBuild = new() { references = [facade, anchor] } };
+        BindingConfiguration configuration = Configuration() with { api = Configuration().api with { projectionInputs = new() { references = [facade, anchor] } } };
         await using BindingHost host = Builder().Build();
         GenerationRequest request = new(configuration, scratch.root);
         Success(await host.GenerateAsync(request), "43L", "miss");
@@ -106,7 +106,7 @@ public sealed class ManagedConstantInputHostTests
         Success(warm, "43L", "hit");
         string receiptPath = Assert.Single(warm.artifacts, artifact => artifact.relativePath.EndsWith("/metadata/verification.json", StringComparison.Ordinal)).relativePath;
         using JsonDocument receipt = JsonDocument.Parse(File.ReadAllText(Path.Combine(warm.outputRoot, receiptPath)));
-        JsonElement inputs = receipt.RootElement.GetProperty("managedCompilationInputs");
+        JsonElement inputs = receipt.RootElement.GetProperty("managedProjectionInputs");
         Assert.Contains(inputs.GetProperty("files").EnumerateArray(), input => input.GetProperty("path").GetString() == dependency);
         string shadow = Path.Combine(first, dependencyName + ".dll");
         Assert.Contains(inputs.GetProperty("absentInputs").EnumerateArray(), input => input.GetProperty("path").GetString() == shadow);
@@ -136,13 +136,13 @@ public sealed class ManagedConstantInputHostTests
         if (kind == "source")
         {
             File.WriteAllText(source, Source(43));
-            configuration = Configuration() with { managedBuild = new() { sources = [source] } };
+            configuration = Configuration() with { api = Configuration().api with { projectionInputs = new() { sources = [source] } } };
             mutate = () => File.WriteAllText(source, Source(44));
         }
         else if (kind == "metadata")
         {
             WriteAssembly(reference, referenceName, Source(43));
-            configuration = Configuration() with { managedBuild = new() { references = [reference] } };
+            configuration = Configuration() with { api = Configuration().api with { projectionInputs = new() { references = [reference] } } };
             mutate = () => WriteAssembly(reference, referenceName, Source(44));
         }
         else
@@ -156,7 +156,7 @@ public sealed class ManagedConstantInputHostTests
             WriteAssembly(reference, referenceName, Source(43) + "public static class UsesDependency { public static Dependency Get() => default; }", dependency);
             string anchor = Path.Combine(fallback, "LateAnchor.dll");
             WriteAssembly(anchor, "LateAnchor", "public struct Anchor { }");
-            configuration = Configuration() with { managedBuild = new() { references = [reference, anchor] } };
+            configuration = Configuration() with { api = Configuration().api with { projectionInputs = new() { references = [reference, anchor] } } };
             mutate = () => File.Copy(dependency, Path.Combine(primary, dependencyName + ".dll"));
         }
         GenerationRequest request = new(configuration, scratch.root);
@@ -166,29 +166,26 @@ public sealed class ManagedConstantInputHostTests
         await using BindingHost changed = Builder().AddArtifactProcessor("fixture.mutate-managed-input", 0, () => new Mutator(mutate)).Build();
         GenerationResult rejected = await changed.GenerateAsync(request);
         Assert.False(rejected.success);
-        Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.message.Contains("Managed compilation inputs changed", StringComparison.Ordinal));
+        Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.message.Contains("Managed projection inputs changed", StringComparison.Ordinal));
         SamePublication(output, before);
     }
 
     [Fact]
-    public async Task OnlyGeneratedPartialMethodBodiesAreDeferredToFullManagedCompilation()
+    public async Task UnselectedPartialMethodBodiesRemainConsumerOwnedWhileSelectedValuesMustResolve()
     {
         using Scratch scratch = new();
         string source = Path.Combine(scratch.root, "values.cs");
         string partial = "namespace Generated.External { public partial class ExternalApi { public object Describe() => Raw; } }";
         File.WriteAllText(source, Source(43) + partial);
-        BindingConfiguration configuration = Configuration() with { managedBuild = new() { sources = [source] } };
+        BindingConfiguration configuration = Configuration() with { api = Configuration().api with { projectionInputs = new() { sources = [source] } } };
         await using BindingHost host = Builder().Build();
-        BuildResult valid = await host.BuildAsync(new(new(configuration, scratch.root)));
-        Success(valid.generation, "43L", "miss");
+        GenerationResult valid = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, scratch.root), compileManaged: true);
+        Success(valid, "43L", "miss");
         Dictionary<string, byte[]> before = Published(valid.outputRoot);
         File.WriteAllText(source, Source(44) + partial.Replace("=> Raw", "=> UnrelatedMissingMember", StringComparison.Ordinal));
         GenerationResult generated = await host.GenerateAsync(new(configuration with { output = configuration.output with { root = "Preview" } }, scratch.root));
         Assert.True(generated.success, generated.GetDiagnosticSummary());
-        BuildResult failed = await host.BuildAsync(new(new(configuration, scratch.root)));
-        Assert.False(failed.success);
-        Assert.Contains(failed.diagnostics, diagnostic => diagnostic.code == "BGCS-MANAGED-COMPILE");
-        SamePublication(valid.outputRoot, before);
+        Assert.Equal(Published(valid.outputRoot).Keys.Order(StringComparer.Ordinal), before.Keys.Order(StringComparer.Ordinal));
         File.WriteAllText(source, Source(44).Replace("44L", "SelectedMissingValue", StringComparison.Ordinal));
         GenerationResult selected = await host.GenerateAsync(new(configuration, scratch.root));
         Assert.False(selected.success);

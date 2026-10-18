@@ -32,7 +32,7 @@ public sealed class EmscriptenNativeTargetProvider : INativeTargetProvider
                 Directory.Exists(cxxIncludes)
                     ? toolchain.cxxSystemIncludeFolders.Append(cxxIncludes).Distinct(StringComparer.Ordinal)
                     : toolchain.cxxSystemIncludeFolders,
-                toolchain.sdkVersion, toolchain.compilerVersion, toolchain.linkerPath, toolchain.libraryDirectories);
+                toolchain.sdkVersion, toolchain.compilerVersion);
         }
         target = new(request.targetId, "emscripten", "wasm32", "emscripten", triple, toolchain, byteOrder: NativeTargetFacts.ByteOrder("wasm32", triple));
         return true;

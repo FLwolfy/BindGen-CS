@@ -12,6 +12,7 @@ using BGCS.Composition;
 using BGCS.Configuration;
 using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Common;
+using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Managed;
 using BGCS.Contracts.Requests;
 using BGCS.Infrastructure.Caching;
@@ -24,6 +25,7 @@ internal static class EmissionStageCache
         ManagedApiModel model,
         EmissionRequest request,
         BindingConfiguration configuration,
+        SourceSnapshot sourceInputs,
         GenerationInputTracker inputs,
         FrozenExtensionRegistry definition,
         CancellationToken cancellationToken
@@ -61,21 +63,21 @@ internal static class EmissionStageCache
                 request.singleFileName,
                 request.maximumValueStringCodeUnits,
                 request.additionalUsings,
-                managedCompilation = request.managedCompilation is null ? null : new
+                managedProjection = request.managedProjection is null ? null : new
                 {
-                    assemblies = request.managedCompilation.assemblies.Select(input => new
+                    assemblies = request.managedProjection.assemblies.Select(input => new
                     { input.path, input.assemblyIdentity, input.digest, length = input.image.Length, input.isFramework }).ToArray(),
-                    sources = request.managedCompilation.sources.Select(input => new { input.path, input.digest, length = input.image.Length }).ToArray(),
-                    request.managedCompilation.defines
+                    sources = request.managedProjection.sources.Select(input => new { input.path, input.digest, length = input.image.Length }).ToArray(),
+                    request.managedProjection.defines
                 }
             },
             // The independently verified model and content/membership digests define
             // this stage. Session-specific owned candidate exclusions are operational
             // paths and must not make otherwise identical emission keys unique.
             inputs.fingerprints,
+            sourceInputs = new { sourceInputs.files, sourceInputs.searchDirectories, sourceInputs.absentInputs },
             extensionInputs = inputs.snapshots.Select(snapshot => new
             { snapshot.files, snapshot.searchDirectories, snapshot.absentInputs }).ToArray(),
-            nativeSourceInputs = inputs.nativeSourceKeys,
             plugins = definition.Plugins.Select(plugin => new
             {
                 plugin.Descriptor,

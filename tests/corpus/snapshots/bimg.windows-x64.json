@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "libraryId": "bimg",
+  "platform": "windows-x64",
+  "sourceNormalization": "quoted-locked-corpus-include-root-v1",
+  "selectionPolicySha256": "5645a77020cbec654f0b5df100702cbbdd06bf5e172bc970a7f9e1cd79e44100",
+  "omittedDeclarations": {
+    "excludedDeclarations": [
+      "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)"
+    ],
+    "reason": "One exact overload is declared but has no implementation in the locked upstream repository; this is an upstream library limitation, not a BGCS parsing or lowering limitation.",
+    "upstreamLimitations": [
+      {
+        "id": "bimg-image-convert-source-bytes-unimplemented",
+        "repository": "bimg",
+        "revision": "6c13a0c8a8908243df475dfcab276554458dcd13",
+        "header": "include/bimg/bimg.h",
+        "line": 460,
+        "lastLine": 465,
+        "sourceSignature": "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)",
+        "headerSha256": "d3c82fdf973eda2f1dedeb7f3104c87184fcf1a5c5cf80be191bb95f5633fc99",
+        "declaration": "ImageContainer* imageConvert(\n\t\t  bx::AllocatorI* _allocator\n\t\t, TextureFormat::Enum _dstFormat\n\t\t, const void* _src\n\t\t, uint32_t _size\n\t\t);",
+        "diagnosticEvidence": "Complete locked source search finds only the declaration. Linking the full generated bridge against upstream core, astc, bx and image_decode emits one unresolved imageConvert(AllocatorI*,Enum,const void*,uint32_t) symbol. The gate selects this exact overload in a separate negative build and requires failure without replacing its prior owned publication."
+      }
+    ]
+  },
+  "sources": {
+    "windows-x64-msvc/managed/Bindings.cs": "5ba58a7a341ff2e72d5fd296f66bf133c41208ec786fc4af092931693ce0fc58",
+    "windows-x64-msvc/native/include/Bimg_.h": "8d49292fce8d83e17a4b12370d72a832aedcfe25aa778951622c38fcf8169609",
+    "windows-x64-msvc/native/src/Bimg_.cpp": "d62b7ad3540f4571379fe7f29ba778e68fea90b558ff3fc9297468aa612772c6",
+    "windows-x64-msvc/native/src/storage.assertions.cpp": "41d42206682fd79e37eed9704b1017bec5f05c378271af01e2fa17c727175938"
+  },
+  "publicApiSha256": "63b42f43d1dc7849da43620c234c407b156abd0de14dbc25897f004c031f1e90"
+}

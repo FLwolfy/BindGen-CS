@@ -8,6 +8,8 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from acceptance_evidence import digest, publication, source_identity
+from native_fixture_build import compile_shared
+import platform
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,7 +27,7 @@ def _configuration(directory: Path, manifest: Path) -> dict:
     return {'schemaVersion': 1, 'library': {'id': 'installed_sources', 'nativeName': 'installed_sources'},
             'source': {'language': 'cpp', 'headers': ['empty.hpp'], 'parseMacros': False},
             'api': {'namespace': 'Package.SourceProtocol', 'name': 'NativeApi'},
-            'runtime': {'mode': 'package'}, 'nativeBuild': {'mode': 'sources'},
+            'runtime': {'mode': 'package'},
             'output': {'root': 'Generated', 'layout': 'singleFile', 'singleFileName': 'Complete.cs'},
             'cache': {'enabled': True, 'directory': str(directory / 'cache')},
             'extensions': {'plugins': [str(manifest)], 'options': {'fixture.source-plugin': {'values': {'increment': 12}}}}}
@@ -50,9 +52,6 @@ def _inspect(output: Path, status: str, increment: int, input_directory: Path) -
     managed = [output / item['relativePath'] for item in artifacts if item['mediaType'] == 'text/x-csharp']
     if len(managed) != 1 or not managed[0].as_posix().endswith('/managed/Complete.cs'):
         raise RuntimeError('Installed source contributions did not compose into the exact configured single managed file.')
-    native = [output / item['relativePath'] for item in artifacts if '/native/bin/' in item['relativePath']]
-    if len(native) != 1:
-        raise RuntimeError('Installed source contributions lack their exact built native library.')
     for name in ('generated.h', 'generated.cpp', 'payload.txt'):
         matches = [item for item in artifacts if item['relativePath'].endswith('/contributions/fixture.source/helpers/' + name)]
         if len(matches) != 1:
@@ -67,18 +66,30 @@ def _inspect(output: Path, status: str, increment: int, input_directory: Path) -
     if len(verification) != 1:
         raise RuntimeError('Installed source contribution has no exact target input evidence.')
     inputs = json.loads(verification[0].read_text())
-    frozen = {name: copy.deepcopy(inputs[name]) for name in ('inputs', 'nativeSourceInputs')}
+    frozen = {name: copy.deepcopy(inputs[name]) for name in ('inputs', 'bridgeInputs', 'configurationInputs',
+        'managedProjectionInputs', 'managedProjectionEnvironment', 'extensionInputs', 'plugins')}
     memberships = []
-    for snapshot in [frozen['inputs'], *frozen['nativeSourceInputs']]:
-        for directory in snapshot['searchDirectories']:
-            if Path(directory['path']).resolve() == input_directory.resolve():
-                memberships.append(directory['digest']['value'])
-                directory['digest'] = None
+    def inspect_snapshots(value):
+        if isinstance(value, dict):
+            for directory in value.get('searchDirectories', []):
+                if Path(directory['path']).resolve() == input_directory.resolve():
+                    memberships.append(directory['digest']['value'])
+                    directory['digest'] = None
+            for child in value.values(): inspect_snapshots(child)
+        elif isinstance(value, list):
+            for child in value: inspect_snapshots(child)
+    inspect_snapshots(frozen)
     if not memberships or len(set(memberships)) != 1:
         raise RuntimeError('Installed source-contributor source-root membership evidence is absent or contradictory.')
     other = hashlib.sha256(json.dumps(frozen, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-    return managed, native[0], {'emission': status, 'artifactCount': len(artifacts), 'manifestSha256': digest(output / '.bgcs-artifacts.json'),
+    return managed, output, {'emission': status, 'artifactCount': len(artifacts), 'manifestSha256': digest(output / '.bgcs-artifacts.json'),
                                 'inputRootMembershipSha256': memberships[0], 'otherInputFactsSha256': other}
+
+
+
+def _compile(source: Path, generated: Path, work: Path, evidence: Path, run, label: str) -> Path:
+    name = 'installed_sources.dll' if platform.system() == 'Windows' else 'libinstalled_sources.dylib' if platform.system() == 'Darwin' else 'libinstalled_sources.so'
+    return compile_shared(source, generated, work / 'external-native' / label / name, [], run, evidence, exports=('contributed_add',))
 
 
 def _consumer(dotnet: str, version: str, directory: Path, managed: list[Path], binary: Path,
@@ -120,10 +131,10 @@ def prepare(dotnet: str, version: str, work: Path, evidence: Path, manifest: Pat
 using System.Linq;
 using BGCS;
 await using BindingHost host = BindingHost.CreateDefault();
-BuildResult result = await host.BuildAsync(await BuildRequest.FromFileAsync("bindgen.json"));
+GenerationResult result = await host.GenerateAsync(await GenerationRequest.FromFileAsync("bindgen.json"));
 if (!result.success) throw new InvalidOperationException(result.GetDiagnosticSummary());
-if (!result.generation.artifacts.Any(item => item.relativePath.EndsWith("/contributions/fixture.source/helpers/generated.cpp", StringComparison.Ordinal)))
-    throw new InvalidOperationException("The installed SDK did not build the manifest's contributed C++ source.");
+if (!result.artifacts.Any(item => item.relativePath.EndsWith("/contributions/fixture.source/helpers/generated.cpp", StringComparison.Ordinal)))
+    throw new InvalidOperationException("The installed SDK did not generate the manifest's contributed C++ source.");
 ''', encoding='utf-8')
     run([dotnet, 'build', 'Consumer.csproj', '-c', 'Release', '-m:1', '-nr:false'], source, evidence, 'source-protocol-sdk-build')
     command = [dotnet, str(source / 'bin/Release/net10.0/Consumer.dll')]
@@ -134,6 +145,7 @@ if (!result.generation.artifacts.Any(item => item.relativePath.EndsWith("/contri
         managed, binary, proof = _inspect(source / 'Generated', status, increment, source)
         phases.append({'phase': label, **proof})
         if label == 'changed':
+            binary = _compile(source, binary, work, evidence, run, 'source-sdk')
             _consumer(dotnet, version, work / 'source-protocol-sdk-consumer', managed, binary, 42, evidence, run, write_project, 'source-protocol-sdk')
     before = _snapshot(source / 'Generated')
     _settings(configuration, 13, True); _write(path, configuration)
@@ -154,17 +166,19 @@ def verify_msbuild(dotnet: str, version: str, work: Path, evidence: Path, state:
     path = source / 'bindgen.json'
     (source / 'Program.cs').write_text('''using System;
 using Package.SourceProtocol;
-using NativeApi api = NativeApi.Load();
+using NativeApi api = NativeApi.Load(args[1]);
 int expected = int.Parse(args[0], global::System.Globalization.CultureInfo.InvariantCulture);
 if (api.ContributedAdd(29) != expected || ContributedHelper.Marker != expected)
     throw new InvalidOperationException("The installed TaskHost contribution oracle disagreed.");
 ''', encoding='utf-8')
     command = [dotnet, 'build', 'Consumer.csproj', '-c', 'Release', '-m:1', '-nr:false']
     phases = []
-    # Generation precedes the consumer's first C# compilation. That compilation
-    # adds potential include candidates under the shared project root. Preserve
-    # the required conservative miss, then prove a hit with truly stable inputs.
+    # Add an actual include candidate explicitly. Consumer compiler intermediates
+    # are not required generation inputs and need not change include membership.
+    # The directory mutation must miss; a subsequent unchanged build must hit.
     for label, increment, status in (('cold', 12, 'miss'), ('stabilized', 12, 'miss'), ('warm', 12, 'hit'), ('changed', 13, 'miss')):
+        if label == 'stabilized':
+            (source / 'new-include-candidate.h').write_text('/* Explicit cache membership mutation. */\n', encoding='utf-8')
         _settings(configuration, increment); _write(path, configuration)
         run(command, source, evidence, 'source-protocol-msbuild-' + label)
         owners = [owner for owner in (source / 'obj').rglob('.bgcs-artifacts.json') if (owner.parent / 'generation.report.json').is_file()]
@@ -173,7 +187,8 @@ if (api.ContributedAdd(29) != expected || ContributedHelper.Marker != expected)
         output = owners[0].parent
         _, _, proof = _inspect(output, status, increment, source)
         phases.append({'phase': label, **proof})
-        run([dotnet, str(source / 'bin/Release/net10.0/Consumer.dll'), str(29 + increment)], source, evidence, 'source-protocol-msbuild-invoke-' + label)
+        binary = _compile(source, output, work, evidence, run, 'source-msbuild-' + label)
+        run([dotnet, str(source / 'bin/Release/net10.0/Consumer.dll'), str(29 + increment), str(binary)], source, evidence, 'source-protocol-msbuild-invoke-' + label)
     cold, stabilized, warm = phases[:3]
     if (cold['inputRootMembershipSha256'] == stabilized['inputRootMembershipSha256']
             or stabilized['inputRootMembershipSha256'] != warm['inputRootMembershipSha256']
@@ -192,7 +207,7 @@ def verify_cli(tool: Path, dotnet: str, version: str, work: Path, evidence: Path
     source.mkdir()
     configuration = _configuration(source, state['manifest'])
     path = source / 'bindgen.json'
-    command = [str(tool), 'build', 'bindgen.json', '--json']
+    command = [str(tool), 'generate', 'bindgen.json', '--json']
     phases = []
     for label, increment, status in (('cold', 12, 'miss'), ('warm', 12, 'hit'), ('changed', 13, 'miss')):
         _settings(configuration, increment); _write(path, configuration)
@@ -200,6 +215,7 @@ def verify_cli(tool: Path, dotnet: str, version: str, work: Path, evidence: Path
         managed, binary, proof = _inspect(source / 'Generated', status, increment, source)
         phases.append({'phase': label, **proof})
         if label == 'changed':
+            binary = _compile(source, binary, work, evidence, run, 'source-cli')
             _consumer(dotnet, version, work / 'source-protocol-cli-consumer', managed, binary, 42, evidence, run, write_project, 'source-protocol-cli')
     before = _snapshot(source / 'Generated')
     _settings(configuration, 13, True); _write(path, configuration)

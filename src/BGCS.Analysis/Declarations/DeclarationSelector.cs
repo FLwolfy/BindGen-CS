@@ -213,16 +213,11 @@ public sealed class DeclarationSelector
                     callableIds.Add(macroFunction);
                 }
                 if (declaration.functionReference is StableId functionReference) Push(false, functionReference, true, key);
-                foreach (StableId dependency in ObjectiveCFactDependencies.Declarations(declaration)) Push(false, dependency, next.Required, key);
-                if (declaration.objectiveCContainer is { } objectiveC)
-                    foreach (StableId parameter in objectiveC.genericParameters) AddType(parameter);
                 if (declaration.parent is StableId parent) Push(false, parent, next.Required, key);
                 foreach (StableId childId in declaration.children)
                 {
                     NativeDeclaration child = module.GetDeclaration(childId);
                     if (child.kind is "Field" or "Parameter" or "EnumItem") Push(false, childId, next.Required, key);
-                    else if (declaration.objectiveCContainer is not null && child.kind is ("Property" or "Function"))
-                        Push(false, childId, next.Required, key);
                     // Keep callable metadata needed to distinguish a DTO, declared
                     // constructors and destructor access. Ordinary members are not
                     // promoted to exports by this metadata-only dependency edge.

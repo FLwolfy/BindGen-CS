@@ -76,7 +76,7 @@ GenerationRequest alternative = request.WithConfiguration(
 ```
 
 The groups are `library`, `source`, `targets`, `api`, `semantics`, `cpp`,
-`nativeBuild`, `managedBuild`, `runtime`, `output`, `extensions`, `cache`
+`runtime`, `output`, `extensions`, `cache`
 and `execution`, with `extends` and profiles for composition. C/C++ use the
 same request. See the [generated reference](generated/config-reference.md)
 for exact constraints and defaults.
@@ -87,36 +87,9 @@ Semantic and ABI analysis, managed projection, emission, processors and final
 emitted-contract checks precede complete candidate publication. Generation
 alone does not certify native linking or runtime invocation.
 
-## Build and interpret results
+## Generation results
 
-```csharp
-BuildResult built = await host.BuildAsync(new BuildRequest(request), cancellationToken);
-if (!built.success)
-    throw new InvalidOperationException(built.GetDiagnosticSummary());
-```
-
-`BuildRequest.FromFileAsync(path, cancellationToken: token)` loads a cancellable
-request; `BuildRequest.FromFile(path)` is the synchronous entry. Build compiles candidate
-managed sources with warnings treated as errors and performs the declared
-native construction or prebuilt-artifact checks. `nativeBuild.mode = none`
-explicitly omits native construction. A required failure prevents formal
-publication and preserves previous owned output. Actual invocation remains
-a separate acceptance stage; receipts identify the work completed.
-
-| Generation result | Meaning |
-| --- | --- |
-| `published` | Complete candidate artifacts were installed. |
-| `success` | Publication succeeded with no Error/Critical diagnostics. |
-| `outputRoot` | Captured formal output location. |
-| `artifacts` | Exact logical paths and content digests. |
-| `nativeReferences` | Typed consumer references from verified target/runtime/output facts, including import-module identity. |
-| `cacheStages` | Decisions for named stages; a hit does not certify a build or invocation. |
-| `targetModels` | Detached SDK models, omitted from routine result JSON. |
-| `diagnostics` | Complete diagnostics, including service-release failures. |
-
-`BuildResult.generation` retains the complete generation result and forwards
-success, publication, artifacts and diagnostics. Console display thresholds
-do not alter Host/JSON diagnostics or success. Error/Critical remain failures.
+`GenerationResult` exposes `success`, `published`, `outputRoot`, `artifacts`, `cacheStages`, `targetModels` and `diagnostics`. Complete owned output is hash-checked and published as one collection. Consumer compilation, native compilation/linking and invocation belong to external builds and acceptance; generation does not certify them.
 
 ## Analysis, inspection, comparison and bridge-only output
 
@@ -148,42 +121,11 @@ Diff verifies owned previous output under a publication lock. Unowned,
 incomplete or tampered sets fail. Formal output remains untouched.
 `hasChanges` describes logical artifacts, rather than operational cache decisions.
 
-## Standalone native construction
-
-Neutral `bridge.manifest.json` locks native build inputs; the typed bridge model
-is the separate `bridge.module.json`.
-
-```csharp
-ManifestNativeBuildRequest nativeRequest = new(
-    "/absolute/path/to/bridge.manifest.json");
-ManifestNativeBuildPlanResult plan = await host.PlanNativeBuildAsync(
-    nativeRequest, cancellationToken);
-if (!plan.success)
-    throw new InvalidOperationException(plan.GetDiagnosticSummary());
-
-ManifestNativeBuildResult native = await host.NativeBuildAsync(
-    nativeRequest, cancellationToken);
-if (!native.success)
-    throw new InvalidOperationException(native.GetDiagnosticSummary());
-```
-
-Overrides include `providerId`, `compilerPath`, `buildToolPath`,
-`auxiliaryToolPath`, `exportToolPath`, `outputFile`, `packageRoot`,
-`verifyExports` and `timeoutSeconds`. Explicit override paths are absolute.
-`auto` retains the manifest provider; stable custom service IDs are supported.
-
-`plan.nativeArtifact` names the final output. Compiler-plan output is a private
-candidate, and planning does not publish. Execution verifies locked inputs,
-required exports and ownership. Success does not claim runtime invocation.
-Portable locked plugin manifests can reactivate; SDK factory-only plugins
-require matching Host registration.
-
 ## Workspaces
 
 ```csharp
 BindingWorkspace workspace = new WorkspaceLoader().Load("workspace.json");
 WorkspaceResult generated = await host.GenerateWorkspaceAsync(workspace, cancellationToken);
-WorkspaceResult built = await host.BuildWorkspaceAsync(workspace, cancellationToken);
 WorkspaceDiffResult compared = await host.DiffWorkspaceAsync(workspace, cancellationToken);
 ```
 
@@ -199,8 +141,7 @@ working directory.
 
 The builder supports factories for frontend, managed projection and backend,
 and registrations for target providers, native/interop transforms, C++ type
-and callable lowerings, processors, validators, native build providers and
-native artifact packagers.
+and callable lowerings, processors and validators.
 
 `AddPlugin<T>()`, `AddPluginFactory(...)` and `AddPluginManifest(...)` configure
 neutral plugins. Metadata declares Contracts compatibility, exact service IDs,

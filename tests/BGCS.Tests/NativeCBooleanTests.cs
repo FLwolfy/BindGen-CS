@@ -86,14 +86,14 @@ public sealed class NativeCBooleanTests
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                 semantics = new() { valueParameters = [new() { function = "store_flag", parameter = "record",
                     direction = NativeParameterDirection.InputOutput, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }] },
-                nativeBuild = new() { mode = "sources", sources = ["boolean.c"] }, cache = new() { enabled = false }
+                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            BuildResult result = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            TargetInspection target = Assert.Single(result.generation.targetModels);
+            TargetInspection target = Assert.Single(result.targetModels);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             Assert.Equal(5, target.interop!.functions.Length);
             Assert.Equal(4, target.managed!.methods.Count(method => !method.valueProjections.IsEmpty));
             string concrete = sourceRuntime ? "BooleanApiContext" : "BooleanApi";

@@ -4,6 +4,8 @@ using BGCS.Contracts.Targets;
 using BGCS.Frontend.Clang.Model.Declarations;
 using BGCS.Frontend.Clang.Parsing;
 using BGCS.Platforms.Targeting;
+using BGCS.Platforms.Toolchains;
+using System.Linq;
 using Xunit;
 
 namespace BGCS.Frontend.Clang.Tests;
@@ -40,7 +42,8 @@ public sealed class ClangResourceHeaderTests
     [Fact]
     public void HostSdkDiscoveryDoesNotImportAnotherClangReleasesBuiltinHeaders()
     {
-        var directories = ToolchainDiscovery.DiscoverSystemIncludeFolders(SourceLanguage.Cpp);
+        NativeTargetDescriptor target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp);
+        var directories = ToolchainResolver.ResolveHeaderSearchPaths(target, SourceLanguage.Cpp).Select(path => path.path).ToArray();
 
         Assert.NotEmpty(directories);
         Assert.DoesNotContain(directories, directory =>

@@ -124,7 +124,7 @@ def main() -> None:
         "docs/generated/cpp-config-reference.md": render(schema, fingerprint, cpp_only=True),
         "docs/generated/cpp-config-reference.cn.md": render(schema, fingerprint, chinese=True, cpp_only=True),
         "docs/config.md": "# Configuration Reference\n\nThe BGCS 3.0 format is grouped and versioned. See the [complete generated reference](generated/config-reference.md),\nthe [Chinese reference](generated/config-reference.cn.md), and the [configuration guide](configuration-guide.md).\nExport the installed version's authoritative schema with `bindgen-cs schema bindgen.schema.json`.\n",
-        "docs/cpp2c.config.md": "# C++ Configuration Reference\n\nC and C++ share one grouped `bindgen.json`. See the [generated C++ group reference](generated/cpp-config-reference.md),\nthe [Chinese reference](generated/cpp-config-reference.cn.md), and the [configuration guide](configuration-guide.md).\nThe complete schema also contains source, targets, semantics, managed API, build and output choices.\n"
+        "docs/cpp2c.config.md": "# C++ Configuration Reference\n\nC and C++ share one grouped `bindgen.json`. See the [generated C++ group reference](generated/cpp-config-reference.md),\nthe [Chinese reference](generated/cpp-config-reference.cn.md), and the [configuration guide](configuration-guide.md).\nThe complete schema also contains source, targets, semantics, managed API, projection inputs and output choices.\n"
     }
     destinations.update({"schemas/" + name: json.dumps(value, ensure_ascii=False, indent=2) + "\n"
                          for name, value in exported_schemas.items()})

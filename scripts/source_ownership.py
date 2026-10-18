@@ -13,7 +13,7 @@ SOURCE_EXTENSIONS = frozenset(('.cs', '.csproj', '.props', '.targets', '.proj', 
                                '.in', '.cmake', '.nuspec'))
 BUILD_DIRECTORIES = frozenset(('bin', 'obj', '__pycache__', 'testresults', '.bindgen-cache'))
 GENERATED_ROOTS = frozenset(('examples/NativeShim/Generated', 'examples/NativeShim/GeneratedBridge',
-                            'examples/QuickStart/Generated'))
+                            'examples/QuickStart/Generated', 'examples/QuickStart/.bgcs/cache'))
 
 
 def verify_source_ownership(root: Path) -> int:

@@ -25,7 +25,6 @@ internal unsafe partial class CppModelContext
     private readonly CppContainerContext m_systemRootContainerContext;
     private CppContainerContext m_rootContainerContext = null!;
     private readonly TypedefResolver m_typedefResolver = new();
-    private readonly Dictionary<CursorKey, CppTemplateParameterType> m_objCTemplateParameterTypes;
     private readonly Dictionary<(ResolverScope Scope, uint Hash, CXCursorKind Kind), List<CursorKey>> m_cursorKeys;
     internal SourcePathMapper sourcePaths { get; set; } = new(new Dictionary<string, string>());
     /// <summary>
@@ -38,7 +37,6 @@ internal unsafe partial class CppModelContext
         this.builder = builder;
         this.m_containers = [];
         this.rootCompilation = new(translationUnit);
-        this.m_objCTemplateParameterTypes = [];
         this.m_cursorKeys = [];
         this.m_userRootContainerContext = new(this.rootCompilation, CppContainerContextType.User, CppVisibility.Default);
         this.m_systemRootContainerContext = new(this.rootCompilation.system, CppContainerContextType.System, CppVisibility.Default);
@@ -73,10 +71,6 @@ internal unsafe partial class CppModelContext
     /// </summary>
     public TypedefResolver typedefResolver => this.m_typedefResolver;
     /// <summary>
-    /// Exposes public member <c>objCTemplateParameterTypes</c>.
-    /// </summary>
-    public Dictionary<CursorKey, CppTemplateParameterType> objCTemplateParameterTypes => this.m_objCTemplateParameterTypes;
-    /// <summary>
     /// Exposes public member <c>containers</c>.
     /// </summary>
     public Dictionary<CursorKey, CppContainerContext> containers => this.m_containers;
@@ -84,15 +78,6 @@ internal unsafe partial class CppModelContext
     /// Gets or sets <c>CurrentClassBeingVisited</c>.
     /// </summary>
     public CppClass? currentClassBeingVisited { get; set; }
-    /// <summary>
-    /// Gets <c>MapTemplateParameterTypeToTypedefKeys</c>.
-    /// </summary>
-    public Dictionary<CppTemplateParameterType, HashSet<CursorKey>> mapTemplateParameterTypeToTypedefKeys { get; } = [];
-    /// <summary>
-    /// Gets or sets <c>CurrentTypedefKey</c>.
-    /// </summary>
-    public CursorKey currentTypedefKey { get; set; }
-
     /// <summary>
     /// Returns computed data from <c>GetOrCreateDeclContainer</c>.
     /// </summary>
@@ -167,24 +152,5 @@ internal unsafe partial class CppModelContext
         return key;
     }
 
-    /// <summary>
-    /// Executes public operation <c>TryToCreateTemplateParametersObjC</c>.
-    /// </summary>
-    public CppTemplateParameterType? TryToCreateTemplateParametersObjC(CXCursor cursor)
-    {
-        if (cursor.Kind != CXCursorKind.CXCursor_TemplateTypeParameter)
-        {
-            return null;
-        }
 
-        var key = GetCursorKey(cursor);
-        if (!this.m_objCTemplateParameterTypes.TryGetValue(key, out var templateParameterType))
-        {
-            var templateParameterName = CXUtil.GetCursorSpelling(cursor);
-            templateParameterType = new(cursor, templateParameterName);
-            this.m_objCTemplateParameterTypes.Add(key, templateParameterType);
-        }
-
-        return templateParameterType;
-    }
 }

@@ -35,7 +35,7 @@ public sealed class WindowsNativeTargetProvider : INativeTargetProvider
         }.Concat(resolved.defines).Concat(inputs.defines);
         NativeToolchainDescriptor toolchain = new(inputs.compilerPath, inputs.sysRoot, inputs.systemIncludeFolders,
             definitions, new[] { "-fms-extensions", "-fms-compatibility", "-fms-compatibility-version=19.30" }.Concat(inputs.arguments),
-            inputs.cxxSystemIncludeFolders, inputs.sdkVersion, inputs.compilerVersion, inputs.linkerPath, inputs.libraryDirectories);
+            inputs.cxxSystemIncludeFolders, inputs.sdkVersion, inputs.compilerVersion);
         string architecture = request.targetId.value.Split('-')[1];
         string triple = NativeTargetTriple.Resolve(request, resolved.cpu + "-pc-windows-msvc", "windows", architecture, "msvc");
         target = new(request.targetId, "windows", architecture, "msvc", triple, toolchain, byteOrder: NativeTargetFacts.ByteOrder(architecture, triple));

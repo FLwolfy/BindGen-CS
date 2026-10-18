@@ -30,9 +30,6 @@
   "runtime": {
     "mode": "package"
   },
-  "nativeBuild": {
-    "mode": "none"
-  },
   "output": {
     "root": "Generated",
     "layout": "singleFile"

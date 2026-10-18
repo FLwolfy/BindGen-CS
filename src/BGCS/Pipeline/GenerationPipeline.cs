@@ -45,7 +45,7 @@ public sealed partial class BindingHost
         GenerationRequest request,
         CancellationToken cancellationToken = default
     )
-        => ExecuteGenerationAsync(request, compileManaged: false, cancellationToken);
+        => ExecuteGenerationAsync(request, cancellationToken);
 
     /// <summary>Generates and verifies only the C++ bridge and its C ABI contracts.</summary>
     /// <param name="request">The grouped C++ generation request.</param>
@@ -57,24 +57,11 @@ public sealed partial class BindingHost
     ) {
         ArgumentNullException.ThrowIfNull(request);
         if (request.configuration.source.language != SourceLanguage.Cpp) throw new ArgumentException("Bridge generation requires C++ input.", nameof(request));
-        return ExecuteGenerationAsync(request, compileManaged: false, cancellationToken, bridgeOnly: true);
-    }
-
-    /// <summary>Compiles candidate managed sources and performs required checks before publishing the joint artifact set.</summary>
-    /// <param name="request">The immutable candidate build request.</param>
-    /// <param name="cancellationToken">Cancels generation or compilation before publication.</param>
-    /// <returns>The final verified candidate publication result.</returns>
-    public async Task<BuildResult> BuildAsync(
-        BuildRequest request,
-        CancellationToken cancellationToken = default
-    ) {
-        ArgumentNullException.ThrowIfNull(request);
-        return new(await ExecuteGenerationAsync(request.generation, compileManaged: true, cancellationToken).ConfigureAwait(false));
+        return ExecuteGenerationAsync(request, cancellationToken, bridgeOnly: true);
     }
 
     private async Task<GenerationResult> ExecuteGenerationAsync(
         GenerationRequest request,
-        bool compileManaged,
         CancellationToken cancellationToken,
         bool bridgeOnly = false
     ) {
@@ -94,14 +81,12 @@ public sealed partial class BindingHost
         HashSet<string> diagnosticErrorCodes = configuration.execution.diagnostics.errorCodes.ToHashSet(StringComparer.Ordinal);
         ImmutableArray<ArtifactDescriptor>.Builder artifacts = ImmutableArray.CreateBuilder<ArtifactDescriptor>();
         ImmutableArray<TargetInspection>.Builder targetModels = ImmutableArray.CreateBuilder<TargetInspection>();
-        ImmutableArray<NativeReferenceDescriptor>.Builder nativeReferences = ImmutableArray.CreateBuilder<NativeReferenceDescriptor>();
         GenerationInputTracker extensionInputs = new(JsonSerializer.SerializeToElement(configuration), request.baseDirectory);
         List<GenerationCacheStageResult> cacheEvidence = [];
         List<(GenerationStageCache Cache, ContentDigest Key, ImmutableArray<CachedStageArtifact> Artifacts)> pendingCacheEntries = [];
         List<IArtifactProcessor> pendingProcessorRelease = [];
         List<SourceContributionCapture> sourceContributions = [];
         bool published = false;
-        bool nativeBuildPerformed = false;
         GenerationComposition? composition = null;
         try
         {
@@ -120,15 +105,16 @@ public sealed partial class BindingHost
             }
             composition = await GenerationComposition.CreateAsync(definition, cancellation.Token, extensionInputs).ConfigureAwait(false);
             FrozenExtensionRegistry registry = composition.registry;
-            BGCS.Validation.ManagedCompilationInputCapture? managedCompilation = bridgeOnly ? null
-                : BGCS.Validation.ManagedCompilationInputCapture.Capture(configuration.managedBuild, request.baseDirectory, cancellation.Token);
+            ManagedProjectionInputCapture? managedProjection = bridgeOnly ? null
+                : ManagedProjectionInputCapture.Capture(configuration.api.projectionInputs, request.baseDirectory, cancellation.Token,
+                    includeFramework: !configuration.api.externalTypes.IsEmpty);
             List<string> protectedInputs = configuration.source.headers.Concat(configuration.source.includeDirectories).Concat(configuration.source.systemIncludeDirectories)
-                .Concat(configuration.nativeBuild.sources).Concat(configuration.nativeBuild.artifacts).Select(path => Path.GetFullPath(path, request.baseDirectory)).ToList();
+                .Select(path => Path.GetFullPath(path, request.baseDirectory)).ToList();
             protectedInputs.AddRange(configuration.cpp.nativeShims.SelectMany(shim => shim.publicHeaders.Concat(shim.sourceFiles)).Select(path => Path.GetFullPath(path, request.baseDirectory)));
-            protectedInputs.AddRange(configuration.managedBuild.sources.Concat(configuration.managedBuild.references).Select(path => Path.GetFullPath(path, request.baseDirectory)));
-            if (managedCompilation is not null)
-                protectedInputs.AddRange(managedCompilation.snapshot.files.SelectMany(input => new[] { input.path, input.resolvedPath })
-                    .Concat(managedCompilation.snapshot.absentInputs.SelectMany(input => new[] { input.path, input.resolvedPath })));
+            protectedInputs.AddRange(configuration.api.projectionInputs.sources.Concat(configuration.api.projectionInputs.references).Select(path => Path.GetFullPath(path, request.baseDirectory)));
+            if (managedProjection is not null)
+                protectedInputs.AddRange(managedProjection.snapshot.files.SelectMany(input => new[] { input.path, input.resolvedPath })
+                    .Concat(managedProjection.snapshot.absentInputs.SelectMany(input => new[] { input.path, input.resolvedPath })));
             protectedInputs.Add(Path.GetFullPath(configuration.cache.directory, request.baseDirectory));
             foreach (PluginRegistration plugin in definition.Plugins)
                 if (plugin.Manifest is not null)
@@ -224,8 +210,6 @@ public sealed partial class BindingHost
                     parseComments = source.parseComments,
                     parseSystemIncludes = source.includeSystemDeclarations,
                     snapshotExcludedDirectories = new[] { publisher.candidateRoot, output, logicalOutput, cacheRoot }.Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToImmutableArray(),
-                    nativeCompilerFamily = configuration.nativeBuild.provider is "clang" or "gnu" or "msvc" or "clang-cl" or "msbuild"
-                        ? configuration.nativeBuild.provider : null,
                     toolchain = new NativeToolchainDescriptor(target.settings.compilerPath, target.settings.sysRoot,
                         target.settings.systemIncludeDirectories, target.settings.defines, target.settings.arguments, target.settings.cxxSystemIncludeDirectories)
                 };
@@ -253,15 +237,10 @@ public sealed partial class BindingHost
                 RejectFormalOutputReads(analysis.snapshot!);
                 parsedInputs.Add(analysis.snapshot!);
                 string targetId = analysis.module!.targetId;
-                NativeOutputKind nativeOutputKind = configuration.nativeBuild.outputKind ?? BGCS.Platforms.Capabilities.PlatformCapabilityCatalog.Get(analysis.target!).defaultOutputKind;
                 ManagedRuntimeProfile runtimeProfile = BGCS.Platforms.ManagedRuntimeResolver.Resolve(analysis.target!, configuration.api.runtime
                     ?? (analysis.target!.platformId == "emscripten" ? ManagedRuntimeKind.BrowserWasm
-                        : nativeOutputKind is NativeOutputKind.StaticLibrary or NativeOutputKind.Object || analysis.target.platformId is "ios" or "ios-simulator"
-                            ? ManagedRuntimeKind.NativeAot : ManagedRuntimeKind.CoreClr), nativeOutputKind);
-                string? nativeArtifactFileName = configuration.nativeBuild.mode == "none" ? null
-                    : BGCS.Platforms.Assets.NativeOutputLayout.ResolveFilename(configuration.library.nativeName, analysis.target!, nativeOutputKind);
-                string emittedLibraryName = BGCS.Platforms.Assets.NativeOutputLayout.ResolveImportModuleName(
-                    analysis.target!, runtimeProfile, configuration.library.nativeName, nativeArtifactFileName);
+                        : analysis.target!.platformId is "ios" or "ios-simulator" ? ManagedRuntimeKind.NativeAot : ManagedRuntimeKind.CoreClr));
+                string emittedLibraryName = configuration.library.nativeName;
                 if (!concreteTargets.Add(targetId)) throw new InvalidOperationException($"Two target selections resolve to '{targetId}'.");
                 ImmutableArray<NativeGeneratedInputMap> contributionMaps = contribution?.Mappings(targetId) ?? [];
                 if (contribution is not null) artifacts.AddRange(contribution.PublishNative(rootSink, targetId));
@@ -482,7 +461,7 @@ public sealed partial class BindingHost
                     if (HasErrors()) break;
                     if (runtimeProfile.moduleMechanism == NativeModuleMechanism.StaticAdapter && configuration.api.importMode == BindingImportMode.FunctionTable)
                     {
-                        var adapter = BGCS.NativeBuild.Planning.StaticExportTableEmitter.Emit(interop,
+                        var adapter = StaticExportTableEmitter.Emit(interop,
                             bridgeModel is null ? parseHeaders.Select(path => NativeGeneratedInputRelocation.HeaderInclude(path, contributionMaps, targetId + "/native/src")).ToImmutableArray() : [bridgeModel.exportPrefix + ".h"]);
                         staticTable = adapter.descriptor;
                         string adapterPath = targetId + "/native/src/export.table.c";
@@ -538,14 +517,15 @@ public sealed partial class BindingHost
                             if (!ReferenceEquals(model.interop, interop))
                                 throw new InvalidOperationException("A managed transformation changed the frozen native ABI instead of its presentation.");
                         }
-                        var externalProjection = await BGCS.Validation.ManagedExternalProjectionBinder.BindAsync(model, configuration, request.baseDirectory, cancellation.Token).ConfigureAwait(false);
-                        model = externalProjection.Model;
-                        if (externalProjection.Inputs is not null) extensionInputs.CaptureArgumentInputs(externalProjection.Inputs);
+                        model = ExternalProjectionConfigurationBinder.Bind(model, configuration.api.externalTypes);
+                        if (backend is BGCS.CSharp.CSharpBackend)
+                            model = BGCS.CSharp.Projection.StaticExternalProjectionBinder.Bind(model, managedProjection?.inputs, cancellation.Token);
                         managedModel = model;
-                        string runtimeNamespace = configuration.runtime.mode == "source" ? configuration.runtime.@namespace ?? configuration.api.@namespace + ".Runtime" : "BGCS.Runtime";
+                        string runtimeNamespace = configuration.runtime.mode == "source"
+                            ? configuration.runtime.@namespace ?? configuration.api.@namespace + ".Runtime" : "BGCS.Runtime";
                         if (configuration.runtime.mode == "package" && configuration.runtime.@namespace is not null && configuration.runtime.@namespace != "BGCS.Runtime")
                             throw new ArgumentException("Package runtime references require the BGCS.Runtime namespace.");
-                        managedCompilation?.Verify(cancellation.Token);
+                        managedProjection?.Verify(cancellation.Token);
                         EmissionRequest emission = new(emittedLibraryName, new PrefixSink(rootSink, targetId + "/managed/"))
                         {
                             framework = configuration.api.framework,
@@ -559,7 +539,7 @@ public sealed partial class BindingHost
                             additionalRuntimeSourceFeatures = configuration.runtime.sourceFeatures,
                             singleFile = configuration.output.layout == "singleFile",
                             singleFileName = configuration.output.singleFileName,
-                            managedCompilation = managedCompilation?.inputs
+                            managedProjection = managedProjection?.inputs
                         };
                         if (backend is BGCS.CSharp.CSharpBackend)
                         {
@@ -596,7 +576,7 @@ public sealed partial class BindingHost
                             if (processor.id != registration.Id || processor.priority != registration.Priority)
                                 throw new InvalidOperationException("A processor changed its frozen identity before emission.");
                         }
-                        managedCompilation?.Verify(cancellation.Token);
+                        managedProjection?.Verify(cancellation.Token);
                         GenerationStageCache? stageCache = null;
                         ContentDigest stageKey = default;
                         string? cacheReason = !configuration.cache.enabled ? "Caching is disabled by configuration."
@@ -610,7 +590,7 @@ public sealed partial class BindingHost
                             try
                             {
                                 stageCache = reusableEmissionCache;
-                                stageKey = EmissionStageCache.CreateKey(model, emission, configuration, extensionInputs, definition, cancellation.Token);
+                                stageKey = EmissionStageCache.CreateKey(model, emission, configuration, analysis.snapshot!, extensionInputs, definition, cancellation.Token);
                             }
                             catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or NotSupportedException)
                             {
@@ -679,7 +659,6 @@ public sealed partial class BindingHost
                 targetModels.Add(new(targetId, selectedModule, bridgeModel, interop, managedModel)
                 {
                     resolvedTarget = analysis.target,
-                    extensionNativeBuildProviders = registry.NativeBuildProviders.Select(provider => provider.Id).Order(StringComparer.Ordinal).ToImmutableArray()
                 });
                 if (!bridgeOnly && (preparedProcessors.Count != 0 || contribution is not null && configuration.output.layout == "singleFile"))
                 {
@@ -730,161 +709,24 @@ public sealed partial class BindingHost
                     if (HasErrors()) break;
                 }
                 artifacts.AddRange(emitted.Select(artifact => artifact with { relativePath = targetId + "/managed/" + artifact.relativePath }));
-                if (compileManaged)
-                {
-                    if (emitted.Any(artifact => artifact.relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) && artifact.mediaType != "text/x-csharp"))
-                        throw new InvalidOperationException("A C# candidate artifact has an inconsistent managed media type.");
-                    var compilation = await new BGCS.Validation.ManagedCompilationValidator().ValidateAsync(emitted.Where(artifact => artifact.mediaType == "text/x-csharp")
-                        .Select(artifact => Path.Combine(publisher.candidateRoot, targetId, "managed", artifact.relativePath)), configuration, request.baseDirectory, cancellation.Token).ConfigureAwait(false);
-                    if (compilation.exitCode != 0 || compilation.timedOut)
-                    {
-                        diagnostics.Add(new(BindingDiagnosticSeverity.Error, compilation.standardOutput + Environment.NewLine + compilation.standardError, "BGCS-MANAGED-COMPILE"));
-                        break;
-                    }
-                }
-                bool nativeLinked = false;
-                object? nativeEvidence = null;
-                object? nativeFactProof = null;
-                NativeAssetPackageResult? nativeAssets = null;
-                BindingConfiguration nativeConfiguration = shims.IsEmpty ? configuration : configuration with
-                { nativeBuild = configuration.nativeBuild with { sources = configuration.nativeBuild.sources.Concat(shims.SelectMany(shim => shim.sourceFiles)).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToImmutableArray() } };
-                if (analysis.requiresNativeCompilerProof || source.language == SourceLanguage.Cpp || configuration.nativeBuild.mode == "sources" || staticTable is not null || cHeaderBridge is { exports.IsEmpty: false })
+                if (source.language == SourceLanguage.Cpp || staticTable is not null || cHeaderBridge is { exports.IsEmpty: false })
                 {
                     ImmutableArray<string> nativeHeaders = parseHeaders.Select(path => NativeGeneratedInputRelocation.HeaderInclude(path, contributionMaps, targetId + "/native/src")).ToImmutableArray();
                     string assertionPath = targetId + "/native/src/storage.assertions." + (source.language == SourceLanguage.C ? "c" : "cpp");
-                    string assertions = new BGCS.NativeBuild.Planning.NativeStorageAssertionEmitter().Emit(selectedModule,
-                        nativeHeaders, source.preamble, nativePostamble);
+                    string assertions = new NativeStorageAssertionEmitter().Emit(selectedModule, nativeHeaders, source.preamble, nativePostamble);
                     rootSink.WriteText(assertionPath, assertions);
                     artifacts.Add(new(assertionPath, source.language == SourceLanguage.C ? "text/x-c" : "text/x-c++",
                         new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(assertions))))));
-                    if (analysis.requiresNativeCompilerProof)
+                    WriteJson(targetId + "/native/metadata/bridge.manifest.json", new
                     {
-                        if (source.language != SourceLanguage.Cpp)
-                            throw new NotSupportedException("Independent parser-adaptation proofs currently require C++ source.");
-                        string canonicalPath = targetId + "/native/src/canonical.assertions.cpp";
-                        string canonical = new BGCS.NativeBuild.Planning.NativeCanonicalAssertionEmitter().Emit(selectedModule,
-                            nativeHeaders, source.preamble, nativePostamble);
-                        rootSink.WriteText(canonicalPath, canonical);
-                        artifacts.Add(new(canonicalPath, "text/x-c++",
-                            new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))))));
-                    }
-                    string factsPath = targetId + "/native/src/facts.input." + (source.language == SourceLanguage.C ? "h" : "hpp");
-                    string factsInput = new BGCS.NativeBuild.Planning.NativeFactInputEmitter().Emit(nativeHeaders, source.preamble, nativePostamble, selectedModule);
-                    rootSink.WriteText(factsPath, factsInput);
-                    artifacts.Add(new(factsPath, source.language == SourceLanguage.C ? "text/x-c-header" : "text/x-c++-header",
-                        new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(factsInput))))));
-                    if (analysis.requiresNativeCompilerProof)
-                    {
-                        FrontendRequest prepared = analysis.preparedFrontend
-                            ?? throw new InvalidOperationException("Independent native proof omitted its frozen frontend inputs.");
-                        List<SourceSnapshot> effectiveProofInputs = [];
-                        NativeEffectiveFactVerifier factVerifier = new(selectedModule, prepared.retainFunctionBodies,
-                            registry.Frontend, request.baseDirectory, extensionInputs,
-                            new NativeGeneratedInputRelocation(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot).SourcePathMappings(publisher.candidateRoot),
-                            prepared.workerPlugins, prepared.workerPluginContext, effectiveProofInputs.Add,
-                            new NativeRecordTraitOrigins(publisher.candidateRoot, artifacts.ToImmutable()));
-                        NativeCompilerProofValidator.Result proof = await new NativeCompilerProofValidator().VerifyAsync(
-                            nativeConfiguration, analysis.target!, prepared,
-                            artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal)
-                                && artifact.mediaType == "text/x-c++").Select(artifact => Path.Combine(publisher.candidateRoot, artifact.relativePath)),
-                            [Path.Combine(publisher.candidateRoot, targetId, "native", "include")],
-                            new[] { publisher.candidateRoot, output, logicalOutput, cacheRoot }
-                                .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToImmutableArray(),
-                            extensionInputs, factVerifier, Path.Combine(publisher.candidateRoot, factsPath), cancellation.Token).ConfigureAwait(false);
-                        ImmutableArray<SourceSnapshot> rawProofInputs = proof.inputs.AddRange(effectiveProofInputs);
-                        foreach (SourceSnapshot snapshot in rawProofInputs)
-                        {
-                            RejectFormalOutputReads(snapshot);
-                            parsedInputs.Add(snapshot);
-                        }
-                        ImmutableArray<SourceSnapshot> portableProofInputs = NativeProofInputProjection.Create(rawProofInputs, proof.privateRoot,
-                            publisher.candidateRoot, artifacts.ToImmutable(), cancellation.Token);
-                        foreach (SourceSnapshot snapshot in portableProofInputs)
-                            extensionInputs.CaptureArgumentInputs(snapshot);
-                        JsonObject proofReceipt = JsonSerializer.SerializeToNode(proof.evidence)!.AsObject();
-                        proofReceipt["inputs"] = JsonSerializer.SerializeToNode(portableProofInputs);
-                        string physicalCandidate = PhysicalPathResolver.Resolve(publisher.candidateRoot);
-                        string candidatePrefix = Path.TrimEndingDirectorySeparator(physicalCandidate) + Path.DirectorySeparatorChar;
-                        proofReceipt["generatedInputs"] = JsonSerializer.SerializeToNode(rawProofInputs.SelectMany(snapshot => snapshot.files)
-                            .Where(input => input.resolvedPath.StartsWith(candidatePrefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                            .Select(input => new
-                            {
-                                path = "artifact:/" + Path.GetRelativePath(physicalCandidate, input.resolvedPath).Replace('\\', '/'),
-                                input.length,
-                                input.digest
-                            }).Distinct().OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray());
-                        nativeFactProof = proofReceipt;
-                    }
-                    NativeGeneratedInputRelocation generatedInputs = new(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot);
-                    var nativeManifest = NativeBuildManifestFactory.Create(nativeConfiguration, analysis.target!, analysis.snapshot!, artifacts.ToImmutable(), request.baseDirectory, target.settings.defines, definition, generatedInputs, analysis.preparedFrontend)
-                        with
-                    {
-                        managedRuntime = runtimeProfile,
-                        importModuleName = emittedLibraryName,
-                        nativeArtifactFilename = nativeArtifactFileName ?? (runtimeProfile.kind == ManagedRuntimeKind.BrowserWasm
-                                ? emittedLibraryName + (nativeOutputKind == NativeOutputKind.Object ? ".o" : ".a")
-                                : BGCS.Platforms.Assets.NativeOutputLayout.ResolveFilename(configuration.library.nativeName, analysis.target!, nativeOutputKind)),
-                        interop = interop,
-                        sourceFacts = selectedModule,
-                        factVerificationSources = ["artifact:/" + factsPath],
-                        extensionInputs = extensionInputs.snapshots.Select(snapshot => generatedInputs.Relocate(contribution?.NativeInputs(snapshot) ?? snapshot)).ToImmutableArray(),
-                        requiredExports = interop.functions.Select(function => function.exportName).Concat(staticTable is null ? [] : new[]
-                            { staticTable.getExportSymbol, staticTable.getRevisionSymbol, staticTable.getCountSymbol, staticTable.getPointerSizeSymbol, staticTable.getAbiIdentitySymbol }).ToImmutableArray()
-                    };
-                    parsedInputs.Add(NativeBuildManifestFactory.CandidateExternalInputs(nativeManifest, publisher.candidateRoot));
-                    WriteJson(targetId + "/native/metadata/bridge.manifest.json", nativeManifest);
-                }
-                if (compileManaged && configuration.nativeBuild.mode != "none")
-                {
-                    if (configuration.nativeBuild.mode == "prebuilt" && cHeaderBridge is { exports.IsEmpty: false })
-                    {
-                        string binary = Path.GetFullPath(configuration.nativeBuild.artifacts.Single(), request.baseDirectory);
-                        var helperExports = await BGCS.NativeBuild.NativeExportInspector.InspectAsync(analysis.target!, binary,
-                            cHeaderBridge.exports.Select(export => export.exportName), cancellation.Token, outputKind: nativeOutputKind).ConfigureAwait(false);
-                        if (!helperExports.success)
-                        {
-                            diagnostics.Add(new(BindingDiagnosticSeverity.Error,
-                                $"The prebuilt native module '{configuration.library.nativeName}' does not contain the selected C header helper adapters. Compile '{targetId}/native/src/{cHeaderBridge.exportPrefix}_helpers.c' into that same module, or use nativeBuild.mode=sources with the declared upstream inputs. Missing adapter exports: {string.Join(", ", helperExports.missing)}.",
-                                "BGCS-C-INTERNAL-LINKAGE")
-                            { location = selectedModule.GetDeclaration(cHeaderBridge.exports[0].sourceDeclaration).source });
-                            break;
-                        }
-                    }
-                    var nativeResult = await new NativeCandidateBuilder().BuildAsync(nativeConfiguration, analysis.target!, interop,
-                        artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal) && artifact.mediaType is "text/x-c++" or "text/x-c")
-                            .Select(artifact => Path.Combine(publisher.candidateRoot, artifact.relativePath)),
-                        artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/", StringComparison.Ordinal) && artifact.mediaType == "text/x-c" && artifact.relativePath.EndsWith(".h", StringComparison.Ordinal))
-                            .Select(artifact => Path.GetDirectoryName(Path.Combine(publisher.candidateRoot, artifact.relativePath))!)
-                            .Concat(contribution?.includeDirectories.Select(_ => Path.Combine(publisher.candidateRoot, targetId, "native", "include")) ?? []),
-                        target.settings.defines, request.baseDirectory, rootSink, targetId + "/native/bin", cancellation.Token,
-                        registry.NativeBuildProviders.SingleOrDefault(provider => provider.Id == configuration.nativeBuild.provider)?.Factory,
-                        new[] { publisher.candidateRoot, output, logicalOutput, cacheRoot }.Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToImmutableArray(), extensionInputs,
-                        interop.functions.Select(function => function.exportName).Concat(staticTable is null ? [] : new[]
-                            { staticTable.getExportSymbol, staticTable.getRevisionSymbol, staticTable.getCountSymbol, staticTable.getPointerSizeSymbol, staticTable.getAbiIdentitySymbol }).ToImmutableArray(),
-                        selectedModule, registry.Frontend,
-                        artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal) && artifact.mediaType is "text/x-c-header" or "text/x-c++-header")
-                            .Select(artifact => Path.Combine(publisher.candidateRoot, artifact.relativePath)).ToImmutableArray(),
-                        new NativeGeneratedInputRelocation(contributionMaps, artifacts.ToImmutable(), publisher.candidateRoot).SourcePathMappings(publisher.candidateRoot), analysis.preparedFrontend,
-                        new NativeRecordTraitOrigins(publisher.candidateRoot, artifacts.ToImmutable())).ConfigureAwait(false);
-                    artifacts.Add(nativeResult.artifact);
-                    nativeLinked = nativeResult.linked;
-                    nativeBuildPerformed = true;
-                    nativeEvidence = nativeResult.evidence;
-                    NativeReferenceDescriptor nativeReference = BGCS.Platforms.Assets.NativeReferenceCatalog.Create(analysis.target!, runtimeProfile, nativeOutputKind, nativeResult.artifact, configuration.library.nativeName);
-                    if (nativeReference.importModuleName != emittedLibraryName)
-                        throw new InvalidOperationException("The native consumption reference changed the generated import module identity.");
-                    nativeReferences.Add(nativeReference);
-                    RejectFormalOutputReads(nativeResult.inputSnapshot);
-                    parsedInputs.Add(nativeResult.inputSnapshot);
-                    RejectFormalOutputReads(nativeResult.argumentInputs);
-                    parsedInputs.Add(nativeResult.argumentInputs);
-                    if (configuration.nativeBuild.packaging.enabled)
-                    {
-                        var package = await new NativePackageCandidateBuilder().PrepareAsync(configuration, analysis.target!, nativeResult.artifact,
-                            publisher.candidateRoot, rootSink, registry, extensionInputs, cancellation.Token).ConfigureAwait(false);
-                        artifacts.AddRange(package.artifacts);
-                        nativeAssets = package.assets;
-                    }
+                        schemaVersion = 1,
+                        targetId,
+                        languageStandard = source.languageStandard,
+                        sources = artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal)).ToImmutableArray(),
+                        headers = artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/include/", StringComparison.Ordinal)).ToImmutableArray(),
+                        requiredExports = interop.functions.Select(function => function.exportName).ToImmutableArray(),
+                        staticExportTable = staticTable
+                    });
                 }
                 WriteJson(targetId + "/metadata/abi.manifest.json", new
                 {
@@ -930,7 +772,7 @@ public sealed partial class BindingHost
                 {
                     ImmutableArray<ArtifactDescriptor> candidates = artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/", StringComparison.Ordinal)).ToImmutableArray();
                     ValidationRequest validation = new(analysis.target!, interop, candidates, new DirectoryArtifactReader(publisher.candidateRoot, candidates))
-                    { managedCompiled = compileManaged, nativeLinked = nativeLinked, nativeArtifactVerified = nativeEvidence is not null };
+                    ;
                     foreach (ValidatorRegistration registration in registry.Validators)
                     {
                         cancellation.Token.ThrowIfCancellationRequested();
@@ -960,34 +802,21 @@ public sealed partial class BindingHost
                     parsed = true,
                     generated = true,
                     managedGenerated = !bridgeOnly,
-                    managedCompiled = compileManaged,
-                    nativeLinked,
-                    nativeArtifactVerified = nativeEvidence is not null,
-                    nativeEvidence,
-                    nativeFactProofRequired = analysis.requiresNativeCompilerProof,
-                    nativeFactProof,
-                    invoked = false,
-                    packaged = false,
                     managedRuntime = runtimeProfile,
                     staticExportTable = staticTable,
-                    assetsPrepared = nativeAssets is not null,
-                    nativeAssets,
-                    nativeReferences = nativeReferences.Where(reference => reference.target.targetId.value == targetId).ToImmutableArray(),
                     implementation = typeof(BindingHost).Assembly.ManifestModule.ModuleVersionId.ToString(),
                     cache = cacheEvidence.Where(evidence => evidence.targetId == targetId).ToArray(),
                     inputs = analysis.snapshot,
                     bridgeInputs = bridgeInputEvidence,
                     configurationInputs = request.configurationInputs,
-                    configurationRemoteInputs = request.configurationRemoteInputs,
-                    managedCompilationInputs = managedCompilation?.snapshot,
-                    managedCompilationEnvironment = managedCompilation is null ? null : new
+                    managedProjectionInputs = managedProjection?.snapshot,
+                    managedProjectionEnvironment = managedProjection is null ? null : new
                     {
-                        assemblies = managedCompilation.inputs.assemblies.Select(input => new
+                        assemblies = managedProjection.inputs.assemblies.Select(input => new
                         { input.path, input.assemblyIdentity, input.digest, length = input.image.Length, input.isFramework }).ToArray(),
-                        managedCompilation.inputs.defines
+                        managedProjection.inputs.defines
                     },
                     extensionInputs = extensionInputs.snapshots,
-                    nativeSourceInputs = extensionInputs.nativeSourceEvidence,
                     plugins = definition.Plugins.Select(plugin => new { descriptor = plugin.Descriptor, settings = plugin.Configuration?.settings, pathBase = plugin.Configuration?.defaultPathBase, valuePathBases = plugin.Configuration?.valuePathBases, inputs = plugin.Manifest?.inputs, absentInputs = plugin.Manifest?.missingInputs }).ToArray(),
                     validationGates = registry.Validators.Select(validator => new { id = validator.Id, priority = validator.Priority }).ToArray()
                 });
@@ -999,8 +828,8 @@ public sealed partial class BindingHost
             composition = null;
             if (!HasErrors())
             {
-                managedCompilation?.Verify(cancellation.Token);
-                await extensionInputs.VerifyBeforeAndReplayAsync(cancellation.Token).ConfigureAwait(false);
+                managedProjection?.Verify(cancellation.Token);
+                await extensionInputs.VerifyAsync(cancellation.Token).ConfigureAwait(false);
                 bool parsedInputPhase = false;
                 if (SourceSnapshotBatch.GetMismatch(FinalInputSnapshots(), cancellation.Token) is string mismatch)
                     throw new IOException((parsedInputPhase
@@ -1014,7 +843,7 @@ public sealed partial class BindingHost
                     // store/path checks between the original two sequences so
                     // duplicate input checks share one fence without changing
                     // first-failure precedence or invoking an extension here.
-                    foreach (SourceSnapshot snapshot in extensionInputs.VerificationSnapshots()) yield return snapshot;
+                    foreach (SourceSnapshot snapshot in extensionInputs.snapshots) yield return snapshot;
                     foreach (SourceContributionCapture capture in sourceContributions) capture.Verify();
                     foreach (SourceSnapshot external in extensionInputs.snapshots)
                     {
@@ -1041,7 +870,7 @@ public sealed partial class BindingHost
                 }
                 foreach (PluginRegistration plugin in definition.Plugins)
                     if (plugin.Manifest is not null) new BGCS.Infrastructure.Plugins.PluginManifestReader().Verify(plugin.Manifest);
-                managedCompilation?.Verify(cancellation.Token);
+                managedProjection?.Verify(cancellation.Token);
                 WriteJson("generation.report.json", new
                 {
                     schemaVersion = 1,
@@ -1049,8 +878,6 @@ public sealed partial class BindingHost
                     targets = concreteTargets.Order(StringComparer.Ordinal).ToArray(),
                     diagnostics = diagnostics.ToImmutable(),
                     cache = cacheEvidence,
-                    nativeBuildPerformed,
-                    managedCompilationPerformed = compileManaged,
                     bridgeOnly
                 });
                 publisher.Commit(artifacts, cancellation.Token);
@@ -1075,8 +902,7 @@ public sealed partial class BindingHost
                 T value
             ) {
                 cancellation.Token.ThrowIfCancellationRequested();
-                JsonElement document = JsonSerializer.SerializeToElement(value, value is BGCS.Contracts.Requests.NativeBuildManifest
-                    ? BGCS.Infrastructure.Workers.WorkerProtocol.jsonOptions : null);
+                JsonElement document = JsonSerializer.SerializeToElement(value);
                 using MemoryStream bytes = new();
                 using (Utf8JsonWriter writer = new(bytes, new() { Indented = true, MaxDepth = 64 }))
                     metadataNormalizer.WriteNormalized(document, writer);
@@ -1117,7 +943,7 @@ public sealed partial class BindingHost
                 if (--m_sessions == 0 && m_closing) m_drained.TrySetResult();
         }
         return new(published, output, published ? artifacts.ToImmutable() : [], diagnostics.ToImmutable())
-        { targetModels = targetModels.ToImmutable(), nativeReferences = published ? nativeReferences.ToImmutable() : [], cacheStages = cacheEvidence.ToImmutableArray() };
+        { targetModels = targetModels.ToImmutable(), cacheStages = cacheEvidence.ToImmutableArray() };
 
         bool HasErrors()
         {

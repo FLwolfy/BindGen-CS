@@ -43,8 +43,6 @@ def main() -> None:
     spec.loader.exec_module(corpus)
     platform = corpus.host_platform()
     gates = {gate for category in CATEGORIES.values() for gate in category}
-    if platform == "windows-x64":
-        gates.add("windows-native-providers")
     for gate in sorted(gates):
         if not (args.gate_root / gate).is_file():
             raise RuntimeError("A current invocation did not complete its required gate: " + gate)

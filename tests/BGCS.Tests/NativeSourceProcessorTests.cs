@@ -21,11 +21,11 @@ public sealed class NativeSourceProcessorTests
     public async Task ConfiguredCandidatesComposePartialApiAndInvokeNativeWithoutPublishingAbiTampering(BindingImportMode mode, bool sourceRuntime, bool singleFile)
     {
         using Scratch scratch = new();
-        BindingConfiguration configuration = Configuration(mode, sourceRuntime, singleFile) with { nativeBuild = new() { mode = "sources", sources = ["native.c"] } };
+        BindingConfiguration configuration = Configuration(mode, sourceRuntime, singleFile) with { };
         await using BindingHost host = Builder().Build();
-        BuildResult result = await host.BuildAsync(new(new(configuration, scratch.root)));
+        GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, scratch.root));
         Assert.True(result.success, result.GetDiagnosticSummary());
-        var target = Assert.Single(result.generation.targetModels);
+        var target = Assert.Single(result.targetModels);
         string targetRoot = Path.Combine(result.outputRoot, target.targetId);
         string managedRoot = Path.Combine(targetRoot, "managed");
         string[] managed = Directory.GetFiles(managedRoot, "*.cs", SearchOption.AllDirectories);
@@ -35,7 +35,7 @@ public sealed class NativeSourceProcessorTests
         Assert.Contains("return 20 + 1;", combined, StringComparison.Ordinal);
         Assert.DoesNotContain("return 10;", combined, StringComparison.Ordinal);
         Assert.DoesNotContain("return 20;", combined, StringComparison.Ordinal);
-        string binary = Assert.Single(Directory.GetFiles(Path.Combine(targetRoot, "native", "bin")));
+        string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
         string factory = mode == BindingImportMode.FunctionTable ? "ProcessorApi.Load(binary)" : "ProcessorApi.Create()";
         string probe = $$"""
             using Generated.Processors;
@@ -56,8 +56,8 @@ public sealed class NativeSourceProcessorTests
             string[] before = Files(result.outputRoot);
             SourceProcessorConfiguration tamper = new() { id = "reject.abi", priority = -1, kind = SourceProcessorKind.ReplaceText,
                 paths = ["**/*.cs"], match = "Cdecl", replacement = "Stdcall" };
-            BuildResult rejected = await host.BuildAsync(new(new(configuration with
-            { output = configuration.output with { processors = configuration.output.processors.Add(tamper) } }, scratch.root)));
+            GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration with
+            { output = configuration.output with { processors = configuration.output.processors.Add(tamper) } }, scratch.root));
             Assert.False(rejected.success);
             Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.severity == BGCS.Contracts.BindingDiagnosticSeverity.Error);
             Assert.Equal(before, Files(result.outputRoot));
@@ -69,7 +69,7 @@ public sealed class NativeSourceProcessorTests
     {
         using Scratch scratch = new();
         BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false, false) with
-        { output = Configuration(BindingImportMode.FunctionTable, false, false).output with { root = "CacheOutput" }, nativeBuild = new() { mode = "none" } };
+        { output = Configuration(BindingImportMode.FunctionTable, false, false).output with { root = "CacheOutput" }};
         await using BindingHost host = Builder().Build();
         GenerationResult cold = await host.GenerateAsync(new(configuration, scratch.root));
         Assert.True(cold.success, cold.GetDiagnosticSummary());

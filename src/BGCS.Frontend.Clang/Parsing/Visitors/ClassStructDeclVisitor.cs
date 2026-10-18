@@ -19,7 +19,7 @@ internal class ClassStructDeclVisitor : DeclContainerVisitor
     /// <summary>
     /// Gets <c>Kinds</c>.
     /// </summary>
-    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_ClassTemplate, CXCursorKind.CXCursor_ClassTemplatePartialSpecialization, CXCursorKind.CXCursor_ClassDecl, CXCursorKind.CXCursor_StructDecl, CXCursorKind.CXCursor_UnionDecl, CXCursorKind.CXCursor_ObjCInterfaceDecl, CXCursorKind.CXCursor_ObjCProtocolDecl, CXCursorKind.CXCursor_ObjCCategoryDecl,];
+    public override IEnumerable<CXCursorKind> kinds { get; } = [CXCursorKind.CXCursor_ClassTemplate, CXCursorKind.CXCursor_ClassTemplatePartialSpecialization, CXCursorKind.CXCursor_ClassDecl, CXCursorKind.CXCursor_StructDecl, CXCursorKind.CXCursor_UnionDecl,];
 
     protected override unsafe CppContainerContext VisitCore(
         CXCursor cursor,
@@ -48,40 +48,6 @@ internal class ClassStructDeclVisitor : DeclContainerVisitor
             case CXCursorKind.CXCursor_UnionDecl:
                 cppClass.classKind = CppClassKind.Union;
                 break;
-            case CXCursorKind.CXCursor_ObjCInterfaceDecl:
-                cppClass.classKind = CppClassKind.ObjCInterface;
-                break;
-            case CXCursorKind.CXCursor_ObjCProtocolDecl:
-                cppClass.classKind = CppClassKind.ObjCProtocol;
-                break;
-            case CXCursorKind.CXCursor_ObjCCategoryDecl:
-                {
-                    cppClass.classKind = CppClassKind.ObjCInterfaceCategory;
-                    // Fetch the target class for the category
-                    CXCursor parentCursor = default;
-                    cursor.VisitChildren(static (
-                        cxCursor,
-                        parent,
-                        clientData
-                    ) => {
-                        ref CXCursor parentCursor = ref Unsafe.AsRef<CXCursor>(clientData);
-                        if (cxCursor.Kind == CXCursorKind.CXCursor_ObjCClassRef)
-                        {
-                            parentCursor = cxCursor.Referenced;
-                            return CXChildVisitResult.CXChildVisit_Break;
-                        }
-
-                        return CXChildVisitResult.CXChildVisit_Continue;
-                    }, (CXClientData)Unsafe.AsPointer(ref parentCursor));
-                    var parentClassContainer = this.context.GetOrCreateDeclContainer(parentCursor).container;
-                    var targetClass = (CppClass)parentClassContainer;
-                    cppClass.objCCategoryName = cppClass.name;
-                    cppClass.name = targetClass.name;
-                    cppClass.objCCategoryTargetClass = targetClass;
-                    // Link back
-                    targetClass.objCCategories.Add(cppClass);
-                    break;
-                }
         }
 
         cppClass.isAbstract = cursor.CXXRecord_IsAbstract;
@@ -207,23 +173,11 @@ internal class ClassStructDeclVisitor : DeclContainerVisitor
         ) => {
             var (cppClass, context) = Unsafe.AsRef<(CppClass, CppModelContext)>(clientData);
             var builder = context.builder;
-            if (cppClass.classKind == CppClassKind.ObjCInterface || cppClass.classKind == CppClassKind.ObjCProtocol)
+            var param = builder.TryToCreateTemplateParameters(childCursor);
+            if (param != null)
             {
-                var param = context.TryToCreateTemplateParametersObjC(childCursor);
-                if (param != null)
-                {
-                    cppClass.templateKind = CppTemplateKind.ObjCGenericClass;
-                    cppClass.templateParameters.Add(param);
-                }
-            }
-            else
-            {
-                var param = builder.TryToCreateTemplateParameters(childCursor);
-                if (param != null)
-                {
-                    cppClass.templateKind = CppTemplateKind.TemplateClass;
-                    cppClass.templateParameters.Add(param);
-                }
+                cppClass.templateKind = CppTemplateKind.TemplateClass;
+                cppClass.templateParameters.Add(param);
             }
 
             return CXChildVisitResult.CXChildVisit_Continue;

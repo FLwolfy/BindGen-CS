@@ -39,10 +39,10 @@ public sealed class NeutralUnifiedModelParityTests
                 """);
             BindingConfiguration configuration = Configuration(allWarnings);
             await using BindingHost host = Host();
-            BuildResult initial = await host.BuildAsync(new(new(configuration, root)));
+            GenerationResult initial = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(initial.success, initial.GetDiagnosticSummary());
-            AssertFacts(Assert.Single(initial.generation.targetModels));
-            BindingDiagnostic warning = Assert.Single(initial.generation.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP);
+            AssertFacts(Assert.Single(initial.targetModels));
+            BindingDiagnostic warning = Assert.Single(initial.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP);
             Assert.Equal(BindingDiagnosticSeverity.Warning, warning.severity);
             Assert.Equal(new SourceLocation("native.h", 9, 7), warning.location);
             Assert.Contains("bgcs_get_context", warning.message, StringComparison.Ordinal);
@@ -66,7 +66,7 @@ public sealed class NeutralUnifiedModelParityTests
             if (allWarnings)
             {
                 // A driver warning may stop an earlier gate before ownership analysis runs.
-                HashSet<string?> originalWarningCodes = initial.generation.diagnostics
+                HashSet<string?> originalWarningCodes = initial.diagnostics
                     .Where(diagnostic => diagnostic.severity == BindingDiagnosticSeverity.Warning).Select(diagnostic => diagnostic.code).ToHashSet();
                 Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.isFailure);
                 Assert.DoesNotContain(rejected.diagnostics, diagnostic => diagnostic.severity == BindingDiagnosticSeverity.Warning);
@@ -175,7 +175,7 @@ public sealed class NeutralUnifiedModelParityTests
             stringResults = [new() { function = "bgcs_create_name", encoding = NativeTextEncoding.Utf8, zeroTerminated = true, allowsNull = true }]
         },
         output = new() { layout = singleFile ? "singleFile" : "split", singleFileName = "Bindings.cs" },
-        nativeBuild = new() { mode = "none" }, cache = new() { enabled = true },
+         cache = new() { enabled = true },
         execution = new() { diagnostics = new() { errorCodes = ["vendor.unrelated-warning"] } }
     };
 
