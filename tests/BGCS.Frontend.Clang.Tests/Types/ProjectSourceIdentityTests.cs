@@ -17,6 +17,62 @@ namespace BGCS.Frontend.Clang.Tests;
 public sealed class ProjectSourceIdentityTests
 {
     [Theory]
+    [InlineData(SourceLanguage.C, false)]
+    [InlineData(SourceLanguage.C, true)]
+    [InlineData(SourceLanguage.Cpp, false)]
+    [InlineData(SourceLanguage.Cpp, true)]
+    public async Task SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles(SourceLanguage language, bool presumed)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-sibling-identities-" + Guid.NewGuid().ToString("N"));
+        string first = Path.Combine(root, "first checkout"), second = Path.Combine(root, "longer relocated checkout");
+        string literal = "(unnamed at " + Path.Combine(first, "headers", "native.h").Replace('\\', '/') + ":8:9)";
+        try
+        {
+            foreach (string checkout in new[] { first, second })
+            {
+                Directory.CreateDirectory(Path.Combine(checkout, "configuration"));
+                foreach (string name in new[] { "Left", "Right" })
+                {
+                    string directory = Path.Combine(checkout, "headers", name);
+                    Directory.CreateDirectory(directory);
+                    await File.WriteAllTextAsync(Path.Combine(directory, "common.h"),
+                        "typedef struct " + name + " { struct { int value; } items[3]; } " + name + ";\n");
+                }
+                await File.WriteAllTextAsync(Path.Combine(checkout, "headers", "native.h"),
+                    "#include \"Left/common.h\"\n#include \"Right/common.h\"\n#define LOOKALIKE \"" + literal + "\"\n"
+                    + "#define REPLACED 0\n#undef REPLACED\n#define REPLACED 64\n#define REMOVED 1\n#undef REMOVED\nvoid Observe(Left* left, Right* right);\n");
+            }
+            FrontendResult original = await Read(first), relocated = await Read(second);
+            Assert.Equal(JsonSerializer.Serialize(original.module), JsonSerializer.Serialize(relocated.module));
+            NativeType[] arrays = original.module.types.Where(type => type.category == NativeTypeCategory.Array && type.arrayLength == 3).ToArray();
+            Assert.Equal(2, arrays.Length);
+            Assert.Equal(2, arrays.Select(type => type.elementType).Distinct().Count());
+            Assert.Contains(original.module.declarations, declaration => declaration.source.file == "../headers/Left/common.h");
+            Assert.Contains(original.module.declarations, declaration => declaration.source.file == "../headers/Right/common.h");
+            Assert.All(original.module.types, type => Assert.DoesNotContain(root.Replace('\\', '/'), type.spelling, StringComparison.OrdinalIgnoreCase));
+            Assert.NotEqual(JsonSerializer.Serialize(original.snapshot), JsonSerializer.Serialize(relocated.snapshot));
+            Assert.Contains(original.snapshot.files, file => file.path == Path.Combine(first, "headers", "Left", "common.h"));
+            Assert.Contains(relocated.snapshot.files, file => file.path == Path.Combine(second, "headers", "Right", "common.h"));
+            Assert.Equal(2, original.module.declarations.Count(declaration => declaration.name == "REPLACED"));
+            NativeDeclaration active = Assert.Single(original.module.declarations, declaration => declaration.name == "REPLACED" && declaration.macro?.isActive == true);
+            Assert.Equal("64", active.constantValue!.value);
+            Assert.False(Assert.Single(original.module.declarations, declaration => declaration.name == "REMOVED").macro!.isActive);
+            NativeStringConstant constant = Assert.Single(original.module.declarations, declaration => declaration.name == "LOOKALIKE").stringConstant!;
+            Assert.Equal(literal, Encoding.UTF8.GetString(constant.codeUnits.Take(constant.codeUnits.Length - 1).Select(value => checked((byte)value)).ToArray()));
+
+            async Task<FrontendResult> Read(string checkout)
+            {
+                FrontendResult result = await new ClangFrontend().ParseAsync(new(new TargetResolver().Resolve(new(new("host"))), language,
+                    [Path.Combine(checkout, "headers", "native.h")])
+                { pathBase = Path.Combine(checkout, "configuration"), parseMacros = true, usePresumedSourceLocations = presumed }, CancellationToken.None);
+                Assert.DoesNotContain(result.module.diagnostics, diagnostic => diagnostic.isFailure);
+                return result;
+            }
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
     [InlineData(SourceLanguage.C)]
     [InlineData(SourceLanguage.Cpp)]
     public async Task RelocatingProjectHeadersPreservesAnonymousTypesMembersAndTransitiveFacts(SourceLanguage language)

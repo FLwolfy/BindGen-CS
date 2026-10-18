@@ -20,7 +20,7 @@ public sealed record BindingConfiguration
     /// <summary>Gets the explicitly declared configuration format revision.</summary>
     [JsonRequired]
     public int schemaVersion { get; init; }
-    /// <summary>Gets ordered local or explicitly pinned HTTPS base references with unambiguous local path bases.</summary>
+    /// <summary>Gets ordered local base configuration references with unambiguous local path bases.</summary>
     public ImmutableArray<ConfigurationReference> extends { get; init; } = [];
     /// <summary>Gets the optional selected named preset applied before base and current document overrides.</summary>
     public string? profile { get; init; }
@@ -61,7 +61,7 @@ public sealed record CppConfiguration
     public ImmutableArray<TypeLoweringRecipe> typeLowerings { get; init; } = [];
     /// <summary>Gets explicitly selected native callable wrappers, export names and exclusions.</summary>
     public ImmutableArray<CallableLoweringRecipe> callableLowerings { get; init; } = [];
-    /// <summary>Gets public C ABI shim headers and source inputs that use the ordinary parse and build stages.</summary>
+    /// <summary>Gets public C ABI shim headers and source inputs that use the ordinary parse and generation stages.</summary>
     public ImmutableArray<NativeShimRequest> nativeShims { get; init; } = [];
     /// <summary>Gets explicitly selected abstract interfaces for finite native callback proxy generation.</summary>
     public ImmutableArray<VirtualCallbackRequest> virtualCallbacks { get; init; } = [];

@@ -28,7 +28,7 @@
     "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "f429bd6f6fe1ec3d8083edebcae059bf2d48de892bd69cf530ba23e3c5753486"
+    "windows-x64-msvc/managed/Bindings.cs": "030e98946431cb0097083f89767f059a8c8f884149010e970fda3c01419d8769"
   },
   "publicApiSha256": "1513dccaa87651d5b7c68754b192341813dc2711d16f1356a7186636342637e4"
 }

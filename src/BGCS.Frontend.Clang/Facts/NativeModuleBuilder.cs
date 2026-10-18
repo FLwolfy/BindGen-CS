@@ -380,7 +380,10 @@ internal sealed class NativeModuleBuilder
     ) {
         fallback = m_sourcePaths.MapCompilerProvenance(fallback);
         using var nativeUsr = ClangSharp.Interop.clang.getCursorUSR(element.cursor);
-        string usr = element.cursor.kind == 0 ? string.Empty : m_sourcePaths.MapUsr(nativeUsr.ToString(), element.cursor.GetSourceLocation().file ?? string.Empty, m_request.usePresumedSourceLocations);
+        // A macro's byte offset identifies its definition occurrence. Erasing
+        // it would merge an inactive definition with a later active redefinition.
+        string usr = element.cursor.kind == 0 ? string.Empty : m_sourcePaths.MapUsr(nativeUsr.ToString(), element.cursor.GetSourceLocation().file ?? string.Empty,
+            m_request.usePresumedSourceLocations && element is not CppMacro);
         string owner = element.cursor.kind == 0 ? string.Empty : CXUtil.GetSemanticRecordIdentity(element.cursor, m_sourcePaths);
         string key = (usr.Length > 0 ? usr + "|" + fallback : fallback + "|" + GetLocation(element)) + owner;
         return category + ":" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key))).ToLowerInvariant();

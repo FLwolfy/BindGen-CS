@@ -10,6 +10,7 @@ namespace BGCS.Frontend.Clang.Utilities;
 internal sealed class SourcePathMapper
 {
     private readonly Dictionary<string, string> m_paths = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private readonly Dictionary<string, string> m_identityPaths;
     private readonly (string Physical, string Logical)[] m_spellings;
     private readonly (string Physical, string Logical)[] m_provenance;
 
@@ -26,6 +27,7 @@ internal sealed class SourcePathMapper
                 throw new ArgumentException("Generated source mappings require absolute physical files and portable logical file paths.", nameof(paths));
             if (!m_paths.TryAdd(Path.GetFullPath(physical), logical)) throw new ArgumentException("A generated physical file has duplicate logical source mappings.", nameof(paths));
         }
+        m_identityPaths = new(m_paths, m_paths.Comparer);
         if (!string.IsNullOrWhiteSpace(pathBase) && sourceFiles is not null)
         {
             string root = Path.GetFullPath(pathBase);
@@ -34,17 +36,25 @@ internal sealed class SourcePathMapper
                 if (!Path.IsPathFullyQualified(file)) continue;
                 string physical = Path.GetFullPath(file);
                 string relative = Path.GetRelativePath(root, physical).Replace('\\', '/');
-                // Keep external SDK paths distinct; an explicit generated mapping always wins.
-                if (Path.IsPathRooted(relative) || relative.Split('/').Any(part => part is "" or "." or ".." || part.Contains(':'))) continue;
+                if (Path.IsPathRooted(relative) || relative.Split('/').Any(part => part is "" or "." || part.Contains(':'))) continue;
+                // Parsed sibling headers have a portable identity too. Keep the
+                // complete relative path (including '..'), rather than collapsing
+                // unrelated SDK files to a basename. This map is only compiler
+                // provenance/USR identity: physical dependencies and external
+                // diagnostic paths remain unchanged, as do artifact path rules.
+                m_identityPaths.TryAdd(physical, relative);
+                if (relative.Split('/').Contains("..", StringComparer.Ordinal)) continue;
                 m_paths.TryAdd(physical, relative);
             }
         }
         m_spellings = m_paths.SelectMany(pair => new[] { (pair.Key, pair.Value), (pair.Key.Replace('\\', '/'), pair.Value) })
             .Distinct().OrderByDescending(pair => pair.Item1.Length).ToArray();
-        m_provenance = m_spellings.SelectMany(pair => new[] { "(anonymous at ", "(unnamed at ", "(lambda at ",
+        m_provenance = m_identityPaths.SelectMany(pair => new[] { (pair.Key, pair.Value), (pair.Key.Replace('\\', '/'), pair.Value) })
+            .Distinct().OrderByDescending(pair => pair.Item1.Length)
+            .SelectMany(pair => new[] { "(anonymous at ", "(unnamed at ", "(lambda at ",
             "(unnamed struct at ", "(unnamed union at ", "(unnamed class at ",
             "(anonymous struct at ", "(anonymous union at ", "(anonymous class at " }
-            .Select(prefix => (prefix + pair.Physical + ":", prefix + pair.Logical + ":"))).ToArray();
+            .Select(prefix => (prefix + pair.Item1 + ":", prefix + pair.Item2 + ":"))).ToArray();
     }
 
     internal bool TryMapPath(
@@ -123,7 +133,8 @@ internal sealed class SourcePathMapper
         string sourceFile,
         bool usePresumedIdentity = false
     ) {
-        if (!TryMapPath(sourceFile, out string logical)) return usr;
+        if (string.IsNullOrEmpty(sourceFile) || !Path.IsPathFullyQualified(sourceFile)
+            || !m_identityPaths.TryGetValue(Path.GetFullPath(sourceFile), out string? logical)) return usr;
         foreach (string file in new[] { Path.GetFullPath(sourceFile), Path.GetFullPath(sourceFile).Replace('\\', '/'), Path.GetFileName(sourceFile) })
         {
             foreach (string separator in new[] { "@", ":" })

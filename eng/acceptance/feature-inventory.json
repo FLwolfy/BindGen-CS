@@ -252,6 +252,29 @@
           "host": "windows-x64",
           "kind": "test",
           "project": "BGCS.Frontend.Clang.Tests",
+          "match": "^BGCS\\.Frontend\\.Clang\\.Tests\\.ProjectSourceIdentityTests\\.SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles$",
+          "requiredCases": [
+            "BGCS.Frontend.Clang.Tests.ProjectSourceIdentityTests.SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles(language: C, presumed: False)",
+            "BGCS.Frontend.Clang.Tests.ProjectSourceIdentityTests.SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles(language: C, presumed: True)",
+            "BGCS.Frontend.Clang.Tests.ProjectSourceIdentityTests.SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles(language: Cpp, presumed: False)",
+            "BGCS.Frontend.Clang.Tests.ProjectSourceIdentityTests.SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles(language: Cpp, presumed: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.SiblingHeaderRelocationTests\\.RealWorkerGeneratesIdenticalArraysAndLayoutGuardsAfterCheckoutRelocation$",
+          "requiredCases": [
+            "BGCS.Tests.SiblingHeaderRelocationTests.RealWorkerGeneratesIdenticalArraysAndLayoutGuardsAfterCheckoutRelocation(mode: FunctionTable)",
+            "BGCS.Tests.SiblingHeaderRelocationTests.RealWorkerGeneratesIdenticalArraysAndLayoutGuardsAfterCheckoutRelocation(mode: DllImport)",
+            "BGCS.Tests.SiblingHeaderRelocationTests.RealWorkerGeneratesIdenticalArraysAndLayoutGuardsAfterCheckoutRelocation(mode: LibraryImport)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Frontend.Clang.Tests",
           "match": "^BGCS\\.Frontend\\.Clang\\.Tests\\.ProjectSourceIdentityTests\\.ProjectProvenanceMappingPreservesLiteralBytesAndLeavesContextDependentValuesUnpublished$",
           "requiredCases": [
             "BGCS.Frontend.Clang.Tests.ProjectSourceIdentityTests.ProjectProvenanceMappingPreservesLiteralBytesAndLeavesContextDependentValuesUnpublished(language: C)",

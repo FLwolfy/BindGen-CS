@@ -18,6 +18,8 @@ def required_cases(host):
     cases = {name: name for name in FACTS}
     def theory(method, arguments):
         for argument in arguments: cases[method + '(' + argument + ')'] = method
+    theory('BGCS.Tests.SiblingHeaderRelocationTests.RealWorkerGeneratesIdenticalArraysAndLayoutGuardsAfterCheckoutRelocation',
+           ['mode: ' + mode for mode in ('FunctionTable', 'DllImport', 'LibraryImport')])
     theory('BGCS.Tests.NativeWideTextTests.CNativeCalls_PreserveUtf16Utf32AndTheActualWcharWidth',
            ['sourceRuntime: False', 'sourceRuntime: True'])
     theory('BGCS.Tests.NativeBridgeErrorAllocationTests.ErrorCapture_UsesItsOwnCAllocatorInsteadOfUserGlobalNewDelete',
