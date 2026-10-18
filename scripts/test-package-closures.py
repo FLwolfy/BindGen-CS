@@ -183,6 +183,29 @@ class PackageClosureTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "symbol package set"):
             PACK.verify_packages(output, "0.0.0-test", False)
 
+    def test_partial_macos_closure_requires_the_explicit_parser_supplement(self):
+        output = self.create_packages()
+        with zipfile.ZipFile(output / "BindGen-CS.0.0.0-test.nupkg", "w") as archive:
+            archive.writestr("toolsettings.json", "pointer fixture")
+        self.worker_archive("osx-x64", path=output / "BindGen-CS.osx-x64.0.0.0-test.nupkg")
+        supplement = output / "BGCS.ParserRuntime.osx-x64.0.0.0-test.nupkg"
+        with zipfile.ZipFile(supplement, "w") as archive:
+            archive.writestr("runtimes/osx-x64/native/libclang.dylib", b"parser fixture")
+        with self.assertRaisesRegex(RuntimeError, "unexpected=.*BGCS.ParserRuntime.osx-x64"):
+            PACK.verify_packages(output, "0.0.0-test", False, "osx-x64")
+        PACK.verify_packages(output, "0.0.0-test", False, "osx-x64", include_osx_x64_parser=True)
+        supplement.unlink()
+        with self.assertRaisesRegex(RuntimeError, "missing=.*BGCS.ParserRuntime.osx-x64"):
+            PACK.verify_packages(output, "0.0.0-test", False, "osx-x64", include_osx_x64_parser=True)
+
+    def test_declared_parser_supplement_does_not_allow_unrelated_packages(self):
+        output = self.create_packages()
+        for name in ("BGCS.ParserRuntime.osx-x64", "Unexpected"):
+            with zipfile.ZipFile(output / (name + ".0.0.0-test.nupkg"), "w") as archive:
+                archive.writestr("fixture.txt", "package fixture")
+        with self.assertRaisesRegex(RuntimeError, "unexpected=.*Unexpected"):
+            PACK.verify_packages(output, "0.0.0-test", False, include_osx_x64_parser=True)
+
     def test_duplicate_symbol_entries_are_rejected(self):
         output = self.create_packages()
         with zipfile.ZipFile(output / "BGCS.0.0.0-test.snupkg", "a") as archive:

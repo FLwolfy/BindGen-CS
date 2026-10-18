@@ -508,10 +508,13 @@ def verify_tool_worker_archive(package: zipfile.ZipFile, rid: str) -> None:
                 raise RuntimeError(f"The archived tool worker content digest differs: {rid}/{relative}")
 
 
-def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: str | None = None) -> None:
+def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: str | None = None,
+                    *, include_osx_x64_parser: bool = False) -> None:
     expected = {f"{name}.{version}.nupkg" for name in MANIFEST["products"] if name != "BindGen-CS"}
+    if full or include_osx_x64_parser:
+        expected.add(f"BGCS.ParserRuntime.osx-x64.{version}.nupkg")
     if full:
-        expected |= {f"BGCS.ParserRuntime.osx-x64.{version}.nupkg", f"BindGen-CS.{version}.nupkg"}
+        expected.add(f"BindGen-CS.{version}.nupkg")
         expected |= {f"BindGen-CS.{rid}.{version}.nupkg" for rid in RIDS}
     elif partial_tool_rid:
         expected |= {f"BindGen-CS.{version}.nupkg", f"BindGen-CS.{partial_tool_rid}.{version}.nupkg"}
@@ -650,7 +653,8 @@ def main() -> None:
             if not full:
                 tool_arguments.extend([f"-p:ToolPackageRuntimeIdentifiers={args.host_only}", f"-p:RuntimeIdentifiers={args.host_only}"])
             execute(args.dotnet, tool_arguments)
-        verify_packages(output, version, full, args.host_only if args.include_host_tool else None)
+        verify_packages(output, version, full, args.host_only if args.include_host_tool else None,
+                        include_osx_x64_parser=args.parser_osx_x64 is not None)
         report = {"schemaVersion": 1, "version": version, **source, "configuration": args.configuration,
                   "usedPrebuiltOutputs": args.no_build, "completeProductSet": full,
                   "workerHostRids": RIDS if full else [args.host_only],

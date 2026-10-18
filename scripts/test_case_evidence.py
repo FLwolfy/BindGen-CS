@@ -76,6 +76,19 @@ def validate_driver(report: dict, execute: bool) -> dict:
     return {key: copy.deepcopy(report[key]) for key in ('assemblySha256', 'sourceAssembly', 'compiledMethods', 'discoveredCases', 'vstestIdentity')}
 
 
+def _trx_name(value: str) -> str:
+    # The locked VSTest TRX logger escapes invalid XML UTF-16 code units, including
+    # both halves of non-BMP characters. Encode the expected name; never decode
+    # literal backslash-u arguments or normalize the independently captured cases.
+    units = value.encode('utf-16-le', errors='surrogatepass')
+    result = []
+    for index in range(0, len(units), 2):
+        unit = int.from_bytes(units[index:index + 2], 'little')
+        valid = unit in (9, 10, 13) or 0x20 <= unit <= 0xD7FF or 0xE000 <= unit <= 0xFFFD
+        result.append(chr(unit) if valid else f'\\u{unit:04x}')
+    return ''.join(result)
+
+
 def _trx(path: Path, selected: list[dict]) -> tuple[ET.Element, list[ET.Element], list[ET.Element], list[ET.Element]]:
     root = ET.parse(path).getroot()
     definitions = root.findall('./{*}TestDefinitions/{*}UnitTest')
@@ -101,7 +114,9 @@ def _trx(path: Path, selected: list[dict]) -> tuple[ET.Element, list[ET.Element]
         identifier = result.get('testId', '').lower()
         _require(identifier in target and identifier not in seen, 'TRX has duplicate or unexpected results.')
         seen.add(identifier)
-        _require(result.get('outcome') == 'Passed' and result.get('testName') == target[identifier]['displayName'], 'TRX skipped/failed a case or changed its literal arguments.')
+        expected_name = _trx_name(target[identifier]['displayName'])
+        _require(result.get('outcome') == 'Passed' and result.get('testName') == expected_name,
+                 f'TRX skipped/failed a case or changed its literal arguments: {identifier}: expected={expected_name!r}, actual={result.get("testName")!r}.')
         execution = result.get('executionId', '').lower()
         definition_execution = defmap[identifier].find('{*}Execution')
         _require(bool(GUID.fullmatch(execution)) and execution not in executions.values() and definition_execution is not None

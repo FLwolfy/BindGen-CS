@@ -55,7 +55,7 @@ def main() -> None:
         report = json.loads(discovery.read_text())
         validate_driver(report, False)
         if mode == 'complete':
-            if report['discoveryTotal'] != 8 or len(report['compiledMethods']) != 5:
+            if report['discoveryTotal'] != 9 or len(report['compiledMethods']) != 5:
                 raise RuntimeError('Inherited/generic/derived-attribute discovery lost or duplicated real cases.')
             methods = {item['fullyQualifiedName']: item for item in report['compiledMethods']}
             generic = methods['BGCS.TestDriverControls.GenericCases.GenericTheory']

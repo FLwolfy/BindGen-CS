@@ -30,6 +30,7 @@ public sealed class LiteralCases
     [Theory]
     [InlineData("a,(b):\"c\"", 1)]
     [InlineData("Ω", 2)]
+    [InlineData("λ😀𐀀\\ud83d\\ude00", 3)]
     public void EscapedTheory(string value, int number)
     {
         Assert.NotEmpty(value);

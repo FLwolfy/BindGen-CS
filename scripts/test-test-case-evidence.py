@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import uuid
 import xml.etree.ElementTree as ET
-from test_case_evidence import validate_driver, _trx
+from test_case_evidence import validate_driver, _trx, _trx_name
 
 class ExactCaseEvidenceTests(unittest.TestCase):
     def setUp(self):
@@ -47,22 +47,30 @@ class ExactCaseEvidenceTests(unittest.TestCase):
         validate_driver(value, False)
         with self.assertRaises(ValueError): validate_driver(value, True)
 
+    def test_trx_uses_the_locked_loggers_utf16_escaping_without_decoding_literals(self):
+        self.assertEqual('λé\\ud83d\\ude00\\ud800\\udc00', _trx_name('λé😀𐀀'))
+        self.assertEqual(r'\u0061\ud83d\ude00', _trx_name(r'\u0061\ud83d\ude00'))
+        self.assertEqual('\\u0000\\ud800\\ufffe\\uffff\t\n\r', _trx_name('\0\ud800\ufffe\uffff\t\n\r'))
+
     def test_independent_trx_requires_exact_names_ids_counts_and_success(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'tests.trx'
-            for fault in ('valid', 'missing', 'duplicate', 'skip', 'literal', 'execution-id', 'counter'):
+            self.cases[0]['displayName'] = 'BGCS.Tests.Example.Theory(value: "λ😀\\ud83d\\ude00")'
+            for fault in ('valid', 'missing', 'duplicate', 'skip', 'literal', 'unicode-literal', 'decoded-literal', 'execution-id', 'counter'):
                 root = ET.Element('TestRun'); results = ET.SubElement(root, 'Results'); definitions = ET.SubElement(root, 'TestDefinitions'); entries = ET.SubElement(root, 'TestEntries')
                 for case in self.cases:
                     execution = str(uuid.uuid4()); definition = ET.SubElement(definitions, 'UnitTest', id=case['id'])
                     ET.SubElement(definition, 'Execution', id=execution)
                     ET.SubElement(definition, 'TestMethod', className=case['className'], name='Theory')
-                    ET.SubElement(results, 'UnitTestResult', testId=case['id'], testName=case['displayName'], outcome='Passed', executionId=execution)
+                    ET.SubElement(results, 'UnitTestResult', testId=case['id'], testName=_trx_name(case['displayName']), outcome='Passed', executionId=execution)
                     ET.SubElement(entries, 'TestEntry', testId=case['id'], executionId=execution)
                 counters = ET.SubElement(ET.SubElement(root, 'ResultSummary', outcome='Completed'), 'Counters', total='2', executed='2', passed='2', failed='0', notExecuted='0')
                 if fault == 'missing': results.remove(results[0])
                 elif fault == 'duplicate': results[1].set('testId', results[0].get('testId'))
                 elif fault == 'skip': results[0].set('outcome', 'NotExecuted')
                 elif fault == 'literal': results[0].set('testName', 'collapsed')
+                elif fault == 'unicode-literal': results[0].set('testName', _trx_name(self.cases[0]['displayName'].replace('😀', '😁')))
+                elif fault == 'decoded-literal': results[0].set('testName', self.cases[0]['displayName'])
                 elif fault == 'execution-id': entries[0].set('executionId', str(uuid.uuid4()))
                 elif fault == 'counter': counters.set('passed', '1')
                 ET.ElementTree(root).write(path, encoding='utf-8')

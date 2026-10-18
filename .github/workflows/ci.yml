@@ -98,7 +98,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-feature-evidence-${{ matrix.target }}
-          path: ${{ matrix.baseline == 'full' && 'artifacts/acceptance/report.json' || 'artifacts/generator-smoke/report.json' }}
+          path: |
+            ${{ matrix.baseline == 'full' && 'artifacts/acceptance/report.json' || 'artifacts/generator-smoke/report.json' }}
+            ${{ matrix.baseline == 'full' && 'artifacts/acceptance/test-results/**/*.trx' || '' }}
+            ${{ matrix.baseline == 'full' && 'artifacts/acceptance/test-results/**/*.json' || '' }}
           if-no-files-found: error
       - name: Upload accepted Intel parser closure
         if: runner.os == 'macOS'
