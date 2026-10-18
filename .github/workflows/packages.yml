@@ -62,7 +62,7 @@ jobs:
           BGCS_OSX_X64_PACKAGE_RUNTIME_DIR: ${{ github.workspace }}/artifacts/clang-runtime/osx-x64
         run: |
           export PACKAGE_TEST_VERSION="$(python -c 'import xml.etree.ElementTree as E; print(E.parse("Directory.Build.props").findtext("./PropertyGroup/Version"))' | tr -d '\r')"
-          python scripts/compiler_test_environment.py -- bash scripts/test-nuget-packages.sh
+          python scripts/compiler_test_environment.py -- "$BASH" scripts/test-nuget-packages.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -103,7 +103,10 @@ public sealed class NativeSdkStorageAccessibilityTests
             Assert.DoesNotContain("ProtectedRep", proof);
             string input = Path.Combine(root, "proof.cpp");
             await File.WriteAllTextAsync(input, proof);
-            ImmutableArray<string> arguments = ["-std=c++23", "-fsyntax-only", input,
+            ImmutableArray<string> arguments = OperatingSystem.IsMacOS()
+                ? ["-std=c++23", "-fsyntax-only", input, "-isystem", sdk,
+                    .. NativeConsumerHarness.CompilerSdkArguments(SourceLanguage.Cpp, target)]
+                : ["-std=c++23", "-fsyntax-only", input,
                 .. target.toolchain.arguments,
                 .. (target.toolchain.sysRoot is string sysroot ? new[] { "--sysroot=" + sysroot } : []),
                 "-isystem", sdk,

@@ -177,11 +177,20 @@ internal static class NativeConsumerHarness
         {
             // The proof must compile against the SDK that supplied its parsed
             // libc++ layout, rather than the selected driver's default SDK.
-            // Keep builtin resource search enabled and C++ headers ahead of C.
+            // Keep builtin resource headers ahead of SDK C headers: libc++'s
+            // stddef.h uses include_next to obtain the compiler's definitions.
             NativeTargetDescriptor target = parserTarget ?? ParserTarget(language);
             if (target.toolchain.sysRoot is string sysroot) { yield return "-isysroot"; yield return sysroot; }
-            foreach (HeaderSearchPath include in ToolchainResolver.ResolveHeaderSearchPaths(target, language))
-            { yield return "-isystem"; yield return include.path; }
+            if (language == SourceLanguage.Cpp && target.toolchain.cxxSystemIncludeFolders.Count != 0)
+            {
+                // Only the explicitly parsed libc++ installation may supply
+                // C++ headers; retain the driver's own builtin resource path.
+                yield return "-nostdinc++";
+                foreach (string include in target.toolchain.cxxSystemIncludeFolders)
+                { yield return "-isystem"; yield return include; }
+            }
+            foreach (string include in target.toolchain.systemIncludeFolders)
+            { yield return "-idirafter"; yield return include; }
             foreach (string define in target.toolchain.defines) yield return "-D" + define;
             foreach (string argument in target.toolchain.arguments) yield return argument;
         }

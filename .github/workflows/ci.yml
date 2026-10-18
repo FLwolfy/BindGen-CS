@@ -69,7 +69,7 @@ jobs:
       - name: Full retained Windows functionality exactly once
         if: matrix.baseline == 'full'
         shell: bash
-        run: python scripts/compiler_test_environment.py -- bash scripts/run-full-test-matrix.sh
+        run: python scripts/compiler_test_environment.py -- "$BASH" scripts/run-full-test-matrix.sh
       - name: Build and execute the finite non-Windows generator baseline
         if: matrix.baseline == 'smoke'
         shell: bash
@@ -81,7 +81,7 @@ jobs:
           dotnet build tests/BGCS.Tests/BGCS.Tests.csproj -c Release --no-restore -m:2 -nr:false -p:TreatWarningsAsErrors=true
           dotnet build src/BGCS.Tool/BGCS.Tool.csproj -c Release -m:2 -nr:false -p:TreatWarningsAsErrors=true
           python scripts/run-generator-smoke.py --dotnet "$DOTNET_ROOT/dotnet" --output artifacts/generator-smoke
-          python scripts/compiler_test_environment.py -- bash scripts/test-performance-budget.sh
+          python scripts/compiler_test_environment.py -- "$BASH" scripts/test-performance-budget.sh
       - name: Consume the current host SDK and CLI from isolated packages
         if: matrix.baseline == 'smoke'
         shell: bash
@@ -91,8 +91,7 @@ jobs:
           version="0.0.0-ci.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
           parser=()
           if [[ "$RUNNER_OS" == "macOS" ]]; then parser=(--parser-osx-x64 "$BGCS_CLANG_RUNTIME_DIR"); fi
-          dotnet build src/BGCS.Tool/BGCS.Tool.csproj -c Release -r "${{ matrix.rid }}" -m:2 -nr:false -p:Version="$version"
-          python scripts/compiler_test_environment.py -- python eng/pack.py --configuration Release --version "$version" --output artifacts/host-packages --no-build --host-only "${{ matrix.rid }}" --include-host-tool --verify-repeat-content "${parser[@]}"
+          python scripts/compiler_test_environment.py -- python eng/pack.py --configuration Release --version "$version" --output artifacts/host-packages --host-only "${{ matrix.rid }}" --include-host-tool --verify-repeat-content "${parser[@]}"
           python scripts/compiler_test_environment.py -- python eng/verify-packages.py --version "$version" --packages artifacts/host-packages --output artifacts/host-installed --sdk-only --host-tool
       - name: Upload exact generator evidence
         if: always()
