@@ -103,7 +103,7 @@ def supplemental_files(directory: Path) -> dict[str, Path]:
     if any(path.is_symlink() or not path.resolve().is_relative_to(directory.resolve()) for path in paths):
         raise RuntimeError("An Intel parser provenance file escapes its resource closure.")
     return {path.relative_to(directory).as_posix(): path for path in paths if path.is_file()
-            and path.relative_to(directory).as_posix() not in ("runtime-provenance.json", "SHA256SUMS")}
+            and path.relative_to(directory).as_posix() != "runtime-provenance.json"}
 
 
 def verify_supplemental(root: Path, directory: Path, expected_revision: str) -> dict:

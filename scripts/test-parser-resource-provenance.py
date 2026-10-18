@@ -74,6 +74,11 @@ class ParserResourceProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "actual build provenance"):
             self.verify()
 
+    def test_unlisted_checksum_sidecar_cannot_escape_the_exact_file_closure(self):
+        (self.directory / "SHA256SUMS").write_text("unlisted checksum data", encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "complete file closure"):
+            self.verify()
+
     def test_arm64_cannot_be_resealed_as_an_intel_parser(self):
         (self.directory / "libclang.dylib").write_bytes(b"\xcf\xfa\xed\xfe" + struct.pack("<I", 0x0100000C) + b"\0" * 56)
         self.write_manifest()

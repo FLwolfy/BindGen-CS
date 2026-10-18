@@ -51,9 +51,6 @@ jobs:
         if: github.event_name == 'workflow_run'
         shell: bash
         run: |
-          cd artifacts/clang-runtime/osx-x64
-          sha256sum --check --strict SHA256SUMS
-          cd ../../..
           python scripts/parser_runtime_provenance.py verify artifacts/clang-runtime/osx-x64
       - name: Pack and install all four products
         shell: bash
