@@ -106,7 +106,10 @@ public sealed class NativeStorageAssertionEmitter
             Check(alignment + "(" + spelling + ")", type.alignment.Value, "native storage alignment");
             if (module.language == SourceLanguage.Cpp && declaration?.kind == "Class")
             {
-                if (declaration.isStandardLayout is bool standardLayout) Check("std::is_standard_layout<" + spelling + ">::value", standardLayout ? 1 : 0, "native standard-layout trait");
+                // Only a positive fact admits DTO storage and C++ field-offset
+                // use. A negative parser observation keeps those routes closed;
+                // an opaque native owner need not also be non-standard-layout.
+                if (declaration.isStandardLayout == true) Check("std::is_standard_layout<" + spelling + ">::value", 1, "native standard-layout trait");
                 if (declaration.isTriviallyCopyable is bool triviallyCopyable) Check("std::is_trivially_copyable<" + spelling + ">::value", triviallyCopyable ? 1 : 0, "native trivial-copy trait");
                 if (declaration.isDefaultConstructible is bool defaultConstructible) Check("std::is_default_constructible<" + spelling + ">::value", defaultConstructible ? 1 : 0, "native default-construction trait");
             }

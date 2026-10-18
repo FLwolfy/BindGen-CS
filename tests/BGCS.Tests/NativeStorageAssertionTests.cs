@@ -98,8 +98,8 @@ public sealed class NativeStorageAssertionTests
             Assert.Contains("sizeof(SDK::Outer<int>)", proof);
             Assert.Contains("alignof(SDK::Outer<int>)", proof);
             NativeDeclaration outer = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "SDK::Outer<int>" && declaration.isCompleteDefinition);
-            if (outer.isStandardLayout is bool standardLayout)
-                Assert.Contains("std::is_standard_layout<SDK::Outer<int>>::value == " + (standardLayout ? "1" : "0"), proof);
+            if (outer.isStandardLayout == true)
+                Assert.Contains("std::is_standard_layout<SDK::Outer<int>>::value == 1", proof);
             else Assert.DoesNotContain("std::is_standard_layout<SDK::Outer<int>>", proof);
             Assert.Contains("decltype(((SDK::Outer<int>*)nullptr)->value)", proof);
             Assert.DoesNotContain("sizeof(" + relative.spelling + ")", proof);
@@ -132,6 +132,81 @@ public sealed class NativeStorageAssertionTests
                     module.declarations.Select(declaration => declaration.id == witness.id ? declaration with { constantValue = null } : declaration).ToImmutableArray(), module.diagnostics)
                     { language = module.language, byteOrder = module.byteOrder };
                 Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(unproved, [header]));
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData("opaque-negative")]
+    [InlineData("size-drift")]
+    [InlineData("required-layout-drift")]
+    public async Task OpaqueNegativeLayoutDoesNotRequireTraitEqualityButPositiveStorageAndSizeStillDo(string condition)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-layout-trait-implication-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string header = Path.Combine(root, "native.hpp"), source = Path.Combine(root, "proof.cpp");
+            await File.WriteAllTextAsync(header, """
+                class OpaqueOwner {
+                #ifdef BGCS_OPAQUE_SIZE_DRIFT
+                    long long value;
+                #else
+                    int value;
+                #endif
+                public: OpaqueOwner() = default;
+                };
+                struct RequiredStorage {
+                    int first;
+                #ifdef BGCS_REQUIRED_LAYOUT_DRIFT
+                private:
+                #endif
+                    int second;
+                };
+                static_assert(sizeof(RequiredStorage) == 2 * sizeof(int));
+                OpaqueOwner* BorrowOpaque(OpaqueOwner* value);
+                RequiredStorage CopyStorage(RequiredStorage value);
+                """);
+            var target = NativeConsumerHarness.ParserTarget(SourceLanguage.Cpp);
+            NativeModule parsed = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"))
+                .ParseAsync(new(target, SourceLanguage.Cpp, [header])
+                { pathBase = root, languageStandard = "c++23", parseMacros = false, parseSystemIncludes = false }, CancellationToken.None)).module;
+            Assert.DoesNotContain(parsed.diagnostics, diagnostic => diagnostic.isFailure);
+            NativeDeclaration owner = Assert.Single(parsed.declarations, declaration => declaration.qualifiedName == "OpaqueOwner" && declaration.kind == "Class");
+            NativeDeclaration storage = Assert.Single(parsed.declarations, declaration => declaration.qualifiedName == "RequiredStorage" && declaration.kind == "Class");
+            Assert.True(owner.isStandardLayout);
+            Assert.True(storage.isStandardLayout);
+            // Model the real cross-compiler case: the parser denies layout use,
+            // while the consumer compiler independently finds this opaque class
+            // standard-layout. Its representation still never crosses by value.
+            NativeModule observed = new(parsed.targetId, parsed.triple, parsed.pointerSize, parsed.types,
+                parsed.declarations.Select(declaration => declaration.id == owner.id ? declaration with { isStandardLayout = false } : declaration).ToImmutableArray(), parsed.diagnostics)
+                { language = parsed.language, byteOrder = parsed.byteOrder };
+            Assert.False(observed.GetDeclaration(owner.id).isStandardLayout);
+            string proof = new NativeStorageAssertionEmitter().Emit(observed, [header]);
+            Assert.DoesNotContain(proof.Split('\n'), line => line.Contains("is_standard_layout<", StringComparison.Ordinal) && line.Contains("OpaqueOwner", StringComparison.Ordinal));
+            Assert.Contains(proof.Split('\n'), line => line.Contains("is_standard_layout<", StringComparison.Ordinal) && line.Contains("RequiredStorage", StringComparison.Ordinal) && line.Contains("== 1", StringComparison.Ordinal));
+            Assert.Contains(proof.Split('\n'), line => line.Contains("sizeof(", StringComparison.Ordinal) && line.Contains("OpaqueOwner", StringComparison.Ordinal));
+            Assert.Contains(proof.Split('\n'), line => line.Contains("alignof(", StringComparison.Ordinal) && line.Contains("OpaqueOwner", StringComparison.Ordinal));
+            Assert.Contains("native field offset differs", proof);
+            Assert.Contains("native callable signature differs", proof);
+            await File.WriteAllTextAsync(source, proof);
+            string compiler = NativeConsumerHarness.FindCompiler(true);
+            bool msvc = Path.GetFileName(compiler).Equals("cl.exe", StringComparison.OrdinalIgnoreCase);
+            ImmutableArray<string> arguments = msvc
+                ? ["/nologo", "/Zs", "/TP", "/std:c++latest", source, .. target.toolchain.systemIncludeFolders.Select(directory => "/I" + directory)]
+                : ["-std=c++23", "-fsyntax-only", source, .. NativeConsumerHarness.CompilerSdkArguments()];
+            if (condition != "opaque-negative")
+                arguments = arguments.Add((msvc ? "/D" : "-D") + (condition == "size-drift" ? "BGCS_OPAQUE_SIZE_DRIFT=1" : "BGCS_REQUIRED_LAYOUT_DRIFT=1"));
+            var compiled = await ProcessExecutor.ExecuteAsync(compiler, arguments, root, TimeSpan.FromSeconds(60));
+            Assert.False(compiled.timedOut);
+            if (condition == "opaque-negative") Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);
+            else
+            {
+                Assert.NotEqual(0, compiled.exitCode);
+                Assert.Contains(condition == "size-drift" ? "BGCS native storage size differs" : "BGCS native standard-layout trait differs",
+                    compiled.standardOutput + compiled.standardError, StringComparison.Ordinal);
             }
         }
         finally { Directory.Delete(root, recursive: true); }
