@@ -103,11 +103,11 @@ public sealed class NativeSdkStorageAccessibilityTests
             Assert.DoesNotContain("ProtectedRep", proof);
             string input = Path.Combine(root, "proof.cpp");
             await File.WriteAllTextAsync(input, proof);
-            ImmutableArray<string> arguments = ["--no-default-config", "--target=" + target.triple, "-std=c++23", "-fsyntax-only", input,
+            ImmutableArray<string> arguments = ["-std=c++23", "-fsyntax-only", input,
                 .. target.toolchain.arguments,
                 .. (target.toolchain.sysRoot is string sysroot ? new[] { "--sysroot=" + sysroot } : []),
                 "-isystem", sdk,
-                .. target.toolchain.systemIncludeFolders.Concat(target.toolchain.cxxSystemIncludeFolders).SelectMany(directory => new[] { "-isystem", directory })];
+                .. target.toolchain.cxxSystemIncludeFolders.Concat(target.toolchain.systemIncludeFolders).SelectMany(directory => new[] { "-isystem", directory })];
             var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true), arguments, root, TimeSpan.FromSeconds(60));
             Assert.False(compiled.timedOut);
             Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);

@@ -97,15 +97,17 @@ internal static class NativeConsumerHarness
             Directory.CreateDirectory(binaryRoot);
             string binary = Path.Combine(binaryRoot, OperatingSystem.IsWindows() ? libraryName + ".dll" : OperatingSystem.IsMacOS() ? "lib" + libraryName + ".dylib" : "lib" + libraryName + ".so");
             await CompileSharedAsync(sources, binary, sourceRoot, arguments,
-                [Path.Combine(nativeRoot, "include")], languageStandard);
+                [Path.Combine(nativeRoot, "include")], languageStandard, target.resolvedTarget);
         }
         static bool IsSource(string path) => Path.GetExtension(path) is ".c" or ".cpp" or ".cc" or ".cxx";
     }
 
     internal static async Task CompileSharedAsync(IEnumerable<string> sources, string binary, string sourceRoot,
-        IEnumerable<string>? arguments = null, IEnumerable<string>? includeDirectories = null, string? languageStandard = null)
+        IEnumerable<string>? arguments = null, IEnumerable<string>? includeDirectories = null, string? languageStandard = null,
+        NativeTargetDescriptor? parserTarget = null)
     {
         string[] sourceFiles = sources.ToArray();
+        NativeTargetDescriptor? appleTarget = OperatingSystem.IsMacOS() ? parserTarget ?? ParserTarget(SourceLanguage.Cpp) : null;
         Directory.CreateDirectory(Path.GetDirectoryName(binary)!);
         string intermediates = Path.Combine(Path.GetDirectoryName(binary)!, "obj");
         Directory.CreateDirectory(intermediates);
@@ -118,7 +120,7 @@ internal static class NativeConsumerHarness
                 ? languageStandard : cpp ? "c++23" : "c17";
             List<string> command = ["-c", sourceFiles[index], "-o", output, "-std=" + standard, "-I", sourceRoot];
             foreach (string include in includeDirectories ?? []) { command.Add("-I"); command.Add(include); }
-            command.AddRange(CompilerSdkArguments());
+            command.AddRange(CompilerSdkArguments(cpp ? SourceLanguage.Cpp : SourceLanguage.C, appleTarget));
             if (!OperatingSystem.IsWindows()) command.Add("-fPIC");
             command.AddRange(arguments ?? []);
             await RunAsync(FindCompiler(cpp), command, sourceRoot);
@@ -131,6 +133,7 @@ internal static class NativeConsumerHarness
             foreach (string path in WindowsLibraries()) link.Add("-L" + path);
         }
         else link.Add("-pthread");
+        if (appleTarget?.toolchain.sysRoot is string sysroot) link.AddRange(["-isysroot", sysroot]);
         link.AddRange(arguments ?? []);
         await RunAsync(FindCompiler(true), link, sourceRoot);
         Assert.True(File.Exists(binary), binary);
@@ -161,13 +164,27 @@ internal static class NativeConsumerHarness
     internal static NativeTargetDescriptor ParserTarget(SourceLanguage language)
         => ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), language);
 
-    internal static IEnumerable<string> CompilerSdkArguments()
+    internal static IEnumerable<string> CompilerSdkArguments(SourceLanguage language = SourceLanguage.Cpp, NativeTargetDescriptor? parserTarget = null)
     {
-        if (!OperatingSystem.IsWindows()) yield break;
-        NativeTargetDescriptor target = ParserTarget(SourceLanguage.Cpp);
-        foreach (string include in target.toolchain.systemIncludeFolders) { yield return "-isystem"; yield return include; }
-        foreach (string argument in target.toolchain.arguments) yield return argument;
-        yield return "-fms-runtime-lib=dll";
+        if (OperatingSystem.IsWindows())
+        {
+            NativeTargetDescriptor target = ParserTarget(SourceLanguage.Cpp);
+            foreach (string include in target.toolchain.systemIncludeFolders) { yield return "-isystem"; yield return include; }
+            foreach (string argument in target.toolchain.arguments) yield return argument;
+            yield return "-fms-runtime-lib=dll";
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            // The proof must compile against the SDK that supplied its parsed
+            // libc++ layout, rather than the selected driver's default SDK.
+            // Keep builtin resource search enabled and C++ headers ahead of C.
+            NativeTargetDescriptor target = parserTarget ?? ParserTarget(language);
+            if (target.toolchain.sysRoot is string sysroot) { yield return "-isysroot"; yield return sysroot; }
+            foreach (HeaderSearchPath include in ToolchainResolver.ResolveHeaderSearchPaths(target, language))
+            { yield return "-isystem"; yield return include.path; }
+            foreach (string define in target.toolchain.defines) yield return "-D" + define;
+            foreach (string argument in target.toolchain.arguments) yield return argument;
+        }
     }
 
     private static IEnumerable<string> WindowsLibraries()

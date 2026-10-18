@@ -47,7 +47,7 @@ public sealed class NativeCTypedefProofTests
             string proof = Path.Combine(root, "typedef-assertions.c");
             await File.WriteAllTextAsync(proof, assertions);
             await NativeConsumerHarness.RunAsync(NativeConsumerHarness.FindCompiler(false),
-                ["-std=c17", "-fsyntax-only", proof, .. NativeConsumerHarness.CompilerSdkArguments()], root);
+                ["-std=c17", "-fsyntax-only", proof, .. NativeConsumerHarness.CompilerSdkArguments(SourceLanguage.C)], root);
             Assert.Contains("sizeof(AnonymousStorage)", assertions);
             Assert.DoesNotContain("sizeof(struct AnonymousStorage)", assertions);
             Assert.Contains("sizeof(struct RealTag)", assertions);

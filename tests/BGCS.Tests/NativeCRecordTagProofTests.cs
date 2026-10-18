@@ -49,7 +49,7 @@ public sealed class NativeCRecordTagProofTests
             Assert.Contains(storageType + " *", proof, StringComparison.Ordinal);
             if (anonymous) Assert.DoesNotContain(keyword + " Pair", proof, StringComparison.Ordinal);
             await File.WriteAllTextAsync(input, proof);
-            ImmutableArray<string> arguments = ["--no-default-config", "--target=" + target.triple, "-std=c17", "-fsyntax-only", input,
+            ImmutableArray<string> arguments = ["-std=c17", "-fsyntax-only", input,
                 .. target.toolchain.systemIncludeFolders.SelectMany(directory => new[] { "-isystem", directory })];
             var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(false), arguments, root, TimeSpan.FromSeconds(30));
             Assert.False(compiled.timedOut);

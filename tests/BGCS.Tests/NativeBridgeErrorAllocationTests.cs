@@ -54,8 +54,13 @@ public sealed class NativeBridgeErrorAllocationTests
                 api = new() { @namespace = "Generated.ErrorAllocation", name = "AllocationApi" },
                 runtime = new() { mode = runtimeMode }, cache = new() { enabled = false }};
             await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
+            GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
+            // ELF replacement operators must bind inside this fixture rather than to the process's C++ runtime.
+            // Keep this link policy out of the generator's parser arguments.
+            string[] fixtureArguments = OperatingSystem.IsLinux() ? ["-Wl,-Bsymbolic-functions"] : [];
+            await NativeConsumerHarness.CompileNativeFixturesAsync(result, root, configuration.library.nativeName,
+                arguments: fixtureArguments);
             var abi = Assert.Single(result.targetModels).interop;
             Assert.All(abi.functions.Where(function => function.error is not null), function =>
             {
@@ -76,7 +81,8 @@ public sealed class NativeBridgeErrorAllocationTests
                 Assert.Equal(0, error);
                 Assert.Equal(0, allocations(out int allocationsBefore, out error));
                 Assert.Equal(0, deletes(out int deletesBefore, out error));
-                Assert.True(allocationsBefore >= 1 && deletesBefore >= 1); // Establish that replacement hooks are active in this binary.
+                Assert.True(allocationsBefore >= 1 && deletesBefore >= 1,
+                    $"Replacement hooks are not active in this binary: allocations={allocationsBefore}, deletes={deletesBefore}.");
                 Assert.Equal(1, Function("Fail")(out int value, out error));
                 Assert.Equal(0, value);
                 Assert.NotEqual(0, error);
