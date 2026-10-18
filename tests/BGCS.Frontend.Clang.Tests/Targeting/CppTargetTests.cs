@@ -188,6 +188,16 @@ public sealed class CppTargetTests
         Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
         Assert.Equal(target.triple, options.targetTriple);
         Assert.NotEmpty(options.systemIncludeFolders);
+        if (target.platformId == "macos" && target.toolchain.sysRoot is string sdk)
+        {
+            string cpp = Path.Combine(sdk, "usr", "include", "c++", "v1");
+            if (Directory.Exists(cpp))
+            {
+                Assert.Equal(cpp, target.toolchain.cxxSystemIncludeFolders[0]);
+                Assert.True(options.systemIncludeFolders.IndexOf(cpp) < options.systemIncludeFolders.IndexOf(Path.Combine(sdk, "usr", "include")),
+                    "The selected SDK's libc++ wrappers must precede its C headers.");
+            }
+        }
     }
 
     [Fact]

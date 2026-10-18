@@ -47,7 +47,15 @@ public static class ToolchainResolver
         {
             sysroot ??= AppleSdkDiscovery.FindInstalledRoot("macosx");
             if (sysroot is not null) Add(includes, Path.Combine(sysroot, "usr", "include"));
-            foreach (string path in new[] { "/Library/Developer/CommandLineTools/usr/include/c++/v1", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1" }) Add(cxx, path);
+            // Current Apple SDKs carry libc++ themselves; do not substitute a
+            // different developer installation for the selected SDK's headers.
+            if (cxx.Count == 0 && sysroot is not null) Add(cxx, Path.Combine(sysroot, "usr", "include", "c++", "v1"));
+            if (cxx.Count == 0)
+                foreach (string path in new[] { "/Library/Developer/CommandLineTools/usr/include/c++/v1", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1" })
+                {
+                    Add(cxx, path);
+                    if (cxx.Count != 0) break;
+                }
         }
         else if (OperatingSystem.IsLinux() && sysroot is null)
         {

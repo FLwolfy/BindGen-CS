@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from acceptance_evidence import digest
 from corpus_policy import selection_policy
@@ -63,6 +64,131 @@ class CorpusSnapshotTests(unittest.TestCase):
     def test_managed_sources_remain_byte_exact(self):
         corpus, source = self.source("managed")
         self.assertEqual(digest(source), CORPUS.snapshot_source_digest(source, "text/x-csharp", corpus))
+
+    def group_report(self, group, status):
+        """Simulate producer reports only; these controls never execute a compiler or consumer."""
+        lock = CORPUS.load_lock(CORPUS.DEFAULT_LOCK)
+        policy_path = ROOT / "tests/corpus/upstream-limitations.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        repositories = [{**{key: item[key] for key in ("id", "revision", "repository", "checkedOutContentSha256")},
+                         "workingTreeClean": True} for item in lock["repositories"]]
+        libraries = [{"libraryId": library, "generated": True, "managedCompiled": True, "upstreamInvoked": False,
+                      "reviewedSnapshots": status == 0, "success": status == 0, "artifactCount": 4,
+                      "omittedDeclarations": policy["libraries"][library]} for library in CORPUS.GROUPS[group]]
+        if group == "cpp":
+            libraries[0]["nativeBridgeSyntax"] = {"compiler": "fixture-cxx-not-executed", "compilerSha256": "a" * 64,
+                "translationUnits": 1, "nativeLinked": False, "upstreamInvoked": False}
+        return {"schemaVersion": 1, "scope": CORPUS.REPORT_SCOPE, "group": group, "platform": CORPUS.host_platform(),
+                "success": status == 0, "failureKind": "unreviewed-snapshots" if status == 3 else None,
+                "upstreamInvoked": False, "upstreamInvocationRequiredForRelease": True,
+                "corpusLockSha256": digest(CORPUS.DEFAULT_LOCK), "repositories": repositories,
+                "repositoriesAfter": json.loads(json.dumps(repositories)), "libraries": libraries,
+                "selectedApiPolicy": {"schemaVersion": policy["schemaVersion"], "policySha256": digest(policy_path),
+                                      "scope": policy["scope"], "libraries": policy["libraries"]},
+                "executionIdentity": {"sourceRevision": "b" * 40, "sourceWorktreeDirty": False,
+                    **{key: "c" * 64 for key in ("checkedOutSourceSha256", "generatorEntrySha256", "generatorAssemblySha256",
+                                                "runtimeAssemblySha256", "executionClosureSha256")}, "executionAssetCount": 5}}
+
+    def collect(self, statuses, mutation=None):
+        calls = []
+        def run(group, output):
+            calls.append((group, output.name))
+            status = statuses[len(calls) - 1]
+            report = self.group_report(group, status)
+            if mutation is not None:
+                mutation(group, report)
+            output.write_text(json.dumps(report), encoding="utf-8")
+            return status
+        return CORPUS._collect_groups(run, self.work / "reports"), calls
+
+    def test_collector_requires_both_successes_and_preserves_original_reports(self):
+        status, calls = self.collect((0, 0))
+        self.assertEqual(0, status)
+        self.assertEqual([("c", "corpus-c.json"), ("cpp", "corpus-cpp.json")], calls)
+        for group in CORPUS.GROUPS:
+            report = json.loads((self.work / "reports" / ("corpus-" + group + ".json")).read_text(encoding="utf-8"))
+            self.assertTrue(report["success"])
+            self.assertEqual(list(CORPUS.GROUPS[group]), [item["libraryId"] for item in report["libraries"]])
+
+    def test_collector_collects_snapshot_only_failures_but_never_returns_success(self):
+        for statuses in ((3, 0), (0, 3), (3, 3)):
+            with self.subTest(statuses=statuses):
+                status, calls = self.collect(statuses)
+                self.assertEqual(3, status)
+                self.assertEqual(["c", "cpp"], [group for group, _ in calls])
+
+    def test_collector_stops_on_a_c_hard_error(self):
+        for hard_error in (1, 2):
+            with self.subTest(hard_error=hard_error):
+                status, calls = self.collect((hard_error, 0))
+                self.assertEqual(hard_error, status)
+                self.assertEqual(["c"], [group for group, _ in calls])
+
+    def test_collector_cannot_hide_cpp_execution_failure_after_unreviewed_c(self):
+        status, calls = self.collect((3, 1))
+        self.assertEqual(1, status)
+        self.assertEqual(["c", "cpp"], [group for group, _ in calls])
+
+    def test_collector_rejects_misclassified_or_incomplete_unreviewed_reports(self):
+        def wrong_group(report): report["group"] = "cpp"
+        def wrong_platform(report): report["platform"] = "not-this-host"
+        def missing_library(report): report["libraries"].pop()
+        def duplicate_library(report): report["libraries"][-1] = report["libraries"][0]
+        def foreign_library(report): report["libraries"][0]["libraryId"] = "bimg"
+        def failed_compilation(report): report["libraries"][0]["managedCompiled"] = False
+        def failed_generation(report): report["libraries"][0]["generated"] = False
+        def hidden_failure(report): report["libraries"][0]["failure"] = "compiler failed"
+        def wrong_lock(report): report["corpusLockSha256"] = "0" * 64
+        def mutated_inputs(report): report["repositoriesAfter"][0]["revision"] = "0" * 40
+        def wrong_inputs(report): report["repositories"][0]["checkedOutContentSha256"] = "0" * 64
+        def wrong_policy(report): report["selectedApiPolicy"]["policySha256"] = "0" * 64
+        def wrong_failure_kind(report): report["failureKind"] = "execution"
+        def false_success(report): report["success"] = True
+        def missing_identity(report): del report["executionIdentity"]
+        for mutate in (wrong_group, wrong_platform, missing_library, duplicate_library, foreign_library, failed_compilation,
+                       failed_generation, hidden_failure, wrong_lock, mutated_inputs, wrong_inputs, wrong_policy,
+                       wrong_failure_kind, false_success, missing_identity):
+            with self.subTest(fault=mutate.__name__):
+                status, calls = self.collect((3, 0), lambda group, report: mutate(report) if group == "c" else None)
+                self.assertEqual(1, status)
+                self.assertEqual(["c"], [group for group, _ in calls])
+
+    def test_collector_requires_a_fresh_report_instead_of_reusing_a_previous_exit3(self):
+        output = self.work / "reports"
+        output.mkdir()
+        (output / "corpus-c.json").write_text(json.dumps(self.group_report("c", 3)), encoding="utf-8")
+        calls = []
+        self.assertEqual(1, CORPUS._collect_groups(lambda group, path: calls.append(group) or 3, output))
+        self.assertEqual(["c"], calls)
+
+    def test_collector_rejects_mixed_source_or_generator_closures_and_cpp_syntax_failures(self):
+        for fault in ("source", "generator", "syntax"):
+            def mutate(group, report):
+                if group != "cpp": return
+                if fault == "syntax": del report["libraries"][0]["nativeBridgeSyntax"]
+                else: report["executionIdentity"]["checkedOutSourceSha256" if fault == "source" else "executionClosureSha256"] = "d" * 64
+            with self.subTest(fault=fault):
+                status, calls = self.collect((3, 0), mutate)
+                self.assertEqual(1, status)
+                self.assertEqual(["c", "cpp"], [group for group, _ in calls])
+
+    def test_collection_mode_forwards_unchanged_group_arguments_without_running_consumers(self):
+        main = CORPUS.main
+        def collect(run_group, output):
+            self.assertEqual(ROOT / "artifacts/acceptance", output)
+            for group in CORPUS.GROUPS:
+                self.assertEqual(0, run_group(group, output / ("corpus-" + group + ".json")))
+            return 3
+        with patch.object(CORPUS, "main", return_value=0) as child, patch.object(CORPUS, "_collect_groups", side_effect=collect):
+            self.assertEqual(3, main(["--dotnet", "locked-dotnet", "--configuration", "Release", "--collect-groups",
+                "--corpus-root", "exact-corpus", "--tool-path", "closed-tool", "--runtime-path", "closed-runtime"]))
+        self.assertEqual(["c", "cpp"], [call.args[0][call.args[0].index("--group") + 1] for call in child.call_args_list])
+        for call in child.call_args_list:
+            args = call.args[0]
+            self.assertNotIn("--collect-groups", args)
+            for option, expected in (("--dotnet", "locked-dotnet"), ("--configuration", "Release"),
+                                     ("--corpus-root", "exact-corpus"), ("--tool-path", "closed-tool"), ("--runtime-path", "closed-runtime")):
+                self.assertEqual(expected, args[args.index(option) + 1])
 
     def policy_fixture(self):
         root = self.work / "policy"

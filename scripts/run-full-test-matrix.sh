@@ -174,19 +174,12 @@ touch "${GATE_DIR}/custom-allocator"
 log "Layer 3: Pinned upstream real-library regeneration and compilation"
 bash "${ROOT_DIR}/scripts/setup-real-library-corpus.sh"
 snapshot_status=0
-if REQUIRE_REAL_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-libraries.sh"; then
-  touch "${GATE_DIR}/real-libraries" "${GATE_DIR}/ir-native-real-libraries"
+if "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-corpus.py" --dotnet "${DOTNET_CMD}" \
+  --configuration "${CONFIGURATION}" --collect-groups; then
+  touch "${GATE_DIR}/real-libraries" "${GATE_DIR}/ir-native-real-libraries" "${GATE_DIR}/real-cpp-libraries"
 else
-  status=$?
-  if [[ "${status}" != "3" ]]; then exit "${status}"; fi
-  snapshot_status=3
-fi
-if REQUIRE_REAL_CPP_LIBRARIES=1 bash "${ROOT_DIR}/scripts/test-real-cpp-libraries.sh"; then
-  touch "${GATE_DIR}/real-cpp-libraries"
-else
-  status=$?
-  if [[ "${status}" != "3" ]]; then exit "${status}"; fi
-  snapshot_status=3
+  snapshot_status=$?
+  if [[ "${snapshot_status}" != "3" ]]; then exit "${snapshot_status}"; fi
 fi
 
 log "Layer 3b: Locked upstream native implementations and generated C# calls"

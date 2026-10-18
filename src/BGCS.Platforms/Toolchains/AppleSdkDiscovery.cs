@@ -45,8 +45,24 @@ public static class AppleSdkDiscovery
         string? configured = Environment.GetEnvironmentVariable("SDKROOT");
         if (!string.IsNullOrWhiteSpace(configured) && Directory.Exists(configured)) return Path.GetFullPath(configured);
         string family = sdkName switch { "macosx" => "MacOSX", "iphoneos" => "iPhoneOS", "iphonesimulator" => "iPhoneSimulator", _ => throw new ArgumentException("Unknown Apple SDK family.", nameof(sdkName)) };
-        string[] roots = ["/Library/Developer/CommandLineTools/SDKs", "/Applications/Xcode.app/Contents/Developer/Platforms/" + family + ".platform/Developer/SDKs"];
-        return roots.Where(Directory.Exists).SelectMany(path => Directory.GetDirectories(path, family + "*.sdk")).OrderDescending(StringComparer.Ordinal).FirstOrDefault();
+        List<string> roots = [];
+        string? developer = Environment.GetEnvironmentVariable("DEVELOPER_DIR");
+        if (!string.IsNullOrWhiteSpace(developer))
+        {
+            developer = Path.GetFullPath(developer);
+            string bundleDeveloper = Path.Combine(developer, "Contents", "Developer");
+            if (Directory.Exists(bundleDeveloper)) developer = bundleDeveloper;
+            roots.Add(Path.Combine(developer, "Platforms", family + ".platform", "Developer", "SDKs"));
+            roots.Add(Path.Combine(developer, "SDKs"));
+        }
+        roots.Add("/Library/Developer/CommandLineTools/SDKs");
+        roots.Add("/Applications/Xcode.app/Contents/Developer/Platforms/" + family + ".platform/Developer/SDKs");
+        foreach (string parent in roots.Where(Directory.Exists))
+        {
+            string? selected = Directory.GetDirectories(parent, family + "*.sdk").OrderDescending(StringComparer.Ordinal).FirstOrDefault();
+            if (selected is not null) return selected;
+        }
+        return null;
     }
 
     private static Dictionary<string, string> ReadSettings(string root)
