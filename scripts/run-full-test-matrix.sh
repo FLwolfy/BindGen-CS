@@ -111,6 +111,19 @@ log "Strict performance and cache budget before the long native-consumer baselin
 bash "${ROOT_DIR}/scripts/test-performance-budget.sh"
 touch "${GATE_DIR}/performance"
 
+log "Pinned real-library generation, compilation and snapshots before the long native-consumer baseline"
+bash "${ROOT_DIR}/scripts/setup-real-library-corpus.sh"
+if "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-corpus.py" --dotnet "${DOTNET_CMD}" \
+  --configuration "${CONFIGURATION}" --collect-groups; then
+  touch "${GATE_DIR}/real-libraries" "${GATE_DIR}/ir-native-real-libraries" "${GATE_DIR}/real-cpp-libraries"
+else
+  snapshot_status=$?
+  if [[ "${snapshot_status}" == "3" ]]; then
+    log "Unreviewed host snapshot candidates were captured for review; acceptance remains failed."
+  fi
+  exit "${snapshot_status}"
+fi
+
 log "Layer 1: Auto-discovered test projects under tests/"
 TEST_PROJECTS=()
 while IFS= read -r project_path; do
@@ -171,17 +184,6 @@ log "Layer 2b: Real custom allocator, matching native frees and retained module 
   --configuration "${CONFIGURATION}" --output "${ROOT_DIR}/artifacts/acceptance/custom-allocator.json"
 touch "${GATE_DIR}/custom-allocator"
 
-log "Layer 3: Pinned upstream real-library regeneration and compilation"
-bash "${ROOT_DIR}/scripts/setup-real-library-corpus.sh"
-snapshot_status=0
-if "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-corpus.py" --dotnet "${DOTNET_CMD}" \
-  --configuration "${CONFIGURATION}" --collect-groups; then
-  touch "${GATE_DIR}/real-libraries" "${GATE_DIR}/ir-native-real-libraries" "${GATE_DIR}/real-cpp-libraries"
-else
-  snapshot_status=$?
-  if [[ "${snapshot_status}" != "3" ]]; then exit "${snapshot_status}"; fi
-fi
-
 log "Layer 4: Reviewed public API compatibility baseline"
 SKIP_RESTORE_BUILD=1 bash "${ROOT_DIR}/scripts/test-public-api-snapshot.sh"
 touch "${GATE_DIR}/api-compatibility"
@@ -189,11 +191,6 @@ touch "${GATE_DIR}/api-compatibility"
 log "Layer 7: License and vulnerability policy"
 bash "${ROOT_DIR}/scripts/test-supply-chain-policy.sh"
 touch "${GATE_DIR}/supply-chain"
-
-if [[ "${snapshot_status}" != "0" ]]; then
-  log "Unreviewed host snapshot candidates were captured under artifacts/acceptance/candidate-snapshots; acceptance remains failed."
-  exit "${snapshot_status}"
-fi
 
 log "Layer 8: Machine-readable acceptance report"
 bash "${ROOT_DIR}/scripts/write-acceptance-report.sh"

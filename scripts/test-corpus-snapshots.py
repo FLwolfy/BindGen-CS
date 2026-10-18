@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -65,6 +66,17 @@ class CorpusSnapshotTests(unittest.TestCase):
         corpus, source = self.source("managed")
         self.assertEqual(digest(source), CORPUS.snapshot_source_digest(source, "text/x-csharp", corpus))
 
+    def test_reviewed_policy_identity_matches_the_repository_lf_bytes(self):
+        # .gitattributes pins repository text to LF. An old CRLF working copy must
+        # not produce a reviewed policy identity that fails in a clean checkout.
+        policy = (ROOT / "tests/corpus/upstream-limitations.json").read_bytes().replace(b"\r\n", b"\n")
+        expected = hashlib.sha256(policy).hexdigest()
+        baselines = list((ROOT / "tests/corpus/snapshots").glob("*.windows-x64.json"))
+        self.assertEqual(6, len(baselines))
+        for path in baselines:
+            with self.subTest(library=path.name):
+                self.assertEqual(expected, json.loads(path.read_text(encoding="utf-8-sig"))["selectionPolicySha256"])
+
     def group_report(self, group, status):
         """Simulate producer reports only; these controls never execute a compiler or consumer."""
         lock = CORPUS.load_lock(CORPUS.DEFAULT_LOCK)
@@ -80,7 +92,7 @@ class CorpusSnapshotTests(unittest.TestCase):
                 "translationUnits": 1, "nativeLinked": False, "upstreamInvoked": False}
         return {"schemaVersion": 1, "scope": CORPUS.REPORT_SCOPE, "group": group, "platform": CORPUS.host_platform(),
                 "success": status == 0, "failureKind": "unreviewed-snapshots" if status == 3 else None,
-                "upstreamInvoked": False, "upstreamInvocationRequiredForRelease": True,
+                "upstreamInvoked": False,
                 "corpusLockSha256": digest(CORPUS.DEFAULT_LOCK), "repositories": repositories,
                 "repositoriesAfter": json.loads(json.dumps(repositories)), "libraries": libraries,
                 "selectedApiPolicy": {"schemaVersion": policy["schemaVersion"], "policySha256": digest(policy_path),

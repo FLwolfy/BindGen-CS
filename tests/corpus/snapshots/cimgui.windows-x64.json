@@ -3,7 +3,7 @@
   "libraryId": "cimgui",
   "platform": "windows-x64",
   "sourceNormalization": "quoted-locked-corpus-include-root-v1",
-  "selectionPolicySha256": "5645a77020cbec654f0b5df100702cbbdd06bf5e172bc970a7f9e1cd79e44100",
+  "selectionPolicySha256": "72e98800299edc085c3f90f09451aea3752c1e4dc08d2ebcc85d2e9b493a8d0a",
   "omittedDeclarations": {
     "excludedDeclarations": [
       "igText",

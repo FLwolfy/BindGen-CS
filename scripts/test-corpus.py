@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate locked upstream headers and verify exact managed consumers and snapshots.
 
-Upstream native invocation is a distinct required release gate. Compiling headers
-or the generated bridge does not certify a call into an upstream native library.
+These checks cover generation and consumer compilation. They do not certify
+complete upstream applications, devices, or calls into upstream native libraries.
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def _validate_group_report(path: Path, group: str, status: int) -> dict:
     libraries = report.get("libraries")
     if (report.get("schemaVersion") != 1 or report.get("scope") != REPORT_SCOPE
             or report.get("group") != group or report.get("platform") != host_platform()
-            or report.get("upstreamInvoked") is not False or report.get("upstreamInvocationRequiredForRelease") is not True
+            or report.get("upstreamInvoked") is not False
             or "failure" in report or report.get("corpusLockSha256") != digest(DEFAULT_LOCK)
             or not isinstance(libraries, list) or any(not isinstance(item, dict) for item in libraries)
             or [item.get("libraryId") for item in libraries] != list(GROUPS[group])
@@ -267,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
     evidence = ROOT / "artifacts/corpus-acceptance" / uuid.uuid4().hex
     evidence.mkdir(parents=True)
     report = {"schemaVersion": 1, "success": False, "scope": REPORT_SCOPE,
-              "upstreamInvoked": False, "upstreamInvocationRequiredForRelease": True,
+              "upstreamInvoked": False,
               "group": args.group, "platform": host_platform(), "evidence": str(evidence), "libraries": []}
     spec = importlib.util.spec_from_file_location("corpus_consumer_helpers", ROOT / "eng/verify-packages.py")
     helper = importlib.util.module_from_spec(spec)

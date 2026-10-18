@@ -110,6 +110,16 @@ jobs:
           name: parser-runtime-osx-x64
           path: artifacts/clang-runtime/osx-x64
           if-no-files-found: error
+      - name: Upload failed corpus review inputs
+        if: failure() && matrix.baseline == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-review-inputs-${{ matrix.target }}
+          path: |
+            artifacts/acceptance/corpus-*.json
+            artifacts/acceptance/candidate-snapshots/corpus
+            artifacts/corpus-acceptance
+          if-no-files-found: ignore
       - name: Seal the exact repository release tooling
         if: matrix.baseline == 'full'
         run: python scripts/release_payload.py seal-tooling eng/BGCS.RepositoryTools/bin/Release/net10.0 --revision "${{ github.sha }}"
