@@ -18,7 +18,7 @@ const workflows = {
 };
 const gates = {workflow: 'ci.yml', productPackageWorkflow: 'packages.yml', requireAllObservedJobsSuccessful: true,
     requireCleanFeatureInventory: true, requireProductPackageInstallation: true,
-    requiredJobNames: ['Complete exact Host shards', 'All independent invocation gates'],
+    requiredJobNames: ['Generator baseline (Windows x64)', 'Generator smoke (Linux x64)', 'Generator smoke (macOS x64)'],
     requiredProductPackageJobNames: ['Installed products across every required host']};
 function run(file, id) {
     return {id, workflow_id: workflows[file].id, path: workflows[file].path, head_sha: revision,
@@ -150,9 +150,8 @@ test('workflow keeps authentication, immutable tag, NuGet and public verificatio
     assert.match(workflow, /github\.event\.workflow_run\.event == 'workflow_run'/);
     assert.match(workflow, /github\.event\.workflow_run\.head_repository\.full_name == github\.repository/);
     assert.match(workflow, /release\.resolveCandidate\(github, context\)/);
-    assert.match(workflow, /dotnet test[^\n]+--filter 'FullyQualifiedName!~BGCS\.Tests\.'/);
-    assert.match(workflow, /run-host-test-shards\.py verify-accepted/);
-    const ordered = ['Require the full CI matrix', 'Pack and test package closure', 'Recheck physical package hashes',
+    assert.doesNotMatch(workflow, /dotnet test|run-host-test-shards\.py|test-nuget-packages\.sh/);
+    const ordered = ['Require the full CI matrix', 'Download accepted product packages', 'Recheck physical package hashes',
         'release.ensureTag(github, context.repo', 'Exchange GitHub OIDC token for a nuget.org API key',
         'Push packages and symbols', 'verify-published-products.py', 'Publish GitHub release'];
     let previous = -1;

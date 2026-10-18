@@ -1,5 +1,7 @@
 # Independent Wasm acceptance — 2026-10-03
 
+> Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
+
 [中文](wasm-acceptance-2026-10-03.cn.md) | [Wiki](README.md) | [Testing](testing.md#independent-webassembly-invocation)
 
 ## Result and scope

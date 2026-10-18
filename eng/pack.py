@@ -44,7 +44,7 @@ def source_identity() -> dict:
 
 
 def verify_generator_archive(package: zipfile.ZipFile) -> None:
-    forbidden = {"bgcs.nativebuild.dll", "bgcs.repositorytools.dll", "microsoft.codeanalysis.workspaces.dll", "microsoft.codeanalysis.csharp.workspaces.dll"}
+    forbidden = {"bgcs.nativebuild.dll", "bgcs.repositorytools.dll", "bgcs.msbuild.dll", "microsoft.build.framework.dll", "microsoft.build.utilities.core.dll", "microsoft.codeanalysis.workspaces.dll", "microsoft.codeanalysis.csharp.workspaces.dll"}
     unexpected = sorted(name for name in package.namelist() if Path(name).name.casefold() in forbidden)
     if unexpected:
         raise RuntimeError("The shipped generator contains repository/native-build tooling: " + ", ".join(unexpected))
@@ -96,7 +96,7 @@ def build_products(dotnet: str, configuration: str, version: str, parser_osx_x64
         parser_osx_x64 = parser_osx_x64.resolve()
         parser_runtime_provenance.verify_supplemental(ROOT, parser_osx_x64, source_revision)
     worker_project = "src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj"
-    for project in ("src/BGCS/BGCS.csproj", worker_project, "integrations/BGCS.MSBuild/BGCS.MSBuild.csproj", "src/BGCS.Tool/BGCS.Tool.csproj"):
+    for project in ("src/BGCS/BGCS.csproj", worker_project, "src/BGCS.Tool/BGCS.Tool.csproj"):
         overrides = {"BGCS_CLANG_RUNTIME_DIR": str(parser_osx_x64)} if project == worker_project and parser_osx_x64 is not None else None
         execute(dotnet, ["build", project, "--configuration", configuration, "-m:2", "-nr:false", "-p:UseSharedCompilation=false", f"-p:Version={version}"],
                 environment_overrides=overrides)
@@ -346,10 +346,9 @@ def pack_nuspec(dotnet: str, project: str, template: Path, stage: Path, output: 
 
 def prepare_sdk(dotnet: str, stage: Path, configuration: str, version: str, supplemental: Path | None, selected_rids: list[str]) -> tuple[list[tuple[str, str]], Path]:
     sdk = stage / "sdk"
-    worker = sdk / "tools/clang-worker"
+    worker = stage / "worker"
     common = worker / "common"
     execution_closure("src/BGCS.Frontend.Clang.Worker", configuration, "BGCS.Frontend.Clang.Worker", common)
-    execution_closure("integrations/BGCS.MSBuild", configuration, "BGCS.MSBuild", sdk / "tools/msbuild/net10.0")
     reference_graph = merge_package_graphs(("src/" + name for name in SDK_MODULES), require_single_version=True)
     dependencies = [("BGCS.Contracts", version), ("BGCS.Runtime", version)]
     dependencies += sorted((key.rsplit("/", 1)[0], key.rsplit("/", 1)[1]) for key in reference_graph["libraries"])
@@ -364,7 +363,15 @@ def prepare_sdk(dotnet: str, stage: Path, configuration: str, version: str, supp
             if not path.is_file():
                 raise FileNotFoundError(f"The complete SDK module output is missing: {path}")
             shutil.copyfile(path, library / path.name)
-    manifests = worker / "manifests"
+    assets = sdk / "contentFiles/any/net10.0/bgcs/worker-assets"
+    assets.mkdir(parents=True)
+    with zipfile.ZipFile(assets / "worker-common.zip", "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+        for file in sorted(common.rglob("*")):
+            if file.is_file():
+                info = zipfile.ZipInfo(file.relative_to(common).as_posix(), (1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_DEFLATED
+                archive.writestr(info, file.read_bytes())
+    manifests = assets / "manifests"
     manifests.mkdir(parents=True)
     common_artifacts = [artifact(file.relative_to(common).as_posix(), file) for file in sorted(common.rglob("*")) if file.is_file()]
     parser_assets = graph("src/BGCS.Frontend.Clang.Worker")
@@ -377,14 +384,7 @@ def prepare_sdk(dotnet: str, stage: Path, configuration: str, version: str, supp
         items = common_artifacts + [artifact(f"runtimes/{rid}/native/{name}", file) for name, file in sorted(files.items())]
         manifest = {"schemaVersion": 1, "hostRid": rid, "parserIdentity": "ClangSharp/20.1.2.4;LLVM/20", "artifacts": items}
         (manifests / f"{rid}.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    # Native directories are tool preparation inputs, not payload of the SDK package.
-    build = sdk / "buildTransitive"
-    build.mkdir()
-    for name in ("BGCS.props", "BGCS.targets"):
-        text = (ROOT / "integrations/BGCS.MSBuild/buildTransitive" / name).read_text(encoding="utf-8")
-        if name == "BGCS.props":
-            text = text.replace("<PropertyGroup>", f"<PropertyGroup>\n    <BGCSProductVersion>{version}</BGCSProductVersion>", 1)
-        (build / name).write_text(text, encoding="utf-8")
+    shutil.copytree(manifests, worker / "manifests")
     schema_directory = sdk / "schemas"
     shutil.copytree(ROOT / "schemas", schema_directory)
     # The packaging CLI may have been built before a subsequently rebuilt SDK module.
@@ -406,11 +406,55 @@ def prepare_sdk(dotnet: str, stage: Path, configuration: str, version: str, supp
         shutil.copyfile(ROOT / "src/BGCS.Frontend.Clang/Resources/Clang" / name, notices / name)
     shutil.copyfile(ROOT / "README.md", sdk / "README.md")
     shutil.copyfile(ROOT / "LICENSE", sdk / "LICENSE")
-    notice_graph = merge_package_graphs([*("src/" + name for name in SDK_MODULES),
-                                         "src/BGCS.Frontend.Clang.Worker", "integrations/BGCS.MSBuild"])
+    notice_graph = merge_package_graphs([*("src/" + name for name in SDK_MODULES), "src/BGCS.Frontend.Clang.Worker"])
     copy_dependency_notices(notice_graph, sdk / "licenses/dependencies")
     copy_resource_notices(sdk / 'licenses/dependencies')
     return dependencies, worker
+
+
+def verify_sdk_worker_archive(package: zipfile.ZipFile, expected_rids: list[str] | None = None) -> None:
+    """Bind standard NuGet content copy metadata to the exact managed worker closure."""
+    prefix = "contentFiles/any/net10.0/bgcs/worker-assets/"
+    names = package.namelist()
+    if any(name.startswith(("tools/msbuild/", "build/", "buildTransitive/")) for name in names):
+        raise RuntimeError("The generator SDK must not deliver MSBuild Tasks, props or targets.")
+    nuspecs = [name for name in names if name.endswith(".nuspec")]
+    if len(nuspecs) != 1:
+        raise RuntimeError("SDK worker content needs one exact NuGet metadata document.")
+    document = ET.fromstring(package.read(nuspecs[0]))
+    rules = [element for element in document.iter() if element.tag.rsplit("}", 1)[-1] == "files"
+             and element.get("include") == "any/net10.0/bgcs/worker-assets/**/*"]
+    if (len(rules) != 1 or rules[0].get("buildAction") != "None" or rules[0].get("copyToOutput") != "true"
+            or rules[0].get("flatten") != "false"):
+        raise RuntimeError("SDK worker assets require standard None/copyToOutput/flatten=false contentFiles metadata.")
+    import io
+    with zipfile.ZipFile(io.BytesIO(package.read(prefix + "worker-common.zip"))) as common:
+        files = [entry for entry in common.infolist() if not entry.is_dir()]
+        actual = {entry.filename: hashlib.sha256(common.read(entry)).hexdigest() for entry in files}
+        if (not actual or len(actual) != len(files) or any("\\" in name or ":" in name
+                or any(part in ("", ".", "..") for part in name.split("/")) for name in actual)):
+            raise RuntimeError("SDK worker archive has duplicate or unsafe relative entries.")
+        manifests = [name for name in names if name.startswith(prefix + "manifests/") and name.endswith(".json")]
+        if not manifests:
+            raise RuntimeError("SDK worker content lacks its per-host manifest.")
+        if expected_rids is not None and {Path(name).stem for name in manifests} != set(expected_rids):
+            raise RuntimeError("SDK worker content omits a declared host manifest.")
+        for name in manifests:
+            manifest = json.loads(package.read(name))
+            rid = Path(name).stem
+            if (rid not in RIDS or manifest.get("schemaVersion") != 1 or manifest.get("hostRid") != rid
+                    or manifest.get("parserIdentity") != "ClangSharp/20.1.2.4;LLVM/20"):
+                raise RuntimeError("SDK worker manifest has a different host or parser identity.")
+            rows = manifest.get("artifacts", [])
+            expected = {row["relativePath"]: row["digest"]["value"] for row in rows
+                        if not row["relativePath"].startswith(f"runtimes/{rid}/native/")}
+            if (len({row["relativePath"] for row in rows}) != len(rows) or actual != expected):
+                raise RuntimeError("SDK common worker archive differs from its exact manifest set or hashes.")
+            if not {"BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json", "BGCS.Frontend.Clang.Worker.runtimeconfig.json"}.issubset(actual):
+                raise RuntimeError("SDK worker content lacks its managed entry, dependency map or runtime configuration.")
+            extension = ".dll" if rid.startswith("win-") else ".dylib" if rid.startswith("osx-") else ".so"
+            if not {f"runtimes/{rid}/native/{name}{extension}" for name in ("libclang", "libClangSharp")}.issubset({row["relativePath"] for row in rows}):
+                raise RuntimeError("SDK worker manifest lacks its required native parser pair.")
 
 
 def verify_tool_worker_archive(package: zipfile.ZipFile, rid: str) -> None:
@@ -493,6 +537,8 @@ def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: st
                 raise RuntimeError("Runtime-only consumers must not receive parser assets.")
             if name.endswith(".snupkg") and not any(entry.endswith(".pdb") for entry in entries):
                 raise RuntimeError("The declared symbol package contains no debugging symbols: " + name)
+            if name == f"BGCS.{version}.nupkg":
+                verify_sdk_worker_archive(package, RIDS if full else None)
             for rid in RIDS:
                 if name == f"BindGen-CS.{rid}.{version}.nupkg":
                     verify_tool_worker_archive(package, rid)
@@ -588,7 +634,6 @@ def main() -> None:
         # Tools consume native preparation inputs. Exclude these files from SDK payload via a copied nuspec filter.
         sdk_template = stage / "sdk-template.nuspec"
         document = ET.parse(ROOT / "distribution/BGCS.Sdk.Package/BGCS.nuspec")
-        document.getroot().find("files/file").set("exclude", "tools/clang-worker/native/**/*")
         document.write(sdk_template, encoding="utf-8", xml_declaration=True)
         pack_nuspec(args.dotnet, "distribution/BGCS.Sdk.Package/BGCS.Sdk.Package.csproj", sdk_template, stage / "sdk", output, version, dependencies)
         if full or args.include_host_tool:

@@ -43,10 +43,11 @@ The default grouped generator configuration is `runtime.mode = "package"`.
 API-local namespace; single-file output can include it. Source and package
 consumers are independently compiled and invoked during acceptance.
 
-Native libraries remain separate application dependencies. BGCS construction
-can produce verified artifacts and typed consumer references when explicitly
-configured, but Runtime itself does not install toolchains or compile native
-sources. A successful Runtime call does not certify every platform/ABI.
+Native libraries remain separate application dependencies. BGCS generates binding
+and bridge source; the consumer owns compilation, linking, packaging and deployment.
+Runtime does not install SDKs or compile native sources. A successful Runtime call
+does not certify every platform/ABI. AOT/Wasm application runs are optional private
+checks, separate from mandatory generator feature baselines.
 
 - [Getting started](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/getting-started.md)
 - [Runtime lifetimes](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/runtime-lifetime.md)

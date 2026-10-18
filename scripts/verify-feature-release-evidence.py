@@ -141,10 +141,18 @@ def validate(inventory: dict, implementation: dict, reports: list[dict], revisio
         source = report.get("source", {})
         host = report.get("platform")
         if (host not in required_hosts or host in indexed or report.get("schemaVersion") != 3
-                or report.get("status") != "passed" or report.get("scope") != "one-host-maintenance-candidate"
+                or report.get("status") != "passed" or report.get("scope") not in ("one-host-maintenance-candidate", "generator-platform-smoke")
                 or report.get("usesPrebuiltOutputs") is not False or source.get("revision") != revision
                 or source.get("workingTreeDirty") is not False or source.get("checkedOutSourceSha256") != content):
             raise RuntimeError("Feature evidence did not come from a fresh clean build of this exact release source/host.")
+        if report.get("scope") == "generator-platform-smoke":
+            from importlib.util import module_from_spec, spec_from_file_location
+            spec = spec_from_file_location("generator_smoke_contract", ROOT / "scripts/run-generator-smoke.py")
+            smoke = module_from_spec(spec); spec.loader.exec_module(smoke)
+            rows = [row for suite in report.get("executedTests", []) for row in suite.get("results", [])]
+            if host == "windows-x64" or report.get("fullFunctionalBaseline") is not False:
+                raise RuntimeError("A platform smoke cannot replace the complete functional baseline or omit its real consumer cases.")
+            smoke.verify_cases({"results": rows}, host)
         indexed[host] = report
     if indexed.keys() != required_hosts:
         raise RuntimeError("The release lacks its complete declared desktop feature evidence hosts.")
@@ -181,10 +189,18 @@ def validate(inventory: dict, implementation: dict, reports: list[dict], revisio
                 key = (host, kind, project, pattern)
             elif kind == "category":
                 category = mapping.get("category", "")
-                candidates = [row for row in report.get("categories", []) if row.get("name") == category]
-                if len(candidates) != 1 or candidates[0].get("status") != "passed":
-                    raise RuntimeError("A required structured feature acceptance category did not pass: " + identity + "/" + category)
-                proof = {"host": host, "kind": kind, "category": category}
+                if category == "installed-host-products":
+                    installed = (global_proofs or {}).get("installedProducts", {})
+                    if (installed.get("sourceRevision") != revision or installed.get("checkedOutSourceSha256") != content
+                            or not installed.get("artifacts") or not installed.get("productRunId")
+                            or any(not re.fullmatch(r"[0-9a-f]{64}", item.get("verificationSha256", "")) for item in installed["artifacts"])):
+                        raise RuntimeError("Installed-product assertions require their exact independently validated package archive: " + identity)
+                    proof = {"host": host, "kind": kind, "category": category, "acceptedProducts": installed}
+                else:
+                    candidates = [row for row in report.get("categories", []) if row.get("name") == category]
+                    if len(candidates) != 1 or candidates[0].get("status") != "passed":
+                        raise RuntimeError("A required structured feature acceptance category did not pass: " + identity + "/" + category)
+                    proof = {"host": host, "kind": kind, "category": category}
                 key = (host, kind, category)
             elif kind == "global":
                 verified_host = (global_proofs or {}).get(PROOF_ID, {}).get("hosts", {}).get(host, {})

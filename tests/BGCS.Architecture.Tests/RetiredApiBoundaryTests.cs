@@ -55,7 +55,10 @@ public sealed class RetiredApiBoundaryTests
         foreach (string type in retiredTypes) Assert.Null(typeof(BindingHost).Assembly.GetType(type));
         Assert.DoesNotContain(typeof(NativeModule).Assembly.GetExportedTypes(), type =>
             type.Name is "INativeBuildProvider" or "INativeArtifactPackager" or "NativeBuildPlan" or "NativeBuildManifest");
-        foreach (Assembly assembly in new[] { typeof(BindingHost).Assembly, typeof(CppBridgePlanner).Assembly, typeof(CSharpBackend).Assembly })
-            Assert.DoesNotContain(assembly.GetReferencedAssemblies(), reference => reference.Name is "BGCS.NativeBuild" or "BGCS.RepositoryTools");
+        foreach (Assembly assembly in new[] { typeof(BindingHost).Assembly, typeof(CppBridgePlanner).Assembly, typeof(CSharpBackend).Assembly,
+            typeof(BGCS.Infrastructure.Workers.WorkerAssetProvisioner).Assembly, typeof(BGCS.Runtime.Bool8).Assembly })
+            Assert.DoesNotContain(assembly.GetReferencedAssemblies(), reference => reference.Name is "BGCS.NativeBuild" or "BGCS.RepositoryTools" or "BGCS.MSBuild"
+                || reference.Name?.StartsWith("Microsoft.Build", StringComparison.Ordinal) == true);
+        Assert.Null(typeof(BGCS.Configuration.TargetConfiguration).GetProperty("toolchain"));
     }
 }

@@ -10,6 +10,7 @@ import hashlib
 from browser_lifecycle_evidence import verify_receipt
 from cpp_acceptance_fixture import expected_lifecycle_checks
 from source_contribution_evidence import CHECK as SOURCE_CHECK, PREREQUISITES as SOURCE_CHECKS, verify_report as verify_source_report
+from installed_custom_target import CHECK as TARGET_CHECK
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('ci_product_evidence', ROOT / 'scripts/verify-ci-product-evidence.py')
@@ -17,7 +18,23 @@ VERIFIER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VERIFIER)
 
 
-def complete_receipt():
+def custom_target_evidence():
+    """Synthetic parser-control data, never an actual installed consumer receipt."""
+    return {"manifestSha256": "a" * 64, "configurationSha256": "b" * 64,
+        "pluginSourceSha256": "c" * 64, "pluginReferences": ["BGCS.Contracts"],
+        "pluginAssets": [{"file": name, "sha256": "d" * 64} for name in
+            ("Package.CustomTarget.dll", "Package.CustomTarget.deps.json", "BGCS.Contracts.dll")],
+        "entries": {entry: {"targetId": "example-private-host", "phases": [
+            {"phase": phase, "sdkValue": sdk + (index >= 2), "profileValue": profile + (index == 3),
+                "primaryFrontend": "hit" if index == 1 else "miss", "csharpEmission": "hit" if index == 1 else "miss",
+                "sdkHeaderSha256": hashlib.sha256(str(sdk + (index >= 2)).encode()).hexdigest(),
+                "profileSha256": hashlib.sha256(str(profile + (index == 3)).encode()).hexdigest(),
+                "publicationSha256": "e" * 64}
+            for index, phase in enumerate(("baseline", "warm", "sdkChanged", "profileChanged"))]}
+            for entry, sdk, profile in (("sdk", 42, 1), ("cli", 44, 3))}}
+
+
+def complete_receipt(*, applications=False):
     revision = 'a' * 40
     content = 'b' * 64
     version = '0.0.0-local.ci123'
@@ -35,7 +52,7 @@ def complete_receipt():
                 'executionIdentity': {**{field: '9' * 64 for field in ('executionClosureSha256', 'generatorEntrySha256', 'generatorAssemblySha256', 'runtimeAssemblySha256')}, 'executionAssetCount': 12},
                 **({'nonblockingLifecycle': {'success': True, 'checks': sorted(expected_lifecycle_checks()),
                     'requiredCount': len(expected_lifecycle_checks())}} if name.startswith('installed-wasm-') else {})}
-                for name, count in VERIFIER.MATRICES.items()],
+                for name, count in (VERIFIER.MATRICES.items() if applications else [])],
             'installedAdvancedWorkerPlugin': {'manifestSha256': 'e' * 64, 'parserIdentity': 'ClangSharp/20.1.2.4;LLVM/20',
                 'pluginAssets': [{'file': name, 'sha256': 'f' * 64} for name in ('ClangFactPlugin.dll', 'ClangFactPlugin.deps.json')]},
             'installedSourceContributor': {'receipt': 'installed-source-contributor.json', 'receiptSha256': '6' * 64,
@@ -45,10 +62,10 @@ def complete_receipt():
                     'phases': [{'phase': phase, 'emission': status, 'artifactCount': 11, 'manifestSha256': str(index + 1) * 64,
                                 'inputRootMembershipSha256': ('1' if index == 0 else '2') * 64,
                                 'otherInputFactsSha256': '3' * 64}
-                        for index, (phase, status) in enumerate((('cold', 'miss'), ('stabilized', 'miss'), ('warm', 'hit'), ('changed', 'miss'))
-                            if entry == 'msbuild' else (('cold', 'miss'), ('warm', 'hit'), ('changed', 'miss')))]}
-                    for entry in ('sdk', 'cli', 'msbuild')}},
-            'checks': [*VERIFIER.MATRICES, *VERIFIER.ADVANCED_CHECKS, *SOURCE_CHECKS, VERIFIER.COMPLETE_SOURCE_CHECK, 'installed-tool-all-unified-generation-commands']}
+                        for index, (phase, status) in enumerate((('cold', 'miss'), ('warm', 'hit'), ('changed', 'miss')))]}
+                    for entry in ('sdk', 'cli')}},
+            'installedCustomTarget': custom_target_evidence(),
+            'checks': [*(VERIFIER.MATRICES if applications else {}), *VERIFIER.ADVANCED_CHECKS, *SOURCE_CHECKS, *VERIFIER.SDK_CONTENT_CHECKS, VERIFIER.COMPLETE_SOURCE_CHECK, TARGET_CHECK, 'installed-tool-all-unified-generation-commands']}
 
 
 def complete_reports(receipt):
@@ -84,6 +101,27 @@ def complete_reports(receipt):
 
 
 class WorkflowProductEvidenceTests(unittest.TestCase):
+    def test_custom_target_requires_both_installed_entry_points_and_changed_input_facts(self):
+        for fault in ('marker', 'closure', 'reference', 'sdk', 'cli', 'phase', 'duplicate', 'warm',
+                      'sdk-hit', 'profile-hit', 'stale-fact', 'header-unchanged', 'profile-unchanged'):
+            receipt = complete_receipt()
+            target = receipt['installedCustomTarget']
+            phases = target['entries']['cli']['phases']
+            if fault == 'marker': receipt['checks'].remove(TARGET_CHECK)
+            elif fault == 'closure': target['pluginAssets'].pop()
+            elif fault == 'reference': target['pluginReferences'].append('BGCS')
+            elif fault in ('sdk', 'cli'): del target['entries'][fault]
+            elif fault == 'phase': phases.pop()
+            elif fault == 'duplicate': phases[-1] = phases[0]
+            elif fault == 'warm': phases[1]['primaryFrontend'] = 'miss'
+            elif fault == 'sdk-hit': phases[2]['primaryFrontend'] = 'hit'
+            elif fault == 'profile-hit': phases[3]['primaryFrontend'] = 'hit'
+            elif fault == 'stale-fact': phases[2]['sdkValue'] = phases[1]['sdkValue']
+            elif fault == 'header-unchanged': phases[2]['sdkHeaderSha256'] = phases[1]['sdkHeaderSha256']
+            else: phases[3]['profileSha256'] = phases[2]['profileSha256']
+            with self.subTest(fault=fault), self.assertRaises(RuntimeError):
+                VERIFIER.validate(receipt, 'a' * 40, 'win-x64')
+
     def test_partial_dirty_source_contributor_proof_requires_explicit_local_opt_in(self):
         receipt = complete_receipt()
         receipt['completeProductSet'] = False
@@ -176,15 +214,6 @@ class WorkflowProductEvidenceTests(unittest.TestCase):
             with self.subTest(location=location, key=key), self.assertRaises(RuntimeError):
                 VERIFIER.validate(receipt, 'a' * 40, 'win-x64')
 
-    def test_partial_products_missing_archive_and_unexecuted_matrix_are_rejected(self):
-        variants = []
-        partial = complete_receipt(); partial['completeProductSet'] = False; variants.append(partial)
-        package = complete_receipt(); package['packagingEvidence']['packages'].pop(); variants.append(package)
-        matrix = complete_receipt(); matrix['featureMatrices'][0]['requiredChecks'] = 56; variants.append(matrix)
-        digests = complete_receipt(); digests['packagingEvidence']['physicalPackageDigestsVerified'] = False; variants.append(digests)
-        for receipt in variants:
-            with self.subTest(receipt=receipt), self.assertRaises(RuntimeError):
-                VERIFIER.validate(receipt, 'a' * 40, 'win-x64')
 
     def test_previous_fixture_counts_do_not_certify_new_callback_and_alias_matrix(self):
         for native, browser in ((95, 56), (101, 62)):
@@ -192,23 +221,16 @@ class WorkflowProductEvidenceTests(unittest.TestCase):
                         'installed-wasm-interpreter-full-import-matrix': browser,
                         'installed-wasm-aot-full-import-matrix': browser}
             for name, count in previous.items():
-                receipt = complete_receipt()
+                receipt = complete_receipt(applications=True)
                 next(matrix for matrix in receipt['featureMatrices'] if matrix['name'] == name)['requiredChecks'] = count
                 with self.subTest(matrix=name, count=count), self.assertRaises(RuntimeError):
                     VERIFIER.validate(receipt, 'a' * 40, 'win-x64')
 
-    def test_host_and_real_visual_studio_2026_evidence_are_required(self):
-        with self.assertRaises(RuntimeError): VERIFIER.validate(complete_receipt(), 'a' * 40, 'osx-x64')
-        with self.assertRaises(RuntimeError): VERIFIER.validate(complete_receipt(), 'a' * 40, 'win-x64', True)
-        receipt = complete_receipt()
-        receipt['checks'].append(VERIFIER.VS_CHECK)
-        receipt['visualStudioMsbuildVersion'] = 'MSBuild version 18.5\n18.5.0.123\n'
-        VERIFIER.validate(receipt, 'a' * 40, 'win-x64', True)
 
     def test_raw_browser_success_does_not_certify_missing_or_partial_lifecycle_protocols(self):
         for name in (name for name in VERIFIER.MATRICES if name.startswith('installed-wasm-')):
             for fault in ('missing', 'false', 'previous-count', 'duplicate', 'different-mode'):
-                receipt = complete_receipt()
+                receipt = complete_receipt(applications=True)
                 matrix = next(matrix for matrix in receipt['featureMatrices'] if matrix['name'] == name)
                 lifecycle = matrix['nonblockingLifecycle']
                 if fault == 'missing': del matrix['nonblockingLifecycle']
@@ -234,7 +256,7 @@ class WorkflowProductEvidenceTests(unittest.TestCase):
 
     def test_each_matrix_requires_receipt_hash_and_the_same_complete_execution_closure(self):
         for fault in ('receipt-hash', 'missing-closure', 'runtime-drift', 'tool-drift', 'asset-count'):
-            receipt = complete_receipt()
+            receipt = complete_receipt(applications=True)
             matrix = receipt['featureMatrices'][-1]
             if fault == 'receipt-hash': matrix['receiptSha256'] = ''
             elif fault == 'missing-closure': del matrix['executionIdentity']
@@ -261,7 +283,7 @@ class WorkflowProductEvidenceTests(unittest.TestCase):
             elif fault == 'check': receipt['checks'].remove(SOURCE_CHECK)
             elif fault == 'entry': del value['entries']['sdk']
             elif fault == 'native': value['entries']['cli']['nativeAndManagedInvoked'] = False
-            elif fault == 'rollback': value['entries']['msbuild']['rejectionPreservedAllFiles'] = False
+            elif fault == 'rollback': value['entries']['cli']['rejectionPreservedAllFiles'] = False
             elif fault == 'cache': value['entries']['sdk']['phases'][1]['emission'] = 'miss'
             elif fault == 'phase': value['entries']['sdk']['phases'].pop()
             elif fault == 'digest': value['receiptSha256'] = ''
@@ -269,19 +291,6 @@ class WorkflowProductEvidenceTests(unittest.TestCase):
             else: value['entries']['sdk']['phases'][2]['manifestSha256'] = value['entries']['sdk']['phases'][1]['manifestSha256']
             with self.subTest(fault=fault), self.assertRaises(RuntimeError): VERIFIER.validate(receipt, 'a' * 40, 'win-x64')
 
-    def test_msbuild_stabilization_requires_only_initial_membership_change_then_an_actual_unchanged_hit(self):
-        for fault in ('missing-phase', 'stabilized-hit', 'warm-miss', 'no-membership-change', 'unstable-warm', 'other-input-change', 'missing-digest'):
-            with self.subTest(fault=fault):
-                receipt = complete_receipt()
-                phases = receipt['installedSourceContributor']['entries']['msbuild']['phases']
-                if fault == 'missing-phase': phases.pop(1)
-                elif fault == 'stabilized-hit': phases[1]['emission'] = 'hit'
-                elif fault == 'warm-miss': phases[2]['emission'] = 'miss'
-                elif fault == 'no-membership-change': phases[0]['inputRootMembershipSha256'] = phases[1]['inputRootMembershipSha256']
-                elif fault == 'unstable-warm': phases[2]['inputRootMembershipSha256'] = '4' * 64
-                elif fault == 'other-input-change': phases[1]['otherInputFactsSha256'] = '5' * 64
-                else: del phases[1]['inputRootMembershipSha256']
-                with self.assertRaises(RuntimeError): VERIFIER.validate(receipt, 'a' * 40, 'win-x64')
 
     def test_actual_source_contribution_subreport_is_mandatory_hashed_and_same_revision(self):
         parent = ROOT / 'artifacts/temporary'
@@ -330,7 +339,7 @@ class WorkflowProductEvidenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='ci-product-report-', dir=parent) as directory:
             path = Path(directory) / 'evidence.zip'
             for fault in ('missing', 'wrong-hash', 'old-raw', 'old-lifecycle', 'wrong-aot', 'wrong-abi', 'no-oracle', 'runtime-drift'):
-                receipt = complete_receipt()
+                receipt = complete_receipt(applications=True)
                 reports = complete_reports(receipt)
                 matrix = receipt['featureMatrices'][0 if fault == 'no-oracle' else -1]
                 report = json.loads(reports[matrix['receipt']])

@@ -3,12 +3,12 @@
 [Documentation](README.md) · [简体中文](api.cn.md) · [Configuration](configuration-guide.md) · [Extensibility](extensibility.md)
 
 The embedded SDK uses `BGCS.BindingHost` and immutable requests. CLI,
-workspace and MSBuild invoke the same Host pipeline. Generation requires
+workspace requests invoke the same Host pipeline. Generation requires
 .NET 10. Properties use camelCase; types and methods use PascalCase.
 `bindgen-cs version --json` reports separate product, Contracts, model and
 worker protocol identities.
 
-## Host composition and ownership
+## Host coordination and ownership
 
 ```csharp
 using System;
@@ -17,6 +17,7 @@ using BGCS;
 await using BindingHost host = BindingHost.CreateDefault();
 ```
 
+`BindingHost` is a coordinator, not a server or network service.
 The default registers built-in implementations, including the isolated Clang
 worker client. Composition freezes when the Host is built; session services
 and plugin instances are independently owned. Factories must not return one
@@ -57,11 +58,10 @@ The synchronous `FromFile` entry accepts the same optional cancellation and
 configuration-loader arguments. Cancellation covers configuration composition
 as well as later generation when the token is passed to both operations.
 
-Only an explicit HTTPS `extends` object with `url`, pinned `sha256` and a local
-`pathBase` can fetch a remote base. Its URI and content identity are recorded
-separately from filesystem inputs. A caller can supply `configurationLoader:
-new BGCS.Configuration.BindingConfigurationLoader(httpClient)` for its own transport; the caller
-owns that `HttpClient`. See the [composition rules](configuration-guide.md).
+Composition reads local files only. URL bases and network configuration are rejected.
+Each local base retains its own path origin and content identity. An optional
+`configurationLoader` supplies local loading behavior; it does not enable a transport.
+See the [composition rules](configuration-guide.md).
 
 SDK-created configuration uses `new GenerationRequest(configuration, baseDirectory)`,
 which validates and defensively freezes input. Immutable overrides retain the
@@ -114,7 +114,7 @@ defines, arguments, preamble/postamble and parse options. Detached models
 contain no Clang handles. Analysis is not a native build.
 
 Each inspected target also retains its `resolvedTarget` descriptor with the
-actual pinned compiler/SDK configuration. Environment inspection uses these
+captured parser/SDK configuration. Environment inspection uses these
 Host-resolved facts rather than inferring a new toolchain from target-ID text.
 
 Diff verifies owned previous output under a publication lock. Unowned,
@@ -177,8 +177,8 @@ for rebuilding. Wrong owners, unlisted files and tampered data fail.
 
 `WorkerAssetDeployment.Deploy(sourceRoot, manifestPath, destinationRoot, token)`
 deploys a locked host parser closure. `Clear(...)` preserves valid ownership
-for redeployment. SDK targets use these APIs; users do not assemble parser
-resources manually. Process isolation is not an untrusted-plugin sandbox.
+for redeployment. SDK first-use provisioning uses restored content and these ownership rules;
+no BGCS build targets or manual parser assembly are required. Process isolation is not an untrusted-plugin sandbox.
 
 ## Consumer API and Runtime
 
@@ -250,7 +250,7 @@ preserving raw scalar ABI. Unsupported by-value ABI or unknown ownership
 produces diagnostics rather than fabricated safe wrappers.
 
 See [Runtime lifetime](runtime-lifetime.md), [ABI safety](abi-safety.md),
-[MSBuild](msbuild.md) and [testing](testing.md). Local receipts certify named
+[packages](packages.md) and [testing](testing.md). Local receipts certify named
 targets, runtimes, imports and stages. Release readiness requires every
 mandatory same-revision gate.
 

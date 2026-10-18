@@ -36,7 +36,6 @@ composed source, library identities, targets, semantics and execution limits.
 | Framework | `net10.0` | The current major's schema fixes this baseline |
 | Runtime delivery | `package` | `source` |
 | Managed layout | `split` | `singleFile` with default `Bindings.cs` |
-| Native construction | `none` | `sources`, `prebuilt` |
 | Cache policy | enabled | Disable explicitly; reuse still requires proven inputs |
 
 ```json
@@ -49,7 +48,7 @@ composed source, library identities, targets, semantics and execution limits.
     "headers": ["include/sample.h"],
     "includeDirectories": ["include"]
   },
-  "targets": [{ "id": "host", "toolchain": "auto" }],
+  "targets": [{ "id": "host" }],
   "api": {
     "namespace": "Example.Sample",
     "name": "SampleApi",
@@ -59,11 +58,9 @@ composed source, library identities, targets, semantics and execution limits.
 }
 ```
 
-`generate` produces validated managed artifacts and any required C++ bridge.
-`build` additionally validates managed compilation and the declared native sources or
-prebuilt artifacts before joint publication. The report distinguishes resolution,
-parsing, generation, managed compilation, native linking, invocation and packaging.
-A passed build does not imply an unexecuted native invocation passed.
+`generate` produces validated managed artifacts and any required C++ bridge source.
+The consumer compiles, links, packages and deploys it externally. Generation, consumer
+compilation and actual native invocation are different evidence stages.
 
 ## Source and language facts
 
@@ -94,22 +91,21 @@ silently changing the process current directory.
 
 ## Targets, SDKs and managed runtime
 
-Each `targets[]` entry has its own `id`, toolchain selection and `settings`. Settings
+Each `targets[]` entry has an explicit `id`, optional `triple` and `settings`. Settings
 include `compilerPath`, `sysRoot`, normal and C++ system header paths, definitions and
 parser arguments. A simple executable name remains a discovery request; a path belongs
 to the declaring configuration's directory. Native target IDs describe OS, CPU and ABI;
 NuGet RIDs describe asset selection and do not replace target facts.
 
 The worker follows the **host**. Target headers, primitive widths, layout, calling ABI,
-SDK and native construction follow the **target**. Clang parsing does not require a
+SDK facts follow the **target**. Clang parsing does not require a
 Clang final compiler. Using MSVC or GNU still requires matching headers and target ABI.
 Do not mix host standard-library headers into a cross-target request.
 
 `api.runtime` can select `coreClr`, `nativeAot` or `browserWasm`; omitting it lets the
 runtime resolver choose the appropriate target default. Managed runtime and import mode
-participate in capability checks. Browser Wasm uses explicit static native references
-and an export-table adapter, rather than desktop dynamic loading. GNU and musl asset
-paths are distinct. Android SDK/API levels and Apple device/simulator SDK requirements
+participate in capability checks. Browser Wasm emits an explicit static export-table adapter for the consumer to
+link, rather than assuming desktop dynamic loading. GNU and musl are distinct ABI identities. Android SDK/API levels and Apple device/simulator SDK requirements
 cannot be proven from a short target or RID string.
 
 Use `doctor`, `inspect` and the [capability evidence](capabilities.md) to review actual
@@ -181,14 +177,15 @@ explicit field copies. For example:
 }
 ```
 
-The consumer probe runs outside the Host and measures every actual public writable
-field. Field order and total managed size can differ: imports continue to use the
+Static Roslyn binding resolves complete public writable scalar fields from frozen
+`api.projectionInputs` source/reference metadata. It does not run a consumer or measure
+CLR offsets/alignment. Field order can differ: imports continue to use the
 generated native carrier, with independently checked native calling ABI. An external
 type is never substituted into an import merely because its size matches.
 
 Fixed-width integer and floating-point fields preserve kind, signedness and width.
-Data-address fields may use an unmanaged pointer, `nint` or `nuint`; measured pointer
-width and byte order must match the target. Address copies support packed fields
+Data-address fields may use an unmanaged pointer, `nint` or `nuint`; declared pointer
+kind and target width must match. Address copies support packed fields
 without assuming alignment. They neither retain pointed-to storage nor transfer its
 ownership. Keep the pointee alive yourself and use unsafe access only within its
 actual lifetime. A same-size `long` is not an address declaration. Callable pointers,
@@ -369,8 +366,7 @@ Frontend reuse additionally requires its verified worker/resource closure and pi
 execution environment, effective arguments, source content and include-search directory
 membership. Ambient or compiler input effects that cannot be closed disable frontend reuse.
 Generated source contributors run before that lookup and their actual captured bytes affect
-identity. Projection, source processing and requested build validations still execute;
-native construction is not currently cached. Unsupported frontends/backends, incomplete
+identity. Projection, source processing and final source-contract validations still execute. Unsupported frontends/backends, incomplete
 upstream fingerprints or processors without complete fingerprints disable that stage rather
 than reuse uncertain bytes. Fingerprinted processors activate and declare their inputs before
 lookup, then run on both cache misses and hits. Entries verify their complete named content set,
@@ -441,10 +437,6 @@ Console diagnostic presentation can use `--log-level warning` and an independent
 (`info`), `warning`, `error`, `critical` and `none`. Failure diagnostics always remain
 visible, and presentation never changes success or removes diagnostics from JSON/Host
 results. These preferences are command options rather than generation/cache inputs.
-
-CMake native plans require CMake 3.24 or newer, including its exact `cmake -E env --`
-argument boundary. Provider discovery and execution still use the configured compiler,
-headers and native target instead of silently adopting a host compiler.
 
 ## C pointer factories and explicit member methods
 
@@ -539,12 +531,12 @@ unselected members and type-forwarding assemblies.
 
 For example, declare a source containing `Vendor.Values.Answer` or its assembly
 under `api.projectionInputs`, then use `"expression": "global::Vendor.Values.Answer"`.
-`api.projectionInputs.defines` augments the plain `net10.0` validation project's framework
-symbols and default Debug symbols. Errors in the selected constant, its field,
+`api.projectionInputs.defines` augments static `net10.0` framework symbols;
+symbols such as `DEBUG` must be supplied explicitly. Errors in the selected constant, its field,
 signature, alias or dependency fail generation. Unresolved bodies of handwritten
 partial methods on the generated API/context can be deferred because constant
-evaluation cannot execute those bodies. `build` compiles all supplied sources
-with warnings as errors; it does not defer those method-body errors.
+evaluation cannot execute those bodies. The consumer build must compile all supplied
+sources and method bodies; static binding is not full consumer-build certification.
 
 These overrides retain `UserAsserted` provenance separately from the original
 compiler facts. For example, presenting native `42` as managed `43` leaves an
@@ -772,6 +764,6 @@ Source mode emits the smallest dependency closure required by the generated API 
 }
 ```
 
-This includes the module, handle, callback, async, codec, allocator, Bool8/Bool32, Pointer/ConstPointer, iterator, bounded integer Atomic, bitfield, special storage and raw interop utilities. It adds source files and no generator or Runtime package reference. Split and single-file output follow the normal output configuration. `sourceFeatures` is an exact, case-sensitive list with no duplicates and is valid only in source mode. The SDK exposes `RuntimeSourceCatalog.GetFeatureIds()` for individually selectable catalog features and `EmissionRequest.additionalRuntimeSourceFeatures` for direct backend use. Configuration, source catalog implementation identity and selected features participate in generation caching.
+This includes the module, handle, callback, async, codec, allocator, Bool8/Bool32, Pointer/ConstPointer, bitfield, special storage and raw interop utilities. It adds source files and no generator or Runtime package reference. Split and single-file output follow the normal output configuration. `sourceFeatures` is an exact, case-sensitive list with no duplicates and is valid only in source mode. The SDK exposes `RuntimeSourceCatalog.GetFeatureIds()` for individually selectable catalog features and `EmissionRequest.additionalRuntimeSourceFeatures` for direct backend use. Configuration, source catalog implementation identity and selected features participate in generation caching.
 
 Including an implementation does not grant an unsupported calling ABI or runtime capability. Special numeric carriers remain storage types; dynamic module loading and dynamic delegates remain subject to the selected execution environment. A complete source consumer and the Runtime package expose the same public Runtime types and members. Each library can use its own source namespace without sharing mutable module state.

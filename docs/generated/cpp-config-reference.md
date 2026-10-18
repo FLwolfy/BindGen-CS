@@ -7,7 +7,7 @@ Both languages use the same schema. Object-schema required fields do not replace
 a base document may supply an omitted value. A null language standard freezes to C17 or C++23 according to the source language.
 Target, toolchain and extension capabilities still require actual evidence.
 
-Schema SHA-256: `6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e3`.
+Schema SHA-256: `35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0ce`.
 
 [Configuration Guide](../configuration-guide.md) | [Getting Started](../getting-started.md)
 

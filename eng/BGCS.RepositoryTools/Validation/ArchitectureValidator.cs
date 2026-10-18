@@ -40,9 +40,9 @@ internal static class ArchitectureValidator
             foreach (JsonProperty project in manifest.RootElement.GetProperty("projects").EnumerateObject())
                 allowedDependencies.Add(project.Name, project.Value.EnumerateArray().Select(value => value.GetString()!).ToArray());
             executables = manifest.RootElement.GetProperty("executables").EnumerateArray().Select(value => value.GetString()!).ToHashSet(StringComparer.Ordinal);
-            if (allowedDependencies.Count != 12 || executables.Any(name => !allowedDependencies.ContainsKey(name))
+            if (allowedDependencies.Count != 11 || executables.Any(name => !allowedDependencies.ContainsKey(name))
                 || allowedDependencies.Values.SelectMany(dependencies => dependencies).Any(name => !allowedDependencies.ContainsKey(name)))
-                throw new InvalidDataException("The architecture manifest must describe all twelve generator implementation projects.");
+                throw new InvalidDataException("The architecture manifest must describe all eleven generator implementation projects.");
         }
         catch (Exception failure) when (failure is IOException or JsonException or InvalidOperationException)
         {

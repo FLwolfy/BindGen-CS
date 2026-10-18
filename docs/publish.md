@@ -23,7 +23,7 @@ package; its RID package and parser dependencies are distribution details.
 `Directory.Build.props` owns the unified version and `docs/releases/<version>.md` must
 contain reviewed notes. All generator, Runtime and default consumer assemblies target
 .NET10. `global.json` permits development within that SDK generation; release CI uses
-the exact SDK/runtime/workload lock in `eng/toolchains/toolchains.lock.json`.
+the applicable exact SDK/runtime lock in `eng/toolchains/toolchains.lock.json`.
 
 ## Local package validation
 
@@ -44,7 +44,7 @@ CI downloads and verifies the same-revision accepted artifact. A host-only local
 is explicitly partial and cannot substitute for complete product certification.
 
 See [package certification](packages.md#packaging-and-certification) for SDK, Contracts,
-Runtime, installed tool, MSBuild, NativeAOT and browser consumer requirements. A local
+Runtime and installed tool consumer requirements; AOT/Wasm application checks are optional manual private work. A local
 report does not establish final package availability or certify another platform.
 
 ## Automatic publication and exact evidence
@@ -53,10 +53,10 @@ The workflow is
 [`.github/workflows/publish-bgcs-runtime-nuget.yml`](../.github/workflows/publish-bgcs-runtime-nuget.yml).
 The ordinary automatic chain is:
 
-1. A main push runs the complete CI matrix, including exact Host test partitions and
-   independent desktop/browser/AOT evidence.
-2. Successful trusted main CI triggers `packages.yml`, which installs the actual products
-   on the required hosts, including the separate Visual Studio2026 TaskHost gate.
+1. A main push runs Windows full generator checks and Linux/macOS generator smoke,
+   preserving core feature baselines and original per-host performance budgets.
+2. One full product-install job consumes the actual SDK/tool/Contracts/Runtime packages.
+   AOT/Wasm application builds are manual private checks, not mandatory release jobs.
 3. Successful product certification triggers release preflight. It authenticates the
    current main candidate, exact workflow/run identities and downloaded artifact bytes.
 4. Required jobs, feature/configuration evidence and installed-product reports are checked

@@ -1,5 +1,7 @@
 # Legacy retirement audit
 
+> Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
+
 This audit identifies source ownership and remaining assertion accounting. It does not certify feature parity or release readiness. The frozen configuration inventory, feature inventory and release gates remain authoritative; removing old code does not complete their pending entries.
 
 The detailed, local audit is `artifacts/implementation/legacy-retirement-readiness-audit.json`. It records the exact file lists, source hashes, old test methods and evidence limitations. Its baseline is Git revision `d4bfe3939b6ab2c404080f9da58e4b5f64c861be`; the current working tree is dirty.

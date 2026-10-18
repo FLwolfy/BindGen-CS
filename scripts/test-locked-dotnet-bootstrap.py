@@ -150,7 +150,7 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         self.assertEqual(['existing-path', str(self.destination.resolve())], path_file.read_text().splitlines())
 
     def test_all_workflow_bootstraps_use_python_then_exact_archive_then_strict_check(self):
-        counts = {'ci.yml': 7, 'packages.yml': 1, 'publish-bgcs-runtime-nuget.yml': 1}
+        counts = {'ci.yml': 1, 'packages.yml': 1, 'publish-bgcs-runtime-nuget.yml': 1}
         for name, expected in counts.items():
             with self.subTest(workflow=name):
                 workflow = (ROOT / '.github/workflows' / name).read_text()
@@ -167,29 +167,34 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
                     observed += 1
                 self.assertEqual(expected, observed)
 
-    def test_early_gnu_job_is_independent_locked_real_and_keeps_all_existing_gates(self):
+    def test_one_locked_generator_job_expands_only_the_three_required_host_roles(self):
         workflow = (ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8')
+        workflow_jobs = workflow.split('\njobs:\n', 1)[1]
         blocks = dict(re.findall(r'^  ([a-zA-Z0-9_-]+):\s*\n(.*?)(?=^  [a-zA-Z0-9_-]+:\s*$|\Z)',
-                                 workflow, re.MULTILINE | re.DOTALL))
-        self.assertTrue({'wasm-invocation', 'native-aot-invocation', 'build-and-test', 'host-shards',
-                         'host-completeness', 'acceptance'} <= set(blocks))
-        job = blocks['gnu-compatibility-smoke']
-        self.assertIn('runs-on: ubuntu-24.04', job)
+                                 workflow_jobs, re.MULTILINE | re.DOTALL))
+        self.assertEqual({'generator'}, set(blocks))
+        job = blocks['generator']
         self.assertNotRegex(job, re.compile(r'^    (?:needs|if|continue-on-error):', re.MULTILINE))
-        self.assertIn('BGCS_CPP2C_CXX: g++', job)
-        self.assertIn('BGCS_CC: gcc', job)
+        for host in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
+            self.assertEqual(1, job.count('os: ' + host))
+        self.assertEqual(1, job.count('baseline: full'))
+        self.assertEqual(2, job.count('baseline: smoke'))
+        self.assertEqual(1, job.count('scripts/run-full-test-matrix.sh'))
+        self.assertEqual(1, job.count('scripts/run-generator-smoke.py'))
+        self.assertEqual(1, job.count('scripts/test-performance-budget.sh'))
+        self.assertIn('compiler: g++', job)
         self.assertNotIn('BGCS_REQUIRE_GNU_SOURCE_VIEW', job)
         self.assertNotIn('BGCS_REQUIRE_CLANG_SOURCE_VIEW', job)
-        self.assertIn('gcc --version', job)
-        self.assertIn('g++ --version', job)
         self.assertLess(job.index('scripts/setup-locked-dotnet.py'), job.index('dotnet restore tests/BGCS.Tests/'))
         self.assertIn('dotnet build tests/BGCS.Tests/BGCS.Tests.csproj', job)
         self.assertNotIn('dotnet build BindGen-CS.slnx', job)
-        self.assertIn('scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/', job)
-        self.assertIn('scripts/verify-gnu-smoke.py --print-filter', job)
-        self.assertIn('--trx artifacts/gnu-smoke/gnu-smoke.trx', job)
+        self.assertNotIn('scripts/test-wasm-bindings.py', job)
+        self.assertNotIn('scripts/test-native-aot-bindings.py', job)
+        self.assertNotIn('run-host-test-shards.py', job)
         self.assertIn('if: always()', job)
-        self.assertIn('path: artifacts/gnu-smoke', job)
+        self.assertIn('artifacts/generator-smoke', job)
+
+    def test_retained_finite_gnu_receipt_control_still_names_real_cases(self):
         expression = gnu_smoke.filter_expression()
         self.assertEqual(9, len(gnu_smoke.METHODS))
         self.assertEqual(28, len(gnu_smoke.REQUIRED_CASES))
@@ -209,7 +214,9 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
                          'scripts/source_ownership.py', 'scripts/acceptance_evidence.py'):
             self.assertLess(runner.index(required), first_required)
         self.assertIn('for project_path in "${TEST_PROJECTS[@]}"; do', runner)
-        self.assertIn('scripts/run-host-test-shards.py" aggregate', runner)
+        self.assertIn('scripts/run-host-tests.py"', runner)
+        self.assertNotIn('run-host-test-shards.py', runner)
+        self.assertNotIn('BGCS_HOST_SHARD_EVIDENCE', runner)
         self.assertIn('run_tests "${project_relative}"', runner)
         self.assertIn('eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj', runner)
         self.assertIn('MsvcBuildsAndInvokesUserClassWithStringVectorAndOptionalStorage', runner)

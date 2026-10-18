@@ -6,23 +6,12 @@ using System.Threading;
 using BGCS.Frontend.Clang;
 using BGCS.Contracts.Requests;
 using BGCS.Platforms.Targeting;
-using Microsoft.Build.Framework;
 
 namespace BGCS.Tests.ParserLibraryHost;
 
-/// <summary>
-/// Exercises the neutral frontend implementation when loaded by an unrelated MSBuild host.
-/// </summary>
-public sealed class ParseNativeApiTask : Microsoft.Build.Utilities.Task
+internal static class Program
 {
-    /// <summary>
-    /// Gets or sets the path receiving the parsed function's name.
-    /// </summary>
-    [Required]
-    public string outputPath { get; set; } = string.Empty;
-
-    /// <inheritdoc />
-    public override bool Execute()
+    private static int Main(string[] arguments)
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-library-host-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -34,16 +23,16 @@ public sealed class ParseNativeApiTask : Microsoft.Build.Utilities.Task
                 { pathBase = root, parseMacros = false }, CancellationToken.None).GetAwaiter().GetResult();
             if (parsed.module.diagnostics.Any(diagnostic => diagnostic.isFailure))
             {
-                Log.LogError(string.Join(Environment.NewLine, parsed.module.diagnostics.Select(diagnostic => diagnostic.message)));
-                return false;
+                Console.Error.WriteLine(string.Join(Environment.NewLine, parsed.module.diagnostics.Select(diagnostic => diagnostic.message)));
+                return 1;
             }
-            File.WriteAllText(outputPath, parsed.module.declarations.Single(declaration => declaration.kind == "Function").name);
-            return true;
+            File.WriteAllText(arguments.Single(), parsed.module.declarations.Single(declaration => declaration.kind == "Function").name);
+            return 0;
         }
         catch (Exception failure)
         {
-            Log.LogErrorFromException(failure, showStackTrace: true);
-            return false;
+            Console.Error.WriteLine(failure);
+            return 1;
         }
         finally { Directory.Delete(root, recursive: true); }
     }

@@ -10,7 +10,7 @@ public sealed record NativeShimRequest
     public string id { get; init; } = string.Empty;
     /// <summary>Gets public headers interpreted through the ordinary worker parse request.</summary>
     public ImmutableArray<string> publicHeaders { get; init; } = [];
-    /// <summary>Gets native implementation sources supplied to the ordinary native build plan.</summary>
+    /// <summary>Gets native implementation sources published for the consumer's own compilation.</summary>
     public ImmutableArray<string> sourceFiles { get; init; } = [];
     /// <summary>Gets exact C-linkage symbols declared by the public headers.</summary>
     public ImmutableArray<string> exports { get; init; } = [];

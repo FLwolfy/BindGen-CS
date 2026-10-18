@@ -53,9 +53,8 @@ See [lowering](lowering.md) and [the cookbook](cpp-extension-cookbook.md) for th
 configuration and prerequisites. A returned `char*` does not establish UTF-8 or ownership;
 a method named `Create` does not establish a safe release function.
 
-`AnalyzeAsync` also retains typed Objective-C declaration facts through the worker.
-This is [analysis-only support](objective-c-facts.md), not generated message-send,
-ARC or Apple runtime binding support; generation rejects that request.
+The current product accepts C/C++. Objective-C models and analysis are outside the
+generator-only scope; unsupported block/calling forms retain explicit rejection.
 
 ## Runtime, extensions and workflow
 
@@ -67,11 +66,11 @@ event-loop protocol; desktop blocking stop/join is not transferred to that runti
 
 Standard plugins use only `BGCS.Contracts`: source contribution, target providers,
 native/interop/managed transforms, C++ lowerings, managed projection/backend, artifact
-processors, validators, native providers and asset packaging have typed ports.
+processors and validators have typed ports.
 Advanced Clang facts use a parser-pinned, worker-only interface with borrowed handles;
 they are a deliberate separate dependency. See [extensibility](extensibility.md).
 
-CLI, embedded SDK, workspaces and opt-in MSBuild use `BindingHost`. Frozen grouped
+CLI, embedded SDK and workspaces use `BindingHost`. Frozen grouped
 configuration, deterministic order, dependency snapshots and extension fingerprints
 control cache reuse. Requested validation still runs on cache hits. Final contract
 checks and owned publication protect the previous complete output on failure.
@@ -84,14 +83,10 @@ implementation project separately. Exact current fields/defaults come from
 
 ## Platform scope
 
-Windows x64, Linux GNU x64, Intel macOS and Browser Wasm are required launch gates;
-NativeAOT and installed SDK/tool/Runtime/plugin/MSBuild consumption have separate
-requirements. Windows local success does not replace Linux or macOS execution.
-A Chromium run does not certify Firefox or Safari. ARM64, musl, Android, iOS and
-FreeBSD have their own resolution, generation, compilation, linking, invocation and
-package-consumption stages; incomplete stages must remain marked as such.
-
-The architecture separates host parser, native target, SDK/sysroot, compiler, ABI,
-managed runtime and import strategy. That is substantive cross-platform support
-infrastructure. Full support is established only by completing each platform's actual
-matrix, not by listing a target or successfully cross-parsing one header.
+Required CI is Windows full generator checks, Linux/macOS generator smoke and one
+full installed-product job. Core baselines and original per-host performance limits
+remain required. AOT/Wasm application builds/runs are optional manual private checks;
+their target facts and source generation remain in scope. ARM64, musl, Android, iOS
+and FreeBSD descriptions do not by themselves certify target execution. A Chromium
+run cannot certify another browser. Actual application/platform claims require their
+own scoped receipts, separate from source-generation acceptance.

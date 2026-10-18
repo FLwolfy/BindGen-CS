@@ -1,5 +1,7 @@
 # Complete Host test evidence
 
+> Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
+
 The Host suite is partitioned into eight class groups on each launch host: Windows x64, Linux GNU x64 and macOS Intel. The other test projects, corpus, performance, package installation and independent browser/NativeAOT gates remain separate requirements. CI executes the Host cases once and reuses their verified union in host acceptance.
 
 The isolated `eng/BGCS.TestDriver` uses the locked SDK's VSTest translation-layer API. It discovers structured `TestCase` objects with xUnit theory pre-enumeration enabled, independently compares them with a metadata-only census of compiled facts/theories, and executes those exact discovered objects. It preserves the case ID, fully qualified method and literal display name, including generic type and argument identities. Inherited methods and derived Fact attributes participate in the census. Unexpanded dynamic theories, omitted compiled methods, ambiguous identities, aborted/partial discovery, skipped cases and failed executions fail the gate.

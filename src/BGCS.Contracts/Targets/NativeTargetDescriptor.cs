@@ -24,7 +24,7 @@ public sealed class NativeTargetDescriptor
     /// The provider's native ABI ID.
     /// </param>
     /// <param name = "triple">
-    /// The compiler target triple for parsing and native compilation.
+    /// The compiler target triple used to interpret source declarations during parsing.
     /// </param>
     /// <param name = "toolchain">
     /// The immutable SDK and compiler inputs for the resolved target.
@@ -90,7 +90,7 @@ public sealed class NativeTargetDescriptor
     /// Gets the resolved toolchain inputs.
     /// </summary>
     public NativeToolchainDescriptor toolchain { get; }
-    /// <summary>Gets optional provider-declared construction and runtime mechanisms without a verification-stage claim.</summary>
+    /// <summary>Gets optional provider-declared parsing and native module mechanisms without a verification-stage claim.</summary>
     public TargetCapabilities? capabilities { get; }
     /// <summary>Gets the explicitly resolved native byte order independently of pointer width and generator host.</summary>
     public NativeByteOrder byteOrder { get; }

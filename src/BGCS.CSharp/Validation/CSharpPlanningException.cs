@@ -26,6 +26,6 @@ public sealed class CSharpPlanningException : NotSupportedException
 
     /// <summary>Gets the exact neutral native identity that failed.</summary>
     public StableId nativeIdentity { get; }
-    /// <summary>Gets the diagnostic suitable for CLI, SDK and MSBuild presentation.</summary>
+    /// <summary>Gets the diagnostic suitable for CLI and C# host presentation.</summary>
     public BindingDiagnostic diagnostic { get; }
 }

@@ -4,8 +4,8 @@ from __future__ import annotations
 import re
 
 CHECK = 'installed-contracts-source-plugin-same-manifest-cpp-cache-and-rollback'
-PREREQUISITES = (CHECK, 'installed-contracts-only-source-plugin-sdk-cli-and-msbuild-manifest',
-                 'installed-sdk-c-cpp-and-contracts-only-plugin', 'installed-msbuild-generated-source-external-native-invocation')
+PREREQUISITES = (CHECK, 'installed-contracts-only-source-plugin-sdk-cli-manifest',
+                 'installed-sdk-c-cpp-and-contracts-only-plugin')
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 
 
@@ -24,7 +24,7 @@ def verify_summary(parent: dict) -> dict:
                    or not isinstance(asset['digest'].get('value'), str) or not SHA.fullmatch(asset['digest']['value']) for asset in assets)):
         raise RuntimeError('The installed source-contributor Contracts-only plugin closure is incomplete.')
     entries = value.get('entries')
-    if not isinstance(entries, dict) or set(entries) != {'sdk', 'cli', 'msbuild'}:
+    if not isinstance(entries, dict) or set(entries) != {'sdk', 'cli'}:
         raise RuntimeError('Every installed source-contributor entry point is mandatory.')
     for name, entry in entries.items():
         if (not isinstance(entry, dict) or set(entry) != {'language', 'nativeAndManagedInvoked', 'phases', 'rejectionPreservedAllFiles'}
@@ -32,7 +32,7 @@ def verify_summary(parent: dict) -> dict:
                 or entry.get('rejectionPreservedAllFiles') is not True):
             raise RuntimeError('The installed source-contributor did not invoke or preserve publication at ' + name)
         phases = entry.get('phases')
-        expected = (('cold', 'miss'), ('stabilized', 'miss'), ('warm', 'hit'), ('changed', 'miss')) if name == 'msbuild' else (('cold', 'miss'), ('warm', 'hit'), ('changed', 'miss'))
+        expected = (('cold', 'miss'), ('warm', 'hit'), ('changed', 'miss'))
         if not isinstance(phases, list) or len(phases) != len(expected):
             raise RuntimeError('The installed source-contributor cache phases are incomplete.')
         for phase, (label, status) in zip(phases, expected):
@@ -41,12 +41,6 @@ def verify_summary(parent: dict) -> dict:
                     or any(not isinstance(phase.get(key), str) or not SHA.fullmatch(phase[key])
                            for key in ('manifestSha256', 'inputRootMembershipSha256', 'otherInputFactsSha256'))):
                 raise RuntimeError('The installed source-contributor cache/content identity is incomplete at ' + name)
-        if name == 'msbuild':
-            cold, stabilized, warm = phases[:3]
-            if (cold['inputRootMembershipSha256'] == stabilized['inputRootMembershipSha256']
-                    or stabilized['inputRootMembershipSha256'] != warm['inputRootMembershipSha256']
-                    or len({phase['otherInputFactsSha256'] for phase in phases[:3]}) != 1):
-                raise RuntimeError('The installed TaskHost cache proof lacks exact first-compilation membership stabilization and unchanged-input reuse.')
         if phases[-2]['manifestSha256'] == phases[-1]['manifestSha256']:
             raise RuntimeError('The changed source-contributor state did not change its actual published artifact identity.')
     return value

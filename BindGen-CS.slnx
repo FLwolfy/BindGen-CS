@@ -26,15 +26,11 @@
     <Project Path="tests/BGCS.CSharp.Tests/BGCS.CSharp.Tests.csproj" />
     <Project Path="tests/BGCS.Frontend.Clang.Tests/BGCS.Frontend.Clang.Tests.csproj" />
     <Project Path="tests/BGCS.Infrastructure.Tests/BGCS.Infrastructure.Tests.csproj" />
-    <Project Path="tests/BGCS.MSBuild.Tests/BGCS.MSBuild.Tests.csproj" />
     <Project Path="tests/BGCS.Platforms.Tests/BGCS.Platforms.Tests.csproj" />
     <Project Path="tests/BGCS.Runtime.Tests/BGCS.Runtime.Tests.csproj" />
     <Project Path="tests/BGCS.Tests/BGCS.Tests.csproj" />
     <Project Path="tests/BGCS.Tool.Tests/BGCS.Tool.Tests.csproj" />
     <Project Path="tests/BGCS.Worker.Tests/BGCS.Worker.Tests.csproj" />
-  </Folder>
-  <Folder Name="/integrations/">
-    <Project Path="integrations/BGCS.MSBuild/BGCS.MSBuild.csproj" />
   </Folder>
   <Folder Name="/tests/fixtures/">
     <Project Path="tests/fixtures/FailingFingerprintPlugin/FailingFingerprintPlugin.csproj" />
@@ -45,6 +41,9 @@
     <Project Path="tests/fixtures/hosts/ProcessProbe/ProcessProbe.csproj" />
     <Project Path="tests/fixtures/plugins/ClangFactPlugin/ClangFactPlugin.csproj" />
     <Project Path="tests/fixtures/plugins/NeutralLoweringPlugin/NeutralLoweringPlugin.csproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/CustomTargetPlugin/BGCS.Example.CustomTargetPlugin.csproj" />
   </Folder>
   <Folder Name="/Repository tools/">
     <Project Path="eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" />

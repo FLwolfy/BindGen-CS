@@ -1,4 +1,6 @@
 using System.Linq;
+using System;
+using System.Runtime.InteropServices;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Targets;
 using BGCS.Platforms.Targeting;
@@ -41,5 +43,81 @@ public sealed class AutomaticToolchainTargetTests
         Assert.Equal("not-an-installed-compiler", resolved.toolchain.compilerPath);
         Assert.Equal(host.targetId, resolved.targetId);
         Assert.Equal(host.triple, resolved.triple);
+        Assert.Same(host, resolved);
+        Assert.Empty(resolved.toolchain.systemIncludeFolders);
+        Assert.Empty(resolved.toolchain.cxxSystemIncludeFolders);
+    }
+
+    [Theory]
+    [InlineData("sysroot")]
+    [InlineData("c")]
+    [InlineData("cpp")]
+    public void ExplicitHostSdkInputsNeverAcquireFallbackHeadersOrDefinitions(string choice)
+    {
+        NativeTargetDescriptor host = new TargetResolver().Resolve(new(new("host")));
+        NativeToolchainDescriptor inputs = new(sysRoot: choice == "sysroot" ? "declared/sysroot" : null,
+            systemIncludeFolders: choice == "c" ? ["declared/c"] : [],
+            cxxSystemIncludeFolders: choice == "cpp" ? ["declared/cpp"] : [],
+            defines: ["DECLARED=7"], arguments: ["-DONLY_THIS_SDK=1"]);
+        NativeTargetDescriptor selected = new(host.targetId, host.platformId, host.architectureId, host.abiId, host.triple, inputs);
+        NativeTargetDescriptor resolved = ToolchainResolver.ResolveToolchain(selected, SourceLanguage.Cpp);
+        Assert.Same(selected, resolved);
+        Assert.Same(inputs, resolved.toolchain);
+        Assert.Equal(new[] { "DECLARED=7" }, resolved.toolchain.defines);
+        Assert.Equal(new[] { "-DONLY_THIS_SDK=1" }, resolved.toolchain.arguments);
+    }
+
+    [Theory]
+    [InlineData("gnu", "x86_64-unknown-linux-gnu")]
+    [InlineData("musl", "x86_64-unknown-linux-musl")]
+    public void LinuxLibcIdentitiesRemainDistinctForExplicitTargets(string abi, string triple)
+    {
+        NativeTargetDescriptor target = new TargetResolver().Resolve(new(new("linux-x64-" + abi), new(systemIncludeFolders: ["explicit/sdk"])));
+        Assert.Equal(abi, target.abiId);
+        Assert.Equal(triple, target.triple);
+        Assert.Same(target, ToolchainResolver.ResolveToolchain(target, SourceLanguage.C));
+    }
+
+    [Fact]
+    public void LinuxHostAliasRequiresItsRuntimeToEstablishTheLibcIdentity()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string architecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+        string rid = RuntimeInformation.RuntimeIdentifier;
+        if (rid != "linux-" + architecture && rid != "linux-musl-" + architecture)
+        {
+            Assert.Throws<PlatformNotSupportedException>(() => new TargetResolver().Resolve(new(new("host"))));
+            return;
+        }
+        NativeTargetDescriptor host = new TargetResolver().Resolve(new(new("host")));
+        Assert.Equal(rid.StartsWith("linux-musl-", StringComparison.Ordinal) ? "musl" : "gnu", host.abiId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void UnknownPlatformRequiresDeclaredCapabilitiesAndKeepsRuntimeRestrictions(bool capabilities)
+    {
+        NativeTargetDescriptor selected = new(new("private-parser"), "private-platform", "x64", "msvc", "x86_64-pc-windows-msvc", new(),
+            capabilities ? new(false, true) : null);
+        TargetResolver resolver = new([new PrivateProvider(selected)]);
+        if (!capabilities)
+        {
+            Assert.Contains("capability", Assert.Throws<NotSupportedException>(() => resolver.Resolve(new(selected.targetId))).Message);
+            return;
+        }
+        NativeTargetDescriptor target = resolver.Resolve(new(selected.targetId));
+        Assert.Equal(ManagedRuntimeKind.CoreClr, ManagedRuntimeResolver.Resolve(target, ManagedRuntimeKind.CoreClr).kind);
+        Assert.Null(ManagedRuntimeResolver.Resolve(target, ManagedRuntimeKind.CoreClr).aggregateAbi);
+        Assert.Throws<NotSupportedException>(() => ManagedRuntimeResolver.Resolve(target, ManagedRuntimeKind.BrowserWasm));
+    }
+
+    private sealed class PrivateProvider(NativeTargetDescriptor target) : INativeTargetProvider
+    {
+        public bool TryResolve(NativeTargetRequest request, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out NativeTargetDescriptor? result)
+        {
+            result = request.targetId == target.targetId ? target : null;
+            return result is not null;
+        }
     }
 }

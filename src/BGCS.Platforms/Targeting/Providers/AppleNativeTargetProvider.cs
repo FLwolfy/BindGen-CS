@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using BGCS.Contracts.Targets;
 
 namespace BGCS.Platforms.Targeting.Providers;
@@ -31,7 +30,8 @@ public sealed class AppleNativeTargetProvider : INativeTargetProvider
             return false;
         string triple = NativeTargetTriple.Resolve(request, resolved.triple, resolved.platform, resolved.architecture, "darwin");
         NativeToolchainDescriptor toolchain = request.toolchain;
-        if (OperatingSystem.IsMacOS() && string.IsNullOrWhiteSpace(toolchain.sysRoot))
+        if (OperatingSystem.IsMacOS() && string.IsNullOrWhiteSpace(toolchain.sysRoot)
+            && toolchain.compilerPath is null && toolchain.systemIncludeFolders.Count == 0 && toolchain.cxxSystemIncludeFolders.Count == 0)
         {
             string sdk = resolved.platform switch
             {
@@ -44,15 +44,17 @@ public sealed class AppleNativeTargetProvider : INativeTargetProvider
                 toolchain.systemIncludeFolders, toolchain.defines, toolchain.arguments, toolchain.cxxSystemIncludeFolders,
                 toolchain.sdkVersion, toolchain.compilerVersion);
         }
-        // The selected host driver owns its C++ library. Cross targets use the requested SDK.
-        if (!string.IsNullOrWhiteSpace(toolchain.sysRoot)
-            && (!OperatingSystem.IsMacOS() || resolved.platform != "macos" || !string.IsNullOrWhiteSpace(request.toolchain.sysRoot)))
+        // Complete only paths belonging to this selected SDK; never mix in a
+        // different host SDK or libc++ implementation.
+        if (!string.IsNullOrWhiteSpace(toolchain.sysRoot))
         {
-            string headers = Path.Combine(Path.GetFullPath(toolchain.sysRoot), "usr", "include", "c++", "v1");
-            if (Directory.Exists(headers))
-                toolchain = new(toolchain.compilerPath, toolchain.sysRoot, toolchain.systemIncludeFolders,
-                    toolchain.defines, toolchain.arguments, toolchain.cxxSystemIncludeFolders.Append(headers).Distinct(StringComparer.Ordinal),
-                    toolchain.sdkVersion, toolchain.compilerVersion);
+            string headers = Path.Combine(Path.GetFullPath(toolchain.sysRoot), "usr", "include");
+            string cxx = Path.Combine(headers, "c++", "v1");
+            toolchain = new(toolchain.compilerPath, toolchain.sysRoot,
+                toolchain.systemIncludeFolders.Count == 0 && Directory.Exists(headers) ? [headers] : toolchain.systemIncludeFolders,
+                toolchain.defines, toolchain.arguments,
+                toolchain.cxxSystemIncludeFolders.Count == 0 && Directory.Exists(cxx) ? [cxx] : toolchain.cxxSystemIncludeFolders,
+                toolchain.sdkVersion, toolchain.compilerVersion);
         }
 
         target = new(request.targetId, resolved.platform, resolved.architecture, "darwin", triple, toolchain, byteOrder: NativeTargetFacts.ByteOrder(resolved.architecture, triple));

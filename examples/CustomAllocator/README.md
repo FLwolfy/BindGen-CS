@@ -5,7 +5,7 @@
 This example builds a real C++ implementation behind a C ABI. Every allocator has its own native state. The native release function checks the owning state, physical extent and alignment. The consumer writes thirteen bytes, asks native code for an independently computed weighted checksum, then closes the public module context while its buffer is alive. The module stays loaded until the matching native free and native allocator-state destruction finish.
 
 ```sh
-bindgen-cs build examples/CustomAllocator/bindgen.json
+bindgen-cs generate examples/CustomAllocator/bindgen.json
 dotnet run --project examples/CustomAllocator/Consumer -- <absolute-native-library-path>
 dotnet run --project examples/CustomAllocator/GeneratedConsumer -- <absolute-native-library-path>
 ```
@@ -23,3 +23,5 @@ An exception from a free callback has ambiguous native state: it might occur aft
 The source catalog feature `memory.native-allocator` supplies the same Runtime implementation with a caller-selected namespace. Strict UTF input codecs can use this pair explicitly, for example `Utf8Codec.EncodeNullTerminated(text, false, 64, allocator)`; dispose the resulting string lease only after native use ends, and await `DisposeAsync()` when queued cleanup must finish. UTF-16/UTF-32 overloads also take explicit byte order. Their source closures include allocator support. Generated conversions require their own declared service/configuration; a release-domain string alone does not specify an allocator implementation.
 
 For generated friendly text inputs, the ordinary context factory accepts optional `temporaryAllocatorFactory`. Its callback receives the new instance's exact `NativeModuleSession`, after complete import resolution. Construct the allocator with that same session; a different session or null result is rejected. The allocation/free callbacks should capture independently checked function addresses and native state. Calling ordinary `api.Raw` from a free callback after context closure is rejected, so it cannot serve as a delayed release mechanism. The `NativeTemporaryAllocatorTests` fixture verifies actual native pairs independently for two contexts and a shared facade across all three imports with package/source Runtime, including closing the context inside matching text cleanup.
+
+Compile/link the emitted bridge and native implementation externally, then compile the generated C# consumer. BGCS only generates sources.

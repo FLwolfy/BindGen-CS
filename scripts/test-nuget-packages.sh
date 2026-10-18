@@ -16,9 +16,6 @@ version="${PACKAGE_TEST_VERSION:-0.0.0-local.run$(date -u +%s).$$}"
 package_directory="${BGCS_PACKAGE_TEST_ARTIFACTS_ROOT:-${task_root}/artifacts}/nuget"
 pack_arguments=(--dotnet "${dotnet_command}" --configuration "${configuration}" --version "${version}" --output "${package_directory}" --verify-repeat-content)
 verify_arguments=(--dotnet "${dotnet_command}" --version "${version}" --packages "${package_directory}" --output "${task_root}/artifacts/verification/packages")
-if [[ -n "${BGCS_MSBUILD_EXE:-}" ]]; then
-  verify_arguments+=(--msbuild-executable "${BGCS_MSBUILD_EXE}")
-fi
 if [[ -n "${BGCS_OSX_X64_PACKAGE_RUNTIME_DIR:-}" ]]; then
   pack_arguments+=(--parser-osx-x64 "${BGCS_OSX_X64_PACKAGE_RUNTIME_DIR}")
 else

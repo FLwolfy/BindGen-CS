@@ -20,9 +20,20 @@ public static class ToolchainResolver
         SourceLanguage language
     ) {
         ArgumentNullException.ThrowIfNull(target);
-        NativeTargetDescriptor host = new TargetResolver().Resolve(new(new("host")));
-        if (target.platformId != host.platformId || target.architectureId != host.architectureId || target.abiId != host.abiId) return target;
         NativeToolchainDescriptor original = target.toolchain;
+        // Explicit SDK roots are the complete selected parser environment, even
+        // when its ABI happens to match the generator host.
+        if (original.sysRoot is not null || original.systemIncludeFolders.Count != 0 || original.cxxSystemIncludeFolders.Count != 0)
+            return target;
+        // A declared installation hint never authorizes selecting another
+        // compiler's SDK. Only the implemented exact MSVC layout is enriched.
+        if (original.compilerPath is string declaredCompiler && (!OperatingSystem.IsWindows()
+            || !Path.IsPathFullyQualified(declaredCompiler) || !File.Exists(declaredCompiler)
+            || !Path.GetFileName(declaredCompiler).Equals("cl.exe", StringComparison.OrdinalIgnoreCase))) return target;
+        NativeTargetDescriptor host;
+        try { host = new TargetResolver().Resolve(new(new("host"))); }
+        catch (PlatformNotSupportedException) { return target; }
+        if (target.platformId != host.platformId || target.architectureId != host.architectureId || target.abiId != host.abiId) return target;
         List<string> includes = [.. original.systemIncludeFolders], cxx = [.. original.cxxSystemIncludeFolders];
         List<string> defines = [.. original.defines], arguments = [.. original.arguments];
         string? compiler = original.compilerPath, sysroot = original.sysRoot, sdkVersion = original.sdkVersion, compilerVersion = original.compilerVersion;
@@ -60,7 +71,7 @@ public static class ToolchainResolver
         else if (OperatingSystem.IsLinux() && sysroot is null)
         {
             Add(includes, "/usr/local/include");
-            string architecture = target.architectureId switch { "x64" => "x86_64-linux-gnu", "arm64" => "aarch64-linux-gnu", _ => target.triple };
+            string architecture = target.architectureId switch { "x64" => "x86_64-linux-" + target.abiId, "arm64" => "aarch64-linux-" + target.abiId, _ => target.triple };
             Add(includes, "/usr/include/" + architecture);
             Add(includes, "/usr/include");
             if (Directory.Exists("/usr/include/c++"))

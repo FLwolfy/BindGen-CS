@@ -4,7 +4,7 @@ using BGCS.Contracts.Requests;
 
 namespace BGCS.Contracts.Ports;
 
-/// <summary>Processes candidate source artifacts before final contract checks and requested builds.</summary>
+/// <summary>Processes candidate source artifacts before final static contract checks.</summary>
 public interface IArtifactProcessor
 {
     /// <summary>Gets the globally unique processor identity.</summary>

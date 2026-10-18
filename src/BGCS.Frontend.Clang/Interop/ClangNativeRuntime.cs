@@ -12,7 +12,7 @@ namespace BGCS.Frontend.Clang.Interop;
 /// </summary>
 /// <remarks>
 /// Native assets are resolved relative to the parser assembly as well as the executable. This supports
-/// library hosts such as MSBuild whose executable directory differs from the library deployment.
+/// library hosts whose executable directory differs from the parser resource deployment.
 /// Loading libclang first also satisfies its versioned SONAME dependency on Unix systems.
 /// </remarks>
 internal static class ClangNativeRuntime

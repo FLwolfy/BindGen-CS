@@ -56,7 +56,7 @@ Contracts 的实现；`ManagedTransformTests` 验证缓存状态变化、释放�
 
 `ISourceContributor` 在原始 C/C++ 解析之前贡献生成输入。它与产物 processor 的
 区别在于：贡献的公开头文件能引入声明，再经过普通的声明选择、分析、lowering 和
-C# 生成。SDK、CLI 与显式启用的 MSBuild 接受同一份 Contracts-only 插件 manifest。
+C# 生成。SDK 与 CLI 接受同一份 Contracts-only 插件 manifest。
 当前实现由仓库测试覆盖；安装认证与正式发布状态仍以实施状态文档为准。
 
 ```csharp
@@ -175,7 +175,7 @@ Draft 2020-12，依赖通过 `$defs` 和本地 anchors/ref 打包；不会隐式
 解析阶段的资格检查包含已验证 worker 闭包、固定的 .NET host/runtime、解析器资源、
 有效参数、源码内容、include 搜索顺序与目录成员关系。无法覆盖的环境或编译器输入会
 禁用复用。自定义 frontend/backend 和缺少完整指纹的扩展不会静默共用内置条目。
-报告逐阶段记录实际 hit、miss 或 not-used；当前不缓存原生构建。
+报告逐阶段记录实际 hit、miss 或 not-used。
 变换、处理器及本次请求所需的全部验证仍会执行。详见
 [缓存配置](configuration-guide.cn.md#插件-bootstrap-与缓存策略)。
 
@@ -183,9 +183,8 @@ Draft 2020-12，依赖通过 `$defs` 和本地 anchors/ref 打包；不会隐式
 托管目录中新增辅助文本。editor 在结束后关闭，
 更新后的 hash 随候选传递；内置 C# backend 在处理后重新读取 imports 和 storage。
 自定义 backend 配合 processor 时需要自己的最终验证器。单文件模式会将新增
-C# 辅助文件与原有源码重新合并，再检查导入契约。原生文本处理仍在实施中。
+C# 辅助文件与原有源码重新合并，再检查导入契约。原生产物不属于此托管 editor 的支持范围，应使用明确的源码贡献或 native shim。
 
-原生构建与资产包装 provider 使用中立契约和相同会话注册规则。每个目标/provider
-仍须完成自己的真实构建、调用和安装包验收。高级 worker 插件还必须验证所固定的
-解析器及安装后的执行闭包。显式线程安全的 Host 服务复用仍按实施状态记录，
+消费者编译、原生构建和打包属于外部工具，不是执行产品构建的插件端口。高级 worker
+插件仍需验证所声明的准确 parser 兼容性与安装执行闭包。显式线程安全的 Host 服务复用仍按实施状态记录，
 不能把接口存在当作验收完成。

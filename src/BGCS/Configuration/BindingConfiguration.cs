@@ -145,8 +145,6 @@ public sealed record TargetConfiguration
     public string id { get; init; } = "host";
     /// <summary>Gets an explicit compiler triple compatible with this target's CPU, platform and ABI; null uses provider defaults.</summary>
     public string? triple { get; init; }
-    /// <summary>Gets the configured toolchain selection identity.</summary>
-    public string toolchain { get; init; } = "auto";
     /// <summary>Gets explicit SDK paths, arguments and compiler identity.</summary>
     public ToolchainConfiguration settings { get; init; } = new();
 }
@@ -154,7 +152,7 @@ public sealed record TargetConfiguration
 /// <summary>Stores target compiler and SDK inputs as immutable configuration values.</summary>
 public sealed record ToolchainConfiguration
 {
-    /// <summary>Gets the compiler path or executable name.</summary>
+    /// <summary>Gets an optional read-only compiler installation hint; the generator does not execute it.</summary>
     public string? compilerPath { get; init; }
     /// <summary>Gets the target sysroot.</summary>
     public string? sysRoot { get; init; }

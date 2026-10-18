@@ -41,8 +41,8 @@ public sealed record GenerationRequest
     /// <summary>Reads the new configuration and resolves relative paths from its containing directory.</summary>
     /// <param name="path">The local bindgen.json input.</param>
     /// <param name="profile">An optional explicit named preset selection.</param>
-    /// <param name="cancellationToken">Cancels composition, local reads and composition.</param>
-    /// <param name="configurationLoader">An optional loader with a caller-owned HTTPS transport.</param>
+    /// <param name="cancellationToken">Cancels local configuration reads and composition.</param>
+    /// <param name="configurationLoader">An optional local configuration loader.</param>
     /// <returns>The independently frozen request.</returns>
     public static GenerationRequest FromFile(
         string path,
@@ -55,8 +55,8 @@ public sealed record GenerationRequest
     /// <summary>Asynchronously captures a local root, its local bases and exact input provenance.</summary>
     /// <param name="path">The local bindgen.json input.</param>
     /// <param name="profile">An optional explicit preset selection.</param>
-    /// <param name="cancellationToken">Cancels file/network reads and composition.</param>
-    /// <param name="configurationLoader">An optional loader with a caller-owned HTTPS transport.</param>
+    /// <param name="cancellationToken">Cancels local file reads and composition.</param>
+    /// <param name="configurationLoader">An optional local configuration loader.</param>
     /// <returns>The independently frozen request with local content identities.</returns>
     public static async Task<GenerationRequest> FromFileAsync(
         string path,

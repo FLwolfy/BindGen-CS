@@ -40,6 +40,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       revision: ${{ steps.version.outputs.revision }}
       ci-run-id: ${{ steps.acceptance.outputs.ci-run-id }}
+      product-run-id: ${{ steps.acceptance.outputs.product-run-id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -248,6 +249,7 @@ jobs:
               ciRunId: accepted.id, productRunId, requiredGates: gateManifest
             }, null, 2) + '\n');
             core.setOutput('ci-run-id', accepted.id);
+            core.setOutput('product-run-id', productRunId);
             core.setOutput('publish', 'true');
 
       - name: Preserve exact per-feature release proof
@@ -289,28 +291,11 @@ jobs:
       - name: Verify locked SDK and isolated runtime
         run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
 
-      - name: Install selected .NET 10 browser workload
-        run: python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/wasm.json
-
-      - name: Download accepted macOS Intel parser runtime
-        uses: actions/download-artifact@v4
-        with:
-          name: parser-runtime-osx-x64
-          path: artifacts/clang-runtime/osx-x64
-          run-id: ${{ needs.release-preflight.outputs.ci-run-id }}
-          github-token: ${{ github.token }}
-
       - name: Download same-revision per-feature release proof
         uses: actions/download-artifact@v4
         with:
           name: release-feature-proof-${{ needs.release-preflight.outputs.revision }}
           path: artifacts/supply-chain/release-features
-
-      - name: Verify the accepted parser runtime checksums
-        shell: bash
-        run: |
-          cd artifacts/clang-runtime/osx-x64
-          sha256sum --check --strict SHA256SUMS
 
       - name: Resolve release version
         id: release
@@ -320,49 +305,31 @@ jobs:
         run: |
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
 
-      - name: Restore
-        run: dotnet restore BindGen-CS.slnx
-
-      - name: Build
-        run: dotnet build BindGen-CS.slnx --configuration Release --no-restore -p:ContinuousIntegrationBuild=true -p:Version=${{ steps.release.outputs.version }}
-
-      - name: Test non-Host projects against fresh release binaries
-        run: dotnet test BindGen-CS.slnx --configuration Release --no-build --filter 'FullyQualifiedName!~BGCS.Tests.'
-
-      - name: Download the exact original Host execution closure
+      - name: Download accepted product packages
         uses: actions/download-artifact@v4
         with:
-          name: host-execution-linux-x64-gnu
-          path: artifacts/release-host-assets
-          run-id: ${{ needs.release-preflight.outputs.ci-run-id }}
+          name: accepted-product-packages
+          path: artifacts/nuget
+          run-id: ${{ needs.release-preflight.outputs.product-run-id }}
           github-token: ${{ github.token }}
-
-      - name: Download the complete original eight-shard Host evidence
+      - name: Download exact installed product receipt
         uses: actions/download-artifact@v4
         with:
-          name: host-test-union-linux-x64-gnu
-          path: artifacts/release-host-union
+          name: product-package-evidence-windows-2022
+          path: artifacts/verification/packages
+          run-id: ${{ needs.release-preflight.outputs.product-run-id }}
+          github-token: ${{ github.token }}
+      - name: Download accepted repository release tooling
+        uses: actions/download-artifact@v4
+        with:
+          name: release-repository-tools
+          path: artifacts/release-tooling
           run-id: ${{ needs.release-preflight.outputs.ci-run-id }}
           github-token: ${{ github.token }}
-
-      - name: Reverify every original Host case and compiled byte without rerunning the suite
-        run: >-
-          python scripts/run-host-test-shards.py verify-accepted
-          --assets artifacts/release-host-assets --input artifacts/release-host-union/raw
-          --output artifacts/supply-chain/host-tests
-
-      - name: Public API compatibility gate
-        run: bash ./scripts/test-public-api-snapshot.sh
-
-      - name: Dependency license and vulnerability gate
-        run: bash ./scripts/test-supply-chain-policy.sh
-
-      - name: Pack and test package closure
-        run: python scripts/compiler_test_environment.py -- bash ./scripts/test-nuget-packages.sh
-        env:
-          CONFIGURATION: Release
-          PACKAGE_TEST_VERSION: ${{ steps.release.outputs.version }}
-          BGCS_OSX_X64_PACKAGE_RUNTIME_DIR: ${{ github.workspace }}/artifacts/clang-runtime/osx-x64
+      - name: Authenticate every accepted package and tooling byte
+        run: |
+          python scripts/release_payload.py verify-packages artifacts/nuget --verification artifacts/verification/packages/verification.json --revision "${{ needs.release-preflight.outputs.revision }}" --version "${{ steps.release.outputs.version }}"
+          python scripts/release_payload.py verify-tooling artifacts/release-tooling --revision "${{ needs.release-preflight.outputs.revision }}"
 
       - name: Assert Intel runtime is in published parser package
         shell: bash
@@ -403,7 +370,7 @@ jobs:
 
       - name: Generate SPDX SBOM and SLSA provenance
         run: >-
-          dotnet run --project eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj --configuration Release --no-build --
+          dotnet artifacts/release-tooling/BGCS.RepositoryTools.dll
           supply-chain artifacts/nuget --output artifacts/supply-chain
           --revision "${{ needs.release-preflight.outputs.revision }}"
           --builder-id "https://github.com/${{ github.repository }}/.github/workflows/publish-bgcs-runtime-nuget.yml@${{ github.workflow_sha }}"

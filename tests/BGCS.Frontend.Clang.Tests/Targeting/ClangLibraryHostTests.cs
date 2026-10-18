@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -25,24 +24,15 @@ public sealed class ClangLibraryHostTests
         try
         {
             string output = Path.Combine(directory, "parsed.txt");
-            string project = Path.Combine(directory, "fixture.proj");
-            File.WriteAllText(project, $"""
-                <Project>
-                  <UsingTask TaskName="BGCS.Tests.ParserLibraryHost.ParseNativeApiTask" AssemblyFile="{SecurityElement.Escape(fixture)}" />
-                  <Target Name="Test">
-                    <ParseNativeApiTask outputPath="{SecurityElement.Escape(output)}" />
-                  </Target>
-                </Project>
-                """);
             var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
             {
-                WorkingDirectory = root,
+                WorkingDirectory = directory,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
-            foreach (string argument in new[] { "msbuild", project, "-t:Test", "-nologo", "-m:1", "-nodeReuse:false" })
+            foreach (string argument in new[] { fixture, output })
                 start.ArgumentList.Add(argument);
             start.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en";
             if (invalidOverride)

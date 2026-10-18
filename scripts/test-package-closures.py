@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import copy
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -23,6 +24,37 @@ SPEC.loader.exec_module(PACK)
 
 
 class PackageClosureTests(unittest.TestCase):
+    def sdk_payload(self, archive, *, tamper=False, extra=False, missing=False, copy=True):
+        prefix = "contentFiles/any/net10.0/bgcs/worker-assets/"
+        files = {"BGCS.Frontend.Clang.Worker.dll": b"worker", "BGCS.Frontend.Clang.Worker.deps.json": b"{}",
+                 "BGCS.Frontend.Clang.Worker.runtimeconfig.json": b"{}", "fr/resources.dll": b"localized", "runtimes/unix/lib/net10.0/helper.dll": b"rid-managed"}
+        manifest = {"schemaVersion": 1, "hostRid": "win-x64", "parserIdentity": "ClangSharp/20.1.2.4;LLVM/20",
+            "artifacts": [{"relativePath": name, "digest": {"value": hashlib.sha256(data).hexdigest()}} for name, data in files.items()]
+                + [{"relativePath": "runtimes/win-x64/native/" + name + ".dll", "digest": {"value": "c" * 64}} for name in ("libclang", "libClangSharp")]}
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w") as common:
+            for name, data in files.items():
+                if not missing or name != "fr/resources.dll": common.writestr(name, data + (b"changed" if tamper else b""))
+            if extra: common.writestr("stale.dll", b"not declared")
+        archive.writestr(prefix + "worker-common.zip", stream.getvalue())
+        archive.writestr(prefix + "manifests/win-x64.json", json.dumps(manifest))
+        archive.writestr("BGCS.nuspec", '<package><metadata><contentFiles><files include="any/net10.0/bgcs/worker-assets/**/*" buildAction="None" copyToOutput="' + str(copy).lower() + '" flatten="false" /></contentFiles></metadata></package>')
+
+    def test_sdk_standard_content_copy_metadata_and_exact_localized_worker_closure(self):
+        for fault in ("valid", "tamper", "extra", "missing", "copy"):
+            path = self.root / (fault + ".nupkg")
+            with zipfile.ZipFile(path, "w") as archive:
+                self.sdk_payload(archive, tamper=fault == "tamper", extra=fault == "extra", missing=fault == "missing", copy=fault != "copy")
+            with zipfile.ZipFile(path) as archive:
+                if fault == "valid": PACK.verify_sdk_worker_archive(archive)
+                else:
+                    with self.subTest(fault=fault), self.assertRaises(RuntimeError): PACK.verify_sdk_worker_archive(archive)
+
+    def test_sdk_manifest_cannot_omit_a_required_host(self):
+        path = self.root / "host.nupkg"
+        with zipfile.ZipFile(path, "w") as archive: self.sdk_payload(archive)
+        with zipfile.ZipFile(path) as archive, self.assertRaises(RuntimeError): PACK.verify_sdk_worker_archive(archive, ["win-x64", "osx-x64"])
+
     def setUp(self):
         parent = ROOT / "artifacts/temporary"
         parent.mkdir(parents=True, exist_ok=True)
@@ -66,14 +98,13 @@ class PackageClosureTests(unittest.TestCase):
         merged = PACK.merge_package_graphs(["host", "frontend"], require_single_version=True)
         self.assertEqual({"Roslyn/1.0.0", "ClangSharp/20.1.2.4"}, set(merged["libraries"]))
 
-    def test_task_host_and_worker_notices_include_independent_closures(self):
+    def test_host_and_worker_notices_include_independent_closures(self):
         self.graph("host", ("Roslyn", "1.0.0", "roslyn"))
         self.graph("worker", ("ClangSharp", "20.1.2.4", "clang"))
-        self.graph("task", ("Microsoft.Build.Utilities.Core", "18.9.6", "msbuild"))
         public = PACK.merge_package_graphs(["host"])
-        notices = PACK.merge_package_graphs(["host", "worker", "task"])
+        notices = PACK.merge_package_graphs(["host", "worker"])
         self.assertNotIn("Microsoft.Build.Utilities.Core/18.9.6", public["libraries"])
-        self.assertEqual(3, len(notices["libraries"]))
+        self.assertEqual(2, len(notices["libraries"]))
         self.assertIn("ClangSharp/20.1.2.4", notices["libraries"])
 
     def test_separate_execution_versions_are_preserved_but_public_conflicts_fail(self):
@@ -139,6 +170,7 @@ class PackageClosureTests(unittest.TestCase):
             if product != "BindGen-CS":
                 with zipfile.ZipFile(output / (product + ".0.0.0-test.nupkg"), "w") as archive:
                     archive.writestr("lib/net10.0/" + product + ".dll", b"reviewed managed payload")
+                    if product == "BGCS": self.sdk_payload(archive)
         for product in PACK.MANIFEST["symbolProducts"]:
             with zipfile.ZipFile(output / (product + ".0.0.0-test.snupkg"), "w") as archive:
                 archive.writestr("lib/net10.0/" + product + ".pdb", b"reviewed symbol payload")
@@ -288,9 +320,9 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(4, len(calls))
-        self.assertEqual([None, str(fixture.directory.resolve()), None, None], [call["parserRoot"] for call in calls])
-        self.assertEqual(["parent-unchanged"] * 4, [call["sentinel"] for call in calls])
+        self.assertEqual(3, len(calls))
+        self.assertEqual([None, str(fixture.directory.resolve()), None], [call["parserRoot"] for call in calls])
+        self.assertEqual(["parent-unchanged"] * 3, [call["sentinel"] for call in calls])
         self.assertEqual("src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj", calls[1]["arguments"][0])
         self.assertTrue(all(call["arguments"][-1] == "-p:Version=0.0.0-control" for call in calls))
 
@@ -302,7 +334,7 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["caller-native-root", str(fixture.directory.resolve()), "caller-native-root", "caller-native-root"],
+        self.assertEqual(["caller-native-root", str(fixture.directory.resolve()), "caller-native-root"],
                          [call["parserRoot"] for call in calls])
 
     def test_without_explicit_parser_all_builds_keep_the_callers_runtime_selection(self):
@@ -312,7 +344,7 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", None, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["caller-native-root"] * 4, [call["parserRoot"] for call in calls])
+        self.assertEqual(["caller-native-root"] * 3, [call["parserRoot"] for call in calls])
 
     def test_managed_child_removes_every_platform_case_without_changing_parent_or_native_discovery(self):
         for index, names in enumerate((("Platform",), ("PLATFORM",), ("pLaTfOrM",), ("Platform", "PLATFORM", "platform"))):

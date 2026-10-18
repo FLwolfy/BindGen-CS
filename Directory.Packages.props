@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup Label="Repository package versions">
-    <ManagePackageVersionsCentrally Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src')) or $([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)tests')) or $([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)integrations')) or '$(MSBuildProjectName)' == 'BGCS.RepositoryTools'">true</ManagePackageVersionsCentrally>
+    <ManagePackageVersionsCentrally Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src')) or $([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)tests')) or '$(MSBuildProjectName)' == 'BGCS.RepositoryTools'">true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
   <ItemGroup Label="Pinned package dependencies">
@@ -18,8 +18,6 @@
     <PackageVersion Include="libClangSharp.runtime.osx-arm64" Version="20.1.2" />
     <PackageVersion Include="libClangSharp.runtime.win-arm64" Version="20.1.2" />
     <PackageVersion Include="libClangSharp.runtime.win-x64" Version="20.1.2" />
-    <PackageVersion Include="Microsoft.Build.Framework" Version="18.9.6" />
-    <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.9.6" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />

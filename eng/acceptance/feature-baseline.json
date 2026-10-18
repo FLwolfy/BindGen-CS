@@ -273,19 +273,9 @@
       "basis": "tests/BGCS.Frontend.Clang.Tests/Targeting"
     },
     {
-      "featureId": "integration.cli-sdk-and-msbuild",
-      "owner": "BGCS",
-      "origin": "3.0 requirement"
-    },
-    {
       "featureId": "distribution.four-products-and-resource-closures",
       "owner": "distribution",
       "origin": "3.0 requirement"
-    },
-    {
-      "featureId": "validation.desktop-wasm-and-nativeaot",
-      "owner": "eng",
-      "basis": ".github/workflows/ci.yml"
     },
     {
       "featureId": "validation.corpus-package-and-performance",
@@ -311,6 +301,11 @@
       "featureId": "platforms.libc-and-musl-identities",
       "owner": "BGCS.Platforms",
       "basis": "tests/BGCS.Platforms.Tests/AutomaticToolchainTargetTests.cs"
+    },
+    {
+      "featureId": "integration.cli-and-sdk",
+      "owner": "BGCS",
+      "origin": "Final generator-only SDK and CLI source generation; no product MSBuild integration."
     }
   ],
   "scopeRemovals": "eng/acceptance/scope-removals.json"

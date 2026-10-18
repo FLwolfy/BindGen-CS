@@ -1,50 +1,35 @@
-# BGCS 3.0 Documentation
+# BGCS 3.0 documentation
 
-[English](README.md) | [简体中文](README.cn.md) | [Repository README](../README.md)
+[简体中文](README.cn.md) | [Repository README](../README.md)
 
-BGCS 3.0 uses .NET 10, grouped versioned configuration and the public `BindingHost`
-pipeline. Current implementation and acceptance status are recorded in
-[implementation status](implementation-status.cn.md), the machine-readable
-[feature inventory](../eng/acceptance/feature-inventory.json) and actual validation
-receipts. A successful local subset does not establish release readiness.
+The product generates source: headers/local config → parse/analyze/generate →
+C#/bridge/manifests. Consumers own compile/link/package/deploy. CLI and ordinary
+C# SDK calls share `BindingHost`, the generation coordinator.
 
-## First integration
+## Start
 
-1. [Getting started](getting-started.md): input headers, generate bindings, declare native inputs and consume an instance API.
-2. [Configuration guide](configuration-guide.md): grouped defaults, paths, semantic contracts, extensions and output modes.
-3. [Generated configuration reference](generated/config-reference.md): every current schema property, constraint and default.
-4. [Packages](packages.md): complete SDK, Contracts-only plugins, Runtime consumers and the tool's physical distribution.
-5. [MSBuild integration](msbuild.md): explicit opt-in, exact manifest items and independent inner builds.
+1. [Getting started](getting-started.md): generate and consume externally.
+2. [Configuration](configuration-guide.md) and [exact field reference](generated/config-reference.md).
+3. [Packages](packages.md): complete SDK, Contracts plugins, Runtime and CLI.
+4. [Public API](api.md): ordinary library calls, sessions, inspection and workspaces.
 
-## Architecture and extension
+## Design and extension
 
-| Task | Document |
-| --- | --- |
-| Understand module ownership, dependencies and pipeline | [Architecture](architecture.md) |
-| Embed generation, building, inspection or a workspace | [Public API](api.md) |
-| Build and link generated sources with your own native build system | [Native construction](native-metadata.md#external-compilation) |
-| Understand resources, callback drain and asynchronous cancellation | [Runtime lifetimes](runtime-lifetime.md) |
-| Configure synchronous callbacks, returned-handle registrations and terminal operations | [Callback cookbook](callbacks.md) |
-| Distinguish storage, calling ABI and semantic evidence | [ABI safety](abi-safety.md) |
-| Inspect original callable/type/parameter names on canonical raw signatures | [Native name attributes](native-metadata.md) |
-| Implement a neutral plugin | [Extensibility](extensibility.md) |
-| Understand a diagnostic | [Diagnostics](diagnostics.md) |
-| Add C++ type/callable lowering or a native shim | [C++ cookbook](cpp-extension-cookbook.md), [lowering architecture](lowering.md) |
-| Inspect grouped C++ configuration | [Generated C++ reference](generated/cpp-config-reference.md) |
-| Understand host/target/SDK separation | [Platform extension](platform-extension.cn.md) |
-| Follow design decisions | [Architecture decision records](adr/) |
+- [Architecture](architecture.md) and [assessment](assessment.md): eleven modules and actual boundaries.
+- [Capabilities](capabilities.md), [ABI safety](abi-safety.md), [lifetimes](runtime-lifetime.md).
+- [Plugins](extensibility.md), [C++ cookbook](cpp-extension-cookbook.md), [lowering](lowering.md).
+- [Platform extension](platform-extension.cn.md) and [CustomTargetPlugin](../examples/CustomTargetPlugin/README.md).
+- [Callbacks](callbacks.md), [naming](naming.md), [source processing](source-processing.md).
+- [External compilation/native metadata](native-metadata.md), [diagnostics](diagnostics.md).
 
-## Verification and release
+## Acceptance and history
 
-- [Testing](testing.md) describes required native, NativeAOT, browser Wasm and repository acceptance execution.
-- [Package certification](packages.md#packaging-and-certification) installs actual local products, compiles and invokes consumers, validates schema closure and compares repeated package content.
-- [Publishing](publish.md) describes same-revision release gates, product packages and actual authorized publication.
-- [Baseline option dispositions](parity-option-dispositions.md) records exact old consumers and explicit managed presentation selection.
-- [Contributing](../CONTRIBUTING.md) records repository development requirements.
-- [Release history](releases/README.md) retains historical release availability and version records.
+[Testing](testing.md), [core acceptance](acceptance.md), [release verification](release-verification.md)
+and [publishing](publish.md) distinguish required baselines, installation and publication.
+Required CI is Windows full, Linux/macOS smoke and one full product-install job;
+original performance budgets remain. AOT/Wasm application builds/runs are optional
+manual private checks; their target facts and source generation remain in product scope.
 
-Platform resolution, parsing, generation, managed compilation, native linking,
-invocation and package consumption are separate stages. Current receipts must show
-the exact target, runtime, import mode, toolchain and source revision for each claim.
-Historical reports and former maturity scores remain historical evidence; they do
-not certify the 3.0 implementation or substitute for its mandatory release gates.
+[The roadmap](roadmap.md) records current convergence. [Historical releases](releases/README.md),
+old plans and checkpoints describe their original revisions, not current APIs,
+compatibility guarantees or completed certification.

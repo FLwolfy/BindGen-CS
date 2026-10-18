@@ -574,7 +574,6 @@ class BGCS.Configuration.TargetConfiguration [sealed; interfaces=System.IEquatab
   ctor()
   property System.String id { get; init }
   property BGCS.Configuration.ToolchainConfiguration settings { get; init }
-  property System.String toolchain { get; init }
   property System.String triple { get; init }
   method BGCS.Configuration.TargetConfiguration <Clone>$()
   method System.Boolean Equals(BGCS.Configuration.TargetConfiguration other) [virtual; final]

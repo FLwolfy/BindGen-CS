@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "library": { "id": "private_target", "nativeName": "private_target" },
+  "source": { "language": "c", "headers": ["native.h"], "parseMacros": false },
+  "targets": [{ "id": "example-private-host" }],
+  "api": { "namespace": "PrivateTarget.Bindings", "name": "PrivateApi", "runtime": "coreClr" },
+  "extensions": {
+    "plugins": ["plugin.json"],
+    "options": { "bgcs.examples.custom-target": { "values": { "profile": "target-sdk.json" } } }
+  },
+  "output": { "root": "Generated" }
+}

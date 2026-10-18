@@ -941,7 +941,7 @@
       "src/BGCS.Frontend.Clang/Properties/AssemblyInfo.cs",
       "src/BGCS.Tool/Validation/ArchitectureFriendPolicy.cs",
       "eng/architecture/test-friends.json",
-      "tests/fixtures/ParserLibraryHost/ParseNativeApiTask.cs"
+      "tests/fixtures/ParserLibraryHost/Program.cs"
     ],
     "publicSurface": "ClangFrontend and the three scoped Advanced entry types; parser model and construction helpers are internal.",
     "surfaceReceipt": "artifacts/test-results/cpp-frontend-minimal-public-surface-two.trx",

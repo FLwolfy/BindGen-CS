@@ -89,17 +89,6 @@ Console.WriteLine("Installed SDK advanced live Clang facts were contributed excl
     run([dotnet, "build", "Consumer.csproj", "--configuration", "Release", "-m:1", "-nr:false"],
         consumer, evidence, "installed-advanced-clang-runtime-consumer-build")
 
-    integrated = work / "advanced-clang-msbuild"
-    write_project(integrated, version, ["BGCS", "BGCS.Runtime"],
-        "<PropertyGroup><BGCSGenerateBindings>true</BGCSGenerateBindings></PropertyGroup>")
-    msbuild_configuration = {**configuration, "output": {"root": "UnusedConfiguredRoot"}}
-    (integrated / "bindgen.json").write_text(json.dumps(msbuild_configuration, indent=2) + "\n", encoding="utf-8")
-    (integrated / "Program.cs").write_text("public static class Program { public static void Main() { } }\n", encoding="utf-8")
-    run([dotnet, "build", "Consumer.csproj", "--configuration", "Release", "-m:1", "-nr:false"],
-        integrated, evidence, "installed-advanced-clang-msbuild")
-    assert_generated_documentation(integrated / "obj")
-    if (integrated / "UnusedConfiguredRoot").exists():
-        raise RuntimeError("The installed advanced-worker MSBuild request escaped its intermediate output.")
     return {"configuration": configuration, "manifest": manifest,
         "evidence": {"manifestSha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
             "parserIdentity": parser_identity, "pluginAssets": [

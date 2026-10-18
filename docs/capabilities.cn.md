@@ -49,8 +49,7 @@ Chromium 浏览器解释/AOT、外部插件和真实库 fixture。它们来自�
 具体配置见 [lowering](lowering.cn.md) 与[实战手册](cpp-extension-cookbook.cn.md)。
 返回 `char*` 并不证明 UTF-8 或 ownership，函数名为 `Create` 也不证明存在安全释放函数。
 
-`AnalyzeAsync` 还能经 worker 保留类型化 Objective-C 声明事实；这是[仅分析能力](objective-c-facts.cn.md)，
-不代表 message-send、ARC 或 Apple runtime 绑定，生成入口会拒绝这类请求。
+当前产品接受 C/C++，Objective-C 模型与分析不在仅生成范围内；无法支持的 block/调用形状仍明确拒绝。
 
 ## Runtime、扩展与工作流
 
@@ -60,11 +59,11 @@ handle、call-scoped callback、显式 retained callback 协议及有限异步 c
 桌面阻塞 stop/join。
 
 普通插件只引用 `BGCS.Contracts`。源码贡献、目标、native/interop/managed transform、
-C++ lowering、managed projection/backend、产物处理、验证、原生 provider 和资产布局均有
+C++ lowering、managed projection/backend、产物处理和验证均有
 类型化端口。高级 Clang fact 插件刻意使用独立的 parser-pinned worker-only 接口与借用句柄，
 见[扩展文档](extensibility.cn.md)。
 
-CLI、SDK、workspace、显式启用的 MSBuild 使用同一 BindingHost。冻结的分组配置、确定顺序、
+CLI、SDK、workspace 使用同一 BindingHost。冻结的分组配置、确定顺序、
 依赖快照与扩展指纹控制缓存；命中缓存仍执行本次所需验证。最终契约检查和所属产物发布保护
 此前完整输出。
 
@@ -74,11 +73,8 @@ CLI、SDK、workspace、显式启用的 MSBuild 使用同一 BindingHost。冻�
 
 ## 平台范围
 
-Windows x64、Linux GNU x64、Intel macOS、Browser Wasm 是首发强制门禁；NativeAOT、
-干净安装 SDK/tool/Runtime/plugin/MSBuild 另有要求。Windows 本地通过不能替代 Linux/macOS
-执行，Chromium 通过也不认证 Firefox/Safari。ARM64、musl、Android、iOS、FreeBSD 必须分别
-完成解析目标、生成、托管编译、原生链接、实际调用、包消费等阶段，未完成的阶段保持明确状态。
-
-架构已实质区分宿主解析器、原生目标、SDK/sysroot、编译器、ABI、托管运行时和导入策略。
-这提供充分的平台扩展基础；完整平台支持仍必须由该平台真实矩阵建立，不能由目标名称或一次
-跨目标解析替代。
+必需 CI 是 Windows 完整生成器检查、Linux/macOS 生成器 smoke 和一个完整产品安装任务。
+核心基线和原有各宿主性能预算不变。AOT/Wasm 应用构建/运行仅为可选手动私有检查，
+相应目标事实与源码生成仍在范围内。ARM64、musl、Android、iOS、FreeBSD 的描述不自动
+认证目标运行，Chromium 通过也不认证其他浏览器。应用/平台调用结论需自己的准确回执，
+与源码生成验收分开记录。

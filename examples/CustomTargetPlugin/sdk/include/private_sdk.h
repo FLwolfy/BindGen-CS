@@ -1,0 +1,1 @@
+#define EXAMPLE_SDK_VALUE 42

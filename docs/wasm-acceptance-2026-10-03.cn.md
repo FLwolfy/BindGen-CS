@@ -1,5 +1,7 @@
 # BGCS 独立 Wasm 验收报告 — 2026-10-03
 
+> 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
+
 [English](wasm-acceptance-2026-10-03.md) | [Wiki](README.cn.md) | [独立测试流程](testing.md#independent-webassembly-invocation)
 
 ## 验收结论

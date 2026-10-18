@@ -9,20 +9,22 @@ namespace BGCS.RepositoryTools.Tests;
 public sealed class ArchitectureCommandTests
 {
     [Fact]
-    public void Validate_AcceptsTheTwelveGeneratorProjectBoundariesAndWorker()
+    public void Validate_AcceptsTheElevenGeneratorProjectBoundariesAndWorker()
     {
         using var repository = new Repository();
-        Assert.Equal(12, repository.projectCount);
+        Assert.Equal(11, repository.projectCount);
         Assert.Equal(0, repository.Validate());
     }
 
-    [Fact]
-    public void Validate_RejectsTheRetiredThirteenProjectManifest()
+    [Theory]
+    [InlineData("BGCS.NativeBuild")]
+    [InlineData("BGCS.MSBuild")]
+    public void Validate_RejectsRetiredImplementationProjects(string retired)
     {
         using var repository = new Repository();
         string path = Path.Combine(repository.root, "eng", "architecture", "project-dependencies.json");
         JsonNode manifest = JsonNode.Parse(File.ReadAllText(path))!;
-        manifest["projects"]!["BGCS.NativeBuild"] = new JsonArray();
+        manifest["projects"]![retired] = new JsonArray();
         File.WriteAllText(path, manifest.ToJsonString());
         Assert.Equal(2, repository.Validate());
     }
@@ -96,7 +98,7 @@ public sealed class ArchitectureCommandTests
             string project,
             string content
         ) {
-            string directory = Path.Combine(root, project == "BGCS.MSBuild" ? "integrations" : "src", project);
+            string directory = Path.Combine(root, "src", project);
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, project + ".csproj"), "<Project Sdk='Microsoft.NET.Sdk'>" + content + "</Project>");
         }

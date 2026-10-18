@@ -238,8 +238,13 @@ public sealed partial class BindingHost
                 parsedInputs.Add(analysis.snapshot!);
                 string targetId = analysis.module!.targetId;
                 ManagedRuntimeProfile runtimeProfile = BGCS.Platforms.ManagedRuntimeResolver.Resolve(analysis.target!, configuration.api.runtime
-                    ?? (analysis.target!.platformId == "emscripten" ? ManagedRuntimeKind.BrowserWasm
-                        : analysis.target!.platformId is "ios" or "ios-simulator" ? ManagedRuntimeKind.NativeAot : ManagedRuntimeKind.CoreClr));
+                    ?? (analysis.target!.platformId switch
+                    {
+                        "emscripten" => ManagedRuntimeKind.BrowserWasm,
+                        "ios" or "ios-simulator" => ManagedRuntimeKind.NativeAot,
+                        "windows" or "linux" or "macos" or "freebsd" or "android" => ManagedRuntimeKind.CoreClr,
+                        _ => throw new NotSupportedException("A custom target platform requires an explicit api.runtime execution model.")
+                    }));
                 string emittedLibraryName = configuration.library.nativeName;
                 if (!concreteTargets.Add(targetId)) throw new InvalidOperationException($"Two target selections resolve to '{targetId}'.");
                 ImmutableArray<NativeGeneratedInputMap> contributionMaps = contribution?.Mappings(targetId) ?? [];

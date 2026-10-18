@@ -60,7 +60,7 @@ installation certification of the final packages.
 `ISourceContributor` supplies generated inputs before the original C/C++ parse. It is
 different from an artifact processor: its public headers can introduce declarations that
 then pass through ordinary selection, analysis, lowering and C# generation. The same
-Contracts-only plugin manifest is consumed by the SDK, CLI and opt-in MSBuild integration.
+Contracts-only plugin manifest is consumed by the SDK and CLI.
 The port is currently covered by the implementation tests; the release and installation
 certification status remains in the implementation status document.
 
@@ -107,7 +107,7 @@ digests and native compilation inputs in the ordinary generation artifact manife
 standalone native build consumes published, verified inputs after the temporary source
 store has been released. Managed helpers enter the same candidate compilation and final
 contract checks as other generated C#; single-file output composes them into `Bindings.cs`.
-An invalid contribution or a failed managed/native build does not replace the previous
+An invalid contribution or a failed final generation validation does not replace the previous
 complete output set.
 
 The contributor runs once for each original target parse, before parser-cache lookup;
@@ -205,7 +205,7 @@ closure and pinned .NET host/runtime, parser resources, effective arguments, sou
 include-search order and directory membership. Unsupported ambient/compiler inputs disable
 reuse. Custom frontend/backend implementations and extensions without complete fingerprints
 do not silently share the built-in entries. Reports record each actual stage's hit, miss or
-not-used result; native construction is not currently cached. Transforms, processors and
+not-used result. Transforms, processors and
 all validations required by this request still run. See [cache configuration](configuration-guide.md#plugin-bootstrap-and-cache-policy).
 
 `IArtifactProcessor` currently replaces or deletes declared managed text and adds
@@ -213,10 +213,9 @@ helpers inside the current target's managed directory through
 an editor that closes after the stage. Updated digests follow the candidates; the built-in
 C# backend rereads imports and storage after processing. A custom backend with processors
 requires its own final validator. Single-file output recomposes additional C# helpers before
-checking imports. Native text processing remains under implementation.
+checking imports. Native artifacts are outside this managed editor surface. Use declared source contribution or a native shim instead.
 
-Native build and artifact package providers use neutral contracts and the same session
-registration rules. Each platform/provider still requires its own actual build, invocation
-and installed-product evidence. Advanced worker plugins also require their pinned parser
-and installed execution closure to pass those gates. Explicitly thread-safe Host service
-reuse remains subject to the implementation and acceptance status.
+Consumer compilation, native builds and packaging belong to external tools, not
+product extension ports. Advanced worker plugins still need their declared exact parser
+compatibility and execution closure. Service reuse must follow its explicit lifetime
+and thread-safety contract; an interface alone does not establish acceptance.

@@ -46,7 +46,8 @@ bash "${ROOT_DIR}/scripts/test-snapshot-manifest.sh"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-readiness-review-candidates.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-scoped-acceptance-removals.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-global-feature-evidence.py"
-"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-host-test-shards.py"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-test-case-evidence.py"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-release-payload.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-compiler-test-environment.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-locked-dotnet-bootstrap.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-locked-workload-manifests.py"
@@ -94,6 +95,8 @@ if [[ "${SKIP_RESTORE_BUILD}" != "1" ]]; then
     -nodeReuse:false
 fi
 touch "${GATE_DIR}/solution-build"
+"${DOTNET_CMD}" build "${ROOT_DIR}/eng/BGCS.TestDriver/BGCS.TestDriver.csproj" --configuration "${CONFIGURATION}" -m:1 -nr:false -p:TreatWarningsAsErrors=true
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-host-test-driver.py" --dotnet "${DOTNET_CMD}" --configuration "${CONFIGURATION}"
 
 log "Production source ownership, declaration style and public documentation"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
@@ -107,6 +110,7 @@ touch "${GATE_DIR}/architecture" "${GATE_DIR}/style" "${GATE_DIR}/documentation"
 log "Layer 1: Auto-discovered test projects under tests/"
 TEST_PROJECTS=()
 while IFS= read -r project_path; do
+  project_path="${project_path%$'\r'}"
   TEST_PROJECTS+=("${project_path}")
 done < <(discover_test_projects)
 
@@ -117,17 +121,9 @@ fi
 
 for project_path in "${TEST_PROJECTS[@]}"; do
   project_relative="${project_path#${ROOT_DIR}/}"
-  if [[ "${project_relative}" == "tests/BGCS.Tests/BGCS.Tests.csproj" && -n "${BGCS_HOST_SHARD_EVIDENCE:-}" ]]; then
-    log "Verify every current Host case from the eight accepted exact partitions"
-    "${PYTHON_CMD}" "${ROOT_DIR}/scripts/run-host-test-shards.py" aggregate \
-      --dotnet "${DOTNET_CMD}" --configuration "${CONFIGURATION}" \
-      --input "${BGCS_HOST_SHARD_EVIDENCE}" --output "${TEST_DIR}"
-    cp -R "${BGCS_HOST_SHARD_EVIDENCE}" "${TEST_DIR}/host-shards"
+  if [[ "${project_relative}" == "tests/BGCS.Tests/BGCS.Tests.csproj" ]]; then
+    "${PYTHON_CMD}" "${ROOT_DIR}/scripts/run-host-tests.py" --dotnet "${DOTNET_CMD}" --configuration "${CONFIGURATION}" --output "${TEST_DIR}"
   else
-    if [[ "${project_relative}" == "tests/BGCS.Tests/BGCS.Tests.csproj" && "${GITHUB_ACTIONS:-}" == "true" ]]; then
-      log "CI requires the exact complete eight-shard Host evidence; it must not silently rerun or omit Host cases."
-      exit 1
-    fi
     run_tests "${project_relative}"
   fi
 done
@@ -182,27 +178,9 @@ else
   if [[ "${snapshot_status}" != "3" ]]; then exit "${snapshot_status}"; fi
 fi
 
-log "Layer 3b: Locked upstream native implementations and generated C# calls"
-native_corpus="${BGCS_NATIVE_LIBRARY_ROOT:-${ROOT_DIR}/artifacts/real-library-native-corpus}"
-"${PYTHON_CMD}" "${ROOT_DIR}/scripts/corpus.py" restore \
-  --root "${native_corpus}" --lock "${ROOT_DIR}/tests/corpus/native-corpus.lock.json" \
-  --output "${ROOT_DIR}/artifacts/acceptance/native-corpus-lock.json"
-"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-upstream-native.py" --dotnet "${DOTNET_CMD}" \
-  --configuration "${CONFIGURATION}" --corpus-root "${native_corpus}" \
-  --runtime "${ROOT_DIR}/src/BGCS.Runtime/bin/${CONFIGURATION}/net10.0/BGCS.Runtime.dll" \
-  --generation-receipt "${ROOT_DIR}/artifacts/acceptance/corpus-c.json" \
-  --generation-receipt "${ROOT_DIR}/artifacts/acceptance/corpus-cpp.json" \
-  --output "${ROOT_DIR}/artifacts/acceptance/upstream-native.json"
-touch "${GATE_DIR}/upstream-native-invocation"
-
 log "Layer 4: Reviewed public API compatibility baseline"
-bash "${ROOT_DIR}/scripts/test-public-api-snapshot.sh"
+SKIP_RESTORE_BUILD=1 bash "${ROOT_DIR}/scripts/test-public-api-snapshot.sh"
 touch "${GATE_DIR}/api-compatibility"
-
-log "Layer 5: NuGet package, tool, and native RID consumer smoke tests"
-bash "${ROOT_DIR}/scripts/test-nuget-packages.sh"
-touch "${GATE_DIR}/nuget-tool"
-touch "${GATE_DIR}/native-package"
 
 log "Layer 6: Performance and cache budget"
 bash "${ROOT_DIR}/scripts/test-performance-budget.sh"

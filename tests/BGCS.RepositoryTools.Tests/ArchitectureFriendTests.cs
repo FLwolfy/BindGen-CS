@@ -105,7 +105,7 @@ public sealed class ArchitectureFriendTests
             }
         }
         internal void WriteSource(string owner, string text) => File.WriteAllText(Path.Combine(root, Path.GetDirectoryName(Project(owner))!, "Friend.cs"), text);
-        private static string Project(string owner) => (owner == "BGCS.MSBuild" ? "integrations/" : "src/") + owner + "/" + owner + ".csproj";
+        private static string Project(string owner) => "src/" + owner + "/" + owner + ".csproj";
         private void WriteProject(string relative, string content)
         {
             string path = Path.Combine(root, relative); Directory.CreateDirectory(Path.GetDirectoryName(path)!);

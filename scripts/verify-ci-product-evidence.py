@@ -11,17 +11,19 @@ import hashlib
 from browser_lifecycle_evidence import verify_receipt, verify_summary, verify_execution_identity
 from cpp_acceptance_fixture import expected_checks, MODES, AGGREGATE_CHECKS
 from source_contribution_evidence import verify_summary as verify_source_summary, verify_report as verify_source_report
+from installed_custom_target import CHECK as CUSTOM_TARGET_CHECK, validate_evidence as verify_custom_target
 
 MATRICES = {"installed-native-aot-full-abi-cpp-and-lifetime-matrix": 113,
             "installed-wasm-interpreter-full-import-matrix": 74,
             "installed-wasm-aot-full-import-matrix": 74}
-VS_CHECK = "installed-visual-studio2026-msbuild-exe-net-task-host-native-invocation-clean-rebuild"
-ADVANCED_CHECKS = ("installed-advanced-clang-plugin-sdk-msbuild-and-runtime-compile",
-                   "installed-advanced-clang-plugin-same-manifest-sdk-cli-msbuild")
+ADVANCED_CHECKS = ("installed-advanced-clang-plugin-sdk-and-runtime-compile",
+                   "installed-advanced-clang-plugin-same-manifest-sdk-cli")
 COMPLETE_SOURCE_CHECK = 'installed-complete-runtime-source-primitives-without-bgcs-references'
+SDK_CONTENT_CHECKS = ('installed-sdk-standard-contentfiles-build-and-publish',
+                      'installed-sdk-clean-published-worker-without-global-package-fallback')
 
 
-def validate(receipt: dict, revision: str, rid: str, require_vs2026: bool = False) -> None:
+def validate(receipt: dict, revision: str, rid: str) -> None:
     if not re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", revision):
         raise RuntimeError("The expected release source revision is invalid.")
     if (receipt.get("schemaVersion") != 1 or receipt.get("success") is not True
@@ -31,6 +33,8 @@ def validate(receipt: dict, revision: str, rid: str, require_vs2026: bool = Fals
         raise RuntimeError("Installed products were not certified from the exact clean complete release source.")
     if COMPLETE_SOURCE_CHECK not in receipt.get('checks', []):
         raise RuntimeError('The installed SDK did not compile and invoke its complete Runtime source without BGCS references.')
+    if not all(check in receipt.get('checks', []) for check in SDK_CONTENT_CHECKS):
+        raise RuntimeError('The installed SDK did not retain standard build/publish worker content and clean deployment generation.')
     content = receipt.get("checkedOutSourceSha256")
     if not isinstance(content, str) or not re.fullmatch(r"[0-9a-f]{64}", content):
         raise RuntimeError("The installed-product source content identity is missing.")
@@ -56,10 +60,12 @@ def validate(receipt: dict, revision: str, rid: str, require_vs2026: bool = Fals
                    or not isinstance(item.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) for item in packages)):
         raise RuntimeError("The physical product/symbol set or digest evidence is incomplete.")
     matrices = receipt.get("featureMatrices", [])
-    if (len(matrices) != len(MATRICES) or {item.get("name"): item.get("requiredChecks") for item in matrices} != MATRICES
-            or not all(name in receipt.get("checks", []) for name in MATRICES)
+    names = [item.get("name") for item in matrices]
+    if (len(set(names)) != len(names) or any(name not in MATRICES for name in names)
+            or any(item.get("requiredChecks") != MATRICES[item["name"]] for item in matrices)
+            or {name for name in receipt.get("checks", []) if name in MATRICES} != set(names)
             or "installed-tool-all-unified-generation-commands" not in receipt.get("checks", [])):
-        raise RuntimeError("Installed NativeAOT and both browser execution matrices did not all finish.")
+        raise RuntimeError("An optional application matrix is malformed or the installed CLI was not consumed.")
     execution = None
     for matrix in matrices:
         if not re.fullmatch(r"[0-9a-f]{64}", matrix.get("receiptSha256", "")):
@@ -77,11 +83,11 @@ def validate(receipt: dict, revision: str, rid: str, require_vs2026: bool = Fals
             or not re.fullmatch(r"[0-9a-f]{64}", advanced.get("manifestSha256", ""))
             or len(assets) != 2 or {item.get("file") for item in assets} != {"ClangFactPlugin.dll", "ClangFactPlugin.deps.json"}
             or any(not re.fullmatch(r"[0-9a-f]{64}", item.get("sha256", "")) for item in assets)):
-        raise RuntimeError("The installed advanced worker plugin was not verified through the same SDK/CLI/MSBuild manifest.")
-    if require_vs2026 and (VS_CHECK not in receipt.get("checks", [])
-            or not re.search(r"(?m)^\s*18\.\d+\.\d+(?:\.\d+)?\s*$", receipt.get("visualStudioMsbuildVersion", ""))):
-        raise RuntimeError("The dedicated Visual Studio2026 TaskHost/native invocation receipt is missing.")
+        raise RuntimeError("The installed advanced worker plugin was not verified through the same SDK/CLI manifest.")
     verify_source_summary(receipt)
+    if CUSTOM_TARGET_CHECK not in receipt.get("checks", []):
+        raise RuntimeError("The installed Contracts-only custom target was not consumed through both SDK and CLI.")
+    verify_custom_target(receipt.get("installedCustomTarget", {}))
 
 
 def verify_feature_report(report: dict, matrix: dict, parent: dict) -> None:
@@ -159,9 +165,8 @@ def main() -> None:
     parser.add_argument("archive", type=Path)
     parser.add_argument("--revision", required=True)
     parser.add_argument("--host-rid", required=True)
-    parser.add_argument("--require-vs2026", action="store_true")
     args = parser.parse_args()
-    validate(read_archive(args.archive), args.revision, args.host_rid, args.require_vs2026)
+    validate(read_archive(args.archive), args.revision, args.host_rid)
     print("Verified actual clean installed products for " + args.revision + " on " + args.host_rid)
 
 

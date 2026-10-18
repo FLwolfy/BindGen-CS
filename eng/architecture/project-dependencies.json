@@ -42,10 +42,6 @@
     "BGCS.Tool": [
       "BGCS",
       "BGCS.Contracts"
-    ],
-    "BGCS.MSBuild": [
-      "BGCS",
-      "BGCS.Contracts"
     ]
   },
   "executables": [

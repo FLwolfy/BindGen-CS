@@ -33,7 +33,6 @@ schema 拒绝未知内置字段。插件选项只有在 bootstrap 注册所属 n
 | 框架 | `net10.0` | 当前大版本 schema 固定此基线 |
 | Runtime 交付 | `package` | `source` |
 | 托管布局 | `split` | `singleFile`，默认 `Bindings.cs` |
-| 原生构建 | `none` | `sources`、`prebuilt` |
 | 缓存策略 | 启用 | 可以关闭；复用仍须证明输入完整 |
 
 ```json
@@ -46,7 +45,7 @@ schema 拒绝未知内置字段。插件选项只有在 bootstrap 注册所属 n
     "headers": ["include/sample.h"],
     "includeDirectories": ["include"]
   },
-  "targets": [{ "id": "host", "toolchain": "auto" }],
+  "targets": [{ "id": "host" }],
   "api": {
     "namespace": "Example.Sample",
     "name": "SampleApi",
@@ -56,9 +55,8 @@ schema 拒绝未知内置字段。插件选项只有在 bootstrap 注册所属 n
 }
 ```
 
-`generate` 产生经过验证的托管产物，以及所需的 C++ 桥接。`build` 还验证托管编译，
-执行声明的原生源码构建或预编译产物验证，然后联合发布。报告区分目标解析、源码解析、
-生成、托管编译、原生链接、调用和包装。构建通过不代表尚未执行的调用也通过。
+`generate` 产生经过验证的托管产物和按需 C++ bridge 源码；消费者在外部编译、链接、
+打包和部署。生成、消费者编译、真实原生调用是不同的证据阶段。
 
 ## 源码与语言事实
 
@@ -84,18 +82,18 @@ C 的 `includeHeaderHelpers` 默认为 `false`。普通绑定只导入外部 C �
 
 ## 目标、SDK 与托管运行环境
 
-每个 `targets[]` 有自己的 `id`、toolchain 选择和 `settings`。settings 包括
+每个 `targets[]` 有 `id`、可选 `triple` 和 `settings`。settings 包括
 `compilerPath`、`sysRoot`、普通及 C++ 系统头目录、宏定义和解析参数。
 简单程序名保留为发现请求；路径归属于声明该值的配置目录。原生目标 ID 表达 OS、CPU
 和 ABI；NuGet RID 表达资产选择，不能代替完整目标事实。
 
-worker 根据**宿主**选择。目标头文件、基础类型宽度、布局、调用 ABI、SDK 和原生构建
+worker 根据**宿主**选择。目标头文件、基础类型宽度、布局、调用 ABI 和 SDK
 根据**目标**选择。Clang 解析不要求最终编译器也是 Clang；使用 MSVC 或 GNU 时仍需匹配
 头文件和目标 ABI。跨目标请求不能混入宿主标准库头。
 
 `api.runtime` 可以选择 `coreClr`、`nativeAot`、`browserWasm`；省略时由 resolver 选择
-符合目标的默认值。托管运行时和导入方式都参与能力判断。浏览器 Wasm 采用显式静态
-native reference 和导出表 adapter。GNU 与 musl 资产路径分开。
+符合目标的默认值。托管运行时和导入方式都参与能力判断。浏览器 Wasm 发射
+由消费者显式链接的静态导出表 adapter。GNU 与 musl 保持不同 ABI 身份。
 Android SDK/API level、Apple 设备和模拟器 SDK 要求不能由一个短 target/RID 证明。
 
 通过 `doctor`、`inspect` 与[能力证据](capabilities.cn.md)检查实际解析的事实。
@@ -160,12 +158,13 @@ marshalling 能力；LibraryImport 验证也检查其生成源码。选择导入
 }
 ```
 
-独立消费者进程探测实际的每个 public、可写字段。字段顺序和托管总大小可以不同：
+静态 Roslyn 绑定从冻结的 `api.projectionInputs` 源码/引用元数据解析完整 public 可写标量字段，
+不运行消费者或测量 CLR offset/alignment。字段顺序可以不同：
 原始导入继续使用生成的原生载体，并单独检查按值调用 ABI。不会仅凭大小相同，就把
 外部类型直接放进导入签名。
 
 定宽整数和浮点字段必须保持种类、符号及宽度。数据地址字段可以使用非托管指针、
-`nint` 或 `nuint`，但实测指针宽度和字节序必须与目标相同；复制 packed 字段不假设
+`nint` 或 `nuint`，但声明的指针种类和目标宽度必须匹配；复制 packed 字段不假设
 地址天然对齐。复制地址不会保留指向的存储，也不转移所有权。调用者仍需维护真正的
 对象生命周期，并在有效范围内进行 unsafe 访问。等宽的 `long` 不能冒充地址声明。
 函数指针、字段重叠、嵌套聚合与缺乏证明的存储需要独立的类型化 adapter。逐字段复制
@@ -269,7 +268,7 @@ helper fragment。managed projection 添加公开托管类型与转换声明，�
 
 callable recipe 选择限定名称，可修改导出名、排除声明，或者包装独立规划的调用。
 `templateInstantiations` 选择具体类和固定函数模板。native shim 声明公开 C header、
-实现源码和准确符号，随后使用普通解析、构建与发布阶段。抽象虚接口回调需要明确有限
+实现源码和准确符号，随后使用普通解析、生成与发布阶段。抽象虚接口回调需要明确有限
 callback slot 和 native proxy 生命周期协议。
 
 具体 DTO 见[C++ cookbook](cpp-extension-cookbook.cn.md)、[lowering 架构](lowering.cn.md)、
@@ -314,17 +313,15 @@ target、toolchain、Runtime 模式与 processor 都参与生成身份。
 可复用阶段包括内置 frontend 的原始解析结果与内置 C# emission。解析复用还要求
 完整 worker/资源闭包、固定 .NET 执行环境、有效参数、源码内容和 include 搜索目录
 成员关系。无法建立闭包的环境或编译器输入会禁用解析复用。源码 contributor 在查询前
-执行，其实际捕获字节参与身份。托管投影、源码处理和请求的构建验证仍会执行；
-当前不缓存原生构建。不受支持的 frontend/backend、缺少完整上游指纹或处理器缺少完整指纹时禁用该阶段，
+执行，其实际捕获字节参与身份。托管投影、源码处理和最终源码契约验证仍会执行。不受支持的 frontend/backend、缺少完整上游指纹或处理器缺少完整指纹时禁用该阶段，
 不会复用不确定的字节。有完整指纹的处理器在查询前激活并声明输入，命中或未命中时
 都会执行。条目验证完整文件名 / 内容集合，损坏条目作为 miss 处理。
 `cache.maximumBytes` 默认 512 MiB，`cache.maximumEntryBytes` 默认 64 MiB；都必须为正，
-单条目最大 256 MiB，总容量至少容纳一个条目。缓存命中不能跳过本次请求需要的 build 或
-调用验证。
+单条目最大 256 MiB，总容量至少容纳一个条目。缓存命中不能跳过本次生成所需的最终契约和输入验证。
 
 ## 执行、工作区与发布
 
-`execution` 包含正数的会话、托管编译和原生构建 deadline。
+`execution` 包含正数的生成会话 deadline。
 
 `execution.diagnostics` 决定候选阶段的警告是否阻断发布。例如：
 
@@ -362,7 +359,7 @@ Ctrl+C 与 SDK 取消传给 Host 及 worker/native 进程树。取消或验证�
 ```
 
 workspace ID 唯一，依赖明确，执行前拒绝环路。输出不能互相重叠，也不能与受保护的
-input/cache 根重叠。generate/build 根据依赖图执行，失败的前置项目阻止依赖者发布。
+input/cache 根重叠。generate 根据依赖图执行，失败的前置项目阻止依赖者发布。
 `diff` 使用私有预览存储，保持正式输出；`inspect` 提供脱离解析器的 native、bridge、
 interop 和 managed 事实供审查。
 
@@ -377,9 +374,6 @@ interop 和 managed 事实供审查。
 frontend 提示。支持 `trace`、`debug`、`information`（或 `info`）、`warning`、`error`、
 `critical`、`none`。失败诊断始终显示；展示偏好不改变成功状态，也不删除 JSON/Host 结果中的
 诊断。这些设置属于命令选项，不参与生成输入或缓存身份。
-
-CMake 原生计划要求 CMake 3.24 或更新版本，包括其准确的 `cmake -E env --` 参数边界。
-provider 仍使用声明的编译器、头文件和原生目标，不静默换成宿主编译器。
 
 ## C 指针 factory 与显式成员方法
 
@@ -453,10 +447,10 @@ Host 在 emission 缓存查询前冻结每个声明的源码、程序集引用�
 消费者程序集始终要求完整的引用闭包，包括未选中的成员和纯类型转发依赖。
 
 例如把包含 `Vendor.Values.Answer` 的源码或程序集加入 `api.projectionInputs`，再声明
-`"expression": "global::Vendor.Values.Answer"`。`api.projectionInputs.defines` 在普通 `net10.0`
-验证工程的框架符号和默认 Debug 符号上追加。选中常量及其字段、签名、别名、依赖中的错误会使生成失败。
+`"expression": "global::Vendor.Values.Answer"`。`api.projectionInputs.defines` 在静态 `net10.0`
+框架符号上追加；`DEBUG` 等符号必须显式提供。选中常量及其字段、签名、别名、依赖中的错误会使生成失败。
 只有生成 API／上下文的手写 partial 方法体中，与常量求值无关的错误可以延后，因为常量求值无法执行
-这些方法体。`build` 仍对全部源码执行 warnings-as-errors 编译，不延后方法体错误。
+这些方法体。消费者构建仍需编译全部源码与方法体；静态绑定不是完整消费者构建证明。
 
 这些覆盖单独保留 `UserAsserted` 来源，不会提升为已经验证的原生事实。例如把原生 `42`
 呈现为托管 `43` 后，实际原生函数仍返回 `42`。修改枚举项数值会改变使用该托管名称传参时的数值，
@@ -649,6 +643,6 @@ C++ 文本值可以在创建它的同一次调用结束前复制为托管 `strin
 }
 ```
 
-这会包含模块、句柄、回调、异步、编解码、分配器、Bool8/Bool32、Pointer/ConstPointer、iterator、受限整数 Atomic、位字段、特殊数值存储与底层互操作工具，不增加生成器或 Runtime 包引用。分文件或单文件遵循普通输出配置。`sourceFeatures` 区分大小写、不允许重复，且仅用于源码模式。SDK 可通过 `RuntimeSourceCatalog.GetFeatureIds()` 查询精确的单独特性，通过 `EmissionRequest.additionalRuntimeSourceFeatures` 直接请求 backend 源码。配置、源码目录实现身份和选择的特性都参与生成缓存。
+这会包含模块、句柄、回调、异步、编解码、分配器、Bool8/Bool32、Pointer/ConstPointer、位字段、特殊数值存储与底层互操作工具，不增加生成器或 Runtime 包引用。分文件或单文件遵循普通输出配置。`sourceFeatures` 区分大小写、不允许重复，且仅用于源码模式。SDK 可通过 `RuntimeSourceCatalog.GetFeatureIds()` 查询精确的单独特性，通过 `EmissionRequest.additionalRuntimeSourceFeatures` 直接请求 backend 源码。配置、源码目录实现身份和选择的特性都参与生成缓存。
 
 包含实现不等于授予未支持的调用 ABI 或运行能力。特殊数值载体仍然只是存储形式，动态模块加载及动态 delegate 仍受执行环境限制。完整源码消费者与 Runtime 包具有相同的公共 Runtime 类型和成员。每个库可采用自己的源码 namespace，不共享可变模块状态。

@@ -16,7 +16,7 @@ public sealed class ControlledSourceFragmentVerifier
     /// <summary>Validates exact source bytes, finite declared placeholders and detached dependency identities.</summary>
     /// <param name="fragment">The immutable native source fragment.</param>
     /// <param name="source">The originating native graph.</param>
-    /// <param name="headers">The allowed parse and native build header inputs.</param>
+    /// <param name="headers">The allowed parsing and emitted bridge header inputs.</param>
     /// <param name="placeholders">Allowed expression substitution identities; empty for translation-unit declarations.</param>
     public void Validate(
         ControlledSourceFragment fragment,

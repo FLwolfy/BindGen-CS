@@ -1,6 +1,7 @@
 # 架构 Plan 逐项核对
 
-> 2026-10-18 生成器范围：本文旧构建/provider 数量与接口记录属于历史检查点。当前产品仅生成 C/C++ 绑定与 bridge 源码，项目/原生构建、链接与打包由外部系统负责；当前范围以 README、api 与 MSBuild 文档及 scope-removals.json 为准。
+> 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
+
 
 > 历史核对记录：下文是早期八工程方案及当时实现/证据的原始映射，不代表 BGCS 3.0 当前完成状态。3.0 的当前工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
 

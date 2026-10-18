@@ -9,11 +9,11 @@ import shutil
 import subprocess
 import uuid
 
-from host_test_shards import _trx, partition, validate_driver
+from test_case_evidence import _trx, validate_driver
 from importlib.util import module_from_spec, spec_from_file_location
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = spec_from_file_location('host_shard_runner', ROOT / 'scripts/run-host-test-shards.py')
+spec = spec_from_file_location('complete_host_runner', ROOT / 'scripts/run-host-tests.py')
 runner = module_from_spec(spec)
 spec.loader.exec_module(runner)
 
@@ -53,7 +53,7 @@ def main() -> None:
         if result.returncode != 0:
             raise RuntimeError('Structured discovery control failed: ' + result.stderr)
         report = json.loads(discovery.read_text())
-        validate_driver(report, None)
+        validate_driver(report, False)
         if mode == 'complete':
             if report['discoveryTotal'] != 8 or len(report['compiledMethods']) != 5:
                 raise RuntimeError('Inherited/generic/derived-attribute discovery lost or duplicated real cases.')
@@ -61,23 +61,20 @@ def main() -> None:
             generic = methods['BGCS.TestDriverControls.GenericCases.GenericTheory']
             if not generic['generic'] or not generic['theory']:
                 raise RuntimeError('The actual generic theory lost its compiled identity.')
-        for shard in sorted({partition(item['className']) for item in report['discoveredCases']}):
-            receipt = target / ('shard' + str(shard)) / 'driver.json'
-            selected = [item for item in report['discoveredCases'] if partition(item['className']) == shard]
-            result = subprocess.run(command[:-1] + [str(receipt), '--shard', str(shard)], cwd=ROOT, env=env, capture_output=True, text=True)
-            receipt.parent.mkdir(parents=True, exist_ok=True)
-            (receipt.parent / 'run.log').write_text(result.stdout + result.stderr, encoding='utf-8')
-            skipped_shard = mode == 'skipped' and any(item['className'].endswith('.SkippedCases') for item in selected)
-            if skipped_shard:
-                if result.returncode == 0 or receipt.exists() or 'failed, skipped, aborted' not in result.stderr:
-                    raise RuntimeError('The actual skipped required case was incorrectly certified.')
-                checks.append('skipped-required-case-rejected')
-            else:
-                if result.returncode != 0:
-                    raise RuntimeError('The exact discovered argument objects could not be executed: ' + result.stderr)
-                execution = json.loads(receipt.read_text())
-                validate_driver(execution, shard)
-                _trx(receipt.parent / ('BGCS.Tests.shard' + str(shard) + '.trx'), selected)
+        receipt = target / 'execution/driver.json'
+        result = subprocess.run(command[:-1] + [str(receipt), '--execute', 'true'], cwd=ROOT, env=env, capture_output=True, text=True)
+        receipt.parent.mkdir(parents=True, exist_ok=True)
+        (receipt.parent / 'run.log').write_text(result.stdout + result.stderr, encoding='utf-8')
+        if mode == 'skipped':
+            if result.returncode == 0 or receipt.exists() or 'failed, skipped, aborted' not in result.stderr:
+                raise RuntimeError('The actual skipped required case was incorrectly certified.')
+            checks.append('skipped-required-case-rejected')
+        else:
+            if result.returncode != 0:
+                raise RuntimeError('The exact discovered argument objects could not be executed: ' + result.stderr)
+            execution = json.loads(receipt.read_text(encoding='utf-8'))
+            validate_driver(execution, True)
+            _trx(receipt.parent / 'BGCS.Tests.trx', report['discoveredCases'])
         if mode == 'complete':
             checks.extend(('inherited-fact-and-theory-enumerated-and-executed', 'generic-theory-exact-objects-executed',
                            'literal-argument-identities-preserved-in-trx', 'derived-fact-attribute-enumerated'))

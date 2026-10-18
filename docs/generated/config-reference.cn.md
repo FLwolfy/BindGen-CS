@@ -6,7 +6,7 @@
 字段为对象 schema 的必填项，并不取代组合后完整配置的语义验证；基础配置可以提供当前文档省略的值。
 `source.languageStandard = null` 在冻结时根据语言选择 `c17` 或 `c++23`。目标、工具链和扩展能力仍须实际验证。
 
-schema SHA-256：`6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e3`。
+schema SHA-256：`35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0ce`。
 
 [配置指南](../configuration-guide.cn.md) | [快速开始](../getting-started.cn.md)
 
@@ -71,11 +71,10 @@ schema SHA-256：`6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0
 | `profiles.*.source.includeSystemDeclarations` | `"boolean"` | `false` | 否 |  |
 | `profiles.*.source.parseMacros` | `"boolean"` | `true` | 否 |  |
 | `profiles.*.source.parseComments` | `"boolean"` | `true` | 否 |  |
-| `profiles.*.targets` | `"array"` | `[{"id":"host","triple":null,"toolchain":"auto","settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | 否 | minItems=1 |
+| `profiles.*.targets` | `"array"` | `[{"id":"host","triple":null,"settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | 否 | minItems=1 |
 | `profiles.*.targets[]` | `"object"` | — | 否 | additionalProperties=false |
 | `profiles.*.targets[].id` | `"string"` | `"host"` | 否 |  |
 | `profiles.*.targets[].triple` | `["string","null"]` | `null` | 否 |  |
-| `profiles.*.targets[].toolchain` | `"string"` | `"auto"` | 否 |  |
 | `profiles.*.targets[].settings` | `"object"` | — | 否 | additionalProperties=false |
 | `profiles.*.targets[].settings.compilerPath` | `["string","null"]` | `null` | 否 |  |
 | `profiles.*.targets[].settings.sysRoot` | `["string","null"]` | `null` | 否 |  |
@@ -701,11 +700,10 @@ schema SHA-256：`6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0
 | `source.includeSystemDeclarations` | `"boolean"` | `false` | 否 |  |
 | `source.parseMacros` | `"boolean"` | `true` | 否 |  |
 | `source.parseComments` | `"boolean"` | `true` | 否 |  |
-| `targets` | `"array"` | `[{"id":"host","triple":null,"toolchain":"auto","settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | 否 | minItems=1 |
+| `targets` | `"array"` | `[{"id":"host","triple":null,"settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | 否 | minItems=1 |
 | `targets[]` | `"object"` | — | 否 | additionalProperties=false |
 | `targets[].id` | `"string"` | `"host"` | 否 |  |
 | `targets[].triple` | `["string","null"]` | `null` | 否 |  |
-| `targets[].toolchain` | `"string"` | `"auto"` | 否 |  |
 | `targets[].settings` | `"object"` | — | 否 | additionalProperties=false |
 | `targets[].settings.compilerPath` | `["string","null"]` | `null` | 否 |  |
 | `targets[].settings.sysRoot` | `["string","null"]` | `null` | 否 |  |

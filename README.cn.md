@@ -2,15 +2,23 @@
 
 [English](README.md) | [简体中文](README.cn.md)
 
-**BGCS 为 C / C++ 库生成 C# 绑定。** 提供原生头文件和版本化配置后，统一的 Host
-通过独立 Clang worker 解析声明，分析 ABI 与生命周期契约，按需生成 C bridge，
-再输出 raw 调用入口和具备依据的友好 C# API。
+**BGCS 为 C/C++ 库生成 C# 绑定。** 输入是原生头文件和版本化配置，输出是 C#、按需的
+C ABI bridge 源码、manifest 和诊断元数据。应用自己的构建系统负责编译、链接、打包和部署。
 
-BGCS 3.0 使用 .NET 10 和 C# 14。默认采用 C17 / C++23、实例 API、FunctionTable
-导入、按职责分文件和独立 Runtime 包。新入口是 `BindingHost`，配置采用分组格式；
-旧配置读取器与旧生成器 API 不属于这个接口。
+```text
+头文件 + 配置 → BGCS 解析 / 分析 / 生成 → C# + bridge + manifest
+                                                   ↓
+                                  消费者编译 / 链接 / 打包 / 部署
+```
 
-## 从头文件开始
+CLI 和普通 C# 类库使用同一流程。`BindingHost` 是一次生成请求的协调器，不是网络服务
+或后台守护进程。Clang 解析在独立 worker 内运行。生成器与 `BGCS.Runtime` 分开；后者
+为生成后的应用提供调用和生命周期基础设施。
+
+BGCS 3.0 使用 .NET 10 / C# 14，默认 C17/C++23、实例 API、FunctionTable、分文件和
+package Runtime。不保留旧生成器 facade、flat 配置读取器或内置消费者/原生构建命令。
+
+## 从头文件生成
 
 3.0.0 发布后：
 
@@ -22,20 +30,15 @@ bindgen-cs validate bindgen.json
 bindgen-cs generate bindgen.json
 ```
 
-C++ 使用同一个配置入口和命令，选择 `--language cpp` 并提供 C++ 头文件。
-`generate` 自动生成支持的 native bridge 和 C#。源码使用先构建仓库，再运行工具：
+源码 checkout 可直接构建并运行工具：
 
 ```bash
-dotnet build BindGen-CS.slnx -c Release
-dotnet run --project src/BGCS.Tool -c Release -- generate examples/QuickStart/bindgen.json
+dotnet build src/BGCS.Tool -c Release
+dotnet run --project src/BGCS.Tool -c Release --no-build -- generate examples/QuickStart/bindgen.json
 ```
 
-原生构建还需要对应编译器与目标 SDK。解析器携带的 builtin headers 补充目标 SDK
-和标准库的编译器支持文件。
-
-## 配置与构建
-
-简单 C 库只需要一个 `bindgen.json`：
+C++ 使用相同命令并选择 `--language cpp`，支持的操作自动降为 bridge 源码。
+生成器不编译这些源码，也不据此认证下游原生库与声明一致。
 
 ```json
 {
@@ -47,38 +50,9 @@ dotnet run --project src/BGCS.Tool -c Release -- generate examples/QuickStart/bi
 }
 ```
 
-配置路径相对于声明该路径的文档解析。`init` 同时写入对应 schema 引用。
-`generate` 在 `Generated/<resolved-target>/` 下生成托管源码、按需的 bridge、
-manifest 和报告。
-
-生成的托管文件由消费者工程编译；原生库与 bridge 源码由自己的 CMake、编译器或应用构建系统编译，再显式部署或链接。BGCS 不构建消费者工程，也不编译、链接、打包或部署原生库。解析和生成成功不代表已经完成原生调用验证。
-
-生成绑定的消费工程使用 `net10.0`，启用 unsafe blocks，通常只引用 `BGCS.Runtime`。
-编译所选目标的 `managed` 文件并部署已验证的原生库。QuickStart 将 `bgcs_add` 映射为 `Add`：
-
-```csharp
-using QuickStart.Generated;
-
-using NativeApi api = NativeApi.Load("/absolute/path/to/the/built/native/library");
-int answer = api.Raw.Add(19, 23);
-```
-
-每个 API 实例拥有独立的模块会话和函数表。资源通过 lease 保留清理所需的模块。
-`runtime.mode = "source"` 输出所需的 Runtime 源码闭包；`output.layout = "singleFile"`
-将托管输出合并为 `Bindings.cs`。完整消费方式、C++ 构造、自定义加载器、Runtime 模式
-和构建配置见[快速开始](docs/getting-started.cn.md)。
-
-## 四个产品，共用流水线
-
-| 产品 | 用途 |
-| --- | --- |
-| `BGCS` | 完整嵌入式 SDK、worker 部署和显式启用的 MSBuild 集成 |
-| `BGCS.Contracts` | 中立不可变模型和普通插件契约 |
-| `BGCS.Runtime` | 生成绑定的消费支持，不依赖生成器或解析器 |
-| `BindGen-CS` | 使用同一套 Host 流水线的命令行工具 |
-
-内部工程作为实现模块随 SDK / 工具交付。用户不需要为 C++ 或 lowering 手动
-拼装额外功能包。工具 RID 分包与解析器 runtime 包提供六种声明的桌面宿主资源闭包。
+相对路径归属声明它的配置，`init` 同时写出 schema。消费工程编译所选目标的托管文件、
+启用 unsafe，通常引用 `BGCS.Runtime`。原生工程编译/链接 bridge 时需保持头文件、宏、
+packing 和 ABI 一致。见 [QuickStart](examples/QuickStart/README.md)和[快速开始](docs/getting-started.cn.md)。
 
 ```csharp
 using BGCS;
@@ -90,62 +64,57 @@ if (!result.success)
     throw new InvalidOperationException(result.GetDiagnosticSummary());
 ```
 
-MSBuild 生成必须明确设置 `BGCSGenerateBindings = true`。编译输入从 `obj` 下已验证的
-manifest 精确读取。详见 [MSBuild](docs/msbuild.cn.md)和[包与分发](docs/packages.cn.md)。
+SDK 首次使用时从已还原的包内容准备匹配的宿主 worker，不依赖 BGCS 构建 targets。
+可以在自己的构建脚本、应用或工具中调用生成；生成应用的普通构建仍由自己负责。
 
-## ABI 安全、扩展与平台
+## 四个产品，十一个实现工程
 
-FunctionTable 是默认导入方式。目标运行时和 ABI 支持时，可以通过 `api.importMode`
-选择 `dllImport` 或 `libraryImport`。三种方式复用原生事实和语义分析。
-raw ABI 始终可访问；友好字符串、buffer、拥有型对象和 callback 需要明确的转换与
-生命周期契约。大小相同不能证明字段布局、对齐或按值调用兼容。
-无法表达的 ABI 会被拒绝，或者要求提供原生 shim。
-
-普通插件引用 `BGCS.Contracts`，通过中立端口扩展目标、模型变换、lowering、
-托管投影、源代码贡献、产物处理或验证。分组 `cpp` recipe、显式模板选择和原生 shim
-表达库特有的 C++ 语义。详见[扩展](docs/extensibility.cn.md)、
-[配置指南](docs/configuration-guide.cn.md)和[C++ 实战手册](docs/cpp-extension-cookbook.cn.md)。
-
-运行生成器的宿主、原生目标、工具链和托管运行时各自独立。target provider 提供 ABI
-与 SDK 事实；浏览器 Wasm 使用静态原生引用、经过验证的 adapter 和运行能力描述。
-新增目标家族不需要复制所有 emitter。原生二进制和实际平台调用仍需独立认证。
-请查看[能力表](docs/capabilities.cn.md)与当前收据：能解析目标或生成产物不等于生产支持。
-
-## 命令与验证
-
-| 命令 | 用途 |
+| 产品 | 用途 |
 | --- | --- |
-| `init`、`schema`、`explain` | 创建分组配置、输出 schema、解释诊断 |
-| `doctor`、`validate`、`inspect` | 检查环境和配置、查看冻结模型 |
-| `generate` | 生成 C# 与所需的 native bridge 源码 |
-| `bridge` | 仅生成 native bridge 源码，不执行托管投影 |
-| `diff`、`workspace` | 不发布地比较产物，或执行有明确项目依赖的工作区 |
-| `version` | 检查实现与解析器身份 |
+| `BGCS` | 完整嵌入式生成 SDK，包含内置实现和 worker 资源 |
+| `BGCS.Contracts` | 中立模型与普通插件契约 |
+| `BGCS.Runtime` | 独立的绑定消费支持 |
+| `BindGen-CS` | 使用同一生成流程的 CLI |
 
-仓库审计与 SBOM 使用不随产品交付的 `eng/BGCS.RepositoryTools` 工程；原生库及消费者编译由外部构建负责。
+内部模块随完整 SDK/工具交付，不需要拼装额外 C++ 功能包。
+`runtime.mode = "source"` 可改为发射 Runtime 源码；`output.layout = "singleFile"`
+将托管输出合并到 `Bindings.cs`。
 
-```bash
-dotnet test BindGen-CS.slnx -c Release
-python scripts/test-native-aot-bindings.py
-python scripts/test-wasm-bindings.py
-python scripts/test-wasm-bindings.py --aot
-bash scripts/run-full-test-matrix.sh
-```
+生成的 API 实例拥有模块会话；调用、拥有型 handle、callback 和 operation 保留清理所需
+lease。Raw ABI 可直接使用；string/Span/owned 等友好 API 需要明确语义和生命周期证据。
 
-浏览器测试需要 .NET 10 `wasm-tools` workload、Python 和经过接受的浏览器。
-发布门禁还覆盖真实库语料、包安装、架构、发布故障、worker 崩溃、生命周期和性能。
-完整包安装验收运行真实消费应用，并对比重复打包内容。缺少前提条件会让必需门禁失败。
-本地部分检查不能证明所有平台已认证，也不能让版本达到发布条件。
+## 宿主、目标、SDK 与事实
 
-- [文档索引](docs/README.cn.md)
-- [测试](docs/testing.md)
-- [架构](docs/architecture.cn.md)
-- [发布](docs/publish.cn.md)
-- [贡献](CONTRIBUTING.md)
+省略目标时检测宿主目标，Linux GNU 与 musl 不混同。显式目标选择另一种 ABI。
+provider 映射目标身份和能力，Clang 读取声明并观察目标类型/布局事实。
+provider 或目标名称不会替用户提供专有 SDK 头文件。
+
+例如 Windows 可使用 Windows parser worker 和显式提供的 NDK sysroot/头文件路径，
+生成 Android ARM64 绑定。Android 编译、链接和设备部署属于消费者。
+见[平台扩展](docs/platform-extension.cn.md)。私有插件可描述特殊 SDK/目标，但须提供真实输入、
+能力和已有受支持托管 runtime。未知 ABI 分类或 runtime 行为仍需实现或 shim；
+这不等于 Switch 或其他专有平台的零配置支持。
+
+Clang 不必是最终原生编译器，但专属头文件分支、布局和调用约定仍须一致。
+无法支持的输入会明确诊断，不会通过隐藏的编译器执行路径补丁替换。
+大小相同不证明 ABI 兼容；目标解析、生成和实际平台调用是不同结论。
+
+## 扩展与验证
+
+Contracts-only 插件提供目标映射、源码输入、变换、C++ lowering、托管投影、backend、
+产物处理和验证。服务归属会话，状态和外部输入需提供缓存指纹；解析器专属高级贡献器
+只在 worker 运行。见[扩展](docs/extensibility.cn.md)、[配置](docs/configuration-guide.cn.md)
+和 [C++ 手册](docs/cpp-extension-cookbook.cn.md)。
+
+必需 CI 是三个生成器任务（Windows 完整、Linux/macOS smoke）和一个完整产品安装任务。
+核心功能基线和原有各宿主性能预算保持必需。AOT/Wasm 应用构建/运行仅为手动、可选的
+私有诊断；相应目标事实与源码生成仍在范围内。本地子集不能认证最终发布或所有平台。
+
+- [文档](docs/README.cn.md) · [架构](docs/architecture.cn.md) · [评估](docs/assessment.cn.md)
+- [测试](docs/testing.cn.md) · [包](docs/packages.cn.md) · [发布](docs/publish.cn.md)
 
 ## 许可证与解析器资源
 
-BGCS 使用 [MIT License](LICENSE)，衍生组件保留其声明。
-[Frontend 资源目录](src/BGCS.Frontend.Clang/Resources/Clang/README.md)记录随包 Clang
-builtin headers 的来源、checksum 和 Apache-2.0 WITH LLVM-exception 许可证。
-这些资源随匹配的解析 worker 交付，不替代 Windows SDK、libc、C++ 标准库或目标 sysroot。
+BGCS 使用 [MIT License](LICENSE)，保留组件维持各自声明。
+[解析器资源](src/BGCS.Frontend.Clang/Resources/Clang/README.md)记录 Clang builtin headers
+来源及 Apache-2.0 WITH LLVM-exception 许可；它们补充而不替代目标 SDK、libc 或 C++ 标准库。

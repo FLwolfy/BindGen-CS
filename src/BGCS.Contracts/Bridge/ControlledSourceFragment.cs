@@ -28,7 +28,7 @@ public sealed record ControlledSourceFragment(
     public ImmutableArray<StableId> declarationDependencies { get; init; } = [];
     /// <summary>Gets explicitly referenced source types.</summary>
     public ImmutableArray<StableId> typeDependencies { get; init; } = [];
-    /// <summary>Gets headers already declared as parse and native build inputs.</summary>
+    /// <summary>Gets headers already declared as parsing and bridge source dependencies.</summary>
     public ImmutableArray<string> requiredHeaders { get; init; } = [];
     /// <summary>Gets the source's semantic assertion, which is never promoted into independently verified evidence.</summary>
     public Evidence evidence { get; init; } = new(EvidenceLevel.UserAsserted, "native-source-fragment");

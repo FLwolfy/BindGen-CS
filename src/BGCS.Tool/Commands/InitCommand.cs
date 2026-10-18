@@ -73,7 +73,7 @@ internal static partial class InitCommand
         SchemaVersion = 1,
         Library = new { Id = "native", NativeName = cpp ? "native_bridge" : "native" },
         Source = new { Language = cpp ? "cpp" : "c", LanguageStandard = cpp ? "c++23" : "c17", Headers = new[] { nativeInput }, IncludeDirectories = includeFolder == "." ? Array.Empty<string>() : new[] { includeFolder }, IncludeTransitivelyReferencedHeaders = true },
-        Targets = new[] { new { Id = "host", Toolchain = "auto" } },
+        Targets = new[] { new { Id = "host" } },
         Api = new { Namespace = "Native.Bindings", Name = "NativeApi", Style = "instance", ImportMode = "functionTable", Framework = "net10.0" },
         Runtime = new { Mode = "package" },
         Output = new { Root = "Generated", Layout = "split" },

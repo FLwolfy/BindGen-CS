@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using BGCS.Contracts.Targets;
 using BGCS.Platforms.Targeting.Providers;
+using BGCS.Platforms.Capabilities;
 
 namespace BGCS.Platforms.Targeting;
 
@@ -63,6 +64,7 @@ public sealed class TargetResolver
     /// <exception cref = "PlatformNotSupportedException">
     /// The host alias cannot be resolved for this operating system or process architecture.
     /// </exception>
+    /// <exception cref="NotSupportedException">A custom platform has no declared capability profile.</exception>
     public NativeTargetDescriptor Resolve(NativeTargetRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -74,6 +76,7 @@ public sealed class TargetResolver
                 continue;
             if (candidate.targetId != concrete.targetId)
                 throw new InvalidOperationException($"Provider '{provider.GetType().FullName}' changed target identity '{concrete.targetId}' to '{candidate.targetId}'.");
+            _ = PlatformCapabilityCatalog.Get(candidate);
             if (resolved is not null)
                 throw new InvalidOperationException($"Multiple native target providers claim '{concrete.targetId}'.");
             resolved = candidate;
@@ -95,7 +98,13 @@ public sealed class TargetResolver
         if (OperatingSystem.IsWindows())
             return new("windows-" + architecture + "-msvc");
         if (OperatingSystem.IsLinux())
-            return new("linux-" + architecture + "-gnu");
+        {
+            string rid = RuntimeInformation.RuntimeIdentifier;
+            string abi = rid == "linux-musl-" + architecture ? "musl"
+                : rid == "linux-" + architecture ? "gnu"
+                : throw new PlatformNotSupportedException($"Linux host runtime '{rid}' does not establish GNU or musl ABI identity. Select an explicit native target ID.");
+            return new("linux-" + architecture + "-" + abi);
+        }
         if (OperatingSystem.IsMacOS())
             return new("macos-" + architecture + "-darwin");
         if (OperatingSystem.IsFreeBSD())

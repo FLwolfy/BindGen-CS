@@ -17,15 +17,10 @@ concurrency:
 
 jobs:
   packages:
-    name: Installed BGCS products (${{ matrix.os }})
+    name: Installed product baseline
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
     timeout-minutes: 90
-    strategy:
-      max-parallel: 1
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2022, macos-15-intel, windows-2025-vs2026]
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,16 +39,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-      - name: Discover actual Visual Studio2026 MSBuild.exe
-        if: matrix.os == 'windows-2025-vs2026'
-        shell: pwsh
-        run: |
-          $instances = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -products '*' -requires Microsoft.Component.MSBuild -version '[18.0,19.0)' -format json -utf8 | ConvertFrom-Json
-          $instance = $instances | Where-Object { $_.catalog.productLineVersion -eq '2026' } | Select-Object -First 1
-          if ($null -eq $instance) { throw 'The dedicated runner did not supply an actual Visual Studio2026 installation.' }
-          $taskMsbuild = Join-Path $instance.installationPath 'MSBuild\Current\Bin\MSBuild.exe'
-          if (-not (Test-Path -LiteralPath $taskMsbuild -PathType Leaf)) { throw 'Visual Studio2026 MSBuild.exe is unavailable.' }
-          "BGCS_MSBUILD_EXE=$taskMsbuild" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Download same-revision accepted Intel macOS parser
         if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@v4
@@ -70,18 +55,26 @@ jobs:
           sha256sum --check --strict SHA256SUMS
           cd ../../..
           python scripts/parser_runtime_provenance.py verify artifacts/clang-runtime/osx-x64
-      - name: Install .NET 10 native WebAssembly workload for installed products
-        shell: bash
-        run: python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/wasm.json
       - name: Pack and install all four products
         shell: bash
         env:
           CONFIGURATION: Release
           BGCS_OSX_X64_PACKAGE_RUNTIME_DIR: ${{ github.workspace }}/artifacts/clang-runtime/osx-x64
-        run: python scripts/compiler_test_environment.py -- bash scripts/test-nuget-packages.sh
+        run: |
+          export PACKAGE_TEST_VERSION="$(python -c 'import xml.etree.ElementTree as E; print(E.parse("Directory.Build.props").findtext("./PropertyGroup/Version"))' | tr -d '\r')"
+          python scripts/compiler_test_environment.py -- bash scripts/test-nuget-packages.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: product-package-evidence-${{ matrix.os }}
+          name: product-package-evidence-windows-2022
           path: artifacts/verification/packages
           overwrite: true
+      - name: Upload accepted product packages without repacking
+        uses: actions/upload-artifact@v4
+        with:
+          name: accepted-product-packages
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+            artifacts/nuget/package-verification.json
+          if-no-files-found: error

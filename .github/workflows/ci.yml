@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    branches:
-      - "**"
+    branches: ["**"]
   pull_request:
 
 concurrency:
@@ -14,602 +13,107 @@ permissions:
   contents: read
 
 jobs:
-  gnu-compatibility-smoke:
-    name: Early GNU compiler/parser compatibility smoke
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
+  generator:
+    name: ${{ matrix.name }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - os: windows-2022
+            name: Generator baseline (Windows x64)
+            target: windows-x64-msvc
+            compiler: ""
+            baseline: full
+          - os: ubuntu-24.04
+            name: Generator smoke (Linux x64)
+            target: linux-x64-gnu
+            compiler: g++
+            baseline: smoke
+            rid: linux-x64
+          - os: macos-15-intel
+            name: Generator smoke (macOS x64)
+            target: macos-x64-darwin
+            compiler: clang++
+            baseline: smoke
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
     env:
-      BGCS_CPP2C_CXX: g++
-      BGCS_CC: gcc
-      BGCS_GNU_CXX: g++
-      BGCS_GNU_CC: gcc
+      BGCS_CPP2C_CXX: ${{ matrix.compiler }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Initialize MSVC and Windows SDK
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
       - name: Install exact locked .NET SDK
         run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
       - name: Verify locked SDK and isolated runtime
-        run: python scripts/verify-locked-toolchain.py --output artifacts/gnu-smoke/sdk.json
-      - name: Record actual GNU compiler identity
+        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
+      - name: Install hash-locked performance metrics
+        run: python -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r scripts/requirements-performance.txt
+      - name: Build locked Intel macOS parser supplement
+        if: runner.os == 'macOS'
         shell: bash
         run: |
-          mkdir -p artifacts/gnu-smoke
-          { command -v gcc; gcc --version; command -v g++; g++ --version; } | tee artifacts/gnu-smoke/compilers.log
-      - name: Restore and build only the real Host tests and Worker closure
+          BGCS_CLANG_RUNTIME_DIR="$GITHUB_WORKSPACE/artifacts/clang-runtime/osx-x64" bash scripts/setup-macos-x64-clang-runtime.sh
+          echo "BGCS_CLANG_RUNTIME_DIR=$GITHUB_WORKSPACE/artifacts/clang-runtime/osx-x64" >> "$GITHUB_ENV"
+          echo "DYLD_LIBRARY_PATH=$GITHUB_WORKSPACE/artifacts/clang-runtime/osx-x64" >> "$GITHUB_ENV"
+          echo "$GITHUB_WORKSPACE/artifacts/clang-runtime/bin" >> "$GITHUB_PATH"
+      - name: Full retained Windows functionality exactly once
+        if: matrix.baseline == 'full'
+        shell: bash
+        run: python scripts/compiler_test_environment.py -- bash scripts/run-full-test-matrix.sh
+      - name: Build and execute the finite non-Windows generator baseline
+        if: matrix.baseline == 'smoke'
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
+          unset Platform PLATFORM platform
           python scripts/source_ownership.py
-          unset Platform PLATFORM platform
-          dotnet restore tests/BGCS.Tests/BGCS.Tests.csproj 2>&1 | tee artifacts/gnu-smoke/restore.log
-          dotnet build tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-restore -m:2 -nr:false 2>&1 | tee artifacts/gnu-smoke/build.log
-      - name: Exercise generated GNU standard values, DTO storage and C typedef consumers
+          dotnet restore tests/BGCS.Tests/BGCS.Tests.csproj
+          dotnet build tests/BGCS.Tests/BGCS.Tests.csproj -c Release --no-restore -m:2 -nr:false -p:TreatWarningsAsErrors=true
+          dotnet build src/BGCS.Tool/BGCS.Tool.csproj -c Release -m:2 -nr:false -p:TreatWarningsAsErrors=true
+          python scripts/run-generator-smoke.py --dotnet "$DOTNET_ROOT/dotnet" --output artifacts/generator-smoke
+          python scripts/compiler_test_environment.py -- bash scripts/test-performance-budget.sh
+      - name: Consume the current host SDK and CLI from isolated packages
+        if: matrix.baseline == 'smoke'
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           unset Platform PLATFORM platform
-          smoke_filter="$(python scripts/verify-gnu-smoke.py --print-filter)"
-          python scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-build --no-restore -m:1 -nr:false --filter "$smoke_filter" --results-directory artifacts/gnu-smoke --logger "trx;LogFileName=gnu-smoke.trx" --logger "console;verbosity=detailed" 2>&1 | tee artifacts/gnu-smoke/native-test.log
-      - name: Reject missing duplicate skipped or changed GNU smoke cases
-        run: python scripts/verify-gnu-smoke.py --trx artifacts/gnu-smoke/gnu-smoke.trx --output artifacts/gnu-smoke/cases.json
-      - name: Upload GNU smoke TRX and native compiler failure diagnostics
+          version="0.0.0-ci.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          parser=()
+          if [[ "$RUNNER_OS" == "macOS" ]]; then parser=(--parser-osx-x64 "$BGCS_CLANG_RUNTIME_DIR"); fi
+          dotnet build src/BGCS.Tool/BGCS.Tool.csproj -c Release -r "${{ matrix.rid }}" -m:2 -nr:false -p:Version="$version"
+          python scripts/compiler_test_environment.py -- python eng/pack.py --configuration Release --version "$version" --output artifacts/host-packages --no-build --host-only "${{ matrix.rid }}" --include-host-tool --verify-repeat-content "${parser[@]}"
+          python scripts/compiler_test_environment.py -- python eng/verify-packages.py --version "$version" --packages artifacts/host-packages --output artifacts/host-installed --sdk-only --host-tool
+      - name: Upload exact generator evidence
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gnu-compatibility-smoke
-          path: artifacts/gnu-smoke
-          if-no-files-found: error
-
-  wasm-invocation:
-    name: Independent Wasm invocation (${{ matrix.os }}, ${{ matrix.deployment }})
-    timeout-minutes: 45
-    strategy:
-      max-parallel: 2
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2022, macos-15-intel]
-        deployment: [interpreter, aot]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install exact locked .NET SDK
-        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
-
-      - name: Verify locked SDK and isolated runtime
-        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-
-      - name: Build missing parser runtime for macOS Intel
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
-          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
-          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
-
-      - name: Install and verify locked native WebAssembly workload
-        run: python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/wasm.json
-
-      - name: Compile the explicit native fixture with the selected Wasm workload
-        shell: bash
-        run: |
-          python - <<'PYCODE'
-          import json, os, subprocess
-          from pathlib import Path
-          environment = {key: value for key, value in os.environ.items() if key.casefold() != 'platform'}
-          query = subprocess.check_output(['dotnet', 'msbuild', 'tests/wasm/Consumer.project.xml', '-nologo',
-              '-getProperty:EmscriptenSdkToolsPath,EmscriptenCacheSdkCacheDir'], text=True, env=environment)
-          properties = json.loads(query)['Properties']
-          compiler = Path(properties['EmscriptenSdkToolsPath']) / 'bin' / ('clang.exe' if os.name == 'nt' else 'clang')
-          sysroot = Path(properties['EmscriptenCacheSdkCacheDir']) / 'sysroot'
-          if not compiler.is_file() or not sysroot.is_dir(): raise RuntimeError('Missing locked workload compiler/sysroot.')
-          output = Path('artifacts/wasm-fixture-compile'); output.mkdir(parents=True, exist_ok=True)
-          source = output / 'fixture.c'; source.write_text('int fixture_add(int a, int b) { return a+b; }\n')
-          target = output / 'fixture.o'
-          subprocess.run([str(compiler), '--target=wasm32-unknown-emscripten', '--sysroot=' + str(sysroot),
-              '-std=c17', '-c', str(source), '-o', str(target)], check=True, env=environment)
-          if target.read_bytes()[:4] != b'\0asm': raise RuntimeError('Fixture compiler produced no Wasm object.')
-          PYCODE
-
-      - name: Generate, link, and invoke all import modes in a browser
-        if: matrix.deployment == 'interpreter'
-        run: python scripts/test-wasm-bindings.py
-
-      - name: Generate, link, and invoke all import modes with Wasm AOT
-        if: matrix.deployment == 'aot'
-        run: python scripts/test-wasm-bindings.py --aot
-
-      - name: Reject a corrupted native result
-        if: matrix.deployment == 'interpreter'
-        shell: bash
-        run: |
-          if python scripts/test-wasm-bindings.py --inject-native-error --output artifacts/wasm-negative; then
-            echo "A corrupted native result was incorrectly accepted." >&2
-            exit 1
-          fi
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          report = json.loads(next(Path('artifacts/wasm-negative').glob('*/report.json')).read_text())
-          assert not report['success']
-          assert not report['invocation']['success']
-          assert 'scalar arguments/result' in report['invocation']['error']
-          PY
-
-      - name: Upload standalone Wasm evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: wasm-invocation-${{ matrix.os }}-${{ matrix.deployment }}
-          path: |
-            artifacts/wasm-acceptance/**/report.json
-            artifacts/wasm-acceptance/**/*.log
-            artifacts/wasm-acceptance/**/DllImport.json
-            artifacts/wasm-acceptance/**/LibraryImport.json
-            artifacts/wasm-acceptance/**/FunctionTable.json
-            artifacts/wasm-acceptance/**/global.json
-            artifacts/wasm-acceptance/**/Generated/**/*.cs
-            artifacts/wasm-acceptance/**/Program.cs
-            artifacts/wasm-acceptance/**/Consumer.csproj
-            artifacts/wasm-acceptance/**/Native/*
-            artifacts/wasm-negative
-            artifacts/wasm-fixture-compile
-
-  native-aot-invocation:
-    name: Independent NativeAOT invocation (${{ matrix.os }})
-    timeout-minutes: 30
-    strategy:
-      max-parallel: 2
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2022, macos-15-intel]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install exact locked .NET SDK
-        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
-
-      - name: Verify locked SDK and isolated runtime
-        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-      - name: Initialize MSVC and Windows SDK
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-      - name: Build missing parser runtime for macOS Intel
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
-          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
-          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
-      - name: Generate, publish and invoke all import modes
-        run: python scripts/test-native-aot-bindings.py
-      - name: Reject a corrupted native result
-        shell: bash
-        run: |
-          if python scripts/test-native-aot-bindings.py --inject-native-error --output artifacts/native-aot-negative; then
-            echo "A corrupted native result was incorrectly accepted." >&2
-            exit 1
-          fi
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          report = json.loads(next(Path('artifacts/native-aot-negative').glob('*/report.json')).read_text())
-          assert not report['success']
-          assert not report['invocation']['success']
-          assert 'scalar arguments/result' in report['invocation']['error']
-          PY
-      - name: Upload standalone NativeAOT evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-aot-invocation-${{ matrix.os }}
-          path: |
-            artifacts/native-aot-acceptance
-            artifacts/native-aot-negative
-
-  build-and-test:
-    name: Build and test (${{ matrix.target }})
-    timeout-minutes: 360
-    strategy:
-      max-parallel: 2
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            target: linux-x64-gnu
-            cpp-compiler: g++
-          - os: windows-2022
-            target: windows-x64-msvc
-            cpp-compiler: ""
-          - os: macos-15-intel
-            target: macos-x64-darwin
-            cpp-compiler: clang++
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Initialize MSVC and Windows SDK
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Setup Python for generated documentation
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install exact locked .NET SDK
-        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
-
-      - name: Verify locked SDK and isolated runtime
-        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-
-      - name: Build missing ClangSharp 20 runtime for macOS Intel
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          runtime_dir="${GITHUB_WORKSPACE}/artifacts/clang-runtime/osx-x64"
-          BGCS_CLANG_RUNTIME_DIR="${runtime_dir}" bash ./scripts/setup-macos-x64-clang-runtime.sh
-          echo "BGCS_CLANG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "BGCS_OSX_X64_PACKAGE_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@20)/lib:${runtime_dir}" >> "${GITHUB_ENV}"
-          echo "${GITHUB_WORKSPACE}/artifacts/clang-runtime/bin" >> "${GITHUB_PATH}"
-
-      - name: Restore
-        shell: bash
-        run: |
-          python scripts/source_ownership.py
-          unset Platform PLATFORM platform
-          dotnet restore BindGen-CS.slnx
-
-      - name: Build
-        shell: bash
-        run: |
-          unset Platform PLATFORM platform
-          dotnet build BindGen-CS.slnx --configuration Release --no-restore
-
-      - name: Verify grouped configuration documentation against the built Tool schema
-        run: python scripts/generate-config-docs.py --configuration Release --check
-
-      - name: Check the fresh embedded worker host before the full macOS matrix
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          unset Platform PLATFORM platform
-          python scripts/compiler_test_environment.py -- dotnet test tests/BGCS.Tests/BGCS.Tests.csproj --configuration Release --no-build --no-restore -m:1 -nr:false --filter "FullyQualifiedName=BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend" --results-directory artifacts/embedded-worker-preflight --logger "trx;LogFileName=embedded-worker.trx" --logger "console;verbosity=detailed"
-          python - <<'PY'
-          import xml.etree.ElementTree as ET
-          root = ET.parse('artifacts/embedded-worker-preflight/embedded-worker.trx').getroot()
-          expected = 'BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend'
-          results = root.findall('{*}Results/{*}UnitTestResult')
-          definitions = root.findall('{*}TestDefinitions/{*}UnitTest')
-          counters = root.find('{*}ResultSummary/{*}Counters')
-          if len(results) != 1 or len(definitions) != 1 or counters is None:
-              raise SystemExit('The embedded worker preflight did not execute exactly one case.')
-          result, definition = results[0], definitions[0]
-          method = definition.find('{*}TestMethod')
-          if (result.get('outcome') != 'Passed' or result.get('testName') != expected
-                  or result.get('testId') != definition.get('id') or method is None
-                  or method.get('className', '') + '.' + method.get('name', '') != expected):
-              raise SystemExit('The embedded worker preflight changed, skipped or failed its required case.')
-          if (any(counters.get(key) != '1' for key in ('total', 'executed', 'passed'))
-                  or any(counters.get(key) != '0' for key in ('failed', 'error', 'timeout', 'aborted', 'notExecuted'))
-                  or any(info.get('outcome') == 'Error' for info in root.findall('.//{*}RunInfo'))):
-              raise SystemExit('The embedded worker preflight contains incomplete or failed execution evidence.')
-          print('Verified the exact fresh embedded worker host within its unchanged 60-second deadline.')
-          PY
-        env:
-          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
-
-      - name: Test managed and native runtime matrix
-        shell: bash
-        run: |
-          unset Platform PLATFORM platform
-          python scripts/compiler_test_environment.py -- dotnet test BindGen-CS.slnx --configuration Release --no-build -m:1 -nr:false --logger trx --logger "console;verbosity=normal" --filter "FullyQualifiedName!~BGCS.Tests."
-        env:
-          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.target }}
-          path: |
-            **/TestResults/*.trx
-            artifacts/embedded-worker-preflight
-
-      - name: Build structured Host discovery driver
-        shell: bash
-        run: |
-          unset Platform PLATFORM platform
-          dotnet build eng/BGCS.TestDriver/BGCS.TestDriver.csproj --configuration Release -p:TreatWarningsAsErrors=true -m:1 -nr:false
-
-      - name: Verify real inherited generic and dynamic theory controls
-        run: python scripts/test-host-test-driver.py
-
-      - name: Verify explicit compiler test environment and exact child arguments
-        run: python scripts/test-compiler-test-environment.py
-
-      - name: Verify locked SDK archive bootstrap and workflow ordering
-        run: python scripts/test-locked-dotnet-bootstrap.py
-
-      - name: Verify locked workload manifests across all launch hosts
-        run: python scripts/test-locked-workload-manifests.py
-
-      - name: Verify trusted release trigger and immutable tag controls
-        run: node --test scripts/test-release-workflow.js
-
-      - name: Freeze complete Host test execution assets
-        run: python scripts/run-host-test-shards.py prepare --output artifacts/host-test-assets
-
-      - name: Upload immutable Host execution asset
-        uses: actions/upload-artifact@v4
-        with:
-          name: host-execution-${{ matrix.target }}
-          path: artifacts/host-test-assets
-          if-no-files-found: error
-
-  host-shards:
-    name: Host test shard (${{ matrix.target }}, ${{ matrix.shard }})
-    needs: build-and-test
-    timeout-minutes: 180
-    strategy:
-      fail-fast: false
-      max-parallel: 6
-      matrix:
-        target: [linux-x64-gnu, windows-x64-msvc, macos-x64-darwin]
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
-        include:
-          - target: linux-x64-gnu
-            os: ubuntu-24.04
-            compiler: g++
-          - target: windows-x64-msvc
-            os: windows-2022
-            compiler: ""
-          - target: macos-x64-darwin
-            os: macos-15-intel
-            compiler: clang++
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
-        with:
-          arch: x64
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install exact locked .NET SDK
-        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
-      - name: Verify locked SDK/runtime
-        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-      - name: Use the exact frozen Intel parser and locked LLVM compiler
-        if: runner.os == 'macOS'
-        shell: bash
-        run: bash scripts/setup-host-shard-parser.sh
-      - name: Download accepted Host execution asset
-        uses: actions/download-artifact@v4
-        with:
-          name: host-execution-${{ matrix.target }}
-          path: artifacts/host-test-assets
-      - name: Discover and run the exact deterministic Host case partition
-        run: python scripts/run-host-test-shards.py run --assets artifacts/host-test-assets --shard ${{ matrix.shard }} --output artifacts/host-test-shards
-        env:
-          BGCS_CPP2C_CXX: ${{ matrix.compiler }}
-      - name: Upload actual shard report and independent TRX
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: host-test-shard-${{ matrix.target }}-${{ matrix.shard }}
-          path: artifacts/host-test-shards
-          if-no-files-found: error
-
-  host-completeness:
-    name: Host test completeness (${{ matrix.target }})
-    needs: [build-and-test, host-shards]
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [linux-x64-gnu, windows-x64-msvc, macos-x64-darwin]
-        include:
-          - target: linux-x64-gnu
-            os: ubuntu-24.04
-            compiler: g++
-          - target: windows-x64-msvc
-            os: windows-2022
-            compiler: ""
-          - target: macos-x64-darwin
-            os: macos-15-intel
-            compiler: clang++
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
-        with:
-          arch: x64
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install exact locked .NET SDK
-        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
-      - name: Verify locked SDK/runtime
-        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-      - name: Use the exact frozen Intel parser and locked LLVM compiler
-        if: runner.os == 'macOS'
-        shell: bash
-        run: bash scripts/setup-host-shard-parser.sh
-      - name: Download accepted Host execution asset
-        uses: actions/download-artifact@v4
-        with:
-          name: host-execution-${{ matrix.target }}
-          path: artifacts/host-test-assets
-      - name: Restore exact accepted compiled bytes
-        run: python scripts/run-host-test-shards.py restore --assets artifacts/host-test-assets
-      - name: Download every Host case partition
-        uses: actions/download-artifact@v4
-        with:
-          pattern: host-test-shard-${{ matrix.target }}-*
-          path: artifacts/host-test-complete/raw
-          merge-multiple: true
-      - name: Reject missing duplicate skipped or changed cases and seal the exact union
-        run: python scripts/run-host-test-shards.py aggregate --input artifacts/host-test-complete/raw --output artifacts/host-test-complete
-      - name: Upload independently checked complete Host evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: host-test-union-${{ matrix.target }}
-          path: artifacts/host-test-complete
-          if-no-files-found: error
-
-  acceptance:
-    needs: [build-and-test, host-completeness]
-    name: BGCS acceptance (${{ matrix.target }})
-    timeout-minutes: 360
-    strategy:
-      max-parallel: 2
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            target: linux-x64-gnu
-            cpp-compiler: g++
-          - os: windows-2022
-            target: windows-x64-msvc
-            cpp-compiler: ""
-          - os: macos-15-intel
-            target: macos-x64-darwin
-            cpp-compiler: clang++
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout BindGen-CS
-        uses: actions/checkout@v4
-
-      - name: Initialize MSVC and Windows SDK
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Setup Python for native-provider acceptance
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install exact locked .NET SDK
-        run: python scripts/setup-locked-dotnet.py --install-dir "${{ runner.temp }}/bgcs-dotnet"
-
-      - name: Verify locked SDK and isolated runtime
-        run: python scripts/verify-locked-toolchain.py --output artifacts/toolchain/sdk.json
-
-      - name: Install hash-locked process metrics for performance acceptance
-        run: >-
-          python -m pip install --disable-pip-version-check --only-binary=:all:
-          --require-hashes -r scripts/requirements-performance.txt
-
-      - name: Use the exact accepted Intel parser supplement
-        if: runner.os == 'macOS'
-        shell: bash
-        run: bash scripts/setup-host-shard-parser.sh
-
-      - name: Download accepted Host execution closure
-        uses: actions/download-artifact@v4
-        with:
-          name: host-execution-${{ matrix.target }}
-          path: artifacts/host-test-assets
-
-      - name: Restore accepted Host execution closure
-        run: python scripts/run-host-test-shards.py restore --assets artifacts/host-test-assets
-
-      - name: Download complete exact Host case evidence
-        uses: actions/download-artifact@v4
-        with:
-          name: host-test-union-${{ matrix.target }}
-          path: artifacts/host-test-complete
-
-      - name: Install locked workload for complete Intel package consumption
-        if: runner.os == 'macOS'
-        run: python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/wasm.json
-
-      - name: Run BGCS maintenance-candidate acceptance matrix
-        shell: bash
-        run: python scripts/compiler_test_environment.py -- bash ./scripts/run-full-test-matrix.sh
-        env:
-          CONFIGURATION: "Release"
-          BGCS_HOST_SHARD_EVIDENCE: ${{ github.workspace }}/artifacts/host-test-complete/raw
-          BGCS_CPP2C_CXX: ${{ matrix.cpp-compiler }}
-
-      - name: Upload acceptance evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: acceptance-${{ matrix.target }}
-          path: artifacts/acceptance
-
-      - name: Upload bounded successful feature evidence
         uses: actions/upload-artifact@v4
         with:
           name: release-feature-evidence-${{ matrix.target }}
-          path: artifacts/acceptance/report.json
+          path: ${{ matrix.baseline == 'full' && 'artifacts/acceptance/report.json' || 'artifacts/generator-smoke/report.json' }}
           if-no-files-found: error
-
-      - name: Seal accepted macOS Intel parser runtime
-        if: matrix.target == 'macos-x64-darwin'
-        shell: bash
-        run: |
-          python3 scripts/parser_runtime_provenance.py verify artifacts/clang-runtime/osx-x64
-          python3 - <<'PY'
-          import hashlib
-          from pathlib import Path
-          root = Path('artifacts/clang-runtime/osx-x64')
-          for name in ('libclang.dylib', 'libClangSharp.dylib'):
-              if not (root / name).is_file():
-                  raise SystemExit(f'Accepted parser runtime is missing {name}.')
-          files = sorted(path for path in root.rglob('*')
-                         if path.is_file() and path.name != 'SHA256SUMS')
-          (root / 'SHA256SUMS').write_text(''.join(
-              f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(root).as_posix()}\n'
-              for path in files), encoding='utf-8', newline='\n')
-          PY
-
-      - name: Upload accepted macOS Intel parser runtime
-        if: matrix.target == 'macos-x64-darwin'
+      - name: Upload accepted Intel parser closure
+        if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: parser-runtime-osx-x64
           path: artifacts/clang-runtime/osx-x64
           if-no-files-found: error
-
-      - name: Upload unreviewed host snapshot inputs
-        if: failure()
+      - name: Seal the exact repository release tooling
+        if: matrix.baseline == 'full'
+        run: python scripts/release_payload.py seal-tooling eng/BGCS.RepositoryTools/bin/Release/net10.0 --revision "${{ github.sha }}"
+      - name: Upload repository release tooling
+        if: matrix.baseline == 'full'
         uses: actions/upload-artifact@v4
         with:
-          name: snapshot-inputs-${{ matrix.target }}
-          if-no-files-found: ignore
-          path: |
-            artifacts/acceptance/candidate-snapshots
-            artifacts/corpus-acceptance
-            artifacts/corpus-native-acceptance
-            artifacts/examples
+          name: release-repository-tools
+          path: eng/BGCS.RepositoryTools/bin/Release/net10.0
+          if-no-files-found: error

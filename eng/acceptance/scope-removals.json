@@ -39,6 +39,24 @@
         "owner": "BGCS.NativeBuild",
         "basis": "tests/BGCS.Generation.Tests/AbiSafetyRegressionTests.cs"
       }
+    },
+    {
+      "featureId": "integration.cli-sdk-and-msbuild",
+      "originalRequirement": {
+        "featureId": "integration.cli-sdk-and-msbuild",
+        "owner": "BGCS",
+        "origin": "3.0 requirement"
+      },
+      "reason": "Explicit final generator-only scope: SDK/CLI generation remains, product MSBuild integration and mandatory application AOT/browser publication certification are removed. No removed check is certified as passing."
+    },
+    {
+      "featureId": "validation.desktop-wasm-and-nativeaot",
+      "originalRequirement": {
+        "featureId": "validation.desktop-wasm-and-nativeaot",
+        "owner": "eng",
+        "basis": ".github/workflows/ci.yml"
+      },
+      "reason": "Explicit final generator-only scope: SDK/CLI generation remains, product MSBuild integration and mandatory application AOT/browser publication certification are removed. No removed check is certified as passing."
     }
   ],
   "removedConfiguration": [
@@ -11637,6 +11655,64 @@
           "BGCS.Tests.RemoteConfigurationTests.EditorSchemaRequiresTheSameExplicitRemoteIdentityAndPathBase"
         ]
       }
+    },
+    {
+      "scope": "feature",
+      "id": "integration.cli-and-sdk",
+      "reason": "Final canonical-Windows functional baseline policy; other hosts are finite real generator smoke, and MSBuild/application certification is removed. Not a passed assertion.",
+      "evidence": {
+        "host": "linux-x64",
+        "kind": "test",
+        "project": "BGCS.MSBuild.Tests",
+        "match": "^BGCS\\.MSBuild\\.Tests\\.TaskHostTests\\.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime$",
+        "requiredCases": [
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: False, designTime: False)",
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: True, designTime: False)",
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: True, designTime: True)"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "integration.cli-and-sdk",
+      "reason": "Final canonical-Windows functional baseline policy; other hosts are finite real generator smoke, and MSBuild/application certification is removed. Not a passed assertion.",
+      "evidence": {
+        "host": "macos-x64",
+        "kind": "test",
+        "project": "BGCS.MSBuild.Tests",
+        "match": "^BGCS\\.MSBuild\\.Tests\\.TaskHostTests\\.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime$",
+        "requiredCases": [
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: False, designTime: False)",
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: True, designTime: False)",
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: True, designTime: True)"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "integration.cli-and-sdk",
+      "reason": "Final canonical-Windows functional baseline policy; other hosts are finite real generator smoke, and MSBuild/application certification is removed. Not a passed assertion.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.MSBuild.Tests",
+        "match": "^BGCS\\.MSBuild\\.Tests\\.TaskHostTests\\.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime$",
+        "requiredCases": [
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: False, designTime: False)",
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: True, designTime: False)",
+          "BGCS.MSBuild.Tests.TaskHostTests.ActualNetTaskHost_GeneratesOnlyWhenExplicitlyEnabledOutsideDesignTime(enabled: True, designTime: True)"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "validation.corpus-package-and-performance",
+      "reason": "Complete upstream application build/invocation is outside the final mandatory generator baseline; finite generated corpus and small consumer assertions remain. Not certified as passing.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "category",
+        "category": "upstream-native-invocation"
+      }
     }
   ],
   "replacements": [
@@ -11649,6 +11725,11 @@
       "previousFeature": "platforms.native-assets-and-musl",
       "currentFeature": "platforms.libc-and-musl-identities",
       "remainingScope": "Target/RID identity facts only; no asset packaging, linking or invocation claim."
+    },
+    {
+      "previousFeature": "integration.cli-sdk-and-msbuild",
+      "currentFeature": "integration.cli-and-sdk",
+      "remainingScope": "Public SDK and CLI generation only; no TaskHost or product build integration."
     }
   ],
   "configurationRenames": [
@@ -11667,5 +11748,26 @@
       "current": "api.projectionInputs.defines",
       "scope": "Exact C# preprocessor symbols for those captured static source trees."
     }
-  ]
+  ],
+  "finalGeneratorPolicy": {
+    "authorization": "Explicit user-approved final generator-only and lean CI plan.",
+    "functionalBaseline": "All retained functional cases execute once on Windows, with exact structured discovery/TRX equality and zero skips.",
+    "platformBaselines": "Linux/macOS execute finite real C/C++ parser/generator/ABI/native-consumer smoke plus unchanged per-host 60/10 performance and isolated host SDK/CLI install.",
+    "productBaseline": "One Windows clean four-product install validates physical six-RID archive closure; not six-RID invocation certification.",
+    "removedMandatoryChecks": [
+      "MSBuild integration/TaskHost/VS2026",
+      "Eight-way Host partition topology",
+      "Application NativeAOT and browser publishing/invocation",
+      "Complete upstream native application builds"
+    ],
+    "previousEvidenceGitRevision": "34674f566c0d3e8766f498cf722a17dd90295d6c",
+    "previousInventoryGitBlobs": {
+      "eng/acceptance/feature-inventory.json": "0c13882869f7a9bb0e79dcdb0dd93d301290b0a7",
+      "eng/acceptance/configuration-inventory.json": "89393ce2f96031696ee903b230af76bc3e57ffcd"
+    },
+    "hostMappingScopeChanges": 6441,
+    "hostMappingScopeChangesSha256": "933dcb7e6253beb57a00a539f70a453416ca46fc36d7824082627ebc5d88a0f2",
+    "releaseReady": false,
+    "removedEvidenceCertified": false
+  }
 }

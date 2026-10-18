@@ -162,7 +162,7 @@ public sealed partial class BindingHost : IAsyncDisposable
             SourceSnapshot argumentInputs = expanded.snapshot;
             activeInputs.CaptureArgumentInputs(argumentInputs);
             activeInputs.DisableCaching(expanded.cacheIneligibilityReasons);
-            // The original descriptor remains the analysis/build provenance. The worker
+            // The original descriptor remains the analysis provenance. The worker
             // receives exactly one expanded argument vector, without reopening its files.
             NativeToolchainDescriptor parserToolchain = new(target.toolchain.compilerPath, target.toolchain.sysRoot,
                 target.toolchain.systemIncludeFolders, target.toolchain.defines, [], target.toolchain.cxxSystemIncludeFolders,

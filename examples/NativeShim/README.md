@@ -4,7 +4,7 @@ From this directory, after building or installing the `bindgen-cs` tool:
 
 ```bash
 bindgen-cs generate bindgen.json
-bindgen-cs build bindgen.json
+bindgen-cs generate bindgen.json
 dotnet run --project Consumer/Consumer.csproj
 ```
 
@@ -26,3 +26,5 @@ To generate only the native bridge, use `bindgen-cs bridge bindgen.json`; this o
 managed emission. Its neutral `native/metadata/bridge.manifest.json` can then be handed
 to `native-build` with an explicit target manifest path. The normal `build` command
 performs managed/native candidate validation and complete joint publication in one request.
+
+Compile/link the emitted bridge and native implementation externally, then compile the generated C# consumer. BGCS only generates sources.

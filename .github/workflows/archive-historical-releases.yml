@@ -1,10 +1,6 @@
 name: Archive historical releases
 
 on:
-  workflow_run:
-    workflows: [CI]
-    branches: [main]
-    types: [completed]
   workflow_dispatch:
 
 concurrency:
@@ -17,11 +13,6 @@ permissions:
 jobs:
   prepare:
     name: Validate original historical packages
-    if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:

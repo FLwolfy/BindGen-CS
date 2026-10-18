@@ -270,6 +270,8 @@ class BGCS.Infrastructure.Workers.WorkerAssetDeployer [sealed]
   method System.Void VerifyDeployment(System.String root, BGCS.Contracts.Artifacts.WorkerAssetManifest manifest, System.String hostRid)
 class BGCS.Infrastructure.Workers.WorkerAssetLocator [abstract; sealed]
   method System.String Locate(System.String explicitRoot [optional; default=null], System.String applicationBase [optional; default=null]) [static]
+class BGCS.Infrastructure.Workers.WorkerAssetProvisioner [abstract; sealed]
+  method System.String Prepare(System.String applicationBase, System.String cacheRoot [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.Infrastructure.Workers.WorkerExecutionIdentity [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.Workers.WorkerExecutionIdentity>]
   ctor(BGCS.Contracts.Common.ContentDigest digest, BGCS.Contracts.Inputs.SourceSnapshot snapshot)
   property BGCS.Contracts.Common.ContentDigest digest { get; init }

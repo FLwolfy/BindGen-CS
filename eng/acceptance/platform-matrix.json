@@ -9,7 +9,7 @@
     "Invoked",
     "Packaged"
   ],
-  "certificationRule": "Every stage requires its own same-revision receipt. Resolution, synthetic layout tests, generated command plans, static adapter protocol tests and copied assets cannot stand in for actual application invocation or installed package consumption.",
+  "certificationRule": "Required generator baseline receipts prove only their exact recorded source revision, host, parser/ABI/consumer and installation scope. Cross-target facts or physical RID package hashes are not application invocation certification.",
   "certificationStatus": "pending",
   "releaseRevision": null,
   "runtimeProfiles": [
@@ -25,15 +25,14 @@
   "targets": [
     {
       "id": "windows-x64-msvc",
-      "releaseGate": "required",
+      "releaseGate": "required-generator-baseline",
       "requiredStages": [
         "Resolved",
         "Parsed",
         "Generated",
         "ManagedCompiled",
         "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Invoked"
       ],
       "runtimeProfiles": [
         "CoreClr",
@@ -47,42 +46,48 @@
       "executionMappings": [
         {
           "workflow": ".github/workflows/ci.yml",
-          "job": "build-and-test",
-          "target": "windows-x64-msvc"
+          "job": "generator",
+          "jobName": "Generator baseline (Windows x64)",
+          "target": "windows-x64-msvc",
+          "scope": "complete retained functionality"
         },
         {
-          "workflow": ".github/workflows/ci.yml",
-          "job": "acceptance",
-          "target": "windows-x64-msvc"
-        },
+          "workflow": ".github/workflows/packages.yml",
+          "job": "packages",
+          "jobName": "Installed product baseline",
+          "scope": "Complete four-product Windows install and physical six-RID archive closure only."
+        }
+      ],
+      "baselineScope": "complete retained functionality",
+      "developerExecutionMappings": [
         {
           "script": "scripts/test-native-aot-bindings.py",
           "stages": [
             "ManagedCompiled",
             "NativeLinked",
             "Invoked"
-          ]
-        },
-        {
-          "workflow": ".github/workflows/packages.yml",
-          "job": "packages",
-          "stages": [
-            "Packaged"
-          ]
+          ],
+          "mandatory": false,
+          "scope": "Manual developer application evidence only; not a generator release requirement."
         }
+      ],
+      "requiredExecutionProfiles": [
+        "CoreClr"
+      ],
+      "optionalApplicationRuntimeProfiles": [
+        "NativeAot"
       ]
     },
     {
       "id": "linux-x64-gnu",
-      "releaseGate": "required",
+      "releaseGate": "required-generator-baseline",
       "requiredStages": [
         "Resolved",
         "Parsed",
         "Generated",
         "ManagedCompiled",
         "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Invoked"
       ],
       "runtimeProfiles": [
         "CoreClr",
@@ -96,42 +101,50 @@
       "executionMappings": [
         {
           "workflow": ".github/workflows/ci.yml",
-          "job": "build-and-test",
-          "target": "linux-x64-gnu"
+          "job": "generator",
+          "jobName": "Generator smoke (Linux x64)",
+          "target": "linux-x64-gnu",
+          "scope": "finite explicit generator/ABI/consumer smoke and partial host SDK/CLI install"
         },
         {
           "workflow": ".github/workflows/ci.yml",
-          "job": "acceptance",
-          "target": "linux-x64-gnu"
-        },
+          "job": "generator",
+          "jobName": "Generator smoke (Linux x64)",
+          "phase": "Consume the current host SDK and CLI from isolated packages",
+          "completeProductSet": false,
+          "scope": "Actual installed host SDK/CLI baseline only."
+        }
+      ],
+      "baselineScope": "finite explicit generator/ABI/consumer smoke and partial host SDK/CLI install",
+      "developerExecutionMappings": [
         {
           "script": "scripts/test-native-aot-bindings.py",
           "stages": [
             "ManagedCompiled",
             "NativeLinked",
             "Invoked"
-          ]
-        },
-        {
-          "workflow": ".github/workflows/packages.yml",
-          "job": "packages",
-          "stages": [
-            "Packaged"
-          ]
+          ],
+          "mandatory": false,
+          "scope": "Manual developer application evidence only; not a generator release requirement."
         }
+      ],
+      "requiredExecutionProfiles": [
+        "CoreClr"
+      ],
+      "optionalApplicationRuntimeProfiles": [
+        "NativeAot"
       ]
     },
     {
       "id": "macos-x64-darwin",
-      "releaseGate": "required",
+      "releaseGate": "required-generator-baseline",
       "requiredStages": [
         "Resolved",
         "Parsed",
         "Generated",
         "ManagedCompiled",
         "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Invoked"
       ],
       "runtimeProfiles": [
         "CoreClr",
@@ -145,94 +158,92 @@
       "executionMappings": [
         {
           "workflow": ".github/workflows/ci.yml",
-          "job": "build-and-test",
-          "target": "macos-x64-darwin"
+          "job": "generator",
+          "jobName": "Generator smoke (macOS x64)",
+          "target": "macos-x64-darwin",
+          "scope": "finite explicit generator/ABI/consumer smoke and partial host SDK/CLI install"
         },
         {
           "workflow": ".github/workflows/ci.yml",
-          "job": "acceptance",
-          "target": "macos-x64-darwin"
-        },
+          "job": "generator",
+          "jobName": "Generator smoke (macOS x64)",
+          "phase": "Consume the current host SDK and CLI from isolated packages",
+          "completeProductSet": false,
+          "scope": "Actual installed host SDK/CLI baseline only."
+        }
+      ],
+      "baselineScope": "finite explicit generator/ABI/consumer smoke and partial host SDK/CLI install",
+      "developerExecutionMappings": [
         {
           "script": "scripts/test-native-aot-bindings.py",
           "stages": [
             "ManagedCompiled",
             "NativeLinked",
             "Invoked"
-          ]
-        },
-        {
-          "workflow": ".github/workflows/packages.yml",
-          "job": "packages",
-          "stages": [
-            "Packaged"
-          ]
+          ],
+          "mandatory": false,
+          "scope": "Manual developer application evidence only; not a generator release requirement."
         }
+      ],
+      "requiredExecutionProfiles": [
+        "CoreClr"
+      ],
+      "optionalApplicationRuntimeProfiles": [
+        "NativeAot"
       ]
     },
     {
       "id": "emscripten-wasm32-emscripten",
-      "releaseGate": "required",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "runtimeProfiles": [
         "BrowserWasm"
-      ],
-      "executionModes": [
-        "interpreter",
-        "aot"
-      ],
-      "requiredHosts": [
-        "windows-x64-msvc",
-        "linux-x64-gnu",
-        "macos-x64-darwin"
       ],
       "certification": {
         "status": "pending",
         "revision": null,
         "receipts": []
       },
-      "executionMappings": [
+      "executionMappings": [],
+      "constraints": [
+        "The external consuming project registers and links native object/archive references with the import identity required by generated bindings; BGCS emits source only.",
+        "LibraryImport uses the explicitly resolved browser default Cdecl convention profile.",
+        "Chromium evidence does not certify Firefox or Safari."
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [
         {
           "script": "scripts/test-wasm-bindings.py",
           "stages": [
             "ManagedCompiled",
             "NativeLinked",
             "Invoked"
-          ]
-        },
-        {
-          "workflow": ".github/workflows/packages.yml",
-          "job": "packages",
-          "stages": [
-            "Packaged"
-          ]
+          ],
+          "mandatory": false,
+          "scope": "Manual developer application evidence only; not a generator release requirement."
         }
       ],
-      "constraints": [
-        "The external consuming project registers and links native object/archive references with the import identity required by generated bindings; BGCS emits source only.",
-        "LibraryImport uses the explicitly resolved browser default Cdecl convention profile.",
-        "Chromium evidence does not certify Firefox or Safari."
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": [
+        "BrowserWasm"
+      ],
+      "optionalApplicationHostExamples": [
+        "windows-x64-msvc",
+        "linux-x64-gnu",
+        "macos-x64-darwin"
+      ],
+      "optionalApplicationExecutionModes": [
+        "interpreter",
+        "aot"
       ]
     },
     {
       "id": "windows-arm64-msvc",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -242,19 +253,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "linux-arm64-gnu",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -264,19 +273,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "macos-arm64-darwin",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -286,19 +293,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "linux-x64-musl",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -308,19 +313,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "linux-arm64-musl",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -330,19 +333,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "android-arm64",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -352,19 +353,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "android-x64",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -374,19 +373,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "ios-arm64-darwin",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -396,19 +393,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "ios-simulator-x64-darwin",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -418,19 +413,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "ios-simulator-arm64-darwin",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -440,19 +433,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "freebsd-x64-gnu",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -462,19 +453,17 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     },
     {
       "id": "freebsd-arm64-gnu",
-      "releaseGate": "deferredCertification",
+      "releaseGate": "target-facts-only",
       "requiredStages": [
-        "Resolved",
-        "Parsed",
-        "Generated",
-        "ManagedCompiled",
-        "NativeLinked",
-        "Invoked",
-        "Packaged"
+        "Resolved"
       ],
       "certification": {
         "status": "pending",
@@ -484,7 +473,11 @@
       "executionMappings": [],
       "knownLimits": [
         "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
-      ]
+      ],
+      "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [],
+      "optionalApplicationRuntimeProfiles": []
     }
   ],
   "sharedTestMappings": [
@@ -526,5 +519,20 @@
     "NativeTargetId is an opaque identity; generation uses explicit platform/CPU/ABI facts; native distribution belongs to the consumer.",
     "Postponed platforms remain visibly uncertified until their real matrix completes."
   ],
-  "responsibilityBoundary": "BGCS resolves target facts, parses and generates sources. ManagedCompiled, NativeLinked and Invoked describe independent repository consumer tests; Packaged describes BGCS product installation. They are not product build, link or native asset packaging services."
+  "responsibilityBoundary": "BGCS resolves target facts, parses and generates sources. ManagedCompiled, NativeLinked and Invoked describe independent repository consumer tests; Packaged describes BGCS product installation. They are not product build, link or native asset packaging services.",
+  "mandatoryApplicationPublishChecks": [],
+  "optionalDeveloperApplicationChecks": [
+    "NativeAOT",
+    "BrowserWasm interpreter",
+    "BrowserWasm AOT"
+  ],
+  "completeFunctionalBaselineHost": "windows-x64",
+  "runtimeProfilesMeaning": "Declared generation strategies and target facts; listed profiles do not imply mandatory application publish or runtime certification.",
+  "requiredExecutionProfiles": [
+    "CoreClr"
+  ],
+  "optionalApplicationRuntimeProfiles": [
+    "NativeAot",
+    "BrowserWasm"
+  ]
 }

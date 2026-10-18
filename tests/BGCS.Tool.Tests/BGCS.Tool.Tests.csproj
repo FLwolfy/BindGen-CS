@@ -14,6 +14,7 @@
 
   <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../../src/BGCS.Tool/BGCS.Tool.csproj" />
+    <ProjectReference Include="../../examples/CustomTargetPlugin/BGCS.Example.CustomTargetPlugin.csproj" />
     <ProjectReference Include="../../src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <Target Name="BGCSDeployCliTestWorker" AfterTargets="Build">

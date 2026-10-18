@@ -7,7 +7,7 @@ Both languages use the same schema. Object-schema required fields do not replace
 a base document may supply an omitted value. A null language standard freezes to C17 or C++23 according to the source language.
 Target, toolchain and extension capabilities still require actual evidence.
 
-Schema SHA-256: `6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e3`.
+Schema SHA-256: `35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0ce`.
 
 [Configuration Guide](../configuration-guide.md) | [Getting Started](../getting-started.md)
 
@@ -72,11 +72,10 @@ Schema SHA-256: `6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e
 | `profiles.*.source.includeSystemDeclarations` | `"boolean"` | `false` | no |  |
 | `profiles.*.source.parseMacros` | `"boolean"` | `true` | no |  |
 | `profiles.*.source.parseComments` | `"boolean"` | `true` | no |  |
-| `profiles.*.targets` | `"array"` | `[{"id":"host","triple":null,"toolchain":"auto","settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | no | minItems=1 |
+| `profiles.*.targets` | `"array"` | `[{"id":"host","triple":null,"settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | no | minItems=1 |
 | `profiles.*.targets[]` | `"object"` | — | no | additionalProperties=false |
 | `profiles.*.targets[].id` | `"string"` | `"host"` | no |  |
 | `profiles.*.targets[].triple` | `["string","null"]` | `null` | no |  |
-| `profiles.*.targets[].toolchain` | `"string"` | `"auto"` | no |  |
 | `profiles.*.targets[].settings` | `"object"` | — | no | additionalProperties=false |
 | `profiles.*.targets[].settings.compilerPath` | `["string","null"]` | `null` | no |  |
 | `profiles.*.targets[].settings.sysRoot` | `["string","null"]` | `null` | no |  |
@@ -702,11 +701,10 @@ Schema SHA-256: `6e788868109830937ec76c80ceee5c4dc7f55c3e61b0b08440b7603667edb0e
 | `source.includeSystemDeclarations` | `"boolean"` | `false` | no |  |
 | `source.parseMacros` | `"boolean"` | `true` | no |  |
 | `source.parseComments` | `"boolean"` | `true` | no |  |
-| `targets` | `"array"` | `[{"id":"host","triple":null,"toolchain":"auto","settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | no | minItems=1 |
+| `targets` | `"array"` | `[{"id":"host","triple":null,"settings":{"compilerPath":null,"sysRoot":null,"systemIncludeDirectories":[],"cxxSystemIncludeDirectories":[],"defines":[],"arguments":[]}}]` | no | minItems=1 |
 | `targets[]` | `"object"` | — | no | additionalProperties=false |
 | `targets[].id` | `"string"` | `"host"` | no |  |
 | `targets[].triple` | `["string","null"]` | `null` | no |  |
-| `targets[].toolchain` | `"string"` | `"auto"` | no |  |
 | `targets[].settings` | `"object"` | — | no | additionalProperties=false |
 | `targets[].settings.compilerPath` | `["string","null"]` | `null` | no |  |
 | `targets[].settings.sysRoot` | `["string","null"]` | `null` | no |  |

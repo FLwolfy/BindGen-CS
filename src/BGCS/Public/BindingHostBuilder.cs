@@ -215,7 +215,7 @@ public sealed class BindingHostBuilder
         return this;
     }
 
-    /// <summary>Registers independent candidate text processing before final contract and build checks.</summary>
+    /// <summary>Registers independent candidate text processing before final static contract checks.</summary>
     /// <param name="id">The globally unique processor identity.</param>
     /// <param name="priority">Descending execution priority, followed by ordinal identity.</param>
     /// <param name="factory">The independent processor factory.</param>

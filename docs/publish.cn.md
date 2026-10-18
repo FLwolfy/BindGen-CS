@@ -39,17 +39,18 @@ bash scripts/test-nuget-packages.sh
 CI 下载并验证同 revision 接受的资源。host-only 本地检查明确属于局部验证，不能代替
 完整产品认证。
 
-SDK、Contracts、Runtime、工具、MSBuild、NativeAOT、浏览器的消费要求见
-[包认证](packages.cn.md#打包与验收)。本地报告不代表最终包已经上架，也不认证其他平台。
+SDK、Contracts、Runtime、工具的消费要求见
+[包认证](packages.cn.md#打包与认证)。本地报告不代表最终包已经上架，也不认证其他平台。
 
 ## 自动发布与准确证据
 
 工作流是 [publish-bgcs-runtime-nuget.yml](../.github/workflows/publish-bgcs-runtime-nuget.yml)。
 正常自动链路是：
 
-1. main push 执行完整 CI，包括准确 Host 分片及独立桌面/browser/AOT 证据。
-2. 成功且可信的 main CI 触发 `packages.yml`，在必需宿主上消费真实产品，另验收
-   Visual Studio2026 TaskHost。
+1. main push 执行 Windows 完整生成器检查和 Linux/macOS 生成器 smoke，保留核心基线
+   及原有各宿主性能预算。
+2. 一个完整产品安装任务消费实际 SDK/tool/Contracts/Runtime 包。AOT/Wasm 应用构建
+   是手动私有检查，不属于必需发布任务。
 3. 产品认证成功触发发布 preflight，认证当前 main 候选、准确 workflow/run 身份和
    下载的 artifact 字节。
 4. 按 `eng/acceptance/required-release-gates.json` 检查作业、功能/配置证据和安装报告，

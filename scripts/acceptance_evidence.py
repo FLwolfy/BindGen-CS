@@ -52,7 +52,7 @@ def test_receipt(path: Path, match: str | None = None) -> dict:
                             "outcome": result.get("outcome"), "executionId": result.get("executionId")})
     passed = sum(result["outcome"] == "Passed" for result in results)
     failed = [result for result in results if result["outcome"] not in ("Passed", "NotExecuted")]
-    if not passed or failed:
+    if not passed or failed or any(result["outcome"] != "Passed" for result in results):
         raise RuntimeError(f"Required executed tests did not pass: {path}: match={match!r}, passed={passed}, failed={len(failed)}")
     return {"trx": str(path.resolve()), "sha256": digest(path), "match": match, "passed": passed,
             "notExecuted": sum(result["outcome"] == "NotExecuted" for result in results), "results": results}

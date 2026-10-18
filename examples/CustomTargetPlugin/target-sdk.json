@@ -1,0 +1,11 @@
+{
+  "platformId": "private-desktop",
+  "architectureId": "x64",
+  "abiId": "msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "byteOrder": "littleEndian",
+  "requiresExplicitSdk": true,
+  "supportsDynamicModules": true,
+  "systemIncludeDirectories": ["sdk/include"],
+  "defines": ["PROFILE_VERSION=1"]
+}

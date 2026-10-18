@@ -119,7 +119,8 @@ public sealed class NativeTargetProviderTests {
                 "riscv64",
                 "gnu",
                 request.tripleOverride ?? "riscv64-unknown-linux-gnu",
-                new(defines: ["FIXTURE_FEATURE=1"], arguments: ["-fno-builtin"]));
+                new(defines: ["FIXTURE_FEATURE=1"], arguments: ["-fno-builtin"]),
+                capabilities: new(requiresExplicitSdk: false, supportsDynamicModules: true));
             return true;
         }
     }

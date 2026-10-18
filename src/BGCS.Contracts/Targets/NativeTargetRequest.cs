@@ -14,7 +14,7 @@ public sealed class NativeTargetRequest
     /// The stable ID understood by a registered provider, or <c>host</c>.
     /// </param>
     /// <param name = "toolchain">
-    /// Explicit SDK, driver, include and compiler inputs; null requests provider defaults.
+    /// Explicit SDK locations, header paths and parser arguments; null requests provider defaults.
     /// </param>
     /// <param name = "tripleOverride">
     /// An explicit compiler triple, or null to use the provider's triple.

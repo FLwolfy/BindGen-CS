@@ -1,5 +1,7 @@
 > 这是 2.x 的历史设计记录。旧 API 名称、评分及完成声明不代表 BGCS 3.0；请参阅[当前路线图](roadmap.cn.md)和[发布证据规则](release-evidence-state-flow.md)。
 
+> 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
+
 # 超级通用 BindGen 执行路线图
 
 [English](roadmap-2.x.md) | [能力矩阵](capabilities.cn.md) | [验收规范](acceptance.cn.md)

@@ -1,5 +1,7 @@
 # CI failure remediation (2026-09-24)
 
+> Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
+
 This note records the fixes for the all-red desktop matrix after the BindGen-CS refactor. It is an implementation report, not a substitute for new same-revision runner reports.
 
 ## Supplied complete runner logs: second failure set

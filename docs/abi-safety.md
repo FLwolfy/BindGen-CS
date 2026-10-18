@@ -199,12 +199,12 @@ C++ objects/inheritance and incomplete/borrowed/missing-symbol tables.
 Negative injection changes a native result and must fail actual invocation,
 not merely fail an unrelated build.
 
-The NativeAOT gate additionally requires 39 aggregate checks, for 113 in total.
+The optional private NativeAOT fixture additionally has 39 aggregate checks, for 113 in total.
 All three imports call C17 transformations of small, mixed, large, union,
 nested, homogeneous floating-point, inline-array, packed and singleton
 aggregates, including aggregate reverse callbacks. Each import's result
-signature must match a separately compiled native C probe. This is a required
-desktop gate; browser aggregate support remains a separate capability.
+signature must match a separately compiled native C probe. This is private application evidence, not a mandatory
+desktop release gate; browser aggregate support remains a separate capability.
 
 A receipt names source revision/dirty status, real generator/Runtime/worker
 bytes, target, runtime, compiler/SDK/workload and completed checks. Local

@@ -1,5 +1,7 @@
 > Historical 2.x design record. Its old API names, scores and completion claims do not describe BGCS 3.0. See the [current roadmap](roadmap.md) and [release evidence rules](release-evidence-state-flow.md).
 
+> Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
+
 # Universal BindGen Execution Roadmap
 
 [中文](roadmap-2.x.cn.md) | [Capability matrix](capabilities.md) | [Acceptance specification](acceptance.md)

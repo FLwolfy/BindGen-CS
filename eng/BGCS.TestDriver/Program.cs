@@ -1,5 +1,4 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,7 +17,6 @@ namespace BGCS.TestDriver;
 
 internal static class Program
 {
-    private const int C_SHARDS = 8;
     private static readonly JsonSerializerOptions s_json = new() { WriteIndented = true };
 
     private static int Main(string[] args)
@@ -31,16 +29,15 @@ internal static class Program
             string assembly = Path.GetFullPath(options["--assembly"]);
             string sdk = Path.GetFullPath(options["--sdk-root"]);
             string output = Path.GetFullPath(options["--output"]);
-            string? shardText = options.GetValueOrDefault("--shard");
-            int? shard = shardText is null ? null : int.Parse(shardText, System.Globalization.CultureInfo.InvariantCulture);
-            if (options.Keys.Any(key => key is not ("--assembly" or "--sdk-root" or "--output" or "--shard")) || shard is < 0 or >= C_SHARDS)
-                throw new ArgumentException("Unknown driver option or invalid fixed eight-way partition.");
+            bool execute = options.GetValueOrDefault("--execute", "false") switch { "true" => true, "false" => false, _ => throw new ArgumentException("Execution must be true or false.") };
+            if (options.Keys.Any(key => key is not ("--assembly" or "--sdk-root" or "--output" or "--execute")))
+                throw new ArgumentException("Unknown driver option.");
             string console = Path.Combine(sdk, "vstest.console.dll");
             if (!File.Exists(assembly) || !File.Exists(console)) throw new FileNotFoundException("The exact compiled test assembly and SDK VSTest console are required.");
             if (File.Exists(output)) throw new IOException("Structured evidence must use a fresh output path.");
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
             CompiledMethod[] methods = ReadMethods(assembly);
-            string settings = Settings(Path.GetDirectoryName(output)!, shard);
+            string settings = Settings(Path.GetDirectoryName(output)!, execute);
             ConsoleParameters parameters = new();
             foreach (string name in new[] { "DOTNET_ROOT", "DOTNET_HOST_PATH", "PATH", "VSTEST_CONNECTION_TIMEOUT" })
                 if (Environment.GetEnvironmentVariable(name) is string value) parameters.EnvironmentVariables[name] = value;
@@ -58,11 +55,11 @@ internal static class Program
                     || discovery.fully.Count != 1 || !SamePath(discovery.fully[0], assembly))
                     throw new InvalidOperationException("Discovery did not completely enumerate exactly the requested source: " + string.Join("; ", discovery.errors));
                 Case[] cases = ValidateCases(discovery.cases, methods, assembly);
-                Case[] selected = shard is null ? [] : cases.Where(item => Partition(item.className) == shard.Value).ToArray();
+                Case[] selected = execute ? cases : [];
                 Run? run = null;
-                if (shard is not null)
+                if (execute)
                 {
-                    if (selected.Length == 0) throw new InvalidOperationException("A required partition contains no discovered cases.");
+                    if (selected.Length == 0) throw new InvalidOperationException("The full baseline contains no discovered cases.");
                     HashSet<string> selectedIds = selected.Select(item => item.id).ToHashSet(StringComparer.Ordinal);
                     run = new();
                     using CancellationTokenSource runDeadline = new(TimeSpan.FromHours(4));
@@ -77,7 +74,7 @@ internal static class Program
                 var document = new
                 {
                     schemaVersion = 1, success = true, discoveryComplete = true, discoveryTotal = cases.Length,
-                    assemblySha256 = Hash(assembly), sourceAssembly = Path.GetFileName(assembly), shardCount = C_SHARDS, shardIndex = shard,
+                    assemblySha256 = Hash(assembly), sourceAssembly = Path.GetFileName(assembly), executionRequested = execute,
                     compiledMethods = methods, discoveredCases = cases, selectedCases = selected,
                     executedCases = run?.results.Select(item => new
                     {
@@ -87,7 +84,7 @@ internal static class Program
                     vstestIdentity = new { consoleSha256 = Hash(console), translationLayerSha256 = Hash(typeof(VsTestConsoleWrapper).Assembly.Location), objectModelSha256 = Hash(typeof(TestCase).Assembly.Location) }
                 };
                 File.WriteAllText(output, JsonSerializer.Serialize(document, s_json) + "\n", new UTF8Encoding(false));
-                Console.WriteLine("Structured discovery: " + cases.Length + "; partition " + (shard?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "discovery-only") + "; executed " + (run?.results.Count ?? 0));
+                Console.WriteLine("Structured discovery: " + cases.Length + "; execution requested " + execute + "; executed " + (run?.results.Count ?? 0));
                 return 0;
             }
             finally { wrapper.EndSession(); }
@@ -156,12 +153,11 @@ internal static class Program
                 throw new InvalidOperationException("Execution returned duplicate, unexpected or changed test argument identities.");
     }
 
-    private static int Partition(string className) => (int)(BinaryPrimitives.ReadUInt32BigEndian(SHA256.HashData(Encoding.UTF8.GetBytes(className))) % C_SHARDS);
     private static string Hash(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
     private static bool SamePath(string first, string second) => string.Equals(Path.GetFullPath(first), Path.GetFullPath(second), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-    private static string Settings(string directory, int? shard) => "<RunSettings><RunConfiguration><TargetFrameworkVersion>.NETCoreApp,Version=v10.0</TargetFrameworkVersion><MaxCpuCount>1</MaxCpuCount><ResultsDirectory>"
+    private static string Settings(string directory, bool execute) => "<RunSettings><RunConfiguration><TargetFrameworkVersion>.NETCoreApp,Version=v10.0</TargetFrameworkVersion><MaxCpuCount>1</MaxCpuCount><ResultsDirectory>"
         + SecurityElement.Escape(directory) + "</ResultsDirectory></RunConfiguration><xUnit><PreEnumerateTheories>true</PreEnumerateTheories><ParallelizeTestCollections>false</ParallelizeTestCollections><MaxParallelThreads>1</MaxParallelThreads></xUnit>"
-        + (shard is null ? "" : "<LoggerRunSettings><Loggers><Logger friendlyName=\"trx\" enabled=\"True\"><Configuration><LogFileName>BGCS.Tests.shard" + shard.Value + ".trx</LogFileName></Configuration></Logger></Loggers></LoggerRunSettings>") + "</RunSettings>";
+        + (!execute ? "" : "<LoggerRunSettings><Loggers><Logger friendlyName=\"trx\" enabled=\"True\"><Configuration><LogFileName>BGCS.Tests.trx</LogFileName></Configuration></Logger></Loggers></LoggerRunSettings>") + "</RunSettings>";
 
     private sealed record CompiledMethod(string className, string fullyQualifiedName, bool theory, int parameterCount, bool generic);
     private sealed record Case(string id, string fullyQualifiedName, string displayName, string className, string compiledMethod, string executorUri);

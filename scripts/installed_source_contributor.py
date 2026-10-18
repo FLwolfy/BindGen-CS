@@ -1,4 +1,4 @@
-"""Verify one delivered Contracts-only source plugin through installed SDK, CLI and TaskHost."""
+"""Verify one delivered Contracts-only source plugin through installed SDK and CLI."""
 from __future__ import annotations
 
 import copy
@@ -158,48 +158,6 @@ if (!result.artifacts.Any(item => item.relativePath.EndsWith("/contributions/fix
     return state
 
 
-def verify_msbuild(dotnet: str, version: str, work: Path, evidence: Path, state: dict, run, write_project) -> None:
-    source = work / 'source-protocol-msbuild'
-    write_project(source, version, ['BGCS', 'BGCS.Runtime'], '<PropertyGroup><BGCSGenerateBindings>true</BGCSGenerateBindings></PropertyGroup>')
-    configuration = _configuration(source, state['manifest'])
-    configuration['output']['root'] = 'UnusedConfiguredRoot'
-    path = source / 'bindgen.json'
-    (source / 'Program.cs').write_text('''using System;
-using Package.SourceProtocol;
-using NativeApi api = NativeApi.Load(args[1]);
-int expected = int.Parse(args[0], global::System.Globalization.CultureInfo.InvariantCulture);
-if (api.ContributedAdd(29) != expected || ContributedHelper.Marker != expected)
-    throw new InvalidOperationException("The installed TaskHost contribution oracle disagreed.");
-''', encoding='utf-8')
-    command = [dotnet, 'build', 'Consumer.csproj', '-c', 'Release', '-m:1', '-nr:false']
-    phases = []
-    # Add an actual include candidate explicitly. Consumer compiler intermediates
-    # are not required generation inputs and need not change include membership.
-    # The directory mutation must miss; a subsequent unchanged build must hit.
-    for label, increment, status in (('cold', 12, 'miss'), ('stabilized', 12, 'miss'), ('warm', 12, 'hit'), ('changed', 13, 'miss')):
-        if label == 'stabilized':
-            (source / 'new-include-candidate.h').write_text('/* Explicit cache membership mutation. */\n', encoding='utf-8')
-        _settings(configuration, increment); _write(path, configuration)
-        run(command, source, evidence, 'source-protocol-msbuild-' + label)
-        owners = [owner for owner in (source / 'obj').rglob('.bgcs-artifacts.json') if (owner.parent / 'generation.report.json').is_file()]
-        if len(owners) != 1 or (source / 'UnusedConfiguredRoot').exists():
-            raise RuntimeError('Installed TaskHost source contribution escaped its one exact intermediate output.')
-        output = owners[0].parent
-        _, _, proof = _inspect(output, status, increment, source)
-        phases.append({'phase': label, **proof})
-        binary = _compile(source, output, work, evidence, run, 'source-msbuild-' + label)
-        run([dotnet, str(source / 'bin/Release/net10.0/Consumer.dll'), str(29 + increment), str(binary)], source, evidence, 'source-protocol-msbuild-invoke-' + label)
-    cold, stabilized, warm = phases[:3]
-    if (cold['inputRootMembershipSha256'] == stabilized['inputRootMembershipSha256']
-            or stabilized['inputRootMembershipSha256'] != warm['inputRootMembershipSha256']
-            or len({phase['otherInputFactsSha256'] for phase in phases[:3]}) != 1):
-        raise RuntimeError('Installed TaskHost cache stabilization must change only initial include membership, then prove an unchanged-input hit.')
-    before = _snapshot(output)
-    _settings(configuration, 13, True); _write(path, configuration)
-    _reject(command, source, evidence, run, 'source-protocol-msbuild-rejected')
-    if _snapshot(output) != before:
-        raise RuntimeError('Installed TaskHost replaced prior generated artifacts after rejected contribution.')
-    state['entries']['msbuild'] = {'language': 'cpp', 'nativeAndManagedInvoked': True, 'phases': phases, 'rejectionPreservedAllFiles': True}
 
 
 def verify_cli(tool: Path, dotnet: str, version: str, work: Path, evidence: Path, state: dict, run, write_project) -> dict:
@@ -224,7 +182,7 @@ def verify_cli(tool: Path, dotnet: str, version: str, work: Path, evidence: Path
         raise RuntimeError('Installed CLI replaced its complete prior publication after invalid contribution.')
     state['entries']['cli'] = {'language': 'cpp', 'nativeAndManagedInvoked': True, 'phases': phases, 'rejectionPreservedAllFiles': True}
     if digest(state['manifest']) != state['manifestSha256']:
-        raise RuntimeError('The installed source manifest changed between SDK, TaskHost and CLI execution.')
+        raise RuntimeError('The installed source manifest changed between SDK and CLI execution.')
     for asset in state['pluginAssets']:
         if digest(state['manifest'].parent / asset['path']) != asset['digest']['value']:
             raise RuntimeError('The installed Contracts-only plugin changed between entry points.')

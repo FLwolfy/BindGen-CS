@@ -21,6 +21,21 @@ SPEC.loader.exec_module(VERIFIER)
 
 
 class PackageEvidenceTests(unittest.TestCase):
+    def test_external_consumer_boundary_stops_all_three_parent_repository_imports(self):
+        from installed_custom_target import isolate_consumer_root
+        parent = self.repository / 'parent'
+        child = parent / 'ordinary-consumer'
+        parent.mkdir()
+        names = ('Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props')
+        for name in names:
+            (parent / name).write_text('<Project><Import Project="repository-only.targets" /></Project>', encoding='utf-8')
+        isolate_consumer_root(child)
+        for name in names:
+            self.assertEqual('<Project />\n', (child / name).read_text(encoding='utf-8'))
+            self.assertIn('repository-only.targets', (parent / name).read_text(encoding='utf-8'))
+        with self.assertRaises(RuntimeError):
+            isolate_consumer_root(child)
+
     def setUp(self):
         parent = ROOT / "artifacts/temporary"
         parent.mkdir(parents=True, exist_ok=True)
@@ -57,6 +72,25 @@ class PackageEvidenceTests(unittest.TestCase):
                         "sourceAtCompletion": {"sourceWorktreeDirty": False},
                         "packages": [{"file": path.name, "bytes": path.stat().st_size,
                                       "sha256": digest(path)} for path in sorted(self.packages.iterdir())]}
+
+    def test_standard_worker_content_copy_preserves_paths_bytes_and_complete_set(self):
+        package = self.packages / 'content.nupkg'
+        output = self.packages / 'consumer'
+        files = {'bgcs/worker-assets/worker-common.zip': b'locked common archive',
+                 'bgcs/worker-assets/manifests/win-x64.json': b'locked host manifest'}
+        with zipfile.ZipFile(package, 'w') as archive:
+            for name, data in files.items(): archive.writestr('contentFiles/any/net10.0/' + name, data)
+        for name, data in files.items():
+            path = output / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(data)
+        VERIFIER.verify_sdk_content_copy(package, output)
+        archive_path = output / 'bgcs/worker-assets/worker-common.zip'
+        archive_path.write_bytes(b'changed common archive')
+        with self.assertRaises(RuntimeError): VERIFIER.verify_sdk_content_copy(package, output)
+        archive_path.write_bytes(files['bgcs/worker-assets/worker-common.zip'])
+        extra = output / 'bgcs/worker-assets/stale.dll'; extra.write_bytes(b'undeclared')
+        with self.assertRaises(RuntimeError): VERIFIER.verify_sdk_content_copy(package, output)
+        extra.unlink(); archive_path.unlink()
+        with self.assertRaises(RuntimeError): VERIFIER.verify_sdk_content_copy(package, output)
 
     def git(self, *arguments):
         subprocess.run(["git", "-c", "core.hooksPath=" + str(self.hooks), "-c", "commit.gpgSign=false",

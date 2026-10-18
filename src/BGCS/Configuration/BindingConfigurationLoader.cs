@@ -491,7 +491,6 @@ public sealed class BindingConfigurationLoader
             ArgumentException.ThrowIfNullOrWhiteSpace(target.id);
             _ = new BGCS.Contracts.Targets.NativeTargetRequest(new(target.id), tripleOverride: target.triple);
             if (!targets.Add(target.id)) throw new ArgumentException($"Target '{target.id}' is configured more than once.");
-            if (target.toolchain != "auto") throw new NotSupportedException($"Toolchain alias '{target.toolchain}' requires a registered toolchain profile.");
         }
         if (!Enum.IsDefined(configuration.api.importMode) || !Enum.IsDefined(configuration.api.style)) throw new ArgumentException("A managed API choice is unknown.");
         if (configuration.api.framework != "net10.0") throw new ArgumentException("BGCS 3.0 requires net10.0 consumers.");

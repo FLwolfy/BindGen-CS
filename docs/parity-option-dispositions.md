@@ -1,5 +1,7 @@
 # Baseline option dispositions and explicit presentation selection
 
+> Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
+
 This audit uses baseline commit `d4bfe3939b6ab2c404080f9da58e4b5f64c861be`. It distinguishes serialized fields from implemented generation behavior. Configuration acceptance rows remain **pending**. Authored tests and source correspondence are not release receipts.
 
 ## Fields without an observed baseline emission path

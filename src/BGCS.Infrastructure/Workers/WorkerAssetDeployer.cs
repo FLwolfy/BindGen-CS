@@ -210,12 +210,22 @@ public sealed class WorkerAssetDeployer
         }
     }
 
-    private static void ValidateManifest(
+    internal static void ValidateManifest(
         WorkerAssetManifest manifest,
         string hostRid
     ) {
         if (manifest.schemaVersion != 1 || manifest.hostRid != hostRid || manifest.parserIdentity != WorkerProtocol.C_PARSER_IDENTITY || manifest.artifacts.IsDefaultOrEmpty)
             throw new IOException("The worker asset manifest does not match this generator host and parser identity.");
+        HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
+        foreach (ArtifactDescriptor artifact in manifest.artifacts)
+        {
+            string path = ArtifactDigestVerifier.ValidateRelativePath(artifact.relativePath);
+            if (!paths.Add(path)
+                || path.Equals("worker-assets.manifest.json", StringComparison.OrdinalIgnoreCase)
+                || path.Equals(".bgcs-artifacts.json", StringComparison.OrdinalIgnoreCase))
+                throw new IOException("The worker asset manifest contains duplicate or reserved paths.");
+            _ = new ContentDigest(artifact.digest.value);
+        }
         string[] required = ["BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json", "BGCS.Frontend.Clang.Worker.runtimeconfig.json", "BGCS.Contracts.dll", "BGCS.Infrastructure.dll", "BGCS.Frontend.Clang.dll", "ClangSharp.dll", "ClangSharp.Interop.dll"];
         foreach (string name in required)
             if (!manifest.artifacts.Any(artifact => artifact.relativePath == name)) throw new IOException($"Worker execution dependency '{name}' is missing from the manifest.");

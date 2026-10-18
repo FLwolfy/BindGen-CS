@@ -2,7 +2,7 @@
 
 [文档目录](README.cn.md) · [English](api.md) · [配置](configuration-guide.cn.md) · [扩展](extensibility.cn.md)
 
-嵌入式 SDK 使用 `BGCS.BindingHost` 和不可变请求。CLI、工作区和 MSBuild 调用同一条 Host 流水线。生成器基线为 .NET 10；数据属性采用 camelCase，类型和方法采用 PascalCase。产品版本、Contracts 版本、模型 revision 和 worker 协议 revision 分别管理，可通过 `bindgen-cs version --json` 查询。
+嵌入式 SDK 使用 `BGCS.BindingHost` 和不可变请求。CLI 和工作区调用同一条 Host 流水线。生成器基线为 .NET 10；数据属性采用 camelCase，类型和方法采用 PascalCase。产品版本、Contracts 版本、模型 revision 和 worker 协议 revision 分别管理，可通过 `bindgen-cs version --json` 查询。
 
 ## Host 的组合与生命周期
 
@@ -13,7 +13,7 @@ using BGCS;
 await using BindingHost host = BindingHost.CreateDefault();
 ```
 
-默认 Host 注册内置实现，包括独立 Clang worker 客户端。组合在构建 Host 时冻结。每个会话拥有独立的服务和插件实例；工厂不能把同一个可变对象交给多个无关会话。
+Host 表示协调器，不是服务器或网络服务。默认 Host 注册内置实现，包括独立 Clang worker 客户端。组合在构建 Host 时冻结。每个会话拥有独立的服务和插件实例；工厂不能把同一个可变对象交给多个无关会话。
 
 需要明确组合时：
 
@@ -43,8 +43,9 @@ if (!generated.success)
 `FromFileAsync(path, profile: null, cancellationToken: token)` 读取分组且带版本的配置，验证并捕获输入闭包。每份声明文档拥有自己的相对路径基准；捕获请求后，进程工作目录改变不会改变请求含义。
 同步入口 `FromFile` 接受相同的可选取消参数和配置加载器。将同一 token 同时传给配置读取与生成，取消可以覆盖配置组合和后续生成阶段。
 
-只有显式配置的 HTTPS `extends` 对象包含 `url`、固定内容 `sha256` 与本地 `pathBase` 时，才会获取远程基础配置。URI 与内容身份单独记录，不作为文件系统路径。
-可通过 `configurationLoader: new BGCS.Configuration.BindingConfigurationLoader(httpClient)` 使用自定义传输；该 `HttpClient` 由调用方管理。完整规则见[配置组合指南](configuration-guide.cn.md)。
+配置组合只读取本地文件，拒绝 URL 基础配置和网络配置。每个本地 base 保留自己的
+路径基准与内容身份。可选 `configurationLoader` 提供本地加载行为，不启用传输。
+见[配置组合指南](configuration-guide.cn.md)。
 
 SDK 直接构造配置时使用 `new GenerationRequest(configuration, baseDirectory)`。构造器验证并防御性冻结输入。不可变覆盖保留原始配置来源：
 
@@ -100,7 +101,7 @@ WorkspaceDiffResult compared = await host.DiffWorkspaceAsync(workspace, cancella
 
 ## 扩展契约
 
-Builder 支持 frontend、managed projection、backend 工厂，以及目标 provider、native/interop transform、C++ type/callable lowering、processor、validator、native build provider 和 native artifact packager 注册。
+Builder 支持 frontend、managed projection、backend 工厂，以及目标 provider、native/interop transform、C++ type/callable lowering、processor 和 validator 注册。
 
 `AddPlugin<T>()`、`AddPluginFactory(...)` 和 `AddPluginManifest(...)` 组合中立插件。描述声明 Contracts 兼容范围、精确服务 ID、端口、优先级和配置 schema。发现实例与会话实例生命周期独立。重复 ID 或激活时变化的描述会失败；配置独立复制并验证。
 
@@ -119,7 +120,7 @@ C# emission plan 属于具体 backend。中立模型不保存 frontend AST、服
 
 `host.ClearOwnedOutputAsync(request, token)` 清除验证过的 BGCS 输出，保护输入、缓存和插件资源，保留空的有效所有权标记供后续重建。错误所有者、未登记文件或篡改内容会失败。
 
-`WorkerAssetDeployment.Deploy(sourceRoot, manifestPath, destinationRoot, token)` 部署锁定宿主解析器闭包；`Clear(...)` 保留再次部署所需的有效所有权。SDK targets 使用这些 API，用户无需手工组装解析器。进程隔离不是运行不可信插件的安全沙箱。
+`WorkerAssetDeployment.Deploy(sourceRoot, manifestPath, destinationRoot, token)` 部署锁定宿主解析器闭包；`Clear(...)` 保留再次部署所需的有效所有权。SDK 从还原内容进行首次本地准备并使用这些所属规则，不需要 BGCS build targets 或手工组装解析器。进程隔离不是运行不可信插件的安全沙箱。
 
 ## 生成的消费 API 与 Runtime
 
@@ -175,7 +176,7 @@ native 调用跨越压缩 GC 时仍保持原始地址身份。NativeAOT、浏览
 
 Friendly 字符串、buffer、所有权和枚举都需要明确且可表达的语义。固定宽度枚举配置改变 friendly 展示，保留 raw 标量 ABI。不支持的按值 ABI 或不明确的所有权形成诊断，不能虚构安全包装。
 
-见[Runtime 生命周期](runtime-lifetime.cn.md)、[ABI 安全](abi-safety.cn.md)、[MSBuild](msbuild.cn.md)和[测试](testing.cn.md)。本机收据仅证明其中列明的目标、运行时、导入和阶段；发布要求全部必需门禁来自同一 revision。
+见[Runtime 生命周期](runtime-lifetime.cn.md)、[ABI 安全](abi-safety.cn.md)、[包](packages.cn.md)和[测试](testing.cn.md)。本机收据仅证明其中列明的目标、运行时、导入和阶段；发布要求全部必需门禁来自同一 revision。
 
 ## 显式原生地址
 

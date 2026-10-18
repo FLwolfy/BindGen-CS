@@ -41,7 +41,7 @@ def verify_global_features(gates: dict, evidence: dict, archives: dict[str, Path
     artifacts = [item.get("artifact") for item in requirements]
     if (not artifacts or len(set(artifacts)) != len(artifacts) or set(archives) != set(artifacts)
             or set(evidence.get("archiveSha256", {})) != set(artifacts)):
-        raise RuntimeError("Global feature evidence requires every exact installed-product artifact, including its dedicated TaskHost host.")
+        raise RuntimeError("Global feature evidence requires every exact installed-product artifact, for the declared installation baseline.")
     validated = {}
     for requirement in requirements:
         name = requirement["artifact"]
@@ -53,7 +53,7 @@ def verify_global_features(gates: dict, evidence: dict, archives: dict[str, Path
         if evidence["archiveSha256"][name] != archive_hash:
             raise RuntimeError("A downloaded global product archive differs from its workflow observation: " + name)
         receipt = PRODUCT.read_archive(path)
-        PRODUCT.validate(receipt, revision, requirement["hostRid"], requirement.get("requireVs2026", False))
+        PRODUCT.validate(receipt, revision, requirement["hostRid"])
         if receipt["checkedOutSourceSha256"] != content:
             raise RuntimeError("Global installed execution used different checked-out source bytes: " + name)
         with zipfile.ZipFile(path) as archive:
@@ -61,27 +61,8 @@ def verify_global_features(gates: dict, evidence: dict, archives: dict[str, Path
         validated[name] = {"artifact": name, "hostRid": requirement["hostRid"], "archiveSha256": archive_hash,
             "verificationSha256": receipt_hash, "matrices": [{"reportId": matrix["name"],
                 "receiptSha256": matrix["receiptSha256"], "executionIdentity": matrix["executionIdentity"]}
-                for matrix in receipt["featureMatrices"]]}
-    definitions = gates.get("globalFeatureProofs", {})
-    if set(definitions) != {PROOF_ID}:
-        raise RuntimeError("The global feature proof must name its finite reviewed proof identity.")
-    definition = definitions[PROOF_ID]
-    hosts = {item["host"] for item in gates["requiredFeatureEvidence"]}
-    if (hosts != set(HOST_RIDS) or set(definition.get("hosts", {})) != hosts
-            or set(definition.get("requiredReports", [])) != set(PRODUCT.MATRICES)
-            or len(definition["requiredReports"]) != len(PRODUCT.MATRICES)):
-        raise RuntimeError("Global feature proof cannot omit a launch host or installed execution report.")
-    proofs = {}
-    for host, requirement in definition["hosts"].items():
-        jobs = requirement.get("jobs", [])
-        artifact = requirement.get("artifact")
-        if (not jobs or len(set(jobs)) != len(jobs) or not set(jobs).issubset(gates["requiredJobNames"])
-                or not set(jobs).issubset(ci_jobs) or artifact not in validated
-                or requirement.get("hostRid") != HOST_RIDS[host]
-                or validated[artifact]["hostRid"] != requirement.get("hostRid")):
-            raise RuntimeError("A global host lacks its exact independent gates and installed reports: " + host)
-        proofs[host] = {"status": "verified", "sourceRevision": revision, "checkedOutSourceSha256": content,
-            "ciRunId": evidence["ci"]["id"], "productRunId": evidence["products"]["id"],
-            "jobs": jobs, **validated[artifact]}
-    return {PROOF_ID: {"hosts": proofs, "installedArtifacts": list(validated.values()),
-        "ciRunId": evidence["ci"]["id"], "productRunId": evidence["products"]["id"]}}
+                for matrix in receipt.get("featureMatrices", [])]}
+    if gates.get("globalFeatureProofs") != {}:
+        raise RuntimeError("Application-runtime global certification is outside the generator release policy.")
+    return {"installedProducts": {"sourceRevision": revision, "checkedOutSourceSha256": content,
+        "artifacts": list(validated.values()), "ciRunId": evidence["ci"]["id"], "productRunId": evidence["products"]["id"]}}

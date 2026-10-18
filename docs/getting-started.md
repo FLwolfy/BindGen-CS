@@ -159,7 +159,7 @@ worker's bundled Clang builtin headers.
 
 C++ uses the same configuration and `generate` / `bridge` entrypoints. Add emitted bridge sources and headers to your native build with the matching target ABI, SDK and compiler settings, then verify actual calls.
 
-## Embedded SDK, plugins and MSBuild
+## Embedded SDK and plugins
 
 ```csharp
 using System;
@@ -174,17 +174,14 @@ if (!result.success)
 ```
 
 `InspectAsync`, `BridgeAsync`, `DiffAsync` and workspace methods use the same Host.
-A session freezes configuration and extension registrations before parsing begins.
+`Host` means coordinator, not a server or network service. A session freezes configuration and extension registrations before parsing begins.
 Ordinary plugins reference `BGCS.Contracts` and operate on detached facts, not Clang AST.
 Their manifest locks the executable asset closure; artifact-affecting state and external
 inputs must be fingerprinted for cache reuse.
 
-[MSBuild integration](msbuild.md) is delivered inside the full SDK and enabled with
-`BGCSGenerateBindings=true`. It uses a separate .NET TaskHost, generates into `obj`,
-and adds the exact manifest-owned C# files to Compile. It deploys generator worker
-resources and performs no consumer/native build, native reference or linking step.
-Design-time and outer builds skip generation by default. Installing the SDK alone
-does not turn generation on.
+The SDK is an ordinary library. Its matched worker is provisioned locally on first
+use from restored package content; there are no BGCS build targets. Invoke the CLI
+or SDK from your own script when generation belongs in a build.
 
 ## Workspaces and customization
 

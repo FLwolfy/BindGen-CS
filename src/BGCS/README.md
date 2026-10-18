@@ -1,54 +1,44 @@
 # BGCS
 
-`BGCS` is the embeddable BindGen-CS generator package. Use it when a build tool, source pipeline, or application needs to generate C# interop from C headers without shelling out to the `bindgen-cs` command.
+`BGCS` is the complete .NET 10 / C# 14 BindGen-CS generator SDK. Call it as an
+ordinary library when an application or build script needs C/C++ binding source.
+The CLI product `BindGen-CS` calls the same pipeline. `BindingHost` is a request
+coordinator, not a network service.
 
-For ordinary command-line use, install the [`BindGen-CS` .NET tool](https://www.nuget.org/packages/BindGen-CS) instead. For C++ classes and templates, add [`BGCS.Cpp2C`](https://www.nuget.org/packages/BGCS.Cpp2C) and generate a C ABI bridge first.
-
-## Install
+After the matching version is published:
 
 ```bash
-dotnet add package BGCS
+dotnet add package BGCS --version 3.0.0
 ```
-
-Projects that compile the generated bindings also need `BGCS.Runtime`, unless the configuration enables standalone runtime-source generation.
-
-## Generate from configuration
 
 ```csharp
-using BGCS.Configuration; using BGCS.Facade; using BGCS.Analysis;
+using BGCS;
 
-CsCodeGenerator generator = CsCodeGenerator.Create("bindgen.json");
-
-if (!generator.GenerateConfigured())
-{
-    foreach (var diagnostic in generator.Messages)
-        Console.Error.WriteLine(diagnostic);
-
-    throw new InvalidOperationException("Binding generation failed.");
-}
-
-var module = generator.LastResult?.Module;
+await using BindingHost host = BindingHost.CreateDefault();
+GenerationResult result = await host.GenerateAsync(
+    GenerationRequest.FromFile("bindgen.json"));
+if (!result.success)
+    throw new InvalidOperationException(result.GetDiagnosticSummary());
 ```
 
-Paths in `bindgen.json` are resolved relative to the configuration file. Successful generation replaces the configured output transactionally, so custom code should live outside the generated directory.
+The package includes analysis, C++ lowering, C# emission, isolated Clang worker
+resources and schema support. Internal implementation assemblies are not separate
+feature packages to assemble. Restored content supplies the host worker for local
+first-use provisioning; no BGCS build targets are required.
 
-## What this package provides
+Inputs are local configuration, headers, explicit SDK/target settings and plugins.
+Outputs are C#, optional C ABI bridge source, manifests and diagnostics. The consumer
+compiles, links, packages and deploys them externally. The SDK does not build consumer
+projects or native libraries and does not run native layout probes.
 
-- configuration loading, validation, presets, and target discovery;
-- Clang-based C/C++ parsing and declaration analysis;
-- a shared Binding IR with ownership and marshalling diagnostics;
-- C# imports, native types, callbacks, constants, friendly overloads, patching, and optional standalone Runtime output;
-- `DllImport`, `LibraryImport`, and function-table/native-context import modes;
-- extension points for generation steps, function rules, parameter writers, patches, and IR emitters.
-
-The primary configuration-driven C# output uses the IR-only `CSharpEmitter`. The pre-release compatibility emitter and old configuration migration path have been removed.
-
-## Start here
+Generated applications normally reference only `BGCS.Runtime`, or request an emitted
+Runtime source closure. They do not need the generator/parser. Ordinary extension
+projects can reference only `BGCS.Contracts`; parser-specific contributors use the
+advanced frontend surface and execute in the worker.
 
 - [Getting started](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/getting-started.md)
-- [Configuration guide](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/configuration-guide.md)
-- [Capabilities and boundaries](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/capabilities.md)
-- [Public API guide](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/api.md)
+- [Public API](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/api.md)
+- [Configuration](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/configuration-guide.md)
 - [Architecture](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/architecture.md)
 
-BindGen-CS is licensed under the MIT License. Portions derived from CppAst/HexaGen retain their original notices.
+BindGen-CS is licensed under MIT. Retained third-party components preserve their notices.

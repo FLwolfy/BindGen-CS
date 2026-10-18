@@ -5,7 +5,7 @@ using System.Linq;
 namespace BGCS.Contracts.Targets;
 
 /// <summary>
-/// Contains immutable SDK and compiler inputs separately from compiler builtin resources.
+/// Contains immutable parser SDK inputs separately from the parser's builtin resources.
 /// </summary>
 public sealed class NativeToolchainDescriptor
 {
@@ -53,7 +53,7 @@ public sealed class NativeToolchainDescriptor
     }
 
     /// <summary>
-    /// Gets the compiler driver identity supplied by the caller or target provider.
+    /// Gets an optional compiler installation location used only to discover parser SDK resources without executing the compiler.
     /// </summary>
     public string? compilerPath { get; }
     /// <summary>

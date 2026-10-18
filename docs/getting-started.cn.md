@@ -146,7 +146,7 @@ Clang builtin headers 是不同输入。
 
 C++ 使用相同配置与 `generate` / `bridge` 入口。将生成的 bridge 源码和头文件加入自己的原生工程，保持目标 ABI、SDK 与编译选项一致，再运行实际调用验收。
 
-## 嵌入式 SDK、插件与 MSBuild
+## 嵌入式 SDK 与插件
 
 ```csharp
 using System;
@@ -165,10 +165,8 @@ if (!result.success)
 中立事实；manifest 固定可执行文件闭包。影响产物的私有状态和外部输入必须完整提供
 指纹，才能复用对应缓存。
 
-[MSBuild 集成](msbuild.cn.md) 随完整 SDK 分发，通过 `BGCSGenerateBindings=true` 启用。
-它采用独立 .NET TaskHost，生成到 `obj`，将 manifest 中准确的 C# 文件加入 Compile，
-并部署生成器自己的 worker 资源。它不执行消费项目或原生构建，不添加原生引用或链接步骤。
-默认跳过 design-time 和 outer build；仅安装 SDK 不会启用绑定生成。
+SDK 是普通类库，首次使用从已还原包内容在本地准备匹配 worker，不提供 BGCS build targets。
+需要构建时生成，可以从自己的脚本调用 CLI 或 SDK；Host 表示协调器，不是网络服务。
 
 ## 工作区与定制
 

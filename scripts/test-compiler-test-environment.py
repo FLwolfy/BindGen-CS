@@ -16,7 +16,7 @@ from compiler_test_environment import NATIVE_INJECTION_VARIABLES, isolated_nativ
 
 
 SCRIPT = Path(__file__).with_name('compiler_test_environment.py')
-spec = spec_from_file_location('host_shard_runner_environment', Path(__file__).with_name('run-host-test-shards.py'))
+spec = spec_from_file_location('host_baseline_runner_environment', Path(__file__).with_name('run-host-tests.py'))
 runner = module_from_spec(spec)
 spec.loader.exec_module(runner)
 
@@ -50,7 +50,7 @@ class CompilerTestEnvironmentTests(unittest.TestCase):
         }
         self.assertEqual(preserved, isolated_native_test_environment(preserved | {'INCLUDE': 'ambient'}, windows=True))
 
-    def test_host_shard_selects_exact_dotnet_and_preserves_parent_environment(self):
+    def test_host_baseline_selects_exact_dotnet_and_preserves_parent_environment(self):
         selected = Path('selected-sdk') / ('dotnet.exe' if os.name == 'nt' else 'dotnet')
         parent = {'PATH': 'native-driver-path', 'DOTNET_ROOT': 'parent-sdk', 'DOTNET_HOST_PATH': 'parent-dotnet',
                   'DOTNET_STARTUP_HOOKS': 'retained-security-input', 'VCINSTALLDIR': 'discovery-selector',

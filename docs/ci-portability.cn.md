@@ -1,5 +1,7 @@
 # CI 宿主与目标边界
 
+> 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
+
 [文档入口](README.cn.md) · [架构](architecture.cn.md) · [测试](testing.md)
 
 ## Clang 内建头文件与 SDK
