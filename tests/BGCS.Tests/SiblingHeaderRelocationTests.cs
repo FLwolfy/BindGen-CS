@@ -38,7 +38,7 @@ public sealed class SiblingHeaderRelocationTests
                 BindingConfiguration configuration = new()
                 {
                     schemaVersion = 1, library = new() { id = "sibling", nativeName = "sibling" },
-                    source = new() { headers = ["../headers/native.h"] },
+                    source = new() { headers = ["../headers/native.h"], includeDirectories = ["../headers"] },
                     api = new() { @namespace = "Generated.Siblings", name = "SiblingApi", importMode = mode,
                         names = ImmutableDictionary<string, string>.Empty.Add("REPLACED", "ObservedValue").Add("REMOVED", "RemovedValue") },
                     cache = new() { enabled = false }

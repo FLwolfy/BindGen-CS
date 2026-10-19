@@ -49,6 +49,98 @@ class BGCS.Contracts.Artifacts.NativeExportInspectionResult [sealed; interfaces=
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
   method System.Void Deconstruct(out System.String tool, out System.Collections.Generic.IReadOnlyList<System.String> expected, out System.Collections.Generic.IReadOnlyList<System.String> actual, out System.Collections.Generic.IReadOnlyList<System.String> missing)
+class BGCS.Contracts.Artifacts.NativeHeaderReference [sealed; interfaces=System.IEquatable<BGCS.Contracts.Artifacts.NativeHeaderReference>]
+  ctor(System.String rootId, System.String relativePath, System.String include)
+  property System.String include { get; init }
+  property System.String relativePath { get; init }
+  property System.String rootId { get; init }
+  method BGCS.Contracts.Artifacts.NativeHeaderReference <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Artifacts.NativeHeaderReference other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Artifacts.NativeHeaderReference left, BGCS.Contracts.Artifacts.NativeHeaderReference right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Artifacts.NativeHeaderReference left, BGCS.Contracts.Artifacts.NativeHeaderReference right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String rootId, out System.String relativePath, out System.String include)
+class BGCS.Contracts.Artifacts.NativeIncludeDirectory [sealed; interfaces=System.IEquatable<BGCS.Contracts.Artifacts.NativeIncludeDirectory>]
+  ctor(System.String rootId, System.String relativePath, System.Boolean isSystem, System.Boolean isFramework)
+  property System.Boolean isFramework { get; init }
+  property System.Boolean isSystem { get; init }
+  property System.String relativePath { get; init }
+  property System.String rootId { get; init }
+  method BGCS.Contracts.Artifacts.NativeIncludeDirectory <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Artifacts.NativeIncludeDirectory other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Artifacts.NativeIncludeDirectory left, BGCS.Contracts.Artifacts.NativeIncludeDirectory right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Artifacts.NativeIncludeDirectory left, BGCS.Contracts.Artifacts.NativeIncludeDirectory right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String rootId, out System.String relativePath, out System.Boolean isSystem, out System.Boolean isFramework)
+class BGCS.Contracts.Artifacts.NativeInputFile [sealed; interfaces=System.IEquatable<BGCS.Contracts.Artifacts.NativeInputFile>]
+  ctor(System.String rootId, System.String relativePath, System.Int64 length, BGCS.Contracts.Common.ContentDigest digest, System.String role)
+  property BGCS.Contracts.Common.ContentDigest digest { get; init }
+  property System.Int64 length { get; init }
+  property System.String relativePath { get; init }
+  property System.String role { get; init }
+  property System.String rootId { get; init }
+  method BGCS.Contracts.Artifacts.NativeInputFile <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Artifacts.NativeInputFile other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Artifacts.NativeInputFile left, BGCS.Contracts.Artifacts.NativeInputFile right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Artifacts.NativeInputFile left, BGCS.Contracts.Artifacts.NativeInputFile right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String rootId, out System.String relativePath, out System.Int64 length, out BGCS.Contracts.Common.ContentDigest digest, out System.String role)
+class BGCS.Contracts.Artifacts.NativeInputRoot [sealed; interfaces=System.IEquatable<BGCS.Contracts.Artifacts.NativeInputRoot>]
+  ctor(System.String id, System.String kind)
+  property System.String id { get; init }
+  property System.String kind { get; init }
+  method BGCS.Contracts.Artifacts.NativeInputRoot <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Artifacts.NativeInputRoot other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Artifacts.NativeInputRoot left, BGCS.Contracts.Artifacts.NativeInputRoot right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Artifacts.NativeInputRoot left, BGCS.Contracts.Artifacts.NativeInputRoot right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String id, out System.String kind)
+class BGCS.Contracts.Artifacts.NativeInputRootBinding [sealed; interfaces=System.IEquatable<BGCS.Contracts.Artifacts.NativeInputRootBinding>]
+  ctor(System.String targetId, System.String rootId, System.String directory)
+  property System.String directory { get; init }
+  property System.String rootId { get; init }
+  property System.String targetId { get; init }
+  method BGCS.Contracts.Artifacts.NativeInputRootBinding <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Artifacts.NativeInputRootBinding other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Artifacts.NativeInputRootBinding left, BGCS.Contracts.Artifacts.NativeInputRootBinding right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Artifacts.NativeInputRootBinding left, BGCS.Contracts.Artifacts.NativeInputRootBinding right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String targetId, out System.String rootId, out System.String directory)
+class BGCS.Contracts.Artifacts.NativeSourceManifest [sealed; interfaces=System.IEquatable<BGCS.Contracts.Artifacts.NativeSourceManifest>]
+  ctor(System.Int32 schemaVersion, System.String targetId, System.String triple, BGCS.Contracts.Inputs.SourceLanguage language, System.String languageStandard, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> sources, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> headers, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeInputRoot> inputRoots, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeInputFile> inputs, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeIncludeDirectory> includeDirectories, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeHeaderReference> headerReferences, System.Collections.Immutable.ImmutableArray<System.String> defines, System.Collections.Immutable.ImmutableArray<System.String> requiredExports, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Bridge.CppLanguageRequirement> languageRequirements)
+  property System.Collections.Immutable.ImmutableArray<System.String> defines { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeHeaderReference> headerReferences { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> headers { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeIncludeDirectory> includeDirectories { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeInputRoot> inputRoots { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeInputFile> inputs { get; init }
+  property BGCS.Contracts.Inputs.SourceLanguage language { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Bridge.CppLanguageRequirement> languageRequirements { get; init }
+  property System.String languageStandard { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> requiredExports { get; init }
+  property System.Int32 schemaVersion { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> sources { get; init }
+  property BGCS.Contracts.Requests.StaticExportTableDescriptor staticExportTable { get; init }
+  property System.String targetId { get; init }
+  property System.String triple { get; init }
+  method BGCS.Contracts.Artifacts.NativeSourceManifest <Clone>$()
+  method System.Boolean Equals(BGCS.Contracts.Artifacts.NativeSourceManifest other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Contracts.Artifacts.NativeSourceManifest left, BGCS.Contracts.Artifacts.NativeSourceManifest right) [static]
+  method System.Boolean op_Inequality(BGCS.Contracts.Artifacts.NativeSourceManifest left, BGCS.Contracts.Artifacts.NativeSourceManifest right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Int32 schemaVersion, out System.String targetId, out System.String triple, out BGCS.Contracts.Inputs.SourceLanguage language, out System.String languageStandard, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> sources, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> headers, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeInputRoot> inputRoots, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeInputFile> inputs, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeIncludeDirectory> includeDirectories, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeHeaderReference> headerReferences, out System.Collections.Immutable.ImmutableArray<System.String> defines, out System.Collections.Immutable.ImmutableArray<System.String> requiredExports, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Bridge.CppLanguageRequirement> languageRequirements)
 class BGCS.Contracts.Artifacts.SourceContribution [sealed; interfaces=System.IEquatable<BGCS.Contracts.Artifacts.SourceContribution>]
   ctor(System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.SourceContributionArtifact> artifacts, BGCS.Contracts.Common.Evidence evidence)
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.SourceContributionArtifact> artifacts { get; init }
@@ -101,6 +193,7 @@ class BGCS.Contracts.Artifacts.WorkerAssetManifest [sealed; interfaces=System.IE
 class BGCS.Contracts.BindingDiagnostic [sealed; interfaces=System.IEquatable<BGCS.Contracts.BindingDiagnostic>]
   ctor(BGCS.Contracts.BindingDiagnosticSeverity severity, System.String message, System.String code [optional; default=null])
   property System.String code { get; init }
+  property System.String details { get; init }
   property System.Boolean isFailure { get }
   property System.Nullable<BGCS.Contracts.Common.SourceLocation> location { get; init }
   property System.String message { get; init }
@@ -2547,6 +2640,8 @@ class BGCS.Contracts.Native.NativeDeclaration [sealed; interfaces=System.IEquata
   property BGCS.Contracts.Common.SourceLocation source { get; init }
   property System.Nullable<BGCS.Contracts.Common.StableId> sourceType { get; init }
   property System.String sourceTypeSpelling { get; init }
+  property BGCS.Contracts.Common.Evidence storageEvidence { get; init }
+  property System.Nullable<System.Int64> storageSize { get; init }
   property BGCS.Contracts.Native.NativeStringConstant stringConstant { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Native.NativeTemplateArgument> templateArguments { get; init }
   property System.String templateKind { get; init }
@@ -3043,6 +3138,7 @@ class BGCS.Contracts.Requests.FrontendResult [sealed; interfaces=System.IEquatab
   ctor(BGCS.Contracts.Native.NativeModule module, BGCS.Contracts.Inputs.SourceSnapshot snapshot)
   property BGCS.Contracts.Inputs.SourceSnapshot executionInputs { get; init }
   property BGCS.Contracts.Native.NativeModule module { get; init }
+  property BGCS.Contracts.Inputs.SourceSnapshot parserBuiltinInputs { get; init }
   property BGCS.Contracts.Inputs.SourceSnapshot snapshot { get; init }
   method BGCS.Contracts.Requests.FrontendResult <Clone>$()
   method System.Boolean Equals(BGCS.Contracts.Requests.FrontendResult other) [virtual; final]
@@ -3348,7 +3444,7 @@ class BGCS.Contracts.Targets.TargetCapabilities [sealed; interfaces=System.IEqua
   method System.String ToString() [virtual]
   method System.Void Deconstruct(out System.Boolean requiresExplicitSdk, out System.Boolean supportsDynamicModules)
 class BGCS.Contracts.Versioning.ContractVersion [abstract; sealed]
-  field System.Int32 C_API_MINOR [static; const=0]
+  field System.Int32 C_API_MINOR [static; const=1]
   field System.Int32 C_MAJOR [static; const=3]
 class BGCS.Contracts.Versioning.ModelRevision [abstract; sealed]
   field System.Int32 C_CPP_BRIDGE [static; const=1]

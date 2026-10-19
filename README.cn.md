@@ -214,6 +214,8 @@ x64。资源可用、能够识别目标，与完成所有 Runtime/ABI 组合认�
 
 [完整文档](docs/README.cn.md) · [参与开发](CONTRIBUTING.md) · [测试](docs/testing.cn.md)
 
+[可迁移原生源码清单与消费者输入映射](docs/native-source-inputs.cn.md)。
+
 ## 许可证
 
 [MIT](LICENSE)。第三方版权与许可全文保留在 [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md)

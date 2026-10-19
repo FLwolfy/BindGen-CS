@@ -1,5 +1,8 @@
 # 原生名称属性
 
+生成的原生文件、输入根目录和消费者源码选择见[可迁移原生源码输入](native-source-inputs.cn.md)。
+该类型化清单与本页的可选 C# 属性互相独立。
+
 将 `api.emitNativeMetadata` 设为 `true`，即可给规范的 `RawApi` 方法及对应的 DllImport/LibraryImport 声明添加原生名称属性。默认值为 `false`。
 
 属性保存原生函数身份、最终 C ABI 的返回类型拼写，以及每个原生参数的名字和类型拼写。修改托管名称不会改变这些事实。FunctionTable 使用相同的规范 RawApi 注解。本选项不覆盖转换后的 friendly 方法、别名、类型或字段声明，也不覆盖非拥有型指针视图。
@@ -24,7 +27,7 @@ Runtime 包使用 `BGCS.Runtime.NativeNameAttribute`。源码模式将闭合的 
 
 BGCS 生成 C# 绑定，并为支持的 C++ 声明生成 C bridge 源码。原生编译、链接、导出检查、打包与部署由使用者的构建系统负责；托管源码由消费者工程编译。生成成功不代表这些后续步骤或真实调用已经通过。
 
-运行 `bindgen-cs generate bindgen.json`，仅需要 bridge 时使用 `bridge`。按返回的产物描述选择确切目标的原生源码和头文件，将它们与上游实现一起加入自己的 CMake、Meson、MSBuild 或编译器工程。保持架构、调用约定、packing、语言标准、宏、include、SDK 与 C++ ABI 一致，显式链接上游库及依赖。生成头文件不提供缺失的实现。
+运行 `bindgen-cs generate bindgen.json`，仅需要 bridge 时使用 `bridge`。通过 `GenerationResult.nativeSources` 或 `BindingArtifactManifest.ReadNativeSources` 选择确切目标的生成翻译单元、shim 实现和有序 include 要求，按[输入映射说明](native-source-inputs.cn.md)映射逻辑根。将所选文件与上游实现一起加入自己的 CMake、Meson、MSBuild 或编译器工程。保持架构、调用约定、packing、语言标准、宏、include、SDK 与 C++ ABI 一致，显式链接上游库及依赖。生成头文件不提供缺失的实现。
 
 QuickStart 的原生工程独立构建：
 

@@ -46,7 +46,7 @@ public sealed class NativeStorageAssertionEmitter
             "__builtin_offsetof", "BGCS_NATIVE_FIELD_OFFSET"];
         foreach (string token in commonProofTokens.Concat(module.language == SourceLanguage.C
             ? new[] { "_Static_assert", "_Generic", "_Alignof", "_Bool" }
-            : new[] { "static_assert", "alignof", "decltype", "static_cast", "typename", "nullptr", "bool", "std", "is_same", "is_signed", "remove_cv", "underlying_type", "type" }))
+            : new[] { "static_assert", "alignof", "decltype", "static_cast", "typename", "using", "nullptr", "bool", "std", "is_same", "is_signed", "is_lvalue_reference", "is_rvalue_reference", "remove_cv", "underlying_type", "type" }))
             text.Append("#if defined(").Append(token).AppendLine(")\n#error BGCS native storage proof token is shadowed by a macro\n#endif");
         // The ordinary offsetof macro belongs to the source environment and may
         // legitimately be customized by a public header. Verification must use
@@ -158,11 +158,31 @@ public sealed class NativeStorageAssertionEmitter
                         continue;
                     }
                     if (field.type is not { } fieldType) throw new InvalidOperationException("A named native field omitted its exact parsed type identity.");
+                    NativeType fieldShape = FieldShape(fieldType);
+                    if (module.language == SourceLanguage.Cpp && fieldShape.category == NativeTypeCategory.Reference)
+                    {
+                        if (field.storageSize is not > 0 || field.storageEvidence is not { level: BGCS.Contracts.Common.EvidenceLevel.Declared or BGCS.Contracts.Common.EvidenceLevel.Verified }
+                            || string.IsNullOrWhiteSpace(field.storageEvidence.origin))
+                            throw new NotSupportedException("A native reference field omitted its compiler-established slot size: " + field.qualifiedName);
+                        // sizeof(field) measures the referent. A single-field carrier
+                        // independently checks the storage representation of the reference.
+                        string carrier = "bgcs_reference_field_slot_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);
+                        string expression = "decltype(((" + spelling + "*)nullptr)->" + field.name + ")";
+                        // Name the type first: some compilers otherwise parse a
+                        // function-reference decltype member as a member function.
+                        fieldChecks.Append("using ").Append(carrier).Append("_type = ").Append(expression).AppendLine(";");
+                        fieldChecks.Append("struct ").Append(carrier).Append(" { ").Append(carrier).AppendLine("_type slot; };");
+                        fieldChecks.Append("static_assert(sizeof(").Append(carrier).Append(") == ").Append(field.storageSize.Value.ToString(CultureInfo.InvariantCulture))
+                            .AppendLine(", \"BGCS native reference field storage differs from parsed facts\");");
+                        fieldChecks.Append("static_assert(std::").Append(fieldShape.isRValueReference ? "is_rvalue_reference<" : "is_lvalue_reference<")
+                            .Append(expression).AppendLine(">::value, \"BGCS native reference field category differs from parsed facts\");");
+                    }
                     if (ContainsAnonymousType(fieldType, []) || !Nameable(fieldType))
                     {
                         NativeType storage = module.GetType(fieldType);
-                        if (storage.size is > 0) Check("sizeof(((" + spelling + "*)0)->" + field.name + ")", storage.size.Value, "native anonymous field storage size");
-                        fieldChecks.AppendLine("/* An unnameable field has a storage-size assertion; exact type identity cannot be asserted by name. */");
+                        if (storage.size is > 0) Check("sizeof(((" + spelling + "*)0)->" + field.name + ")", storage.size.Value,
+                            fieldShape.category == NativeTypeCategory.Reference ? "native reference referent size" : "native anonymous field storage size");
+                        fieldChecks.AppendLine("/* An unnameable field retains size assertions; exact type identity cannot be asserted by name. */");
                         continue;
                     }
                     string alias = "bgcs_verified_field_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);
@@ -188,6 +208,18 @@ public sealed class NativeStorageAssertionEmitter
         text.Append(callableAssertions.Emit()).Append(fieldChecks);
         if (intrinsicProof) text.AppendLine("#if defined(_MSC_VER)\n#pragma warning(pop)\n#endif");
         return text.ToString();
+
+        NativeType FieldShape(BGCS.Contracts.Common.StableId identity)
+        {
+            NativeType type = module.GetType(identity);
+            HashSet<BGCS.Contracts.Common.StableId> visited = [];
+            while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified && type.elementType is { } element)
+            {
+                if (!visited.Add(type.id)) throw new InvalidOperationException("Native field storage verification encountered a cyclic type graph.");
+                type = module.GetType(element);
+            }
+            return type;
+        }
 
         bool ContainsAnonymousType(
             BGCS.Contracts.Common.StableId identity,

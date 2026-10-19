@@ -1,6 +1,6 @@
 # C++ 扩展实战手册
 
-[English](cpp-extension-cookbook.md) | [Lowering 契约](lowering.cn.md)
+[English](cpp-extension-cookbook.md) | [Lowering 契约](lowering.cn.md) | [可迁移原生输入](native-source-inputs.cn.md)
 
 完整 SDK 和工具读取同一份分组 `bindgen.json`。有限的类型转换使用 recipe；基于中立声明的规划使用仅依赖 Contracts 的插件；必须由项目 C++ 解释的实现使用显式 C shim。所有入口都参与 Host 的 worker 解析、ABI 复核、缓存、候选验证和发布。
 
@@ -222,7 +222,7 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 }
 ```
 
-消费项目需要提供 `Engine.Managed.EntityId`，并把源码或引用纳入候选编译验证。raw 导入保留实际 C 类型。即使类型规则没有匹配任何声明，所有配置中的托管类型和表达式也要通过语法验证。
+消费项目需要提供 `Engine.Managed.EntityId`。静态托管绑定所需的源码、引用和宏通过 `api.projectionInputs` 声明，BGCS 不构建或执行该项目。raw 导入保留实际 C 类型。即使类型规则没有匹配任何声明，所有配置中的托管类型和表达式也要通过语法验证。
 
 原生输入占位符为 `{value}`、`{nativeType}`，输出占位符为 `{value}`、`{resultType}`。原生结果先保存到局部变量，因此转换不会重复执行原始函数。匹配忽略空白，使用 ordinal 规则和 `*`；同优先级的独占匹配冲突会失败。
 
@@ -315,18 +315,18 @@ bindgen-cs generate bindgen.json
       "sourceFiles": ["shims/widget_c.cpp"],
       "exports": ["bgcs_widget_create", "bgcs_widget_destroy", "bgcs_widget_sum"]
     }]
-  },
+  }
 }
 ```
 
-公开头声明固定 C-linkage 签名，实现文件包含上游 C++ 头并执行项目转换。路径相对于声明它的配置文件。Host 解析公开头、检查准确导出，并发布供外部构建使用的实现文件。
+公开头声明固定 C-linkage 签名，实现文件包含上游 C++ 头并执行项目转换。路径相对于声明它的配置文件。Host 解析公开头、检查准确导出，把实现记录为 `ShimSource`，交给消费者外部构建。用于分析的 `.cpp` 入口不能替代自洽的公开头；如果 bridge 包含实现文件，消费者又单独编译它，就可能产生重复定义。
 
 ```bash
 bindgen-cs bridge examples/NativeShim/bindgen.json
 bindgen-cs generate examples/NativeShim/bindgen.json
 ```
 
-`native/metadata/bridge.module.json` 保存类型化操作，`bridge.manifest.json` 保存构建输入，最终 ABI 和 verification 元数据保存复核结果。C 导出本身不能证明释放线程域或 callback quiescence；请求拥有型和长期回调包装前需要明确相应协议。
+`<target>/native/metadata/bridge.module.json` 保存类型化操作，`bridge.manifest.json` 保存可迁移的 `NativeSourceManifest`。[输入说明](native-source-inputs.cn.md)展示了 `GenerationResult.nativeSources`、会话根绑定及验证后的 `ReadNativeSources` 选择方式。编译、链接和调用属于消费者。C 导出本身不能证明释放线程域或 callback quiescence；请求拥有型和长期回调包装前需要明确相应协议。
 
 ## 模板和原始虚回调
 

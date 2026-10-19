@@ -199,6 +199,7 @@ class BGCS.Infrastructure.Plugins.PluginManifestReader [sealed]
 class BGCS.Infrastructure.Publishing.ArtifactPublicationReader [sealed]
   ctor()
   method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> ReadVerified(System.String outputRoot, System.String libraryId, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method TResult ReadVerified(System.String outputRoot, System.String libraryId, System.Func<System.String,System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor>,TResult> reader, System.Threading.CancellationToken cancellationToken [optional; default=null])
 class BGCS.Infrastructure.Publishing.ArtifactPublisher [sealed; interfaces=System.IDisposable]
   ctor(System.String destination, System.String libraryId, System.Collections.Generic.IEnumerable<System.String> protectedInputs [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
   property System.String candidateRoot { get }
@@ -238,6 +239,8 @@ class BGCS.Infrastructure.Verification.ArtifactDigestVerifier [sealed]
   ctor()
   method System.String ValidateRelativePath(System.String path) [static]
   method System.Void Verify(System.String root, System.Collections.Generic.IEnumerable<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts, System.Collections.Generic.IEnumerable<System.String> additionalFiles [optional; default=null])
+class BGCS.Infrastructure.Verification.NativeSourceManifestVerifier [abstract; sealed]
+  method System.Void Validate(BGCS.Contracts.Artifacts.NativeSourceManifest manifest, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts) [static]
 class BGCS.Infrastructure.Workers.FrontendWorkerClient [sealed; interfaces=BGCS.Contracts.Ports.IFrontend]
   ctor(System.String workerPath, System.Nullable<System.TimeSpan> timeout [optional; default=null], System.String dotnetPath [optional; default=null], System.String parserIdentity [optional; default="ClangSharp/20.1.2.4;LLVM/20"])
   method BGCS.Infrastructure.Workers.WorkerExecutionIdentity CaptureExecutionIdentity(System.Threading.CancellationToken cancellationToken [optional; default=null])

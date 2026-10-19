@@ -28,7 +28,7 @@ public sealed class NativeCustomFunctionTableTests
             BindingConfiguration configuration = new()
             {
                 schemaVersion = 1, library = new() { id = "custom-table", nativeName = "custom_table" },
-                source = new() { headers = [Path.Combine(example, "native.h")], parseMacros = false, includeTransitivelyReferencedHeaders = false },
+                source = new() { headers = [Path.Combine(example, "native.h")], includeDirectories = [example], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
                     @namespace = "Generated.CustomFunctionTable", name = "CustomTableApi", importMode = BindingImportMode.FunctionTable,

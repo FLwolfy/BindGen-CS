@@ -8,6 +8,7 @@ from compiler_test_environment import isolated_native_test_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 FACTS = (
+    'BGCS.Tests.PortableNativeSourceTests.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt',
     'BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend',
     'BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse',
     'BGCS.Tests.NativeCustomFunctionTableTests.RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns',
@@ -17,8 +18,14 @@ FACTS = (
 
 def required_cases(host):
     cases = {name: name for name in FACTS}
+    for method in ('SameNamedHeadersUseVerifiedQualifiedIncludesAndRootOrderInvalidatesCache',
+                   'UnmappedInputOrAbsoluteUserIncludeDoesNotReplacePublishedOutput'):
+        name = 'BGCS.Tests.PortableNativeSourceTests.' + method
+        cases[name] = name
     def theory(method, arguments):
         for argument in arguments: cases[method + '(' + argument + ')'] = method
+    theory('BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden',
+           ['language: C, staticAdapter: False', 'language: Cpp, staticAdapter: False', 'language: Cpp, staticAdapter: True'])
     theory('BGCS.Tests.SiblingHeaderRelocationTests.RealWorkerGeneratesIdenticalArraysAndLayoutGuardsAfterCheckoutRelocation',
            ['mode: ' + mode for mode in ('FunctionTable', 'DllImport', 'LibraryImport')])
     theory('BGCS.Tests.NativeWideTextTests.CNativeCalls_PreserveUtf16Utf32AndTheActualWcharWidth',

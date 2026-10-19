@@ -79,7 +79,7 @@ public sealed class WorkerPluginHostTests
         File.WriteAllText(basePath, JsonSerializer.Serialize(new
         {
             schemaVersion = 1, library = new { id = "worker_host", nativeName = "worker_host" },
-            source = new { headers = new[] { Path.Combine(fixture.source, "native.h") }, parseMacros = false },
+            source = new { headers = new[] { Path.Combine(fixture.source, "native.h") }, includeDirectories = new[] { fixture.source }, parseMacros = false },
             output = new { root = fixture.output }, cache = new { directory = Path.Combine(fixture.root, "cache") },
             extensions = new { plugins = new[] { fixture.manifest }, options = new Dictionary<string, object>
                 { ["clang.fixture"] = new { values = new { externalFile = "external.txt" } } } }

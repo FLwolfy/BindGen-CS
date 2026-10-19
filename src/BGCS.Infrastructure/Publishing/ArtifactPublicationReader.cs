@@ -21,16 +21,34 @@ public sealed class ArtifactPublicationReader
         string outputRoot,
         string libraryId,
         CancellationToken cancellationToken = default
+    ) => ReadVerified(outputRoot, libraryId, static (
+        _,
+        artifacts
+    ) => artifacts, cancellationToken);
+
+    /// <summary>Reads selected content while the complete publication remains verified and locked.</summary>
+    /// <typeparam name="TResult">The detached reader result.</typeparam>
+    /// <param name="outputRoot">The formal BGCS output directory.</param>
+    /// <param name="libraryId">The expected publication owner.</param>
+    /// <param name="reader">A synchronous reader of the verified physical root and artifact identities; it must not retain handles or mutate the publication.</param>
+    /// <param name="cancellationToken">Cancels waiting for publication ownership.</param>
+    /// <returns>The detached result read from one complete publication, including an empty set when no output exists.</returns>
+    public TResult ReadVerified<TResult>(
+        string outputRoot,
+        string libraryId,
+        Func<string, ImmutableArray<ArtifactDescriptor>, TResult> reader,
+        CancellationToken cancellationToken = default
     ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryId);
+        ArgumentNullException.ThrowIfNull(reader);
         OwnedPathBoundary boundary = new(outputRoot);
         string absolute = boundary.physicalPath;
-        if (!Directory.Exists(absolute)) { boundary.Verify(); return []; }
+        if (!Directory.Exists(absolute)) { boundary.Verify(); return reader(absolute, []); }
         using FileStream publicationLock = DirectoryPublicationLease.Acquire(absolute, TimeSpan.FromSeconds(30), cancellationToken);
         boundary.Verify();
-        if (!Directory.Exists(absolute)) { boundary.Verify(); return []; }
-        if (!Directory.EnumerateFileSystemEntries(absolute).Any()) { boundary.Verify(); return []; }
+        if (!Directory.Exists(absolute)) { boundary.Verify(); return reader(absolute, []); }
+        if (!Directory.EnumerateFileSystemEntries(absolute).Any()) { boundary.Verify(); return reader(absolute, []); }
         string manifestPath = Path.Combine(absolute, ".bgcs-artifacts.json");
         ArtifactDigestVerifier.RejectLinkedAncestors(manifestPath);
         if (!File.Exists(manifestPath)) throw new IOException("The existing output has no BGCS artifact ownership manifest.");
@@ -40,6 +58,8 @@ public sealed class ArtifactPublicationReader
         cancellationToken.ThrowIfCancellationRequested();
         new ArtifactDigestVerifier().Verify(absolute, owner.artifacts, [".bgcs-artifacts.json"]);
         boundary.Verify();
-        return owner.artifacts;
+        TResult result = reader(absolute, owner.artifacts);
+        boundary.Verify();
+        return result;
     }
 }

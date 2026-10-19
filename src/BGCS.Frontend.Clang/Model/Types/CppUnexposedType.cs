@@ -3,7 +3,6 @@
 // Licensed under the MIT License.
 using System;
 using System.Collections.Generic;
-using BGCS.Frontend.Clang.Collections;
 using BGCS.Frontend.Clang.Model.Declarations;
 using BGCS.Frontend.Clang.Model.Interfaces;
 using ClangSharp.Interop;
@@ -16,7 +15,7 @@ namespace BGCS.Frontend.Clang.Model.Types;
 /// <remarks>
 /// Template parameter type instance are actually exposed with this type.
 /// </remarks>
-internal sealed class CppUnexposedType : CppType, ICppTemplateOwner, ICppContainer
+internal sealed class CppUnexposedType : CppType, ICppContainer
 {
     /// <summary>
     /// Captures a borrowed native type relationship for attempt-local analysis.
@@ -33,7 +32,6 @@ internal sealed class CppUnexposedType : CppType, ICppTemplateOwner, ICppContain
     ) : base(cursor, CppTypeKind.Unexposed)
     {
         this.name = name ?? throw new ArgumentNullException(nameof(name));
-        this.templateParameters = new CppContainerList<CppType>(this);
     }
 
     /// <summary>
@@ -45,8 +43,8 @@ internal sealed class CppUnexposedType : CppType, ICppTemplateOwner, ICppContain
     internal CppFunctionTypeBase? blockSignature { get; init; }
     /// <inheritdoc/>
     public override int sizeOf { get; set; }
-    /// <inheritdoc/>
-    public CppContainerList<CppType> templateParameters { get; }
+    /// <summary>Gets borrowed template argument types without changing their declaration owners.</summary>
+    public List<CppType> templateArguments { get; } = [];
 
     /// <inheritdoc/>
     public override CppType GetCanonicalType() => this;

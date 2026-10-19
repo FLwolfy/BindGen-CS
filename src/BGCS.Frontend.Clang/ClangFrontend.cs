@@ -95,6 +95,6 @@ public sealed class ClangFrontend : IFrontend
         if (!SourceSnapshotVerifier.Matches(executionInputs, cancellationToken))
             throw new IOException("Locked Clang parser resources changed while parsing.");
         return ValueTask.FromResult(new FrontendResult(module, new SourceSnapshot(files, directories) { excludedDirectories = request.snapshotExcludedDirectories })
-        { executionInputs = executionInputs });
+        { executionInputs = executionInputs, parserBuiltinInputs = executionInputs });
     }
 }

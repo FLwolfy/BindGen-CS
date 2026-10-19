@@ -65,7 +65,7 @@ switch (envelope.request.headers[0])
     case "stderr-flood":
         await Console.Error.WriteAsync(new string('x', 1024 * 1024));
         await Console.Error.WriteLineAsync("LAST_DIAGNOSTIC");
-        await WorkerProtocol.WriteAsync(output, new WorkerResponse(envelope.requestId, null, null), CancellationToken.None);
+        await WorkerProtocol.WriteAsync(output, new WorkerResponse(envelope.requestId, null, "fixture failure summary"), CancellationToken.None);
         break;
 }
 await output.FlushAsync();

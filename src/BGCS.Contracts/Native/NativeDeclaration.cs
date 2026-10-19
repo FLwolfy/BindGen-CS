@@ -41,6 +41,10 @@ public sealed record NativeDeclaration(
     public string? role { get; init; }
     /// <summary>Gets the field byte offset, or null when not applicable or unknown.</summary>
     public long? offset { get; init; }
+    /// <summary>Gets the compiler-established field slot size in bytes, independently of a reference type's referent size; null means unknown or not applicable.</summary>
+    public long? storageSize { get; init; }
+    /// <summary>Gets compiler provenance for the field slot size; this does not certify another consumer compiler.</summary>
+    public Evidence? storageEvidence { get; init; }
     /// <summary>Gets the field bit offset, or null when not applicable or unknown.</summary>
     public long? bitOffset { get; init; }
     /// <summary>Gets the bitfield width, or null for an ordinary field.</summary>

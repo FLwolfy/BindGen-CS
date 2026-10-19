@@ -27,8 +27,8 @@
   "sources": {
     "windows-x64-msvc/managed/Bindings.cs": "5ba58a7a341ff2e72d5fd296f66bf133c41208ec786fc4af092931693ce0fc58",
     "windows-x64-msvc/native/include/Bimg_.h": "8d49292fce8d83e17a4b12370d72a832aedcfe25aa778951622c38fcf8169609",
-    "windows-x64-msvc/native/src/Bimg_.cpp": "d62b7ad3540f4571379fe7f29ba778e68fea90b558ff3fc9297468aa612772c6",
-    "windows-x64-msvc/native/src/storage.assertions.cpp": "41d42206682fd79e37eed9704b1017bec5f05c378271af01e2fa17c727175938"
+    "windows-x64-msvc/native/src/Bimg_.cpp": "ba10facc6b23e9d1ba6e01d71a876a77941685d7a81cb08f2a7d70cd506fbb99",
+    "windows-x64-msvc/native/src/storage.assertions.cpp": "fd5ce3e4c035dd6738b85e5605fa12573f0bb93233a267fe021729db10b7d2bf"
   },
   "publicApiSha256": "63b42f43d1dc7849da43620c234c407b156abd0de14dbc25897f004c031f1e90"
 }

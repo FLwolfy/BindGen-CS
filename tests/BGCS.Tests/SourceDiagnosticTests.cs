@@ -1,16 +1,46 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
 using BGCS.Contracts;
 using BGCS.Contracts.Inputs;
+using BGCS.Contracts.Ports;
+using BGCS.Contracts.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
 
 public sealed class SourceDiagnosticTests
 {
+    [Fact]
+    public async Task FrontendFailureDetailsRemainStructuredWithoutExpandingTheSummary()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-failure-details-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(root, "native.h"), "int read_value(void);\n");
+            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new FailedFrontend()).Build();
+            AnalysisResult result = await host.AnalyzeAsync(new(["native.h"], SourceLanguage.C, root) { parseMacros = false });
+            BindingDiagnostic failure = Assert.Single(result.diagnostics, diagnostic => diagnostic.code == "BGCS-ANALYSIS-SESSION");
+            Assert.Equal("fixture worker summary", failure.message);
+            Assert.Equal("fixture worker throw-site\n at Collection.insert", failure.details);
+            string json = JsonSerializer.Serialize(failure);
+            Assert.Equal(failure.details, JsonSerializer.Deserialize<BindingDiagnostic>(json)!.details);
+            Assert.DoesNotContain("\"details\"", JsonSerializer.Serialize(new BindingDiagnostic(BindingDiagnosticSeverity.Error, "ordinary failure")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private sealed class FailedFrontend : IFrontend
+    {
+        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
+            => ValueTask.FromException<FrontendResult>(new InvalidDataException("fixture worker summary", new IOException("fixture worker throw-site\n at Collection.insert")));
+    }
+
     [Theory]
     [InlineData(BindingImportMode.FunctionTable, 16, "BGCS-CSHARP-ABI-PLAN")]
     [InlineData(BindingImportMode.DllImport, 16, "BGCS-CSHARP-ABI-PLAN")]

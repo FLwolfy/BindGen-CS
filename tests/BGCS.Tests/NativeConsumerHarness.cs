@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Contracts.Inputs;
+using BGCS.Contracts.Artifacts;
 using BGCS.Contracts.Targets;
 using BGCS.Infrastructure.Verification;
 using BGCS.Infrastructure.Publishing;
@@ -89,15 +90,23 @@ internal static class NativeConsumerHarness
         foreach (TargetInspection target in generated.targetModels)
         {
             string targetRoot = Path.Combine(generated.outputRoot, target.targetId);
-            string nativeRoot = Path.Combine(targetRoot, "native");
-            string[] generatedSources = Directory.Exists(nativeRoot) ? Directory.GetFiles(nativeRoot, "*", SearchOption.AllDirectories).Where(IsSource).ToArray() : [];
-            string[] sources = fixtureSources.Concat(generatedSources).Distinct(StringComparer.Ordinal).ToArray();
+            NativeSourceManifest manifest = Assert.Single(generated.nativeSources, item => item.targetId == target.targetId);
+            string[] generatedSources = manifest.sources.Select(source => Path.Combine(generated.outputRoot, source.relativePath)).ToArray();
+            Dictionary<string, string> roots = generated.nativeInputRoots.Where(item => item.targetId == target.targetId)
+                .ToDictionary(item => item.rootId, item => item.directory, StringComparer.Ordinal);
+            string[] declaredSources = manifest.inputs.Where(input => input.role == "ShimSource")
+                .Select(input => Path.Combine(roots[input.rootId], input.relativePath)).ToArray();
+            string[] sources = fixtureSources.Concat(generatedSources).Concat(declaredSources).Distinct(StringComparer.Ordinal).ToArray();
             if (sources.Length == 0) continue;
             string binaryRoot = NativeDirectory(targetRoot);
             Directory.CreateDirectory(binaryRoot);
             string binary = Path.Combine(binaryRoot, OperatingSystem.IsWindows() ? libraryName + ".dll" : OperatingSystem.IsMacOS() ? "lib" + libraryName + ".dylib" : "lib" + libraryName + ".so");
-            await CompileSharedAsync(sources, binary, sourceRoot, arguments,
-                [Path.Combine(nativeRoot, "include")], languageStandard, target.resolvedTarget);
+            List<string> compilerArguments = [.. arguments ?? []];
+            foreach (NativeIncludeDirectory include in manifest.includeDirectories.Where(include => include.isSystem))
+                compilerArguments.AddRange([include.isFramework ? "-iframework" : "-isystem", Path.Combine(roots[include.rootId], include.relativePath)]);
+            await CompileSharedAsync(sources, binary, sourceRoot, compilerArguments,
+                manifest.includeDirectories.Where(include => !include.isSystem).Select(include => Path.Combine(roots[include.rootId], include.relativePath)),
+                languageStandard ?? manifest.languageStandard, target.resolvedTarget);
         }
         static bool IsSource(string path) => Path.GetExtension(path) is ".c" or ".cpp" or ".cc" or ".cxx";
     }

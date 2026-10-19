@@ -226,6 +226,8 @@ internal static class CppParser
                 if (options.parserKind == SourceLanguage.Cpp)
                     NativeCallableExceptionFactReader.Read(createIndex, argumentsArray, rootFileContent, compilation);
                 if (options.parserKind == SourceLanguage.Cpp)
+                    NativeReferenceStorageFactReader.Read(createIndex, argumentsArray, compilation);
+                if (options.parserKind == SourceLanguage.Cpp)
                     EvaluateDefaultConstructibility(createIndex, argumentsArray, rootFileContent, compilation);
                 if (options.parserKind == SourceLanguage.Cpp && compilation.primitiveFacts.Keys.Any(type => type.kind == CppPrimitiveKind.WChar))
                 {

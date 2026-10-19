@@ -32,9 +32,13 @@ public sealed class CrashIsolationTests
     {
         InvalidDataException exception = await Assert.ThrowsAsync<InvalidDataException>(async () =>
             await CreateClient().ParseAsync(Request("stderr-flood"), CancellationToken.None));
-        Assert.Contains("LAST_DIAGNOSTIC", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("truncated", exception.Message, StringComparison.Ordinal);
-        Assert.InRange(exception.Message.Length, 1, 66 * 1024);
+        Assert.Contains("fixture failure summary", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("LAST_DIAGNOSTIC", exception.Message, StringComparison.Ordinal);
+        string details = Assert.IsType<IOException>(exception.InnerException).Message;
+        Assert.Contains("LAST_DIAGNOSTIC", details, StringComparison.Ordinal);
+        Assert.Contains("truncated", details, StringComparison.Ordinal);
+        Assert.InRange(exception.Message.Length, 1, 2300);
+        Assert.InRange(details.Length, 1, 66 * 1024);
     }
 
     [Fact]
@@ -43,7 +47,8 @@ public sealed class CrashIsolationTests
         int host = Environment.ProcessId;
         IOException failure = await Assert.ThrowsAsync<IOException>(async () =>
             await CreateClient().ParseAsync(Request("native-abort"), CancellationToken.None));
-        Assert.Contains("NATIVE_ABORT_ENTERED", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("request", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("NATIVE_ABORT_ENTERED", Assert.IsType<IOException>(failure.InnerException).Message, StringComparison.Ordinal);
         Assert.Equal(host, Environment.ProcessId);
         await Assert.ThrowsAsync<InvalidDataException>(async () =>
             await CreateClient().ParseAsync(Request("invalid-json"), CancellationToken.None));

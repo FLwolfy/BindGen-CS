@@ -19,6 +19,11 @@ public sealed record GenerationResult(
     ImmutableArray<BindingDiagnostic> diagnostics
 )
 {
+    /// <summary>Gets portable native source requirements for each successfully published target.</summary>
+    public ImmutableArray<NativeSourceManifest> nativeSources { get; init; } = [];
+    /// <summary>Gets session-local physical root bindings; consumers remap these identities to their own frozen inputs.</summary>
+    [JsonIgnore]
+    public ImmutableArray<NativeInputRootBinding> nativeInputRoots { get; init; } = [];
     /// <summary>Gets detached target models for explicit SDK inspection without embedding them in routine result JSON.</summary>
     [JsonIgnore]
     public ImmutableArray<TargetInspection> targetModels { get; init; } = [];

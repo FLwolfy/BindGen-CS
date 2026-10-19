@@ -20,7 +20,7 @@ public sealed class LibraryAgnosticArchitectureTests
         string[] forbiddenMarkers =
         [
             "ImVec", "ImGui", "SDL_", "cimgui", "bgfx", "bimg", "miniaudio",
-            "InnoEngine", "GLFW_", "sqlite3_", "Assimp::", "gbf::",
+            "ConsumerSpecificLibrary", "GLFW_", "sqlite3_", "Assimp::", "gbf::",
             "HWND", "HINSTANCE", "HRESULT", "Uint8", "Sint8"
         ];
         List<string> offenders = [];

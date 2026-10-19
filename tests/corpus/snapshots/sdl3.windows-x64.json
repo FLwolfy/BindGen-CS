@@ -57,9 +57,9 @@
   },
   "sources": {
     "windows-x64-msvc/managed/Bindings.cs": "20dd8cabde77792ca824bb20813781af635d59dbc99ae82c351885c39d1f986d",
-    "windows-x64-msvc/native/include/bgcs_sdl3_helpers.h": "c75302344992b65de3a096125e2bee143041fb356a3fac453aac8170ca487b93",
+    "windows-x64-msvc/native/include/bgcs_sdl3_helpers.h": "8f71efa0818d7e24af21cc4ecb8dc2a3be0ca90b2a745c7d2f99eea9e3c3025a",
     "windows-x64-msvc/native/src/bgcs_sdl3_helpers.c": "819775cee81d70f2c05181df9c6abe3796f51b67d03950c4f444bfe1db824e38",
-    "windows-x64-msvc/native/src/storage.assertions.c": "16c8acbcb42aad2fbe1b510f66fde63a4257990af9de764f94a1682f21af08c1"
+    "windows-x64-msvc/native/src/storage.assertions.c": "cd9ed184be797918ed0394c8581009e329de17bb96fcfa8bcd8ce9ddba831d81"
   },
   "publicApiSha256": "25c9cc20f476fa37bd5babf1ef85d62d0eacc5a86a10a366d16e73593927e082"
 }

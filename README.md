@@ -225,6 +225,8 @@ implementation. See [plugins](docs/extensibility.md) and [platform extension](do
 
 [All documentation](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Testing](docs/testing.md)
 
+[Portable native source manifests and consumer input mapping](docs/native-source-inputs.md).
+
 ## License
 
 [MIT](LICENSE). Third-party copyright and license texts are retained in

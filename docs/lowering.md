@@ -1,6 +1,6 @@
 # Neutral C++ lowering architecture
 
-[简体中文](lowering.cn.md) | [Cookbook](cpp-extension-cookbook.md) | [Architecture](architecture.md)
+[简体中文](lowering.cn.md) | [Cookbook](cpp-extension-cookbook.md) | [Architecture](architecture.md) | [Native inputs](native-source-inputs.md)
 
 The C++ backend accepts detached native facts and produces typed C ABI operations. Standard plugins reference `BGCS.Contracts`; parsing and worker execution stay outside the lowering layer.
 
@@ -19,8 +19,9 @@ flowchart TD
     Bridge --> Verify
     Verify --> Interop["InteropModule with exact ABI and semantics"]
     Interop --> Managed["Managed projection and C# backend"]
-    Managed --> Candidate["Candidate compile / native build / requested validation"]
+    Managed --> Candidate["Candidate source and contract validation"]
     Candidate --> Publish["Joint publication and verification receipt"]
+    Publish -.-> Consumer["Consumer-owned compile / link / invocation"]
 ```
 
 ## Model boundaries
@@ -47,7 +48,7 @@ All services affecting output contribute implementation/configuration/private-st
 
 Ordinary C inputs preserve one original native parameter each. An expanded parameter uses `BridgeArgumentGroup`, with exact original declaration/type IDs, named C carrier bindings, and a fingerprinted expression. Groups preserve native parameter order and consume every exported C carrier exactly once. A one-carrier ordinary group needs no new expression.
 
-The verifier rejects missing, duplicate, unrelated, or out-of-order bindings. The emitter substitutes only declared names and invokes the native callable once. A group cannot infer ownership or a managed pinning protocol. The recipe form is `cpp.typeLowerings[].abiParameters`; the cookbook contains complete examples.
+The verifier rejects missing, duplicate, unrelated, or out-of-order bindings. The emitter substitutes only declared names and emits one invocation of the native callable; that call executes in the consumer's compiled bridge. A group cannot infer ownership or a managed pinning protocol. The recipe form is `cpp.typeLowerings[].abiParameters`; the cookbook contains complete examples.
 
 Finite standard sequence adapters use `BridgeArgumentGroup.standardSequence` instead of a source-expression template. The model records the exact original element, compiler extent, copy/borrow operation, and evidence. Additional exports link to a preserved primary through `inputAdapterOf`; exact data/length coverage and unchanged result identity are checked before emission. Results are limited to scalar/void or a fresh owned default-standard `basic_string`/`filesystem::path` value with its complete destruction pair and creating-call cleanup proof. Borrowed, pointer/reference, custom-text and other container results remain unavailable through this adapter, as do construction and custom invocation/result expressions. See the cookbook for `cpp.sequenceInputAdapters` and its explicit borrowing constraints.
 
@@ -55,7 +56,7 @@ Finite standard sequence adapters use `BridgeArgumentGroup.standardSequence` ins
 
 Structured operations cover free/static/member calls, construction, destruction, native base casts, checked derived casts, and finite standard value protocols. Controlled expressions provide explicit extensions rather than replacing the whole operation model.
 
-`DefaultConstruct` names an exact owner without creating a fake source function. A nullable compiler-evaluated default-constructibility fact is required before planning it; missing, inaccessible, deleted, abstract and incomplete construction remains unavailable. A final native compiler assertion and `new Owner()` validate the actual build arguments. `generate` retains the pending native-compilation stage; parser facts alone do not certify native build or invocation.
+`DefaultConstruct` names an exact owner without creating a fake source function. A nullable compiler-evaluated default-constructibility fact is required before planning it; missing, inaccessible, deleted, abstract and incomplete construction remains unavailable. Generated source includes a native assertion and `new Owner()` for the consumer's compiler to check. BGCS does not compile or execute that construction; parser facts alone do not certify the consumer's build or invocation.
 
 Owned result plans require the exact native destruction pair. Generated releases require nonthrowing destruction; this does not prove thread independence. Arbitrary borrowed pointer/reference lifetimes remain unknown. Typed same-object base casts retain the owner relation. A by-value unique-pointer argument moves its payload while retaining caller ownership of its now-empty holder.
 
@@ -88,8 +89,8 @@ continue to require a template-family protocol rather than acquiring standard be
 `NativeValueProtocol.scopedRelease` has no capability by default. Its finite
 `CreatingCall` scope permits only a fresh default-allocator standard string or
 filesystem path to be copied and destroyed inside the same synchronous creating
-call and caller thread. Native identity and nonthrowing destruction are asserted
-by the actual compiler; custom traits, allocators and `pmr` retain unknown cleanup.
+call and caller thread. Generated assertions check native identity and nonthrowing
+destruction when the consumer compiles the bridge; custom traits, allocators and `pmr` retain unknown cleanup.
 `CopyCodeUnits` copies the complete counted extent into an exact writable unit
 pointer/capacity pair and returns the written count through the status boundary.
 It checks bounds, null and alignment before writing, and converts a path once per
@@ -111,6 +112,6 @@ Virtual proxy metadata records exact status-returning Cdecl callback slots. The 
 
 Before writing candidates, operation verification checks source identities, arity, carriers, ownership pairs, fragments, and argument groups. C header reparse checks the actual export set and signature shapes. Semantic merging preserves original parameter identities and assertion levels.
 
-Requested managed compilation, native linking, export verification, and invocation run against candidates. Failure does not publish a successful formal result. Generated typed plans live in `bridge.module.json`; native build inputs live in `bridge.manifest.json`. The verification receipt records which stages actually ran.
+BGCS validates source and contracts before publication; it does not compile managed consumers, link native code or invoke generated APIs. A generation validation failure prevents publication. Generated typed plans live in `bridge.module.json`; the typed `NativeSourceManifest` stays in `<target>/native/metadata/bridge.manifest.json`. Use `GenerationResult.nativeSources` or verified `BindingArtifactManifest.ReadNativeSources`, then map input roots as described in the [source-input guide](native-source-inputs.md). Verification metadata records generator stages, not completion of the consumer's later build.
 
-Native value operations and high-level managed projections are verified separately. Raw/status container tests do not establish automatic C# array returns. Counted string inputs retain their exact data/length text contract. Local Windows/CoreCLR invocation evidence covers minimal CStr string inputs, fresh default-standard string/path copies to C# `string`, and owned members combining counted inputs with text results across all three imports and both Runtime modes. The owned fixture uses `SetNameWithSequence(string)`, `GetName()` and `PrefixWithSequence(string)`; its native body really retains `this` until destruction, without changing unknown self retention to false. These local checks do not certify other platforms, NativeAOT or final packages. Chrono preserves native count, ratio and clock rather than assuming a managed date epoch.
+Native value operations and high-level managed projections have separate repository consumer fixtures. Raw/status container checks do not establish automatic C# array returns. Counted string inputs retain their exact data/length text contract. Text fixtures cover CStr inputs, fresh default-standard string/path copies to C# `string`, and owned members such as `SetNameWithSequence(string)`, `GetName()` and `PrefixWithSequence(string)`. Their native body can retain `this` until destruction without changing unknown self retention to false. Those external fixture runs are distinct from generation and from release certification. Chrono preserves native count, ratio and clock rather than assuming a managed date epoch.

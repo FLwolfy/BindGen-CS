@@ -36,16 +36,6 @@ internal static class NativeGeneratedInputRelocation
         return null;
     }
 
-    internal static string HeaderInclude(
-        string path,
-        ImmutableArray<NativeGeneratedInputMap> maps,
-        string sourceArtifactDirectory
-    ) {
-        string? relocated = MapPath(path, maps);
-        string anchor = Path.GetPathRoot(AppContext.BaseDirectory)!;
-        return relocated is null ? path : Path.GetRelativePath(Path.GetFullPath(sourceArtifactDirectory, anchor), Path.GetFullPath(relocated["artifact:/".Length..], anchor)).Replace('\\', '/');
-    }
-
     internal static ImmutableArray<string> EnumerateFiles(string directory)
     {
         ImmutableArray<string>.Builder files = ImmutableArray.CreateBuilder<string>();

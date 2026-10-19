@@ -79,17 +79,31 @@ public sealed class NativeModuleVerifier
                 CheckReference(parameter, typeIds, declaration.id, diagnostics);
             if (declaration.offset < 0 || declaration.bitOffset < 0 || declaration.bitWidth < 0)
                 Add(diagnostics, $"Native declaration '{declaration.qualifiedName}' has an invalid field position.");
-            if (declaration.parent is not StableId parentId || declaration.offset is not long offset || !declarationIds.Contains(parentId))
+            if (declaration.storageSize < 0 || declaration.storageSize is not null
+                && (declaration.kind != "Field" || declaration.role == "Variable" || declaration.isStatic || declaration.bitWidth is not null
+                    || declaration.storageEvidence is not { level: EvidenceLevel.Declared or EvidenceLevel.Verified }
+                    || string.IsNullOrWhiteSpace(declaration.storageEvidence.origin))
+                || declaration.storageEvidence is not null && declaration.storageSize is null)
+                Add(diagnostics, $"Native declaration '{declaration.qualifiedName}' has invalid field storage facts or missing compiler provenance.");
+            NativeType? fieldType = declaration.type is StableId fieldIdentity && typeIds.Contains(fieldIdentity) ? ResolveFieldType(module, fieldIdentity, typeIds) : null;
+            bool reference = fieldType?.category == NativeTypeCategory.Reference;
+            if (!reference && declaration.storageSize is long declaredSize && fieldType?.size is long typeSize && declaredSize != typeSize)
+                Add(diagnostics, $"Native field '{declaration.qualifiedName}' has a slot size inconsistent with its nonreference type size.");
+            if (declaration.parent is not StableId parentId || !declarationIds.Contains(parentId))
                 continue;
             NativeDeclaration parent = module.GetDeclaration(parentId);
             if (parent.type is not StableId parentType || !typeIds.Contains(parentType))
                 continue;
             NativeType container = module.GetType(parentType);
+            if (container.category == NativeTypeCategory.Record && parent.isCompleteDefinition && declaration.kind == "Field"
+                && declaration.role != "Variable" && !declaration.isStatic
+                && reference && declaration.storageSize is not > 0)
+                Add(diagnostics, $"Reference field '{declaration.qualifiedName}' omitted its compiler-established field storage size.");
+            if (declaration.offset is not long offset) continue;
             if (container.category == NativeTypeCategory.Record && container.size is long extent && offset > extent)
                 Add(diagnostics, $"Field '{declaration.qualifiedName}' starts beyond its record's {extent}-byte extent.");
             if (container.category == NativeTypeCategory.Record && container.size is long recordSize
-                && declaration.bitWidth is null && declaration.type is StableId fieldTypeId && typeIds.Contains(fieldTypeId)
-                && module.GetType(fieldTypeId).size is long fieldSize && fieldSize > 0
+                && declaration.bitWidth is null && (declaration.storageSize ?? (reference ? null : fieldType?.size)) is long fieldSize && fieldSize > 0
                 && (offset > recordSize || fieldSize > recordSize - offset))
                 Add(diagnostics, $"Field '{declaration.qualifiedName}' exceeds its record's {recordSize}-byte extent.");
             if (container.category == NativeTypeCategory.Record && container.size is long bitfieldExtent
@@ -98,6 +112,19 @@ public sealed class NativeModuleVerifier
                 Add(diagnostics, $"Bitfield '{declaration.qualifiedName}' exceeds its record's {bitfieldExtent}-byte extent.");
         }
         return diagnostics.ToImmutable();
+    }
+
+    private static NativeType ResolveFieldType(
+        NativeModule module,
+        StableId identity,
+        ISet<StableId> known
+    ) {
+        NativeType type = module.GetType(identity);
+        HashSet<StableId> visited = [];
+        while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified
+            && type.elementType is StableId element && known.Contains(element) && visited.Add(type.id))
+            type = module.GetType(element);
+        return type;
     }
 
     private static void CheckReference(

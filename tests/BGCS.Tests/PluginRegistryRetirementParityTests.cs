@@ -13,6 +13,7 @@ using BGCS.Contracts.Native;
 using BGCS.Contracts.Plugins;
 using BGCS.Contracts.Ports;
 using BGCS.Contracts.Requests;
+using BGCS.Contracts.Versioning;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -20,16 +21,26 @@ namespace BGCS.Tests;
 public sealed class PluginRegistryRetirementParityTests
 {
     [Theory]
-    [InlineData(2, 0)]
-    [InlineData(3, 1)]
-    [InlineData(4, 0)]
-    [InlineData(3, -1)]
+    [InlineData(ContractVersion.C_MAJOR - 1, 0)]
+    [InlineData(ContractVersion.C_MAJOR, ContractVersion.C_API_MINOR + 1)]
+    [InlineData(ContractVersion.C_MAJOR + 1, 0)]
+    [InlineData(ContractVersion.C_MAJOR, -1)]
     public void IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(int major, int minimumMinor)
     {
         int calls = 0;
         PluginDescriptor descriptor = new("probe.plugin", "1.0.0", [new("probe.service", ExtensionPort.NativeModuleTransform)])
         { contractsMajor = major, minimumApiMinor = minimumMinor };
         Assert.Throws<InvalidOperationException>(() => Builder().AddPluginFactory(descriptor, () => { calls++; throw new InvalidOperationException(); }));
+        Assert.Equal(0, calls);
+    }
+
+    [Fact]
+    public void CurrentContractDescriptorIsAcceptedWithoutExecutingTheFactory()
+    {
+        int calls = 0;
+        PluginDescriptor descriptor = new("probe.plugin", "1.0.0", [new("probe.service", ExtensionPort.NativeModuleTransform)])
+        { contractsMajor = ContractVersion.C_MAJOR, minimumApiMinor = ContractVersion.C_API_MINOR };
+        Builder().AddPluginFactory(descriptor, () => { calls++; throw new InvalidOperationException(); });
         Assert.Equal(0, calls);
     }
 

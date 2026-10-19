@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "productVersion": "3.0.0",
-  "scope": "Reviewed initial major-version public API baselines, not platform/package/release certification.",
+  "productVersion": "3.0.1",
+  "scope": "Reviewed additive patch-version API and native source manifest changes; not platform/package/release certification.",
   "releaseCertification": false,
   "sourceWorktreeDirtyAtReview": true,
   "snapshotEncoding": "UTF-8 without BOM, invariant LF, final newline",
@@ -27,9 +27,9 @@
     {
       "assembly": "BGCS.Contracts",
       "baseline": "tests/public-api/BGCS.Contracts.txt",
-      "sha256": "8e23a812d1f940f25a89c60a35e77546e621b2e94fd3418c12fac2df3783f548",
-      "lines": 3356,
-      "exportedTypes": 261
+      "sha256": "ef318bf187dea3569ef195b3b32d2e9db4125a17df914bf8631ba7b689ecdb60",
+      "lines": 3452,
+      "exportedTypes": 267
     },
     {
       "assembly": "BGCS.Runtime",
@@ -41,16 +41,16 @@
     {
       "assembly": "BGCS",
       "baseline": "tests/public-api/BGCS.txt",
-      "sha256": "b32796cc38c38f776e162254c92c4884ef90fe376aa37139e009e53220f73153",
-      "lines": 817,
+      "sha256": "de6fdd3f2e599ed5c4abcda7a6b9736d96e477da2d6eb5f0d914419ab4f34d62",
+      "lines": 820,
       "exportedTypes": 58
     },
     {
       "assembly": "BGCS.Infrastructure",
       "baseline": "tests/public-api/BGCS.Infrastructure.txt",
-      "sha256": "7f5ae32987e5492eee4d3afb7f990354c81a0eb2d2129de94a74db845dba39b2",
-      "lines": 342,
-      "exportedTypes": 52
+      "sha256": "06eee6d65fde79fcd0a9a7ac198df000a6223b01b5f678ef8a90d3155b983801",
+      "lines": 325,
+      "exportedTypes": 51
     },
     {
       "assembly": "BGCS.Platforms",
@@ -93,5 +93,12 @@
     "Remove TargetConfiguration.toolchain, an unused auto-only alias; explicit targets.settings retains parser SDK paths, macros and arguments.",
     "WorkerAssetProvisioner.Prepare verifies application-deployed standard NuGet content and exact host-native resources before preparing or reusing an owned version/host/manifest resource directory; no download, compiler execution, global NuGet lookup or build hook.",
     "The independent Contracts/Runtime, neutral transformation ports and C/C++ bridge emitters retain their current documented contracts. Unsupported ABI forms and missing lifecycle evidence remain strict failures or omit only the unsafe friendly projection."
+  ],
+  "reviewedPatchChanges": [
+    "Add typed portable NativeSourceManifest input roots, files, ordered include requirements and generated sources; return physical root bindings separately from portable JSON.",
+    "Add BindingArtifactManifest.ReadNativeSources and a locked verified publication callback; no build or execution services enter Contracts.",
+    "Add optional BindingDiagnostic.details and parserBuiltinInputs for bounded failure context and exact resource separation.",
+    "Add compiler-declared per-field storageSize/storageEvidence independently of reference referent sizeof; strict graph/layout checks remain.",
+    "Contracts major 3 and existing extension ports remain; API minor 1 identifies the additive surface. v3.0.0 remains immutable."
   ]
 }

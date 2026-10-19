@@ -1,5 +1,9 @@
 # Native name attributes
 
+For generated native files, input roots and consumer source selection, see
+[portable native source inputs](native-source-inputs.md). That typed manifest is
+independent of the optional C# attributes described here.
+
 Set `api.emitNativeMetadata` to `true` to annotate canonical `RawApi` methods and the corresponding DllImport/LibraryImport declarations. The default is `false`.
 
 The annotations retain the original native callable identity, final C ABI return type spelling, and each original parameter name and type spelling. Managed renaming does not change those facts. FunctionTable uses the same canonical RawApi annotations. Converted friendly methods, aliases, type/field declarations and non-owning pointer views are outside this option's scope.
@@ -28,8 +32,10 @@ deployment. Your managed consumer owns C# compilation. A successful generation
 result proves none of those later steps or actual invocation.
 
 Run `bindgen-cs generate bindgen.json` (or `bridge` for bridge-only output).
-Use the returned artifact descriptors to select the exact target's native source
-and header files. Add those files and the upstream library implementation to your
+Use `GenerationResult.nativeSources` or `BindingArtifactManifest.ReadNativeSources`
+to select the exact target's generated translation units, shim sources and ordered
+include requirements. Remap the logical input roots as described in the
+[source-input guide](native-source-inputs.md). Add the selected files and upstream implementation to your
 CMake, Meson, MSBuild or compiler build. Preserve target architecture, calling
 conventions, packing, language mode, defines, includes, SDK and C++ ABI settings.
 Link the upstream library and its dependencies explicitly. Generated headers do

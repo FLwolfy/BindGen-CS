@@ -26,6 +26,7 @@ internal static class EmissionStageCache
         EmissionRequest request,
         BindingConfiguration configuration,
         SourceSnapshot sourceInputs,
+        SourceSnapshot declaredNativeInputs,
         GenerationInputTracker inputs,
         FrozenExtensionRegistry definition,
         CancellationToken cancellationToken
@@ -45,7 +46,7 @@ internal static class EmissionStageCache
         JsonElement identity = JsonSerializer.SerializeToElement(new
         {
             stage = "BGCS.CSharpEmission",
-            revision = 2,
+            revision = 3,
             implementations,
             configuration,
             model,
@@ -76,6 +77,7 @@ internal static class EmissionStageCache
             // paths and must not make otherwise identical emission keys unique.
             inputs.fingerprints,
             sourceInputs = new { sourceInputs.files, sourceInputs.searchDirectories, sourceInputs.absentInputs },
+            declaredNativeInputs = new { declaredNativeInputs.files, declaredNativeInputs.searchDirectories, declaredNativeInputs.absentInputs },
             extensionInputs = inputs.snapshots.Select(snapshot => new
             { snapshot.files, snapshot.searchDirectories, snapshot.absentInputs }).ToArray(),
             plugins = definition.Plugins.Select(plugin => new

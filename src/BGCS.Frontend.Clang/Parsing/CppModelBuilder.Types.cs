@@ -157,10 +157,10 @@ internal unsafe partial class CppModelBuilder
                     {
                         sizeOf = (int)type.SizeOf
                     };
-                    var templateParameters = ParseTemplateSpecializedArguments(cursor, type);
-                    if (templateParameters != null)
+                    var templateArguments = ParseTemplateSpecializedArguments(cursor, type);
+                    if (templateArguments != null)
                     {
-                        cppUnexposedType.templateParameters.AddRange(templateParameters);
+                        cppUnexposedType.templateArguments.AddRange(templateArguments);
                     }
 
                     return cppUnexposedType;

@@ -36,6 +36,10 @@ try
 catch (Exception exception)
 {
     Console.Error.WriteLine(exception);
-    await WorkerProtocol.WriteAsync(output, new WorkerResponse(envelope.requestId, null, exception.Message), CancellationToken.None);
+    string summary = exception.Message;
+    int newline = summary.IndexOfAny(['\r', '\n']);
+    if (newline >= 0) summary = summary[..newline];
+    if (summary.Length > 2048) summary = summary[..2048] + " [truncated]";
+    await WorkerProtocol.WriteAsync(output, new WorkerResponse(envelope.requestId, null, summary), CancellationToken.None);
     Environment.ExitCode = 1;
 }

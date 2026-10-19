@@ -230,7 +230,7 @@ public sealed partial class TypedBridgeEmitter
         }
         source.Append(apiMacro).Append(" const char* ").Append(callMacro).Append(' ').Append(module.errorMessageExport).Append("(const ").Append(module.errorTypeName).Append("* error)\n{\n    return error == nullptr ? nullptr : error->message;\n}\n\n")
             .Append(apiMacro).Append(" void ").Append(callMacro).Append(' ').Append(module.errorReleaseExport).Append('(').Append(module.errorTypeName).Append("* error)\n{\n    std::free(static_cast<void*>(error));\n}\n");
-        return [Write("include/" + fileStem + ".h", "text/x-c", header.ToString()), Write("src/" + fileStem + ".cpp", "text/x-c++", source.ToString())];
+        return [Write("include/" + fileStem + ".h", "text/x-c-header", header.ToString()), Write("src/" + fileStem + ".cpp", "text/x-c++", source.ToString())];
 
         string Signature(BridgeExport export)
         {

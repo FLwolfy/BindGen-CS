@@ -56,6 +56,15 @@
             "BGCS.Tests.NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation(singleFile: False)",
             "BGCS.Tests.NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation(singleFile: True)"
           ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt"
+          ]
         }
       ],
       "sourceReview": {
@@ -76,7 +85,9 @@
         "src/BGCS.Contracts/Native/NativeType.cs",
         "src/BGCS.Contracts/Native/NativeDeclaration.cs",
         "src/BGCS.Frontend.Clang/Facts/NativeModuleBuilder.cs",
-        "src/BGCS.Analysis/Interop/NativeModuleVerifier.cs"
+        "src/BGCS.Analysis/Interop/NativeModuleVerifier.cs",
+        "src/BGCS.Frontend.Clang/Parsing/NativeReferenceStorageFactReader.cs",
+        "tests/BGCS.Tests/NativeReferenceFieldStorageTests.cs"
       ],
       "requiredHosts": [
         "windows-x64"
@@ -127,6 +138,40 @@
           "requiredCases": [
             "BGCS.Tests.NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation(singleFile: False)",
             "BGCS.Tests.NeutralSourceFactParityTests.SourceAliasesAnonymousRecordsAndCallbacksSurvivePublicGenerationAndCompilation(singleFile: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Frontend.Clang.Tests",
+          "match": "^BGCS\\.Frontend\\.Clang\\.Tests\\.ReferenceFieldStorageTests\\.ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents$",
+          "requiredCases": [
+            "BGCS.Frontend.Clang.Tests.ReferenceFieldStorageTests.ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents(triple: \"i686-pc-linux-gnu\", slotSize: 4)",
+            "BGCS.Frontend.Clang.Tests.ReferenceFieldStorageTests.ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents(triple: \"x86_64-pc-linux-gnu\", slotSize: 8)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.NativeReferenceFieldStorageTests\\.WorkerReferenceSlotsRetainStrictGraphAndConsumerCompilerChecks$",
+          "requiredCases": [
+            "BGCS.Tests.NativeReferenceFieldStorageTests.WorkerReferenceSlotsRetainStrictGraphAndConsumerCompilerChecks(corruptStorage: False)",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.WorkerReferenceSlotsRetainStrictGraphAndConsumerCompilerChecks(corruptStorage: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.NativeReferenceFieldStorageTests\\.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage$",
+          "requiredCases": [
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"valid\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"missing\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"unproven\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"negative\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"overflow\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"ordinary-mismatch\")"
           ]
         }
       ],
@@ -443,7 +488,10 @@
       "receipt": null,
       "implementation": [
         "src/BGCS.CSharp/Planning/CSharpEmissionPlanner.cs",
-        "src/BGCS.CSharp/Planning/AggregateAbiPlanner.cs"
+        "src/BGCS.CSharp/Planning/AggregateAbiPlanner.cs",
+        "src/BGCS.Frontend.Clang/Parsing/NativeReferenceStorageFactReader.cs",
+        "src/BGCS.Analysis/Interop/NativeModuleVerifier.cs",
+        "tests/BGCS.Tests/NativeReferenceFieldStorageTests.cs"
       ],
       "requiredHosts": [
         "windows-x64"
@@ -536,6 +584,40 @@
             "BGCS.Tests.NativeAggregateTests.GeneratedAggregateCallsPreserveNativeArgumentsReturnsAlignmentAndClassification(mode: FunctionTable, sourceRuntime: True)",
             "BGCS.Tests.NativeAggregateTests.GeneratedAggregateCallsPreserveNativeArgumentsReturnsAlignmentAndClassification(mode: LibraryImport, sourceRuntime: False)",
             "BGCS.Tests.NativeAggregateTests.GeneratedAggregateCallsPreserveNativeArgumentsReturnsAlignmentAndClassification(mode: LibraryImport, sourceRuntime: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Frontend.Clang.Tests",
+          "match": "^BGCS\\.Frontend\\.Clang\\.Tests\\.ReferenceFieldStorageTests\\.ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents$",
+          "requiredCases": [
+            "BGCS.Frontend.Clang.Tests.ReferenceFieldStorageTests.ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents(triple: \"i686-pc-linux-gnu\", slotSize: 4)",
+            "BGCS.Frontend.Clang.Tests.ReferenceFieldStorageTests.ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents(triple: \"x86_64-pc-linux-gnu\", slotSize: 8)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.NativeReferenceFieldStorageTests\\.WorkerReferenceSlotsRetainStrictGraphAndConsumerCompilerChecks$",
+          "requiredCases": [
+            "BGCS.Tests.NativeReferenceFieldStorageTests.WorkerReferenceSlotsRetainStrictGraphAndConsumerCompilerChecks(corruptStorage: False)",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.WorkerReferenceSlotsRetainStrictGraphAndConsumerCompilerChecks(corruptStorage: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.NativeReferenceFieldStorageTests\\.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage$",
+          "requiredCases": [
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"valid\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"missing\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"unproven\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"negative\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"overflow\")",
+            "BGCS.Tests.NativeReferenceFieldStorageTests.GraphValidationUsesReferenceSlotsAndStillRejectsMalformedStorage(condition: \"ordinary-mismatch\")"
           ]
         }
       ],
@@ -4299,12 +4381,14 @@
       "status": "implementationReady",
       "receipt": null,
       "implementation": [
-        "src/BGCS.Cpp2C/Planning/TemplateInstantiationPlanner.cs"
+        "src/BGCS.Cpp2C/Planning/TemplateInstantiationPlanner.cs",
+        "src/BGCS.Frontend.Clang/Model/Types/CppUnexposedType.cs",
+        "tests/BGCS.Frontend.Clang.Tests/Types/BorrowedTemplateArgumentTests.cs"
       ],
       "requiredHosts": [
         "windows-x64"
       ],
-      "acceptanceRationale": "Explicit concrete class, full/partial specialization and function requests are parsed by the worker and generate typed wrapper source with a static_cast to the requested callable signature. Neutral tests reject missing concrete parser facts, unbound templates, duplicate identities and source injection. Repository-owned consumer tests compile generated C++ and invoke actual constructors/members/functions. Product native build, native source-view replay and pre-publication native binary drift checks are outside scope; no such retired evidence is claimed.",
+      "acceptanceRationale": "Explicit concrete class, full/partial specialization and function requests are parsed by the worker and generate typed wrapper source with a static_cast to the requested callable signature. Neutral tests reject missing concrete parser facts, unbound templates, duplicate identities and source injection. Repository-owned consumer tests compile generated C++ and invoke actual constructors/members/functions. Product native build, native source-view replay and pre-publication native binary drift checks are outside scope; no such retired evidence is claimed. Dependent template arguments retain borrowed type references without changing declaration ownership; repeated std::pair<iterator,bool> overloads have direct frontend and real-worker regressions.",
       "releaseEvidence": [
         {
           "host": "windows-x64",
@@ -4373,6 +4457,25 @@
             "BGCS.Tests.NativeTemplateBindingTests.ExplicitTemplateSignaturesGenerateCallableWrapperConversions(changed: \"alias\")",
             "BGCS.Tests.NativeTemplateBindingTests.ExplicitTemplateSignaturesGenerateCallableWrapperConversions(changed: \"parameter\")",
             "BGCS.Tests.NativeTemplateBindingTests.ExplicitTemplateSignaturesGenerateCallableWrapperConversions(changed: \"return\")"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Frontend.Clang.Tests",
+          "match": "^BGCS\\.Frontend\\.Clang\\.Tests\\.BorrowedTemplateArgumentTests\\.DependentPairOverloadsKeepTheIteratorAliasAndTemplateParameterOwnedByTheirDeclaration$",
+          "requiredCases": [
+            "BGCS.Frontend.Clang.Tests.BorrowedTemplateArgumentTests.DependentPairOverloadsKeepTheIteratorAliasAndTemplateParameterOwnedByTheirDeclaration(standardLibrary: False)",
+            "BGCS.Frontend.Clang.Tests.BorrowedTemplateArgumentTests.DependentPairOverloadsKeepTheIteratorAliasAndTemplateParameterOwnedByTheirDeclaration(standardLibrary: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Worker.Tests",
+          "match": "^BGCS\\.Worker\\.Tests\\.WorkerRoundTripTests\\.StandardPairDependentOverloadsRoundTripWithoutReparentingBorrowedTemplateArguments$",
+          "requiredCases": [
+            "BGCS.Worker.Tests.WorkerRoundTripTests.StandardPairDependentOverloadsRoundTripWithoutReparentingBorrowedTemplateArguments"
           ]
         }
       ],
@@ -6284,7 +6387,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -6439,6 +6542,15 @@
           "match": "^BGCS\\.Tool\\.Tests\\.CustomTargetPluginCommandTests\\.ManifestTargetUsesTheRealCliWorkerAndTracksItsSdkBeforeWarmReuse$",
           "requiredCases": [
             "BGCS.Tool.Tests.CustomTargetPluginCommandTests.ManifestTargetUsesTheRealCliWorkerAndTracksItsSdkBeforeWarmReuse"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PluginRegistryRetirementParityTests\\.CurrentContractDescriptorIsAcceptedWithoutExecutingTheFactory$",
+          "requiredCases": [
+            "BGCS.Tests.PluginRegistryRetirementParityTests.CurrentContractDescriptorIsAcceptedWithoutExecutingTheFactory"
           ]
         }
       ],
@@ -6677,7 +6789,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -6796,6 +6908,15 @@
             "BGCS.Tests.ManagedTransformTests.InvalidManagedTransformationCannotReplaceTheLastCompletePublication(fault: \"identity\")",
             "BGCS.Tests.ManagedTransformTests.InvalidManagedTransformationCannotReplaceTheLastCompletePublication(fault: \"null\")",
             "BGCS.Tests.ManagedTransformTests.InvalidManagedTransformationCannotReplaceTheLastCompletePublication(fault: \"priority\")"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PluginRegistryRetirementParityTests\\.CurrentContractDescriptorIsAcceptedWithoutExecutingTheFactory$",
+          "requiredCases": [
+            "BGCS.Tests.PluginRegistryRetirementParityTests.CurrentContractDescriptorIsAcceptedWithoutExecutingTheFactory"
           ]
         }
       ],
@@ -6919,12 +7040,14 @@
         "src/BGCS/Pipeline/FrontendGenerationCache.cs",
         "src/BGCS/Pipeline/EmissionStageCache.cs",
         "src/BGCS.Infrastructure/Caching/GenerationStageCache.cs",
-        "src/BGCS.Infrastructure/IO/ExternalInputSnapshotBuilder.cs"
+        "src/BGCS.Infrastructure/IO/ExternalInputSnapshotBuilder.cs",
+        "src/BGCS/Pipeline/NativeHeaderPlan.cs",
+        "tests/BGCS.Tests/PortableNativeSourceTests.cs"
       ],
       "requiredHosts": [
         "windows-x64"
       ],
-      "acceptanceRationale": "Detached verified worker facts and complete emission sets restore deleted owned output with content validation while current generator validators, artifact processors, syntax/ABI readers and final input/publication fences still run. The emission key separately includes the original parser files, search directories and absent inputs; a new include candidate yields miss then unchanged-input hit with identical managed bytes. Same-path source/reference/defines/model changes, extension registration/order/fingerprint changes and generated contribution bytes invalidate affected stages. Volatile/unverified/unfingerprinted inputs disable reuse; corrupt/incomplete entries regenerate. No consumer or native product compilation is implied.",
+      "acceptanceRationale": "Detached verified worker facts and complete emission sets restore deleted owned output with content validation while current generator validators, artifact processors, syntax/ABI readers and final input/publication fences still run. The emission key separately includes the original parser files, search directories and absent inputs; a new include candidate yields miss then unchanged-input hit with identical managed bytes. Same-path source/reference/defines/model changes, extension registration/order/fingerprint changes and generated contribution bytes invalidate affected stages. Volatile/unverified/unfingerprinted inputs disable reuse; corrupt/incomplete entries regenerate. No consumer or native product compilation is implied. Native include root order, declared native/shim input bytes, generated source identities and parser builtin execution inputs remain tracked; changed mappings cannot replay old absolute native includes.",
       "releaseEvidence": [
         {
           "host": "windows-x64",
@@ -7158,6 +7281,44 @@
           "requiredCases": [
             "BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse"
           ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.SameNamedHeadersUseVerifiedQualifiedIncludesAndRootOrderInvalidatesCache$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.SameNamedHeadersUseVerifiedQualifiedIncludesAndRootOrderInvalidatesCache"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.UnmappedInputOrAbsoluteUserIncludeDoesNotReplacePublishedOutput$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.UnmappedInputOrAbsoluteUserIncludeDoesNotReplacePublishedOutput"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(language: C, staticAdapter: False)",
+            "BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(language: Cpp, staticAdapter: False)",
+            "BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(language: Cpp, staticAdapter: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt"
+          ]
         }
       ],
       "sourceReview": {
@@ -7179,12 +7340,16 @@
       "receipt": null,
       "implementation": [
         "src/BGCS.Infrastructure/Publishing/ArtifactPublisher.cs",
-        "src/BGCS.Infrastructure/IO/OutputDirectorySetTransaction.cs"
+        "src/BGCS.Infrastructure/IO/OutputDirectorySetTransaction.cs",
+        "src/BGCS/Pipeline/NativeHeaderPlan.cs",
+        "src/BGCS/Public/BindingArtifactManifest.cs",
+        "src/BGCS.Infrastructure/Verification/NativeSourceManifestVerifier.cs",
+        "tests/BGCS.Tests/PortableNativeSourceTests.cs"
       ],
       "requiredHosts": [
         "windows-x64"
       ],
-      "acceptanceRationale": "The generator publishes its complete owned artifact directory through ArtifactPublisher: candidate digest failures and unowned/tampered output preserve the previous collection; source/ownership overlaps are rejected and successful replacement removes only prior owned artifacts. Retained directory-set transaction tests cover rollback and acquisition faults. The unused NativeBuild-era joint native-file/directory publisher and its dedicated tests are retired, not certified as passing.",
+      "acceptanceRationale": "The generator publishes its complete owned artifact directory through ArtifactPublisher: candidate digest failures and unowned/tampered output preserve the previous collection; source/ownership overlaps are rejected and successful replacement removes only prior owned artifacts. Retained directory-set transaction tests cover rollback and acquisition faults. The unused NativeBuild-era joint native-file/directory publisher and its dedicated tests are retired, not certified as passing. Portable native includes and typed native source requirements preserve exact content identities separately from physical root bindings. Hidden-original relocated C/C++ compilation and invocation, ambiguous roots, failure preservation and cache invalidation are repository consumer tests, never product build features.",
       "releaseEvidence": [
         {
           "host": "windows-x64",
@@ -7256,6 +7421,62 @@
           "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactPublicationTests\\.SourceOverlapAndDifferentLibraryOwnership_AreRejected$",
           "requiredCases": [
             "BGCS.Infrastructure.Tests.ArtifactPublicationTests.SourceOverlapAndDifferentLibraryOwnership_AreRejected"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.SameNamedHeadersUseVerifiedQualifiedIncludesAndRootOrderInvalidatesCache$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.SameNamedHeadersUseVerifiedQualifiedIncludesAndRootOrderInvalidatesCache"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.UnmappedInputOrAbsoluteUserIncludeDoesNotReplacePublishedOutput$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.UnmappedInputOrAbsoluteUserIncludeDoesNotReplacePublishedOutput"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PortableNativeSourceTests\\.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden$",
+          "requiredCases": [
+            "BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(language: C, staticAdapter: False)",
+            "BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(language: Cpp, staticAdapter: False)",
+            "BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(language: Cpp, staticAdapter: True)"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Infrastructure.Tests",
+          "match": "^BGCS\\.Infrastructure\\.Tests\\.NativeSourceManifestTests\\.CompleteManifestAcceptsPortableFilesWithoutPhysicalBindings$",
+          "requiredCases": [
+            "BGCS.Infrastructure.Tests.NativeSourceManifestTests.CompleteManifestAcceptsPortableFilesWithoutPhysicalBindings"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Infrastructure.Tests",
+          "match": "^BGCS\\.Infrastructure\\.Tests\\.NativeSourceManifestTests\\.MissingRootsAndOmittedOrStaleArtifactsAreRejected$",
+          "requiredCases": [
+            "BGCS.Infrastructure.Tests.NativeSourceManifestTests.MissingRootsAndOmittedOrStaleArtifactsAreRejected"
+          ]
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Infrastructure.Tests",
+          "match": "^BGCS\\.Infrastructure\\.Tests\\.NativeSourceManifestTests\\.InputIdentitiesRetainCaseIndependentlyOfGeneratedArtifactCollisionPolicy$",
+          "requiredCases": [
+            "BGCS.Infrastructure.Tests.NativeSourceManifestTests.InputIdentitiesRetainCaseIndependentlyOfGeneratedArtifactCollisionPolicy"
           ]
         }
       ],

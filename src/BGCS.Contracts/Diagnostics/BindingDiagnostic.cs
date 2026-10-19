@@ -15,6 +15,9 @@ public sealed record BindingDiagnostic(
 {
     /// <summary>Gets the original header position when the producing stage can identify one.</summary>
     public SourceLocation? location { get; init; }
+    /// <summary>Gets optional investigation context, such as bounded worker stderr, kept separate from the concise message.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? details { get; init; }
     /// <summary>Gets whether this diagnostic prevents successful generation or publication.</summary>
     [JsonIgnore]
     public bool isFailure => severity is BindingDiagnosticSeverity.Error or BindingDiagnosticSeverity.Critical;

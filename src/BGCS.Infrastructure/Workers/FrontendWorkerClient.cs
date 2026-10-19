@@ -247,7 +247,7 @@ public sealed class FrontendWorkerClient : IFrontend
             string stderr = await errorOutput.WaitAsync(linked.Token).ConfigureAwait(false);
             if (process.ExitCode != 0 || response.error is not null || operation == WorkerOperationKind.Parse && response.result is null
                 || operation == WorkerOperationKind.CapturePluginInputs && response.pluginCapture is null)
-                throw new InvalidDataException($"Clang worker failed for request {requestId}: {response.error ?? stderr}");
+                throw WorkerFailure(requestId, process.ExitCode, response.error, stderr);
             if (operation == WorkerOperationKind.CapturePluginInputs && response.result is not null)
                 throw new InvalidDataException("Worker extension input discovery returned an unexpected parsed model.");
             if (request.workerPlugins.IsEmpty && response.pluginCapture is not null)
@@ -275,11 +275,14 @@ public sealed class FrontendWorkerClient : IFrontend
         {
             drainedErrors = await StopAndDrainAsync().ConfigureAwait(false);
             string exit = process.HasExited ? $" Exit code: {process.ExitCode}." : string.Empty;
-            throw new IOException($"Clang worker closed an incomplete response for request {requestId}.{exit}{Environment.NewLine}{drainedErrors}", exception);
+            throw new IOException($"Clang worker closed an incomplete response for request {requestId}.{exit}",
+                new IOException(string.IsNullOrWhiteSpace(drainedErrors) ? exception.Message : drainedErrors, exception));
         }
         catch (JsonException exception)
         {
-            throw new InvalidDataException($"Clang worker returned invalid JSON for request {requestId}.", exception);
+            drainedErrors = await StopAndDrainAsync().ConfigureAwait(false);
+            throw new InvalidDataException($"Clang worker returned invalid JSON for request {requestId}.",
+                new IOException(string.IsNullOrWhiteSpace(drainedErrors) ? exception.Message : drainedErrors, exception));
         }
         finally
         {
@@ -310,6 +313,23 @@ public sealed class FrontendWorkerClient : IFrontend
                 return "[Worker termination or diagnostic drain exceeded its five-second bound.]";
             }
         }
+    }
+
+    private static InvalidDataException WorkerFailure(
+        string requestId,
+        int exitCode,
+        string? error,
+        string stderr
+    ) {
+        string summary = string.IsNullOrWhiteSpace(error) ? $"The worker exited with code {exitCode} without a complete successful response." : error;
+        int newline = summary.IndexOfAny(['\r', '\n']);
+        if (newline >= 0) summary = summary[..newline];
+        if (summary.Length > 2048) summary = summary[..2048] + " [truncated]";
+        string? details = !string.IsNullOrWhiteSpace(stderr) ? stderr : error != summary ? error : null;
+        if (details?.Length > 64 * 1024)
+            details = "[Earlier worker diagnostics truncated.]" + Environment.NewLine + details[^(64 * 1024)..];
+        return new InvalidDataException($"Clang worker failed for request {requestId}: {summary}",
+            details is null ? null : new IOException(details));
     }
 
     private static async Task<string> ReadBoundedErrorsAsync(

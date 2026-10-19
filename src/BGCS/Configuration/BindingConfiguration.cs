@@ -116,7 +116,7 @@ public sealed record SourceConfiguration
     public bool includeHeaderHelpers { get; init; }
     /// <summary>Gets explicitly named fixed native adapters for selected variadic functions; the native compiler applies default argument promotions.</summary>
     public ImmutableArray<VariadicVariantRequest> variadicVariants { get; init; } = [];
-    /// <summary>Gets user include directories in search order.</summary>
+    /// <summary>Gets user include directories in search order, also used to identify portable emitted native includes.</summary>
     public ImmutableArray<string> includeDirectories { get; init; } = [];
     /// <summary>Gets system include directories in search order.</summary>
     public ImmutableArray<string> systemIncludeDirectories { get; init; } = [];

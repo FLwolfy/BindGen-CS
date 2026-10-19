@@ -86,6 +86,8 @@ public sealed partial class BindingHost
         List<(GenerationStageCache Cache, ContentDigest Key, ImmutableArray<CachedStageArtifact> Artifacts)> pendingCacheEntries = [];
         List<IArtifactProcessor> pendingProcessorRelease = [];
         List<SourceContributionCapture> sourceContributions = [];
+        List<NativeSourceManifest> nativeManifests = [];
+        List<NativeInputRootBinding> nativeInputRoots = [];
         bool published = false;
         GenerationComposition? composition = null;
         try
@@ -180,10 +182,20 @@ public sealed partial class BindingHost
             {
                 cancellation.Token.ThrowIfCancellationRequested();
                 SourceConfiguration source = configuration.source;
+                NativeSourceTextValidator.Validate(source.preamble, "source.preamble");
+                NativeSourceTextValidator.Validate(source.postamble, "source.postamble");
                 BGCS.Cpp2C.Shims.NativeShimPlanner shimPlanner = new();
                 ImmutableArray<NativeShimPlan> shims = configuration.cpp.nativeShims.Select(shim => shimPlanner.Plan(shim, request.baseDirectory)).ToImmutableArray();
                 ImmutableArray<string> parseHeaders = source.headers.Select(path => Path.GetFullPath(path, request.baseDirectory))
                     .Concat(shims.SelectMany(shim => shim.publicHeaders)).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToImmutableArray();
+                ImmutableArray<string> userIncludes = NativeHeaderPlan.PrepareUserIncludes(source.includeDirectories, parseHeaders, request.baseDirectory);
+                SourceSnapshot declaredNativeInputs = new ExternalInputSnapshotBuilder().Capture(
+                    parseHeaders.Concat(shims.SelectMany(shim => shim.sourceFiles)).Distinct(StringComparer.Ordinal)
+                        .Select(path => new DeclaredExternalInput(path, ExternalInputKind.File)).ToImmutableArray(),
+                    request.baseDirectory, cancellation.Token);
+                parsedInputs.Add(declaredNativeInputs);
+                foreach (InputDependency shimInput in declaredNativeInputs.files.Where(input => shims.Any(shim => shim.sourceFiles.Contains(input.path))))
+                    NativeSourceTextValidator.Validate(File.ReadAllText(shimInput.path), shimInput.path);
                 TemplateInstantiationPlanner templatePlanner = new();
                 TemplateInstantiationPlan? templates = source.language == SourceLanguage.Cpp
                     && (!configuration.cpp.templateInstantiations.types.IsEmpty || !configuration.cpp.templateInstantiations.functions.IsEmpty)
@@ -200,7 +212,7 @@ public sealed partial class BindingHost
                     targetId = target.id,
                     triple = target.triple,
                     languageStandard = source.languageStandard!,
-                    includeDirectories = source.includeDirectories,
+                    includeDirectories = userIncludes,
                     systemIncludeDirectories = source.systemIncludeDirectories,
                     defines = source.defines,
                     arguments = source.arguments,
@@ -249,6 +261,7 @@ public sealed partial class BindingHost
                 if (!concreteTargets.Add(targetId)) throw new InvalidOperationException($"Two target selections resolve to '{targetId}'.");
                 ImmutableArray<NativeGeneratedInputMap> contributionMaps = contribution?.Mappings(targetId) ?? [];
                 if (contribution is not null) artifacts.AddRange(contribution.PublishNative(rootSink, targetId));
+                NativeHeaderPlan nativeHeaderPlan = NativeHeaderPlan.Create(preparedSource, contributionMaps, publisher.candidateRoot, analysis.frontendExecutionInputs);
                 NativeModule originalModule = analysis.module!;
                 HashSet<StableId> ordinaryDeclarations = originalModule.declarations.Select(declaration => declaration.id).ToHashSet();
                 StableId? pathInputProbe = source.language == SourceLanguage.Cpp && !configuration.cpp.sequenceInputAdapters.IsEmpty
@@ -353,11 +366,14 @@ public sealed partial class BindingHost
                         }
                         bridge = new CppBridgePlanner(new LoweringRegistry(typeLowerings, callableLowerings), configuration.cpp.callableLowerings.Select(recipe => recipe with
                         { sourceFragments = recipe.sourceFragments.Select(fragment => fragment with { requiredHeaders = fragment.requiredHeaders.Select(path => Path.GetFullPath(path, request.baseDirectory)).ToImmutableArray() }).ToImmutableArray() }), configuration.cpp.familyBindings).Plan(new(selectedModule, analysis.target!, prefix,
-                            parseHeaders), selectedCallables, cancellation.Token, publicDeclarations: selection.publicDeclarations, virtualProxies: virtualProxies) with
+                            parseHeaders), selectedCallables, cancellation.Token, publicDeclarations: selection.publicDeclarations, virtualProxies: virtualProxies);
+                        bridge = bridge with
                         {
                             preamble = source.preamble,
                             postamble = nativePostamble,
-                            headers = parseHeaders.Select(path => NativeGeneratedInputRelocation.HeaderInclude(path, contributionMaps, targetId + "/native/src")).ToImmutableArray()
+                            headers = parseHeaders.Select(path => nativeHeaderPlan.Include(path, targetId + "/native/src")).ToImmutableArray(),
+                            sourceFragments = bridge.sourceFragments.Select(fragment => fragment with
+                            { requiredHeaders = fragment.requiredHeaders.Select(path => nativeHeaderPlan.Include(path, targetId + "/native/src")).ToImmutableArray() }).ToImmutableArray()
                         };
                     }
                     finally
@@ -399,7 +415,7 @@ public sealed partial class BindingHost
                     if (!cHeaderBridge.exports.IsEmpty)
                     {
                         string nativePrefix = targetId + "/native/";
-                        ImmutableArray<string> nativeHeaders = parseHeaders.Select(path => NativeGeneratedInputRelocation.HeaderInclude(path, contributionMaps, nativePrefix + "include")).ToImmutableArray();
+                        ImmutableArray<string> nativeHeaders = parseHeaders.Select(path => nativeHeaderPlan.Include(path, nativePrefix + "include")).ToImmutableArray();
                         ImmutableArray<ArtifactDescriptor> native = new CHeaderBridgeEmitter().Emit(cHeaderBridge, selectedModule, nativeHeaders,
                             new PrefixSink(rootSink, nativePrefix), source.preamble, nativePostamble, cancellation.Token);
                         artifacts.AddRange(native.Select(artifact => artifact with { relativePath = nativePrefix + artifact.relativePath }));
@@ -467,7 +483,8 @@ public sealed partial class BindingHost
                     if (runtimeProfile.moduleMechanism == NativeModuleMechanism.StaticAdapter && configuration.api.importMode == BindingImportMode.FunctionTable)
                     {
                         var adapter = StaticExportTableEmitter.Emit(interop,
-                            bridgeModel is null ? parseHeaders.Select(path => NativeGeneratedInputRelocation.HeaderInclude(path, contributionMaps, targetId + "/native/src")).ToImmutableArray() : [bridgeModel.exportPrefix + ".h"]);
+                            bridgeModel is null ? parseHeaders.Select(path => nativeHeaderPlan.Include(path, targetId + "/native/src")).ToImmutableArray()
+                                : [nativeHeaderPlan.IncludeArtifact(targetId + "/native/include/" + bridgeModel.exportPrefix + ".h", targetId + "/native/src")]);
                         staticTable = adapter.descriptor;
                         string adapterPath = targetId + "/native/src/export.table.c";
                         string adapterSource = (bridgeModel is null ? source.preamble + "\n" : string.Empty) + adapter.source;
@@ -595,7 +612,7 @@ public sealed partial class BindingHost
                             try
                             {
                                 stageCache = reusableEmissionCache;
-                                stageKey = EmissionStageCache.CreateKey(model, emission, configuration, analysis.snapshot!, extensionInputs, definition, cancellation.Token);
+                                stageKey = EmissionStageCache.CreateKey(model, emission, configuration, analysis.snapshot!, declaredNativeInputs, extensionInputs, definition, cancellation.Token);
                             }
                             catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or NotSupportedException)
                             {
@@ -716,23 +733,22 @@ public sealed partial class BindingHost
                 artifacts.AddRange(emitted.Select(artifact => artifact with { relativePath = targetId + "/managed/" + artifact.relativePath }));
                 if (source.language == SourceLanguage.Cpp || staticTable is not null || cHeaderBridge is { exports.IsEmpty: false })
                 {
-                    ImmutableArray<string> nativeHeaders = parseHeaders.Select(path => NativeGeneratedInputRelocation.HeaderInclude(path, contributionMaps, targetId + "/native/src")).ToImmutableArray();
+                    ImmutableArray<string> nativeHeaders = parseHeaders.Select(path => nativeHeaderPlan.Include(path, targetId + "/native/src")).ToImmutableArray();
                     string assertionPath = targetId + "/native/src/storage.assertions." + (source.language == SourceLanguage.C ? "c" : "cpp");
                     string assertions = new NativeStorageAssertionEmitter().Emit(selectedModule, nativeHeaders, source.preamble, nativePostamble);
                     rootSink.WriteText(assertionPath, assertions);
                     artifacts.Add(new(assertionPath, source.language == SourceLanguage.C ? "text/x-c" : "text/x-c++",
                         new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(assertions))))));
-                    WriteJson(targetId + "/native/metadata/bridge.manifest.json", new
-                    {
-                        schemaVersion = 1,
-                        targetId,
-                        languageStandard = source.languageStandard,
-                        sources = artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/src/", StringComparison.Ordinal)).ToImmutableArray(),
-                        headers = artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/include/", StringComparison.Ordinal)).ToImmutableArray(),
-                        requiredExports = interop.functions.Select(function => function.exportName).ToImmutableArray(),
-                        staticExportTable = staticTable
-                    });
                 }
+                foreach (ArtifactDescriptor nativeArtifact in artifacts.Where(artifact => artifact.relativePath.StartsWith(targetId + "/native/", StringComparison.Ordinal)
+                    && artifact.mediaType is "text/x-c" or "text/x-c++" or "text/x-c-header" or "text/x-c++-header"))
+                    NativeSourceTextValidator.Validate(File.ReadAllText(Path.Combine(publisher.candidateRoot, nativeArtifact.relativePath)), nativeArtifact.relativePath);
+                NativeSourceManifest nativeManifest = nativeHeaderPlan.Manifest(targetId, artifacts.ToImmutable(), analysis.snapshot!, declaredNativeInputs, shims,
+                    interop.functions.Select(function => function.exportName).ToImmutableArray(), bridgeModel?.languageRequirements ?? [], staticTable, cancellation.Token);
+                BGCS.Infrastructure.Verification.NativeSourceManifestVerifier.Validate(nativeManifest, artifacts.ToImmutable());
+                nativeManifests.Add(nativeManifest);
+                nativeInputRoots.AddRange(nativeHeaderPlan.Bindings(targetId, output));
+                WriteJson(targetId + "/native/metadata/bridge.manifest.json", nativeManifest);
                 WriteJson(targetId + "/metadata/abi.manifest.json", new
                 {
                     schemaVersion = 1,
@@ -812,6 +828,7 @@ public sealed partial class BindingHost
                     implementation = typeof(BindingHost).Assembly.ManifestModule.ModuleVersionId.ToString(),
                     cache = cacheEvidence.Where(evidence => evidence.targetId == targetId).ToArray(),
                     inputs = analysis.snapshot,
+                    nativeInputRoots = nativeHeaderPlan.Bindings(targetId, logicalOutput),
                     bridgeInputs = bridgeInputEvidence,
                     configurationInputs = request.configurationInputs,
                     managedProjectionInputs = managedProjection?.snapshot,
@@ -936,7 +953,7 @@ public sealed partial class BindingHost
         catch (Exception failure)
         {
             diagnostics.Add(failure is BGCS.CSharp.Validation.CSharpPlanningException plannedFailure ? plannedFailure.diagnostic
-                : new(BindingDiagnosticSeverity.Error, failure.Message, "BGCS-GENERATION-SESSION"));
+                : new(BindingDiagnosticSeverity.Error, failure.Message, "BGCS-GENERATION-SESSION") { details = failure.InnerException?.Message });
         }
         finally
         {
@@ -948,7 +965,12 @@ public sealed partial class BindingHost
                 if (--m_sessions == 0 && m_closing) m_drained.TrySetResult();
         }
         return new(published, output, published ? artifacts.ToImmutable() : [], diagnostics.ToImmutable())
-        { targetModels = targetModels.ToImmutable(), cacheStages = cacheEvidence.ToImmutableArray() };
+        {
+            targetModels = targetModels.ToImmutable(),
+            cacheStages = cacheEvidence.ToImmutableArray(),
+            nativeSources = published ? nativeManifests.ToImmutableArray() : [],
+            nativeInputRoots = published ? nativeInputRoots.ToImmutableArray() : []
+        };
 
         bool HasErrors()
         {

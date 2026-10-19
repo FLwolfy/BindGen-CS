@@ -66,6 +66,8 @@ schema 拒绝未知内置字段。插件选项只有在 bootstrap 注册所属 n
 `defines` 和 `arguments` 必须符合实际原生构建。`preamble` 和 `postamble` 是明确的解析
 输入，并参与内容身份。
 
+声明的用户 include 根也决定生成原生源码中的可移植引用。BGCS 核对实际搜索顺序；歧义或根外输入明确失败，不回退到工作区绝对路径。类型化源码要求与冻结输入根映射见[原生源码输入](native-source-inputs.cn.md)。
+
 C 的 `includeHeaderHelpers` 默认为 `false`。普通绑定只导入外部 C 函数及其别名，
 不要求现有库额外提供头文件辅助导出。设为 `true` 后，选中的 static、inline 和仅可直接
 调用的 C 辅助函数会生成 adapter，必须和外部函数一起编译到配置指定的同一个原生模块。

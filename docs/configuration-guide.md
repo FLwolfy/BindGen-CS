@@ -71,6 +71,8 @@ policies. `includeTransitivelyReferencedHeaders` keeps transitive declarations;
 `defines` and `arguments` must match the actual native build. `preamble` and `postamble`
 are explicit parser inputs and participate in content identity.
 
+Declared user roots also determine portable includes in generated native source. BGCS verifies search order and rejects ambiguous or unmapped references; it never falls back to an absolute workspace include. See [portable native inputs](native-source-inputs.md) for typed source requirements and frozen-root mapping.
+
 `includeHeaderHelpers` defaults to `false` for C. Ordinary binding generation imports
 external C functions and their aliases without requiring extra exports from an existing
 library. Set it to `true` to include selected static, inline and direct-call-only C

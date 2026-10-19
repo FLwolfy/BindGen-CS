@@ -190,6 +190,13 @@ public sealed partial class BindingHost : IAsyncDisposable
                     throw new IOException("Detached parser execution resources changed during native analysis.");
                 activeInputs.CaptureArgumentInputs(parsed.executionInputs);
             }
+            if (parsed.parserBuiltinInputs is { } builtinInputs)
+            {
+                var executionFiles = (parsed.executionInputs?.files ?? []).ToDictionary(input => input.path,
+                    OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+                if (builtinInputs.files.IsDefault || builtinInputs.files.Any(input => !executionFiles.TryGetValue(input.path, out var authenticated) || input != authenticated))
+                    throw new IOException("Parser builtin files must belong to the authenticated frontend execution inputs.");
+            }
             NativeModule module = parsed.module;
             if (module.targetId != target.targetId.value || module.triple != target.triple || module.language != request.language)
                 throw new InvalidOperationException("The frontend result changed the resolved native target or source-language provenance.");
@@ -222,6 +229,7 @@ public sealed partial class BindingHost : IAsyncDisposable
             {
                 target = target,
                 argumentInputs = argumentInputs,
+                frontendExecutionInputs = parsed.parserBuiltinInputs,
                 preparedFrontend = resolved
             };
         }
@@ -231,7 +239,7 @@ public sealed partial class BindingHost : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            result = new(null, null, [new(BindingDiagnosticSeverity.Error, exception.Message, "BGCS-ANALYSIS-SESSION")]);
+            result = new(null, null, [new(BindingDiagnosticSeverity.Error, exception.Message, "BGCS-ANALYSIS-SESSION") { details = exception.InnerException?.Message }]);
         }
         finally
         {

@@ -11,6 +11,7 @@ using BGCS.Contracts.Targets;
 using BGCS.Infrastructure.Workers;
 using BGCS.Infrastructure.IO;
 using BGCS.Platforms.Targeting;
+using BGCS.Platforms.Toolchains;
 using Xunit;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
@@ -22,6 +23,32 @@ namespace BGCS.Worker.Tests;
 
 public sealed class WorkerRoundTripTests
 {
+    [Fact]
+    public async Task StandardPairDependentOverloadsRoundTripWithoutReparentingBorrowedTemplateArguments()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-worker-template-borrow-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string header = Path.Combine(root, "collection.hpp");
+            await File.WriteAllTextAsync(header, "#include <utility>\ntemplate<class T> struct Collection { using iterator=T*; std::pair<iterator,bool> insert(); std::pair<iterator,bool> insert(T); };\n");
+            NativeTargetDescriptor target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp);
+            FrontendResult parsed = await CreateClient().ParseAsync(new(target, SourceLanguage.Cpp, [header])
+            {
+                pathBase = root, parseMacros = false,
+                headerSearchPaths = ToolchainResolver.ResolveHeaderSearchPaths(target, SourceLanguage.Cpp).ToImmutableArray()
+            }, CancellationToken.None);
+            Assert.DoesNotContain(parsed.module.diagnostics, diagnostic => diagnostic.isFailure);
+            Assert.NotNull(parsed.parserBuiltinInputs);
+            Assert.NotEmpty(parsed.parserBuiltinInputs.files);
+            var collection = Assert.Single(parsed.module.declarations, declaration => declaration.name == "Collection");
+            Assert.Single(parsed.module.declarations, declaration => declaration.name == "iterator" && declaration.parent == collection.id);
+            Assert.Equal(2, parsed.module.declarations.Count(declaration => declaration.name == "insert" && declaration.parent == collection.id));
+            Assert.Empty(new NativeModuleVerifier().Validate(parsed.module));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Fact]
     public async Task DeepWorkerDeployment_LoadsItsBundledParserAndCompanionBeyondMaxPath()
     {

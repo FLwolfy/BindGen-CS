@@ -296,15 +296,20 @@ internal sealed class NativeModuleBuilder
             };
         }
         if (declaration is CppField fieldFact)
+        {
+            long? storageSize = FieldStorageSize(fieldFact);
             fact = fact with
             {
                 role = fieldFact.cursor.Kind == CXCursorKind.CXCursor_VarDecl ? "Variable" : fact.role,
                 value = fieldFact.initExpression?.ToString() ?? fieldFact.initValue?.ToString(),
                 offset = fieldFact.bitOffset >= 0 ? fieldFact.offset : null,
+                storageSize = storageSize,
+                storageEvidence = storageSize is not null ? new(EvidenceLevel.Declared, "clang.field-storage:" + fact.qualifiedName) : null,
                 bitOffset = fieldFact.bitOffset >= 0 ? fieldFact.bitOffset : null,
                 bitWidth = fieldFact.isBitField ? fieldFact.bitFieldWidth : null,
                 isStatic = fieldFact.storageQualifier == CppStorageQualifier.Static
             };
+        }
         if (declaration is CppEnumItem enumItem)
             fact = fact with
             {
@@ -338,6 +343,18 @@ internal sealed class NativeModuleBuilder
         m_declarations.Add(identity, fact);
         if (element.cursor.kind != 0) m_declarationCursors.Add(id, element.cursor);
         return id;
+    }
+
+    private long? FieldStorageSize(CppField field)
+    {
+        if (field.cursor.Kind != CXCursorKind.CXCursor_FieldDecl || field.isBitField || field.storageQualifier == CppStorageQualifier.Static) return null;
+        CXType type = field.cursor.Type.CanonicalType;
+        if (type.kind is CXTypeKind.CXType_LValueReference or CXTypeKind.CXType_RValueReference)
+        {
+            bool function = type.PointeeType.CanonicalType.kind is CXTypeKind.CXType_FunctionProto or CXTypeKind.CXType_FunctionNoProto;
+            return m_compilation!.referenceFieldStorageSizes.TryGetValue((function, type.kind == CXTypeKind.CXType_RValueReference), out long size) ? size : null;
+        }
+        return field.cursor.Type.SizeOf is long ordinarySize && ordinarySize >= 0 ? ordinarySize : null;
     }
 
     private static IEnumerable<ICppDeclaration> DeclarationChildren(ICppContainer container) => container.children;

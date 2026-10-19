@@ -1,6 +1,6 @@
 # 中立 C++ Lowering 架构
 
-[English](lowering.md) | [实战手册](cpp-extension-cookbook.cn.md) | [架构](architecture.cn.md)
+[English](lowering.md) | [实战手册](cpp-extension-cookbook.cn.md) | [架构](architecture.cn.md) | [原生输入](native-source-inputs.cn.md)
 
 C++ backend 接收独立的原生事实，产生类型化 C ABI 操作。标准插件仅引用 `BGCS.Contracts`；解析器和 worker 执行属于其他层。
 
@@ -19,8 +19,9 @@ flowchart TD
     Bridge --> Verify
     Verify --> Interop["准确 ABI 与语义的 InteropModule"]
     Interop --> Managed["Managed projection 与 C# backend"]
-    Managed --> Candidate["候选编译 / 原生构建 / 请求的验证"]
+    Managed --> Candidate["候选源码与契约验证"]
     Candidate --> Publish["联合发布与验收收据"]
+    Publish -.-> Consumer["消费者负责编译 / 链接 / 调用"]
 ```
 
 ## 模型边界
@@ -47,7 +48,7 @@ flowchart TD
 
 普通输入与原生参数保持一对一。展开输入使用 `BridgeArgumentGroup`，包含准确原生参数声明/类型 ID、命名 C carrier binding 和有内容指纹的表达式。组顺序与原参数一致，所有 C 输入被完整且不重复地使用。普通单载体组可以省略额外表达式。
 
-验证器拒绝缺失、重复、无关或乱序绑定；emitter 只替换声明的名称，执行一次原生调用。参数组不能推断所有权或托管 pinning 协议。声明式入口为 `cpp.typeLowerings[].abiParameters`，完整配置见实战手册。
+验证器拒绝缺失、重复、无关或乱序绑定；emitter 只替换声明的名称，生成一次原生调用，该调用由消费者编译的 bridge 执行。参数组不能推断所有权或托管 pinning 协议。声明式入口为 `cpp.typeLowerings[].abiParameters`，完整配置见实战手册。
 
 有限标准序列适配使用 `BridgeArgumentGroup.standardSequence`，无需拼接 source-expression 模板。模型保存准确元素类型、编译器 extent、复制/借用操作和证据。新增导出通过 `inputAdapterOf` 关联保留的原导出；生成前检查完整 data/length 覆盖与不变的结果身份。结果仅限标量/void，或具备完整析构配对和 creating-call 清理证明的新建拥有型默认标准 `basic_string`/`filesystem::path` 值。此适配器仍不接受借用、pointer/reference、自定义文本及其他容器结果，也不处理构造和自定义调用/结果表达式。`cpp.sequenceInputAdapters` 配置和明确的借用限制见实战手册。
 
@@ -55,7 +56,7 @@ flowchart TD
 
 类型化操作覆盖自由函数、静态/实例方法、构造、析构、原生 base cast、checked derived cast 和有限 STL 协议。受控表达式作为明确扩展，不取代整个操作模型。
 
-`DefaultConstruct` 关联准确 owner，不伪造源函数。规划前必须有可空的编译器默认构造事实；未知、不可访问、已删除、抽象或不完整类型不提供该构造。最终原生编译通过构造断言与 `new Owner()` 复核实际构建参数。`generate` 仍记录 native compilation 尚待执行，解析事实不能证明 native build 或实际调用已经通过。
+`DefaultConstruct` 关联准确 owner，不伪造源函数。规划前必须有可空的编译器默认构造事实；未知、不可访问、已删除、抽象或不完整类型不提供该构造。生成源码包含构造断言与 `new Owner()`，由消费者编译器检查。BGCS 不编译或执行该构造；解析事实不能证明消费者构建或实际调用已经通过。
 
 拥有型结果必须有准确的 native destruction 配对。生成释放要求析构不抛异常，但不因此证明线程无关。普通借用指针/引用结果保留未知生命周期；类型化同对象基类转换保留 owner 关系。按值 unique_ptr 参数移动内部所有权，调用方仍拥有变空后的 holder。
 
@@ -73,7 +74,7 @@ C++ `char8_t`、`char16_t` 与 `char32_t` 保留不同的原生基础类型身�
 UniquePointer、SharedPointer、Variant、Path、Duration 和 TimePoint。
 自定义 variant 必须显式声明 member-template 访问，path 必须声明 GenericUtf8 或 NativeUtf8；chrono
 保留原生表示、ratio 和 clock 身份。
-模板族，复用类型化操作与独立验证流程，同时保留实际 C++ 类型。原生形状检查不会提升
+这些绑定复用类型化操作与独立验证流程，同时保留实际 C++ 类型。原生形状检查不会提升
 用户对行为、所有权或编码的断言等级。完整配置与限制见实战手册；任意替换模板族名称
 不能证明存储兼容。
 
@@ -84,7 +85,7 @@ UniquePointer、SharedPointer、Variant、Path、Duration 和 TimePoint。
 
 `NativeValueProtocol.scopedRelease` 默认不授予能力。有限的 `CreatingCall` 只允许新建的默认
 allocator 标准字符串或 filesystem path 在同一次同步创建调用、同一调用线程中复制并析构。
-真实编译器断言准确类型身份和非抛出析构；自定义 traits、allocator 与 `pmr` 保留未知清理契约。
+生成的断言在消费者编译 bridge 时检查准确类型身份和非抛出析构；自定义 traits、allocator 与 `pmr` 保留未知清理契约。
 `CopyCodeUnits` 接收准确的可写单元指针和容量，经 status 边界返回完整写入单元数；写入前检查
 容量、空地址和对齐，每次复制只转换一次 path。该能力不授予逃逸 handle、finalizer、跨线程或借用视图生命周期。
 
@@ -101,6 +102,6 @@ allocator 标准字符串或 filesystem path 在同一次同步创建调用、�
 
 写候选前检查源身份、arity、载体、释放配对、source fragment 和参数组。C header reparse 复核准确的导出集合与签名，语义合并保留原生参数 ID 和证据等级。
 
-托管编译、native link、导出和实际调用按请求针对候选执行。失败不能发布成功正式结果。`bridge.module.json` 保存类型化计划，`bridge.manifest.json` 保存原生构建输入；verification receipt 记录实际执行阶段。
+BGCS 在发布前验证源码和契约，不编译托管消费工程、不链接原生代码，也不调用生成的 API。生成验证失败会阻止发布。`bridge.module.json` 保存类型化计划；类型化 `NativeSourceManifest` 仍位于 `<target>/native/metadata/bridge.manifest.json`。通过 `GenerationResult.nativeSources` 或验证后的 `BindingArtifactManifest.ReadNativeSources` 读取，再按[输入说明](native-source-inputs.cn.md)映射根目录。verification 元数据记录生成器阶段，不表示消费者后续构建已经完成。
 
-有限 value protocol 的原生操作与高层托管投影分别验收。容器 raw/status 测试不能证明自动返回 C# 数组。计数字符串参数保留准确的 data/length 文本契约。本地 Windows/CoreCLR 真实调用已覆盖最小 CStr 字符串输入、新建默认标准字符串/path 复制为 C# `string`，以及拥有型成员组合计数输入和文本返回，均使用三种导入和两种 Runtime 模式。拥有型夹具调用 `SetNameWithSequence(string)`、`GetName()` 和 `PrefixWithSequence(string)`；原生函数体确实保留 `this` 直至析构，没有把未知 self 保留事实改成 false。这些本地结果不认证其他平台、NativeAOT 或最终产品包。chrono 保留原生 count、ratio、clock，不能默认把任意时钟当成托管日期的 epoch。
+有限 value protocol 的原生操作与高层托管投影有各自的仓库消费夹具。容器 raw/status 检查不能证明自动返回 C# 数组。计数字符串参数保留准确的 data/length 文本契约。文本夹具覆盖 CStr 输入、新建默认标准字符串/path 复制为 C# `string`，以及 `SetNameWithSequence(string)`、`GetName()`、`PrefixWithSequence(string)` 等拥有型成员；原生函数体可以保留 `this` 直至析构，不把未知 self 保留事实改成 false。这些外部夹具执行与源码生成、版本认证是独立步骤。chrono 保留原生 count、ratio、clock，不能默认把任意时钟当成托管日期的 epoch。

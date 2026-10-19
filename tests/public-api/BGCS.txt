@@ -64,6 +64,7 @@ enum BGCS.ArtifactChangeKind [sealed; underlying=System.Int32; interfaces=System
   field System.Int32 value__
 class BGCS.BindingArtifactManifest [abstract; sealed]
   method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> Read(System.String outputRoot, System.String libraryId, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeSourceManifest> ReadNativeSources(System.String outputRoot, System.String libraryId, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.BindingHost [sealed; interfaces=System.IAsyncDisposable]
   method BGCS.BindingHost CreateDefault() [static]
   method BGCS.BindingHostBuilder CreateBuilder() [static]
@@ -691,6 +692,8 @@ class BGCS.GenerationResult [sealed; interfaces=System.IEquatable<BGCS.Generatio
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.GenerationCacheStageResult> cacheStages { get; init }
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.BindingDiagnostic> diagnostics { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeInputRootBinding> nativeInputRoots { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.NativeSourceManifest> nativeSources { get; init }
   property System.String outputRoot { get; init }
   property System.Boolean published { get; init }
   property System.Boolean success { get }

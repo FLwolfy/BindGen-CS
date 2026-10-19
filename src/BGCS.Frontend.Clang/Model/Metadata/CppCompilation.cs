@@ -22,6 +22,7 @@ internal class CppCompilation : CppGlobalDeclarationContainer, IDisposable
     private CXTranslationUnit m_translationUnit;
     internal Dictionary<CppPrimitiveType, PrimitiveTypeFacts> primitiveFacts { get; } = [];
     internal Dictionary<CppType, NativeStorageFacts> storageFacts { get; } = new(ReferenceEqualityComparer.Instance);
+    internal Dictionary<(bool IsFunction, bool IsRValue), long> referenceFieldStorageSizes { get; } = [];
     internal Dictionary<CppClass, bool?> defaultConstructionFacts { get; } = new(ReferenceEqualityComparer.Instance);
     internal Dictionary<CppClass, (bool? StandardLayout, bool? TriviallyCopyable)> recordStorageTraits { get; } = new(ReferenceEqualityComparer.Instance);
     internal Dictionary<CppFunction, bool> callableExceptionFacts { get; } = new(ReferenceEqualityComparer.Instance);

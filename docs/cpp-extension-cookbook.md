@@ -1,6 +1,6 @@
 # C++ extension cookbook
 
-[简体中文](cpp-extension-cookbook.cn.md) | [Lowering contracts](lowering.md)
+[简体中文](cpp-extension-cookbook.cn.md) | [Lowering contracts](lowering.md) | [Portable native inputs](native-source-inputs.md)
 
 The complete SDK and tool use the same grouped `bindgen.json`. Choose a recipe for a finite conversion, a Contracts-only plugin for a typed planning decision, or a project-owned C shim for native semantics that require handwritten implementation. Each route participates in the Host's worker parsing, ABI verification, caching, candidate validation, and publication.
 
@@ -247,7 +247,7 @@ Add this fragment to a complete configuration whose source headers declare `Engi
 }
 ```
 
-The managed project must supply `Engine.Managed.EntityId` and include its source/reference in candidate validation. Raw imports still use the exact C carrier. BGCS validates managed type and expression syntax even when a recipe's native type pattern does not match.
+The consumer project supplies `Engine.Managed.EntityId`. Use `api.projectionInputs` for sources, references or defines needed by static managed binding; BGCS does not build or execute that project. Raw imports still use the exact C carrier. BGCS validates managed type and expression syntax even when a recipe's native type pattern does not match.
 
 Input placeholders are `{value}` and `{nativeType}`; output placeholders are `{value}` and `{resultType}`. Native result expressions operate on a local containing the original invocation result, so conversion does not duplicate the native call. Patterns ignore whitespace, use ordinal matching, and accept `*`. Equal-priority exclusive matches fail; identity ordering does not silently choose one.
 
@@ -340,18 +340,18 @@ The canonical complete example is [examples/NativeShim/bindgen.json](../examples
       "sourceFiles": ["shims/widget_c.cpp"],
       "exports": ["bgcs_widget_create", "bgcs_widget_destroy", "bgcs_widget_sum"]
     }]
-  },
+  }
 }
 ```
 
-The public header declares fixed C-linkage prototypes; the implementation includes the upstream C++ header and performs the project-specific conversion. Paths resolve from their declaring configuration. The Host parses the header, checks each exact symbol, and includes sources in its ordinary native build plan.
+The public header declares fixed C-linkage prototypes; the implementation includes the upstream C++ header and performs the project-specific conversion. Paths resolve from their declaring configuration. The Host parses the header, checks each exact symbol, and records the implementation as `ShimSource` for the consumer's external build. An analysis `.cpp` entry is not a substitute for a self-contained public header; independently compiling a file that a bridge also includes can duplicate definitions.
 
 ```bash
 bindgen-cs bridge examples/NativeShim/bindgen.json
 bindgen-cs generate examples/NativeShim/bindgen.json
 ```
 
-Inspect the generated `native/metadata/bridge.module.json` for the typed operations, `bridge.manifest.json` for build inputs, and the final ABI/verification metadata. Native C symbols alone do not establish correct release affinity or callback quiescence; supply those semantics explicitly before requesting owning or retained convenience wrappers.
+Inspect `<target>/native/metadata/bridge.module.json` for typed operations and `bridge.manifest.json` for the portable `NativeSourceManifest`. The [source-input guide](native-source-inputs.md) shows `GenerationResult.nativeSources`, session root bindings and verified `ReadNativeSources` selection. Compilation, linking and invocation belong to the consumer. Native C symbols alone do not establish correct release affinity or callback quiescence; supply those semantics explicitly before requesting owning or retained convenience wrappers.
 
 ## Concrete templates and virtual slots
 
