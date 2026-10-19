@@ -508,6 +508,44 @@ def verify_tool_worker_archive(package: zipfile.ZipFile, rid: str) -> None:
                 raise RuntimeError(f"The archived tool worker content digest differs: {rid}/{relative}")
 
 
+def verify_parser_runtime_archive(package: zipfile.ZipFile) -> None:
+    """Check NuGet's actual native asset paths and every relocated provenance payload byte."""
+    entries = {entry.filename: entry for entry in package.infolist() if not entry.is_dir()}
+    if "runtime-provenance.json" not in entries or entries["runtime-provenance.json"].file_size > 16 * 1024 * 1024:
+        raise RuntimeError("The parser package lacks its bounded resource provenance.")
+    manifest = json.loads(package.read("runtime-provenance.json"))
+    expected = {}
+    for item in manifest.get("artifacts", []):
+        relative = item.get("path")
+        if not isinstance(relative, str) or "\\" in relative or any(part in ("", ".", "..") for part in relative.split("/")):
+            raise RuntimeError("The parser package provenance contains an invalid resource path.")
+        if "/" not in relative and relative.endswith(".dylib"):
+            target = "runtimes/osx-x64/native/" + relative
+        elif relative.startswith(("licenses/", "build-inputs/")):
+            target = relative
+        else:
+            raise RuntimeError("The parser package provenance contains an unexpected resource: " + relative)
+        if target in expected:
+            raise RuntimeError("The parser package provenance contains duplicate resource paths.")
+        expected[target] = item
+    required = {"runtimes/osx-x64/native/libclang.dylib", "runtimes/osx-x64/native/libClangSharp.dylib",
+                "licenses/LLVM-LICENSE.txt", "licenses/ClangSharp-LICENSE.md", "licenses/ClangSharp-NOTICE.md",
+                "build-inputs/homebrew-llvm.json"}
+    if not required.issubset(expected):
+        raise RuntimeError("The parser package provenance omits a required native asset, input or license.")
+    payload = {name for name in entries if name not in ("runtime-provenance.json", "_rels/.rels", "[Content_Types].xml", ".signature.p7s")
+               and not name.endswith(".nuspec") and not name.startswith("package/services/metadata/core-properties/")}
+    if payload != set(expected):
+        raise RuntimeError("The parser package asset layout differs from its provenance: "
+                           + ", ".join(sorted(payload.symmetric_difference(expected))[:12]))
+    for target, item in expected.items():
+        if entries[target].file_size != item.get("bytes"):
+            raise RuntimeError("The parser package resource size differs: " + target)
+        with package.open(target) as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != item.get("sha256"):
+                raise RuntimeError("The parser package resource digest differs: " + target)
+
+
 def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: str | None = None,
                     *, include_osx_x64_parser: bool = False) -> None:
     expected = {f"{name}.{version}.nupkg" for name in MANIFEST["products"] if name != "BindGen-CS"}
@@ -542,6 +580,8 @@ def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: st
                 raise RuntimeError("The declared symbol package contains no debugging symbols: " + name)
             if name == f"BGCS.{version}.nupkg":
                 verify_sdk_worker_archive(package, RIDS if full else None)
+            if name == f"BGCS.ParserRuntime.osx-x64.{version}.nupkg":
+                verify_parser_runtime_archive(package)
             for rid in RIDS:
                 if name == f"BindGen-CS.{rid}.{version}.nupkg":
                     verify_tool_worker_archive(package, rid)

@@ -24,6 +24,33 @@ SPEC.loader.exec_module(PACK)
 
 
 class PackageClosureTests(unittest.TestCase):
+    def parser_payload(self, archive, fault="valid"):
+        files = {name: name.encode("utf-8") for name in (
+            "libclang.dylib", "libClangSharp.dylib", "libLLVM.dylib", "libzstd.1.dylib",
+            "licenses/LLVM-LICENSE.txt", "licenses/ClangSharp-LICENSE.md", "licenses/ClangSharp-NOTICE.md",
+            "build-inputs/homebrew-llvm.json")}
+        manifest = {"artifacts": [{"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+                                  for name, data in files.items()]}
+        archive.writestr("runtime-provenance.json", json.dumps(manifest))
+        for name, data in files.items():
+            target = "runtimes/osx-x64/native/" + name if name.endswith(".dylib") else name
+            if fault == "nested-native" and name.endswith(".dylib"): target = "runtimes/" + target
+            if fault == "nested-license" and name.startswith("licenses/"): target = "licenses/" + target
+            if fault == "missing-companion" and name == "libzstd.1.dylib": continue
+            archive.writestr(target, data[:-1] + b"!" if fault == "tamper" and name == "libclang.dylib" else data)
+        if fault == "unlisted": archive.writestr("runtimes/osx-x64/native/stale.dylib", b"not declared")
+
+    def test_parser_package_preserves_native_asset_paths_and_complete_provenance_bytes(self):
+        for fault in ("valid", "nested-native", "nested-license", "missing-companion", "tamper", "unlisted"):
+            with self.subTest(fault=fault):
+                path = self.root / (fault + ".nupkg")
+                with zipfile.ZipFile(path, "w") as archive:
+                    self.parser_payload(archive, fault)
+                with zipfile.ZipFile(path) as archive:
+                    if fault == "valid": PACK.verify_parser_runtime_archive(archive)
+                    else:
+                        with self.assertRaises(RuntimeError): PACK.verify_parser_runtime_archive(archive)
+
     def sdk_payload(self, archive, *, tamper=False, extra=False, missing=False, copy=True):
         prefix = "contentFiles/any/net10.0/bgcs/worker-assets/"
         files = {"BGCS.Frontend.Clang.Worker.dll": b"worker", "BGCS.Frontend.Clang.Worker.deps.json": b"{}",
@@ -190,10 +217,14 @@ class PackageClosureTests(unittest.TestCase):
         self.worker_archive("osx-x64", path=output / "BindGen-CS.osx-x64.0.0.0-test.nupkg")
         supplement = output / "BGCS.ParserRuntime.osx-x64.0.0.0-test.nupkg"
         with zipfile.ZipFile(supplement, "w") as archive:
-            archive.writestr("runtimes/osx-x64/native/libclang.dylib", b"parser fixture")
+            self.parser_payload(archive)
         with self.assertRaisesRegex(RuntimeError, "unexpected=.*BGCS.ParserRuntime.osx-x64"):
             PACK.verify_packages(output, "0.0.0-test", False, "osx-x64")
         PACK.verify_packages(output, "0.0.0-test", False, "osx-x64", include_osx_x64_parser=True)
+        with zipfile.ZipFile(supplement, "w") as archive:
+            self.parser_payload(archive, "nested-native")
+        with self.assertRaisesRegex(RuntimeError, "asset layout"):
+            PACK.verify_packages(output, "0.0.0-test", False, "osx-x64", include_osx_x64_parser=True)
         supplement.unlink()
         with self.assertRaisesRegex(RuntimeError, "missing=.*BGCS.ParserRuntime.osx-x64"):
             PACK.verify_packages(output, "0.0.0-test", False, "osx-x64", include_osx_x64_parser=True)

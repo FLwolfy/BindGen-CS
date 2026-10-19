@@ -8,5 +8,5 @@
     <license type="expression">Apache-2.0 WITH LLVM-exception</license>
     <repository type="git" url="https://github.com/FLwolfy/BindGen-CS" />
   </metadata>
-  <files><file src="runtimes/**/*" target="runtimes" /><file src="licenses/**/*" target="licenses" /><file src="build-inputs/**/*" target="build-inputs" /><file src="runtime-provenance.json" target="" /></files>
+  <files><file src="**/*" target="" /></files>
 </package>
