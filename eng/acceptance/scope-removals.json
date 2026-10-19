@@ -11713,6 +11713,105 @@
         "kind": "category",
         "category": "upstream-native-invocation"
       }
+    },
+    {
+      "scope": "feature",
+      "id": "host.candidate-publication-and-recovery",
+      "reason": "The unused NativeBuild-era ArtifactSetPublisher/ArtifactSetDestination implementation and solely dedicated tests are retired. Generator ArtifactPublisher publication and retained directory transaction assertions remain required; removal is not passing evidence. Original source and test definitions are preserved at 28c7c245efafaf03606ab6f5234da47b0faa5532.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.Infrastructure.Tests",
+        "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.FileAndDirectoryPublicationPreservesUnrelatedParentFilesAndOwners$",
+        "requiredCases": [
+          "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.FileAndDirectoryPublicationPreservesUnrelatedParentFilesAndOwners"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "host.candidate-publication-and-recovery",
+      "reason": "The unused NativeBuild-era ArtifactSetPublisher/ArtifactSetDestination implementation and solely dedicated tests are retired. Generator ArtifactPublisher publication and retained directory transaction assertions remain required; removal is not passing evidence. Original source and test definitions are preserved at 28c7c245efafaf03606ab6f5234da47b0faa5532.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.Infrastructure.Tests",
+        "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.FailedLaterFileInstallRollsBackAlreadyInstalledDirectory$",
+        "requiredCases": [
+          "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.FailedLaterFileInstallRollsBackAlreadyInstalledDirectory"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "host.candidate-publication-and-recovery",
+      "reason": "The unused NativeBuild-era ArtifactSetPublisher/ArtifactSetDestination implementation and solely dedicated tests are retired. Generator ArtifactPublisher publication and retained directory transaction assertions remain required; removal is not passing evidence. Original source and test definitions are preserved at 28c7c245efafaf03606ab6f5234da47b0faa5532.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.Infrastructure.Tests",
+        "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.UnownedExistingNamedFileAndOverlappingDestinationsAreRejected$",
+        "requiredCases": [
+          "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.UnownedExistingNamedFileAndOverlappingDestinationsAreRejected"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "host.candidate-publication-and-recovery",
+      "reason": "The unused NativeBuild-era ArtifactSetPublisher/ArtifactSetDestination implementation and solely dedicated tests are retired. Generator ArtifactPublisher publication and retained directory transaction assertions remain required; removal is not passing evidence. Original source and test definitions are preserved at 28c7c245efafaf03606ab6f5234da47b0faa5532.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.Infrastructure.Tests",
+        "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.InterruptedPreparedJournalTemporaryIsRecoveredWithoutReplacingPreviousOutput$",
+        "requiredCases": [
+          "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.InterruptedPreparedJournalTemporaryIsRecoveredWithoutReplacingPreviousOutput(differentCase: False)",
+          "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.InterruptedPreparedJournalTemporaryIsRecoveredWithoutReplacingPreviousOutput(differentCase: True)"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "host.candidate-publication-and-recovery",
+      "reason": "The unused NativeBuild-era ArtifactSetPublisher/ArtifactSetDestination implementation and solely dedicated tests are retired. Generator ArtifactPublisher publication and retained directory transaction assertions remain required; removal is not passing evidence. Original source and test definitions are preserved at 28c7c245efafaf03606ab6f5234da47b0faa5532.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.Infrastructure.Tests",
+        "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetConcurrencyTests\\.CompetingPublishersInstallOnlyCompleteUniformOwnedSets$",
+        "requiredCases": [
+          "BGCS.Infrastructure.Tests.ArtifactSetConcurrencyTests.CompetingPublishersInstallOnlyCompleteUniformOwnedSets"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "host.candidate-publication-and-recovery",
+      "reason": "Only the mixed alias test surface=\"set\" row is retired with the unused NativeBuild-era ArtifactSetPublisher/ArtifactSetDestination surface; all other rows and actual ArtifactPublisher alias/lock/overlap/link/dangling checks remain. Removal is not a passing proof.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.Infrastructure.Tests",
+        "match": "^BGCS\\.Infrastructure\\.Tests\\.OwnedPathAliasTests\\.ExplicitParentAliasSupportsEachOwnedSurface$",
+        "requiredCases": [
+          "BGCS.Infrastructure.Tests.OwnedPathAliasTests.ExplicitParentAliasSupportsEachOwnedSurface(surface: \"set\")"
+        ]
+      }
+    },
+    {
+      "scope": "feature",
+      "id": "host.candidate-publication-and-recovery",
+      "reason": "Only the mixed alias test surface=\"set\" row is retired with the unused NativeBuild-era ArtifactSetPublisher/ArtifactSetDestination surface; all other rows and actual ArtifactPublisher alias/lock/overlap/link/dangling checks remain. Removal is not a passing proof.",
+      "evidence": {
+        "host": "windows-x64",
+        "kind": "test",
+        "project": "BGCS.Infrastructure.Tests",
+        "match": "^BGCS\\.Infrastructure\\.Tests\\.OwnedPathAliasTests\\.RedirectingCapturedParentNeverGrantsOwnershipOfTheNewTarget$",
+        "requiredCases": [
+          "BGCS.Infrastructure.Tests.OwnedPathAliasTests.RedirectingCapturedParentNeverGrantsOwnershipOfTheNewTarget(surface: \"set\")"
+        ]
+      }
     }
   ],
   "replacements": [

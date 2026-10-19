@@ -154,7 +154,7 @@ public sealed class NativeStorageAssertionEmitter
                 {
                     if (module.language == SourceLanguage.C && field.bitWidth is not null)
                     {
-                        fieldChecks.AppendLine("/* C bitfield declarations require effective-argument fact verification; they have no addressable exact-type assertion. */");
+                        fieldChecks.AppendLine("/* C bitfields have no addressable exact-type assertion; parsed bit offsets and widths remain part of the binding contract. */");
                         continue;
                     }
                     if (field.type is not { } fieldType) throw new InvalidOperationException("A named native field omitted its exact parsed type identity.");
@@ -162,7 +162,7 @@ public sealed class NativeStorageAssertionEmitter
                     {
                         NativeType storage = module.GetType(fieldType);
                         if (storage.size is > 0) Check("sizeof(((" + spelling + "*)0)->" + field.name + ")", storage.size.Value, "native anonymous field storage size");
-                        fieldChecks.AppendLine("/* Unnameable field type identity is verified against effective native source facts. */");
+                        fieldChecks.AppendLine("/* An unnameable field has a storage-size assertion; exact type identity cannot be asserted by name. */");
                         continue;
                     }
                     string alias = "bgcs_verified_field_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);

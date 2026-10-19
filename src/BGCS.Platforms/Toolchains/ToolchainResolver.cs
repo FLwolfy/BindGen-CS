@@ -23,7 +23,8 @@ public static class ToolchainResolver
         NativeToolchainDescriptor original = target.toolchain;
         // Explicit SDK roots are the complete selected parser environment, even
         // when its ABI happens to match the generator host.
-        if (original.sysRoot is not null || original.systemIncludeFolders.Count != 0 || original.cxxSystemIncludeFolders.Count != 0)
+        if (original.sysRoot is not null) return CompleteSelectedSysroot(target);
+        if (original.systemIncludeFolders.Count != 0 || original.cxxSystemIncludeFolders.Count != 0)
             return target;
         // A declared installation hint never authorizes selecting another
         // compiler's SDK. Only the implemented exact MSVC layout is enriched.
@@ -95,14 +96,58 @@ public static class ToolchainResolver
         ) { if (Directory.Exists(path)) paths.Add(Path.GetFullPath(path)); }
     }
 
-    /// <summary>Returns the already resolved ordered parser SDK directories without querying a compiler.</summary>
+    /// <summary>Returns ordered parser SDK directories and existing selected Apple framework roots without querying a compiler.</summary>
     /// <param name="target">The immutable parser target.</param>
     /// <param name="language">The selected source language.</param>
     /// <returns>Explicit SDK paths, preserving C and C++ separation.</returns>
     public static IReadOnlyList<HeaderSearchPath> ResolveHeaderSearchPaths(
         NativeTargetDescriptor target,
         SourceLanguage language
-    )
-        => (language == SourceLanguage.Cpp ? target.toolchain.cxxSystemIncludeFolders.Concat(target.toolchain.systemIncludeFolders) : target.toolchain.systemIncludeFolders)
-            .Distinct(StringComparer.Ordinal).Select(path => new HeaderSearchPath(path, false, false)).ToArray();
+    ) {
+        List<HeaderSearchPath> paths = (language == SourceLanguage.Cpp
+            ? target.toolchain.cxxSystemIncludeFolders.Concat(target.toolchain.systemIncludeFolders)
+            : target.toolchain.systemIncludeFolders).Distinct(StringComparer.Ordinal)
+            .Select(path => new HeaderSearchPath(path, false, false)).ToList();
+        if (target.platformId is "macos" or "ios" or "ios-simulator" && target.toolchain.sysRoot is string sysroot)
+            foreach (string relative in new[] { "System/Library/Frameworks", "System/Library/SubFrameworks", "Library/Frameworks" })
+            {
+                string path = Path.GetFullPath(Path.Combine(sysroot, relative));
+                if (Directory.Exists(path)) paths.Add(new(path, false, true));
+            }
+        return paths.Distinct().ToArray();
+    }
+
+    private static NativeTargetDescriptor CompleteSelectedSysroot(NativeTargetDescriptor target)
+    {
+        NativeToolchainDescriptor original = target.toolchain;
+        string root = Path.GetFullPath(original.sysRoot!);
+        List<string> includes = [.. original.systemIncludeFolders];
+        if (includes.Count == 0 && target.platformId is "linux" or "freebsd" or "android")
+        {
+            if (target.platformId != "android") Add("usr/local/include");
+            string? architecture = (target.architectureId, target.platformId) switch
+            {
+                ("x64", "android") => "x86_64-linux-android",
+                ("x86", "android") => "i686-linux-android",
+                ("arm", "android") => "arm-linux-androideabi",
+                ("arm64", "android") => "aarch64-linux-android",
+                ("x64", "linux") => "x86_64-linux-" + target.abiId,
+                ("x86", "linux") => "i386-linux-" + target.abiId,
+                ("arm64", "linux") => "aarch64-linux-" + target.abiId,
+                _ => null
+            };
+            if (architecture is not null) Add("usr/include/" + architecture);
+            Add("usr/include");
+        }
+        if (includes.SequenceEqual(original.systemIncludeFolders, StringComparer.Ordinal)) return target;
+        NativeToolchainDescriptor completed = new(original.compilerPath, original.sysRoot, includes, original.defines, original.arguments,
+            original.cxxSystemIncludeFolders, original.sdkVersion, original.compilerVersion);
+        return new(target.targetId, target.platformId, target.architectureId, target.abiId, target.triple, completed, target.capabilities, target.byteOrder);
+
+        void Add(string relative)
+        {
+            string path = Path.GetFullPath(Path.Combine(root, relative));
+            if (Directory.Exists(path)) includes.Add(path);
+        }
+    }
 }

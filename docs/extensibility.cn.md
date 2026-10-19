@@ -8,7 +8,8 @@
 候选产物读取都通过中立契约传递，不要求引用 Clang frontend。
 
 插件描述必须声明 ID、semantic version、Contracts major/minor 和完整服务清单。
-服务 ID 在 Host 内全局唯一，priority 按降序执行，同优先级按 ordinal ID 排序。
+服务 ID 在 Host 内全局唯一。变换、lowering 和后处理端口按 priority 降序执行，同优先级按 ordinal ID 排序。
+目标 provider 按 ordinal ID 查询；多个 provider 声明同一个目标时拒绝，不按 priority 选择。
 frontend、projection 和 backend 分别只能注册一个主实现。
 
 Host 先创建发现实例并读取描述，随后释放该实例。每个 generation session

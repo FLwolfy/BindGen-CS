@@ -140,10 +140,14 @@ public sealed class CallbackLifetimeTests
         using NativeModuleSession session = new(new StaticModuleProvider([], providerState.Dispose));
         NativeModuleLease module = session.AcquireResource();
         CallbackRegistration registration = new(1, () => { }, new FaultingState(), module);
-        session.Dispose();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => registration.DisposeAsync().AsTask());
+        Task closing = session.DisposeAsync().AsTask();
+        Assert.False(closing.IsCompleted);
+        InvalidOperationException failure = await Assert.ThrowsAsync<InvalidOperationException>(() => registration.DisposeAsync().AsTask());
+        Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => closing.WaitAsync(TimeSpan.FromSeconds(5))));
+        Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => session.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5))));
         Assert.Equal(0, providerState.releases);
-        module.Dispose(); // The test explicitly recovers its known-safe retained module.
+        module.Dispose();
+        Assert.Equal(0, providerState.releases);
     }
 
     private sealed class ProbeState : IDisposable

@@ -150,6 +150,10 @@ internal class CppParserOptions
         ArgumentNullException.ThrowIfNull(target);
         ClearTargetConfiguration();
         this.targetTriple = target.triple;
+        // Every OS/SDK root must be supplied and snapshotted by the caller.
+        // Keep only the independently locked compiler builtin resource search.
+        AddTargetArgument("-nostdlibinc");
+        AddTargetArgument("-nostdinc++");
         foreach (string definition in target.toolchain.defines)
         {
             if (!this.defines.Contains(definition))
@@ -190,10 +194,6 @@ internal class CppParserOptions
             if (!entry.isBuiltin)
                 AddTargetSystemInclude(entry.path, afterBuiltin: builtinIndex >= 0, isFramework: entry.isFramework);
         }
-
-        if (this.parserKind == SourceLanguage.Cpp
-            && (target.toolchain.cxxSystemIncludeFolders.Count > 0 || discoveredIncludes.Count > 0))
-            AddTargetArgument("-nostdinc++");
 
         if (!string.IsNullOrWhiteSpace(effectiveSysRoot))
         {

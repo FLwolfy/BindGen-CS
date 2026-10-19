@@ -559,21 +559,6 @@
             "UnownedOrManuallyModifiedOutput_IsNeverReplaced"
           ],
           "exists": true
-        },
-        {
-          "path": "tests/BGCS.Infrastructure.Tests/ArtifactSetPublisherTests.cs",
-          "methods": [
-            "FileAndDirectoryPublicationPreservesUnrelatedParentFilesAndOwners",
-            "FailedLaterFileInstallRollsBackAlreadyInstalledDirectory"
-          ],
-          "exists": true
-        },
-        {
-          "path": "tests/BGCS.Infrastructure.Tests/ArtifactSetConcurrencyTests.cs",
-          "methods": [
-            "CompetingPublishersInstallOnlyCompleteUniformOwnedSets"
-          ],
-          "exists": true
         }
       ],
       "pending": [],

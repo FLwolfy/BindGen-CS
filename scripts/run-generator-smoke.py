@@ -9,6 +9,7 @@ from compiler_test_environment import isolated_native_test_environment
 ROOT = Path(__file__).resolve().parents[1]
 FACTS = (
     'BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend',
+    'BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse',
     'BGCS.Tests.NativeCustomFunctionTableTests.RuntimeOnlySlotAdapterCallsUnexportedFunctionsAndRetainsModuleUntilLastRealCallReturns',
     'BGCS.Tests.NativeStandardLoweringTests.StandardValues_ParseBridgeReparseCompileAndInvokeRealNativeOperations',
     'BGCS.Tests.NativeStandardLoweringTests.ExplicitClassAndFunctionTemplates_UseConcreteWorkerFactsAndRealNativeExports',

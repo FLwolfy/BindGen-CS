@@ -1641,7 +1641,8 @@
         "T0376",
         "T0377",
         "T0378",
-        "T0379"
+        "T0379",
+        "T0542"
       ],
       "unclosedGaps": [
         "Current source epoch tests and clean same-head CI receipts are pending."
@@ -1654,8 +1655,7 @@
       "reviewedAssertions": "Exact retained method/literal assertions; no execution or release promotion.",
       "neutralImplementation": [
         "src/BGCS.Infrastructure/IO/OutputDirectorySetTransaction.cs",
-        "src/BGCS.Infrastructure/Publishing/ArtifactPublisher.cs",
-        "src/BGCS.Infrastructure/Publishing/ArtifactSetPublisher.cs"
+        "src/BGCS.Infrastructure/Publishing/ArtifactPublisher.cs"
       ],
       "features": [
         {
@@ -1665,15 +1665,14 @@
       ],
       "configurations": [],
       "testReviewRefs": [
-        "T0380",
-        "T0381",
-        "T0382",
-        "T0383",
-        "T0384",
         "T0385",
         "T0386",
         "T0387",
-        "T0388"
+        "T0388",
+        "T0538",
+        "T0539",
+        "T0540",
+        "T0541"
       ],
       "unclosedGaps": [
         "Current source epoch tests and clean same-head CI receipts are pending."
@@ -5329,7 +5328,7 @@
         }
       ],
       "scopeJustification": "The complete functional baseline executes once on Windows; separate Linux/macOS real parser/generation/native-call smoke does not claim full platform functional certification.",
-      "acceptanceRationale": "Real SDK warnings-as-errors compilation and native invocation exercise static imports, checked scalar/aggregate/pointer carriers, text and buffers under DllImport with package/source runtime. Limits: Only corresponding mandatory desktop/AOT/browser jobs establish platform evidence."
+      "acceptanceRationale": "Real SDK warnings-as-errors compilation and native invocation exercise static imports, checked scalar/aggregate/pointer carriers, text and buffers under DllImport with package/source runtime. Limits: Only actual mapped canonical Windows tests and explicit Linux/macOS smoke establish their stated execution scope; optional AOT/browser application receipts are separate evidence and are not mandatory generator gates."
     },
     "D0015": {
       "status": "implementationReady",
@@ -5519,7 +5518,7 @@
         }
       ],
       "scopeJustification": "The complete functional baseline executes once on Windows; separate Linux/macOS real parser/generation/native-call smoke does not claim full platform functional certification.",
-      "acceptanceRationale": "Multiple context/provider states remain independent, context ownership is checked, static shared facades forward to the same context, and owned handles/callbacks/fresh text maintain their module lifetimes. Limits: Owned C++ text actual six-case fixture is pending; retained native self is not reclassified as nonretaining."
+      "acceptanceRationale": "Multiple context/provider states remain independent, context ownership is checked, static shared facades forward to the same context, and owned handles/callbacks/fresh text maintain their module lifetimes. Limits: Mapped owned C++ text cases cover counted input and fresh string results on owned receivers; their actual execution scope comes from the corresponding receipts. Retained native self is not reclassified as nonretaining."
     },
     "D0017": {
       "status": "implementationReady",
@@ -6387,7 +6386,7 @@
         }
       ],
       "scopeJustification": "The complete functional baseline executes once on Windows; separate Linux/macOS real parser/generation/native-call smoke does not claim full platform functional certification.",
-      "acceptanceRationale": "Explicit returned-handle and callback/userdata-pair registrations retain managed state until complete native-frame quiescence. Actual native threads, self-close, exception fallback, context closure and all three imports by both Runtime modes exercise exact unregister protocols. Blocking/unknown shutdown is omitted on profiles that cannot safely join; explicit Browser EventLoop protocols have separate installed74+33 gates."
+      "acceptanceRationale": "Explicit returned-handle and callback/userdata-pair registrations retain managed state until complete native-frame quiescence. Actual native threads, self-close, exception fallback, context closure and all three imports by both Runtime modes exercise exact unregister protocols. Blocking/unknown shutdown is omitted on profiles that cannot safely join. Explicit Browser EventLoop generation protocols remain separate from optional installed browser application receipts; those receipts establish only their own exact functional/lifecycle execution scope and are not mandatory generator or release gates."
     },
     "D0026": {
       "status": "implementationReady",
@@ -8484,6 +8483,13 @@
           "project": "BGCS.CSharp.Tests",
           "match": "^BGCS\\.CSharp\\.Tests\\.ImportLibraryConstantTests\\.MissingMutableMismatchedOrInjectedReferencesFailBeforeEmission$",
           "requiredCasesRef": "T0379"
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Tests",
+          "match": "^BGCS\\.Tests\\.PrimaryFrontendCacheTests\\.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse$",
+          "requiredCasesRef": "T0542"
         }
       ],
       "scopeJustification": "The complete functional baseline executes once on Windows; separate Linux/macOS real parser/generation/native-call smoke does not claim full platform functional certification.",
@@ -8492,7 +8498,6 @@
     "D0050": {
       "status": "implementationReady",
       "implementation": [
-        "src/BGCS.Infrastructure/Publishing/ArtifactSetPublisher.cs",
         "src/BGCS.Infrastructure/Publishing/ArtifactPublisher.cs",
         "src/BGCS.Infrastructure/IO/OutputDirectorySetTransaction.cs"
       ],
@@ -8500,41 +8505,6 @@
         "windows-x64"
       ],
       "releaseEvidence": [
-        {
-          "host": "windows-x64",
-          "kind": "test",
-          "project": "BGCS.Infrastructure.Tests",
-          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.FileAndDirectoryPublicationPreservesUnrelatedParentFilesAndOwners$",
-          "requiredCasesRef": "T0380"
-        },
-        {
-          "host": "windows-x64",
-          "kind": "test",
-          "project": "BGCS.Infrastructure.Tests",
-          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.FailedLaterFileInstallRollsBackAlreadyInstalledDirectory$",
-          "requiredCasesRef": "T0381"
-        },
-        {
-          "host": "windows-x64",
-          "kind": "test",
-          "project": "BGCS.Infrastructure.Tests",
-          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.UnownedExistingNamedFileAndOverlappingDestinationsAreRejected$",
-          "requiredCasesRef": "T0382"
-        },
-        {
-          "host": "windows-x64",
-          "kind": "test",
-          "project": "BGCS.Infrastructure.Tests",
-          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetPublisherTests\\.InterruptedPreparedJournalTemporaryIsRecoveredWithoutReplacingPreviousOutput$",
-          "requiredCasesRef": "T0383"
-        },
-        {
-          "host": "windows-x64",
-          "kind": "test",
-          "project": "BGCS.Infrastructure.Tests",
-          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactSetConcurrencyTests\\.CompetingPublishersInstallOnlyCompleteUniformOwnedSets$",
-          "requiredCasesRef": "T0384"
-        },
         {
           "host": "windows-x64",
           "kind": "test",
@@ -8562,10 +8532,38 @@
           "project": "BGCS.Infrastructure.Tests",
           "match": "^BGCS\\.Infrastructure\\.Tests\\.OutputDirectorySetTransactionTests\\.RepeatedAndNestedOutputsAreRejectedBeforeOwnershipAcquisition$",
           "requiredCasesRef": "T0388"
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Infrastructure.Tests",
+          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactPublicationTests\\.CompletePublication_RemovesPreviousOwnedArtifactsAfterValidation$",
+          "requiredCasesRef": "T0538"
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Infrastructure.Tests",
+          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactPublicationTests\\.CorruptCandidate_LeavesTheEntirePreviousOutputUntouched$",
+          "requiredCasesRef": "T0539"
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Infrastructure.Tests",
+          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactPublicationTests\\.UnownedOrManuallyModifiedOutput_IsNeverReplaced$",
+          "requiredCasesRef": "T0540"
+        },
+        {
+          "host": "windows-x64",
+          "kind": "test",
+          "project": "BGCS.Infrastructure.Tests",
+          "match": "^BGCS\\.Infrastructure\\.Tests\\.ArtifactPublicationTests\\.SourceOverlapAndDifferentLibraryOwnership_AreRejected$",
+          "requiredCasesRef": "T0541"
         }
       ],
       "scopeJustification": "The complete functional baseline executes once on Windows; separate Linux/macOS real parser/generation/native-call smoke does not claim full platform functional certification.",
-      "acceptanceRationale": "Owned publication sets validate paths/overlaps, preserve unrelated parent files, acquire concurrent ownership, install complete sets and recover prepared journals. Fault injection during a later install rolls back already installed outputs; multi-directory publication is a lock/journal protocol rather than a claim of filesystem-wide atomic rename."
+      "acceptanceRationale": "The generator publishes its complete owned artifact directory through ArtifactPublisher: candidate digest failures and unowned/tampered output preserve the previous collection; source/ownership overlaps are rejected and successful replacement removes only prior owned artifacts. Retained directory-set transaction tests cover rollback and acquisition faults. The unused NativeBuild-era joint native-file/directory publisher and its dedicated tests are retired, not certified as passing."
     },
     "D0051": {
       "status": "implementationReady",
@@ -15792,42 +15790,6 @@
         "BGCS.CSharp.Tests.ImportLibraryConstantTests.MissingMutableMismatchedOrInjectedReferencesFailBeforeEmission(caseId: \"unqualified\", reference: \"Native\", source: \"namespace Vendor {public static class LibraryNames\"···)"
       ]
     },
-    "T0380": {
-      "project": "BGCS.Infrastructure.Tests",
-      "method": "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.FileAndDirectoryPublicationPreservesUnrelatedParentFilesAndOwners",
-      "requiredCases": [
-        "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.FileAndDirectoryPublicationPreservesUnrelatedParentFilesAndOwners"
-      ]
-    },
-    "T0381": {
-      "project": "BGCS.Infrastructure.Tests",
-      "method": "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.FailedLaterFileInstallRollsBackAlreadyInstalledDirectory",
-      "requiredCases": [
-        "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.FailedLaterFileInstallRollsBackAlreadyInstalledDirectory"
-      ]
-    },
-    "T0382": {
-      "project": "BGCS.Infrastructure.Tests",
-      "method": "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.UnownedExistingNamedFileAndOverlappingDestinationsAreRejected",
-      "requiredCases": [
-        "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.UnownedExistingNamedFileAndOverlappingDestinationsAreRejected"
-      ]
-    },
-    "T0383": {
-      "project": "BGCS.Infrastructure.Tests",
-      "method": "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.InterruptedPreparedJournalTemporaryIsRecoveredWithoutReplacingPreviousOutput",
-      "requiredCases": [
-        "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.InterruptedPreparedJournalTemporaryIsRecoveredWithoutReplacingPreviousOutput(differentCase: False)",
-        "BGCS.Infrastructure.Tests.ArtifactSetPublisherTests.InterruptedPreparedJournalTemporaryIsRecoveredWithoutReplacingPreviousOutput(differentCase: True)"
-      ]
-    },
-    "T0384": {
-      "project": "BGCS.Infrastructure.Tests",
-      "method": "BGCS.Infrastructure.Tests.ArtifactSetConcurrencyTests.CompetingPublishersInstallOnlyCompleteUniformOwnedSets",
-      "requiredCases": [
-        "BGCS.Infrastructure.Tests.ArtifactSetConcurrencyTests.CompetingPublishersInstallOnlyCompleteUniformOwnedSets"
-      ]
-    },
     "T0385": {
       "project": "BGCS.Infrastructure.Tests",
       "method": "BGCS.Infrastructure.Tests.OutputDirectorySetTransactionTests.CommitInstallsEveryCandidateAsOneValidatedSet",
@@ -17106,6 +17068,41 @@
         "BGCS.Tests.NativeDefaultArgumentTests.TypedDefaultsShareConversionsWithAliasesViewsAndSharedContexts(mode: FunctionTable, sourceRuntime: True)",
         "BGCS.Tests.NativeDefaultArgumentTests.TypedDefaultsShareConversionsWithAliasesViewsAndSharedContexts(mode: LibraryImport, sourceRuntime: False)",
         "BGCS.Tests.NativeDefaultArgumentTests.TypedDefaultsShareConversionsWithAliasesViewsAndSharedContexts(mode: LibraryImport, sourceRuntime: True)"
+      ]
+    },
+    "T0538": {
+      "project": "BGCS.Infrastructure.Tests",
+      "method": "BGCS.Infrastructure.Tests.ArtifactPublicationTests.CompletePublication_RemovesPreviousOwnedArtifactsAfterValidation",
+      "requiredCases": [
+        "BGCS.Infrastructure.Tests.ArtifactPublicationTests.CompletePublication_RemovesPreviousOwnedArtifactsAfterValidation"
+      ]
+    },
+    "T0539": {
+      "project": "BGCS.Infrastructure.Tests",
+      "method": "BGCS.Infrastructure.Tests.ArtifactPublicationTests.CorruptCandidate_LeavesTheEntirePreviousOutputUntouched",
+      "requiredCases": [
+        "BGCS.Infrastructure.Tests.ArtifactPublicationTests.CorruptCandidate_LeavesTheEntirePreviousOutputUntouched"
+      ]
+    },
+    "T0540": {
+      "project": "BGCS.Infrastructure.Tests",
+      "method": "BGCS.Infrastructure.Tests.ArtifactPublicationTests.UnownedOrManuallyModifiedOutput_IsNeverReplaced",
+      "requiredCases": [
+        "BGCS.Infrastructure.Tests.ArtifactPublicationTests.UnownedOrManuallyModifiedOutput_IsNeverReplaced"
+      ]
+    },
+    "T0541": {
+      "project": "BGCS.Infrastructure.Tests",
+      "method": "BGCS.Infrastructure.Tests.ArtifactPublicationTests.SourceOverlapAndDifferentLibraryOwnership_AreRejected",
+      "requiredCases": [
+        "BGCS.Infrastructure.Tests.ArtifactPublicationTests.SourceOverlapAndDifferentLibraryOwnership_AreRejected"
+      ]
+    },
+    "T0542": {
+      "project": "BGCS.Tests",
+      "method": "BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse",
+      "requiredCases": [
+        "BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse"
       ]
     }
   }

@@ -8,9 +8,11 @@ Standard plugins reference `BGCS.Contracts` and implement
 and candidate reads use neutral contracts without a Clang frontend dependency.
 
 A descriptor declares the plugin ID, semantic version, required Contracts major/minor and
-complete service collection. Service IDs are globally unique. Execution uses descending
-priority and ordinal ID for ties. Frontend, projection and backend each accept one primary
-implementation.
+complete service collection. Service IDs are globally unique. Ordered transformation,
+lowering and processor ports use descending priority and ordinal ID for ties. Target
+providers are queried in ordinal ID order; multiple providers claiming the same target
+are rejected rather than selected by priority. Frontend, projection and backend each
+accept one primary implementation.
 
 The Host creates a discovery instance, captures its descriptor and disposes it. Every
 generation session owns an independent plugin. Configure registers factories before the

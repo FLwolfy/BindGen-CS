@@ -265,6 +265,7 @@ public class CallbackRegistration : IDisposable, IAsyncDisposable
         catch (Exception exception)
         {
             // Keep the module if retained-state cleanup fails: native code may still need it.
+            m_module?.RetainForUnresolvedCleanup(exception);
             m_released.TrySetException(exception);
         }
     }

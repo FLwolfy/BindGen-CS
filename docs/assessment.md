@@ -2,7 +2,7 @@
 
 [简体中文](assessment.cn.md) | [Capabilities](capabilities.md) | [Acceptance](acceptance.md)
 
-Assessment date: 2026-10-18. This assesses the current generator-only implementation
+Assessment date: 2026-10-19. This assesses the current generator-only implementation
 and its source boundaries. It does not declare all functional acceptance complete,
 certify a release revision, or establish that a package has been published.
 
@@ -23,6 +23,21 @@ and source generation for those profiles remain part of the generator's scope.
 | Usability | Grouped configuration and init/doctor/validate/generate/diff provide one generation workflow. Defaults are instance APIs, FunctionTable imports and split files; consumers integrate generation explicitly. | Headers and target SDK inputs must be configured. Encoding, allocator, concrete templates and lifecycle semantics may need explicit declarations. Consumers own compilation, linking and deployment. |
 | Decoupling | Native facts, bridge operations, interop ABI and managed presentation are separate models. The worker isolates parsing; Runtime has no generator dependency. | Replacing a frontend requires equivalent facts. A new target description alone does not establish ABI support. |
 | Cross-platform design | Host parsing, target identity/SDK/ABI and runtime/import capabilities are separate. GNU and musl remain distinct target facts. | Target modeling and generated code are different from an application verified on that platform. Unsupported profiles retain explicit refusals; owning virtual registrations remain omitted on nonblocking browser profiles. |
+
+## Implementation granularity
+
+The eleven projects separate independently changing responsibilities. Typed models,
+protocol-specific planners, emitters and verifiers make ordinary extensions local to
+their owning module; adding another project for every type or platform would not
+improve that boundary. This does not mean every implementation is equally small.
+
+`BGCS/Pipeline/GenerationPipeline.cs` remains a concentration point: its roughly
+900-line generation method includes local helpers and coordinates target parsing,
+lowering, projection, caches, processors and final publication. It uses the proper
+module boundaries, but its size increases the cost of reviewing control flow and
+failure cleanup. The configuration loader and emitted-contract reader are other
+substantial components. Passing architecture or style checks does not remove this
+maintenance debt, and this assessment does not label their granularity optimal.
 
 ## Product responsibilities
 

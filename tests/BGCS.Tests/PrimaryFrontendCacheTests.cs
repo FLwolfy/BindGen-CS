@@ -21,6 +21,44 @@ namespace BGCS.Tests;
 public sealed class PrimaryFrontendCacheTests
 {
     [Fact]
+    public async Task ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse()
+    {
+        using Scratch scratch = new();
+        string sdk = Path.Combine(scratch.root, "selected-sdk"), selected = Path.Combine(sdk, "selected");
+        string implicitHeaders = Path.Combine(sdk, "usr", "include"), additive = Path.Combine(scratch.root, "source-extra");
+        foreach (string directory in new[] { selected, implicitHeaders, additive }) Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(selected, "selected.h"), "typedef int bgcs_selected;\n");
+        File.WriteAllText(Path.Combine(additive, "source_extra.h"), "typedef int bgcs_extra;\n");
+        File.WriteAllText(Path.Combine(implicitHeaders, "bgcs_unlisted.h"), "typedef int bgcs_unlisted;\n");
+        // This locked builtin leaf has no dynamic include query that would
+        // intentionally disable primary caching independently of SDK authority.
+        File.WriteAllText(Path.Combine(scratch.source, "native.h"), "#include <__stddef_size_t.h>\n#include <selected.h>\n#include <source_extra.h>\nsize_t measured_value(size_t value);\nbgcs_selected selected_value(bgcs_extra value);\n");
+        GenerationRequest request = new(scratch.Request().configuration with
+        {
+            source = new() { headers = ["native.h"], parseMacros = false, systemIncludeDirectories = [additive] },
+            targets = [new() { id = "linux-x64-gnu", settings = new() { sysRoot = sdk, systemIncludeDirectories = [selected] } }]
+        }, scratch.source);
+        await using BindingHost host = scratch.Builder().Build();
+        GenerationResult cold = await host.GenerateAsync(request);
+        Assert.True(cold.success, cold.GetDiagnosticSummary());
+        GenerationResult warm = await host.GenerateAsync(request);
+        Assert.True(warm.success, warm.GetDiagnosticSummary());
+        Assert.True(Primary(warm).status == "hit", Primary(warm).reason);
+        Assert.Equal("hit", Assert.Single(warm.cacheStages, stage => stage.stage == "csharpEmission").status);
+        Assert.Contains(Assert.Single(warm.targetModels).native.declarations, declaration => declaration.name == "selected_value");
+        var before = Directory.GetFiles(warm.outputRoot, "*", SearchOption.AllDirectories)
+            .ToDictionary(path => Path.GetRelativePath(warm.outputRoot, path), File.ReadAllBytes);
+        File.AppendAllText(Path.Combine(scratch.source, "native.h"), "#include <bgcs_unlisted.h>\nbgcs_unlisted unlisted_value(void);\n");
+        GenerationResult rejected = await host.GenerateAsync(request);
+        Assert.False(rejected.success, rejected.GetDiagnosticSummary());
+        Assert.False(rejected.published);
+        Assert.Contains("bgcs_unlisted.h", rejected.GetDiagnosticSummary());
+        Assert.Equal(before.Keys.Order(), Directory.GetFiles(warm.outputRoot, "*", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(warm.outputRoot, path)).Order());
+        foreach (var entry in before) Assert.Equal(entry.Value, File.ReadAllBytes(Path.Combine(warm.outputRoot, entry.Key)));
+    }
+
+    [Fact]
     public async Task VerifiedWorkerFactsRestoreAfterOutputDeletionAndDoNotSkipValidators()
     {
         using Scratch scratch = new();

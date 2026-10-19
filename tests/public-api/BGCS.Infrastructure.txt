@@ -206,26 +206,6 @@ class BGCS.Infrastructure.Publishing.ArtifactPublisher [sealed; interfaces=Syste
   method System.Boolean ClearOwned(System.String destination, System.String libraryId, System.Collections.Generic.IEnumerable<System.String> protectedInputs [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
   method System.Void Commit(System.Collections.Generic.IEnumerable<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Void Dispose() [virtual; final]
-class BGCS.Infrastructure.Publishing.ArtifactSetDestination [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.Publishing.ArtifactSetDestination>]
-  ctor(System.String path, System.String libraryId, System.Boolean isDirectory [optional; default=true])
-  property System.Boolean isDirectory { get; init }
-  property System.String libraryId { get; init }
-  property System.String path { get; init }
-  method BGCS.Infrastructure.Publishing.ArtifactSetDestination <Clone>$()
-  method System.Boolean Equals(BGCS.Infrastructure.Publishing.ArtifactSetDestination other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Infrastructure.Publishing.ArtifactSetDestination left, BGCS.Infrastructure.Publishing.ArtifactSetDestination right) [static]
-  method System.Boolean op_Inequality(BGCS.Infrastructure.Publishing.ArtifactSetDestination left, BGCS.Infrastructure.Publishing.ArtifactSetDestination right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.String path, out System.String libraryId, out System.Boolean isDirectory)
-class BGCS.Infrastructure.Publishing.ArtifactSetPublisher [sealed; interfaces=System.IDisposable]
-  ctor(System.Collections.Generic.IEnumerable<BGCS.Infrastructure.Publishing.ArtifactSetDestination> destinations, System.Collections.Generic.IEnumerable<System.String> protectedInputs [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
-  property System.Exception cleanupFailure { get }
-  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> ReadExistingArtifacts(System.String destination)
-  method System.String GetCandidatePath(System.String destination)
-  method System.Void Commit(System.Collections.Generic.IReadOnlyDictionary<System.String,System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor>> artifacts, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Void Dispose() [virtual; final]
 class BGCS.Infrastructure.Publishing.CandidateTextEditor [sealed; interfaces=BGCS.Contracts.Artifacts.IArtifactEditor|BGCS.Contracts.Artifacts.IArtifactReader|System.IDisposable]
   ctor(System.String root, System.Collections.Generic.IEnumerable<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts, System.String additionPrefix [optional; default=null])
   property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts { get }

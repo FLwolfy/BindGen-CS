@@ -1,5 +1,6 @@
 using System.Linq;
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Targets;
@@ -11,6 +12,36 @@ namespace BGCS.Platforms.Tests;
 
 public sealed class AutomaticToolchainTargetTests
 {
+    [Theory]
+    [InlineData("linux-x64-gnu", "x86_64-linux-gnu")]
+    [InlineData("linux-x64-musl", "x86_64-linux-musl")]
+    [InlineData("linux-x86-gnu", "i386-linux-gnu")]
+    [InlineData("android-x64", "x86_64-linux-android")]
+    [InlineData("android-x86", "i686-linux-android")]
+    [InlineData("android-arm", "arm-linux-androideabi")]
+    [InlineData("android-arm64", "aarch64-linux-android")]
+    public void SelectedUnixSysrootResolvesOnlyItsExistingCSearchRoots(string targetId, string multiarch)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-selected-sysroot-" + Guid.NewGuid().ToString("N"));
+        string local = Path.Combine(root, "usr", "local", "include"), common = Path.Combine(root, "usr", "include");
+        string architecture = Path.Combine(common, multiarch), selected = Path.Combine(root, "selected");
+        foreach (string path in new[] { local, architecture, selected }) Directory.CreateDirectory(path);
+        try
+        {
+            NativeTargetDescriptor target = new TargetResolver().Resolve(new(new(targetId), new(sysRoot: root)));
+            NativeTargetDescriptor resolved = ToolchainResolver.ResolveToolchain(target, SourceLanguage.C);
+            Assert.Equal(target.platformId == "android" ? new[] { architecture, common } : new[] { local, architecture, common }, resolved.toolchain.systemIncludeFolders);
+            Assert.Empty(resolved.toolchain.cxxSystemIncludeFolders);
+            Assert.Equal(target.triple, resolved.triple);
+            Assert.Equal(target.abiId, resolved.abiId);
+            NativeTargetDescriptor explicitPaths = new TargetResolver().Resolve(new(new(targetId),
+                new(sysRoot: root, systemIncludeFolders: [selected])));
+            Assert.Same(explicitPaths, ToolchainResolver.ResolveToolchain(explicitPaths, SourceLanguage.C));
+            Assert.Equal(new[] { selected }, explicitPaths.toolchain.systemIncludeFolders);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Fact]
     public void ForeignTargetsRetainOnlyTheirDeclaredParserSdkInputs()
     {

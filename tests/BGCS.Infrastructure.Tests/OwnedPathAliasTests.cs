@@ -45,7 +45,6 @@ public sealed class OwnedPathAliasTests : IDisposable
     [InlineData("cache")]
     [InlineData("publisher")]
     [InlineData("publication-reader")]
-    [InlineData("set")]
     [InlineData("transaction")]
     [InlineData("transaction-set")]
     public async Task ExplicitParentAliasSupportsEachOwnedSurface(string surface)
@@ -90,17 +89,6 @@ public sealed class OwnedPathAliasTests : IDisposable
                 Publish(logical, "original");
                 Assert.Equal(s_artifact, Assert.Single(new ArtifactPublicationReader().ReadVerified(logical, "fixture")));
                 break;
-            case "set":
-                string file = Path.Combine(m_alias, "native.bin");
-                using (ArtifactSetPublisher set = new([new(logical, "fixture"), new(file, "fixture", false)]))
-                {
-                    new DirectoryArtifactSink(set.GetCandidatePath(logical)).WriteText("value.txt", "original");
-                    File.WriteAllText(set.GetCandidatePath(file), "native", new UTF8Encoding(false));
-                    set.Commit(new Dictionary<string, ImmutableArray<ArtifactDescriptor>>
-                    { [logical] = [s_artifact], [file] = [Descriptor("native.bin", "native")] });
-                }
-                Assert.Equal("native", File.ReadAllText(Path.Combine(m_target, "native.bin")));
-                break;
             case "transaction":
                 using (OutputDirectoryTransaction transaction = new(logical))
                 {
@@ -125,7 +113,6 @@ public sealed class OwnedPathAliasTests : IDisposable
     [InlineData("editor")]
     [InlineData("cache")]
     [InlineData("publisher")]
-    [InlineData("set")]
     [InlineData("transaction")]
     [InlineData("transaction-set")]
     public async Task RedirectingCapturedParentNeverGrantsOwnershipOfTheNewTarget(string surface)
@@ -157,11 +144,6 @@ public sealed class OwnedPathAliasTests : IDisposable
                 ArtifactPublisher publisher = new(logical, "fixture"); owner = publisher;
                 new DirectoryArtifactSink(publisher.candidateRoot).WriteText("value.txt", "unsafe");
                 operation = () => { publisher.Commit([Descriptor("value.txt", "unsafe")]); return Task.CompletedTask; };
-                break;
-            case "set":
-                ArtifactSetPublisher set = new([new(logical, "fixture")]); owner = set;
-                new DirectoryArtifactSink(set.GetCandidatePath(logical)).WriteText("value.txt", "unsafe");
-                operation = () => { set.Commit(new Dictionary<string, ImmutableArray<ArtifactDescriptor>> { [logical] = [Descriptor("value.txt", "unsafe")] }); return Task.CompletedTask; };
                 break;
             case "transaction":
                 OutputDirectoryTransaction transaction = new(logical); owner = transaction;
@@ -211,9 +193,7 @@ public sealed class OwnedPathAliasTests : IDisposable
         using (OutputDirectoryTransaction first = new(logical))
             Assert.Throws<TimeoutException>(() => new OutputDirectoryTransaction(physical, TimeSpan.FromMilliseconds(60)));
         Assert.Throws<ArgumentException>(() => new OutputDirectorySetTransaction([logical, physical]));
-        Assert.Throws<ArgumentException>(() => new ArtifactSetPublisher([new(logical, "fixture"), new(physical, "fixture")]));
         Assert.Throws<IOException>(() => new ArtifactPublisher(logical, "fixture", [Path.Combine(physical, "source.h")]));
-        Assert.Throws<IOException>(() => new ArtifactSetPublisher([new(physical, "fixture")], [Path.Combine(logical, "source.h")]));
     }
 
     [Fact]
@@ -226,7 +206,6 @@ public sealed class OwnedPathAliasTests : IDisposable
         Assert.Throws<IOException>(() => new ArtifactDigestVerifier().Verify(m_alias, []));
         Assert.Throws<IOException>(() => new GenerationStageCache(m_alias));
         Assert.Throws<IOException>(() => new ArtifactPublisher(m_alias, "fixture"));
-        Assert.Throws<IOException>(() => new ArtifactSetPublisher([new(m_alias, "fixture")]));
         Assert.Throws<IOException>(() => new OutputDirectoryTransaction(m_alias));
         string owned = Path.Combine(m_target, "owned");
         Publish(owned, "original");

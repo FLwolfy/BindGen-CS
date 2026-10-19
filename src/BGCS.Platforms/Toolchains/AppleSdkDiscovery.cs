@@ -11,26 +11,23 @@ using BGCS.Platforms.Targeting;
 
 namespace BGCS.Platforms.Toolchains;
 
-/// <summary>Checks the selected Apple SDK identity before resolving its target headers and libraries.</summary>
+/// <summary>Checks the selected Apple SDK identity before resolving its parser header environment.</summary>
 public static class AppleSdkDiscovery
 {
     /// <summary>Validates SDK family and version independently for macOS, device and simulator targets.</summary>
     /// <param name="targetId">macOS, iOS device or iOS simulator target identity.</param>
     /// <param name="sdkRoot">The explicit installed SDK root.</param>
-    /// <param name="compilerPath">The optional authoritative installed Clang driver.</param>
+    /// <param name="compilerPath">An optional read-only compiler installation hint; no driver is executed.</param>
     /// <returns>An immutable target pinned to the selected SDK path/version.</returns>
     public static NativeTargetDescriptor Resolve(
         NativeTargetId targetId,
         string sdkRoot,
         string? compilerPath = null
     ) {
-        NativeTargetDescriptor target = new TargetResolver().Resolve(new(targetId));
-        string family = target.platformId switch { "macos" => "macosx", "ios" => "iphoneos", "ios-simulator" => "iphonesimulator", _ => throw new NotSupportedException("The requested target is not an Apple SDK family.") };
         string root = Path.GetFullPath(sdkRoot);
-        Dictionary<string, string> settings = ReadSettings(root);
-        if (!settings.TryGetValue("CanonicalName", out string? canonical) || !canonical.StartsWith(family, StringComparison.Ordinal)
-            || !settings.TryGetValue("Version", out string? version) || !System.Version.TryParse(version, out _))
-            throw new InvalidDataException("The selected Apple SDK does not identify the requested device/simulator family and exact version.");
+        NativeTargetDescriptor target = new TargetResolver().Resolve(new(targetId, new(sysRoot: root)));
+        string family = target.platformId switch { "macos" => "macosx", "ios" => "iphoneos", "ios-simulator" => "iphonesimulator", _ => throw new NotSupportedException("The requested target is not an Apple SDK family.") };
+        string version = ReadValidatedVersion(root, family);
         string? compiler = compilerPath;
         string includes = Path.Combine(root, "usr", "include"), cxx = Path.Combine(includes, "c++", "v1");
         if (!Directory.Exists(includes)) throw new IOException("The selected Apple SDK has no system include directory.");
@@ -40,11 +37,19 @@ public static class AppleSdkDiscovery
     /// <summary>Finds existing Apple SDK metadata without executing SDK tools.</summary>
     /// <param name="sdkName">macosx, iphoneos or iphonesimulator.</param>
     /// <returns>The explicitly selected or installed SDK root, or null.</returns>
+    /// <exception cref="InvalidDataException">An explicit SDKROOT does not identify the requested SDK family and version.</exception>
+    /// <exception cref="DirectoryNotFoundException">An explicitly selected SDKROOT does not exist.</exception>
     public static string? FindInstalledRoot(string sdkName)
     {
-        string? configured = Environment.GetEnvironmentVariable("SDKROOT");
-        if (!string.IsNullOrWhiteSpace(configured) && Directory.Exists(configured)) return Path.GetFullPath(configured);
         string family = sdkName switch { "macosx" => "MacOSX", "iphoneos" => "iPhoneOS", "iphonesimulator" => "iPhoneSimulator", _ => throw new ArgumentException("Unknown Apple SDK family.", nameof(sdkName)) };
+        string? configured = Environment.GetEnvironmentVariable("SDKROOT");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            string root = Path.GetFullPath(configured);
+            if (!Directory.Exists(root)) throw new DirectoryNotFoundException("The explicitly selected SDKROOT does not exist: " + root);
+            _ = ReadValidatedVersion(root, sdkName);
+            return root;
+        }
         List<string> roots = [];
         string? developer = Environment.GetEnvironmentVariable("DEVELOPER_DIR");
         if (!string.IsNullOrWhiteSpace(developer))
@@ -63,6 +68,17 @@ public static class AppleSdkDiscovery
             if (selected is not null) return selected;
         }
         return null;
+    }
+
+    private static string ReadValidatedVersion(
+        string root,
+        string family
+    ) {
+        Dictionary<string, string> settings = ReadSettings(root);
+        if (!settings.TryGetValue("CanonicalName", out string? canonical) || !canonical.StartsWith(family, StringComparison.Ordinal)
+            || !settings.TryGetValue("Version", out string? version) || !System.Version.TryParse(version, out _))
+            throw new InvalidDataException("The selected Apple SDK does not identify the requested device/simulator family and exact version.");
+        return version;
     }
 
     private static Dictionary<string, string> ReadSettings(string root)

@@ -1,8 +1,10 @@
 using System;
+using BGCS.Contracts.Inputs;
 using BGCS.Contracts.Targets;
 using BGCS.Frontend.Clang.Model.Expressions;
 using BGCS.Frontend.Clang.Parsing;
 using BGCS.Platforms.Targeting;
+using BGCS.Platforms.Toolchains;
 using Xunit;
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
@@ -20,13 +22,21 @@ namespace BGCS.Frontend.Clang.Tests
                 return;
             }
 
+            // This x86 expression fixture uses the installed Windows SDK's
+            // architecture-neutral declarations, with explicit search roots.
+            // It must not rely on libclang's implicit host SDK discovery.
+            NativeToolchainDescriptor sdk = ToolchainResolver.ResolveToolchain(
+                new TargetResolver().Resolve(new(new NativeTargetId("host"))), SourceLanguage.Cpp).toolchain;
+            Assert.NotEmpty(sdk.systemIncludeFolders);
+            NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("windows-x86-msvc"),
+                new NativeToolchainDescriptor(systemIncludeFolders: sdk.systemIncludeFolders)));
             ParseAssert(@"
 #define INITGUID
 #include <guiddef.h>
 DEFINE_GUID(IID_ID3D11DeviceChild,0x1841e5c8,0x16b0,0x489b,0xbc,0xc8,0x44,0xcf,0xb0,0xd5,0xde,0xae);
 ", compilation =>
                 {
-                    Assert.False(compilation.hasErrors);
+                    Assert.False(compilation.hasErrors, string.Join(Environment.NewLine, compilation.diagnostics.messages));
                     Assert.Single(compilation.fields);
                     var cppField = compilation.fields[0];
 
@@ -39,7 +49,7 @@ DEFINE_GUID(IID_ID3D11DeviceChild,0x1841e5c8,0x16b0,0x489b,0xbc,0xc8,0x44,0xcf,0
 
                     Assert.Equal("{0x1841e5c8, 0x16b0, 0x489b, {0xbc, 0xc8, 0x44, 0xcf, 0xb0, 0xd5, 0xde, 0xae}}", toStr);
                 },
-                new CppParserOptions().ConfigureForTarget(new TargetResolver().Resolve(new(new NativeTargetId("windows-x86-msvc")))));
+                new CppParserOptions().ConfigureForTarget(target));
         }
 
 

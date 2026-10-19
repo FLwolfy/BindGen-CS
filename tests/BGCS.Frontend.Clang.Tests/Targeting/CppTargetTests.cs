@@ -1,9 +1,12 @@
 using BGCS.Contracts.Inputs;
 using System;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using BGCS.Contracts.Targets;
+using BGCS.Contracts.Requests;
+using BGCS.Infrastructure.IO;
 using BGCS.Frontend.Clang.Model.Declarations;
 using BGCS.Frontend.Clang.Model.Metadata;
 using BGCS.Frontend.Clang.Model.Types;
@@ -16,6 +19,39 @@ namespace BGCS.Frontend.Clang.Tests;
 
 public sealed class CppTargetTests
 {
+    [Fact]
+    public async System.Threading.Tasks.Task SelectedAppleFrameworkAndCHeadersAreParsedAndSnapshottedExplicitly()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-explicit-framework-" + Guid.NewGuid().ToString("N"));
+        string sdk = Path.Combine(root, "sdk"), includes = Path.Combine(sdk, "usr", "include");
+        string frameworks = Path.Combine(sdk, "System", "Library", "Frameworks");
+        string frameworkHeaders = Path.Combine(frameworks, "BgcsFixture.framework", "Headers");
+        Directory.CreateDirectory(includes);
+        Directory.CreateDirectory(frameworkHeaders);
+        try
+        {
+            File.WriteAllText(Path.Combine(includes, "sdk_value.h"), "typedef int bgcs_sdk_value;\n");
+            string frameworkHeader = Path.Combine(frameworkHeaders, "value.h");
+            File.WriteAllText(frameworkHeader, "typedef int bgcs_framework_value;\n");
+            string header = Path.Combine(root, "entry.h");
+            File.WriteAllText(header, "#include <sdk_value.h>\n#include <BgcsFixture/value.h>\nbgcs_sdk_value read_value(bgcs_framework_value value);\n");
+            NativeTargetDescriptor target = new TargetResolver().Resolve(new(new("macos-x64-darwin"), new(sysRoot: sdk)));
+            var parsed = await new ClangFrontend().ParseAsync(new FrontendRequest(target, SourceLanguage.C, [header])
+            {
+                pathBase = root, languageStandard = "c17", parseMacros = false,
+                headerSearchPaths = ToolchainResolver.ResolveHeaderSearchPaths(target, SourceLanguage.C).ToImmutableArray()
+            }, default);
+            Assert.DoesNotContain(parsed.module.diagnostics, diagnostic => diagnostic.isFailure);
+            Assert.Contains(parsed.module.declarations, declaration => declaration.name == "read_value");
+            Assert.Contains(parsed.snapshot.searchDirectories, directory => directory.path == frameworks);
+            Assert.Contains(parsed.snapshot.files, file => file.path == frameworkHeader);
+            Assert.True(SourceSnapshotVerifier.Matches(parsed.snapshot));
+            File.WriteAllText(frameworkHeader, "typedef float bgcs_framework_value;\n");
+            Assert.False(SourceSnapshotVerifier.Matches(parsed.snapshot));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Fact]
     public void CppSdkWrappersPrecedeCHeadersAndIncludeNextReachesTheCAbi()
     {
@@ -160,7 +196,8 @@ public sealed class CppTargetTests
         options.ConfigureForTarget(
             new TargetResolver().Resolve(new(new NativeTargetId("emscripten-wasm32-emscripten"))));
 
-        Assert.DoesNotContain("-nostdinc++", options.additionalArguments);
+        Assert.Single(options.additionalArguments, argument => argument == "-nostdinc++");
+        Assert.Single(options.additionalArguments, argument => argument == "-nostdlibinc");
         Assert.DoesNotContain(Path.GetTempPath(), options.systemIncludeFolders);
     }
 
