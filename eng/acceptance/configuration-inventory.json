@@ -468,7 +468,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -1699,7 +1699,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -2067,7 +2067,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -6736,7 +6736,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -10190,7 +10190,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -11084,7 +11084,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -11452,7 +11452,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
@@ -12999,7 +12999,7 @@
           "requiredCases": [
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
             "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
           ]
         },
