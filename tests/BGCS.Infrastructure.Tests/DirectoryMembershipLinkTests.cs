@@ -39,6 +39,26 @@ public sealed class DirectoryMembershipLinkTests : IDisposable
     }
 
     [Fact]
+    public void PermissionChangesKeepMembershipButReplacingAFileWithADirectoryInvalidatesIt()
+    {
+        string path = Path.Combine(m_root, "value.any");
+        File.WriteAllText(path, "bytes");
+        FileAttributes original = File.GetAttributes(path);
+        DirectoryInputDependency before = DirectoryMembershipDigest.Capture(m_root);
+        try
+        {
+            File.SetAttributes(path, original | FileAttributes.ReadOnly);
+            Assert.Equal(before, DirectoryMembershipDigest.Capture(m_root));
+        }
+        finally { File.SetAttributes(path, original); }
+        File.Delete(path);
+        Directory.CreateDirectory(path);
+        Assert.NotEqual(before.digest, DirectoryMembershipDigest.Capture(m_root).digest);
+        Assert.Equal(KnownDigest(m_root, PhysicalPathResolver.Resolve(m_root), "exists", "value.any", "directory", ""),
+            DirectoryMembershipDigest.Capture(m_root).digest);
+    }
+
+    [Fact]
     public async Task RealDirectoryAliasesAndAncestorCyclesKeepLinkEncodingAndRejectRedirection()
     {
         string include = Path.Combine(m_root, "include"), first = Path.Combine(m_root, "first"), second = Path.Combine(m_root, "second");

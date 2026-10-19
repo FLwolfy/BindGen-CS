@@ -47,12 +47,13 @@ public static class DirectoryMembershipDigest
             foreach (FileSystemInfo entry in new DirectoryInfo(resolved).EnumerateFileSystemInfos().OrderBy(entry => entry.Name, StringComparer.Ordinal))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                FileAttributes attributes = entry.Attributes;
-                string? linkTarget = (attributes & FileAttributes.ReparsePoint) != 0 ? entry.LinkTarget : null;
+                // Enumeration already supplies the entry kind. Attributes also
+                // computes unrelated Unix user/group write permissions.
+                string? linkTarget = entry.LinkTarget;
                 string? resolvedTarget = linkTarget is null ? null : resolution.Resolve(entry.FullName, cancellationToken);
                 if (exclusions.Length != 0 && Excluded(resolvedTarget ?? entry.FullName)) continue;
                 string relative = item.Relative + entry.Name;
-                bool isDirectory = (attributes & FileAttributes.Directory) != 0;
+                bool isDirectory = entry is DirectoryInfo;
                 Append(relative);
                 Append(isDirectory ? "directory" : "file");
                 Append(linkTarget ?? string.Empty);
