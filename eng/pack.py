@@ -327,8 +327,6 @@ def copy_resource_notices(destination: Path) -> None:
         raise RuntimeError('The redistributed embedded vocabulary or original license changed from its audited provenance.')
     shutil.copytree(source, destination / 'resources/english-words')
     shutil.copyfile(ROOT / 'THIRD-PARTY-NOTICES.md', destination / 'THIRD-PARTY-NOTICES.md')
-    (destination / 'source').mkdir(exist_ok=True)
-    shutil.copyfile(ROOT / 'src/HexaGen_LICENSE', destination / 'source/HexaGen_LICENSE')
 
 
 def pack_nuspec(dotnet: str, project: str, template: Path, stage: Path, output: Path, version: str, dependencies: list[tuple[str, str]] = ()) -> None:

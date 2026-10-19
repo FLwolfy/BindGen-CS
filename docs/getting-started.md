@@ -24,7 +24,7 @@ proved all of its ABI, runtime or import combinations.
 
 ## Install or run from the repository
 
-After the 3.0.0 release is published:
+Install the released command-line tool:
 
 ```bash
 dotnet tool install --global BindGen-CS --version 3.0.0
@@ -32,7 +32,7 @@ bindgen-cs --help
 ```
 
 Use `dotnet tool update --global BindGen-CS` for a later release, or a repository-local
-.NET tool manifest to pin a tool version. Until publication, run the checked-out tool:
+.NET tool manifest to pin a tool version. To run from a source checkout:
 
 ```bash
 dotnet run --project src/BGCS.Tool -- version

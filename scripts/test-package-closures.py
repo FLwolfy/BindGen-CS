@@ -471,8 +471,7 @@ class PackageClosureTests(unittest.TestCase):
         resource = self.root / 'src/BGCS.CSharp/Resources/en_EN.txt'
         resource.parent.mkdir(parents=True)
         shutil.copyfile(ROOT / 'src/BGCS.CSharp/Resources/en_EN.txt', resource)
-        (self.root / 'src/HexaGen_LICENSE').write_text('fixture original attribution')
-        (self.root / 'THIRD-PARTY-NOTICES.md').write_text('fixture notice index')
+        shutil.copyfile(ROOT / 'THIRD-PARTY-NOTICES.md', self.root / 'THIRD-PARTY-NOTICES.md')
         return source
 
     def test_resource_distribution_keeps_exact_license_provenance_and_attribution(self):
@@ -481,8 +480,12 @@ class PackageClosureTests(unittest.TestCase):
         PACK.copy_resource_notices(output)
         for name in ('LICENSE.md', 'embedded-resource-provenance.json'):
             self.assertEqual((source / name).read_bytes(), (output / 'resources/english-words' / name).read_bytes())
-        self.assertEqual('fixture original attribution', (output / 'source/HexaGen_LICENSE').read_text())
-        self.assertTrue((output / 'THIRD-PARTY-NOTICES.md').is_file())
+        notice = output / 'THIRD-PARTY-NOTICES.md'
+        self.assertEqual((ROOT / 'THIRD-PARTY-NOTICES.md').read_bytes(), notice.read_bytes())
+        original = notice.read_text(encoding='utf-8').split('## HexaGen\n', 1)[1].split('```text\n', 1)[1].split('\n```', 1)[0] + '\n'
+        self.assertEqual('14c7f3bdb1cb325dffb0ccca7288a8edd0338231615a50c8321fadb64d143453',
+                         hashlib.sha256(original.encode('utf-8')).hexdigest())
+        self.assertFalse((output / 'source').exists())
 
     def test_resource_distribution_rejects_source_transform_license_and_path_drift(self):
         source = self.prepare_resource_notices()

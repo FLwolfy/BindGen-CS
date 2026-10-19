@@ -19,7 +19,7 @@ Windows x64 可以使用 Windows worker 和 Android NDK 头文件解析 Android 
 
 ## 安装或运行仓库中的工具
 
-3.0.0 实际发布之后：
+安装已发布的命令行工具：
 
 ```bash
 dotnet tool install --global BindGen-CS --version 3.0.0
@@ -27,7 +27,7 @@ bindgen-cs --help
 ```
 
 后续版本可以通过 `dotnet tool update --global BindGen-CS` 更新；也可以使用仓库本地的
-.NET tool manifest 固定版本。在正式发布前，从仓库根目录运行：
+.NET tool manifest 固定版本。也可以从仓库根目录运行源码中的工具：
 
 ```bash
 dotnet run --project src/BGCS.Tool -- version

@@ -1,120 +1,220 @@
-# BindGen-CS
+<h1 align="center">BindGen-CS</h1>
+<p align="center">从 C/C++ 原生库，到 C# API。</p>
+<p align="center">
+  <a href="https://www.nuget.org/packages/BGCS"><img alt="NuGet" src="https://img.shields.io/nuget/v/BGCS?style=flat-square"></a>
+  <a href="https://github.com/FLwolfy/BindGen-CS/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/FLwolfy/BindGen-CS/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
+</p>
+<p align="center">
+  <a href="README.md">English</a> · <a href="#快速开始">快速开始</a> · <a href="#在-c-中生成绑定">C# 调用</a> · <a href="docs/README.cn.md">完整文档</a>
+</p>
 
-[English](README.md) | [简体中文](README.cn.md)
+**BGCS 根据 C/C++ 头文件生成 C# 绑定。** 输出包括 C# 源码、按需生成的 C ABI 桥接源码、
+文件清单和诊断。你可以使用命令行，也可以从自己的 C# 工具中调用。
 
-**BGCS 为 C/C++ 库生成 C# 绑定。** 输入是原生头文件和版本化配置，输出是 C#、按需的
-C ABI bridge 源码、manifest 和诊断元数据。应用自己的构建系统负责编译、链接、打包和部署。
-
-```text
-头文件 + 配置 → BGCS 解析 / 分析 / 生成 → C# + bridge + manifest
-                                                   ↓
-                                  消费者编译 / 链接 / 打包 / 部署
+```mermaid
+flowchart LR
+    I["头文件 + 配置"] --> G["BGCS"]
+    G --> O["C# + 桥接 + 清单"]
+    O --> B["你的项目自己的构建流程"]
+    B --> A["你的应用"]
 ```
 
-CLI 和普通 C# 类库使用同一流程。`BindingHost` 是一次生成请求的协调器，不是网络服务
-或后台守护进程。Clang 解析在独立 worker 内运行。生成器与 `BGCS.Runtime` 分开；后者
-为生成后的应用提供调用和生命周期基础设施。
+BGCS 负责解析、分析和生成。你的项目负责编译、链接、包装和部署。
 
-BGCS 3.0 使用 .NET 10 / C# 14，默认 C17/C++23、实例 API、FunctionTable、分文件和
-package Runtime。不保留旧生成器 facade、flat 配置读取器或内置消费者/原生构建命令。
+## 功能
 
-## 从头文件生成
+| 方面 | 能力 |
+| --- | --- |
+| 解析 | 基于 Clang 读取 C/C++ 声明、类型、宏、注释、布局和模板。 |
+| C++ 桥接 | 支持范围内的构造、成员、继承、模板实例、异常边界，以及 `std::string`、`std::vector`、`std::optional` 等类型转换。 |
+| C# 输出 | FunctionTable、DllImport、LibraryImport；原始与友好 API；实例或静态 API；分文件或单文件。 |
+| Runtime | 模块加载、handle、内存、UTF-8/16/32 和回调生命周期；可引用包或生成源码。 |
+| 定制 | 命名、筛选、类型映射、语义、插件、自定义目标；缓存跟踪输入变化，支持工作区。 |
 
-3.0.0 发布后：
+**基线为 .NET 10 / C# 14。** 默认 C17 或 C++23、实例 API、FunctionTable、分文件和包形式 Runtime。
+FunctionTable 会在开始调用前，把所需原生导出解析到当前 API 实例的函数表中。
+
+## 快速开始
+
+### 1. 安装与配置
+
+安装 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)，然后执行：
 
 ```bash
 dotnet tool install --global BindGen-CS --version 3.0.0
-bindgen-cs init include/native.h --language c
-bindgen-cs doctor bindgen.json
-bindgen-cs validate bindgen.json
-bindgen-cs generate bindgen.json
 ```
 
-源码 checkout 可直接构建并运行工具：
+假设你的原生库导出了 `native.h` 中的函数：
 
-```bash
-dotnet build src/BGCS.Tool -c Release
-dotnet run --project src/BGCS.Tool -c Release --no-build -- generate examples/QuickStart/bindgen.json
+```c
+int bgcs_add(int left, int right);
 ```
 
-C++ 使用相同命令并选择 `--language cpp`，支持的操作自动降为 bridge 源码。
-生成器不编译这些源码，也不据此认证下游原生库与声明一致。
+在头文件旁保存 `bindgen.json`：
 
 ```json
 {
   "schemaVersion": 1,
-  "library": { "id": "example", "nativeName": "example" },
-  "source": { "language": "c", "headers": ["include/native.h"] },
-  "api": { "namespace": "Example.Bindings", "name": "NativeApi" },
+  "library": { "id": "quickstart", "nativeName": "quickstart" },
+  "source": { "language": "c", "headers": ["native.h"] },
+  "api": {
+    "namespace": "QuickStart.Generated",
+    "name": "NativeApi",
+    "names": { "bgcs_add": "Add" }
+  },
   "output": { "root": "Generated", "layout": "split" }
 }
 ```
 
-相对路径归属声明它的配置，`init` 同时写出 schema。消费工程编译所选目标的托管文件、
-启用 unsafe，通常引用 `BGCS.Runtime`。原生工程编译/链接 bridge 时需保持头文件、宏、
-packing 和 ABI 一致。见 [QuickStart](examples/QuickStart/README.md)和[快速开始](docs/getting-started.cn.md)。
+相对路径以配置文件为基准，默认选择当前宿主目标。为自己的头文件创建配置时，
+也可以运行 `bindgen-cs init native.h --language c`，自动生成起始配置和 schema。
+
+### 2. 生成
+
+```bash
+bindgen-cs generate bindgen.json
+```
+
+把 `Generated/<target>/managed/` 下的 C# 文件加入 .NET 项目，例如复制到项目内的
+`Generated/` 目录。这个简单 C API 不需要桥接源码。
+
+<details>
+<summary>查看输出布局与常用命令</summary>
+
+```text
+Generated/
+├─ generation.report.json
+└─ <target>/
+   ├─ managed/       # C# 源码
+   ├─ native/        # 按需生成的桥接头文件与源码
+   └─ metadata/      # 文件清单、ABI 与绑定元数据
+```
+
+```bash
+bindgen-cs doctor bindgen.json
+bindgen-cs validate bindgen.json
+bindgen-cs inspect bindgen.json --json
+bindgen-cs diff bindgen.json
+bindgen-cs workspace generate workspace.json
+```
+
+将 `runtime.mode` 设为 `"source"`，可生成 Runtime 源码并省去 Runtime 包引用；
+将 `output.layout` 设为 `"singleFile"`，可合并输出为 `Bindings.cs`。
+
+</details>
+
+### 3. 在应用中调用
+
+在消费项目现有 `.csproj` 的 `<Project>` 节点内加入：
+
+```xml
+<PropertyGroup>
+  <TargetFramework>net10.0</TargetFramework>
+  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+</PropertyGroup>
+<ItemGroup>
+  <PackageReference Include="BGCS.Runtime" Version="3.0.0" />
+</ItemGroup>
+```
+
+原生库编译完成后，把其完整路径作为应用的第一个参数：
 
 ```csharp
+using System;
+using QuickStart.Generated;
+
+using NativeApi api = NativeApi.Load(args[0]);
+Console.WriteLine(api.Add(19, 23)); // 42
+```
+
+```bash
+dotnet run -- "/absolute/path/to/native-library"
+```
+
+原生文件通常是 `quickstart.dll`、`libquickstart.so` 或 `libquickstart.dylib`。
+原始入口为 `api.Raw.Add(19, 23)`。
+[可运行的 QuickStart](examples/QuickStart/README.md) 包含原生源码与独立的 CMake 构建示例。
+
+## C++ 绑定
+
+在你的 C++ 库目录中执行：
+
+```bash
+bindgen-cs init include/widget.hpp --language cpp
+bindgen-cs generate bindgen.json
+```
+
+对于支持的 C++ 操作，BGCS 还会输出 `native/include/` 和 `native/src/`，把 C++ 操作转换为
+C# 可以调用的 C 风格入口。桥接源码由原生项目编译、链接；生成的 C# 由 .NET 项目编译。
+只需要桥接源码时使用 `bridge`。
+
+模板需要选择具体实例；所有权、编码、长期回调等语义按需补充。自定义类型可以通过插件、
+recipe 或原生 shim 处理。参阅 [C++ 手册](docs/cpp-extension-cookbook.cn.md)与[类型转换](docs/lowering.cn.md)。
+
+## 在 C# 中生成绑定
+
+在自己的 C# 工具项目中引用生成库：
+
+```bash
+dotnet add package BGCS --version 3.0.0
+```
+
+```csharp
+using System;
 using BGCS;
 
 await using BindingHost host = BindingHost.CreateDefault();
 GenerationResult result = await host.GenerateAsync(
     GenerationRequest.FromFile("bindgen.json"));
+
 if (!result.success)
     throw new InvalidOperationException(result.GetDiagnosticSummary());
 ```
 
-SDK 首次使用时从已还原的包内容准备匹配的宿主 worker，不依赖 BGCS 构建 targets。
-可以在自己的构建脚本、应用或工具中调用生成；生成应用的普通构建仍由自己负责。
+这个普通生成类库就是 **BGCS SDK**。`BindingHost` 是流程协调对象，与命令行使用同一套生成
+实现。完整包自带匹配的解析资源，首次使用时在本地准备隔离运行的 Clang worker 子进程。
 
-## 四个产品，十一个实现工程
-
-| 产品 | 用途 |
+| 产品 | 使用者 |
 | --- | --- |
-| `BGCS` | 完整嵌入式生成 SDK，包含内置实现和 worker 资源 |
-| `BGCS.Contracts` | 中立模型与普通插件契约 |
-| `BGCS.Runtime` | 独立的绑定消费支持 |
-| `BindGen-CS` | 使用同一生成流程的 CLI |
+| [`BindGen-CS`](https://www.nuget.org/packages/BindGen-CS) | 终端命令与脚本。 |
+| [`BGCS`](https://www.nuget.org/packages/BGCS) | 你自己的 C# 生成工具。 |
+| [`BGCS.Runtime`](https://www.nuget.org/packages/BGCS.Runtime) | 使用绑定的应用，也可以改用生成的 Runtime 源码。 |
+| [`BGCS.Contracts`](https://www.nuget.org/packages/BGCS.Contracts) | 标准生成插件。 |
 
-内部模块随完整 SDK/工具交付，不需要拼装额外 C++ 功能包。
-`runtime.mode = "source"` 可改为发射 Runtime 源码；`output.layout = "singleFile"`
-将托管输出合并到 `Bindings.cs`。
+应用需要生成的 C#、Runtime 支持和原生库。生成器与解析器属于生成工具这一侧。
 
-生成的 API 实例拥有模块会话；调用、拥有型 handle、callback 和 operation 保留清理所需
-lease。Raw ABI 可直接使用；string/Span/owned 等友好 API 需要明确语义和生命周期证据。
+## 平台与扩展
 
-## 宿主、目标、SDK 与事实
+- **宿主：** 根据本机系统和进程架构选择解析器资源。
+- **目标：** 根据配置选择原生类型布局和调用规则，也就是 ABI。
+- **目标 SDK：** 由你提供对应头文件、sysroot、宏和标准库环境。
 
-省略目标时检测宿主目标，Linux GNU 与 musl 不混同。显式目标选择另一种 ABI。
-provider 映射目标身份和能力，Clang 读取声明并观察目标类型/布局事实。
-provider 或目标名称不会替用户提供专有 SDK 头文件。
+例如，Windows x64 可以使用 Windows 解析器和 Android NDK 头文件生成 Android ARM64 绑定，
+再由你的 Android 项目编译和链接。
 
-例如 Windows 可使用 Windows parser worker 和显式提供的 NDK sysroot/头文件路径，
-生成 Android ARM64 绑定。Android 编译、链接和设备部署属于消费者。
-见[平台扩展](docs/platform-extension.cn.md)。私有插件可描述特殊 SDK/目标，但须提供真实输入、
-能力和已有受支持托管 runtime。未知 ABI 分类或 runtime 行为仍需实现或 shim；
-这不等于 Switch 或其他专有平台的零配置支持。
+工具提供 Windows、GNU Linux、macOS 的 x64/ARM64 宿主资源；自动化真实调用验证运行在桌面
+x64。资源可用、能够识别目标，与完成所有 Runtime/ABI 组合认证是不同状态，见[能力说明](docs/capabilities.cn.md)。
 
-Clang 不必是最终原生编译器，但专属头文件分支、布局和调用约定仍须一致。
-无法支持的输入会明确诊断，不会通过隐藏的编译器执行路径补丁替换。
-大小相同不证明 ABI 兼容；目标解析、生成和实际平台调用是不同结论。
+命名、筛选和语义优先使用配置。标准插件引用 `BGCS.Contracts`，操作中立模型。
+私有目标插件可以接入特殊 SDK；新的调用 ABI 或托管运行机制仍需相应实现。
+参阅[插件](docs/extensibility.cn.md)与[平台扩展](docs/platform-extension.cn.md)。
 
-## 扩展与验证
+## 文档
 
-Contracts-only 插件提供目标映射、源码输入、变换、C++ lowering、托管投影、backend、
-产物处理和验证。服务归属会话，状态和外部输入需提供缓存指纹；解析器专属高级贡献器
-只在 worker 运行。见[扩展](docs/extensibility.cn.md)、[配置](docs/configuration-guide.cn.md)
-和 [C++ 手册](docs/cpp-extension-cookbook.cn.md)。
+| 开始使用 | 定制行为 | 了解实现 |
+| --- | --- | --- |
+| [快速开始](docs/getting-started.cn.md) | [配置](docs/configuration-guide.cn.md) | [架构](docs/architecture.cn.md) |
+| [C# API](docs/api.cn.md) | [C++ 手册](docs/cpp-extension-cookbook.cn.md) | [ABI 安全](docs/abi-safety.cn.md) |
+| [包的选择](docs/packages.cn.md) | [源码处理](docs/source-processing.cn.md) | [Runtime 生命周期](docs/runtime-lifetime.cn.md) |
 
-必需 CI 是三个生成器任务（Windows 完整、Linux/macOS smoke）和一个完整产品安装任务。
-核心功能基线和原有各宿主性能预算保持必需。AOT/Wasm 应用构建/运行仅为手动、可选的
-私有诊断；相应目标事实与源码生成仍在范围内。本地子集不能认证最终发布或所有平台。
+**示例：** [QuickStart](examples/QuickStart/README.md) · [NativeShim](examples/NativeShim/README.md) ·
+[LoweringPlugin](examples/LoweringPlugin/README.md) · [CustomTargetPlugin](examples/CustomTargetPlugin/README.md) ·
+[CustomAllocator](examples/CustomAllocator/README.md) · [CustomFunctionTable](examples/CustomFunctionTable/README.cn.md)。
 
-- [文档](docs/README.cn.md) · [架构](docs/architecture.cn.md) · [评估](docs/assessment.cn.md)
-- [测试](docs/testing.cn.md) · [包](docs/packages.cn.md) · [发布](docs/publish.cn.md)
+[完整文档](docs/README.cn.md) · [参与开发](CONTRIBUTING.md) · [测试](docs/testing.cn.md)
 
-## 许可证与解析器资源
+## 许可证
 
-BGCS 使用 [MIT License](LICENSE)，保留组件维持各自声明。
-[解析器资源](src/BGCS.Frontend.Clang/Resources/Clang/README.md)记录 Clang builtin headers
-来源及 Apache-2.0 WITH LLVM-exception 许可；它们补充而不替代目标 SDK、libc 或 C++ 标准库。
+[MIT](LICENSE)。第三方版权与许可全文保留在 [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md)
+和分发的资源声明中。
