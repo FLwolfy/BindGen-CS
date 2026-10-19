@@ -52,6 +52,13 @@ jobs:
         shell: bash
         run: |
           python scripts/parser_runtime_provenance.py verify artifacts/clang-runtime/osx-x64
+      - name: Download same-revision repository audit tooling
+        uses: actions/download-artifact@v4
+        with:
+          name: release-repository-tools
+          path: artifacts/release-tooling
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
       - name: Pack and install all four products
         shell: bash
         env:
@@ -60,6 +67,14 @@ jobs:
         run: |
           export PACKAGE_TEST_VERSION="$(python -c 'import xml.etree.ElementTree as E; print(E.parse("Directory.Build.props").findtext("./PropertyGroup/Version"))' | tr -d '\r')"
           python scripts/compiler_test_environment.py -- "$BASH" scripts/test-nuget-packages.sh
+      - name: Audit delivered dependency metadata before accepting packages
+        shell: bash
+        run: |
+          python scripts/release_payload.py verify-tooling artifacts/release-tooling --revision "${{ github.event.workflow_run.head_sha }}"
+          dotnet artifacts/release-tooling/BGCS.RepositoryTools.dll supply-chain artifacts/nuget \
+            --output artifacts/verification/packages/dependency-audit \
+            --revision "${{ github.event.workflow_run.head_sha }}" \
+            --timestamp "$(git show -s --format=%cI HEAD)"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

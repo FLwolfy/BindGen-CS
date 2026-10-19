@@ -15,6 +15,80 @@ namespace BGCS.RepositoryTools.Tests;
 
 public sealed class DeliveredDependencySupplyChainTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void SymbolsInheritOnlyTheirExactAuditedMainLicenseInEitherArchiveOrder(
+        bool symbolsFirst,
+        bool fileLicense
+    ) {
+        using Fixture fixture = new();
+        fixture.WriteSymbolMain(fileLicense);
+        string symbols = fixture.WriteSymbols(symbolsFirst ? "000-symbols.snupkg" : "zzz-symbols.snupkg");
+        Assert.Equal(0, fixture.Run());
+        using JsonDocument sbom = fixture.Read("sbom.spdx.json");
+        JsonElement[] packages = sbom.RootElement.GetProperty("packages").EnumerateArray().ToArray();
+        JsonElement main = Assert.Single(packages, item => item.GetProperty("checksums")[0].GetProperty("checksumValue").GetString() == Fixture.FileHash(fixture.Package));
+        JsonElement symbol = Assert.Single(packages, item => item.GetProperty("checksums")[0].GetProperty("checksumValue").GetString() == Fixture.FileHash(symbols));
+        string license = main.GetProperty("licenseDeclared").GetString()!;
+        if (fileLicense)
+        {
+            Assert.StartsWith("LicenseRef-", license, StringComparison.Ordinal);
+            Assert.Contains(sbom.RootElement.GetProperty("hasExtractedLicensingInfos").EnumerateArray(), item =>
+                item.GetProperty("licenseId").GetString() == license && item.GetProperty("extractedText").GetString() == "Exact main package license\n");
+        }
+        else Assert.Equal("Apache-2.0", license);
+        Assert.Equal(license, symbol.GetProperty("licenseDeclared").GetString());
+        Assert.Equal("BGCS", symbol.GetProperty("name").GetString());
+        Assert.Equal("3.0.0", symbol.GetProperty("versionInfo").GetString());
+        Assert.Contains(sbom.RootElement.GetProperty("relationships").EnumerateArray(), edge =>
+            edge.GetProperty("spdxElementId").GetString() == symbol.GetProperty("SPDXID").GetString()
+            && edge.GetProperty("relationshipType").GetString() == "GENERATED_FROM"
+            && edge.GetProperty("relatedSpdxElement").GetString() == main.GetProperty("SPDXID").GetString());
+    }
+
+    [Theory]
+    [InlineData("orphan", "exact corresponding")]
+    [InlineData("wrong-id", "exact corresponding")]
+    [InlineData("wrong-version", "exact corresponding")]
+    [InlineData("duplicate", "Multiple delivered symbol")]
+    [InlineData("missing-type", "SymbolsPackage type")]
+    [InlineData("wrong-type", "SymbolsPackage type")]
+    [InlineData("duplicate-type", "SymbolsPackage type")]
+    [InlineData("missing-pdb", "no debugging symbols")]
+    [InlineData("symbol-license", "license contradicts")]
+    [InlineData("symbol-url", "license contradicts")]
+    [InlineData("main-license", "lacks a license declaration")]
+    public void SymbolAssociationCannotInventLicenseIdentityOrTypeEvidence(
+        string mutation,
+        string reason
+    ) {
+        using Fixture fixture = new();
+        if (mutation != "orphan") fixture.WriteSymbolMain(missingLicense: mutation == "main-license");
+        fixture.WriteSymbols("000-symbols.snupkg", mutation);
+        if (mutation == "duplicate") fixture.WriteSymbols("second-symbols.snupkg");
+        Assert.Equal(2, fixture.Run());
+        Assert.Contains(reason, fixture.Error.ToString(), StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(fixture.Output, "sbom.spdx.json")));
+        Assert.False(File.Exists(Path.Combine(fixture.Output, "provenance.slsa.json")));
+    }
+
+    [Theory]
+    [InlineData("wrong-hash")]
+    [InlineData("dirty-source")]
+    [InlineData("wrong-revision")]
+    [InlineData("missing-archive")]
+    public void SymbolsDoNotBypassTheAcceptedArchiveEnvelope(string mutation)
+    {
+        using Fixture fixture = new();
+        fixture.WriteSymbolMain();
+        fixture.WriteSymbols("000-symbols.snupkg");
+        Assert.Equal(2, fixture.Run(mutation));
+        Assert.False(File.Exists(Path.Combine(fixture.Output, "sbom.spdx.json")));
+    }
+
     [Fact]
     public void ActualArchivesProvideTransitiveDependenciesLicensesHashesAndProvenance()
     {
@@ -48,8 +122,10 @@ public sealed class DeliveredDependencySupplyChainTests
     [InlineData("changed-notice", "audited hash")]
     [InlineData("missing-assembly", "missing its managed asset")]
     [InlineData("unresolved-product", "no exact accepted")]
-    public void MissingOrContradictoryDeliveredEvidenceFailsBeforeWriting(string mutation, string reason)
-    {
+    public void MissingOrContradictoryDeliveredEvidenceFailsBeforeWriting(
+        string mutation,
+        string reason
+    ) {
         using Fixture fixture = new();
         fixture.WritePackage(mutation);
         Assert.Equal(2, fixture.Run());
@@ -96,8 +172,10 @@ public sealed class DeliveredDependencySupplyChainTests
     [InlineData("missing-native-owner", "no component/license provenance")]
     [InlineData("wrong-native-license", "audited hash")]
     [InlineData("wrong-native-bytes", "matching delivered binary")]
-    public void NativeSourceLicenseAndDependencyGraphsMustMatchTheActualArchive(string mutation, string reason)
-    {
+    public void NativeSourceLicenseAndDependencyGraphsMustMatchTheActualArchive(
+        string mutation,
+        string reason
+    ) {
         using Fixture fixture = new();
         fixture.WriteNativePackage(mutation);
         Assert.Equal(2, fixture.Run());
@@ -154,8 +232,10 @@ public sealed class DeliveredDependencySupplyChainTests
     [InlineData("unknown-schema", "schema is unsupported")]
     [InlineData("malformed-owner", "PE embedded-resource metadata is invalid")]
     [InlineData("resource-section-size", "actual PE resource section")]
-    public void EmbeddedResourceInventoryCannotInventSourceLicenseOrPayloadProof(string mutation, string reason)
-    {
+    public void EmbeddedResourceInventoryCannotInventSourceLicenseOrPayloadProof(
+        string mutation,
+        string reason
+    ) {
         using Fixture fixture = new();
         fixture.WriteEmbeddedResourcePackage(mutation);
         Assert.Equal(2, fixture.Run());
@@ -173,6 +253,41 @@ public sealed class DeliveredDependencySupplyChainTests
 
         internal Fixture() => Directory.CreateDirectory(Path.GetDirectoryName(Package)!);
 
+        internal void WriteSymbolMain(
+            bool fileLicense = false,
+            bool missingLicense = false
+        ) {
+            using ZipArchive archive = ZipFile.Open(Package, ZipArchiveMode.Create);
+            string license = missingLicense ? "" : fileLicense ? "<license type=\"file\">LICENSE.txt</license>" : "<license type=\"expression\">Apache-2.0</license>";
+            using (StreamWriter writer = new(archive.CreateEntry("BGCS.nuspec").Open(), new UTF8Encoding(false)))
+                writer.Write("<package><metadata><id>BGCS</id><version>3.0.0</version>" + license + "</metadata></package>");
+            if (fileLicense)
+                using (StreamWriter writer = new(archive.CreateEntry("LICENSE.txt").Open(), new UTF8Encoding(false))) writer.Write("Exact main package license\n");
+        }
+
+        internal string WriteSymbols(
+            string filename,
+            string? mutation = null
+        ) {
+            string path = Path.Combine(Path.GetDirectoryName(Package)!, filename);
+            using ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create);
+            string type = mutation switch
+            {
+                "missing-type" => "",
+                "wrong-type" => "<packageTypes><packageType name=\"Dependency\" /></packageTypes>",
+                "duplicate-type" => "<packageTypes><packageType name=\"SymbolsPackage\" /><packageType name=\"SymbolsPackage\" /></packageTypes>",
+                _ => "<packageTypes><packageType name=\"SymbolsPackage\" /></packageTypes>"
+            };
+            string license = mutation == "symbol-license" ? "<license type=\"expression\">GPL-3.0-only</license>"
+                : mutation == "symbol-url" ? "<licenseUrl>https://example.invalid/unrelated-license</licenseUrl>" : "";
+            using (StreamWriter writer = new(archive.CreateEntry("BGCS.nuspec").Open(), new UTF8Encoding(false)))
+                writer.Write("<package><metadata><id>" + (mutation == "wrong-id" ? "Other" : "BGCS") + "</id><version>"
+                    + (mutation == "wrong-version" ? "3.0.1" : "3.0.0") + "</version>" + type + license + "</metadata></package>");
+            if (mutation != "missing-pdb")
+                using (StreamWriter writer = new(archive.CreateEntry("lib/net10.0/BGCS.pdb").Open(), new UTF8Encoding(false))) writer.Write("fixture symbol bytes");
+            return path;
+        }
+
         internal void WriteEmbeddedResourcePackage(string? mutation = null)
         {
             DirectoryInfo? root = new(AppContext.BaseDirectory);
@@ -186,7 +301,10 @@ public sealed class DeliveredDependencySupplyChainTests
             if (mutation == "wrong-resource") proof["resource"] = "absent.resource";
             if (mutation == "unknown-schema") proof["schemaVersion"] = 99;
             using ZipArchive archive = ZipFile.Open(Package, ZipArchiveMode.Create);
-            void Add(string path, byte[] bytes) { using Stream stream = archive.CreateEntry(path).Open(); stream.Write(bytes); }
+            void Add(
+                string path,
+                byte[] bytes
+            ) { using Stream stream = archive.CreateEntry(path).Open(); stream.Write(bytes); }
             Add("BGCS.nuspec", Encoding.UTF8.GetBytes("<package><metadata><id>BGCS</id><version>3.0.0</version><license type=\"expression\">MIT</license></metadata></package>"));
             if (mutation != "missing-owner")
             {
@@ -222,10 +340,22 @@ public sealed class DeliveredDependencySupplyChainTests
                 ["Alpha/1.0.0"] = new { dependencies = new Dictionary<string, string> { ["Beta"] = mutation == "missing-edge" ? "9.0.0" : "2.0.0" }, runtime = new Dictionary<string, object> { ["lib/net10.0/Alpha.dll"] = new { } } },
                 ["Beta/2.0.0"] = new { runtime = new Dictionary<string, object> { ["lib/net10.0/Beta.dll"] = new { } } }
             };
-            object Inventory(string id, string version, string license, string sha, string nuspec, string[] dependencies) => new
+            object Inventory(
+                string id,
+                string version,
+                string license,
+                string sha,
+                string nuspec,
+                string[] dependencies
+            ) => new
             {
-                id, version, license, licenseType = "expression", packageSha512 = sha,
-                resolvedDependencies = dependencies, copyright = (string?)null,
+                id,
+                version,
+                license,
+                licenseType = "expression",
+                packageSha512 = sha,
+                resolvedDependencies = dependencies,
+                copyright = (string?)null,
                 nuspec = new { path = id + "/" + version + "/" + id + ".nuspec", sha256 = Hash(nuspec) },
                 notices = new[] { new { path = id + "/" + version + "/LICENSE.txt", sha256 = Hash(id + " license") } }
             };
@@ -233,8 +363,10 @@ public sealed class DeliveredDependencySupplyChainTests
             if (mutation != "missing-license")
                 inventory.Add(Inventory("Beta", "2.0.0", "Apache-2.0", betaSha, betaNuspec, []));
             using ZipArchive archive = ZipFile.Open(Package, ZipArchiveMode.Create);
-            void Add(string path, string text)
-            {
+            void Add(
+                string path,
+                string text
+            ) {
                 using StreamWriter writer = new(archive.CreateEntry(path).Open(), new UTF8Encoding(false));
                 writer.Write(text);
             }
@@ -255,9 +387,18 @@ public sealed class DeliveredDependencySupplyChainTests
 
         internal void WriteNativePackage(string? mutation = null)
         {
-            object Component(string id, string filename, string bytes, string license, string[] dependencies, object source) => new
+            object Component(
+                string id,
+                string filename,
+                string bytes,
+                string license,
+                string[] dependencies,
+                object source
+            ) => new
             {
-                id, version = "20.1.8", source,
+                id,
+                version = "20.1.8",
+                source,
                 files = new[] { new { path = filename, sha256 = Hash(mutation == "wrong-native-bytes" && id == "LLVM" ? "not delivered" : bytes) } },
                 licenses = new[] { new { path = "licenses/" + id + ".txt", sha256 = Hash(mutation == "wrong-native-license" && id == "LLVM" ? "fabricated license" : license) } },
                 dependencies
@@ -269,8 +410,10 @@ public sealed class DeliveredDependencySupplyChainTests
                 components.Add(Component("LLVM", "libclang.dylib", "native LLVM bytes", "actual LLVM license text", [],
                     new { uri = "https://github.com/llvm/llvm-project/archive/20.1.8.tar.gz", sha256 = new string('d', 64) }));
             using ZipArchive archive = ZipFile.Open(Package, ZipArchiveMode.Create);
-            void Add(string path, string text)
-            {
+            void Add(
+                string path,
+                string text
+            ) {
                 using StreamWriter writer = new(archive.CreateEntry(path).Open(), new UTF8Encoding(false));
                 writer.Write(text);
             }
@@ -288,15 +431,24 @@ public sealed class DeliveredDependencySupplyChainTests
             {
                 List<object> packages = [];
                 if (inventoryMutation != "missing-archive")
-                    packages.Add(new { file = Path.GetFileName(Package), bytes = new FileInfo(Package).Length,
-                        sha256 = inventoryMutation == "wrong-hash" ? new string('0', 64) : FileHash(Package) });
+                    foreach (string path in Directory.GetFiles(Path.GetDirectoryName(Package)!).Where(path => path.EndsWith(".nupkg", StringComparison.Ordinal) || path.EndsWith(".snupkg", StringComparison.Ordinal)))
+                        packages.Add(new
+                        {
+                            file = Path.GetFileName(path),
+                            bytes = new FileInfo(path).Length,
+                            sha256 = inventoryMutation == "wrong-hash" ? new string('0', 64) : FileHash(path)
+                        });
                 if (inventoryMutation == "extra-archive")
                     packages.Add(new { file = "Absent.3.0.0.nupkg", bytes = 1L, sha256 = new string('0', 64) });
                 File.WriteAllText(Path.Combine(Path.GetDirectoryName(Package)!, "package-verification.json"), JsonSerializer.Serialize(new
                 {
-                    schemaVersion = 1, completeProductSet = true, sourceRevision = new string('a', 40),
-                    checkedOutSourceSha256 = new string('b', 64), sourceRevisionStable = true,
-                    sourceWorktreeDirty = inventoryMutation == "dirty-source", sourceBytesStable = inventoryMutation != "unstable-source",
+                    schemaVersion = 1,
+                    completeProductSet = true,
+                    sourceRevision = new string('a', 40),
+                    checkedOutSourceSha256 = new string('b', 64),
+                    sourceRevisionStable = true,
+                    sourceWorktreeDirty = inventoryMutation == "dirty-source",
+                    sourceBytesStable = inventoryMutation != "unstable-source",
                     sourceAtCompletion = new { sourceRevision = new string('a', 40), checkedOutSourceSha256 = new string('b', 64), sourceWorktreeDirty = false },
                     packages
                 }));

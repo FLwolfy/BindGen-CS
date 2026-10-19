@@ -285,7 +285,10 @@ def copy_dependency_notices(assets: dict, destination: Path) -> None:
             notices.append(license_text)
         output = destination / name / version
         output.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(nuspec, output / nuspec.name)
+        # NuGet pack filters .nuspec payloads as package metadata, even below
+        # licenses/. Keep the upstream bytes under a package-safe XML filename.
+        delivered_nuspec = nuspec.name + ".xml"
+        shutil.copyfile(nuspec, output / delivered_nuspec)
         copied = []
         for relative in sorted(set(notices)):
             source = package_root / relative
@@ -301,7 +304,7 @@ def copy_dependency_notices(assets: dict, destination: Path) -> None:
                           "licenseType": license_element.get("type") if license_element is not None else "url",
                           "packageSha512": details["sha512"],
                           "resolvedDependencies": assets["resolvedDependencies"][library],
-                          "nuspec": {"path": f"{name}/{version}/{nuspec.name}", "sha256": digest(nuspec)},
+                          "nuspec": {"path": f"{name}/{version}/{delivered_nuspec}", "sha256": digest(nuspec)},
                           "copyright": fields.get("copyright").text if fields.get("copyright") is not None else None,
                           "notices": copied})
     (destination / "license-inventory.json").write_text(json.dumps(inventory, indent=2) + "\n", encoding="utf-8")

@@ -28,6 +28,7 @@ internal sealed class DeliveredDependencyGraph
     private readonly Dictionary<string, Dependency> m_dependencies = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<(string source, string dependency)> m_pending = [];
     private readonly Dictionary<string, string> m_products = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SymbolPackage> m_symbols = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<(string source, string id, string version)> m_productDependencies = [];
     private readonly SortedDictionary<string, string> m_extractedLicenses = new(StringComparer.Ordinal);
     private readonly SortedDictionary<string, object> m_nativeMaterials = new(StringComparer.Ordinal);
@@ -68,11 +69,29 @@ internal sealed class DeliveredDependencyGraph
         XElement metadata = Metadata(nuspecs[0]);
         string productName = RequiredElement(metadata, "id");
         string version = RequiredElement(metadata, "version");
-        string license = ReadLicense(metadata, entries, "");
-        m_packages[id] = package with { name = productName, versionInfo = version, licenseDeclared = license };
-        if (path.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
+        bool symbols = path.EndsWith(".snupkg", StringComparison.OrdinalIgnoreCase);
+        string? licenseUrl = metadata.Elements().SingleOrDefault(element => element.Name.LocalName == "licenseUrl")?.Value;
+        string? license = symbols && !metadata.Elements().Any(element => element.Name.LocalName == "license")
+            ? null : ReadLicense(metadata, entries, "");
+        m_packages[id] = package with { name = productName, versionInfo = version, licenseDeclared = license ?? "NOASSERTION", licenseUrl = licenseUrl };
+        string identity = productName + "/" + version;
+        if (symbols)
         {
-            string identity = productName + "/" + version;
+            // NuGet intentionally excludes licensing from snupkg metadata. Its
+            // corresponding exact main package supplies the actual license:
+            // https://learn.microsoft.com/nuget/create-packages/symbol-packages-snupkg#symbol-package-structure
+            XElement[] groups = metadata.Elements().Where(element => element.Name.LocalName == "packageTypes").ToArray();
+            XElement[] types = groups.Length == 1 ? groups[0].Elements().ToArray() : [];
+            if (types.Length != 1 || types[0].Name.LocalName != "packageType"
+                || types[0].Attribute("name")?.Value != "SymbolsPackage")
+                throw new InvalidDataException("A delivered snupkg must declare exactly the SymbolsPackage type.");
+            if (!entries.Keys.Any(name => name.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidDataException("A delivered SymbolsPackage contains no debugging symbols.");
+            if (!m_symbols.TryAdd(identity, new(id, productName, version, license, licenseUrl)))
+                throw new InvalidDataException($"Multiple delivered symbol packages claim the same NuGet identity: {identity}");
+        }
+        else
+        {
             if (!m_products.TryAdd(identity, id))
                 throw new InvalidDataException($"Multiple delivered packages claim the same NuGet identity: {identity}");
             foreach (XElement dependency in metadata.Descendants().Where(element => element.Name.LocalName == "dependency"))
@@ -156,6 +175,18 @@ internal sealed class DeliveredDependencyGraph
 
     internal void Complete()
     {
+        foreach ((string identity, SymbolPackage symbols) in m_symbols)
+        {
+            if (!m_products.TryGetValue(identity, out string? mainId)
+                || m_packages[mainId].name != symbols.name || m_packages[mainId].versionInfo != symbols.version)
+                throw new InvalidDataException($"The delivered symbol package has no exact corresponding audited main package: {identity}");
+            Package main = m_packages[mainId];
+            if (symbols.license is not null && symbols.license != main.licenseDeclared
+                || symbols.licenseUrl is not null && symbols.licenseUrl != main.licenseUrl)
+                throw new InvalidDataException($"The delivered symbol license contradicts its corresponding main package: {identity}");
+            m_packages[symbols.id] = m_packages[symbols.id] with { licenseDeclared = main.licenseDeclared };
+            m_relationships.Add((symbols.id, "GENERATED_FROM", mainId));
+        }
         foreach ((string source, string dependency) in m_pending)
         {
             if (!m_dependencies.TryGetValue(dependency, out Dependency? resolved))
@@ -567,7 +598,15 @@ internal sealed class DeliveredDependencyGraph
         string licenseDeclared,
         string? sha256,
         string? sha512,
-        string copyrightText
+        string copyrightText,
+        string? licenseUrl = null
+    );
+    private sealed record SymbolPackage(
+        string id,
+        string name,
+        string version,
+        string? license,
+        string? licenseUrl
     );
     private sealed record FileEntry(
         string id,

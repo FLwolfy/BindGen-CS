@@ -134,6 +134,40 @@ class PackageClosureTests(unittest.TestCase):
         self.assertEqual(2, len(notices["libraries"]))
         self.assertIn("ClangSharp/20.1.2.4", notices["libraries"])
 
+    def dependency_notice_fixture(self):
+        directory = self.root / "packages/fixture.dependency/1.0.0"
+        directory.mkdir(parents=True)
+        metadata = b'\xef\xbb\xbf<?xml version="1.0" encoding="utf-8"?>\r\n<package><metadata><id>Fixture.Dependency</id><version>1.0.0</version><license type="file">LICENSE.txt</license></metadata></package>\r\n'
+        notice = b'Original upstream license\r\nCopyright fixture\r\n'
+        (directory / "fixture.dependency.nuspec").write_bytes(metadata)
+        (directory / "LICENSE.txt").write_bytes(notice)
+        assets = {"packageFolders": {str(self.root / "packages"): {}}, "resolvedDependencies": {"Fixture.Dependency/1.0.0": []},
+            "libraries": {"Fixture.Dependency/1.0.0": {"type": "package", "path": "fixture.dependency/1.0.0",
+                "sha512": "fixture-restored-package-checksum", "files": ["fixture.dependency.nuspec", "LICENSE.txt"]}}}
+        return assets, directory, metadata, notice
+
+    def test_dependency_notice_metadata_uses_package_safe_name_with_exact_upstream_bytes(self):
+        assets, _, metadata, notice = self.dependency_notice_fixture()
+        output = self.root / "licenses/dependencies"
+        PACK.copy_dependency_notices(assets, output)
+        inventory = json.loads((output / "license-inventory.json").read_text(encoding="utf-8"))
+        self.assertEqual(1, len(inventory))
+        item = inventory[0]
+        path = "Fixture.Dependency/1.0.0/fixture.dependency.nuspec.xml"
+        self.assertEqual({"path": path, "sha256": hashlib.sha256(metadata).hexdigest()}, item["nuspec"])
+        self.assertEqual(metadata, (output / path).read_bytes())
+        self.assertFalse((output / path.removesuffix(".xml")).exists())
+        self.assertEqual(notice, (output / item["notices"][0]["path"]).read_bytes())
+        self.assertEqual(hashlib.sha256(notice).hexdigest(), item["notices"][0]["sha256"])
+
+    def test_dependency_notice_missing_declared_license_cannot_create_an_inventory(self):
+        assets, package, _, _ = self.dependency_notice_fixture()
+        (package / "LICENSE.txt").unlink()
+        output = self.root / "rejected-notices"
+        with self.assertRaises(FileNotFoundError):
+            PACK.copy_dependency_notices(assets, output)
+        self.assertFalse((output / "license-inventory.json").exists())
+
     def test_separate_execution_versions_are_preserved_but_public_conflicts_fail(self):
         self.graph("host", ("Shared.Dependency", "1.0.0", "one"))
         self.graph("task", ("Shared.Dependency", "2.0.0", "two"))
