@@ -51,7 +51,8 @@ def prepare(dotnet: str, version: str, root: Path, work: Path, evidence: Path, r
     external.write_text("installed-worker-input", encoding="utf-8")
     configuration = {
         "schemaVersion": 1, "library": {"id": "advanced_worker", "nativeName": "advanced_worker"},
-        "source": {"language": "c", "headers": [str(source / "native.h")], "parseMacros": False},
+        "source": {"language": "c", "headers": [str(source / "native.h")],
+            "includeDirectories": [str(source)], "parseMacros": False},
         "api": {"namespace": "Package.AdvancedWorker", "name": "NativeApi"},
         "runtime": {"mode": "package"},
         "output": {"root": str(work / "advanced-sdk-generated")},

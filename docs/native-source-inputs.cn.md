@@ -97,6 +97,11 @@ static (string[] Sources,
 消费者把这些有序要求转换为自己的编译器、链接器输入，同时遵守宏、语言要求、导出约定及上游库依赖。
 示例本身不编译或执行任何代码。
 
+系统目录描述 SDK 要求，并不表示可以统一转换为一串 `-isystem` 参数。消费者应保留自己的编译器
+builtin headers 所需的搜索位置，并通过该编译器的 SDK 接入方式选择 C/C++ 头文件。
+例如 libc++ 的 `stddef.h` 使用 `include_next`；把已经配置的 C SDK 根重复放到 builtin headers
+之前，会改变其行为。BGCS 解析器的 builtin headers 不是消费编译器的资源。
+
 ## 分析入口与公开头文件
 
 `.cpp` 可以作为分析输入，但翻译单元未必适合充当公开 include。生成 bridge 应包含公开、

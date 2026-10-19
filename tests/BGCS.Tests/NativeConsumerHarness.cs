@@ -102,8 +102,7 @@ internal static class NativeConsumerHarness
             Directory.CreateDirectory(binaryRoot);
             string binary = Path.Combine(binaryRoot, OperatingSystem.IsWindows() ? libraryName + ".dll" : OperatingSystem.IsMacOS() ? "lib" + libraryName + ".dylib" : "lib" + libraryName + ".so");
             List<string> compilerArguments = [.. arguments ?? []];
-            foreach (NativeIncludeDirectory include in manifest.includeDirectories.Where(include => include.isSystem))
-                compilerArguments.AddRange([include.isFramework ? "-iframework" : "-isystem", Path.Combine(roots[include.rootId], include.relativePath)]);
+            compilerArguments.AddRange(ManifestSystemIncludeArguments(manifest, roots, target.resolvedTarget));
             await CompileSharedAsync(sources, binary, sourceRoot, compilerArguments,
                 manifest.includeDirectories.Where(include => !include.isSystem).Select(include => Path.Combine(roots[include.rootId], include.relativePath)),
                 languageStandard ?? manifest.languageStandard, target.resolvedTarget);
@@ -172,6 +171,28 @@ internal static class NativeConsumerHarness
 
     internal static NativeTargetDescriptor ParserTarget(SourceLanguage language)
         => ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), language);
+
+    internal static IEnumerable<string> ManifestSystemIncludeArguments(NativeSourceManifest manifest,
+        IReadOnlyDictionary<string, string> roots, NativeTargetDescriptor? parserTarget)
+    {
+        HashSet<string> compilerSdk = new(StringComparer.Ordinal);
+        if (OperatingSystem.IsMacOS())
+        {
+            NativeTargetDescriptor target = parserTarget ?? ParserTarget(manifest.language);
+            // CompilerSdkArguments already supplies these exact SDK roots with
+            // libc++ before builtin headers and C headers after builtin headers.
+            // Repeating C SDK roots as -isystem would change include_next order.
+            compilerSdk.UnionWith(target.toolchain.cxxSystemIncludeFolders.Concat(target.toolchain.systemIncludeFolders)
+                .Select(Path.GetFullPath));
+        }
+        foreach (NativeIncludeDirectory include in manifest.includeDirectories.Where(include => include.isSystem))
+        {
+            string path = Path.GetFullPath(Path.Combine(roots[include.rootId], include.relativePath));
+            if (!include.isFramework && compilerSdk.Contains(path)) continue;
+            yield return include.isFramework ? "-iframework" : "-isystem";
+            yield return path;
+        }
+    }
 
     internal static IEnumerable<string> CompilerSdkArguments(SourceLanguage language = SourceLanguage.Cpp, NativeTargetDescriptor? parserTarget = null)
     {

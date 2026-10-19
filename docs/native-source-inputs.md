@@ -114,6 +114,13 @@ The consumer translates these ordered requirements into its own compiler and
 linker inputs, also honoring defines, language requirements, exports and upstream
 libraries. The example does not compile or execute anything.
 
+System directories remain SDK requirements, not a universal list of `-isystem`
+arguments. Keep the consumer compiler's builtin headers in their required search
+position and use its SDK integration for the selected C and C++ headers. For
+example, libc++ uses `include_next` in `stddef.h`; repeating an already configured
+C SDK root before builtin headers changes that behavior. BGCS parser builtin
+headers are not consumer compiler resources.
+
 ## Analysis entries and public headers
 
 A `.cpp` file can be an analysis input, but a translation unit is not necessarily

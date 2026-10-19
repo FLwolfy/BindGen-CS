@@ -74,8 +74,7 @@ public sealed class PortableNativeSourceTests
         }, StringComparer.Ordinal);
         _ = Assert.Single(BindingArtifactManifest.ReadNativeSources(relocated, "portable"));
         List<string> arguments = manifest.defines.Select(define => "-D" + define).ToList();
-        foreach (NativeIncludeDirectory include in manifest.includeDirectories.Where(include => include.isSystem))
-            arguments.AddRange([include.isFramework ? "-iframework" : "-isystem", Path.Combine(roots[include.rootId], include.relativePath)]);
+        arguments.AddRange(NativeConsumerHarness.ManifestSystemIncludeArguments(manifest, roots, Assert.Single(result.targetModels).resolvedTarget));
         string binary = Path.Combine(scratch.root, OperatingSystem.IsWindows() ? "portable.dll" : OperatingSystem.IsMacOS() ? "libportable.dylib" : "libportable.so");
         await NativeConsumerHarness.CompileSharedAsync(manifest.sources.Select(source => Path.Combine(relocated, source.relativePath)), binary, frozen,
             arguments, manifest.includeDirectories.Where(include => !include.isSystem).Select(include => Path.Combine(roots[include.rootId], include.relativePath)),
