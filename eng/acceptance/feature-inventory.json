@@ -7985,9 +7985,9 @@
           "host": "windows-x64",
           "kind": "test",
           "project": "BGCS.RepositoryTools.Tests",
-          "match": "^BGCS\\.RepositoryTools\\.Tests\\.ArchitectureCommandTests\\.Validate_AcceptsTheTwelveGeneratorProjectBoundariesAndWorker$",
+          "match": "^BGCS\\.RepositoryTools\\.Tests\\.ArchitectureCommandTests\\.Validate_AcceptsTheElevenGeneratorProjectBoundariesAndWorker$",
           "requiredCases": [
-            "BGCS.RepositoryTools.Tests.ArchitectureCommandTests.Validate_AcceptsTheTwelveGeneratorProjectBoundariesAndWorker"
+            "BGCS.RepositoryTools.Tests.ArchitectureCommandTests.Validate_AcceptsTheElevenGeneratorProjectBoundariesAndWorker"
           ]
         },
         {
