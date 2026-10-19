@@ -93,6 +93,10 @@ jobs:
           if [[ "$RUNNER_OS" == "macOS" ]]; then parser=(--parser-osx-x64 "$BGCS_CLANG_RUNTIME_DIR"); fi
           python scripts/compiler_test_environment.py -- python eng/pack.py --configuration Release --version "$version" --output artifacts/host-packages --host-only "${{ matrix.rid }}" --include-host-tool --verify-repeat-content "${parser[@]}"
           python scripts/compiler_test_environment.py -- python eng/verify-packages.py --version "$version" --packages artifacts/host-packages --output artifacts/host-installed --sdk-only --host-tool
+      - name: Profile a preserved current-source performance failure
+        if: failure() && matrix.baseline == 'smoke'
+        shell: bash
+        run: python scripts/profile-failed-performance.py --dotnet "$DOTNET_ROOT/dotnet" --configuration Release
       - name: Upload exact generator evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -103,6 +107,19 @@ jobs:
             ${{ matrix.baseline == 'full' && 'artifacts/acceptance/test-results/**/*.trx' || '' }}
             ${{ matrix.baseline == 'full' && 'artifacts/acceptance/test-results/**/*.json' || '' }}
           if-no-files-found: error
+      - name: Preserve performance measurements and command logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-diagnostics-${{ matrix.target }}
+          path: |
+            artifacts/performance/**/report.json
+            artifacts/performance/**/logs/*.log
+            artifacts/performance-diagnostics/**/report.json
+            artifacts/performance-diagnostics/**/*.log
+            artifacts/performance-diagnostics/**/*.nettrace
+            artifacts/performance-diagnostics/**/*.speedscope.json
+          if-no-files-found: ignore
       - name: Upload accepted Intel parser closure
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4

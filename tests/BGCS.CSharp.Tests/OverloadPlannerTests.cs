@@ -58,6 +58,43 @@ public sealed class OverloadPlannerTests
     }
 
     [Fact]
+    public async Task RepeatedCarrierNormalization_StillRejectsALateFriendlyCollisionBeforeWriting()
+    {
+        InteropModule original = Module();
+        var functions = ImmutableArray.CreateBuilder<InteropFunction>();
+        for (int index = 0; index < 256; index++)
+            functions.Add(original.functions[0] with
+            {
+                id = new("eval_" + index),
+                exportName = "native_eval_" + index,
+                parameters = [original.functions[0].parameters[0] with { id = new("value_" + index) }],
+                sourceName = "Evaluate" + index,
+                sourceQualifiedName = "Demo::Evaluate" + index,
+                sourceSignature = "Demo::Evaluate" + index + "(int)"
+            });
+        functions.Add(original.functions[1] with
+        {
+            id = new("late_eval_f64"),
+            exportName = "native_late_eval_f64",
+            parameters = [original.functions[1].parameters[0] with { id = new("late_value") }],
+            sourceName = "Evaluate0",
+            sourceQualifiedName = "Demo::Evaluate0",
+            sourceSignature = "Demo::Evaluate0(double)"
+        });
+        ManagedApiModel model = Project(WithFunctions(original, functions.ToImmutable()));
+        model = model with { methods = model.methods.SetItem(256, model.methods[256] with
+        {
+            valueProjections = [new(new("late_value"), new("global::System.Int32", "(double){value}"))]
+        }) };
+        NeutralBackendTests.MemorySink sink = new();
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        Assert.Contains("OverloadApi.Evaluate0(System.Int32)", error.Message);
+        Assert.Contains("native_eval_0", error.Message);
+        Assert.Contains("native_late_eval_f64", error.Message);
+        Assert.Empty(sink.sources);
+    }
+
+    [Fact]
     public async Task TextReferenceNullability_DoesNotCreateDistinctFriendlyOverloads()
     {
         InteropModule original = Module();

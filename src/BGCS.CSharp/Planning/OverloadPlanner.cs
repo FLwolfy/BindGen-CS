@@ -370,6 +370,7 @@ internal static class OverloadPlanner
         string runtimeNamespace
     )
     {
+        private readonly Dictionary<string, string> m_normalized = new(StringComparer.Ordinal);
         private readonly HashSet<string> m_values = plan.storage.Select(storage => storage.name.TrimStart('@'))
             .Concat(plan.managedEnums.Select(declaration => declaration.name.TrimStart('@')))
             .Concat(plan.pointerCarriers.Select(carrier => carrier.name.TrimStart('@'))).ToHashSet(StringComparer.Ordinal);
@@ -403,7 +404,13 @@ internal static class OverloadPlanner
             ["void"] = "System.Void"
         };
 
-        internal string Normalize(string type) => Normalize(SyntaxFactory.ParseTypeName(type, options: new CSharpParseOptions(LanguageVersion.CSharp14)));
+        internal string Normalize(string type)
+        {
+            if (m_normalized.TryGetValue(type, out string? normalized)) return normalized;
+            normalized = Normalize(SyntaxFactory.ParseTypeName(type, options: new CSharpParseOptions(LanguageVersion.CSharp14)));
+            m_normalized.Add(type, normalized);
+            return normalized;
+        }
 
         private string Normalize(TypeSyntax type) => type switch
         {
