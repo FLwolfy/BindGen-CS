@@ -98,9 +98,11 @@ def build_products(dotnet: str, configuration: str, version: str, parser_osx_x64
     if parser_osx_x64 is not None:
         parser_osx_x64 = parser_osx_x64.resolve()
         parser_runtime_provenance.verify_supplemental(ROOT, parser_osx_x64, source_revision)
-    worker_project = "extensions/frontends/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj"
-    for project in ("src/BGCS/BGCS.csproj", worker_project, "src/BGCS.Tool/BGCS.Tool.csproj", *(ASSEMBLY_PROJECTS[name] + "/" + name + ".csproj" for name in OPTIONAL_PRODUCTS)):
-        overrides = {"BGCS_CLANG_RUNTIME_DIR": str(parser_osx_x64)} if project == worker_project and parser_osx_x64 is not None else None
+    # Core and Runtime are independent products, not incidental generator dependencies.
+    names = ("BGCS.Core", "BGCS.Runtime", "BGCS", "BGCS.Frontend.Clang.Worker", "BGCS.Tool", *OPTIONAL_PRODUCTS)
+    for name in names:
+        project = ASSEMBLY_PROJECTS[name] + "/" + name + ".csproj"
+        overrides = {"BGCS_CLANG_RUNTIME_DIR": str(parser_osx_x64)} if name == "BGCS.Frontend.Clang.Worker" and parser_osx_x64 is not None else None
         execute(dotnet, ["build", project, "--configuration", configuration, "-m:2", "-nr:false", "-p:UseSharedCompilation=false", f"-p:Version={version}"],
                 environment_overrides=overrides)
 

@@ -444,10 +444,10 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(3 + len(PACK.OPTIONAL_PRODUCTS), len(calls))
-        self.assertEqual([None, str(fixture.directory.resolve()), *([None] * (1 + len(PACK.OPTIONAL_PRODUCTS)))], [call["parserRoot"] for call in calls])
-        self.assertEqual(["parent-unchanged"] * (3 + len(PACK.OPTIONAL_PRODUCTS)), [call["sentinel"] for call in calls])
-        self.assertEqual("extensions/frontends/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj", calls[1]["arguments"][0])
+        self.assertEqual(5 + len(PACK.OPTIONAL_PRODUCTS), len(calls))
+        self.assertEqual([None, None, None, str(fixture.directory.resolve()), *([None] * (1 + len(PACK.OPTIONAL_PRODUCTS)))], [call["parserRoot"] for call in calls])
+        self.assertEqual(["parent-unchanged"] * (5 + len(PACK.OPTIONAL_PRODUCTS)), [call["sentinel"] for call in calls])
+        self.assertEqual("extensions/frontends/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj", calls[3]["arguments"][0])
         self.assertTrue(all(call["arguments"][-1] == "-p:Version=0.0.0-control" for call in calls))
 
     def test_accepted_explicit_parser_overrides_worker_ambient_value_without_changing_other_children(self):
@@ -458,7 +458,7 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["caller-native-root", str(fixture.directory.resolve()), *(["caller-native-root"] * (1 + len(PACK.OPTIONAL_PRODUCTS)))],
+        self.assertEqual(["caller-native-root"] * 3 + [str(fixture.directory.resolve()), *(["caller-native-root"] * (1 + len(PACK.OPTIONAL_PRODUCTS)))],
                          [call["parserRoot"] for call in calls])
 
     def test_without_explicit_parser_all_builds_keep_the_callers_runtime_selection(self):
@@ -468,7 +468,15 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", None, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["caller-native-root"] * (3 + len(PACK.OPTIONAL_PRODUCTS)), [call["parserRoot"] for call in calls])
+        self.assertEqual(["caller-native-root"] * (5 + len(PACK.OPTIONAL_PRODUCTS)), [call["parserRoot"] for call in calls])
+
+    def test_every_standalone_product_is_built_before_collecting_prebuilt_archives(self):
+        capture = self.capture_product_builds()
+        PACK.build_products(sys.executable, "Release", "0.0.0-control", None, "c" * 40)
+        projects = [json.loads(line)["arguments"][0] for line in capture.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(len(set(projects)), len(projects))
+        for name in ("BGCS.Core", "BGCS.Runtime", "BGCS", "BGCS.Tool", "BGCS.Frontend.Clang.Worker", *PACK.OPTIONAL_PRODUCTS):
+            self.assertIn(PACK.ASSEMBLY_PROJECTS[name] + "/" + name + ".csproj", projects)
 
     def test_requested_tool_rids_are_built_with_one_explicit_restore_set_before_packaging(self):
         capture = self.capture_product_builds()

@@ -169,6 +169,26 @@ reproduces the original failure and accepts the corrected argument. No product
 generation, ABI, input, performance or platform rule changed. A new clean commit
 still requires all four remote gates and verified public consumption.
 
+At `c9cbb3a`, the first Windows attempt exceeded the unchanged cimguizmo budget
+at 16.219 seconds. Its failed artifact remains preserved. One unchanged-revision
+retry passed the complete 3,600-case baseline, all six corpus libraries and the
+original budgets: 19.598 seconds cold, 7.807 warm and 14.297 for cimguizmo. Linux
+and macOS passed on the same revision. This is not a claim that shared-runner
+timing variance has been eliminated.
+
+The subsequent fresh product job built every tool RID successfully, then found
+that the independent Runtime product had never been built before collection.
+The repository packer now explicitly builds Core, Runtime, the generator, worker,
+tool and all optional products. Runtime independence is preserved; no generator
+project reference was added. All 40 package controls pass. A fresh isolated
+checkout produced all 16 NuGet and eight symbol archives, validated all six
+host closures and reproduced every archive's complete file content on repack.
+Private-package SDK/host-tool installation preflight also passed the real
+consumer checks, including native invocation. The checkout was intentionally
+dirty, so its existing partial-preflight mode records completeProductSet=false;
+the clean complete-certification guard was not weakened. The final clean commit
+still requires all four remote gates and public payload/consumption verification.
+
 ## Certification policy
 
 - Run the full retained local baseline with explicit Release configuration after
