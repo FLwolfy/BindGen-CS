@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -35,14 +35,14 @@ public sealed class ValueStringReceiverTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("value_strings", sink)
         { importMode = mode, includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? "Generated.ValueStrings.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpValueStringResultPlan result = Assert.Single(plan.valueStringResults);
         Assert.Equal("WidgetObject", Assert.IsType<CSharpValueStringReceiverPlan>(result.receiver).objectName);
         Assert.Equal("string", Assert.Single(result.receiver.signature.parameterTypes));
         Assert.Equal("text", Assert.Single(result.receiver.signature.parameterNames));
         Assert.EndsWith(".WidgetObject", result.signature.parameterTypes[0], StringComparison.Ordinal);
         Assert.Contains(plan.statusMethods, operation => operation.ownedResult is not null && operation.instanceIndex >= 0);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         const string consumer = """
             namespace Generated.ValueStrings;
             public static class Consumer {
@@ -100,7 +100,7 @@ public sealed class ValueStringReceiverTests
                 : function.id.value == "destroy-widget" ? function with { parameters = function.parameters.SetItem(0, function.parameters[0] with { type = pointer.id }) } : function).ToImmutableArray();
         }
         module = new(module.libraryId, module.targetId, module.pointerSize, types, functions, []) { byteOrder = module.byteOrder };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(ValueStringResultTests.Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(ValueStringResultTests.Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
         Assert.DoesNotContain(plan.valueStringResults, result => result.receiver is not null);
         Assert.Contains(plan.methods, method => method.nativeExport == member.id);
     }
@@ -111,7 +111,7 @@ public sealed class ValueStringReceiverTests
         InteropModule original = Module();
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types,
             original.functions.Where(function => function.id.value is not ("create-widget" or "clone-widget")).ToImmutableArray(), []) { byteOrder = original.byteOrder };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(ValueStringResultTests.Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(ValueStringResultTests.Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.valueStringResults);
         Assert.Contains(plan.methods, method => method.nativeExport == new StableId("make"));
         Assert.Contains(plan.ownedProjectionOmissions, omission => omission.nativeExport == new StableId("make"));

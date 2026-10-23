@@ -6,6 +6,7 @@
 
   <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../../src/BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
+    <ProjectReference Include="../../extensions/foundation/BGCS.Hosting.Standard/BGCS.Hosting.Standard.csproj" />
     <ProjectReference Include="../fixtures/FailingFingerprintPlugin/FailingFingerprintPlugin.csproj" />
     <ProjectReference Include="../fixtures/OutputPublisher/OutputPublisher.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../fixtures/hosts/ProcessProbe/ProcessProbe.csproj" ReferenceOutputAssembly="false" />

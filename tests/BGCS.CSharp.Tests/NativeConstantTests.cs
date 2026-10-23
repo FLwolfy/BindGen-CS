@@ -3,11 +3,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -76,8 +76,8 @@ public sealed class NativeConstantTests
         ManagedApiModel model = Model(new(NativeScalarConstantKind.Integer, "18446744073709551615", 8, false, Evidence));
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         string path = "Api/ConstantApi.Constants.g.cs";
         string original = sink.sources[path];
         string modified = mutation switch
@@ -97,7 +97,7 @@ public sealed class NativeConstantTests
     private static ManagedApiModel Model(NativeScalarConstant value)
     {
         InteropModule interop = new("constants", "windows-x64-msvc", 8, [], [], [])
-        { constants = [new(new("maximum"), "MAXIMUM", "MAXIMUM", value, null)] };
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian, constants = [new(new("maximum"), "MAXIMUM", "MAXIMUM", value, null)] };
         return new DefaultManagedProjection().Project(interop, new("Generated.Constants", "ConstantApi")
         { names = ImmutableDictionary<string, string>.Empty.Add("MAXIMUM", "Maximum") }, CancellationToken.None);
     }

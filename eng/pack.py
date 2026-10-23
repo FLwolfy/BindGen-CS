@@ -26,7 +26,10 @@ from source_ownership import verify_source_ownership
 MANIFEST = json.loads((ROOT / "distribution/manifests/product-packages.json").read_text(encoding="utf-8"))
 RIDS = MANIFEST["toolRuntimeIdentifiers"]
 PARSER_VERSION = "20.1.2"
-SDK_MODULES = tuple(name for name in MANIFEST["publicApiAssemblies"] if name not in ("BGCS.Contracts", "BGCS.Runtime"))
+SDK_MODULES = tuple(MANIFEST["sdkAssemblies"])
+ASSEMBLY_PROJECTS = MANIFEST["assemblyProjects"]
+WORKER_PROJECT = ASSEMBLY_PROJECTS["BGCS.Frontend.Clang.Worker"]
+OPTIONAL_PRODUCTS = tuple(MANIFEST["optionalProducts"])
 
 
 def digest(path: Path) -> str:
@@ -44,7 +47,7 @@ def source_identity() -> dict:
 
 
 def verify_generator_archive(package: zipfile.ZipFile) -> None:
-    forbidden = {"bgcs.nativebuild.dll", "bgcs.repositorytools.dll", "bgcs.msbuild.dll", "microsoft.build.framework.dll", "microsoft.build.utilities.core.dll", "microsoft.codeanalysis.workspaces.dll", "microsoft.codeanalysis.csharp.workspaces.dll"}
+    forbidden = {"bgcs.contracts.dll", "bgcs.cpp2c.dll", "bgcs.platforms.dll", "bgcs.extensions.targets.dll", "bgcs.extensions.hosts.dll", "bgcs.extensions.dotnet.dll", "bgcs.nativebuild.dll", "bgcs.repositorytools.dll", "bgcs.msbuild.dll", "microsoft.build.framework.dll", "microsoft.build.utilities.core.dll", "microsoft.codeanalysis.workspaces.dll", "microsoft.codeanalysis.csharp.workspaces.dll"}
     unexpected = sorted(name for name in package.namelist() if Path(name).name.casefold() in forbidden)
     if unexpected:
         raise RuntimeError("The shipped generator contains repository/native-build tooling: " + ", ".join(unexpected))
@@ -95,11 +98,20 @@ def build_products(dotnet: str, configuration: str, version: str, parser_osx_x64
     if parser_osx_x64 is not None:
         parser_osx_x64 = parser_osx_x64.resolve()
         parser_runtime_provenance.verify_supplemental(ROOT, parser_osx_x64, source_revision)
-    worker_project = "src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj"
-    for project in ("src/BGCS/BGCS.csproj", worker_project, "src/BGCS.Tool/BGCS.Tool.csproj"):
+    worker_project = "extensions/frontends/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj"
+    for project in ("src/BGCS/BGCS.csproj", worker_project, "src/BGCS.Tool/BGCS.Tool.csproj", *(ASSEMBLY_PROJECTS[name] + "/" + name + ".csproj" for name in OPTIONAL_PRODUCTS)):
         overrides = {"BGCS_CLANG_RUNTIME_DIR": str(parser_osx_x64)} if project == worker_project and parser_osx_x64 is not None else None
         execute(dotnet, ["build", project, "--configuration", configuration, "-m:2", "-nr:false", "-p:UseSharedCompilation=false", f"-p:Version={version}"],
                 environment_overrides=overrides)
+
+
+def build_tool_rids(dotnet: str, configuration: str, version: str, rids: list[str]) -> None:
+    """Close every requested tool RID before capturing any restored dependency metadata."""
+    runtime_identifiers = "%3B".join(rids)
+    for rid in rids:
+        execute(dotnet, ["build", "src/BGCS.Tool/BGCS.Tool.csproj", "--configuration", configuration,
+                        "--runtime", rid, "-m:2", "-nr:false", "-p:UseSharedCompilation=false",
+                        f"-p:RuntimeIdentifiers={runtime_identifiers}", f"-p:Version={version}"])
 
 
 def build_output(project: str, configuration: str) -> Path:
@@ -342,23 +354,23 @@ def pack_nuspec(dotnet: str, project: str, template: Path, stage: Path, output: 
             ET.SubElement(group, "dependency", {"id": name, "version": f"[{dependency_version}]"})
     nuspec = stage.parent / f"{metadata.findtext('id')}.nuspec"
     document.write(nuspec, encoding="utf-8", xml_declaration=True)
-    execute(dotnet, ["pack", project, "--output", str(output), "-m:1", "-nr:false", "-p:UseSharedCompilation=false", f"-p:NuspecFile={nuspec}", f"-p:NuspecBasePath={stage}", f"-p:Version={version}"])
+    execute(dotnet, ["pack", project, "--output", str(output), "-m:1", "-nr:false", "-p:UseSharedCompilation=false", f"-p:NuspecFile={nuspec}", f"-p:NuspecBasePath={stage}", f"-p:Version={version}", f"-p:PackageId={metadata.findtext('id')}"])
 
 
 def prepare_sdk(dotnet: str, stage: Path, configuration: str, version: str, supplemental: Path | None, selected_rids: list[str]) -> tuple[list[tuple[str, str]], Path]:
     sdk = stage / "sdk"
     worker = stage / "worker"
     common = worker / "common"
-    execution_closure("src/BGCS.Frontend.Clang.Worker", configuration, "BGCS.Frontend.Clang.Worker", common)
-    reference_graph = merge_package_graphs(("src/" + name for name in SDK_MODULES), require_single_version=True)
-    dependencies = [("BGCS.Contracts", version), ("BGCS.Runtime", version)]
+    execution_closure(WORKER_PROJECT, configuration, "BGCS.Frontend.Clang.Worker", common)
+    reference_graph = merge_package_graphs((ASSEMBLY_PROJECTS[name] for name in SDK_MODULES), require_single_version=True)
+    dependencies = [("BGCS.Core", version), ("BGCS.Runtime", version)]
     dependencies += sorted((key.rsplit("/", 1)[0], key.rsplit("/", 1)[1]) for key in reference_graph["libraries"])
     if supplemental is not None:
         dependencies.append(("BGCS.ParserRuntime.osx-x64", version))
     library = sdk / "lib/net10.0"
     library.mkdir(parents=True)
     for name in SDK_MODULES:
-        output = build_output("src/" + name, configuration)
+        output = build_output(ASSEMBLY_PROJECTS[name], configuration)
         for extension in (".dll", ".xml", ".pdb"):
             path = output / (name + extension)
             if not path.is_file():
@@ -375,7 +387,7 @@ def prepare_sdk(dotnet: str, stage: Path, configuration: str, version: str, supp
     manifests = assets / "manifests"
     manifests.mkdir(parents=True)
     common_artifacts = [artifact(file.relative_to(common).as_posix(), file) for file in sorted(common.rglob("*")) if file.is_file()]
-    parser_assets = graph("src/BGCS.Frontend.Clang.Worker")
+    parser_assets = graph(WORKER_PROJECT)
     for rid in selected_rids:
         files = native_closure(parser_assets, rid, supplemental)
         native_directory = worker / "native" / rid
@@ -395,28 +407,72 @@ def prepare_sdk(dotnet: str, stage: Path, configuration: str, version: str, supp
     execution_closure("src/BGCS.Tool", configuration, "BGCS.Tool", schema_exporter)
     for payload in library.glob("*.dll"):
         shutil.copyfile(payload, schema_exporter / payload.name)
-    for name in ("BGCS.Contracts", "BGCS.Runtime"):
-        source = build_output("src/" + name, configuration) / (name + ".dll")
+    for name in ("BGCS.Core", "BGCS.Runtime"):
+        source = build_output(ASSEMBLY_PROJECTS[name], configuration) / (name + ".dll")
         shutil.copyfile(source, schema_exporter / source.name)
     tool = schema_exporter / "BGCS.Tool.dll"
-    for name, kind in (("bindgen.schema.json", "binding"), ("workspace.schema.json", "workspace"), ("plugin.schema.json", "plugin")):
+    for name, kind in (("bindgen.schema.json", "binding"), ("workspace.schema.json", "workspace"), ("extension.schema.json", "extension")):
         execute(dotnet, [str(tool), "schema", str(schema_directory / name), "--kind", kind])
     notices = sdk / "licenses/clang-resource"
     notices.mkdir(parents=True)
     for name in ("LICENSE.txt", "README.md"):
-        shutil.copyfile(ROOT / "src/BGCS.Frontend.Clang/Resources/Clang" / name, notices / name)
+        shutil.copyfile(ROOT / "extensions/frontends/BGCS.Frontend.Clang/Resources/Clang" / name, notices / name)
     shutil.copyfile(ROOT / "README.md", sdk / "README.md")
     shutil.copyfile(ROOT / "LICENSE", sdk / "LICENSE")
-    notice_graph = merge_package_graphs([*("src/" + name for name in SDK_MODULES), "src/BGCS.Frontend.Clang.Worker"])
+    notice_graph = merge_package_graphs([*(ASSEMBLY_PROJECTS[name] for name in SDK_MODULES), WORKER_PROJECT])
     copy_dependency_notices(notice_graph, sdk / "licenses/dependencies")
     copy_resource_notices(sdk / 'licenses/dependencies')
     return dependencies, worker
 
 
+
+def prepare_optional_packages(dotnet: str, stage: Path, output: Path, configuration: str, version: str) -> None:
+    for product in OPTIONAL_PRODUCTS:
+        package = stage / product
+        library = package / "lib/net10.0"
+        library.mkdir(parents=True)
+        for assembly in MANIFEST["optionalPackageAssemblies"][product]:
+            source = build_output(ASSEMBLY_PROJECTS[assembly], configuration)
+            for extension in (".dll", ".xml", ".pdb"):
+                file = source / (assembly + extension)
+                if not file.is_file(): raise FileNotFoundError("Optional extension closure is incomplete: " + str(file))
+                shutil.copyfile(file, library / file.name)
+        for name in ("README.md", "LICENSE", "THIRD-PARTY-NOTICES.md"):
+            shutil.copyfile(ROOT / name, package / name)
+        document = ET.Element("package")
+        metadata = ET.SubElement(document, "metadata")
+        for key, value in (("id", product), ("version", version), ("authors", "FLwolfy"),
+                ("description", "Explicit optional source-generation extension for BGCS; consumer builds remain external."), ("readme", "README.md")):
+            ET.SubElement(metadata, key).text = value
+        ET.SubElement(metadata, "license", type="expression").text = "MIT"
+        ET.SubElement(metadata, "repository", type="git", url="https://github.com/FLwolfy/BindGen-CS")
+        group = ET.SubElement(ET.SubElement(metadata, "dependencies"), "group", targetFramework="net10.0")
+        ET.SubElement(group, "dependency", id="BGCS.Core", version="[" + version + "]")
+        ET.SubElement(ET.SubElement(document, "files"), "file", src="**/*", target="")
+        template = stage / (product + "-template.nuspec")
+        ET.ElementTree(document).write(template, encoding="utf-8", xml_declaration=True)
+        pack_nuspec(dotnet, "distribution/BGCS.Sdk.Package/BGCS.Sdk.Package.csproj", template, package, output, version)
+
+
+def verify_extension_archive(package: zipfile.ZipFile, product: str, version: str) -> None:
+    expected = set(MANIFEST["optionalPackageAssemblies"][product])
+    assemblies = {Path(name).stem for name in package.namelist() if name.startswith("lib/") and name.endswith(".dll")}
+    if assemblies != expected: raise RuntimeError("Optional extension has an incomplete or coupled managed closure: " + product)
+    metadata = ET.fromstring(package.read(next(name for name in package.namelist() if name.endswith(".nuspec"))))
+    dependencies = {(node.get("id"), node.get("version")) for node in metadata.iter() if node.tag.rsplit("}", 1)[-1] == "dependency"}
+    if dependencies != {("BGCS.Core", "[" + version + "]")}:
+        raise RuntimeError("Optional extensions must depend only on the exact Core product: " + product)
+    if any(name.startswith(("build/", "buildTransitive/", "runtimes/", "tools/")) for name in package.namelist()):
+        raise RuntimeError("An optional extension contains forbidden build/runtime tooling: " + product)
+
 def verify_sdk_worker_archive(package: zipfile.ZipFile, expected_rids: list[str] | None = None) -> None:
     """Bind standard NuGet content copy metadata to the exact managed worker closure."""
     prefix = "contentFiles/any/net10.0/bgcs/worker-assets/"
     names = package.namelist()
+    required_schemas = {'bindgen.schema.json', 'workspace.schema.json', 'extension.schema.json',
+                        'native-source-manifest.schema.json', 'capability-report.schema.json'}
+    if {Path(name).name for name in names if name.startswith('schemas/') and name.endswith('.json')} != required_schemas:
+        raise RuntimeError('The SDK must deliver exactly the five current source-generation schemas.')
     if any(name.startswith(("tools/msbuild/", "build/", "buildTransitive/")) for name in names):
         raise RuntimeError("The generator SDK must not deliver MSBuild Tasks, props or targets.")
     nuspecs = [name for name in names if name.endswith(".nuspec")]
@@ -451,7 +507,7 @@ def verify_sdk_worker_archive(package: zipfile.ZipFile, expected_rids: list[str]
                         if not row["relativePath"].startswith(f"runtimes/{rid}/native/")}
             if (len({row["relativePath"] for row in rows}) != len(rows) or actual != expected):
                 raise RuntimeError("SDK common worker archive differs from its exact manifest set or hashes.")
-            if not {"BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json", "BGCS.Frontend.Clang.Worker.runtimeconfig.json"}.issubset(actual):
+            if not {"BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json", "BGCS.Frontend.Clang.Worker.runtimeconfig.json", "BGCS.Hosting.Standard.dll"}.issubset(actual):
                 raise RuntimeError("SDK worker content lacks its managed entry, dependency map or runtime configuration.")
             extension = ".dll" if rid.startswith("win-") else ".dylib" if rid.startswith("osx-") else ".so"
             if not {f"runtimes/{rid}/native/{name}{extension}" for name in ("libclang", "libClangSharp")}.issubset({row["relativePath"] for row in rows}):
@@ -493,8 +549,8 @@ def verify_tool_worker_archive(package: zipfile.ZipFile, rid: str) -> None:
         identities.add(relative.casefold())
         expected[relative] = digest_value["value"]
     required = {"BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json",
-                "BGCS.Frontend.Clang.Worker.runtimeconfig.json", "BGCS.Contracts.dll", "BGCS.Infrastructure.dll",
-                "BGCS.Frontend.Clang.dll", "ClangSharp.dll", "ClangSharp.Interop.dll"}
+                "BGCS.Frontend.Clang.Worker.runtimeconfig.json", "BGCS.Core.dll", "BGCS.Infrastructure.dll",
+                "BGCS.Frontend.Clang.dll", "BGCS.Hosting.Standard.dll", "ClangSharp.dll", "ClangSharp.Interop.dll"}
     extension = ".dll" if rid.startswith("win-") else ".dylib" if rid.startswith("osx-") else ".so"
     required |= {f"runtimes/{rid}/native/{name}{extension}" for name in ("libclang", "libClangSharp")}
     if not required <= expected.keys():
@@ -549,7 +605,7 @@ def verify_parser_runtime_archive(package: zipfile.ZipFile) -> None:
 
 def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: str | None = None,
                     *, include_osx_x64_parser: bool = False) -> None:
-    expected = {f"{name}.{version}.nupkg" for name in MANIFEST["products"] if name != "BindGen-CS"}
+    expected = {f"{name}.{version}.nupkg" for name in MANIFEST["products"] + MANIFEST["optionalProducts"] if name != "BindGen-CS"}
     if full or include_osx_x64_parser:
         expected.add(f"BGCS.ParserRuntime.osx-x64.{version}.nupkg")
     if full:
@@ -564,6 +620,7 @@ def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: st
     symbols = {file.name for file in output.glob(f"*.{version}.snupkg")}
     if symbols != expected_symbols:
         raise RuntimeError(f"The symbol package set differs from the declared products: missing={sorted(expected_symbols-symbols)}, unexpected={sorted(symbols-expected_symbols)}")
+    repeated_assemblies = {}
     for name in sorted(packages | symbols):
         file = output / name
         if file.stat().st_size >= MANIFEST["maximumPackageBytes"]:
@@ -577,10 +634,34 @@ def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: st
                 raise RuntimeError(f"Corrupt package entry: {name}/{bad}")
             if name.startswith("BGCS.Runtime.") and any("clang" in item.lower() for item in package.namelist()):
                 raise RuntimeError("Runtime-only consumers must not receive parser assets.")
+            for independent in ("BGCS.Core", "BGCS.Runtime"):
+                if name == f"{independent}.{version}.nupkg":
+                    libraries = {Path(entry).stem for entry in entries if entry.startswith("lib/") and entry.endswith(".dll")}
+                    if libraries != {independent}: raise RuntimeError("Independent product leaks another managed assembly: " + independent)
+                    metadata = ET.fromstring(package.read(next(entry for entry in entries if entry.endswith(".nuspec"))))
+                    if any(node.tag.rsplit("}", 1)[-1] == "dependency" for node in metadata.iter()):
+                        raise RuntimeError("Independent product must not carry generator, frontend, runtime or third-party dependencies: " + independent)
             if name.endswith(".snupkg") and not any(entry.endswith(".pdb") for entry in entries):
                 raise RuntimeError("The declared symbol package contains no debugging symbols: " + name)
             if name == f"BGCS.{version}.nupkg":
                 verify_sdk_worker_archive(package, RIDS if full else None)
+                delivered = {Path(entry).stem for entry in entries if entry.startswith("lib/") and entry.endswith(".dll")}
+                if delivered != set(SDK_MODULES): raise RuntimeError("The default SDK assembly closure differs from its explicit composition.")
+                if any("BGCS.Extension." in entry for entry in entries): raise RuntimeError("Default SDK includes an optional extension.")
+                metadata = ET.fromstring(package.read(next(entry for entry in entries if entry.endswith(".nuspec"))))
+                dependencies = {node.get("id") for node in metadata.iter() if node.tag.rsplit("}", 1)[-1] == "dependency"}
+                if any(identity.startswith("BGCS.") and identity not in {"BGCS.Core", "BGCS.Runtime", "BGCS.ParserRuntime.osx-x64"} for identity in dependencies):
+                    raise RuntimeError("Default SDK exposes an internal or optional product dependency.")
+            for product in OPTIONAL_PRODUCTS:
+                if name == f"{product}.{version}.nupkg": verify_extension_archive(package, product, version)
+            if not name.endswith(".snupkg"):
+                for entry in entries:
+                    if entry.startswith("lib/") and entry.endswith(".dll"):
+                        identity = Path(entry).name
+                        fingerprint = hashlib.sha256(package.read(entry)).hexdigest()
+                        if identity in repeated_assemblies and repeated_assemblies[identity] != fingerprint:
+                            raise RuntimeError("The same foundation assembly has divergent bytes across packages: " + identity)
+                        repeated_assemblies[identity] = fingerprint
             if name == f"BGCS.ParserRuntime.osx-x64.{version}.nupkg":
                 verify_parser_runtime_archive(package)
             for rid in RIDS:
@@ -643,6 +724,8 @@ def main() -> None:
     verify_source_ownership(ROOT)
     source = source_identity()
     version = args.version or ET.parse(ROOT / "Directory.Build.props").findtext("./PropertyGroup/Version")
+    if not re.fullmatch(r"4\.0\.0(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
+        parser.error("This source tree may create only 4.0.0 or private 4.0.0-ci candidate packages.")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     full = args.host_only is None
@@ -652,8 +735,10 @@ def main() -> None:
         parser.error("Full package distribution requires accepted --parser-osx-x64 assets.")
     if args.parser_osx_x64 is not None:
         args.parser_osx_x64 = args.parser_osx_x64.resolve()
+    tool_rids = RIDS if full else [args.host_only] if args.include_host_tool else []
     if not args.no_build:
         build_products(args.dotnet, args.configuration, version, args.parser_osx_x64, source["sourceRevision"])
+        build_tool_rids(args.dotnet, args.configuration, version, tool_rids)
     elif args.parser_osx_x64 is not None:
         parser_runtime_provenance.verify_supplemental(ROOT, args.parser_osx_x64, source["sourceRevision"])
     if full or args.include_host_tool:
@@ -663,7 +748,7 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix="package-stage-", dir=temporary_parent) as temporary:
         stage = Path(temporary)
         dependencies, worker = prepare_sdk(args.dotnet, stage, args.configuration, version, args.parser_osx_x64, RIDS if full else [args.host_only])
-        for project in ("src/BGCS.Contracts/BGCS.Contracts.csproj", "src/BGCS.Runtime/BGCS.Runtime.csproj"):
+        for project in ("src/BGCS.Core/BGCS.Core.csproj", "src/BGCS.Runtime/BGCS.Runtime.csproj"):
             execute(args.dotnet, ["pack", project, "--configuration", args.configuration, "--no-build", "--output", str(output), f"-p:Version={version}"])
         if args.parser_osx_x64 is not None:
             supplement = stage / "supplement"
@@ -680,17 +765,18 @@ def main() -> None:
         document = ET.parse(ROOT / "distribution/BGCS.Sdk.Package/BGCS.nuspec")
         document.write(sdk_template, encoding="utf-8", xml_declaration=True)
         pack_nuspec(args.dotnet, "distribution/BGCS.Sdk.Package/BGCS.Sdk.Package.csproj", sdk_template, stage / "sdk", output, version, dependencies)
+        prepare_optional_packages(args.dotnet, stage, output, args.configuration, version)
         if full or args.include_host_tool:
             tool_notices = stage / "tool-notices"
-            copy_dependency_notices(merge_package_graphs(["src/BGCS.Tool", "src/BGCS.Frontend.Clang.Worker"]), tool_notices)
+            copy_dependency_notices(merge_package_graphs(["src/BGCS.Tool", WORKER_PROJECT]), tool_notices)
             copy_resource_notices(tool_notices)
             if args.parser_osx_x64 is not None:
                 shutil.copytree(args.parser_osx_x64 / "licenses", tool_notices / "parser-osx-x64/licenses")
                 shutil.copytree(args.parser_osx_x64 / "build-inputs", tool_notices / "parser-osx-x64/build-inputs")
                 shutil.copyfile(args.parser_osx_x64 / "runtime-provenance.json", tool_notices / "parser-osx-x64/runtime-provenance.json")
-            tool_arguments = ["pack", "src/BGCS.Tool/BGCS.Tool.csproj", "--configuration", args.configuration, "--output", str(output), "-m:1", "-nr:false", "-p:UseSharedCompilation=false", f"-p:Version={version}", f"-p:BGCSWorkerPackageRoot={worker}", f"-p:BGCSToolNoticesRoot={tool_notices}"]
-            if args.no_build:
-                tool_arguments.append("--no-build")
+            # RID compilation and restore must finish before SDK notices are captured.
+            # Packing may publish the closed outputs, but cannot mutate those graphs.
+            tool_arguments = ["pack", "src/BGCS.Tool/BGCS.Tool.csproj", "--configuration", args.configuration, "--no-build", "--output", str(output), "-m:1", "-nr:false", "-p:UseSharedCompilation=false", f"-p:Version={version}", f"-p:BGCSWorkerPackageRoot={worker}", f"-p:BGCSToolNoticesRoot={tool_notices}"]
             if not full:
                 tool_arguments.extend([f"-p:ToolPackageRuntimeIdentifiers={args.host_only}", f"-p:RuntimeIdentifiers={args.host_only}"])
             execute(args.dotnet, tool_arguments)

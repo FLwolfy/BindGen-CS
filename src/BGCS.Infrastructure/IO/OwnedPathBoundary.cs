@@ -1,39 +1,53 @@
 using System;
 using System.IO;
+using BGCS.Core.Hosting;
 
 namespace BGCS.Infrastructure.IO;
 
 /// <summary>Captures a caller-selected parent alias without permitting linked owned leaves or later redirection.</summary>
-internal sealed class OwnedPathBoundary
+public sealed class OwnedPathBoundary
 {
     private readonly string m_logical;
-    internal string physicalPath { get; }
+    private readonly IHostPathService m_paths;
+    /// <summary>Gets the frozen physical owner location.</summary>
+    public string physicalPath { get; }
 
-    internal OwnedPathBoundary(string path)
-    {
+    /// <summary>Captures the parent alias and rejects linked owned leaves.</summary>
+    /// <param name="path">The proposed owned path.</param>
+    /// <param name="paths">The explicitly selected host path service.</param>
+    public OwnedPathBoundary(
+        string path,
+        IHostPathService paths
+    ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        m_paths = paths ?? throw new ArgumentNullException(nameof(paths));
         m_logical = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         string parent = Path.GetDirectoryName(m_logical) ?? throw new IOException("An owned path must have a parent directory.");
         RejectLink(m_logical);
-        physicalPath = Path.Combine(PhysicalPathResolver.Resolve(parent), Path.GetFileName(m_logical));
+        physicalPath = Path.Combine(PhysicalPathResolver.Resolve(parent, paths), Path.GetFileName(m_logical));
         Verify();
     }
 
-    internal void Verify()
+    /// <summary>Rechecks physical identity and every owned physical ancestor.</summary>
+    public void Verify()
     {
         RejectLink(m_logical);
-        if (!Equal(PhysicalPathResolver.Resolve(m_logical), physicalPath))
+        if (!m_paths.Equals(PhysicalPathResolver.Resolve(m_logical, m_paths), physicalPath))
             throw new IOException($"The owned path changed physical identity: '{m_logical}'.");
         RejectPhysicalLinks(physicalPath);
     }
 
-    internal static void RejectPhysicalLinks(string path)
+    /// <summary>Rejects existing or dangling links at every physical path component.</summary>
+    /// <param name="path">The physical owner path.</param>
+    public static void RejectPhysicalLinks(string path)
     {
         for (string? current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
             RejectLink(current);
     }
 
-    internal static void RejectLink(string path)
+    /// <summary>Rejects an existing or dangling link at one owned path.</summary>
+    /// <param name="path">The owned path.</param>
+    public static void RejectLink(string path)
     {
         FileAttributes attributes;
         try { attributes = File.GetAttributes(path); }
@@ -49,9 +63,4 @@ internal sealed class OwnedPathBoundary
             throw new IOException($"An owned path cannot follow a dangling symbolic link: '{path}'.");
     }
 
-    private static bool Equal(
-        string first,
-        string second
-    )
-        => string.Equals(Path.TrimEndingDirectorySeparator(first), Path.TrimEndingDirectorySeparator(second), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 }

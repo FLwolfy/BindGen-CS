@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 2,
+  "library": { "id": "integer_policy", "nativeName": "integer_native" },
+  "source": { "language": "c", "headers": ["native.h"], "parseMacros": false },
+  "api": { "namespace": "Example.IntegerPolicy", "name": "IntegerApi", "runtime": "example.coreclr-integer-only" },
+  "output": { "root": "Generated" }
+}

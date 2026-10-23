@@ -6,8 +6,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -34,9 +34,9 @@ public sealed class NativeShimInheritanceTests
             await File.WriteAllTextAsync(Path.Combine(root, "shim.cpp"), "#include \"fixture.hpp\"\n#include \"shim.h\"\nextern \"C\" int demo_sum(int left, int right) { return Demo::Sum(left, right); }\n");
             BindingConfiguration configuration = Configuration("shim") with
             {
-                cpp = new() { nativeShims = [new() { id = "sum", publicHeaders = ["shim.h"], sourceFiles = ["shim.cpp"], exports = ["demo_sum"] }] }
+                bridge = new() { nativeShims = [new() { id = "sum", publicHeaders = ["shim.h"], sourceFiles = ["shim.cpp"], exports = ["demo_sum"] }] }
             };
-            (CppBridgeModule plan, string binary) = await Build(configuration, root);
+            (NativeBridgePlan plan, string binary) = await Build(configuration, root);
             Assert.Contains(plan.headers, path => Path.GetFileName(path) == "shim.h");
             BridgeExport shim = plan.exports.Single(export => export.operation.declaration is { } id && plan.source.GetDeclaration(id).name == "demo_sum");
             Assert.Equal("C", plan.source.GetDeclaration(shim.operation.declaration!.Value).linkage);
@@ -59,7 +59,7 @@ public sealed class NativeShimInheritanceTests
         string root = Path.Combine(Path.GetTempPath(), "bgcs-neutral-casts-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         nint library = 0;
-        CppBridgeModule? plan = null;
+        NativeBridgePlan? plan = null;
         List<(BridgeExport Constructor, nint Instance)> owned = [];
         try
         {
@@ -127,19 +127,19 @@ public sealed class NativeShimInheritanceTests
 
     private static BindingConfiguration Configuration(string id) => new()
     {
-        schemaVersion = 1, library = new() { id = id, nativeName = id + "_bridge" },
+        schemaVersion = 2, library = new() { id = id, nativeName = id + "_bridge" },
         source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated." + id, name = "FixtureApi" },
         runtime = new() { mode = "source" }, cache = new() { enabled = false }};
 
-    private static async Task<(CppBridgeModule Plan, string Binary)> Build(BindingConfiguration configuration, string root)
+    private static async Task<(NativeBridgePlan Plan, string Binary)> Build(BindingConfiguration configuration, string root)
     {
-        string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
+        string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
         GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
         Assert.True(result.success, result.GetDiagnosticSummary());
         string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
-        CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
+        NativeBridgePlan plan = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
         string name = configuration.library.nativeName;
         return (plan, Path.Combine(NativeConsumerHarness.NativeDirectory(target), OperatingSystem.IsWindows() ? name + ".dll" : OperatingSystem.IsMacOS() ? "lib" + name + ".dylib" : "lib" + name + ".so"));
     }

@@ -3,7 +3,7 @@
   "libraryId": "miniaudio",
   "platform": "windows-x64",
   "sourceNormalization": "quoted-locked-corpus-include-root-v1",
-  "selectionPolicySha256": "72e98800299edc085c3f90f09451aea3752c1e4dc08d2ebcc85d2e9b493a8d0a",
+  "selectionPolicySha256": "a30534e7dda000005976f33bc7c093fbdba6d603bcd55ca5075e89f4b23167f1",
   "omittedDeclarations": {
     "excludedDeclarations": [
       "ma_log_postf"
@@ -11,7 +11,10 @@
     "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "847c963af71718e5b252e3eb75c9224f8e26e8c0c8463c815a425c6561b7fa3c"
+    "windows-x64-msvc/managed/Bindings.cs": "495d7193a6a13419e15d0c10667ab4c0c117d68ab6e374946644190a7e681838",
+    "windows-x64-msvc/native/include/bgcs_miniaudio.h": "230a3218f365e78ae8034e758b482f60f167997322ab4d7185984a2c1050c546",
+    "windows-x64-msvc/native/src/bgcs_miniaudio.c": "6797ba3d50f6207d186ef1834d372f848b88ef95d04b3a1ccde302797b49512d",
+    "windows-x64-msvc/native/src/storage.assertions.c": "0bbde5b3b28cfb7591f21f7a8982bed2edecf016db8b0734c6f492852eaea3bc"
   },
-  "publicApiSha256": "899a266768323ed74b0f86f16029afd31cf9425133029879dfbd58d5d56a781b"
+  "publicApiSha256": "ece60e00515189cdf67a4768c9172c91d9d28785671fc74b76a30890c7adf492"
 }

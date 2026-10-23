@@ -1,3 +1,4 @@
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,12 +7,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.IO;
 using Xunit;
@@ -33,7 +34,7 @@ public sealed class SourceContributionAliasTests
         Assert.True(result.published);
         Assert.NotNull(generated);
         Assert.StartsWith(Path.Combine(temporary.first, "BGCS", "source-inputs", "v1") + Path.DirectorySeparatorChar, generated, StringComparison.Ordinal);
-        Assert.Equal(PhysicalPathResolver.Resolve(generated), generated);
+        Assert.Equal(PhysicalPathResolver.Resolve(generated, TestHostPaths.Create()), generated);
         Assert.False(File.Exists(generated));
         var header = Assert.Single(result.artifacts, artifact => artifact.relativePath.EndsWith("/native/include/contributions/alias.source/generated.h", StringComparison.Ordinal));
         Assert.Equal(Contributor.C_HEADER, File.ReadAllText(Path.Combine(result.outputRoot, header.relativePath)));
@@ -74,13 +75,13 @@ public sealed class SourceContributionAliasTests
         Assert.Empty(Directory.GetFileSystemEntries(temporary.second));
     }
 
-    private static BindingHost Host(IFrontend frontend) => BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => frontend)
-        .AddSourceContributor("alias.source", 0, () => new Contributor()).Build();
+    private static BindingHost Host(IFrontend frontend) => BindingGenerator.CreateBuilder().UseDetachedFrontend(() => frontend)
+        .RegisterFactory<ISourceContributor>(new("alias.source", ExtensionPort.SourceContributor, 0), _ => new Contributor()).Build();
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "temp-alias", nativeName = "temp-alias" },
-        source = new() { headers = ["original.h"], parseMacros = false }, targets = [new() { id = "emscripten-wasm32-emscripten" }],
+        schemaVersion = 2, library = new() { id = "temp-alias", nativeName = "temp-alias" },
+        source = new() { headers = ["original.h"], parseMacros = false }, targets = [new() { id = "host" }],
         api = new() { @namespace = "Generated.TemporaryAlias", name = "NativeApi" }, cache = new() { enabled = false }
     };
 
@@ -96,6 +97,12 @@ public sealed class SourceContributionAliasTests
 
     private sealed class ObservingFrontend(Func<string, Task> observe) : IFrontend
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
             string generated = Assert.Single(request.sourcePathMappings, pair => pair.Value == "contributions/alias.source/generated.h").Key;
@@ -104,7 +111,7 @@ public sealed class SourceContributionAliasTests
             NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
             NativeDeclaration function = new(new("echo"), "Function", "echo", "echo", null, new("original.h", 1, 1))
             { returnType = integer.id, callingConvention = "C" };
-            NativeModule module = new(request.target.targetId.value, request.target.triple, 4, [integer], [function], [])
+            NativeModule module = new(request.target.targetId.value, request.target.triple, TestComposition.PointerSize(request.target), [integer], [function], [])
             { language = SourceLanguage.C, byteOrder = request.target.byteOrder };
             return new(module, new([], []));
         }
@@ -112,7 +119,7 @@ public sealed class SourceContributionAliasTests
 
     private sealed class TemporaryAlias : IDisposable
     {
-        private readonly string m_root = Path.Combine(PhysicalPathResolver.Resolve(Path.GetTempPath()), "bgcs-contribution-alias-" + Guid.NewGuid().ToString("N"));
+        private readonly string m_root = Path.Combine(PhysicalPathResolver.Resolve(Path.GetTempPath(), TestHostPaths.Create()), "bgcs-contribution-alias-" + Guid.NewGuid().ToString("N"));
         private readonly Dictionary<string, string?> m_environment = new(StringComparer.Ordinal);
         private readonly List<string> m_links = [];
         private string alias => Path.Combine(m_root, "selected-temp");

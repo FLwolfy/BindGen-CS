@@ -277,5 +277,10 @@
     "notExecuted": 0
   },
   "runtimeAssemblySha256": "b18e813228b9604fb6d6061af01b1392ccd3dc8154827229a5a7cf7b03eb2388",
-  "updatedAtUtc": "2026-10-15T19:23:10.853341+00:00"
+  "updatedAtUtc": "2026-10-15T19:23:10.853341+00:00",
+  "historicalOnly": true,
+  "currentRevisionCertified": false,
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "currentEvidenceInventory": "eng/acceptance/feature-inventory.json",
+  "scopeNotice": "Historical source/assertion correspondence and old local observations only. Current4.0 implementation and exact same-revision execution mappings are authoritative in feature/configuration inventories; no old receipt certifies current behavior."
 }

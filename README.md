@@ -1,78 +1,50 @@
 <h1 align="center">BindGen-CS</h1>
-<p align="center">C and C++ libraries. C# APIs.</p>
+<p align="center">C and C++ libraries. Clear C# bindings.</p>
 <p align="center">
   <a href="https://www.nuget.org/packages/BGCS"><img alt="NuGet" src="https://img.shields.io/nuget/v/BGCS?style=flat-square"></a>
   <a href="https://github.com/FLwolfy/BindGen-CS/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/FLwolfy/BindGen-CS/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
 </p>
-<p align="center">
-  <a href="README.cn.md">简体中文</a> · <a href="#quick-start">Quick start</a> · <a href="#generate-from-c">C# library</a> · <a href="docs/README.md">Documentation</a>
-</p>
+<p align="center"><a href="README.cn.md">简体中文</a> · <a href="#quick-start">Quick start</a> · <a href="#use-from-c">C# API</a> · <a href="docs/README.md">Documentation</a></p>
 
-**BGCS generates C# bindings from C/C++ headers.** It produces C# source, any
-required C ABI bridge source, file manifests and diagnostics. Use the CLI or call
-the generator from your own C# tool.
+**BGCS generates C# bindings from C/C++ headers.** Use a terminal command or call
+it from your own C# tool. The output is source code, manifests and diagnostics.
 
 ```mermaid
 flowchart LR
-    I["Headers + configuration"] --> G["BGCS"]
-    G --> O["C# + bridge + manifest"]
-    O --> B["Your project's build"]
-    B --> A["Your application"]
+    H["Headers + target + semantic rules"] --> G["BGCS: parse, analyze, generate"]
+    G --> S["C# + necessary C/C++ bridge + manifests"]
+    S --> P["Your project: compile, link, package, deploy"]
 ```
 
-BGCS owns parsing, analysis and generation. Your project owns compilation, linking,
-packaging and deployment.
-
-## Features
-
-| Area | Capabilities |
-| --- | --- |
-| Parsing | Clang-based C/C++ declarations, types, macros, comments, layouts and templates. |
-| C++ bridges | Supported constructors, methods, inheritance, template instances, exception boundaries and types such as `std::string`, `std::vector` and `std::optional`. |
-| C# output | FunctionTable, DllImport or LibraryImport; raw and friendly APIs; instance or static APIs; split or single-file output. |
-| Runtime | Module loading, handles, memory, UTF-8/16/32 and callback lifetimes; package or emitted source. |
-| Customization | Naming, selection, type mapping, semantics, plugins, custom targets, input-aware caching and workspaces. |
-
-**Requires .NET 10 / C# 14.** Defaults: C17 or C++23, instance API, FunctionTable,
-split files and package Runtime. FunctionTable resolves the required native exports
-into an API instance before calls begin.
+BGCS does not compile or run your project. When a native bridge is needed, your
+project compiles that source alongside, or against, your native library.
 
 ## Quick start
 
-### 1. Install and configure
+Requires **.NET 10 / C# 14**. Defaults are C17 or C++23, an instance API,
+FunctionTable imports and separate files.
 
-Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then:
+### 1. Describe the input
 
 ```bash
-dotnet tool install --global BindGen-CS --version 3.0.0
+dotnet tool install --global BindGen-CS --version 4.0.0
+bindgen-cs init native.h --language c
 ```
 
-Suppose your native library exports this function in `native.h`:
-
-```c
-int bgcs_add(int left, int right);
-```
-
-Save `bindgen.json` beside the header:
+For a header containing `int add(int left, int right);`, a minimal `bindgen.json` is:
 
 ```json
 {
-  "schemaVersion": 1,
-  "library": { "id": "quickstart", "nativeName": "quickstart" },
+  "schemaVersion": 2,
+  "library": { "id": "sample", "nativeName": "sample" },
   "source": { "language": "c", "headers": ["native.h"] },
-  "api": {
-    "namespace": "QuickStart.Generated",
-    "name": "NativeApi",
-    "names": { "bgcs_add": "Add" }
-  },
-  "output": { "root": "Generated", "layout": "split" }
+  "api": { "namespace": "Sample.Generated", "name": "NativeApi", "names": { "add": "Add" } }
 }
 ```
 
-Paths are relative to this configuration. The default target is the current host.
-For your own header, `bindgen-cs init native.h --language c` creates a starter
-configuration and schema.
+Paths are relative to the file that declares them. The default target is the
+supported local desktop environment. Cross-target generation needs explicit target inputs.
 
 ### 2. Generate
 
@@ -80,154 +52,134 @@ configuration and schema.
 bindgen-cs generate bindgen.json
 ```
 
-Add `Generated/<target>/managed/` C# files to your .NET project, for example by
-copying them into its `Generated/` folder. This simple C API needs no bridge.
-
-<details>
-<summary>Output layout and useful commands</summary>
-
 ```text
 Generated/
 ├─ generation.report.json
 └─ <target>/
-   ├─ managed/       # C# source
-   ├─ native/        # Bridge headers/sources, when needed
-   └─ metadata/      # File manifest, ABI and binding metadata
+   ├─ managed/                 C# binding source
+   ├─ native/include/          Bridge headers, when needed
+   ├─ native/src/              Bridge source, when needed
+   └─ metadata/                ABI, native source and capability manifests
 ```
 
-```bash
-bindgen-cs doctor bindgen.json
-bindgen-cs validate bindgen.json
-bindgen-cs inspect bindgen.json --json
-bindgen-cs diff bindgen.json
-bindgen-cs workspace generate workspace.json
-```
+C++ uses the same command with `source.language` set to `cpp`. BGCS plans a C ABI
+bridge automatically. By-value aggregate boundaries normally use typed pointer and
+output channels; a direct import requires an applicable ABI plan.
 
-Set `runtime.mode` to `"source"` to emit Runtime source instead of referencing its
-package. Set `output.layout` to `"singleFile"` for a single `Bindings.cs`.
+### 3. Use the generated files
 
-</details>
-
-### 3. Call from your application
-
-Inside your consumer's existing `.csproj` `<Project>` element, add:
+Add `managed/` sources to your .NET project, enable `AllowUnsafeBlocks`, and reference:
 
 ```xml
-<PropertyGroup>
-  <TargetFramework>net10.0</TargetFramework>
-  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-</PropertyGroup>
-<ItemGroup>
-  <PackageReference Include="BGCS.Runtime" Version="3.0.0" />
-</ItemGroup>
+<PackageReference Include="BGCS.Runtime" Version="4.0.0" />
 ```
 
-Once your native library is built, use its full path as the first application argument:
+After your project builds the native module:
 
 ```csharp
 using System;
-using QuickStart.Generated;
+using Sample.Generated;
 
-using NativeApi api = NativeApi.Load(args[0]);
-Console.WriteLine(api.Add(19, 23)); // 42
+using NativeApi api = NativeApi.Load(args[0]); // Path to your native module.
+Console.WriteLine(api.Add(19, 23));
 ```
 
-```bash
-dotnet run -- "/absolute/path/to/native-library"
-```
+`api.Raw` exposes the physical native boundary. Friendly methods are generated
+when ownership, encoding and lifetime contracts are sufficient. They never infer a
+safe lifetime from a function name alone.
 
-The native file is typically `quickstart.dll`, `libquickstart.so` or
-`libquickstart.dylib`. Use `api.Raw.Add(19, 23)` for the raw entry.
-The [runnable QuickStart](examples/QuickStart/README.md) includes native source
-and an external CMake build.
+## Use from C#
 
-## C++ bindings
-
-In your C++ library's directory:
-
-```bash
-bindgen-cs init include/widget.hpp --language cpp
-bindgen-cs generate bindgen.json
-```
-
-For supported C++ operations, BGCS also emits `native/include/` and `native/src/`.
-This bridge exposes C++ operations through C-callable entry points. Compile and link
-it in your native project; compile the generated C# in your .NET project.
-Use `bridge` to request only bridge sources.
-
-Select concrete template instances and declare ownership, encoding or retained
-callback semantics where needed. Custom types can use plugins, recipes or native
-shims. See the [C++ cookbook](docs/cpp-extension-cookbook.md) and [lowerings](docs/lowering.md).
-
-## Generate from C#
-
-Reference the generator in your own C# tool:
-
-```bash
-dotnet add package BGCS --version 3.0.0
-```
+Reference `BGCS` in your generation tool:
 
 ```csharp
 using System;
 using BGCS;
 
-await using BindingHost host = BindingHost.CreateDefault();
-GenerationResult result = await host.GenerateAsync(
+await using BindingHost generator = BindingGenerator.CreateDefault();
+GenerationResult result = await generator.GenerateAsync(
     GenerationRequest.FromFile("bindgen.json"));
 
 if (!result.success)
     throw new InvalidOperationException(result.GetDiagnosticSummary());
 ```
 
-This ordinary generation library is the **BGCS SDK**. `BindingHost` coordinates
-generation, using the same pipeline as the CLI. The complete package ships matching
-parser resources and prepares its isolated Clang worker locally on first use.
+This ordinary library is the **BGCS SDK**. `BindingHost` coordinates generation;
+it is not a server. The full package supplies matching Clang parser resources and
+prepares its isolated worker locally. It does not download a target SDK.
 
-| Package | Used by |
+## Choose what you need
+
+| Product | Purpose |
 | --- | --- |
-| [`BindGen-CS`](https://www.nuget.org/packages/BindGen-CS) | Terminal commands and scripts. |
-| [`BGCS`](https://www.nuget.org/packages/BGCS) | Your C# generation tool. |
-| [`BGCS.Runtime`](https://www.nuget.org/packages/BGCS.Runtime) | Applications using generated bindings; emitted Runtime source is an alternative. |
-| [`BGCS.Contracts`](https://www.nuget.org/packages/BGCS.Contracts) | Standard generation plugins. |
+| `BindGen-CS` | CLI for terminals and scripts. |
+| `BGCS` | Complete generation library, including standard implementations. |
+| `BGCS.Core` | Neutral models and interfaces for your own generation extensions. |
+| `BGCS.Runtime` | Module, handle, memory, string and callback support used by generated code. |
+| `BGCS.Extension.*` | Optional target or execution implementations, explicitly registered. |
 
-The application needs generated C#, Runtime support and its native library.
-The generator and parser stay with the generation tool.
+Your application needs generated source, Runtime support and its native module.
+It does not need the generator or Clang. Set `runtime.mode` to `source` to emit
+Runtime source instead of referencing the Runtime assembly.
 
-## Platforms and extension
+## Extend with ordinary code
 
-- **Host:** the local OS and process architecture select the parser resources.
-- **Target:** the configuration selects the native layout and calling rules (ABI).
-- **Target SDK:** your supplied headers, sysroot, macros and standard library describe that environment.
+Implement an interface in your own generation project and register its factory:
 
-For example, Windows x64 can generate Android ARM64 bindings using its Windows
-parser and Android NDK headers. Your Android project compiles and links the result.
+```csharp
+using BGCS;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
 
-Tools ship x64/ARM64 host resources for Windows, GNU Linux and macOS. Automated
-native-call checks run on desktop x64; resource availability and target recognition
-do not certify every runtime/ABI combination. See [capabilities](docs/capabilities.md).
+await using BindingHost generator = BindingGenerator.CreateBuilder()
+    .RegisterFactory<INativeModuleTransform>(
+        new ExtensionDescriptor("sample.rules", ExtensionPort.NativeModuleTransform),
+        _ => new SampleRules())
+    .Build();
+```
 
-Start with configuration for naming, selection and semantics. Standard plugins
-reference `BGCS.Contracts` and work with neutral models. A private target plugin
-can supply a custom SDK; a new calling ABI or managed runtime requires its own
-implementation. See [plugins](docs/extensibility.md) and [platform extension](docs/platform-extension.cn.md).
+`SampleRules` implements `INativeModuleTransform`. No published plugin, manifest,
+assembly scan or Clang AST is required. Other interfaces cover targets, runtime
+profiles, call ABIs, lowering, API projection and artifact processing. Extensions
+that cannot describe all of their inputs disable affected cache reuse.
 
-## Documentation
+See [extension interfaces](docs/extensibility.md) and [examples](examples/README.md).
 
-| Start | Customize | Understand |
+## Platforms and SDKs
+
+| Question | Source of the answer |
+| --- | --- |
+| Where does the generator run? | Host services select matching parser resources. |
+| Which native platform is described? | Your target settings and target provider. |
+| Where are system declarations? | Your target SDK/sysroot and header search paths. |
+| What are the layouts? | The frontend interprets those inputs for the selected target. |
+| How can C# call them? | A runtime profile and call ABI provider. |
+
+A Windows parser can analyze another target's headers; that does not execute a
+target program or establish runtime support. A private SDK can be supplied through
+configuration and interface implementations without becoming a BGCS dependency.
+An unknown ABI or unsupported runtime fails explicitly.
+
+Optional official implementations cover Browser Wasm, NativeAOT, Android,
+Apple mobile and FreeBSD. Target/SDK resolution, source generation and real
+execution are separate capabilities. See [the capability boundaries](docs/capabilities.md).
+
+## More control
+
+| Generate | Customize | Understand |
 | --- | --- | --- |
 | [Getting started](docs/getting-started.md) | [Configuration](docs/configuration-guide.md) | [Architecture](docs/architecture.md) |
-| [C# API](docs/api.md) | [C++ cookbook](docs/cpp-extension-cookbook.md) | [ABI safety](docs/abi-safety.md) |
+| [C# API](docs/api.md) | [Native bridges](docs/native-bridge.md) | [ABI safety](docs/abi-safety.md) |
 | [Packages](docs/packages.md) | [Source processing](docs/source-processing.md) | [Runtime lifetimes](docs/runtime-lifetime.md) |
 
-**Examples:** [QuickStart](examples/QuickStart/README.md) · [NativeShim](examples/NativeShim/README.md) ·
-[LoweringPlugin](examples/LoweringPlugin/README.md) · [CustomTargetPlugin](examples/CustomTargetPlugin/README.md) ·
-[CustomAllocator](examples/CustomAllocator/README.md) · [CustomFunctionTable](examples/CustomFunctionTable/README.md).
+Three import modes: **FunctionTable**, **DllImport**, **LibraryImport**.
+Instance or explicit static APIs. Split or single-file output. Local workspaces,
+inspection and diffs. Supported C++ objects, templates and standard-library values
+can be adapted through lowering, recipes or native shims.
 
-[All documentation](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Testing](docs/testing.md)
-
-[Portable native source manifests and consumer input mapping](docs/native-source-inputs.md).
+[Documentation](docs/README.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md)
 
 ## License
 
-[MIT](LICENSE). Third-party copyright and license texts are retained in
-[THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md) and the distributed resource notices.
+[MIT](LICENSE). Applicable third-party copyrights and licenses are retained in
+[THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md) and distributed resource notices.

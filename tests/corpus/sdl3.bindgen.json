@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/bindgen.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "sdl3",
     "nativeName": "SDL3"
@@ -50,7 +50,8 @@
       "SDL_GetVersion": "CorpusVersion",
       "SDL_abs": "CorpusAbsolute",
       "SDL_GetRevision": "CorpusRevision"
-    }
+    },
+    "runtime": "dotnet.coreclr"
   },
   "runtime": {
     "mode": "package"

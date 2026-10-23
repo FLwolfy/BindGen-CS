@@ -1,11 +1,12 @@
+using BGCS.Core.Hosting;
 using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.Publishing;
 using Xunit;
 
@@ -13,6 +14,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class DirectoryArtifactReaderTests : IDisposable
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     private readonly string m_root = Path.Combine(Path.GetTempPath(), "bgcs-candidate-read-" + Guid.NewGuid().ToString("N"));
     public DirectoryArtifactReaderTests() => Directory.CreateDirectory(m_root);
 
@@ -22,7 +24,7 @@ public sealed class DirectoryArtifactReaderTests : IDisposable
         byte[] content = Encoding.UTF8.GetBytes("candidate ✓");
         File.WriteAllBytes(Path.Combine(m_root, "value.txt"), content);
         ArtifactDescriptor[] artifacts = [Descriptor("value.txt", content)];
-        DirectoryArtifactReader reader = new(m_root, artifacts);
+        DirectoryArtifactReader reader = new(m_root, artifacts, m_paths);
         artifacts[0] = Descriptor("other.txt", []);
         Assert.Equal("candidate ✓", await reader.ReadTextAsync("value.txt", CancellationToken.None));
         await Assert.ThrowsAsync<ArgumentException>(() => reader.ReadTextAsync("other.txt", CancellationToken.None).AsTask());
@@ -36,7 +38,7 @@ public sealed class DirectoryArtifactReaderTests : IDisposable
     [InlineData("C:/absolute.txt")]
     [InlineData("nested\\file.txt")]
     public void UnownedOrEscapingPaths_AreRejectedDuringSnapshotConstruction(string path)
-        => Assert.Throws<ArgumentException>(() => new DirectoryArtifactReader(m_root, [Descriptor(path, [])]));
+        => Assert.Throws<ArgumentException>(() => new DirectoryArtifactReader(m_root, [Descriptor(path, [])], m_paths));
 
     [Fact]
     public async Task InvalidTextSizeLimitsAndCancellation_DoNotReturnPartialCandidates()
@@ -44,9 +46,9 @@ public sealed class DirectoryArtifactReaderTests : IDisposable
         byte[] binary = [0xff, 0xfe];
         File.WriteAllBytes(Path.Combine(m_root, "data.bin"), binary);
         ArtifactDescriptor artifact = Descriptor("data.bin", binary);
-        DirectoryArtifactReader reader = new(m_root, [artifact]);
+        DirectoryArtifactReader reader = new(m_root, [artifact], m_paths);
         await Assert.ThrowsAsync<DecoderFallbackException>(() => reader.ReadTextAsync("data.bin", CancellationToken.None).AsTask());
-        await Assert.ThrowsAsync<IOException>(() => new DirectoryArtifactReader(m_root, [artifact], 1).ReadBytesAsync("data.bin", CancellationToken.None).AsTask());
+        await Assert.ThrowsAsync<IOException>(() => new DirectoryArtifactReader(m_root, [artifact], m_paths, 1).ReadBytesAsync("data.bin", CancellationToken.None).AsTask());
         using CancellationTokenSource canceled = new();
         canceled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => reader.ReadBytesAsync("data.bin", canceled.Token).AsTask());

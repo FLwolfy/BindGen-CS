@@ -1,0 +1,2 @@
+
+[[deprecated]] typedef int LegacyNumber;

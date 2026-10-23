@@ -5,12 +5,12 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
-using BGCS.Platforms;
+using BGCS.Interop.DotNet;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -54,7 +54,7 @@ public sealed class NativeExternalProjectionTests
             await File.WriteAllTextAsync(Path.Combine(root, "consumer-types.cs"), consumerTypes);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "external", nativeName = "point_fixture" },
+                schemaVersion = 2, library = new() { id = "external", nativeName = "point_fixture" },
                 source = new() { headers = ["point.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
                 { projectionInputs = new() { sources = ["consumer-types.cs"] },
@@ -71,7 +71,7 @@ public sealed class NativeExternalProjectionTests
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                 cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(result.targetModels);
@@ -82,9 +82,9 @@ public sealed class NativeExternalProjectionTests
             Assert.Equal(0, target.interop.GetType(generic.nativeType).fields.Single(field => field.name == "x").offset);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed, new(configuration.library.nativeName, new NoWrites())
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed, new(configuration.library.nativeName, new NoWrites())
             { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.External.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
-                managedRuntime = ManagedRuntimeResolver.Resolve(target.resolvedTarget!, ManagedRuntimeKind.CoreClr) });
+                managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!) });
             Assert.Equal(2, plan.externalTypeProjections.Length);
             Assert.DoesNotContain(plan.methods, method => method.parameterTypes.Any(type => type.Contains("Vector2", StringComparison.Ordinal) || type.Contains("Pair<", StringComparison.Ordinal)));
             var sources = Directory.GetFiles(Path.Combine(targetRoot, "managed"), "*.cs", SearchOption.AllDirectories)
@@ -138,6 +138,6 @@ public sealed class NativeExternalProjectionTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

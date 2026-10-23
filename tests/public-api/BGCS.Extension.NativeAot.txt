@@ -1,0 +1,13 @@
+class BGCS.Extension.NativeAot.NativeAotCallAbiProvider [sealed; interfaces=BGCS.Core.Plugins.ICacheFingerprintProvider|BGCS.Core.Ports.ICallAbiProvider]
+  ctor()
+  method BGCS.Core.Calls.CallAbiAssessment Assess(BGCS.Core.Calls.CallAbiRequest request) [virtual; final]
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.Extension.NativeAot.NativeAotPlugin [sealed; interfaces=BGCS.Core.Plugins.IBindingPlugin|BGCS.Core.Plugins.ICacheFingerprintProvider|System.IDisposable]
+  ctor()
+  property BGCS.Core.Plugins.PluginDescriptor descriptor { get } [virtual; final]
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Void Configure(BGCS.Core.Plugins.IExtensionRegistryBuilder registry, BGCS.Core.Plugins.PluginConfiguration configuration) [virtual; final]
+class BGCS.Extension.NativeAot.NativeAotRuntimeProvider [sealed; interfaces=BGCS.Core.Plugins.ICacheFingerprintProvider|BGCS.Core.Ports.IManagedRuntimeProvider]
+  ctor()
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Boolean TryResolve(BGCS.Core.Targets.ManagedRuntimeRequest request, out BGCS.Core.Targets.ManagedRuntimeProfile profile) [virtual; final]

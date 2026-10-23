@@ -1,4 +1,4 @@
-"""Prepare independent fixtures through BGCS 3.0's public, neutral bridge pipeline."""
+"""Prepare independent fixtures through BGCS 4.0's public, neutral bridge pipeline."""
 
 import json
 from pathlib import Path
@@ -61,9 +61,9 @@ def stage_repository_generator(root, work, configuration):
     tool_root = work / "generator"
     pack.execution_closure("src/BGCS.Tool", configuration, "BGCS.Tool", tool_root)
     worker = tool_root / "bgcs/worker"
-    pack.execution_closure("src/BGCS.Frontend.Clang.Worker", configuration, "BGCS.Frontend.Clang.Worker", worker)
+    pack.execution_closure(pack.WORKER_PROJECT, configuration, "BGCS.Frontend.Clang.Worker", worker)
     supplemental = os.environ.get("BGCS_OSX_X64_PACKAGE_RUNTIME_DIR") or os.environ.get("BGCS_CLANG_RUNTIME_DIR")
-    native = pack.native_closure(pack.graph("src/BGCS.Frontend.Clang.Worker"), rid, Path(supplemental) if supplemental else None)
+    native = pack.native_closure(pack.graph(pack.WORKER_PROJECT), rid, Path(supplemental) if supplemental else None)
     for name, path in native.items():
         destination = worker / "runtimes" / rid / "native" / name
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -72,6 +72,34 @@ def stage_repository_generator(root, work, configuration):
     (worker / "worker-assets.manifest.json").write_text(json.dumps({"schemaVersion": 1, "hostRid": rid,
         "parserIdentity": "ClangSharp/20.1.2.4;LLVM/20", "artifacts": entries}, indent=2), encoding="utf-8")
     return tool_root / "BGCS.Tool.dll"
+
+
+
+def stage_optional_extension(root, work, configuration, browser):
+    """Declare the exact optional implementation; the engine never loads a platform by name."""
+    manifest = json.loads((root / "distribution/manifests/product-packages.json").read_text(encoding="utf-8"))
+    product = "BGCS.Extension.BrowserWasm" if browser else "BGCS.Extension.NativeAot"
+    extension_id = "bgcs.extension.browser-wasm" if browser else "bgcs.extension.native-aot"
+    directory = work / "extensions" / product
+    directory.mkdir(parents=True, exist_ok=True)
+    names = [*manifest["optionalPackageAssemblies"][product], "BGCS.Core"]
+    files = []
+    for name in names:
+        source = root / manifest["assemblyProjects"][name] / "bin" / configuration / "net10.0" / (name + ".dll")
+        if not source.is_file(): raise RuntimeError("Build the explicitly selected optional implementation first: " + str(source))
+        output = directory / source.name
+        shutil.copyfile(source, output)
+        files.append({"path": output.name, "digest": {"value": file_digest(output)}})
+    prefix = "browser-wasm" if browser else "native-aot"
+    services = ([{"id": prefix + ".target", "port": "nativeTargetProvider"}] if browser else [])
+    services += [{"id": prefix + ".execution", "port": "managedRuntimeProvider"},
+                 {"id": prefix + ".call-abi", "port": "callAbiProvider"}]
+    path = directory / "plugin.json"
+    path.write_text(json.dumps({"schemaVersion": 1, "assembly": product + ".dll",
+        "entryType": product + (".BrowserWasmPlugin" if browser else ".NativeAotPlugin"),
+        "plugin": {"id": extension_id, "version": "4.0.0", "contractsMajor": 4, "services": services},
+        "assets": files}, indent=2), encoding="utf-8")
+    return path
 
 
 def target_configuration(compiler, sysroot=None, cpp=False):
@@ -84,14 +112,17 @@ def target_configuration(compiler, sysroot=None, cpp=False):
     return target
 
 
-def prepare(root, work, dotnet, tool, compiler, environment, run, sysroot=None):
+def prepare(root, work, dotnet, tool, compiler, environment, run, sysroot=None, configuration="Release"):
     shutil.copytree(root / "tests/fixtures/CppFacade", work / "CppFacade")
     config = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "library": {"id": "cpp_facade", "nativeName": "api", "bridgeExportPrefix": "acceptance_cpp"},
         "source": {"language": "cpp", "languageStandard": "c++23", "headers": ["CppFacade/counter.hpp"],
+                   "includeDirectories": ["CppFacade"],
                    "parseComments": False, "parseMacros": False, "includeSystemDeclarations": False},
         "targets": [target_configuration(compiler, sysroot, cpp=True)],
+        "api": {"runtime": "dotnet.mono-wasm" if sysroot else "dotnet.native-aot"},
+        "extensions": {"plugins": [str(stage_optional_extension(root, work, configuration=configuration, browser=bool(sysroot)))]},
         "cache": {"enabled": False}, "output": {"root": "Bridge"},
     }
     path = work / "bridge.json"
@@ -107,8 +138,8 @@ def prepare(root, work, dotnet, tool, compiler, environment, run, sysroot=None):
         if isinstance(value, list): return [identifiers(item) for item in value]
         return value
     module = identifiers(json.loads(models[0].read_text(encoding="utf-8-sig")))
-    if module.get("modelRevision") != 1:
-        raise RuntimeError("The fixture reader requires bridge model revision 1.")
+    if module.get("modelRevision") != 2:
+        raise RuntimeError("The fixture reader requires native bridge model revision 2.")
     declarations = {item["id"]: item for item in module["source"]["declarations"]}
     types = {item["id"]: item for item in module["source"]["types"]}
 
@@ -163,7 +194,7 @@ def prepare(root, work, dotnet, tool, compiler, environment, run, sysroot=None):
                         + "\n    #undef BGCS_FIXTURE_SYMBOL")
     native_source.write_text(text, encoding="utf-8")
     return {"source": source, "header": header, "symbols": symbols, "names": names,
-            "operations": operations, "types": bridge_types}
+            "operations": operations, "types": bridge_types, "plugin": config["extensions"]["plugins"][0]}
 
 
 def binding_configuration(mode, namespace, compiler, bridge, sysroot=None):
@@ -176,14 +207,15 @@ def binding_configuration(mode, namespace, compiler, bridge, sysroot=None):
             ("bgcs_alias_record", "record", "inputOutput"), ("bgcs_alias_record", "field", "inputOutput"),
             ("bgcs_alias_span", "value", "inputOutput"))]
     configuration = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "library": {"id": "native_" + mode.lower(), "nativeName": "api"},
         "source": {"language": "c", "languageStandard": "c17", "headers": ["Native/api.h", str(bridge["header"])],
+                   "includeDirectories": ["Native", str(bridge["header"].parent)],
                    "parseComments": False, "parseMacros": False, "includeSystemDeclarations": False},
         "targets": [target_configuration(compiler, sysroot)],
         "api": {"name": "NativeApi", "namespace": namespace + "." + mode, "style": "instance",
                 "importMode": mode[0].lower() + mode[1:], "framework": "net10.0",
-                "runtime": "browserWasm" if sysroot else "nativeAot", "names": bridge["names"],
+                "runtime": "dotnet.mono-wasm" if sysroot else "dotnet.native-aot", "names": bridge["names"],
                 "enums": [{"name": "WideFlags", "underlyingType": "uInt64", "isFlags": True,
                            "values": [{"name": "HighBit", "value": str(1 << 60)},
                                       {"name": "AddedBit", "value": str(1 << 59)},
@@ -225,6 +257,8 @@ def binding_configuration(mode, namespace, compiler, bridge, sysroot=None):
             "successStatus": "0", "cancellationStatus": "1", "cancelFunction": "bgcs_event_async_cancel",
             "cancelHandleParameter": "handle", "cancellationIsNonBlocking": True,
             "cancellationQuiescence": "unknown", "retainedParameters": ["values"]}]
+    if not sysroot: configuration["bridge"] = {"aggregateStrategy": "direct"}
+    configuration["extensions"] = {"plugins": [str(bridge["plugin"])]}
     return configuration
 
 
@@ -272,18 +306,24 @@ def write_consumer(root, work, namespace, pointer_size, aggregates=False):
     text = text.replace("__ENTRY_POINT__", "private static global::System.Threading.Tasks.Task<int> Main() => BrowserLifecycleRunner.RunAsync(RunBaseline, FinishLifecycle);" if browser
                         else "private static int Main() => RunBaseline();")
     text = text.replace("__BASELINE_PRINT__", "" if browser else "Console.WriteLine(m_report);")
-    text = text.replace("__BROWSER_LIFECYCLE_REPORT__", "internal static FunctionTable.NativeApi CreateLifecycleTable() => FunctionTable.NativeApi.FromProvider(new SymbolProvider());\n"
+    text = text.replace("__BROWSER_LIFECYCLE_REPORT__", "internal static FunctionTable.NativeApi CreateLifecycleTable() => FunctionTable.NativeApi.FromProvider(new SymbolProvider(), callbackDispatcher);\n"
                         "    private static void FinishLifecycle(bool success, string? error, string[] checks) { m_lifecycleChecks = checks; m_report = SerializeReport(success, error); Console.WriteLine(m_report); }" if browser else "")
     text = text.replace("__MAIN_ASSERTION__", 'Assert(sizeof(nint) == 4, "The consumer must execute inside wasm32.");' if browser else "")
     text = text.replace("__AGGREGATE_DIRECT_CHECKS__", "RunAggregatesDllImport(dll); RunAggregatesLibraryImport(library);" if aggregates else "")
     text = text.replace("__AGGREGATE_TABLE_CHECKS__", "RunAggregatesFunctionTable(api);" if aggregates else "")
-    text = text.replace("__STATIC_ADAPTER_CHECK__", 'using (var linked = FunctionTable.NativeApi.FromStatic()) Assert(linked.Raw.BgcsAdd(3, 4) == 7, "The generated static adapter resolves the complete native table.");' if browser else "")
+    text = text.replace("__STATIC_ADAPTER_CHECK__", 'using (var linked = FunctionTable.NativeApi.FromStatic(callbackDispatcher)) Assert(linked.Raw.BgcsAdd(3, 4) == 7, "The generated static adapter resolves the complete native table.");' if browser else "")
+    if browser:
+        text = text.replace("    private static int RunBaseline()", "    internal static readonly NativeCallbackDispatcher callbackDispatcher = new(action => Enqueue(action, 0));\n"
+            "    [JSImport(\"globalThis.setTimeout\")]\n    private static partial void Enqueue([JSMarshalAs<JSType.Function>] Action action, int timeout);\n\n    private static int RunBaseline()")
+        text = text.replace("NativeApi.Create()", "NativeApi.Create(callbackDispatcher)")
+        text = text.replace("NativeApi.FromProvider(context)", "NativeApi.FromProvider(context, callbackDispatcher)")
+        text = text.replace("NativeApi.FromProvider(failing)", "NativeApi.FromProvider(failing, callbackDispatcher)")
     (work / "Program.cs").write_text(text.replace("__RUNNERS__", runners), encoding="utf-8")
     if browser:
         lifecycle = (root / "tests/wasm/Lifecycle.cs.in").read_text(encoding="utf-8")
         modes = (root / "tests/wasm/LifecycleMode.cs.in").read_text(encoding="utf-8")
         lifecycle = lifecycle.replace("__MODE_FACTORIES__", "\n".join(modes.replace("__MODE__", mode)
-            .replace("__FACTORY__", "Program.CreateLifecycleTable()" if mode == "FunctionTable" else mode + ".NativeApi.Create()") for mode in MODES))
+            .replace("__FACTORY__", "Program.CreateLifecycleTable()" if mode == "FunctionTable" else mode + ".NativeApi.Create(Program.callbackDispatcher)") for mode in MODES))
         (work / "Lifecycle.cs").write_text(lifecycle.replace("__NAMESPACE__", namespace), encoding="utf-8")
 
 

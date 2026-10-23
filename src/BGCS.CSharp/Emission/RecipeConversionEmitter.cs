@@ -82,7 +82,7 @@ internal static class RecipeConversionEmitter
         string expression
     ) => method.valueProjections.TryGetValue(index, out CSharpRecipeProjectionPlan? projection) && projection.fromNativeExpression is not null
         ? "RecipeConversions." + FromNative(projection) + "(" + expression + ")" : expression;
-    internal static string DirectResultType(CSharpMethodPlan method) => method.returnProjection is { fromNativeExpression: not null } projection ? projection.managedType : method.returnType;
+    internal static string DirectResultType(CSharpMethodPlan method) => method.projectedReturnType;
     internal static string DirectResult(
         CSharpMethodPlan method,
         string expression

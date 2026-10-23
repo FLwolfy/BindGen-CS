@@ -4,9 +4,11 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Interop;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -34,10 +36,20 @@ public sealed class NativeCHeaderHelperTests
             Assert.True(result.success, result.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(result.targetModels);
             Assert.Contains(target.native.declarations, declaration => declaration.name == "Local" && declaration.isStatic && declaration.isDefinition);
-            Assert.All(target.interop.functions.Where(function => function.sourceName != "External"), helper => Assert.StartsWith("bgcs_helpers_helper_", helper.exportName));
-            Assert.Contains(target.interop.functions, function => function.sourceName == "External" && function.exportName == "External");
+            Assert.All(target.interop.functions, function => Assert.StartsWith(target.bridge!.exportPrefix + "_", function.exportName));
+            NativeDeclaration originalExternal = Assert.Single(target.native.declarations, declaration => declaration.kind == "Function" && declaration.name == "External");
+            InteropFunction external = Assert.Single(target.interop.functions, function => function.sourceName == "External" && function.sourceDeclaration == originalExternal.id);
+            Assert.NotEqual("External", external.exportName);
+            NativeSourceManifest manifest = Assert.Single(result.nativeSources);
+            NativeExportBinding binding = Assert.Single(manifest.exportBindings, item => item.callableId == external.id);
+            Assert.Equal(originalExternal.id, binding.sourceDeclaration);
+            Assert.Equal(external.exportName, binding.exportName);
+            Assert.Equal(configuration.library.id, binding.moduleId);
+            Assert.Equal(configuration.library.nativeName, manifest.module.nativeName);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            Assert.True(File.Exists(Path.Combine(targetRoot, "native", "src", "bgcs_helpers_helpers.c")));
+            string bridgeSource = target.targetId + "/native/src/" + target.bridge!.exportPrefix + ".c";
+            Assert.Contains(manifest.sources, artifact => artifact.relativePath == bridgeSource && artifact.mediaType == "text/x-c");
+            Assert.True(File.Exists(Path.Combine(result.outputRoot, bridgeSource)));
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             object? answer = await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, "helper_fixture", """
                 using System;
@@ -71,7 +83,7 @@ public sealed class NativeCHeaderHelperTests
 
     private static BindingConfiguration Configuration(BindingImportMode importMode, string runtimeMode) => new()
     {
-        schemaVersion = 1, library = new() { id = "helpers", nativeName = "helper_fixture" },
+        schemaVersion = 2, library = new() { id = "helpers", nativeName = "helper_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["helpers.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false, includeHeaderHelpers = true },
         api = new() { @namespace = "Generated.Helpers", name = "HelperApi", importMode = importMode },
         runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
@@ -95,12 +107,12 @@ public sealed class NativeCHeaderHelperTests
         static inline int (*HelperGet(void))(int) { return &NativeValue; }
         """;
 
-    private static BindingHost Host() => BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+    private static BindingHost Host() => BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
     private static string WorkerRoot()
     {
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

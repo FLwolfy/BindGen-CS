@@ -21,9 +21,9 @@ SPEC.loader.exec_module(VERIFIER)
 def custom_target_evidence():
     """Synthetic parser-control data, never an actual installed consumer receipt."""
     return {"manifestSha256": "a" * 64, "configurationSha256": "b" * 64,
-        "pluginSourceSha256": "c" * 64, "pluginReferences": ["BGCS.Contracts"],
+        "pluginSourceSha256": "c" * 64, "pluginReferences": ["BGCS.Core"],
         "pluginAssets": [{"file": name, "sha256": "d" * 64} for name in
-            ("Package.CustomTarget.dll", "Package.CustomTarget.deps.json", "BGCS.Contracts.dll")],
+            ("Package.CustomTarget.dll", "Package.CustomTarget.deps.json", "BGCS.Core.dll")],
         "entries": {entry: {"targetId": "example-private-host", "phases": [
             {"phase": phase, "sdkValue": sdk + (index >= 2), "profileValue": profile + (index == 3),
                 "primaryFrontend": "hit" if index == 1 else "miss", "csharpEmission": "hit" if index == 1 else "miss",
@@ -38,9 +38,10 @@ def complete_receipt(*, applications=False):
     revision = 'a' * 40
     content = 'b' * 64
     version = '0.0.0-local.ci123'
-    packages = [f'{name}.{version}.{extension}' for name in ('BGCS.Contracts', 'BGCS', 'BGCS.Runtime') for extension in ('nupkg', 'snupkg')]
-    packages += [f'BindGen-CS.{rid}.{version}.nupkg' for rid in ('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')]
-    packages += [f'BindGen-CS.{version}.nupkg', f'BGCS.ParserRuntime.osx-x64.{version}.nupkg']
+    manifest = VERIFIER.PRODUCT_MANIFEST
+    packages = [f'{name}.{version}.nupkg' for name in manifest['products'] + manifest['optionalProducts'] + manifest['technicalPackages']]
+    packages += [f'{name}.{version}.snupkg' for name in manifest['symbolProducts']]
+    packages += [f'BindGen-CS.{rid}.{version}.nupkg' for rid in manifest['toolRuntimeIdentifiers']]
     return {'schemaVersion': 1, 'success': True, 'sourceRevision': revision, 'sourceWorktreeDirty': False,
             'sourceBytesStable': True, 'completeProductSet': True, 'checkedOutSourceSha256': content,
             'hostRuntimeIdentifier': 'win-x64', 'version': version,
@@ -57,7 +58,7 @@ def complete_receipt(*, applications=False):
                 'pluginAssets': [{'file': name, 'sha256': 'f' * 64} for name in ('ClangFactPlugin.dll', 'ClangFactPlugin.deps.json')]},
             'installedSourceContributor': {'receipt': 'installed-source-contributor.json', 'receiptSha256': '6' * 64,
                 'manifestSha256': '5' * 64, 'pluginAssets': [{'path': name, 'digest': {'value': '4' * 64}}
-                    for name in ('Package.Plugin.dll', 'Package.Plugin.deps.json', 'BGCS.Contracts.dll')],
+                    for name in ('Package.Plugin.dll', 'Package.Plugin.deps.json', 'BGCS.Core.dll')],
                 'entries': {entry: {'language': 'cpp', 'nativeAndManagedInvoked': True, 'rejectionPreservedAllFiles': True,
                     'phases': [{'phase': phase, 'emission': status, 'artifactCount': 11, 'manifestSha256': str(index + 1) * 64,
                                 'inputRootMembershipSha256': ('1' if index == 0 else '2') * 64,
@@ -65,7 +66,9 @@ def complete_receipt(*, applications=False):
                         for index, (phase, status) in enumerate((('cold', 'miss'), ('warm', 'hit'), ('changed', 'miss')))]}
                     for entry in ('sdk', 'cli')}},
             'installedCustomTarget': custom_target_evidence(),
-            'checks': [*(VERIFIER.MATRICES if applications else {}), *VERIFIER.ADVANCED_CHECKS, *SOURCE_CHECKS, *VERIFIER.SDK_CONTENT_CHECKS, VERIFIER.COMPLETE_SOURCE_CHECK, TARGET_CHECK, 'installed-tool-all-unified-generation-commands']}
+            'optionalExtensions': [{'product': product, 'pluginType': product.rsplit('.', 1)[1] + 'Plugin', 'coreOnlyProductDependency': True,
+                'assemblySha256': 'c' * 64, 'coreSha256': 'd' * 64} for product in VERIFIER.PRODUCT_MANIFEST['optionalProducts']],
+            'checks': [*(VERIFIER.MATRICES if applications else {}), *VERIFIER.ADVANCED_CHECKS, *SOURCE_CHECKS, *VERIFIER.SDK_CONTENT_CHECKS, VERIFIER.OPTIONAL_CHECK, VERIFIER.COMPLETE_SOURCE_CHECK, TARGET_CHECK, 'installed-tool-all-unified-generation-commands']}
 
 
 def complete_reports(receipt):
@@ -101,6 +104,18 @@ def complete_reports(receipt):
 
 
 class WorkflowProductEvidenceTests(unittest.TestCase):
+    def test_every_optional_extension_requires_independent_current_package_consumption(self):
+        for fault in ('missing', 'duplicate', 'dependency', 'hash', 'marker'):
+            with self.subTest(fault=fault):
+                receipt = complete_receipt()
+                if fault == 'missing': receipt['optionalExtensions'].pop()
+                elif fault == 'duplicate': receipt['optionalExtensions'][-1] = receipt['optionalExtensions'][0]
+                elif fault == 'dependency': receipt['optionalExtensions'][0]['coreOnlyProductDependency'] = False
+                elif fault == 'hash': receipt['optionalExtensions'][0]['assemblySha256'] = 'unverified'
+                else: receipt['checks'].remove(VERIFIER.OPTIONAL_CHECK)
+                with self.assertRaisesRegex(RuntimeError, 'optional extension'):
+                    VERIFIER.validate(receipt, receipt['sourceRevision'], receipt['hostRuntimeIdentifier'])
+
     def test_custom_target_requires_both_installed_entry_points_and_changed_input_facts(self):
         for fault in ('marker', 'closure', 'reference', 'sdk', 'cli', 'phase', 'duplicate', 'warm',
                       'sdk-hit', 'profile-hit', 'stale-fact', 'header-unchanged', 'profile-unchanged'):

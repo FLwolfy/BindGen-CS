@@ -1,10 +1,14 @@
+using System;
 using System.Collections.Immutable;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using System.Linq;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Interop;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
+using BGCS.Core.Calls;
+using BGCS.Core.Capabilities;
 
 namespace BGCS.CSharp.Planning;
 
@@ -20,6 +24,8 @@ public sealed record CSharpEmissionPlan(
     ImmutableArray<CSharpMethodPlan> methods
 )
 {
+    /// <summary>Gets per-declaration source-generation results computed from actual raw, friendly and omitted plans.</summary>
+    public ImmutableArray<BindingCapabilityReport> capabilities { get; init; } = [];
     /// <summary>Gets explicit runtime-specific physical import carriers whose exact typed API is retained through checked address conversions.</summary>
     public ImmutableArray<CSharpPhysicalImportPlan> physicalImports { get; init; } = [];
     /// <summary>Gets an independently compiler-checked external constant for static native import attributes.</summary>
@@ -94,7 +100,7 @@ public sealed record CSharpEmissionPlan(
     public ImmutableArray<CSharpConstantPlan> constants { get; init; } = [];
     /// <summary>Gets exact Unicode fields or readonly native-code-unit properties.</summary>
     public ImmutableArray<CSharpStringConstantPlan> stringConstants { get; init; } = [];
-    /// <summary>Gets whether the verified browser LibraryImport profile uses its default Cdecl import convention.</summary>
+    /// <summary>Gets whether the selected execution profile establishes the exact default LibraryImport convention.</summary>
     public bool libraryImportUsesPlatformDefault { get; init; }
     /// <summary>Gets aggregate ABI shapes checked separately from storage size and offsets.</summary>
     public ImmutableArray<CSharpAggregateCallPlan> aggregateCalls { get; init; } = [];
@@ -165,13 +171,13 @@ public sealed record CSharpOpaqueCallablePlan(
 /// <param name="callingAbi">The selected implemented calling algorithm.</param>
 /// <param name="size">The complete native size.</param>
 /// <param name="alignment">The matched managed and native alignment.</param>
-/// <param name="eightByteClasses">System V eightbyte classes, or the Microsoft size-based argument/return form.</param>
+/// <param name="callSites">The complete call plans using this aggregate, preserving parameter and result classifications separately.</param>
 public sealed record CSharpAggregateCallPlan(
     StableId nativeType,
-    ManagedAggregateCallingAbi callingAbi,
+    CallAbiId callingAbi,
     int size,
     int alignment,
-    ImmutableArray<string> eightByteClasses
+    ImmutableArray<NativeCallPlan> callSites
 );
 
 /// <summary>Plans an explicit managed enum without changing any raw ABI carrier.</summary>
@@ -238,14 +244,16 @@ public sealed record CSharpOwnedResultPlan(
 
 /// <summary>Plans one typed object wrapper over an independently owned native handle.</summary>
 /// <param name="name">The checked nested C# object name.</param>
-/// <param name="nativeType">The original native class identity.</param>
+/// <param name="nativeType">The original native class identity, or null for an explicitly generated bridge owner.</param>
 /// <param name="methodIndices">Status-method plan indices that operate on this class.</param>
 public sealed record CSharpObjectPlan(
     string name,
-    StableId nativeType,
+    StableId? nativeType,
     ImmutableArray<int> methodIndices
 )
 {
+    /// <summary>Gets the explicit bridge-owned owner identity when the wrapper does not represent an original native type.</summary>
+    public StableId? generatedType { get; init; }
     /// <summary>Gets whether this wrapper owns the native resource or only retains its supplying module.</summary>
     public ManagedReceiverKind kind { get; init; }
     /// <summary>Gets explicit direct C members, separate from checked C++ status-member indices.</summary>
@@ -294,6 +302,13 @@ public sealed record CSharpMethodPlan(
     public ImmutableArray<CSharpValueParameterPlan> valueParameters { get; init; } = [];
     /// <summary>Gets explicit managed input or original-result conversions keyed by native parameter index.</summary>
     public ImmutableDictionary<int, CSharpRecipeProjectionPlan> valueProjections { get; init; } = ImmutableDictionary<int, CSharpRecipeProjectionPlan>.Empty;
+    /// <summary>Gets the physical pointer channel implementing the original by-value result, or null for an ordinary raw return.</summary>
+    public int? copiedResultIndex { get; init; }
+    /// <summary>Gets the projected logical return spelling while preserving the separate physical import signature.</summary>
+    public string projectedReturnType => copiedResultIndex is int index
+        ? valueProjections.TryGetValue(index, out CSharpRecipeProjectionPlan? copy) && copy.fromNativeExpression is not null
+            ? copy.managedType : valueParameters.Single(value => value.parameterIndex == index).managedElementType
+        : returnProjection is { fromNativeExpression: not null } projection ? projection.managedType : returnType;
     /// <summary>Gets an explicit managed direct-return conversion.</summary>
     public CSharpRecipeProjectionPlan? returnProjection { get; init; }
 }

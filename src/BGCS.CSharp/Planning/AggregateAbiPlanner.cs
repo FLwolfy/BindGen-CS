@@ -2,19 +2,38 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Targets;
+using BGCS.Core.Calls;
+using BGCS.Analysis.Calls;
 
 namespace BGCS.CSharp.Planning;
 
 /// <summary>Checks aggregate field representation, managed alignment and calling classification independently.</summary>
-internal sealed class AggregateAbiPlanner(
-    InteropModule module,
-    ManagedRuntimeProfile? runtime
-)
+internal sealed class AggregateAbiPlanner
 {
+    private readonly InteropModule module;
+    private readonly ManagedRuntimeProfile runtime;
+    private readonly Dictionary<(NativeCallDirection, StableId), NativeCallPlan> m_plans = [];
+
+    internal AggregateAbiPlanner(
+        InteropModule module,
+        ManagedRuntimeProfile runtime,
+        ImmutableArray<NativeCallPlan> plans
+    ) {
+        this.module = module;
+        this.runtime = runtime;
+        CallPlanValidator validation = new(module, runtime);
+        foreach (NativeCallPlan plan in plans)
+        {
+            validation.Verify(plan);
+            if (!m_plans.TryAdd((plan.signature.direction, plan.signature.id), plan))
+                throw new InvalidOperationException("A physical signature has more than one direct-call plan.");
+        }
+    }
+
     private readonly Dictionary<StableId, Shape?> m_shapes = [];
     private readonly Dictionary<StableId, CSharpAggregateCallPlan> m_calls = [];
 
@@ -26,36 +45,27 @@ internal sealed class AggregateAbiPlanner(
         return shape is null ? (1, null) : (shape.Alignment, shape.Alignment);
     }
 
+    internal void RequireSignature(NativeCallSignature signature)
+    {
+        if (!m_plans.TryGetValue((signature.direction, signature.id), out NativeCallPlan? plan)
+            || !CallPlanValidator.SameSignature(signature, plan.signature))
+            throw new NotSupportedException("The physical call, including any aggregate carriers, has no complete plan from its explicitly selected calling-ABI provider. Select the matching implementation or generate a native pointer bridge/shim for this signature.");
+    }
+
     internal void CheckCall(StableId id)
     {
         InteropType type = Underlying(id);
-        ManagedAggregateAbiProfile profile = runtime?.aggregateAbi
-            ?? throw Unsupported(type, "The managed runtime has no implemented aggregate calling profile.");
-        if (!Enum.IsDefined(profile.callingAbi) || profile.nativeTargetId != module.targetId || profile.pointerSize != 8 || module.pointerSize != 8
-            || profile.byteOrder != NativeByteOrder.LittleEndian || module.byteOrder != profile.byteOrder
-            || !profile.triple.StartsWith("x86_64-", StringComparison.Ordinal)
-            || profile.callingAbi == ManagedAggregateCallingAbi.WindowsX64 && !profile.triple.Contains("windows-msvc", StringComparison.Ordinal)
-            || profile.callingAbi == ManagedAggregateCallingAbi.SystemVAmd64 && !profile.triple.Contains("linux-gnu", StringComparison.Ordinal)
-                && !profile.triple.Contains("darwin", StringComparison.Ordinal) && !profile.triple.Contains("macos", StringComparison.Ordinal)
-            || runtime!.kind is not (ManagedRuntimeKind.CoreClr or ManagedRuntimeKind.NativeAot))
-            throw Unsupported(type, "The aggregate runtime profile does not match the established native target.");
         if (m_calls.ContainsKey(type.id)) return;
         Shape shape = Describe(type.id, [])
-            ?? throw Unsupported(type, "Its fields, managed alignment or complete storage cannot be represented by this aggregate implementation.");
-        ImmutableArray<string> classes;
-        if (profile.callingAbi == ManagedAggregateCallingAbi.WindowsX64)
-            classes = [shape.Size is 1 or 2 or 4 or 8 ? "Integer" : "Indirect"];
-        else if (shape.Size > 16)
-            classes = ["Memory"];
-        else
-        {
-            string[] words = Enumerable.Repeat("NoClass", checked((shape.Size + 7) / 8)).ToArray();
-            bool aligned = Classify(type.id, 0, words, []);
-            // Empty or pure-padding shapes have no independently represented source field classification.
-            if (words.All(value => value == "NoClass")) throw Unsupported(type, "The record has no classifiable native fields.");
-            classes = aligned ? words.ToImmutableArray() : ["Memory"];
-        }
-        m_calls.Add(type.id, new(type.id, profile.callingAbi, shape.Size, shape.Alignment, classes));
+            ?? throw Unsupported(type, "Its complete managed storage cannot be represented independently of calling classification.");
+        NativeCallPlan[] sites = m_plans.Values.Where(plan => plan.parameters.Any(value => Underlying(value.nativeType).id == type.id)
+            || plan.returnValue is not null && Underlying(plan.returnValue.nativeType).id == type.id).ToArray();
+        NativeCallValuePlan[] values = sites.SelectMany(plan => plan.returnValue is null ? plan.parameters : plan.parameters.Add(plan.returnValue))
+            .Where(value => Underlying(value.nativeType).id == type.id).ToArray();
+        if (values.Length == 0 || values.Any(value => value.size != shape.Size || value.alignment != shape.Alignment))
+            throw Unsupported(type, "No exact ABI plan establishes this carrier's calling representation.");
+        m_calls.Add(type.id, new(type.id, runtime.callAbi, shape.Size, shape.Alignment,
+            sites.OrderBy(plan => plan.signature.direction).ThenBy(plan => plan.signature.id.value, StringComparer.Ordinal).ToImmutableArray()));
     }
 
     private Shape? Describe(
@@ -120,42 +130,6 @@ internal sealed class AggregateAbiPlanner(
             active.Remove(type.id);
             m_shapes[type.id] = result;
         }
-    }
-
-    private bool Classify(
-        StableId id,
-        long offset,
-        string[] words,
-        HashSet<StableId> active
-    ) {
-        InteropType type = Underlying(id);
-        if (!active.Add(type.id)) return false;
-        try
-        {
-            if (type.category == NativeTypeCategory.Enumeration) return Classify(type.elementType!.Value, offset, words, active);
-            if (type.category == NativeTypeCategory.Record)
-            {
-                bool aligned = true;
-                foreach (InteropField field in type.fields)
-                    aligned &= Classify(field.type, checked(offset + field.offset!.Value), words, active);
-                return aligned;
-            }
-            if (type.category == NativeTypeCategory.Array)
-            {
-                long stride = Underlying(type.elementType!.Value).size!.Value;
-                bool aligned = true;
-                for (long index = 0; index < type.arrayLength; index++)
-                    aligned &= Classify(type.elementType.Value, checked(offset + index * stride), words, active);
-                return aligned;
-            }
-            int first = checked((int)(offset / 8)), last = checked((int)((offset + type.size!.Value - 1) / 8));
-            if (first < 0 || last >= words.Length) throw new InvalidOperationException("An aggregate field exceeds the checked eightbyte storage extent.");
-            string classification = type.primitiveKind is "Float" or "Double" ? "Sse" : "Integer";
-            for (int index = first; index <= last; index++)
-                words[index] = words[index] == "NoClass" ? classification : words[index] == classification ? classification : "Integer";
-            return offset % type.alignment!.Value == 0;
-        }
-        finally { active.Remove(type.id); }
     }
 
     private InteropType Underlying(StableId id)

@@ -34,7 +34,7 @@ def sdk_root(dotnet: Path) -> tuple[Path, str, str]:
 
 def components(configuration: str) -> dict[str, Path]:
     suffix = Path('bin') / configuration / 'net10.0'
-    result = {'host': ROOT / 'tests/BGCS.Tests' / suffix, 'worker': ROOT / 'src/BGCS.Frontend.Clang.Worker' / suffix,
+    result = {'host': ROOT / 'tests/BGCS.Tests' / suffix, 'worker': ROOT / 'extensions/frontends/BGCS.Frontend.Clang.Worker' / suffix,
             'driver': ROOT / 'eng/BGCS.TestDriver' / suffix,
             **{'fixture/' + name: ROOT / 'tests/fixtures' / kind / name / suffix for kind, name in
                (('plugins', 'NeutralLoweringPlugin'), ('plugins', 'ClangFactPlugin'), ('hosts', 'EmbeddedSdkHost'))}}

@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -62,7 +62,7 @@ public sealed class NativeCBooleanTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "c_boolean", nativeName = "c_boolean_fixture" },
+                schemaVersion = 2, library = new() { id = "c_boolean", nativeName = "c_boolean_fixture" },
                 source = new() { headers = ["boolean.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.CBoolean", name = "BooleanApi", importMode = mode,
                     nestGeneratedTypesInApi = nested,
@@ -88,7 +88,7 @@ public sealed class NativeCBooleanTests
                     direction = NativeParameterDirection.InputOutput, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }] },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(result.targetModels);
@@ -140,6 +140,6 @@ public sealed class NativeCBooleanTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

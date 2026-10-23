@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -6,8 +7,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Caching;
@@ -15,7 +16,8 @@ namespace BGCS.Infrastructure.Caching;
 /// <summary>Stores bounded, complete candidate artifact sets without publishing or validating a consumer build.</summary>
 public sealed class GenerationStageCache
 {
-    private const int C_REVISION = 2;
+    private const int C_REVISION = 3;
+    private readonly IHostPathService m_paths;
     private readonly string m_root;
     private readonly OwnedPathBoundary m_boundary;
     private readonly long m_maximumBytes;
@@ -26,19 +28,22 @@ public sealed class GenerationStageCache
 
     /// <summary>Captures a rebuildable cache directory and its disk budgets.</summary>
     /// <param name="root">The absolute or relative cache directory, outside all source and output roots.</param>
+    /// <param name="paths">The explicitly selected host path service.</param>
     /// <param name="maximumBytes">The total stored-entry budget in bytes.</param>
     /// <param name="maximumEntryBytes">The maximum serialized entry size, at most 256 MiB.</param>
     public GenerationStageCache(
         string root,
+        IHostPathService paths,
         long maximumBytes = 536870912,
         int maximumEntryBytes = 67108864
     ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         if (maximumBytes <= 0 || maximumEntryBytes <= 0 || maximumEntryBytes > 268435456 || maximumBytes < maximumEntryBytes)
             throw new ArgumentOutOfRangeException(nameof(maximumBytes), "Cache budgets must be positive and contain at least one bounded entry.");
-        m_boundary = new(root);
+        m_paths = paths;
+        m_boundary = new(root, paths);
         m_root = m_boundary.physicalPath;
-        if (string.Equals(m_root, Path.GetPathRoot(m_root)?.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+        if (paths.Equals(m_root, Path.GetPathRoot(m_root)!))
             throw new ArgumentException("A cache directory cannot be a volume root.", nameof(root));
         m_maximumBytes = maximumBytes;
         m_maximumEntryBytes = maximumEntryBytes;
@@ -83,7 +88,7 @@ public sealed class GenerationStageCache
             Entry entry = JsonSerializer.Deserialize<Entry>(bytes) ?? throw new InvalidDataException("The cached entry is empty.");
             if (entry.revision != C_REVISION || entry.key != key.value || entry.artifacts is null || entry.artifacts.Length > 50000)
                 throw new InvalidDataException("The cached entry identity or artifact set is invalid.");
-            HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> paths = new(StringComparer.Ordinal);
             ImmutableArray<CachedStageArtifact>.Builder verified = ImmutableArray.CreateBuilder<CachedStageArtifact>();
             foreach (StoredArtifact artifact in entry.artifacts)
             {
@@ -127,7 +132,7 @@ public sealed class GenerationStageCache
         CancellationToken cancellationToken = default
     ) {
         if (artifacts.IsDefault) throw new ArgumentException("A cached stage requires a complete artifact array.", nameof(artifacts));
-        HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> paths = new(StringComparer.Ordinal);
         List<StoredArtifact> stored = [];
         long total = 0;
         foreach (CachedStageArtifact artifact in artifacts)
@@ -197,8 +202,8 @@ public sealed class GenerationStageCache
         // installs/pruning as well as other writers, including other processes.
         // Retain one inode so releasing ownership cannot split the lock domain.
         string scope = Path.Combine(m_root, "entries");
-        RejectLink(DirectoryPublicationLease.GetPath(scope));
-        try { return DirectoryPublicationLease.Acquire(scope, TimeSpan.FromSeconds(30), cancellationToken); }
+        RejectLink(DirectoryPublicationLease.GetPath(scope, m_paths));
+        try { return DirectoryPublicationLease.Acquire(scope, m_paths, TimeSpan.FromSeconds(30), cancellationToken); }
         catch (TimeoutException failure)
         {
             throw new IOException("Another generation cache operation retained entry-set ownership beyond the bounded wait.", failure);

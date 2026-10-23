@@ -1,104 +1,175 @@
 {
-  "schemaVersion": 1,
-  "productVersion": "3.0.1",
-  "scope": "Reviewed additive patch-version API and native source manifest changes; not platform/package/release certification.",
+  "schemaVersion": 2,
+  "productVersion": "4.0.0",
+  "scope": "Current 4.0 candidate public API shape extracted from compiled assemblies; not feature, runtime, platform, package or release certification.",
   "releaseCertification": false,
+  "sourceRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
   "sourceWorktreeDirtyAtReview": true,
   "snapshotEncoding": "UTF-8 without BOM, invariant LF, final newline",
   "reviewedBoundaries": [
-    "Contracts and Runtime independent",
-    "standard ports expose neutral immutable contracts",
-    "frontend has only one frontend and three explicitly advanced worker types",
-    "old facade/configuration/parser authoring cones absent",
-    "internal implementation APIs are delivered in the SDK but are not extra products",
-    "consumer compilation and MSBuild integration absent",
-    "worker provisioning uses only deployed verified resources"
-  ],
-  "snapshotFacts": [
-    "native function-pointer signatures and calling conventions",
-    "enum widths and full constants",
-    "type inheritance/interfaces and generic constraints",
-    "static/readonly/ref-like/init/operator/indexer/optional/default facts"
+    "Core and Runtime are independent products",
+    "Engine contains no frontend, host, SDK, target or managed-runtime defaults",
+    "The BGCS facade explicitly composes replaceable foundation implementations",
+    "Optional extensions depend on Core and share exact foundation assembly bytes where needed",
+    "No friend-assembly or private test-access API",
+    "No consumer compilation, native build or MSBuild integration"
   ],
   "limitations": [
-    "Not a universal nullable-annotation or custom-attribute compatibility analyzer; review contract/source semantics separately."
+    "Snapshot extraction is not a universal nullable/custom-attribute compatibility proof; validate implementation and behavioral contracts separately."
   ],
   "assemblies": [
     {
-      "assembly": "BGCS.Contracts",
-      "baseline": "tests/public-api/BGCS.Contracts.txt",
-      "sha256": "ef318bf187dea3569ef195b3b32d2e9db4125a17df914bf8631ba7b689ecdb60",
-      "lines": 3452,
-      "exportedTypes": 267
+      "assembly": "BGCS.Core",
+      "project": "src/BGCS.Core",
+      "baseline": "tests/public-api/BGCS.Core.txt",
+      "sha256": "2f411757743322f0cf3b45ac8fe5602b1242a96e4daa9f278c5a45aca96bf307",
+      "assemblySha256": "9d10b99735d66bab66d31cbb783a0c7c7ed54ace5cec7a9dd9f4052203fb7061",
+      "lines": 3820,
+      "exportedTypes": 298
     },
     {
       "assembly": "BGCS.Runtime",
+      "project": "src/BGCS.Runtime",
       "baseline": "tests/public-api/BGCS.Runtime.txt",
       "sha256": "2d9b6ab81a39899d505b9095581aa91850e87ececc9ec1df959331e43fdd332d",
+      "assemblySha256": "b6fa93d9d6248d03d79f687f0b55930a02fd90d9048634186dd7af754501584f",
       "lines": 318,
       "exportedTypes": 44
     },
     {
       "assembly": "BGCS",
+      "project": "src/BGCS",
       "baseline": "tests/public-api/BGCS.txt",
-      "sha256": "de6fdd3f2e599ed5c4abcda7a6b9736d96e477da2d6eb5f0d914419ab4f34d62",
-      "lines": 820,
-      "exportedTypes": 58
+      "sha256": "93d81f54d9ac7e265c8f97e0b6c18f6289b8031bb0f2f75b7a346d46e74fd871",
+      "assemblySha256": "0d477ac53a41281f98aa6b6033ff0fbf6a52438b080a55b3181ca90d0d7cadb0",
+      "lines": 3,
+      "exportedTypes": 1
+    },
+    {
+      "assembly": "BGCS.Engine",
+      "project": "src/BGCS.Engine",
+      "baseline": "tests/public-api/BGCS.Engine.txt",
+      "sha256": "36fd3358ec8ab9e7b802910117d145678d600d03a95d804e5fdf51a0ed464566",
+      "assemblySha256": "ea8fa9cc32de1b21a7e07a434ebe67f5fbf8aca8c15dd865be4eda818df22087",
+      "lines": 825,
+      "exportedTypes": 60
     },
     {
       "assembly": "BGCS.Infrastructure",
+      "project": "src/BGCS.Infrastructure",
       "baseline": "tests/public-api/BGCS.Infrastructure.txt",
-      "sha256": "06eee6d65fde79fcd0a9a7ac198df000a6223b01b5f678ef8a90d3155b983801",
-      "lines": 325,
-      "exportedTypes": 51
-    },
-    {
-      "assembly": "BGCS.Platforms",
-      "baseline": "tests/public-api/BGCS.Platforms.txt",
-      "sha256": "3ddfd8a8bd6ba887f96fa1c3a474381835bd4923b32994147470289337668298",
-      "lines": 50,
-      "exportedTypes": 13
+      "sha256": "15e00354fa9f17e3f4f1993261244e1a943cbea86f49fa285cf19d292ae1dc39",
+      "assemblySha256": "f9c29bce6115b9869264cb8870eae9f11d8edd317121e20efad57e27d7537e81",
+      "lines": 291,
+      "exportedTypes": 45
     },
     {
       "assembly": "BGCS.Analysis",
+      "project": "src/BGCS.Analysis",
       "baseline": "tests/public-api/BGCS.Analysis.txt",
-      "sha256": "eb49d53b21eec0add9295ae15c8b1863ed3d9f76c27a1b9a1b3925cc1a376b20",
-      "lines": 197,
-      "exportedTypes": 43
+      "sha256": "0951fb4a271c0f34209bd357fae3dbba75f552af932ed36fd0ce53d29a479565",
+      "assemblySha256": "84635faeb1c0f9f81227c3396600579206ceafe055571cb8e9e4d9297860a104",
+      "lines": 203,
+      "exportedTypes": 44
     },
     {
-      "assembly": "BGCS.Cpp2C",
-      "baseline": "tests/public-api/BGCS.Cpp2C.txt",
-      "sha256": "2e2bbc9c6759c2802634764e34ffe0970edd8c42ab60f3f67b3906a9b54fd640",
-      "lines": 77,
-      "exportedTypes": 16
+      "assembly": "BGCS.NativeBridge",
+      "project": "src/BGCS.NativeBridge",
+      "baseline": "tests/public-api/BGCS.NativeBridge.txt",
+      "sha256": "4085bd865e29f0c54d055ce490785ba9022506537b9484ebfb28621415104b03",
+      "assemblySha256": "79229b8ec120ec367edc3d5e6337dee2cfc2ef084620014cb59520b2164e48aa",
+      "lines": 74,
+      "exportedTypes": 15
     },
     {
       "assembly": "BGCS.CSharp",
+      "project": "src/BGCS.CSharp",
       "baseline": "tests/public-api/BGCS.CSharp.txt",
-      "sha256": "8925f65ff32b5bea37f7be3067cbc83ced9468a3db97cb05fb398b08add16cf2",
-      "lines": 1223,
+      "sha256": "35a38594812022c9d628c4ff99c33e7df9fa0200b2d288b3737ff648305f04f3",
+      "assemblySha256": "2516ebfeb78231007146369108a9e862a53b19a61d0169465b53a2ac09f3acc2",
+      "lines": 1221,
       "exportedTypes": 92
     },
     {
-      "assembly": "BGCS.Frontend.Clang",
-      "baseline": "tests/public-api/BGCS.Frontend.Clang.txt",
-      "sha256": "5b6978105b3d4e6e3717cfa0930eb79128f4ef933ed918418e933f659a3ff14c",
-      "lines": 13,
+      "assembly": "BGCS.Hosting.Standard",
+      "project": "extensions/foundation/BGCS.Hosting.Standard",
+      "baseline": "tests/public-api/BGCS.Hosting.Standard.txt",
+      "sha256": "95f2c964e5cb5a69c1cd0b9affcec8c978ecfd7a26b729b014d7bcd4b3a4478a",
+      "assemblySha256": "92d10e380adf4e147fe988ccc2021a83f16c48a0eb0653a37414101628949b07",
+      "lines": 15,
+      "exportedTypes": 2
+    },
+    {
+      "assembly": "BGCS.Targets.Desktop",
+      "project": "extensions/foundation/BGCS.Targets.Desktop",
+      "baseline": "tests/public-api/BGCS.Targets.Desktop.txt",
+      "sha256": "c7d3ce3af6d536f836026eb47ef1ef490272805fc5b4408bff6ca54ba80a7255",
+      "assemblySha256": "666033885a30da5137c1ba39d8b1003724db2f3651a1a3f776c2e3cc8292949f",
+      "lines": 51,
+      "exportedTypes": 11
+    },
+    {
+      "assembly": "BGCS.Interop.DotNet",
+      "project": "extensions/foundation/BGCS.Interop.DotNet",
+      "baseline": "tests/public-api/BGCS.Interop.DotNet.txt",
+      "sha256": "ddebbebfea33439b0e4380e2f24a83c392779406f61dd5eedbb8b296b8229203",
+      "assemblySha256": "3f50ac9d610021ff7518bc0bbe76eafa268b84a9ce2a7700a09edf7b81ba21f7",
+      "lines": 15,
       "exportedTypes": 4
+    },
+    {
+      "assembly": "BGCS.Frontend.Clang",
+      "project": "extensions/frontends/BGCS.Frontend.Clang",
+      "baseline": "tests/public-api/BGCS.Frontend.Clang.txt",
+      "sha256": "47339a7b85576a19fa293c89525029cc7c687ce90dd6214eb18a91f15e33e8e9",
+      "assemblySha256": "4320774eca6a10c77fa0fb01e0a80d08324a32d649f34cf62c52078a71d242b3",
+      "lines": 60,
+      "exportedTypes": 14
+    },
+    {
+      "assembly": "BGCS.Extension.Android",
+      "project": "extensions/BGCS.Extension.Android",
+      "baseline": "tests/public-api/BGCS.Extension.Android.txt",
+      "sha256": "31f1f7145d13c38d9341bc22f52f300e5f59c1e6ddfae4377f599088a3b35f27",
+      "assemblySha256": "0ec0649f8674efb70d9031bc2c91d335438d9bf030ec0b55b4b27af65955b73a",
+      "lines": 10,
+      "exportedTypes": 3
+    },
+    {
+      "assembly": "BGCS.Extension.AppleMobile",
+      "project": "extensions/BGCS.Extension.AppleMobile",
+      "baseline": "tests/public-api/BGCS.Extension.AppleMobile.txt",
+      "sha256": "85828c1b50d8fed45b8b1627bb1e20c3d0ef193d69b876b29b71dea63d55c779",
+      "assemblySha256": "b58c837e7cde287ac6bd0ab5caaaa8daca641426fc8a132877f6c9d46397768a",
+      "lines": 11,
+      "exportedTypes": 3
+    },
+    {
+      "assembly": "BGCS.Extension.BrowserWasm",
+      "project": "extensions/BGCS.Extension.BrowserWasm",
+      "baseline": "tests/public-api/BGCS.Extension.BrowserWasm.txt",
+      "sha256": "2b8c39e4cadb80806af8f72b8ab8d4e712aa7cddd15efcbbb502e33ebc3547ea",
+      "assemblySha256": "5fc593d1b6025d18ddecda30c44dcaf695a51701e1530926e6c8d90fd130078e",
+      "lines": 19,
+      "exportedTypes": 5
+    },
+    {
+      "assembly": "BGCS.Extension.FreeBsd",
+      "project": "extensions/BGCS.Extension.FreeBsd",
+      "baseline": "tests/public-api/BGCS.Extension.FreeBsd.txt",
+      "sha256": "1df524a35fd570c7417d8dadbe860968a2de441cc67924b5d66033453bd9a5fc",
+      "assemblySha256": "9103511e82bb623883f3237df50d8c755dae6d6506c0f5739110d7dd3613d734",
+      "lines": 8,
+      "exportedTypes": 2
+    },
+    {
+      "assembly": "BGCS.Extension.NativeAot",
+      "project": "extensions/BGCS.Extension.NativeAot",
+      "baseline": "tests/public-api/BGCS.Extension.NativeAot.txt",
+      "sha256": "27205b946b6a5fd43e19e98a52f057012003992a0b960b588085b3fd1e12a4b2",
+      "assemblySha256": "49df71c8823a8ff5410cf878ae8916937924ac159b175dd3dce03d2391e3f517",
+      "lines": 13,
+      "exportedTypes": 3
     }
-  ],
-  "reviewedPreReleaseChanges": [
-    "Retire all consumer compilation, native build/provider/packaging APIs and MSBuild integration without compatibility aliases; consumers own compilation, linking and deployment.",
-    "Remove TargetConfiguration.toolchain, an unused auto-only alias; explicit targets.settings retains parser SDK paths, macros and arguments.",
-    "WorkerAssetProvisioner.Prepare verifies application-deployed standard NuGet content and exact host-native resources before preparing or reusing an owned version/host/manifest resource directory; no download, compiler execution, global NuGet lookup or build hook.",
-    "The independent Contracts/Runtime, neutral transformation ports and C/C++ bridge emitters retain their current documented contracts. Unsupported ABI forms and missing lifecycle evidence remain strict failures or omit only the unsafe friendly projection."
-  ],
-  "reviewedPatchChanges": [
-    "Add typed portable NativeSourceManifest input roots, files, ordered include requirements and generated sources; return physical root bindings separately from portable JSON.",
-    "Add BindingArtifactManifest.ReadNativeSources and a locked verified publication callback; no build or execution services enter Contracts.",
-    "Add optional BindingDiagnostic.details and parserBuiltinInputs for bounded failure context and exact resource separation.",
-    "Add compiler-declared per-field storageSize/storageEvidence independently of reference referent sizeof; strict graph/layout checks remain.",
-    "Contracts major 3 and existing extension ports remain; API minor 1 identifies the additive surface. v3.0.0 remains immutable."
   ]
 }

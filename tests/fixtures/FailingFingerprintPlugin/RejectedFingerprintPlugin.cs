@@ -2,11 +2,11 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 
 namespace BGCS.Tests.Fixtures.FailingFingerprintPlugin;
 
@@ -20,7 +20,7 @@ public sealed class RejectedFingerprintPlugin : IBindingPlugin, ICacheFingerprin
 
     /// <inheritdoc/>
     public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        => registry.RegisterFactory<INativeModuleTransform>("rejected-service", () => new FixtureTransform("rejected-service"));
+        => registry.RegisterFactory<INativeModuleTransform>("rejected-service", _ => new FixtureTransform("rejected-service"));
 
     /// <inheritdoc/>
     public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
@@ -34,7 +34,7 @@ public sealed class AcceptancePlugin : IBindingPlugin, ICacheFingerprintProvider
     public PluginDescriptor descriptor => new("bgcs.fixtures.acceptance", "1.0.0", [new("acceptance-probe", ExtensionPort.NativeModuleTransform)]);
     /// <inheritdoc/>
     public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        => registry.RegisterFactory<INativeModuleTransform>("acceptance-probe", () => new FixtureTransform("acceptance-probe"));
+        => registry.RegisterFactory<INativeModuleTransform>("acceptance-probe", _ => new FixtureTransform("acceptance-probe"));
     /// <inheritdoc/>
     public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
         => new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("acceptance-v1")))), []);

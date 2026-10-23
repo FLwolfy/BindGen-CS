@@ -7,9 +7,9 @@ using System.Runtime.Loader;
 using System.Text;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -53,7 +53,7 @@ public sealed class NativeWideTextTests
                 EXPORT uint32_t next_wchar(const wchar_t* text) { return (uint32_t)text[1]; }
                 EXPORT uint32_t wchar_width(void) { return (uint32_t)sizeof(wchar_t); }
                 """);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             AnalysisResult facts = await host.AnalyzeAsync(AnalysisRequest.FromFiles(["wide.h"], baseDirectory: root) with { parseMacros = false });
             Assert.True(facts.success, facts.GetDiagnosticSummary());
             NativeDeclaration function = facts.module!.declarations.Single(declaration => declaration.name == "first_wchar" && declaration.kind == "Function");
@@ -73,7 +73,7 @@ public sealed class NativeWideTextTests
                 });
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "wide", nativeName = "wide_fixture" },
+                schemaVersion = 2, library = new() { id = "wide", nativeName = "wide_fixture" },
                 source = new() { headers = ["wide.h"], language = SourceLanguage.C, parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeWide", name = "WideApi" }, runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 semantics = new() { stringParameters = rules.ToImmutable() },  cache = new() { enabled = false }
@@ -123,6 +123,6 @@ public sealed class NativeWideTextTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

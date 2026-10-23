@@ -1,0 +1,131 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:58003e58270b8f575f71186f1105676472e5b7fe7762f99b249c6f856f3dfd08"
+      },
+      "category": "Qualified",
+      "spelling": "int const",
+      "size": 4,
+      "alignment": 4,
+      "elementType": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": "Const",
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "category": "Primitive",
+      "spelling": "int",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Int",
+      "isSigned": true,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:0c599fbcce7ab6ea80607a20288ef0945ab9dc5979a0e6c382ddcc8e3e3d279d"
+      },
+      "kind": "Field",
+      "name": "x",
+      "qualifiedName": "x",
+      "type": {
+        "value": "type:58003e58270b8f575f71186f1105676472e5b7fe7762f99b249c6f856f3dfd08"
+      },
+      "source": {
+        "file": "TestExpressions.TestBinaryOr.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": "Variable",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": "12 | 1",
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": {
+        "kind": "Integer",
+        "value": "13",
+        "width": 4,
+        "isSigned": true,
+        "evidence": {
+          "level": "Declared",
+          "origin": "clang.constant-evaluation:::x"
+        }
+      },
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

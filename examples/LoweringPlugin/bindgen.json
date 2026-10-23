@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "engine",
     "nativeName": "engine_bridge"

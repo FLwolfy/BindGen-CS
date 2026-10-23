@@ -9,7 +9,7 @@
     "src/BGCS.CSharp/Emission/CSharpEmitter.cs:EmitInstanceManagedFunction"
   ],
   "implementation": [
-    "src/BGCS.Contracts/Managed/ManagedReceiver.cs",
+    "src/BGCS.Core/Managed/ManagedReceiver.cs",
     "src/BGCS.CSharp/Planning/ValueReceiverPlanner.cs",
     "src/BGCS.CSharp/Emission/ValueReceiverEmitter.cs",
     "src/BGCS.CSharp/Validation/EmittedInteropContractReader.cs"
@@ -54,5 +54,10 @@
     "Status/owned results, callbacks and async value-receiver combinations require independently checked plans.",
     "The address borrow is synchronous, non-null and explicitly nonretaining; it supplies no ownership or native validity after return.",
     "NativeAOT, browser Wasm, other operating systems and final physical packages require their own same-revision validation."
-  ]
+  ],
+  "historicalOnly": true,
+  "currentRevisionCertified": false,
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "currentEvidenceInventory": "eng/acceptance/feature-inventory.json",
+  "scopeNotice": "Historical source/assertion correspondence and old local observations only. Current4.0 implementation and exact same-revision execution mappings are authoritative in feature/configuration inventories; no old receipt certifies current behavior."
 }

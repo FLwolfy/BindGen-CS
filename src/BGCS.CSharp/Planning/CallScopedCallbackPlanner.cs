@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 
 namespace BGCS.CSharp.Planning;
 
@@ -35,10 +35,14 @@ public sealed record CSharpCallbackMethodPlan(
 /// <param name="objectSignature">The managed member signature with self omitted.</param>
 public sealed record CSharpCallbackReceiverPlan(
     string objectName,
-    StableId nativeType,
+    StableId? nativeType,
     int instanceIndex,
     CSharpFacadeMethodPlan objectSignature
-);
+)
+{
+    /// <summary>Gets the exact generated bridge owner when no original native owner exists.</summary>
+    public StableId? generatedType { get; init; }
+}
 
 /// <summary>Freezes one exact reverse-call ABI, explicit fallback and optional static user-data token protocol.</summary>
 /// <param name="parameterIndex">The native argument receiving the callback address.</param>
@@ -177,7 +181,7 @@ internal static class CallScopedCallbackPlanner
                 result.Add(new(methodIndex, callbacks.ToImmutable(), inputs, signature)
                 {
                     statusOperation = status,
-                    receiver = receiver is null ? null : new(receiver.name, receiver.nativeType, status!.instanceIndex, objectSignature)
+                    receiver = receiver is null ? null : new(receiver.name, receiver.nativeType, status!.instanceIndex, objectSignature) { generatedType = receiver.generatedType }
                 });
             }
             catch (NotSupportedException failure)
@@ -191,7 +195,8 @@ internal static class CallScopedCallbackPlanner
             CSharpStatusMethodPlan status,
             InteropFunction function
         ) {
-            CSharpObjectPlan? owner = plan.objects.SingleOrDefault(candidate => candidate.nativeType == function.sourceOwnerType
+            CSharpObjectPlan? owner = plan.objects.SingleOrDefault(candidate => (candidate.nativeType is not null && candidate.nativeType == function.sourceOwnerType && candidate.generatedType is null && function.sourceGeneratedOwnerType is null
+                || candidate.generatedType is not null && candidate.generatedType == function.sourceGeneratedOwnerType && candidate.nativeType is null && function.sourceOwnerType is null)
                 && candidate.kind == ManagedReceiverKind.Owned
                 && candidate.methodIndices.Any(index => plan.statusMethods[index].methodIndex == status.methodIndex));
             if (owner is null)

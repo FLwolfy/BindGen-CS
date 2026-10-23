@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using BGCS.Configuration;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -43,6 +43,6 @@ public sealed class ModuleBorrowedConfigurationTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "borrowed", nativeName = "borrowed" }, source = new() { headers = ["native.h"] }
+        schemaVersion = 2, library = new() { id = "borrowed", nativeName = "borrowed" }, source = new() { headers = ["native.h"] }
     };
 }

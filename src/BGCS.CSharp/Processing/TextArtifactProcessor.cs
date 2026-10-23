@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 
 namespace BGCS.CSharp.Processing;
 
@@ -18,34 +18,23 @@ public sealed class TextArtifactProcessor : IArtifactProcessor, ICacheFingerprin
     private readonly bool m_requireMatch;
 
     /// <summary>Freezes a literal rule without reading formal output or accepting executable configuration.</summary>
-    /// <param name="id">The unique processor identity.</param>
-    /// <param name="priority">Descending pipeline priority, followed by ordinal identity.</param>
     /// <param name="paths">Portable managed-relative selectors, using *, ? and complete ** segments.</param>
     /// <param name="match">The nonempty literal text to replace.</param>
     /// <param name="replacement">The literal replacement, without regex substitution.</param>
     /// <param name="ignoreCase">Selects ordinal case-insensitive matching.</param>
     /// <param name="requireMatch">Requires at least one actual text match across the selected artifacts.</param>
     public TextArtifactProcessor(
-        string id,
-        int priority,
         IEnumerable<string> paths,
         string match,
         string replacement,
         bool ignoreCase = false,
         bool requireMatch = true
     ) {
-        SourceProcessingSupport.Identity(id);
         ArgumentException.ThrowIfNullOrEmpty(match);
         ArgumentNullException.ThrowIfNull(replacement);
         if (match.Length > 65536 || replacement.Length > 1048576) throw new ArgumentException("A source text rule exceeds its bounded declaration size.");
-        this.id = id; this.priority = priority;
         m_selector = new(paths); m_match = match; m_replacement = replacement; m_ignoreCase = ignoreCase; m_requireMatch = requireMatch;
     }
-
-    /// <inheritdoc/>
-    public string id { get; }
-    /// <inheritdoc/>
-    public int priority { get; }
 
     /// <inheritdoc/>
     public async ValueTask ProcessAsync(
@@ -63,7 +52,7 @@ public sealed class TextArtifactProcessor : IArtifactProcessor, ICacheFingerprin
             matched |= changed;
             if (changed) await request.content.ReplaceTextAsync(artifact.relativePath, output, cancellationToken).ConfigureAwait(false);
         }
-        if (m_requireMatch && !matched) throw new InvalidOperationException("The literal source processor matched no declared text: " + id);
+        if (m_requireMatch && !matched) throw new InvalidOperationException("The literal source processor matched no declared text.");
     }
 
     /// <inheritdoc/>
@@ -74,10 +63,8 @@ public sealed class TextArtifactProcessor : IArtifactProcessor, ICacheFingerprin
         cancellationToken.ThrowIfCancellationRequested();
         return SourceProcessingSupport.Fingerprint(new
         {
-            revision = 1,
+            revision = 2,
             kind = "literal",
-            id,
-            priority,
             m_selector.patterns,
             match = m_match,
             replacement = m_replacement,

@@ -6,6 +6,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS;
+using BGCS.Core.Ports;
+using BGCS.Core.Plugins;
+using BGCS.Frontend.Clang.Workers;
 
 internal static class Program
 {
@@ -23,8 +26,10 @@ internal static class Program
         Stopwatch elapsed = Stopwatch.StartNew();
         ReportPhase("entry");
         GenerationResult result;
-        bool frontendLoaded;
-        await using (BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(arguments[0]).Build())
+        const string newId = "bgcs.frontend.clang.worker";
+        bool nativeParserLoaded;
+        await using (BindingHost host = BindingGenerator.CreateBuilder().ReplaceFactory<IFrontend>(newId, new(newId, ExtensionPort.Frontend), context =>
+            new FrontendWorkerClient(WorkerAssetLocator.Locate(context.RequireHostServices(), arguments[0]), context.RequireHostServices(), TimeSpan.FromSeconds(300))).Build())
         {
             ReportPhase("host-built");
             GenerationRequest request = GenerationRequest.FromFile(arguments[1]);
@@ -32,11 +37,13 @@ internal static class Program
             ReportPhase("generation-start");
             result = await host.GenerateAsync(request);
             ReportPhase("generation-completed");
-            frontendLoaded = AppDomain.CurrentDomain.GetAssemblies().Any(assembly => assembly.GetName().Name == "BGCS.Frontend.Clang");
+            using Process current = Process.GetCurrentProcess();
+            nativeParserLoaded = current.Modules.Cast<ProcessModule>().Any(module => Path.GetFileName(module.FileName).StartsWith("libclang", StringComparison.OrdinalIgnoreCase)
+                || Path.GetFileName(module.FileName).StartsWith("libClangSharp", StringComparison.OrdinalIgnoreCase));
         }
         ReportPhase("dispose-completed");
-        Console.WriteLine(JsonSerializer.Serialize(new { result.success, result.outputRoot, frontendLoaded, diagnosticSummary = result.GetDiagnosticSummary() }));
-        return result.success && !frontendLoaded ? 0 : 1;
+        Console.WriteLine(JsonSerializer.Serialize(new { result.success, result.outputRoot, nativeParserLoaded, diagnosticSummary = result.GetDiagnosticSummary() }));
+        return result.success && !nativeParserLoaded ? 0 : 1;
 
         void ReportPhase(string phase)
         {

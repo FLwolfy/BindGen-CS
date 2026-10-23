@@ -4,8 +4,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -36,14 +36,14 @@ public sealed class NativeImportLibraryConstantTests
             await File.WriteAllTextAsync(Path.Combine(root, "LibraryNames.cs"), consumer);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "import-constant", nativeName = "import_constant_fixture" },
+                schemaVersion = 2, library = new() { id = "import-constant", nativeName = "import_constant_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["answer.h"], includeTransitivelyReferencedHeaders = false },
                 api = new() { projectionInputs = new() { sources = ["LibraryNames.cs"] }, @namespace = "Generated.ImportConstant", name = "AnswerApi", importMode = mode,
                     emitLibraryNameConstant = false, importLibraryNameConstant = "Vendor.LibraryNames.Native" },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = true }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             var target = Assert.Single(built.targetModels);
@@ -85,15 +85,15 @@ public sealed class NativeImportLibraryConstantTests
         {
             string config = Path.Combine(root, "bindgen.json");
             const string json = """
-                {"schemaVersion":1,"library":{"id":"answer","nativeName":"native"},"source":{"headers":["answer.h"]},
+                {"schemaVersion":2,"library":{"id":"answer","nativeName":"native"},"source":{"headers":["answer.h"]},
                 "api":{"importMode":"dllImport","emitLibraryNameConstant":false,"importLibraryNameConstant":"Vendor.LibraryNames.Native"}}
                 """;
             File.WriteAllText(config, json);
-            BindingConfiguration configuration = GenerationRequest.FromFile(config).configuration;
+            BindingConfiguration configuration = TestInputs.LoadRequest(config).configuration;
             Assert.Equal("Vendor.LibraryNames.Native", configuration.api.importLibraryNameConstant);
             Assert.False(configuration.api.emitLibraryNameConstant);
             File.WriteAllText(config, json.Replace("dllImport", "functionTable", StringComparison.Ordinal));
-            Assert.Throws<ArgumentException>(() => GenerationRequest.FromFile(config));
+            Assert.Throws<ArgumentException>(() => TestInputs.LoadRequest(config));
         }
         finally { Directory.Delete(root, recursive: true); }
     }
@@ -103,6 +103,6 @@ public sealed class NativeImportLibraryConstantTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

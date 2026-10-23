@@ -1,8 +1,9 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using BGCS.Contracts.Artifacts;
+using BGCS.Core.Artifacts;
 using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Publishing;
@@ -10,17 +11,23 @@ namespace BGCS.Infrastructure.Publishing;
 /// <summary>Writes backend artifacts inside one caller-owned staging directory.</summary>
 public sealed class DirectoryArtifactSink : IArtifactSink
 {
+    private readonly IHostPathService m_host;
     private readonly string m_root;
     private readonly OwnedPathBoundary m_boundary;
-    private readonly HashSet<string> m_paths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> m_paths;
 
     /// <summary>Captures a staging root without creating or publishing it.</summary>
+    /// <param name="paths">The explicitly selected host path service.</param>
     /// <param name="root">The caller-owned candidate directory.</param>
     /// <exception cref="ArgumentException">The root is empty.</exception>
-    public DirectoryArtifactSink(string root)
-    {
+    public DirectoryArtifactSink(
+        string root,
+        IHostPathService paths
+    ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
-        m_boundary = new(root);
+        m_host = paths;
+        m_boundary = new(root, paths);
+        m_paths = new(paths.comparer);
         m_root = m_boundary.physicalPath;
     }
 
@@ -45,10 +52,10 @@ public sealed class DirectoryArtifactSink : IArtifactSink
         if (Path.IsPathRooted(normalized) || normalized.Split('/').AnyInvalidSegment())
             throw new ArgumentException("Artifact paths must identify a file inside the candidate root.", nameof(relativePath));
         string destination = Path.GetFullPath(normalized, m_root);
-        string relative = Path.GetRelativePath(m_root, destination);
+        string relative = m_host.GetRelativePath(m_root, destination);
         if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || Path.IsPathRooted(relative))
             throw new ArgumentException("The artifact path escapes the candidate root.", nameof(relativePath));
-        if (!m_paths.Add(normalized))
+        if (!m_paths.Add(destination))
             throw new InvalidOperationException($"Two backend outputs claim artifact '{normalized}'.");
         string current = m_root;
         RejectLinkedAncestors(current);

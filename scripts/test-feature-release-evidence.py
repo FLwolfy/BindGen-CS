@@ -202,7 +202,7 @@ class FeatureReleaseEvidenceTests(unittest.TestCase):
 class FeatureBaselineTests(unittest.TestCase):
     def setUp(self):
         self.baseline = {"schemaVersion": 1, "baselineRevision": "d" * 40, "features": [
-            {"featureId": "native.one", "owner": "BGCS.Contracts", "basis": "original declared scope"},
+            {"featureId": "native.one", "owner": "BGCS.Core", "basis": "original declared scope"},
             {"featureId": "native.two", "owner": "BGCS.Analysis", "origin": "3.0 requirement"}]}
         self.inventory = copy.deepcopy(self.baseline)
 
@@ -228,6 +228,17 @@ class FeatureBaselineTests(unittest.TestCase):
             self.inventory["features"][index][key] = "different scope"
             with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, "original definition"):
                 VERIFIER.validate_feature_baseline(self.inventory, self.baseline)
+
+    def test_major_version_current_owner_is_separate_from_the_frozen_historical_definition(self):
+        self.baseline['historicalDefinitionRevision'] = 'c' * 40
+        for current, previous in zip(self.inventory['features'], self.baseline['features']):
+            current['historicalDefinition'] = {key: previous[key] for key in ('owner', 'basis', 'origin') if key in previous}
+            current['owner'] = 'Current.Implementation'
+            current['basis'] = 'current/source.cs'
+        VERIFIER.validate_feature_baseline(self.inventory, self.baseline)
+        self.inventory['features'][0]['historicalDefinition']['owner'] = 'rewritten history'
+        with self.assertRaisesRegex(RuntimeError, 'original definition'):
+            VERIFIER.validate_feature_baseline(self.inventory, self.baseline)
 
     def test_missing_or_other_revision_baseline_is_rejected(self):
         self.baseline["baselineRevision"] = "e" * 40

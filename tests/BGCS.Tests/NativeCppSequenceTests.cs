@@ -7,10 +7,10 @@ using System.Runtime.Loader;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -30,12 +30,12 @@ public sealed class NativeCppSequenceTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "sequences.hpp"), Header);
             BindingConfiguration configuration = Configuration(runtimeMode);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
-            CppBridgeModule model = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
+            NativeBridgePlan model = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
             BridgeExport[] adapters = model.exports.Where(export => export.inputAdapterOf is not null).ToArray();
             Assert.Equal(10, adapters.Length);
             foreach (BridgeExport adapter in adapters) Assert.Contains(model.exports, export => export.id == adapter.inputAdapterOf);
@@ -65,8 +65,8 @@ public sealed class NativeCppSequenceTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "sequences.hpp"), Header);
             BindingConfiguration configuration = Configuration("package");
-            configuration = configuration with { cpp = configuration.cpp with { sequenceInputAdapters = [Request(function, assertCall)] } };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            configuration = configuration with { bridge = configuration.bridge with { cpp = configuration.bridge.cpp with { sequenceInputAdapters = [Request(function, assertCall)] } } };
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await host.BridgeAsync(new(configuration, root));
             Assert.False(result.success);
             string summary = result.GetDiagnosticSummary();
@@ -78,13 +78,13 @@ public sealed class NativeCppSequenceTests
 
     private static BindingConfiguration Configuration(string runtimeMode) => new()
     {
-        schemaVersion = 1, library = new() { id = "sequences", nativeName = "sequence_fixture" },
+        schemaVersion = 2, library = new() { id = "sequences", nativeName = "sequence_fixture" },
         source = new() { language = SourceLanguage.Cpp, headers = ["sequences.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.NativeSequences", name = "SequenceApi" },
         semantics = new() { ownedResults = [new() { function = "Demo::Receiver::Receiver(int)", releaseThreadDomain = "any" }] },
-        cpp = new() { sequenceInputAdapters = [Request("Demo::SumVector"), Request("Demo::SumArray"), Request("Demo::SumString"), Request("Demo::SumUtf8"),
+        bridge = new() { cpp = new() { sequenceInputAdapters = [Request("Demo::SumVector"), Request("Demo::SumArray"), Request("Demo::SumString"), Request("Demo::SumUtf8"),
             Request("Demo::SumBool"), Request("Demo::SumSpan", true), Request("Demo::SumConstSpan", true), Request("Demo::SumFixedSpan", true),
-            Request("Demo::SumRef", true), Request("Demo::Receiver::Sum")] },
+            Request("Demo::SumRef", true), Request("Demo::Receiver::Sum")] } },
         runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
     };
 
@@ -180,6 +180,6 @@ public sealed class NativeCppSequenceTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

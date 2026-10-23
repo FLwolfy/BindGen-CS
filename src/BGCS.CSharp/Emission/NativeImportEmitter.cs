@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using System.Text;
-using BGCS.Contracts;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 
 namespace BGCS.CSharp.Emission;

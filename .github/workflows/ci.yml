@@ -69,6 +69,8 @@ jobs:
       - name: Full retained Windows functionality exactly once
         if: matrix.baseline == 'full'
         shell: bash
+        env:
+          BGCS_ENFORCE_GENERATION_BUDGETS: '1'
         run: python scripts/compiler_test_environment.py -- "$BASH" scripts/run-full-test-matrix.sh
       - name: Build and execute the finite non-Windows generator baseline
         if: matrix.baseline == 'smoke'
@@ -88,11 +90,20 @@ jobs:
         run: |
           set -euo pipefail
           unset Platform PLATFORM platform
-          version="0.0.0-ci.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          version="$(python scripts/acceptance_evidence.py package-version .)"
           parser=()
           if [[ "$RUNNER_OS" == "macOS" ]]; then parser=(--parser-osx-x64 "$BGCS_CLANG_RUNTIME_DIR"); fi
           python scripts/compiler_test_environment.py -- python eng/pack.py --configuration Release --version "$version" --output artifacts/host-packages --host-only "${{ matrix.rid }}" --include-host-tool --verify-repeat-content "${parser[@]}"
           python scripts/compiler_test_environment.py -- python eng/verify-packages.py --version "$version" --packages artifacts/host-packages --output artifacts/host-installed --sdk-only --host-tool
+      - name: Verify the explicit browser extension with aggregate and callback calls
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/verify-locked-toolchain.py --install-workloads --output artifacts/toolchain/browser.json
+          dotnet build extensions/BGCS.Extension.BrowserWasm/BGCS.Extension.BrowserWasm.csproj -c Release -m:1 -nr:false -p:TreatWarningsAsErrors=true
+          python scripts/test-wasm-bindings.py --dotnet "$DOTNET_ROOT/dotnet" --targeted --no-build --output artifacts/browser-mono
+          python scripts/test-wasm-bindings.py --dotnet "$DOTNET_ROOT/dotnet" --targeted --aot --no-build --output artifacts/browser-aot
       - name: Profile a preserved current-source performance failure
         if: failure() && matrix.baseline == 'smoke'
         shell: bash
@@ -120,6 +131,20 @@ jobs:
             artifacts/performance-diagnostics/**/*.nettrace
             artifacts/performance-diagnostics/**/*.speedscope.json
           if-no-files-found: ignore
+      - name: Preserve the targeted optional browser regression
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-browser-regression-linux-x64
+          path: |
+            artifacts/toolchain/browser.json
+            artifacts/browser-mono/**/report.json
+            artifacts/browser-mono/**/*.log
+            artifacts/browser-mono/**/Generated/**
+            artifacts/browser-aot/**/report.json
+            artifacts/browser-aot/**/*.log
+            artifacts/browser-aot/**/Generated/**
+          if-no-files-found: error
       - name: Upload accepted Intel parser closure
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4

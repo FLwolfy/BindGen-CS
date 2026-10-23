@@ -1,4 +1,8 @@
 using System;
+using System.IO;
+using System.Text.Json;
+using BGCS.Core.Hosting;
+using BGCS.Hosting.Standard;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -61,7 +65,8 @@ internal static class GenerationArguments
         Options options,
         CancellationToken cancellationToken
     ) {
-        GenerationRequest request = await GenerationRequest.FromFileAsync(options.configPath, options.profile, cancellationToken).ConfigureAwait(false);
+        await using HostServices host = new HostServicesProvider().Create(new(Path.GetDirectoryName(Path.GetFullPath(options.configPath))!, JsonSerializer.SerializeToElement(new { })));
+        GenerationRequest request = await GenerationRequest.FromFile(options.configPath, options.profile).MaterializeAsync(host.paths, cancellationToken).ConfigureAwait(false);
         BGCS.Configuration.BindingConfiguration configuration = request.configuration;
         if (options.outputPath is not null)
             configuration = configuration with { output = configuration.output with { root = System.IO.Path.GetFullPath(options.outputPath) } };

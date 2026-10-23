@@ -5,8 +5,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -94,7 +94,7 @@ public sealed class NeutralSourceFactParityTests
 
     private static BindingConfiguration Configuration(bool singleFile) => new()
     {
-        schemaVersion = 1, library = new() { id = "source-facts", nativeName = "source_facts" },
+        schemaVersion = 2, library = new() { id = "source-facts", nativeName = "source_facts" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false,
             selection = new() { excludeDeclarations = ["hidden_helper"] } },
         api = new() { @namespace = "Generated.SourceFacts", name = "FactsApi" },
@@ -131,7 +131,7 @@ public sealed class NeutralSourceFactParityTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        string workerRoot = Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(workerRoot).Build();
+        string workerRoot = Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(workerRoot).Build();
     }
 }

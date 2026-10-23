@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Declarations;
 

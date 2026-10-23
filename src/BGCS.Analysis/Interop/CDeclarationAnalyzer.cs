@@ -3,13 +3,22 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Layout;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Interop;
+
+/// <summary>Identifies whether C declarations describe direct imports or inputs to native source lowering.</summary>
+public enum CDeclarationAnalysisPurpose
+{
+    /// <summary>Every callable must be externally addressable without a generated source wrapper.</summary>
+    DirectImports,
+    /// <summary>Source-only callables may be retained for explicitly selected native bridge emission.</summary>
+    NativeBridgePlanning
+}
 
 /// <summary>Builds native C ABI facts without choosing managed names, carriers or import syntax.</summary>
 public sealed class CDeclarationAnalyzer
@@ -18,13 +27,13 @@ public sealed class CDeclarationAnalyzer
     /// <param name="module">The verified native source graph.</param>
     /// <param name="libraryId">The library's stable identity.</param>
     /// <param name="selectedFunctions">The selected free C functions; null selects all free functions.</param>
-    /// <param name="headerBridge">The checked real wrapper exports for selected source helpers; their native adapter must be compiled into the configured module.</param>
+    /// <param name="purpose">Whether selected source helpers are being analyzed for native bridge planning.</param>
     /// <returns>A native-only ABI module with explicit rejection diagnostics.</returns>
     public InteropModule Analyze(
         NativeModule module,
         string libraryId,
         IEnumerable<StableId>? selectedFunctions = null,
-        BGCS.Contracts.Bridge.CHeaderBridgeModule? headerBridge = null
+        CDeclarationAnalysisPurpose purpose = CDeclarationAnalysisPurpose.DirectImports
     ) {
         ArgumentNullException.ThrowIfNull(module);
         ImmutableArray<BindingDiagnostic>.Builder diagnostics = module.diagnostics.ToBuilder();
@@ -35,15 +44,13 @@ public sealed class CDeclarationAnalyzer
             return new(libraryId, module.targetId, module.pointerSize, [], [], diagnostics.ToImmutable()) { byteOrder = module.byteOrder };
         HashSet<StableId>? selection = selectedFunctions?.ToHashSet();
         BGCS.Analysis.Declarations.NativeSourceLocator sourceLocations = new(module);
-        Dictionary<StableId, BGCS.Contracts.Bridge.CHeaderBridgeExport> wrappers = headerBridge?.exports.ToDictionary(export => export.sourceDeclaration) ?? [];
         ImmutableArray<InteropFunction>.Builder functions = ImmutableArray.CreateBuilder<InteropFunction>();
         ByValueCompatibilityAnalyzer byValue = new();
         foreach (NativeDeclaration declaration in module.declarations.Where(declaration => declaration.kind == "Function"))
         {
             if (selection is not null && !selection.Contains(declaration.id))
                 continue;
-            wrappers.TryGetValue(declaration.id, out BGCS.Contracts.Bridge.CHeaderBridgeExport? wrapper);
-            if (BGCS.Analysis.Bridge.CHeaderFunctionPolicy.RequiresAdapter(declaration) && wrapper is null)
+            if (BGCS.Analysis.Bridge.CHeaderFunctionPolicy.RequiresAdapter(declaration) && purpose != CDeclarationAnalysisPurpose.NativeBridgePlanning)
             {
                 diagnostics.Add(new(selection is null ? BindingDiagnosticSeverity.Warning : BindingDiagnosticSeverity.Error,
                     $"C function '{declaration.qualifiedName}' requires a compiled header adapter. Enable source.includeHeaderHelpers and compile the emitted helper source into the configured native module, or provide an explicit native shim.", "BGCS-C-INTERNAL-LINKAGE")
@@ -68,10 +75,7 @@ public sealed class CDeclarationAnalyzer
             CheckValue(returnType, $"return type of '{declaration.qualifiedName}'");
             foreach (InteropParameter parameter in parameters)
                 CheckValue(parameter.type, $"parameter '{parameter.name}' of '{declaration.qualifiedName}'");
-            if (wrapper is not null && (wrapper.sourceName != declaration.name || wrapper.returnType != returnType
-                || !wrapper.parameters.Select(parameter => (parameter.sourceDeclaration, parameter.type)).SequenceEqual(parameters.Select(parameter => (parameter.id, parameter.type)))))
-                throw new InvalidOperationException("A C header adapter does not preserve its source callable contract.");
-            functions.Add(new(declaration.id, wrapper?.exportName ?? declaration.name, returnType, parameters, wrapper is null ? declaration.callingConvention ?? "Unknown" : "C")
+            functions.Add(new(declaration.id, declaration.name, returnType, parameters, declaration.callingConvention ?? "Unknown")
             {
                 sourceDeclaration = declaration.id,
                 source = declaration.source,

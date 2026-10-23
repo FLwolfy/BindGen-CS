@@ -1,0 +1,2 @@
+
+namespace [[deprecated]] cppast {};

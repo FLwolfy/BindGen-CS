@@ -10,12 +10,12 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Tests.NeutralPlugin;
 using Xunit;
 
@@ -77,7 +77,8 @@ public sealed class SourceContributionIntegrationTests
         GenerationResult warm = await host.GenerateAsync(request);
         Assert.True(warm.success, warm.GetDiagnosticSummary());
         Assert.Equal(declaration.id, Assert.Single(Assert.Single(warm.targetModels).native.declarations, item => item.name == "contributed_add").id);
-        Assert.Equal("hit", Assert.Single(warm.cacheStages, stage => stage.stage == "csharpEmission").status);
+        GenerationCacheStageResult warmEmission = Assert.Single(warm.cacheStages, stage => stage.stage == "csharpEmission");
+        Assert.True(warmEmission.status == "hit", "Expected a warm emission cache hit: " + JsonSerializer.Serialize(warmEmission));
     }
 
     [Fact]
@@ -85,14 +86,14 @@ public sealed class SourceContributionIntegrationTests
     {
         using Scratch scratch = new(SourceLanguage.C);
         int version = 1, calls = 0, disposed = 0;
-        await using BindingHost host = Builder().AddSourceContributor("mutable-source", 0,
-            () => new MutableContributor(version, () => calls++, () => disposed++)).Build();
+        await using BindingHost host = Builder().RegisterFactory<ISourceContributor>(new("mutable-source", ExtensionPort.SourceContributor, 0), _ => new MutableContributor(version, () => calls++, () => disposed++)).Build();
         GenerationRequest request = new(scratch.Configuration(), scratch.root);
         GenerationResult first = await host.GenerateAsync(request);
         Assert.True(first.success, first.GetDiagnosticSummary());
         GenerationResult warm = await host.GenerateAsync(request);
         Assert.True(warm.success, warm.GetDiagnosticSummary());
-        Assert.Equal("hit", Assert.Single(warm.cacheStages, stage => stage.stage == "csharpEmission").status);
+        GenerationCacheStageResult warmEmission = Assert.Single(warm.cacheStages, stage => stage.stage == "csharpEmission");
+        Assert.True(warmEmission.status == "hit", "Expected a warm emission cache hit: " + JsonSerializer.Serialize(warmEmission));
         version = 2;
         GenerationResult changed = await host.GenerateAsync(request);
         Assert.True(changed.success, changed.GetDiagnosticSummary());
@@ -116,7 +117,7 @@ public sealed class SourceContributionIntegrationTests
         GenerationResult previous = await initial.GenerateAsync(request);
         Assert.True(previous.success, previous.GetDiagnosticSummary());
         byte[] report = await File.ReadAllBytesAsync(Path.Combine(previous.outputRoot, "generation.report.json"));
-        await using BindingHost host = Builder().AddSourceContributor("invalid", 0, () => new DelegateContributor("invalid", (_, _) =>
+        await using BindingHost host = Builder().RegisterFactory<ISourceContributor>(new("invalid", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("invalid", (_, _) =>
             ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8(path, SourceContributionRole.PublicHeader,
                 "text/x-c-header", "int bad(void);", SourceLanguage.C, true)], new(EvidenceLevel.Declared, "invalid-path fixture"))))).Build();
         GenerationResult rejected = await host.GenerateAsync(request);
@@ -128,7 +129,7 @@ public sealed class SourceContributionIntegrationTests
     public async Task UnfingerprintedContributorDisablesEmissionCacheAndCancellationReleasesSession()
     {
         using Scratch scratch = new(SourceLanguage.C);
-        await using BindingHost host = Builder().AddSourceContributor("plain", 0, () => new DelegateContributor("plain", (_, token) =>
+        await using BindingHost host = Builder().RegisterFactory<ISourceContributor>(new("plain", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("plain", (_, token) =>
         {
             token.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("plain.h", SourceContributionRole.PublicHeader,
@@ -139,8 +140,7 @@ public sealed class SourceContributionIntegrationTests
         Assert.Equal("disabled", Assert.Single(result.cacheStages, stage => stage.stage == "csharpEmission").status);
         using CancellationTokenSource cancellation = new();
         bool disposed = false;
-        await using BindingHost cancelledHost = Builder().AddSourceContributor("cancelled", 0,
-            () => new DelegateContributor("cancelled", (_, token) => { cancellation.Cancel(); token.ThrowIfCancellationRequested(); throw new InvalidOperationException(); }, () => disposed = true)).Build();
+        await using BindingHost cancelledHost = Builder().RegisterFactory<ISourceContributor>(new("cancelled", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("cancelled", (_, token) => { cancellation.Cancel(); token.ThrowIfCancellationRequested(); throw new InvalidOperationException(); }, () => disposed = true)).Build();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelledHost.GenerateAsync(new(scratch.Configuration(), scratch.root), cancellation.Token));
         Assert.True(disposed);
     }
@@ -174,7 +174,7 @@ public sealed class SourceContributionIntegrationTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
     }
 
     private sealed class Scratch : IDisposable
@@ -189,7 +189,7 @@ public sealed class SourceContributionIntegrationTests
         }
         internal BindingConfiguration Configuration() => new()
         {
-            schemaVersion = 1, library = new() { id = "contributions", nativeName = "contributions_bridge" },
+            schemaVersion = 2, library = new() { id = "contributions", nativeName = "contributions_bridge" },
             source = new() { language = m_language, headers = ["original.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
             api = new() { @namespace = "Generated.Contributions", name = "ContributionsApi" }, runtime = new() { mode = "source" }
         };

@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Text.Json;
 using BGCS.Configuration;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -20,24 +20,24 @@ public sealed class SourceSelectionConfigurationTests
         try
         {
             File.WriteAllText(Path.Combine(parent, "base.json"), """
-                { "schemaVersion":1,"library":{"id":"selection","nativeName":"selection"},
+                { "schemaVersion":2,"library":{"id":"selection","nativeName":"selection"},
                   "source":{"headers":["entry.hpp"],"selection":{"includeHeaders":["include/public.hpp"],"excludeDeclarations":["Demo::Hidden"]}},
                   "profiles":{"restricted":{"source":{"selection":{"excludeHeaders":["private/internal.hpp"]}}}} }
                 """);
             string path = Path.Combine(child, "bindgen.json");
             File.WriteAllText(path, """
-                {"schemaVersion":1,"extends":["../base/base.json"],"profile":"restricted",
+                {"schemaVersion":2,"extends":["../base/base.json"],"profile":"restricted",
                   "source":{"selection":{"includeDeclarations":["Demo::Selected(int)"]}}}
                 """);
-            DeclarationSelectionRequest selected = GenerationRequest.FromFile(path).configuration.source.selection;
+            DeclarationSelectionRequest selected = TestInputs.LoadRequest(path).configuration.source.selection;
             Assert.Equal(Path.Combine(parent, "include", "public.hpp"), Assert.Single(selected.includeHeaders));
             Assert.Equal(Path.Combine(parent, "private", "internal.hpp"), Assert.Single(selected.excludeHeaders));
             Assert.Equal("Demo::Hidden", Assert.Single(selected.excludeDeclarations));
             Assert.Equal("Demo::Selected(int)", Assert.Single(selected.includeDeclarations));
             File.WriteAllText(path, """
-                {"schemaVersion":1,"extends":["../base/base.json"],"source":{"selection":{"includeHeaders":[],"excludeHeaders":["local.hpp"]}}}
+                {"schemaVersion":2,"extends":["../base/base.json"],"source":{"selection":{"includeHeaders":[],"excludeHeaders":["local.hpp"]}}}
                 """);
-            selected = GenerationRequest.FromFile(path).configuration.source.selection;
+            selected = TestInputs.LoadRequest(path).configuration.source.selection;
             Assert.Empty(selected.includeHeaders);
             Assert.Equal(Path.Combine(child, "local.hpp"), Assert.Single(selected.excludeHeaders));
         }
@@ -62,7 +62,7 @@ public sealed class SourceSelectionConfigurationTests
             "duplicate-entry" => new() { excludeDeclarations = ["Demo::Hidden", "Demo::Hidden"] },
             _ => new() { includeDeclarations = ["Demo::Selected"], excludeDeclarations = ["Demo::Selected"] }
         };
-        BindingConfiguration configuration = new() { schemaVersion = 1, library = new() { id = "selection", nativeName = "selection" },
+        BindingConfiguration configuration = new() { schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" },
             source = new() { headers = ["entry.hpp"], selection = selected! } };
         Assert.ThrowsAny<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
     }
@@ -76,10 +76,10 @@ public sealed class SourceSelectionConfigurationTests
         {
             string path = Path.Combine(root, "bindgen.json");
             string text = """
-                {"schemaVersion":1,"library":{"id":"selection","nativeName":"selection"},"source":{"headers":["entry.h"],"selection":{"includeHeader":["entry.h"]}}}
+                {"schemaVersion":2,"library":{"id":"selection","nativeName":"selection"},"source":{"headers":["entry.h"],"selection":{"includeHeader":["entry.h"]}}}
                 """;
             File.WriteAllText(path, text);
-            Assert.Throws<JsonException>(() => GenerationRequest.FromFile(path));
+            Assert.Throws<JsonException>(() => TestInputs.LoadRequest(path));
             Assert.Equal(text, File.ReadAllText(path));
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -99,7 +99,7 @@ public sealed class SourceSelectionConfigurationTests
             "duplicate" => new() { includeCategories = [NativeDeclarationCategory.Callables, NativeDeclarationCategory.Callables] },
             _ => new() { includeCategories = [NativeDeclarationCategory.Records], excludeCategories = [NativeDeclarationCategory.Records] }
         };
-        BindingConfiguration configuration = new() { schemaVersion = 1, library = new() { id = "selection", nativeName = "selection" },
+        BindingConfiguration configuration = new() { schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" },
             source = new() { headers = ["entry.hpp"], selection = selection } };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
     }
@@ -121,6 +121,6 @@ public sealed class SourceSelectionConfigurationTests
             _ => new() { categories = [new(NativeDeclarationCategory.Callables) { includeDeclarations = ["read"], excludeDeclarations = ["read"] }] }
         };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(new()
-        { schemaVersion = 1, library = new() { id = "selection", nativeName = "selection" }, source = new() { headers = ["input.h"], selection = selected } }, Path.GetTempPath()));
+        { schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" }, source = new() { headers = ["input.h"], selection = selected } }, Path.GetTempPath()));
     }
 }

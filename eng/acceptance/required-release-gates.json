@@ -44,7 +44,17 @@
       "linux-x64",
       "macos-x64"
     ],
-    "applicationPublishChecks": "optional developer checks; no mandatory NativeAOT/browser application certification",
+    "applicationPublishChecks": "the existing Linux generator smoke job must run the explicit BrowserWasm extension aggregate-and-callback fixture in MonoWasm and AOT modes; broader NativeAOT and browser application certification remains an optional developer check",
+    "targetedBrowserRegression": {
+      "job": "Generator smoke (Linux x64)",
+      "script": "scripts/test-wasm-bindings.py --targeted --no-build",
+      "modes": [
+        "MonoWasm",
+        "AOT"
+      ],
+      "artifact": "optional-browser-regression-linux-x64",
+      "scope": "generated aggregate calls and callbacks with the explicitly registered BrowserWasm extension; not full browser platform certification"
+    },
     "productInstallationHost": "windows-x64",
     "fullPlatformCertification": false
   }

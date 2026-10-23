@@ -5,9 +5,9 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -28,8 +28,8 @@ public sealed class ManagedRecordPresentationTests
         ManagedRecordRuleRequest rule = Rule();
         ManagedApiModel model = Model(rule);
         NeutralBackendTests.MemorySink sink = new();
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("unused", sink) { singleFile = singleFile });
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("unused", sink) { singleFile = singleFile });
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         string consumer = """
             using System.Runtime.InteropServices;
@@ -93,7 +93,7 @@ public sealed class ManagedRecordPresentationTests
             _ => rule
         };
         NeutralBackendTests.MemorySink sink = new();
-        Action plan = () => new CSharpEmissionPlanner().Plan(Model(rule, overlap: invalid == "overlap"), new("unused", sink));
+        Action plan = () => new CSharpTestPlanner().Plan(Model(rule, overlap: invalid == "overlap"), new("unused", sink));
         Exception failure = invalid == "overlap" ? Assert.Throws<NotSupportedException>(plan) : Assert.Throws<ArgumentException>(plan);
         Assert.Contains(invalid switch
         {

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Compilation">
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup Label="Test inputs">
+    <None Remove="test_indirect.h" />
+    <None Remove="test_pragma.h" />
+    <None Remove="test_pragma_root.h" />
+  </ItemGroup>
+
+  <ItemGroup Label="Test inputs">
+    <Content Include="test_indirect.h">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="test_pragma.h">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="test_pragma_root.h">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup Label="Package dependencies">
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup Label="Project dependencies">
+    <ProjectReference Include="../../../extensions/frontends/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
+    <ProjectReference Include="../../../extensions/foundation/BGCS.Targets.Desktop/BGCS.Targets.Desktop.csproj" />
+    <ProjectReference Include="../../fixtures/ParserLibraryHost/ParserLibraryHost.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup><ProjectReference Include="../../../extensions/foundation/BGCS.Hosting.Standard/BGCS.Hosting.Standard.csproj" /></ItemGroup>
+  <ItemGroup><Content Include="Fixtures/PublicFacts/**" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../../../extensions/BGCS.Extension.BrowserWasm/BGCS.Extension.BrowserWasm.csproj" /><ProjectReference Include="../../../extensions/BGCS.Extension.AppleMobile/BGCS.Extension.AppleMobile.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../../../src/BGCS.Analysis/BGCS.Analysis.csproj" /></ItemGroup>
+</Project>

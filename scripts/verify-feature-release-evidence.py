@@ -56,7 +56,10 @@ def validate_feature_baseline(inventory: dict, baseline: dict) -> None:
             or len(set(ids)) != len(ids) or len(set(old_ids)) != len(old_ids) or ids[:len(old_ids)] != old_ids):
         raise RuntimeError("Feature baseline rows were omitted, duplicated, reordered or assigned different identities.")
     for old, row in zip(previous, current):
-        if any(row.get(key) != old.get(key) for key in ("owner", "basis", "origin")):
+        definition = row.get("historicalDefinition", row)
+        if baseline.get("historicalDefinitionRevision") and "historicalDefinition" not in row:
+            raise RuntimeError("A retained feature needs its explicit frozen historical definition: " + old["featureId"])
+        if any(definition.get(key) != old.get(key) for key in ("owner", "basis", "origin")):
             raise RuntimeError("A frozen feature identity changed its owner or original definition: " + old["featureId"])
 
 

@@ -6,10 +6,10 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
 using Microsoft.CodeAnalysis;
@@ -33,7 +33,7 @@ public sealed class ExactIrRetirementPlanningTests
         InteropModule module = new("bits", "windows-x64-msvc", 8, [signed, unsigned, flags], [], []) { byteOrder = NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.ExactBits", "Api"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("bits", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("bits", sink), CancellationToken.None);
         string paths = (string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? throw new InvalidOperationException("Framework metadata is unavailable.");
         var references = paths.Split(Path.PathSeparator).Append(typeof(BGCS.Runtime.NativeModuleSession).Assembly.Location)
             .Distinct(StringComparer.OrdinalIgnoreCase).Select(path => MetadataReference.CreateFromFile(path));
@@ -84,8 +84,8 @@ public sealed class ExactIrRetirementPlanningTests
         var model = new DefaultManagedProjection().Project(module, new("Generated.ExactOpaque", "Api"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         CSharpPlanningException failure = await Assert.ThrowsAsync<CSharpPlanningException>(async () =>
-            await new CSharpBackend().EmitAsync(model, new EmissionRequest("opaque", sink) { importMode = mode }, CancellationToken.None));
-        Assert.Contains("calling-ABI", failure.Message);
+            await new CSharpTestBackend().EmitAsync(model, new EmissionRequest("opaque", sink) { importMode = mode }, CancellationToken.None));
+        Assert.Contains("complete plan", failure.Message);
         Assert.Empty(sink.sources);
         Assert.Empty(opaque.fields);
         Assert.Equal(16, opaque.size);

@@ -1,18 +1,19 @@
+using BGCS.Frontend.Clang.Workers;
 using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Cpp2C.Emission;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.NativeBridge.Emission;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.Workers;
-using BGCS.Platforms.Targeting;
-using BGCS.Platforms.Toolchains;
+using BGCS.Targets.Desktop.Targeting;
+using BGCS.Targets.Desktop.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -80,7 +81,7 @@ public sealed class NativeStorageAssertionTests
             var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp);
             FrontendRequest request = new(target, SourceLanguage.Cpp, [header])
             { pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false };
-            NativeModule module = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"))
+            NativeModule module = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost())
                 .ParseAsync(request, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
             NativeType relative = Assert.Single(module.types, type => type.category == NativeTypeCategory.Record
@@ -89,12 +90,12 @@ public sealed class NativeStorageAssertionTests
             Assert.Contains(module.declarations, declaration => declaration.name == "ProtectedImpl" && declaration.isCompleteDefinition && declaration.visibility == "Protected");
             if (exposure is not ("private-sdk" or "qualified"))
             {
-                NotSupportedException failure = Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(module, [header]));
+                NotSupportedException failure = Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module)));
                 Assert.Contains("publicly exposed native type", failure.Message);
                 Assert.Contains(relative.spelling, failure.Message);
                 return;
             }
-            string proof = new NativeStorageAssertionEmitter().Emit(module, [header]);
+            string proof = new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module));
             Assert.Contains("sizeof(SDK::Outer<int>)", proof);
             Assert.Contains("alignof(SDK::Outer<int>)", proof);
             NativeDeclaration outer = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "SDK::Outer<int>" && declaration.isCompleteDefinition);
@@ -131,7 +132,7 @@ public sealed class NativeStorageAssertionTests
                 NativeModule unproved = new(module.targetId, module.triple, module.pointerSize, module.types,
                     module.declarations.Select(declaration => declaration.id == witness.id ? declaration with { constantValue = null } : declaration).ToImmutableArray(), module.diagnostics)
                     { language = module.language, byteOrder = module.byteOrder };
-                Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(unproved, [header]));
+                Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(unproved, [header], NativeAssertionConventions.For(unproved)));
             }
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -169,7 +170,7 @@ public sealed class NativeStorageAssertionTests
                 RequiredStorage CopyStorage(RequiredStorage value);
                 """);
             var target = NativeConsumerHarness.ParserTarget(SourceLanguage.Cpp);
-            NativeModule parsed = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"))
+            NativeModule parsed = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost())
                 .ParseAsync(new(target, SourceLanguage.Cpp, [header])
                 { pathBase = root, languageStandard = "c++23", parseMacros = false, parseSystemIncludes = false }, CancellationToken.None)).module;
             Assert.DoesNotContain(parsed.diagnostics, diagnostic => diagnostic.isFailure);
@@ -184,7 +185,7 @@ public sealed class NativeStorageAssertionTests
                 parsed.declarations.Select(declaration => declaration.id == owner.id ? declaration with { isStandardLayout = false } : declaration).ToImmutableArray(), parsed.diagnostics)
                 { language = parsed.language, byteOrder = parsed.byteOrder };
             Assert.False(observed.GetDeclaration(owner.id).isStandardLayout);
-            string proof = new NativeStorageAssertionEmitter().Emit(observed, [header]);
+            string proof = new NativeStorageAssertionEmitter().Emit(observed, [header], NativeAssertionConventions.For(observed));
             Assert.DoesNotContain(proof.Split('\n'), line => line.Contains("is_standard_layout<", StringComparison.Ordinal) && line.Contains("OpaqueOwner", StringComparison.Ordinal));
             Assert.Contains(proof.Split('\n'), line => line.Contains("is_standard_layout<", StringComparison.Ordinal) && line.Contains("RequiredStorage", StringComparison.Ordinal) && line.Contains("== 1", StringComparison.Ordinal));
             Assert.Contains(proof.Split('\n'), line => line.Contains("sizeof(", StringComparison.Ordinal) && line.Contains("OpaqueOwner", StringComparison.Ordinal));
@@ -232,7 +233,7 @@ public sealed class NativeStorageAssertionTests
                 [new(integer, NativeTypeCategory.Primitive, correct ? "int" : "unsigned int", 4, 4) { primitiveKind = correct ? "Int" : "UInt", isSigned = correct },
                  new(enumType, NativeTypeCategory.Enumeration, "PublicEnum", 4, 4) { declaration = declarationId, elementType = integer }], [declaration], [])
                 { language = SourceLanguage.C };
-            string assertions = new NativeStorageAssertionEmitter().Emit(module, [header]);
+            string assertions = new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module));
             Assert.Contains("sizeof(PublicEnum)", assertions);
             Assert.DoesNotContain("sizeof(enum PublicEnum)", assertions);
             await File.WriteAllTextAsync(source, assertions);
@@ -256,7 +257,7 @@ public sealed class NativeStorageAssertionTests
     {
         NativeModule module = Module(specialized: false, system: false);
 
-        string source = new NativeStorageAssertionEmitter().Emit(module, []);
+        string source = new NativeStorageAssertionEmitter().Emit(module, [], NativeAssertionConventions.For(module));
         Assert.DoesNotContain("sizeof(Demo::Outer::Nested)", source);
         Assert.DoesNotContain("decltype(((Demo::Outer::Nested*)nullptr)->value)", source);
         Assert.Contains("sizeof(int)", source);
@@ -268,7 +269,7 @@ public sealed class NativeStorageAssertionTests
     public void ConcreteNestedStorageRetainsExactPublicFieldChecksIncludingSdkFacts(bool system)
     {
         NativeModule module = Module(specialized: true, system);
-        string source = new NativeStorageAssertionEmitter().Emit(module, []);
+        string source = new NativeStorageAssertionEmitter().Emit(module, [], NativeAssertionConventions.For(module));
         Assert.Contains("sizeof(Demo::Outer<int>::Nested) == 4", source);
         Assert.Contains("alignof(Demo::Outer<int>::Nested) == 4", source);
         Assert.Contains("typedef int bgcs_verified_field_0;", source);
@@ -300,6 +301,6 @@ public sealed class NativeStorageAssertionTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

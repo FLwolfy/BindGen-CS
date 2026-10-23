@@ -5,12 +5,12 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using Microsoft.CodeAnalysis.CSharp;
@@ -79,7 +79,7 @@ public sealed class NativeRecordArrayConstructorTests
             string[] members = ["NativeThing_Reset", "NativeThing_Resize", "NativeThing_SetEnabled", "NativeThing_Value"];
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "array-presentation", nativeName = "array_presentation_fixture" },
+                schemaVersion = 2, library = new() { id = "array-presentation", nativeName = "array_presentation_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["thing.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
@@ -113,11 +113,11 @@ public sealed class NativeRecordArrayConstructorTests
                 },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(built.targetModels);
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites()) { importMode = mode });
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites()) { importMode = mode });
             CSharpStoragePlan storage = Assert.Single(plan.storage, carrier => carrier.name == "NativeThing");
             CSharpRecordArrayCopyPlan array = Assert.Single(storage.presentation!.arrayCopies);
             Assert.Equal(1, array.length);
@@ -206,6 +206,6 @@ public sealed class NativeRecordArrayConstructorTests
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

@@ -7,9 +7,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 
 namespace BGCS.CSharp.Processing;
 
@@ -24,8 +24,6 @@ public sealed class RegexArtifactProcessor : IArtifactProcessor, ICacheFingerpri
     private readonly int m_lastGroup;
 
     /// <summary>Freezes the regex, replacement, selector and finite per-artifact execution budget.</summary>
-    /// <param name="id">The unique processor identity.</param>
-    /// <param name="priority">Descending pipeline priority, followed by ordinal identity.</param>
     /// <param name="paths">Portable managed-relative candidate selectors.</param>
     /// <param name="pattern">The bounded .NET expression.</param>
     /// <param name="replacement">Literal text and standard .NET dollar substitutions.</param>
@@ -33,8 +31,6 @@ public sealed class RegexArtifactProcessor : IArtifactProcessor, ICacheFingerpri
     /// <param name="options">Supported matching options; invariant culture is always applied and right-to-left matching is rejected.</param>
     /// <param name="requireMatch">Requires an actual match across the selected candidates.</param>
     public RegexArtifactProcessor(
-        string id,
-        int priority,
         IEnumerable<string> paths,
         string pattern,
         string replacement,
@@ -42,24 +38,17 @@ public sealed class RegexArtifactProcessor : IArtifactProcessor, ICacheFingerpri
         RegexOptions options = RegexOptions.None,
         bool requireMatch = true
     ) {
-        SourceProcessingSupport.Identity(id);
         ArgumentException.ThrowIfNullOrEmpty(pattern); ArgumentNullException.ThrowIfNull(replacement);
         const RegexOptions allowed = RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.ExplicitCapture
             | RegexOptions.IgnorePatternWhitespace | RegexOptions.CultureInvariant | RegexOptions.Compiled | RegexOptions.NonBacktracking;
         if ((options & ~allowed) != 0 || timeoutMilliseconds is < 1 or > 30000 || pattern.Length > 65536 || replacement.Length > 1048576)
             throw new ArgumentException("A source regex requires supported invariant options, bounded text and a finite 1..30000 millisecond budget.");
-        this.id = id; this.priority = priority;
         m_selector = new(paths); m_replacement = replacement; m_requireMatch = requireMatch;
         m_expression = new(pattern, options | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(timeoutMilliseconds));
         m_groups = m_expression.GetGroupNames().Concat(m_expression.GetGroupNumbers()
             .Select(number => number.ToString(CultureInfo.InvariantCulture))).ToHashSet(StringComparer.Ordinal);
         m_lastGroup = m_expression.GetGroupNumbers()[^1];
     }
-
-    /// <inheritdoc/>
-    public string id { get; }
-    /// <inheritdoc/>
-    public int priority { get; }
 
     /// <inheritdoc/>
     public async ValueTask ProcessAsync(
@@ -92,7 +81,7 @@ public sealed class RegexArtifactProcessor : IArtifactProcessor, ICacheFingerpri
             if (start != 0 || output.Length != input.Length)
                 await request.content.ReplaceTextAsync(artifact.relativePath, output.ToString(), cancellationToken).ConfigureAwait(false);
         }
-        if (m_requireMatch && !matched) throw new InvalidOperationException("The regex source processor matched no declared text: " + id);
+        if (m_requireMatch && !matched) throw new InvalidOperationException("The regex source processor matched no declared text.");
     }
 
     /// <inheritdoc/>
@@ -103,10 +92,8 @@ public sealed class RegexArtifactProcessor : IArtifactProcessor, ICacheFingerpri
         cancellationToken.ThrowIfCancellationRequested();
         return SourceProcessingSupport.Fingerprint(new
         {
-            revision = 1,
+            revision = 2,
             kind = "regex",
-            id,
-            priority,
             m_selector.patterns,
             pattern = m_expression.ToString(),
             replacement = m_replacement,

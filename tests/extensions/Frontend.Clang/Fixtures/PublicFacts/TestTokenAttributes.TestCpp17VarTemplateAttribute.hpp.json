@@ -1,0 +1,416 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:17a5fdf42f9e352081b9cfca2c437872a3dfd0c27bc9ad004ab38aba4e46cc8b"
+      },
+      "category": "Record",
+      "spelling": "TestT\u003Cint\u003E",
+      "size": 1,
+      "alignment": 1,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:e55cc32f215618ddf6ebefd51c19901c28da73a86f1bab47b2409e95580436e4"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:3605f317c3453c6643131419a7eabf30bc2042eb608eddb5c13faf52c9c0b053"
+      },
+      "category": "Template",
+      "spelling": "T",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:6154534d68cbe3cbc34274d04f2fc97aa2d23372a2558ba40213c9f91b3026d2"
+      },
+      "category": "Record",
+      "spelling": "Test",
+      "size": 1,
+      "alignment": 1,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:0b523271da7386d485071b9093275718fdd84bd24085d7850ed27b86de67d460"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "category": "Primitive",
+      "spelling": "int",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Int",
+      "isSigned": true,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:fffbe204942e59e2001bcd5fd26c61d1220ba1d7d1d60f3f496b863594b62ead"
+      },
+      "category": "Record",
+      "spelling": "TestT\u003CT\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:6979e4d2b0c33c6e9f9d2143bfca9340c1f83a071283cf89ecf947d3c4c2d790"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:0b523271da7386d485071b9093275718fdd84bd24085d7850ed27b86de67d460"
+      },
+      "kind": "Class",
+      "name": "Test",
+      "qualifiedName": "Test",
+      "type": {
+        "value": "type:6154534d68cbe3cbc34274d04f2fc97aa2d23372a2558ba40213c9f91b3026d2"
+      },
+      "source": {
+        "file": "TestTokenAttributes.TestCpp17VarTemplateAttribute.hpp",
+        "line": 6,
+        "column": 1
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:e3c15aad9fb3b9d28ace11b2570739cbca994358804072d011bdaad80ceffe0f"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Struct",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": true,
+      "isDefaultConstructible": true,
+      "isStandardLayout": true,
+      "isTriviallyCopyable": true,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": "NormalClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:6979e4d2b0c33c6e9f9d2143bfca9340c1f83a071283cf89ecf947d3c4c2d790"
+      },
+      "kind": "Class",
+      "name": "TestT",
+      "qualifiedName": "TestT\u003CT\u003E",
+      "type": {
+        "value": "type:fffbe204942e59e2001bcd5fd26c61d1220ba1d7d1d60f3f496b863594b62ead"
+      },
+      "source": {
+        "file": "TestTokenAttributes.TestCpp17VarTemplateAttribute.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [
+        {
+          "value": "type:3605f317c3453c6643131419a7eabf30bc2042eb608eddb5c13faf52c9c0b053"
+        }
+      ],
+      "templateKind": "TemplateClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:e3c15aad9fb3b9d28ace11b2570739cbca994358804072d011bdaad80ceffe0f"
+      },
+      "kind": "Field",
+      "name": "channels",
+      "qualifiedName": "Test::channels",
+      "type": {
+        "value": "type:17a5fdf42f9e352081b9cfca2c437872a3dfd0c27bc9ad004ab38aba4e46cc8b"
+      },
+      "source": {
+        "file": "TestTokenAttributes.TestCpp17VarTemplateAttribute.hpp",
+        "line": 7,
+        "column": 16
+      },
+      "parent": {
+        "value": "declaration:0b523271da7386d485071b9093275718fdd84bd24085d7850ed27b86de67d460"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": 0,
+      "storageSize": 1,
+      "storageEvidence": {
+        "level": "Declared",
+        "origin": "clang.field-storage:Test::channels"
+      },
+      "bitOffset": 0,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:e55cc32f215618ddf6ebefd51c19901c28da73a86f1bab47b2409e95580436e4"
+      },
+      "kind": "Class",
+      "name": "TestT",
+      "qualifiedName": "TestT\u003Cint\u003E",
+      "type": {
+        "value": "type:17a5fdf42f9e352081b9cfca2c437872a3dfd0c27bc9ad004ab38aba4e46cc8b"
+      },
+      "source": {
+        "file": "TestTokenAttributes.TestCpp17VarTemplateAttribute.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Struct",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": true,
+      "isDefaultConstructible": true,
+      "isStandardLayout": true,
+      "isTriviallyCopyable": true,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [
+        {
+          "kind": "AsType",
+          "spelling": "int",
+          "type": {
+            "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+          }
+        }
+      ],
+      "templateParameters": [],
+      "templateKind": "TemplateSpecializedClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "Warning",
+      "message": "unknown attribute \u0027cppast\u0027 ignored",
+      "code": "BGCS-FRONTEND-CLANG",
+      "location": {
+        "file": "TestTokenAttributes.TestCpp17VarTemplateAttribute.hpp",
+        "line": 7,
+        "column": 7
+      }
+    }
+  ]
+}

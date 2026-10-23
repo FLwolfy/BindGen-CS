@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -7,7 +8,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.Caching;
 using Xunit;
 
@@ -15,6 +16,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class GenerationStageCacheIntegrityTests
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     [Theory]
     [InlineData("../escape")]
     [InlineData("short")]
@@ -22,7 +24,7 @@ public sealed class GenerationStageCacheIntegrityTests
     public void InvalidKeysCannotSelectCacheFilesystemPaths(string value)
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         Assert.Throws<ArgumentException>(() => cache.Store(new ContentDigest(value), Set("must not write")));
         Assert.False(Directory.Exists(scratch.root));
     }
@@ -40,7 +42,7 @@ public sealed class GenerationStageCacheIntegrityTests
     public void CompleteSetTamperingIsAMissAndFreshCandidatesRepairEveryByte(string damage)
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         ContentDigest key = Digest("complete-key");
         ImmutableArray<CachedStageArtifact> candidates = Set("original");
         Assert.True(cache.Store(key, candidates));
@@ -88,7 +90,7 @@ public sealed class GenerationStageCacheIntegrityTests
     public async Task ConcurrentStoresAndReadsNeverExposeMixedOrPartialArtifactSets()
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         ContentDigest key = Digest("shared-key");
         ImmutableArray<CachedStageArtifact> first = Set("first"), second = Set("second");
         await Task.WhenAll(Enumerable.Range(0, 4).Select(index => Task.Run(() =>
@@ -110,7 +112,7 @@ public sealed class GenerationStageCacheIntegrityTests
     public void CancelledReadsAndStoresLeaveThePreviousCompleteEntryUntouched()
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         ContentDigest key = Digest("cancelled-key");
         Assert.True(cache.Store(key, Set("original")));
         string path = Assert.Single(Directory.GetFiles(scratch.root, "*.stage.json"));
@@ -129,7 +131,7 @@ public sealed class GenerationStageCacheIntegrityTests
     public void AnUnreadableEntryIsAMissWithNoPartialArtifactsAndTheOriginalBytesRecover()
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         ContentDigest key = Digest("busy-entry");
         Assert.True(cache.Store(key, Set("original")));
         string path = Assert.Single(Directory.GetFiles(scratch.root, "*.stage.json"));
@@ -148,7 +150,7 @@ public sealed class GenerationStageCacheIntegrityTests
     public void CancellingContendedOwnershipNeverReplacesTheCompleteEntry()
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         ContentDigest key = Digest("contended-entry");
         Assert.True(cache.Store(key, Set("original")));
         string path = Assert.Single(Directory.GetFiles(scratch.root, "*.stage.json"));

@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -14,23 +14,14 @@ public abstract class SyntaxArtifactProcessor : IArtifactProcessor
 {
     private readonly ManagedArtifactSelector m_selector;
 
-    /// <summary>Freezes transformation identity and portable managed candidate selectors.</summary>
-    /// <param name="id">The globally unique processor identity.</param>
-    /// <param name="priority">Descending priority followed by ordinal identity.</param>
+    /// <summary>Freezes portable managed candidate selectors; service identity belongs to its registration descriptor.</summary>
     /// <param name="paths">Managed-relative path selectors.</param>
     protected SyntaxArtifactProcessor(
-        string id,
-        int priority,
         IEnumerable<string> paths
-    ) {
-        SourceProcessingSupport.Identity(id);
-        this.id = id; this.priority = priority; m_selector = new(paths);
+    )
+    {
+        m_selector = new(paths);
     }
-
-    /// <inheritdoc/>
-    public string id { get; }
-    /// <inheritdoc/>
-    public int priority { get; }
 
     /// <summary>Transforms one temporary parsed source; final ABI and candidate compilation checks remain authoritative.</summary>
     /// <param name="path">The managed-relative candidate path.</param>

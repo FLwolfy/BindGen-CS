@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using BGCS.Configuration;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Interop;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -56,5 +56,5 @@ public sealed class StringResultConfigurationTests
 
     private static StringResultConfiguration Rule() => new() { function = "get_text", encoding = NativeTextEncoding.Utf8, zeroTerminated = true, allowsNull = false };
     private static BindingConfiguration Configuration() => new()
-    { schemaVersion = 1, library = new() { id = "text", nativeName = "text" }, source = new() { headers = ["native.h"] } };
+    { schemaVersion = 2, library = new() { id = "text", nativeName = "text" }, source = new() { headers = ["native.h"] } };
 }

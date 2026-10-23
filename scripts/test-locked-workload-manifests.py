@@ -22,29 +22,29 @@ class LockedWorkloadManifestTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix='workload-raw-lock-')
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        self.sdk = {'sdkVersion': '10.0.401', 'managedRuntimeVersion': '10.0.12',
+        self.sdk = {'sdkVersion': '10.0.402', 'managedRuntimeVersion': '10.0.13',
                     'sdkArchives': {rid: {'url': 'https://example.invalid/sdk-' + rid, 'sha512': str(index) * 128}
                                     for index, rid in enumerate(HOSTS)}}
-        manifest = {'version': '10.0.112', 'workloads': {'wasm-tools': {'packs': ['tool'], 'platforms': list(HOSTS)}},
-                    'packs': {'tool': {'kind': 'Framework', 'version': '10.0.12',
+        manifest = {'version': '10.0.113', 'workloads': {'wasm-tools': {'packs': ['tool'], 'platforms': list(HOSTS)}},
+                    'packs': {'tool': {'kind': 'Framework', 'version': '10.0.13',
                                        'alias-to': {rid: 'Actual.Tool.' + rid for rid in HOSTS}}}}
         unix = {'WorkloadManifest.json': (json.dumps(manifest, indent=2) + '\n').encode(),
                 'WorkloadManifest.targets': b'<Project>\n</Project>\n'}
         self.bytes = {rid: {name: data.replace(b'\n', b'\r\n') if rid == 'win-x64' else data
                            for name, data in unix.items()} for rid in HOSTS}
-        self.lock = {'schemaVersion': 2, 'sdkVersion': '10.0.401', 'runtimePackVersion': '10.0.12',
+        self.lock = {'schemaVersion': 2, 'sdkVersion': '10.0.402', 'runtimePackVersion': '10.0.13',
                      'requiredWorkload': 'wasm-tools', 'sourceSdkArchives': copy.deepcopy(self.sdk['sdkArchives']),
-                     'manifests': [{'id': 'fixture', 'manifestFeatureBand': '10.0.100', 'version': '10.0.112',
+                     'manifests': [{'id': 'fixture', 'manifestFeatureBand': '10.0.100', 'version': '10.0.113',
                                     'filesByHost': {rid: {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}
                                                     for rid, files in self.bytes.items()}}]}
 
     def install_fixture(self, rid):
         directory = self.root / rid
-        manifest = directory / 'sdk-manifests/10.0.100/fixture/10.0.112'
+        manifest = directory / 'sdk-manifests/10.0.100/fixture/10.0.113'
         manifest.mkdir(parents=True)
         for name, data in self.bytes[rid].items():
             (manifest / name).write_bytes(data)
-        (directory / 'packs' / ('Actual.Tool.' + rid) / '10.0.12').mkdir(parents=True)
+        (directory / 'packs' / ('Actual.Tool.' + rid) / '10.0.13').mkdir(parents=True)
         return directory, manifest
 
     def test_each_host_accepts_only_its_exact_raw_bytes_and_actual_pack(self):
@@ -53,7 +53,7 @@ class LockedWorkloadManifestTests(unittest.TestCase):
                 directory, _ = self.install_fixture(rid)
                 verifier.verify_workload_archive_provenance(self.lock, self.sdk, rid)
                 report = verifier.verify_workloads(directory, self.lock, rid)
-                self.assertEqual([{'id': 'Actual.Tool.' + rid, 'version': '10.0.12'}], report['resolvedRequiredPacks'])
+                self.assertEqual([{'id': 'Actual.Tool.' + rid, 'version': '10.0.13'}], report['resolvedRequiredPacks'])
                 self.assertEqual(set(self.lock['manifests'][0]['filesByHost'][rid].values()),
                                  {entry['sha256'] for entry in report['manifestInputs']})
 
@@ -107,7 +107,7 @@ class LockedWorkloadManifestTests(unittest.TestCase):
 
     def test_expected_manifest_does_not_hide_missing_actual_workload_pack(self):
         directory, _ = self.install_fixture('osx-x64')
-        (directory / 'packs/Actual.Tool.osx-x64/10.0.12').rmdir()
+        (directory / 'packs/Actual.Tool.osx-x64/10.0.13').rmdir()
         with self.assertRaisesRegex(RuntimeError, 'required tested workload pack/version is absent'):
             verifier.verify_workloads(directory, self.lock, 'osx-x64')
 

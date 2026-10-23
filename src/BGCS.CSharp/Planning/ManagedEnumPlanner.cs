@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using System.Threading;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Managed;
 
 namespace BGCS.CSharp.Planning;
 

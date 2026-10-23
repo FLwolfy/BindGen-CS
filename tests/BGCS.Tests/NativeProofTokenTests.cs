@@ -3,12 +3,12 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
 using BGCS.Infrastructure.Execution;
-using BGCS.Cpp2C.Emission;
-using BGCS.Platforms.Toolchains;
+using BGCS.NativeBridge.Emission;
+using BGCS.Targets.Desktop.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -39,7 +39,8 @@ public sealed class NativeProofTokenTests
             await File.WriteAllTextAsync(header, "typedef struct Pair { " + (scenario == "offset" ? "int b; int a;" : "int a; int b;") + " } Pair;\n"
                 + "#undef offsetof\n#define offsetof(t,m) bgcs_fake_##m\n#define bgcs_fake_a 0\n#define bgcs_fake_b 4\n"
                 + (scenario == "shadow" ? "#define " + (cpp ? "static_assert" : "_Static_assert") + "(...)\n" : string.Empty));
-            await File.WriteAllTextAsync(input, new NativeStorageAssertionEmitter().Emit(Module(header, cpp), [header]));
+            NativeModule expected = Module(header, cpp);
+            await File.WriteAllTextAsync(input, new NativeStorageAssertionEmitter().Emit(expected, [header], NativeAssertionConventions.For(expected)));
             string msvc = MsvcToolchainDiscovery.FindCompiler("x64") ?? throw new FileNotFoundException("MSVC is required for the native storage proof guard gate.");
             MsvcToolchainInfo sdk = MsvcToolchainDiscovery.Resolve(msvc, "x64");
             string compiler = provider == "msvc" ? msvc : NativeConsumerHarness.FindCompiler(cpp);

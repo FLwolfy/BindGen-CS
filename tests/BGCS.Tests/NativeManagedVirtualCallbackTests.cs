@@ -1,3 +1,4 @@
+using BGCS.Core.Targets;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -6,13 +7,14 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Bridge;
+using BGCS.Core.Capabilities;
+using BGCS.Core.Inputs;
+using BGCS.Core.Managed;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Interop;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -59,10 +61,10 @@ public sealed class NativeManagedVirtualCallbackTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1,
+                schemaVersion = 2,
                 library = new() { id = "managed_callbacks", nativeName = "managed_callbacks", bridgeExportPrefix = "managed_callbacks" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["calculator.hpp"], preamble = "#define BGCS_VIRTUAL_USER_PREAMBLE 1\n", parseMacros = false },
-                cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator") { releaseThreadDomain = "any" }] },
+                bridge = new() { cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator") { releaseThreadDomain = "any" }] } },
                 api = new() { @namespace = "Generated.Virtual", name = "VirtualApi", importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("managed_callbacks_error", "CallbackError")
@@ -71,33 +73,38 @@ public sealed class NativeManagedVirtualCallbackTests
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string targetRoot = Assert.Single(Directory.GetDirectories(result.outputRoot));
             string factInput = await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "src", "storage.assertions.cpp"));
             int userPreamble = factInput.IndexOf("#define BGCS_VIRTUAL_USER_PREAMBLE 1", StringComparison.Ordinal);
             Assert.True(userPreamble >= 0, factInput);
-            int support = factInput.IndexOf(BGCS.Cpp2C.Planning.VirtualCallbackPlanner.preamble, userPreamble, StringComparison.Ordinal);
+            int support = factInput.IndexOf(BGCS.NativeBridge.Planning.VirtualCallbackPlanner.preamble, userPreamble, StringComparison.Ordinal);
             Assert.True(support > userPreamble, factInput);
             int userHeader = factInput.IndexOf("calculator.hpp", support, StringComparison.Ordinal);
             Assert.True(userHeader > support, factInput);
-            Assert.Contains("namespace BGCSGeneratedCallbacks", factInput[userHeader..]);
             Assert.DoesNotContain("#include", factInput[(userHeader + "calculator.hpp".Length)..]);
+            string bridgeSource = await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "src", "managed_callbacks.cpp"));
+            Assert.Contains("namespace BGCSGeneratedCallbacks", bridgeSource);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             using JsonDocument manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(targetRoot, "metadata", "abi.manifest.json")));
             Assert.Single(manifest.RootElement.GetProperty("managedVirtualProxies").EnumerateArray());
             Assert.Empty(manifest.RootElement.GetProperty("managedVirtualProxyOmissions").EnumerateArray());
             InteropModule finalAbi = manifest.RootElement.GetProperty("module").Deserialize<InteropModule>()!;
+            VirtualProxyContract generatedProxy = Assert.Single(finalAbi.virtualProxies);
+            var sourceInterface = Assert.Single(result.targetModels).native.GetType(generatedProxy.sourceInterface);
+            BindingCapabilityReport capability = Assert.Single(result.capabilities, value => value.declarationId == sourceInterface.declaration);
+            Assert.Equal(DeclarationGenerationStatus.GeneratedFriendly, capability.status);
             ManagedApiModel managed = new DefaultManagedProjection().Project(finalAbi,
                 new(configuration.api.@namespace, configuration.api.name) { style = configuration.api.style, names = configuration.api.names }, CancellationToken.None);
-            CSharpEmissionPlan emission = new CSharpEmissionPlanner().Plan(managed, new(configuration.library.nativeName, new NoWrites())
+            CSharpEmissionPlan emission = new HostTestEmissionPlanner().Plan(managed, new(configuration.library.nativeName, new NoWrites())
             { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Virtual.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime });
-            CSharpEmissionPlan nonblocking = new CSharpEmissionPlanner().Plan(managed, new(configuration.library.nativeName, new NoWrites())
+            CSharpEmissionPlan nonblocking = new HostTestEmissionPlanner().Plan(managed, new(configuration.library.nativeName, new NoWrites())
             {
                 importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Virtual.Runtime" : "BGCS.Runtime",
-                managedRuntime = new("fixture-explicit-no-block", BGCS.Contracts.Targets.ManagedRuntimeKind.CoreClr,
-                    BGCS.Contracts.Targets.NativeModuleMechanism.DynamicLibrary, [mode], true, false)
+                managedRuntime = new("fixture-explicit-no-block", new BGCS.Core.Targets.ManagedRuntimeId("dotnet.coreclr"),
+                    BGCS.Core.Targets.NativeModuleMechanism.DynamicLibrary, [mode], true, false)
             });
             Assert.Empty(nonblocking.virtualProxies);
             Assert.Contains("nonblocking virtual-proxy protocol", Assert.Single(nonblocking.virtualProxyOmissions).reason, StringComparison.Ordinal);
@@ -195,7 +202,7 @@ public sealed class NativeManagedVirtualCallbackTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 
     private sealed class NoWrites : IArtifactSink

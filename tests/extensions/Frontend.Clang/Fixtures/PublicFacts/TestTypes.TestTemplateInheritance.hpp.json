@@ -1,0 +1,318 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:1e6d751279645be460e60c3c4a3771ba69a3ed07a53a944598dc3542c3c9364a"
+      },
+      "category": "Record",
+      "spelling": "Derived",
+      "size": 1,
+      "alignment": 1,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:87fcb2bace0096fde46786ea3e80a841422afade28d368a299ca2b4a38db0b9f"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:204a3eab29f6c03d5752ebed1d64085c44eed40fa89b1f5ee64c824cb2f3c48a"
+      },
+      "category": "Template",
+      "spelling": "T",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:6fefa485fd70feaff45fe45e7468dd413d23e6c19ee78ea9a6987cc7fbdde731"
+      },
+      "category": "Record",
+      "spelling": "BaseTemplate\u003CT\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:d1e68f837beaf67eed7cf0a9c7b91497e3118836a289c7b84352ec7a63e5408a"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:b115b86a25f141c128fd5442aee229ce1f88ae03ecdb8fcd98d31030a31508b0"
+      },
+      "category": "Record",
+      "spelling": "BaseTemplate\u003CDerived\u003E",
+      "size": 1,
+      "alignment": 1,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:943b19f83262df7fc9059f49b114907a97a93c42db40d01f273be3e541c2d259"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:87fcb2bace0096fde46786ea3e80a841422afade28d368a299ca2b4a38db0b9f"
+      },
+      "kind": "Class",
+      "name": "Derived",
+      "qualifiedName": "Derived",
+      "type": {
+        "value": "type:1e6d751279645be460e60c3c4a3771ba69a3ed07a53a944598dc3542c3c9364a"
+      },
+      "source": {
+        "file": "TestTypes.TestTemplateInheritance.hpp",
+        "line": 7,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": true,
+      "isDefaultConstructible": true,
+      "isStandardLayout": true,
+      "isTriviallyCopyable": true,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [
+        {
+          "type": {
+            "value": "type:b115b86a25f141c128fd5442aee229ce1f88ae03ecdb8fcd98d31030a31508b0"
+          },
+          "visibility": "Public",
+          "isVirtual": false
+        }
+      ],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": "NormalClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:943b19f83262df7fc9059f49b114907a97a93c42db40d01f273be3e541c2d259"
+      },
+      "kind": "Class",
+      "name": "BaseTemplate",
+      "qualifiedName": "BaseTemplate\u003CDerived\u003E",
+      "type": {
+        "value": "type:b115b86a25f141c128fd5442aee229ce1f88ae03ecdb8fcd98d31030a31508b0"
+      },
+      "source": {
+        "file": "TestTypes.TestTemplateInheritance.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": true,
+      "isDefaultConstructible": true,
+      "isStandardLayout": true,
+      "isTriviallyCopyable": true,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [
+        {
+          "kind": "AsType",
+          "spelling": "Derived",
+          "type": {
+            "value": "type:1e6d751279645be460e60c3c4a3771ba69a3ed07a53a944598dc3542c3c9364a"
+          }
+        }
+      ],
+      "templateParameters": [],
+      "templateKind": "TemplateSpecializedClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:d1e68f837beaf67eed7cf0a9c7b91497e3118836a289c7b84352ec7a63e5408a"
+      },
+      "kind": "Class",
+      "name": "BaseTemplate",
+      "qualifiedName": "BaseTemplate\u003CT\u003E",
+      "type": {
+        "value": "type:6fefa485fd70feaff45fe45e7468dd413d23e6c19ee78ea9a6987cc7fbdde731"
+      },
+      "source": {
+        "file": "TestTypes.TestTemplateInheritance.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [
+        {
+          "value": "type:204a3eab29f6c03d5752ebed1d64085c44eed40fa89b1f5ee64c824cb2f3c48a"
+        }
+      ],
+      "templateKind": "TemplateClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

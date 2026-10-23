@@ -22,7 +22,7 @@ Windows x64 可以使用 Windows worker 和 Android NDK 头文件解析 Android 
 安装已发布的命令行工具：
 
 ```bash
-dotnet tool install --global BindGen-CS --version 3.0.0
+dotnet tool install --global BindGen-CS --version 4.0.0
 bindgen-cs --help
 ```
 
@@ -34,7 +34,7 @@ dotnet run --project src/BGCS.Tool -- version
 ```
 
 下面的 `bindgen-cs` 可以替换成这个源码命令，保留工具参数之前的 `--`。
-需要理解的产品只有四个：完整生成 SDK `BGCS`、中立插件契约 `BGCS.Contracts`、
+需要理解的产品只有四个：完整生成 SDK `BGCS`、中立插件契约 `BGCS.Core`、
 绑定消费者的 `BGCS.Runtime` 和工具 `BindGen-CS`。完整 SDK 或工具直接交付内部实现
 程序集；RID 工具分包和解析器 runtime 包属于技术分发细节，见[包分发](packages.cn.md)。
 
@@ -55,7 +55,7 @@ C 与 C++ 都使用 `bindgen.json`。带版本的分组配置示例：
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": { "id": "example", "nativeName": "example" },
   "source": { "language": "c", "languageStandard": "c17", "headers": ["native.h"] },
   "api": { "namespace": "Example.Bindings", "name": "NativeApi" },
@@ -87,7 +87,7 @@ bindgen-cs init include/native.h --language c --config bindings/bindgen.json
   <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="BGCS.Runtime" Version="3.0.0" />
+  <PackageReference Include="BGCS.Runtime" Version="4.0.0" />
 </ItemGroup>
 ```
 
@@ -153,7 +153,7 @@ using System;
 using System.Threading;
 using BGCS;
 
-await using BindingHost host = BindingHost.CreateDefault();
+await using BindingHost host = BindingGenerator.CreateDefault();
 GenerationResult result = await host.GenerateAsync(
     GenerationRequest.FromFile("bindgen.json"), CancellationToken.None);
 if (!result.success)
@@ -161,7 +161,7 @@ if (!result.success)
 ```
 
 `InspectAsync`、`BridgeAsync`、`DiffAsync` 和 workspace 方法也使用同一 Host。
-会话在解析前冻结配置和扩展注册。普通插件只引用 `BGCS.Contracts`，处理脱离解析器的
+会话在解析前冻结配置和扩展注册。普通插件只引用 `BGCS.Core`，处理脱离解析器的
 中立事实；manifest 固定可执行文件闭包。影响产物的私有状态和外部输入必须完整提供
 指纹，才能复用对应缓存。
 

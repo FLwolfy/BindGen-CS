@@ -5,12 +5,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -35,12 +35,12 @@ public sealed class PointerCarrierTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.Addresses.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal(4, plan.pointerCarriers.Length);
         Assert.Equal(2, plan.pointerFunctions.Length);
         Assert.All(plan.methods, method => Assert.DoesNotContain(plan.pointerCarriers, carrier => method.returnType == carrier.name
             || method.returnType.EndsWith("." + carrier.name, StringComparison.Ordinal)));
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string text = string.Join("\n", sink.sources.Values);
         Assert.Contains("DangerousArray_values", text);
         Assert.Contains("DangerousField_next", text);
@@ -100,13 +100,13 @@ public sealed class PointerCarrierTests
             pointerCarriers = model.pointerCarriers.Add(new(new("pointer-alias"), "AliasAddress")) };
         if (fault == "owned-result") model = model with { interop = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types,
             model.interop.functions.Select(function => function.id == new StableId("get")
-            ? function with { returnOwnership = new(NativeOwnershipKind.Borrowed, new(NativeLifetimeKind.Module, null, new(EvidenceLevel.UserAsserted, "fixture:tracked")), new(EvidenceLevel.UserAsserted, "fixture:tracked")) } : function).ToImmutableArray(), []) };
+            ? function with { returnOwnership = new(NativeOwnershipKind.Borrowed, new(NativeLifetimeKind.Module, null, new(EvidenceLevel.UserAsserted, "fixture:tracked")), new(EvidenceLevel.UserAsserted, "fixture:tracked")) } : function).ToImmutableArray(), []) { byteOrder = model.interop.byteOrder } };
         if (fault == "duplicate-pointer") model = model with { pointerCarriers = model.pointerCarriers.Add(new(new("pointer"), "DuplicateAddress")) };
         if (fault == "type-collision") model = model with { pointerCarriers = [new(new("pointer"), "Node")] };
         if (fault == "method-collision") model = model with { pointerFunctions = model.pointerFunctions.Add(new(new("read"), [new(new("self"), "NodeAddress")]) { name = "ReadAddress" }) };
         if (fault is "duplicate-pointer" or "type-collision" or "method-collision")
-            Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
-        else Assert.Throws<CSharpPlanningException>(() => new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
+            Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
+        else Assert.Throws<CSharpPlanningException>(() => new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
     }
 
     [Fact]
@@ -126,8 +126,8 @@ public sealed class PointerCarrierTests
     {
         ManagedApiModel model = Model(false);
         InteropModule module = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types.Select(type => type.id == new StableId("record")
-            ? type with { size = null, alignment = null, fields = [] } : type).ToImmutableArray(), model.interop.functions, []);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(Model(false, module), new("native", new NeutralBackendTests.MemorySink()));
+            ? type with { size = null, alignment = null, fields = [] } : type).ToImmutableArray(), model.interop.functions, []) { byteOrder = model.interop.byteOrder };
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Model(false, module), new("native", new NeutralBackendTests.MemorySink()));
         Assert.All(plan.pointerCarriers.Where(carrier => carrier.depth == 1), carrier => { Assert.Null(carrier.elementSize); Assert.Empty(carrier.fields); });
     }
 
@@ -138,10 +138,10 @@ public sealed class PointerCarrierTests
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types.AddRange(ImmutableArray.Create<InteropType>(
             new InteropType(new("void"), "void", NativeTypeCategory.Primitive, 0, 1) { primitiveKind = "Void" },
             new InteropType(new("void-pointer"), "void*", NativeTypeCategory.Pointer, 8, 8) { elementType = new("void") },
-            new InteropType(new("void-alias"), "NativeContext", NativeTypeCategory.Alias, 8, 8) { elementType = new("void-pointer") })), original.functions, []);
+            new InteropType(new("void-alias"), "NativeContext", NativeTypeCategory.Alias, 8, 8) { elementType = new("void-pointer") })), original.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated", "OpaqueApi")
             { pointerCarriers = [new("NativeContext", "ContextAddress")] }, CancellationToken.None);
-        CSharpPointerCarrierPlan carrier = Assert.Single(new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())).pointerCarriers);
+        CSharpPointerCarrierPlan carrier = Assert.Single(new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())).pointerCarriers);
         Assert.Null(carrier.elementSize); Assert.Empty(carrier.fields);
         Assert.False(new NativePointerShapeReader(module).CanConvert(new("void-alias"), new("void-pointer")));
     }
@@ -156,8 +156,8 @@ public sealed class PointerCarrierTests
             { qualifier = "Volatile", elementType = new("int") }).Select(type => type.id != new StableId("record") ? type : type with
             { fields = type.fields.Select(field => volatileField && field.id == new StableId("value") ? field with { type = new("volatile-int") }
                 : !volatileField && field.id == new StableId("next") ? field with { type = new("const-pointer") } : field).ToImmutableArray() }).ToImmutableArray();
-        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, original.functions, []);
-        CSharpPointerCarrierPlan carrier = new CSharpEmissionPlanner().Plan(Model(false, module), new("native", new NeutralBackendTests.MemorySink()))
+        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, original.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+        CSharpPointerCarrierPlan carrier = new CSharpTestPlanner().Plan(Model(false, module), new("native", new NeutralBackendTests.MemorySink()))
             .pointerCarriers.Single(item => item.name == "NodeAddress");
         Assert.Null(carrier.elementSize);
         Assert.False(carrier.exposesTypedPointer);
@@ -174,9 +174,9 @@ public sealed class PointerCarrierTests
         ManagedApiModel model = Model(nested, documentation: prose);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal(prose, Assert.Single(plan.pointerCarriers, carrier => carrier.name == "NodeAddress").documentation);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string text = string.Join("\n", sink.sources.Values);
         Assert.Contains("&lt;include", text);
         Assert.Contains("&amp;", text);
@@ -203,7 +203,7 @@ public sealed class PointerCarrierTests
         if (fault == "private-field") operation = operation with { name = "m_handle" };
         if (fault == "carrier-name") operation = operation with { name = "NodeAddress" };
         NeutralBackendTests.MemorySink sink = new();
-        Assert.ThrowsAny<Exception>(() => new CSharpEmissionPlanner().Plan(model with { pointerFunctions = [operation] }, new("native", sink)));
+        Assert.ThrowsAny<Exception>(() => new CSharpTestPlanner().Plan(model with { pointerFunctions = [operation] }, new("native", sink)));
         Assert.Empty(sink.sources);
     }
 
@@ -212,7 +212,7 @@ public sealed class PointerCarrierTests
     {
         ManagedApiModel model = Model(false) with { pointerCarriers = [new(new("pointer"), "m_handle")], pointerFunctions = [] };
         NeutralBackendTests.MemorySink sink = new();
-        Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(model, new("native", sink)));
+        Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(model, new("native", sink)));
         Assert.Empty(sink.sources);
     }
 
@@ -225,8 +225,8 @@ public sealed class PointerCarrierTests
         ManagedApiModel model = Model(false);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string from = fault switch { "context-null-check" => "global::System.ArgumentNullException.ThrowIfNull(context);", "receiver-conversion" => "context.ReadAddress(this)", _ => "return context.ReadAddress(this);" };
         string to = fault switch { "context-null-check" => "", "receiver-conversion" => "context.ReadAddress(default)", _ => "return 0;" };
         var changed = sink.sources.Select(source => (source.Key, source.Value.Replace(from, to, StringComparison.Ordinal))).ToArray();
@@ -243,7 +243,7 @@ public sealed class PointerCarrierTests
             [new(new("first-self"), "self", pointer), new(new("first-value"), "value", integer)], "C");
         InteropFunction last = new(new("last"), "last", integer,
             [new(new("last-value"), "value", integer), new(new("last-self"), "self", pointer)], "C");
-        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types, [first, last], []);
+        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types, [first, last], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Addresses", "AddressApi")
         {
             pointerCarriers = [new("pointer", "NodeAddress")],
@@ -251,7 +251,7 @@ public sealed class PointerCarrierTests
                 new("last") { name = "Read", receiver = "self", parameters = [new("self", "NodeAddress")] }]
         }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
-        var failure = Assert.Throws<InvalidOperationException>(() => new CSharpEmissionPlanner().Plan(model, new("native", sink)));
+        var failure = Assert.Throws<InvalidOperationException>(() => new CSharpTestPlanner().Plan(model, new("native", sink)));
         Assert.Contains("NodeAddress", failure.Message, StringComparison.Ordinal);
         Assert.Contains("overload", failure.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(sink.sources);
@@ -283,6 +283,6 @@ public sealed class PointerCarrierTests
                 new(new("pointer-alias"), "Alias", NativeTypeCategory.Alias, 8, 8) { elementType = pointer.id },
                 new(new("array"), "int[2]", NativeTypeCategory.Array, 8, 4) { elementType = integer.id, arrayLength = 2 }],
             [new(new("read"), "read_node", integer.id, [new(new("self"), "self", pointer.id)], "C"),
-                new(new("get"), "get_nodes", new("pointer-pointer"), [], "C")], []);
+                new(new("get"), "get_nodes", new("pointer-pointer"), [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

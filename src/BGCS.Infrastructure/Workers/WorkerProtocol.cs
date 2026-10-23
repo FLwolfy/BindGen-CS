@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Requests;
 
 namespace BGCS.Infrastructure.Workers;
 
@@ -13,9 +13,7 @@ namespace BGCS.Infrastructure.Workers;
 public static class WorkerProtocol
 {
     /// <summary>The only accepted protocol revision.</summary>
-    public const int C_REVISION = BGCS.Contracts.Versioning.ModelRevision.C_FRONTEND_PROTOCOL;
-    /// <summary>The parser identity required by the default Clang worker.</summary>
-    public const string C_PARSER_IDENTITY = "ClangSharp/20.1.2.4;LLVM/20";
+    public const int C_REVISION = BGCS.Core.Versioning.ModelRevision.C_FRONTEND_PROTOCOL;
     /// <summary>The maximum JSON payload size in bytes.</summary>
     public const int C_MAXIMUM_FRAME_BYTES = 256 * 1024 * 1024;
 
@@ -106,5 +104,5 @@ public sealed record WorkerResponse(
 )
 {
     /// <summary>Gets complete worker-only extension state captured independently in this process.</summary>
-    public BGCS.Contracts.Plugins.WorkerPluginCapture? pluginCapture { get; init; }
+    public BGCS.Core.Plugins.WorkerPluginCapture? pluginCapture { get; init; }
 }

@@ -3,9 +3,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using BGCS.CSharp.Projection;
 using Xunit;
 
@@ -126,6 +126,6 @@ public sealed class FlatIdentifierNamingTests
     private static InteropModule Module()
     {
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
-        return new("flat", "windows-x64-msvc", 8, [integer], [new(new("create"), "CREATEWINDOW", integer.id, [], "C")], []);
+        return new("flat", "windows-x64-msvc", 8, [integer], [new(new("create"), "CREATEWINDOW", integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

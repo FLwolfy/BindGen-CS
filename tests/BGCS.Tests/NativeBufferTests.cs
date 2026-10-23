@@ -5,9 +5,9 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
 using BGCS.Runtime;
 using Xunit;
 
@@ -62,7 +62,7 @@ public sealed class NativeBufferTests
                     lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "buffers", nativeName = "buffer_fixture" },
+                schemaVersion = 2, library = new() { id = "buffers", nativeName = "buffer_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["buffers.h"], parseMacros = false },
                 api = new() { @namespace = "Generated.Buffers", name = "BufferApi", importMode = mode },
                 semantics = new() { bufferParameters = [Rule("sum", NativeParameterDirection.Input), Rule("sum_bytes", NativeParameterDirection.Input, unit: NativeLengthUnit.Bytes),
@@ -71,7 +71,7 @@ public sealed class NativeBufferTests
                     Rule("small_count", NativeParameterDirection.Input), Rule("inspect_aligned", NativeParameterDirection.Input) with { requiredAlignment = 64, allowsNull = false }] },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
             Assert.True(built.success, built.GetDiagnosticSummary());
             string target = System.Linq.Enumerable.Single(Directory.GetDirectories(built.outputRoot));
@@ -121,8 +121,10 @@ public sealed class NativeBufferTests
                 }
                 Console.WriteLine("native-buffer-ok");
                 """);
-            await RunAsync(consumer, "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false");
-            Assert.Contains("native-buffer-ok", await RunAsync(consumer, Path.Combine(consumer, "bin", "Debug", "net10.0", "Consumer.dll"), native));
+            string buildOutput = await RunAsync(consumer, "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false");
+            string consumerAssembly = Path.Combine(consumer, "bin", "Release", "net10.0", "Consumer.dll");
+            Assert.True(File.Exists(consumerAssembly), "The SDK did not produce the fixture consumer assembly: " + consumerAssembly + Environment.NewLine + buildOutput);
+            Assert.Contains("native-buffer-ok", await RunAsync(consumer, consumerAssembly, native));
         }
         finally { Directory.Delete(temporary, recursive: true); }
     }
@@ -148,6 +150,6 @@ public sealed class NativeBufferTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

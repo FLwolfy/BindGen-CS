@@ -1,9 +1,11 @@
+> Historical design record. Superseded by [the current architecture](architecture.md) and [acceptance](acceptance.md); not a current capability or release receipt.
+
 # BGCS 架构重构执行计划
 
 > 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
 
 
-> 历史计划：本文保留早期八工程方案与当时的实施说明。BGCS 3.0 的当前工程边界、实施阶段与发布要求见[当前路线图](roadmap.cn.md)、[架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。历史条目不代表当前实现或已完成认证。
+> 历史计划：本文保留早期八工程方案与当时的实施说明。BGCS 4.0 的当前工程边界、实施阶段与发布要求见[当前路线图](roadmap.cn.md)、[架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。历史条目不代表当前实现或已完成认证。
 
 ## 实施中的职责细化
 
@@ -15,7 +17,7 @@
 ### 1. 仓库及八个生产项目
 
 ```text
-C:\Dev\GameEngineDev\BindGen-CS\
+BindGen-CS/
 ├─ BindGen-CS.slnx
 ├─ CONTRIBUTING.md                                 独立开发规范入口
 ├─ .editorconfig                                   [新增]
@@ -26,9 +28,9 @@ C:\Dev\GameEngineDev\BindGen-CS\
 ├─ src/
 │  ├─ BGCS.Infrastructure/
 │  ├─ BGCS.Frontend.Clang/
-│  ├─ BGCS.Contracts/
+│  ├─ BGCS.Core/
 │  ├─ BGCS/
-│  ├─ BGCS.Cpp2C/
+│  ├─ BGCS.NativeBridge/
 │  ├─ BGCS.CSharp/
 │  ├─ BGCS.Runtime/
 │  └─ BGCS.Tool/
@@ -43,13 +45,13 @@ C:\Dev\GameEngineDev\BindGen-CS\
 依赖：
 
 ```text
-BGCS.Tool → BGCS + BGCS.Cpp2C
-BGCS → BGCS.Infrastructure + BGCS.Frontend.Clang + BGCS.Contracts + BGCS.CSharp
-BGCS.Cpp2C → BGCS.Infrastructure + BGCS.Frontend.Clang + BGCS.Contracts
+BGCS.Tool → BGCS + BGCS.NativeBridge
+BGCS → BGCS.Infrastructure + BGCS.Frontend.Clang + BGCS.Core + BGCS.CSharp
+BGCS.NativeBridge → BGCS.Infrastructure + BGCS.Frontend.Clang + BGCS.Core
 BGCS.Frontend.Clang → BGCS.Infrastructure
 BGCS.CSharp → BGCS.Infrastructure
 
-BGCS.Contracts：不依赖其他 BGCS 项目
+BGCS.Core：不依赖其他 BGCS 项目
 BGCS.Runtime：独立互操作库
 ```
 
@@ -93,7 +95,7 @@ Core 删除 CppAst 引用。AST 参数、C++ 类型和语言映射迁入对应�
 ### 3. CppAst：解析器及 Clang 边界
 
 ```text
-src/BGCS.Frontend.Clang/
+extensions/frontends/BGCS.Frontend.Clang/
 ├─ BGCS.Frontend.Clang.csproj
 ├─ Parsing/
 │  ├─ CppParser.cs
@@ -142,8 +144,8 @@ bundled builtin headers 与所用 libclang 匹配。宿主 SDK headers 与 built
 ### 4. Intermediate：真正冻结的生成模型
 
 ```text
-src/BGCS.Contracts/
-├─ BGCS.Contracts.csproj
+src/BGCS.Core/
+├─ BGCS.Core.csproj
 ├─ BindingModule.cs                                [迁入、重构]
 ├─ BindingType.cs
 ├─ BindingFunction.cs
@@ -159,7 +161,7 @@ src/BGCS.Contracts/
 │  ├─ IBindingEmitter.cs                           [迁入]
 │  └─ EmissionContext.cs                           拆分独立类型
 └─ Bridges/                                        [新增]
-   ├─ CppBridgeModule.cs
+   ├─ NativeBridgePlan.cs
    ├─ CppBridgeType.cs
    ├─ CppBridgeFunction.cs
    ├─ CppBridgeOperation.cs
@@ -224,17 +226,17 @@ src/BGCS/
 ### 6. Cpp2C：C++ 桥生成及原生构建
 
 ```text
-src/BGCS.Cpp2C/
-├─ BGCS.Cpp2C.csproj
+src/BGCS.NativeBridge/
+├─ BGCS.NativeBridge.csproj
 ├─ Application/
 │  └─ CppBridgeGenerationPipeline.cs                [新增] 唯一桥生成编排
 ├─ Configuration/
 │  ├─ Cpp2CGeneratorConfig.cs                       归并当前配置职责
 │  └─ Cpp2CConfigValidator.cs
 ├─ Analysis/
-│  └─ CppBridgeModuleAnalyzer.cs                    [重构] 构建冻结 Bridge IR
+│  └─ NativeBridgePlanAnalyzer.cs                    [重构] 构建冻结 Bridge IR
 ├─ Lowering/
-│  ├─ ICppTypeLowering.cs                          拆分既有协议
+│  ├─ INativeTypeLowering.cs                          拆分既有协议
 │  ├─ CppLoweringRegistry.cs
 │  ├─ CppLoweringRecipes.cs
 │  ├─ BuiltInCppTypeLowerings.cs

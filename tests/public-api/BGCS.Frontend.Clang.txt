@@ -1,13 +1,60 @@
 class BGCS.Frontend.Clang.Advanced.ClangFactContributionContext [sealed]
-  property BGCS.Contracts.Requests.FrontendRequest request { get }
+  property BGCS.Core.Requests.FrontendRequest request { get }
   property ClangSharp.Interop.CXTranslationUnit translationUnit { get }
-  method BGCS.Contracts.Common.SourceLocation GetSourceLocation(ClangSharp.Interop.CXCursor cursor)
-  method System.Boolean TryGetDeclarationCursor(BGCS.Contracts.Common.StableId declaration, out ClangSharp.Interop.CXCursor cursor)
+  method BGCS.Core.Common.SourceLocation GetSourceLocation(ClangSharp.Interop.CXCursor cursor)
+  method System.Boolean TryGetDeclarationCursor(BGCS.Core.Common.StableId declaration, out ClangSharp.Interop.CXCursor cursor)
 class BGCS.Frontend.Clang.Advanced.ClangPluginAssemblyIdentity [abstract; sealed]
   property System.Collections.Immutable.ImmutableArray<System.Reflection.Assembly> sharedAssemblies { get } [static]
 interface BGCS.Frontend.Clang.Advanced.IClangFactContributor [abstract]
-  method BGCS.Contracts.Native.NativeModule Contribute(BGCS.Frontend.Clang.Advanced.ClangFactContributionContext context, BGCS.Contracts.Native.NativeModule module, System.Threading.CancellationToken cancellationToken) [abstract; virtual]
-class BGCS.Frontend.Clang.ClangFrontend [sealed; interfaces=BGCS.Contracts.Ports.IFrontend]
+  method BGCS.Core.Native.NativeModule Contribute(BGCS.Frontend.Clang.Advanced.ClangFactContributionContext context, BGCS.Core.Native.NativeModule module, System.Threading.CancellationToken cancellationToken) [abstract; virtual]
+class BGCS.Frontend.Clang.ClangFrontend [sealed; interfaces=BGCS.Core.Ports.IFrontend]
+  ctor(BGCS.Core.Hosting.HostServices host)
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Requests.FrontendPreparation> PrepareAsync(BGCS.Core.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Requests.FrontendResult> ParseAsync(BGCS.Core.Requests.FrontendRequest request, System.Collections.Generic.IReadOnlyList<BGCS.Frontend.Clang.Advanced.IClangFactContributor> contributors, System.Threading.CancellationToken cancellationToken)
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Requests.FrontendResult> ParseAsync(BGCS.Core.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.Frontend.Clang.ClangFrontendPlugin [sealed; interfaces=BGCS.Core.Plugins.IBindingPlugin|BGCS.Core.Plugins.ICacheFingerprintProvider|System.IDisposable]
   ctor()
-  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Requests.FrontendResult> ParseAsync(BGCS.Contracts.Requests.FrontendRequest request, System.Collections.Generic.IReadOnlyList<BGCS.Frontend.Clang.Advanced.IClangFactContributor> contributors, System.Threading.CancellationToken cancellationToken)
-  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Requests.FrontendResult> ParseAsync(BGCS.Contracts.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  property BGCS.Core.Plugins.PluginDescriptor descriptor { get } [virtual; final]
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Void Configure(BGCS.Core.Plugins.IExtensionRegistryBuilder registry, BGCS.Core.Plugins.PluginConfiguration configuration) [virtual; final]
+class BGCS.Frontend.Clang.ClangParserIdentity [abstract; sealed]
+  field System.String C_IDENTITY [static; const="ClangSharp/20.1.2.4;LLVM/20"]
+class BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult [sealed; interfaces=System.IEquatable<BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult>]
+  ctor(System.Collections.Immutable.ImmutableArray<System.String> arguments, System.Collections.Immutable.ImmutableArray<System.String> linkerOnlyArguments, BGCS.Core.Inputs.SourceSnapshot snapshot)
+  property System.Collections.Immutable.ImmutableArray<System.String> arguments { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> cacheIneligibilityReasons { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> linkerOnlyArguments { get; init }
+  property BGCS.Core.Inputs.SourceSnapshot snapshot { get; init }
+  method BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult <Clone>$()
+  method System.Boolean Equals(BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult left, BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult right) [static]
+  method System.Boolean op_Inequality(BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult left, BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.Collections.Immutable.ImmutableArray<System.String> arguments, out System.Collections.Immutable.ImmutableArray<System.String> linkerOnlyArguments, out BGCS.Core.Inputs.SourceSnapshot snapshot)
+class BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentIdentityValidator [abstract; sealed]
+  method System.Void Validate(System.Collections.Generic.IEnumerable<System.String> arguments, System.String context, System.Boolean rejectParserSubstitution [optional; default=false]) [static]
+class BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentInputSnapshotBuilder [sealed]
+  ctor(BGCS.Core.Hosting.IHostPathService paths)
+  method BGCS.Core.Inputs.SourceSnapshot Capture(System.Collections.Generic.IEnumerable<System.String> arguments, System.String pathBase, System.Boolean windowsResponseSyntax [optional; default=false], System.Boolean clangConfigurations [optional; default=true], System.String compilerPath [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method BGCS.Frontend.Clang.Parsing.Arguments.NativeArgumentExpansionResult Expand(System.Collections.Generic.IEnumerable<System.String> arguments, System.String pathBase, System.Boolean windowsResponseSyntax [optional; default=false], System.Boolean clangConfigurations [optional; default=true], System.String compilerPath [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null], System.Collections.Generic.IEnumerable<System.String> snapshotExcludedDirectories [optional; default=null], System.Collections.Generic.IEnumerable<System.String> includeSearchDirectories [optional; default=null], System.String sysRoot [optional; default=null])
+class BGCS.Frontend.Clang.Workers.FrontendWorkerClient [sealed; interfaces=BGCS.Core.Ports.IFrontend|BGCS.Core.Ports.IIsolatedFrontend]
+  ctor(System.String workerPath, BGCS.Core.Hosting.HostServices host, System.Nullable<System.TimeSpan> timeout [optional; default=null], System.String dotnetPath [optional; default=null], System.String parserIdentity [optional; default="ClangSharp/20.1.2.4;LLVM/20"])
+  property System.String parserIdentity { get } [virtual; final]
+  method BGCS.Core.Ports.FrontendExecutionIdentity CaptureExecutionIdentity(System.Threading.CancellationToken cancellationToken [optional; default=null]) [virtual; final]
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Plugins.WorkerPluginCapture> CapturePluginInputsAsync(BGCS.Core.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null]) [virtual; final]
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Requests.FrontendPreparation> PrepareAsync(BGCS.Core.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Requests.FrontendResult> ParseAsync(BGCS.Core.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.Frontend.Clang.Workers.WorkerAssetDeployer [sealed]
+  ctor(BGCS.Core.Hosting.IHostPathService paths)
+  method BGCS.Core.Artifacts.WorkerAssetManifest ReadManifest(System.String path)
+  method System.Void Deploy(System.String sourceRoot, System.String destinationRoot, BGCS.Core.Artifacts.WorkerAssetManifest manifest, System.String hostRid, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method System.Void VerifyDeployment(System.String root, BGCS.Core.Artifacts.WorkerAssetManifest manifest, System.String hostRid)
+class BGCS.Frontend.Clang.Workers.WorkerAssetDeployment [abstract; sealed]
+  method System.Boolean Clear(System.String sourceRoot, System.String destinationRoot, BGCS.Core.Hosting.HostServices host, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.Void Deploy(System.String sourceRoot, System.String manifestPath, System.String destinationRoot, BGCS.Core.Hosting.HostServices host, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+class BGCS.Frontend.Clang.Workers.WorkerAssetLocator [abstract; sealed]
+  method System.String Locate(BGCS.Core.Hosting.HostServices host, System.String explicitRoot [optional; default=null], System.String applicationBase [optional; default=null]) [static]
+class BGCS.Frontend.Clang.Workers.WorkerAssetProvisioner [abstract; sealed]
+  method System.String Prepare(System.String applicationBase, BGCS.Core.Hosting.HostServices host, System.String cacheRoot [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]

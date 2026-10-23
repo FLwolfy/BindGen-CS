@@ -5,9 +5,9 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using Microsoft.CodeAnalysis;
@@ -29,8 +29,8 @@ public sealed class FunctionTableNamespaceTests
         string runtime = sourceRuntime ? "Custom.Runtime" : "BGCS.Runtime";
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("namespace_native", sink) { importMode = BindingImportMode.FunctionTable, includeRuntimeSource = sourceRuntime, runtimeNamespace = runtime };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(pair => (pair.Key, pair.Value)), request.libraryName);
         string probe = """
             namespace Example.FunctionTable

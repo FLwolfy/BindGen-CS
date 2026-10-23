@@ -7,13 +7,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
-using BGCS.Contracts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
+using BGCS.Core.Hosting;
+using BGCS.Hosting.Standard;
+using BGCS.Targets.Desktop;
+using BGCS.Interop.DotNet;
+using BGCS.Core;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -25,7 +29,7 @@ public sealed class PluginSessionTests
     {
         List<ProbePlugin> plugins = [];
         PluginDescriptor descriptor = new("probe", "1.0.0", [new("probe.transform", ExtensionPort.NativeModuleTransform, 4)]);
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new EmptyFrontend())
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new EmptyFrontend())
             .AddPluginFactory(descriptor, () => { ProbePlugin plugin = new(); plugins.Add(plugin); return plugin; });
         Assert.Empty(plugins);
         await using BindingHost host = builder.Build();
@@ -41,7 +45,7 @@ public sealed class PluginSessionTests
     public async Task DiscoveryAndSessions_HaveIndependentPluginsAndReleaseServicesBeforeTheirPlugin()
     {
         List<ProbePlugin> plugins = [];
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new EmptyFrontend())
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new EmptyFrontend())
             .AddPluginFactory(() => { ProbePlugin plugin = new(); plugins.Add(plugin); return plugin; });
         Assert.True(Assert.Single(plugins).disposed);
         await using BindingHost host = builder.Build();
@@ -52,18 +56,18 @@ public sealed class PluginSessionTests
         foreach (ProbePlugin plugin in plugins.Skip(1))
         {
             Assert.Equal(new[] { "configure", "create", "transform", "service.dispose", "plugin.dispose" }, plugin.trace);
-            Assert.Throws<InvalidOperationException>(() => plugin.retainedRegistry!.RegisterFactory<INativeModuleTransform>("probe.transform", () => null!));
+            Assert.Throws<InvalidOperationException>(() => plugin.retainedRegistry!.RegisterFactory<INativeModuleTransform>("probe.transform", _ => null!));
         }
     }
 
     [Fact]
     public void DuplicatePluginAndGlobalServiceIdsAndPrimaryPorts_AreRejectedAtHostFreeze()
     {
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<ProbePlugin>();
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder().AddPlugin<ProbePlugin>();
         Assert.Throws<InvalidOperationException>(() => builder.AddPlugin<ProbePlugin>());
-        Assert.Throws<InvalidOperationException>(() => builder.AddCppTypeLowering("probe.transform", 0, () => null!));
-        Assert.Throws<InvalidOperationException>(() => BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new EmptyFrontend()).AddPlugin<FrontendPlugin>().Build());
-        Assert.Throws<InvalidOperationException>(() => BindingHost.CreateBuilder().AddBuiltIns().AddPluginFactory(() => new ProbePlugin(major: 4)));
+        Assert.Throws<InvalidOperationException>(() => builder.RegisterFactory<INativeTypeLowering>(new("probe.transform", ExtensionPort.NativeTypeLowering, 0), _ => null!));
+        Assert.Throws<InvalidOperationException>(() => BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new EmptyFrontend()).AddPlugin<FrontendPlugin>().Build());
+        Assert.Throws<InvalidOperationException>(() => BindingGenerator.CreateBuilder().AddPluginFactory(() => new ProbePlugin(major: BGCS.Core.Versioning.ContractVersion.C_MAJOR + 1)));
     }
 
     [Theory]
@@ -76,8 +80,8 @@ public sealed class PluginSessionTests
     {
         List<ProbePlugin> plugins = [];
         bool frontendCreated = false;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-            .WithFrontendFactory(() => { frontendCreated = true; return new EmptyFrontend(); })
+        await using BindingHost host = BindingGenerator.CreateBuilder()
+            .UseDetachedFrontend(() => { frontendCreated = true; return new EmptyFrontend(); })
             .AddPluginFactory(() => { ProbePlugin plugin = new(failure); plugins.Add(plugin); return plugin; }).Build();
         AnalysisResult result = await host.AnalyzeAsync(Request());
         Assert.False(result.success);
@@ -94,11 +98,11 @@ public sealed class PluginSessionTests
         File.WriteAllText(Path.Combine(root, "custom.h"), "/* Explicit neutral frontend fixture input. */");
         try
         {
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<FrontendPlugin>().AddPlugin<TargetPlugin>().Build();
+            await using BindingHost host = PluginFrontendBuilder().AddPlugin<TargetPlugin>().Build();
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "custom", nativeName = "custom" }, source = new() { headers = ["custom.h"] },
-                targets = [new() { id = "custom-wasm32" }], cache = new() { enabled = false }
+                schemaVersion = 2, library = new() { id = "custom", nativeName = "custom" }, source = new() { headers = ["custom.h"] },
+                targets = [new() { id = "custom-wasm32" }], api = new() { runtime = new("fixture.empty-model") }, cache = new() { enabled = false }
             };
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
@@ -119,17 +123,17 @@ public sealed class PluginSessionTests
         File.WriteAllText(Path.Combine(root, "custom.h"), "/* Explicit neutral frontend fixture input. */");
         try
         {
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<FrontendPlugin>()
-                .AddTargetProvider("probe.unknown-wasm", () => new CustomTarget(() => { }, NativeByteOrder.Unknown)).Build();
+            await using BindingHost host = PluginFrontendBuilder()
+                .RegisterFactory<INativeTargetProvider>(new("probe.unknown-wasm", ExtensionPort.NativeTargetProvider), _ => new CustomTarget(() => { }, NativeByteOrder.Unknown)).Build();
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "custom", nativeName = "custom" }, source = new() { headers = ["custom.h"] },
-                targets = [new() { id = "custom-wasm32" }], cache = new() { enabled = false }
+                schemaVersion = 2, library = new() { id = "custom", nativeName = "custom" }, source = new() { headers = ["custom.h"] },
+                targets = [new() { id = "custom-wasm32" }], api = new() { runtime = new("fixture.empty-model") }, cache = new() { enabled = false }
             };
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.False(result.success);
             Assert.False(result.published);
-            Assert.Contains("little-endian wasm32", result.GetDiagnosticSummary(), StringComparison.Ordinal);
+            Assert.Contains("byte order", result.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
             Assert.False(Directory.Exists(result.outputRoot));
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -140,15 +144,16 @@ public sealed class PluginSessionTests
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-plugin-release-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root, "custom.h"), "/* Empty neutral frontend fixture. */");
         int instances = 0;
         try
         {
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<FrontendPlugin>()
+            await using BindingHost host = PluginFrontendBuilder()
                 .AddPluginFactory(() => new ProbePlugin(throwOnDispose: ++instances > 1)).Build();
             GenerationResult result = await host.GenerateAsync(new(new()
             {
-                schemaVersion = 1, library = new() { id = "release", nativeName = "release" }, source = new() { headers = ["custom.h"] },
-                targets = [new() { id = "emscripten-wasm32-emscripten" }], cache = new() { enabled = false }
+                schemaVersion = 2, library = new() { id = "release", nativeName = "release" }, source = new() { headers = ["custom.h"] },
+                targets = [new() { id = "host" }], cache = new() { enabled = false }
             }, root));
             Assert.False(result.success);
             Assert.Contains("plugin cleanup", result.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
@@ -162,12 +167,12 @@ public sealed class PluginSessionTests
     public async Task ConflictingTargetClaims_ReleaseAllProviderInstances()
     {
         int disposed = 0;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new EmptyFrontend())
-            .AddTargetProvider("target.first", () => new CustomTarget(() => disposed++))
-            .AddTargetProvider("target.second", () => new CustomTarget(() => disposed++)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new EmptyFrontend())
+            .RegisterFactory<INativeTargetProvider>(new("target.first", ExtensionPort.NativeTargetProvider), _ => new CustomTarget(() => disposed++))
+            .RegisterFactory<INativeTargetProvider>(new("target.second", ExtensionPort.NativeTargetProvider), _ => new CustomTarget(() => disposed++)).Build();
         AnalysisResult result = await host.AnalyzeAsync(Request() with { targetId = "custom-wasm32" });
         Assert.False(result.success);
-        Assert.Contains("Multiple native target providers", result.GetDiagnosticSummary());
+        Assert.Contains("Multiple target providers claim", result.GetDiagnosticSummary());
         Assert.Equal(2, disposed);
     }
 
@@ -176,7 +181,7 @@ public sealed class PluginSessionTests
     {
         List<SettingsPlugin> plugins = [];
         using JsonDocument document = JsonDocument.Parse("{\"enabled\":false,\"count\":0}");
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new EmptyFrontend())
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new EmptyFrontend())
             .AddPluginFactory(() => { SettingsPlugin plugin = new(); plugins.Add(plugin); return plugin; }, document.RootElement, AppContext.BaseDirectory);
         document.Dispose();
         await using BindingHost host = builder.Build();
@@ -187,7 +192,7 @@ public sealed class PluginSessionTests
         Assert.Equal(0, plugins[1].configuration!.settings.GetProperty("count").GetInt32());
         Assert.Equal(Path.GetFullPath(AppContext.BaseDirectory), plugins[1].configuration!.pathBase);
         using JsonDocument invalid = JsonDocument.Parse("{\"enabled\":false,\"count\":0,\"typo\":true}");
-        Assert.Throws<ArgumentException>(() => BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<SettingsPlugin>(invalid.RootElement));
+        Assert.Throws<ArgumentException>(() => BindingGenerator.CreateBuilder().AddPlugin<SettingsPlugin>(invalid.RootElement));
     }
 
     [Fact]
@@ -198,10 +203,10 @@ public sealed class PluginSessionTests
         try
         {
             bool frontendCreated = false;
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => { frontendCreated = true; return new EmptyFrontend(); }).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => { frontendCreated = true; return new EmptyFrontend(); }).Build();
             GenerationResult result = await host.GenerateAsync(new(new()
             {
-                schemaVersion = 1, library = new() { id = "settings", nativeName = "settings" }, source = new() { headers = ["unused.h"] },
+                schemaVersion = 2, library = new() { id = "settings", nativeName = "settings" }, source = new() { headers = ["unused.h"] },
                 extensions = new() { options = ImmutableDictionary<string, PluginSettingsConfiguration>.Empty.Add("missing-plugin", new()) }
             }, root));
             Assert.False(result.success);
@@ -221,18 +226,18 @@ public sealed class PluginSessionTests
         File.WriteAllText(Path.Combine(root, "unused.h"), "/* Explicit empty neutral frontend fixture input. */");
         BindingConfiguration configuration = new()
         {
-            schemaVersion = 1, library = new() { id = "gate", nativeName = "gate" }, source = new() { headers = ["unused.h"] },
-            targets = [new() { id = "emscripten-wasm32-emscripten" }], cache = new() { enabled = false }
+            schemaVersion = 2, library = new() { id = "gate", nativeName = "gate" }, source = new() { headers = ["unused.h"] },
+            targets = [new() { id = "host" }], cache = new() { enabled = false }
         };
         List<string> trace = [];
         try
         {
-            await using (BindingHost initial = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<FrontendPlugin>().Build())
+            await using (BindingHost initial = PluginFrontendBuilder().Build())
                 Assert.True((await initial.GenerateAsync(new(configuration, root))).success);
             string before = File.ReadAllText(Path.Combine(root, "Generated", "generation.report.json"));
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<FrontendPlugin>()
-                .AddValidator("first", 10, () => new ProbeValidator("first", 10, trace))
-                .AddValidator("second", 0, () => new ProbeValidator("second", 0, trace, reject: !releaseFailure, releaseFailure: releaseFailure)).Build();
+            await using BindingHost host = PluginFrontendBuilder()
+                .RegisterFactory<IGenerationValidator>(new("first", ExtensionPort.GenerationValidator, 10), _ => new ProbeValidator("first", 10, trace))
+                .RegisterFactory<IGenerationValidator>(new("second", ExtensionPort.GenerationValidator, 0), _ => new ProbeValidator("second", 0, trace, reject: !releaseFailure, releaseFailure: releaseFailure)).Build();
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.False(result.success);
             Assert.Equal(new[] { "first", "second", "dispose:second", "dispose:first" }, trace);
@@ -249,12 +254,12 @@ public sealed class PluginSessionTests
         Directory.CreateDirectory(root);
         File.WriteAllText(Path.Combine(root, "unused.h"), "/* Explicit empty neutral frontend fixture input. */");
         string entry = Path.Combine(root, "bindgen.json");
-        File.WriteAllText(entry, "{\"schemaVersion\":1,\"library\":{\"id\":\"gate\",\"nativeName\":\"gate\"},\"source\":{\"headers\":[\"unused.h\"]},\"targets\":[{\"id\":\"emscripten-wasm32-emscripten\"}]}");
+        File.WriteAllText(entry, "{\"schemaVersion\":2,\"library\":{\"id\":\"gate\",\"nativeName\":\"gate\"},\"source\":{\"headers\":[\"unused.h\"]},\"targets\":[{\"id\":\"host\"}]}");
         try
         {
-            GenerationRequest request = GenerationRequest.FromFile(entry);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<FrontendPlugin>()
-                .AddValidator("mutate", 0, () => new ProbeValidator("mutate", 0, [], action: () => File.AppendAllText(entry, "\n"))).Build();
+            GenerationRequest request = TestInputs.LoadRequest(entry);
+            await using BindingHost host = PluginFrontendBuilder()
+                .RegisterFactory<IGenerationValidator>(new("mutate", ExtensionPort.GenerationValidator, 0), _ => new ProbeValidator("mutate", 0, [], action: () => File.AppendAllText(entry, "\n"))).Build();
             GenerationResult result = await host.GenerateAsync(request);
             Assert.False(result.success);
             Assert.Contains("changed during generation", result.GetDiagnosticSummary());
@@ -280,9 +285,36 @@ public sealed class PluginSessionTests
         public void Dispose() { trace.Add("dispose:" + identity); if (releaseFailure) throw new IOException("validator release failure"); }
     }
 
-    private static AnalysisRequest Request() => AnalysisRequest.FromFiles(["native.h"]) with { targetId = "emscripten-wasm32-emscripten" };
+    private static AnalysisRequest Request() => AnalysisRequest.FromFiles(["native.h"]) with { targetId = "host" };
 
-    private sealed class ProbePlugin(string? failure = null, int major = 3, bool throwOnDispose = false) : IBindingPlugin
+    private static BindingHostBuilder PluginFrontendBuilder() => BindingHost.CreateBuilder()
+        .RegisterFactory<IHostServicesProvider>(new("fixture.host", ExtensionPort.HostServicesProvider), _ => new HostServicesProvider())
+        .AddPlugin<DesktopTargetsExtension>()
+        .AddPlugin<DotNetInteropPlugin>()
+        .RegisterFactory<IManagedRuntimeProvider>(new("fixture.empty.runtime", ExtensionPort.ManagedRuntimeProvider), _ => new EmptyModelRuntime())
+        .AddPlugin<FrontendPlugin>();
+
+    private sealed class EmptyModelRuntime : IManagedRuntimeProvider
+    {
+        public bool TryResolve(ManagedRuntimeRequest request, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out ManagedRuntimeProfile? profile)
+        {
+            profile = null;
+            if (request.runtimeId.value != "fixture.empty-model") return false;
+            if (request.target.byteOrder == NativeByteOrder.Unknown) throw new NotSupportedException("The fixture requires an explicit byte order.");
+            profile = new(request.target.targetId.value + "/fixture.empty-model", request.runtimeId,
+                NativeModuleMechanism.ExternalFunctionTable, [BindingImportMode.FunctionTable], false, false)
+            {
+                nativeTargetId = request.target.targetId.value,
+                nativeTriple = request.target.triple,
+                pointerSize = 4,
+                byteOrder = request.target.byteOrder,
+                callAbi = new("fixture.no-native-calls")
+            };
+            return true;
+        }
+    }
+
+    private sealed class ProbePlugin(string? failure = null, int major = BGCS.Core.Versioning.ContractVersion.C_MAJOR, bool throwOnDispose = false) : IBindingPlugin
     {
         public ProbePlugin() : this(null) { }
         public List<string> trace { get; } = [];
@@ -295,9 +327,9 @@ public sealed class PluginSessionTests
             trace.Add("configure");
             retainedRegistry = registry;
             if (failure == "missing") return;
-            if (failure == "wrong-port") { registry.RegisterFactory<IFrontend>("probe.transform", () => new EmptyFrontend()); return; }
-            registry.RegisterFactory<INativeModuleTransform>(failure == "undeclared" ? "another" : "probe.transform", () => { trace.Add("create"); return new ProbeTransform(trace); });
-            if (failure == "duplicate") registry.RegisterFactory<INativeModuleTransform>("probe.transform", () => new ProbeTransform(trace));
+            if (failure == "wrong-port") { registry.RegisterFactory<IFrontend>("probe.transform", _ => new EmptyFrontend()); return; }
+            registry.RegisterFactory<INativeModuleTransform>(failure == "undeclared" ? "another" : "probe.transform", _ => { trace.Add("create"); return new ProbeTransform(trace); });
+            if (failure == "duplicate") registry.RegisterFactory<INativeModuleTransform>("probe.transform", _ => new ProbeTransform(trace));
             m_changed = failure == "changing";
         }
         public void Dispose() { disposed = true; trace.Add("plugin.dispose"); if (throwOnDispose) throw new IOException("plugin cleanup failure"); }
@@ -313,8 +345,16 @@ public sealed class PluginSessionTests
 
     private sealed class EmptyFrontend : IFrontend
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-            => ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple, 4, [], [], []) { language = request.language, byteOrder = request.target.byteOrder }, new([], [])));
+            => ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple,
+                request.target.architectureId == "wasm32" ? 4 : TestComposition.PointerSize(request.target), [], [], [])
+                { language = request.language, byteOrder = request.target.byteOrder }, new([], [])));
     }
 
     private sealed class SettingsPlugin : IBindingPlugin
@@ -333,7 +373,7 @@ public sealed class PluginSessionTests
         public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
         {
             this.configuration = configuration;
-            registry.RegisterFactory<INativeModuleTransform>("probe.transform", () => new ProbeTransform([]));
+            registry.RegisterFactory<INativeModuleTransform>("probe.transform", _ => new ProbeTransform([]));
         }
     }
 
@@ -341,14 +381,14 @@ public sealed class PluginSessionTests
     {
         public FrontendPlugin() { }
         public PluginDescriptor descriptor => new("probe.frontend-plugin", "1.0.0", [new("probe.frontend", ExtensionPort.Frontend)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => registry.RegisterFactory<IFrontend>("probe.frontend", () => new EmptyFrontend());
+        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => registry.RegisterFactory<IFrontend>("probe.frontend", _ => new EmptyFrontend());
     }
 
     private sealed class TargetPlugin : IBindingPlugin
     {
         public TargetPlugin() { }
         public PluginDescriptor descriptor => new("probe.target-plugin", "1.0.0", [new("probe.target", ExtensionPort.NativeTargetProvider)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => registry.RegisterFactory<INativeTargetProvider>("probe.target", () => new CustomTarget(() => { }));
+        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => registry.RegisterFactory<INativeTargetProvider>("probe.target", _ => new CustomTarget(() => { }));
     }
 
     private sealed class CustomTarget(Action dispose, NativeByteOrder byteOrder = NativeByteOrder.LittleEndian) : INativeTargetProvider, IDisposable

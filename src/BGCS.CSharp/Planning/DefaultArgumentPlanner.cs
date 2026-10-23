@@ -4,9 +4,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 
 namespace BGCS.CSharp.Planning;
 
@@ -18,11 +18,12 @@ internal static class DefaultArgumentPlanner
     ) {
         if (plan.api.defaultOverloadLimit is < 1 or > 4096) throw new ArgumentException("The default overload limit must be between 1 and 4096.");
         if (plan.api.methods.Any(member => member.defaults.IsDefault)) throw new ArgumentException("Managed default arguments must be initialized.");
-        var originals = SharedContextPlanner.CreateMethods(plan, request);
+        ImmutableArray<CSharpFacadeMethodPlan> originals = plan.api.methods.Any(member => !member.defaults.IsEmpty)
+            ? SharedContextPlanner.CreateMethods(plan, request) : [];
         var membersByExport = plan.api.methods.ToLookup(member => member.nativeExport);
         var functionsById = plan.api.interop.functions.ToLookup(function => function.id);
         Dictionary<string, CSharpDefaultConstantPlan> constants = new(StringComparer.Ordinal);
-        HashSet<BGCS.Contracts.Common.StableId> covered = [];
+        HashSet<BGCS.Core.Common.StableId> covered = [];
         ImmutableArray<CSharpDefaultOverloadPlan>.Builder overloads = ImmutableArray.CreateBuilder<CSharpDefaultOverloadPlan>();
         foreach (CSharpFacadeMethodPlan signature in originals)
         {

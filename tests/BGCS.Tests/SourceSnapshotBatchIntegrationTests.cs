@@ -7,13 +7,13 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -29,8 +29,7 @@ public sealed class SourceSnapshotBatchIntegrationTests
         string added = Path.Combine(directory, "new.unrecognized-extension");
         bool mutate = false;
         await using BindingHost host = fixture.Builder().AddPluginFactory(DirectoryPlugin.Descriptor,
-            () => new DirectoryPlugin(directory)).AddValidator("batch-mutation", 0,
-            () => new MutationValidator(() => { if (mutate) File.WriteAllText(added, "new membership"); })).Build();
+            () => new DirectoryPlugin(directory)).RegisterFactory<IGenerationValidator>(new("batch-mutation", ExtensionPort.GenerationValidator, 0), _ => new MutationValidator(() => { if (mutate) File.WriteAllText(added, "new membership"); })).Build();
         GenerationRequest request = fixture.Request();
         await Warm(host, request);
         Dictionary<string, byte[]> before = Snapshot(fixture.output);
@@ -51,8 +50,7 @@ public sealed class SourceSnapshotBatchIntegrationTests
     {
         using WorkerPluginFixture fixture = new();
         bool mutate = false;
-        await using BindingHost host = fixture.Builder().AddValidator("batch-mutation", 0,
-            () => new MutationValidator(() => { if (mutate) Rewrite(fixture.external, "other"); })).Build();
+        await using BindingHost host = fixture.Builder().RegisterFactory<IGenerationValidator>(new("batch-mutation", ExtensionPort.GenerationValidator, 0), _ => new MutationValidator(() => { if (mutate) Rewrite(fixture.external, "other"); })).Build();
         GenerationRequest request = fixture.Request();
         await Warm(host, request);
         string proof = Directory.GetFiles(fixture.output, "verification.json", SearchOption.AllDirectories).Single();
@@ -145,7 +143,7 @@ public sealed class SourceSnapshotBatchIntegrationTests
         public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
             => new(new ContentDigest(new string('a', 64)), [new(directory, ExternalInputKind.Directory)]);
         public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-            => registry.RegisterFactory<INativeModuleTransform>("batch.directory.transform", () => new DirectoryTransform());
+            => registry.RegisterFactory<INativeModuleTransform>("batch.directory.transform", _ => new DirectoryTransform());
         public void Dispose() { }
     }
 
@@ -177,7 +175,7 @@ public sealed class SourceSnapshotBatchIntegrationTests
         public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
         {
             if (state.armed) Rewrite(state.path, "other");
-            registry.RegisterFactory<INativeModuleTransform>("batch.restore", () => new RestoreTransform(state));
+            registry.RegisterFactory<INativeModuleTransform>("batch.restore", _ => new RestoreTransform(state));
         }
         public void Dispose() { }
     }

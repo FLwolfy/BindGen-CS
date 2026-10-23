@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
 using BGCS.CSharp.Planning;
 using Xunit;
 
@@ -35,21 +35,20 @@ public sealed class NativeOwnedValueStringResultTests
             string[] selected=["Widget::Widget(int)","Widget::~Widget","Widget::SetName","Widget::GetName","Widget::Prefix","Widget::CheckName","Widget::LongName","Live","Observed"];
             BindingConfiguration configuration=new()
             {
-                schemaVersion=1,library=new(){id="owned_text",nativeName="owned_text_fixture"},
+                schemaVersion = 2,library=new(){id="owned_text",nativeName="owned_text_fixture"},
                 source=new(){language=SourceLanguage.Cpp,headers=["widget.hpp"],parseMacros=false,includeTransitivelyReferencedHeaders=false,selection=new(){includeDeclarations=selected.ToImmutableArray()}},
                 api=new(){@namespace="Generated.OwnedValueText",name="OwnedTextApi",importMode=mode,maximumValueStringCodeUnits=32,
                     style=sourceRuntime?ManagedApiStyle.Static:ManagedApiStyle.Instance,nestGeneratedTypesInApi=sourceRuntime,
                     names=ImmutableDictionary<string,string>.Empty.Add("Widget::Widget(int)","CreateWidget").Add("Widget::SetName","SetName").Add("Widget::GetName","GetName")
                         .Add("Widget::Prefix","Prefix").Add("Widget::CheckName","CheckName").Add("Widget::LongName","LongName").Add("Live","Live").Add("Observed","Observed")},
                 semantics=new(){ownedResults=[new(){function="Widget::Widget(int)",releaseThreadDomain="any"}]},
-                cpp=new(){familyBindings=[new(){nativeType="std::string",family=StandardValueKind.String,stringEncoding=NativeTextEncoding.Utf8,evidence=new(EvidenceLevel.UserAsserted,"Widget-name-is-counted-UTF8") }],
-                    sequenceInputAdapters=[Input("Widget::SetName"),Input("Widget::Prefix"),Input("Widget::CheckName")]},
+                bridge = new() { cpp = new() { familyBindings=[new(){nativeType="std::string",family=StandardValueKind.String,stringEncoding=NativeTextEncoding.Utf8,evidence=new(EvidenceLevel.UserAsserted,"Widget-name-is-counted-UTF8") }], sequenceInputAdapters=[Input("Widget::SetName"),Input("Widget::Prefix"),Input("Widget::CheckName")] } },
                 runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},cache=new(){enabled=false}
             };
-            await using BindingHost host=BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host=BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built=await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration,root));Assert.True(built.success,built.GetDiagnosticSummary());
             TargetInspection target=Assert.Single(built.targetModels);
-            CSharpEmissionPlan plan=new CSharpEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
+            CSharpEmissionPlan plan=new HostTestEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
                 {importMode=mode,runtimeNamespace=sourceRuntime?"Generated.OwnedValueText.Runtime":"BGCS.Runtime",maximumValueStringCodeUnits=32});
             foreach(string member in new[]{"GetName","Prefix","LongName"})
             {
@@ -128,7 +127,7 @@ public sealed class NativeOwnedValueStringResultTests
     {
         DirectoryInfo? root=new(AppContext.BaseDirectory);while(root is not null&&!File.Exists(Path.Combine(root.FullName,"BindGen-CS.slnx")))root=root.Parent;
         string configuration=AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar+"Release"+Path.DirectorySeparatorChar,StringComparison.Ordinal)?"Release":"Debug";
-        return Path.Combine(root!.FullName,"src","BGCS.Frontend.Clang.Worker","bin",configuration,"net10.0");
+        return Path.Combine(root!.FullName,"extensions","frontends","BGCS.Frontend.Clang.Worker","bin",configuration,"net10.0");
     }
     private sealed class NoWrites:IArtifactSink{public string WriteText(string relativePath,string content)=>throw new InvalidOperationException("Planning cannot emit artifacts.");}
     private const string Header="""

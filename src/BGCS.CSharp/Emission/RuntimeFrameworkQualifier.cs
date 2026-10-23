@@ -17,7 +17,7 @@ internal static class RuntimeFrameworkQualifier
     ) {
         string frameworkDirectory = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         string[] assemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? throw new InvalidOperationException("Framework metadata for runtime source validation is unavailable."))
-            .Split(Path.PathSeparator).Where(path => string.Equals(Path.GetDirectoryName(path), frameworkDirectory, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)).ToArray();
+            .Split(Path.PathSeparator).Where(path => string.Equals(Path.GetDirectoryName(path), frameworkDirectory, StringComparison.Ordinal)).ToArray();
         SyntaxTree[] trees = sources.Select(source => CSharpSyntaxTree.ParseText(source.Text, new CSharpParseOptions(LanguageVersion.CSharp14), source.Path, cancellationToken: cancellationToken)).ToArray();
         CSharpCompilation compilation = CSharpCompilation.Create("BGCS.RuntimeSource.Validation", trees,
             assemblies.Select(path => MetadataReference.CreateFromFile(path)), new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));

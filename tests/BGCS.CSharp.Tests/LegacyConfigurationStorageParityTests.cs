@@ -6,11 +6,11 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -36,7 +36,7 @@ public sealed class LegacyConfigurationStorageParityTests
         ManagedApiModel model = new DefaultManagedProjection().Project(native, new("Generated.ResidualStorage", "AliasApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("scalar_alias", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpMethodPlan method = Assert.Single(plan.methods);
         Assert.Equal("int", method.returnType);
         Assert.Equal("int", Assert.Single(method.parameterTypes));
@@ -44,7 +44,7 @@ public sealed class LegacyConfigurationStorageParityTests
         Assert.Same(native, model.interop);
         Assert.Equal(first.id, native.GetType(second.id).elementType);
         Assert.Equal(integer.id, native.GetType(first.id).elementType);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         Assert.DoesNotContain(sink.sources.Keys, path => path.EndsWith("/AliasInt.g.cs", StringComparison.Ordinal) || path.EndsWith("/BaseInt.g.cs", StringComparison.Ordinal));
     }
@@ -75,11 +75,11 @@ public sealed class LegacyConfigurationStorageParityTests
         ManagedApiModel model = new DefaultManagedProjection().Project(native, projection, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("record_copy", sink) { singleFile = singleFile };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpStoragePlan storage = Assert.Single(plan.storage, item => item.nativeType == record.id);
         Assert.Equal(new[] { "ID", "URL", "CPU" }, storage.presentation!.constructorFields.Select(field => field.name));
         Assert.Equal(new[] { 0, 4, 8 }, storage.fields.Select(field => field.offset));
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         const string consumer = """
             using System;
@@ -128,11 +128,11 @@ public sealed class LegacyConfigurationStorageParityTests
         InteropModule native = new("bool_policy", "windows-x64-msvc", 8, [boolean], [function], []) { byteOrder = NativeByteOrder.LittleEndian };
         ManagedApiModel original = new DefaultManagedProjection().Project(native, new("Generated.ResidualStorage", "BooleanApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
-        CSharpEmissionPlan valid = new CSharpEmissionPlanner().Plan(original, new("bool_policy", sink));
+        CSharpEmissionPlan valid = new CSharpTestPlanner().Plan(original, new("bool_policy", sink));
         Assert.Equal("byte", Assert.Single(valid.methods).returnType);
         Assert.Equal("byte", Assert.Single(valid.methods).parameterTypes[0]);
         ManagedApiModel invalid = original with { types = original.types.Select(type => type.nativeType == boolean.id ? type with { frameworkType = "System.Int32" } : type).ToImmutableArray() };
-        Assert.ThrowsAny<NotSupportedException>(() => new CSharpEmissionPlanner().Plan(invalid, new("bool_policy", sink)));
+        Assert.ThrowsAny<NotSupportedException>(() => new CSharpTestPlanner().Plan(invalid, new("bool_policy", sink)));
         Assert.Empty(sink.sources);
     }
 

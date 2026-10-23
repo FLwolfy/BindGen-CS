@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -5,8 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.IO;
 using Xunit;
@@ -15,6 +16,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class ScopedFileSnapshotTests : IDisposable
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     // These integration controls cover stable aliases and mutations between
     // independent verifier calls. PhysicalPathResolutionScopeTests exercises
     // deterministic retargeting between observation and final revalidation.
@@ -35,7 +37,7 @@ public sealed class ScopedFileSnapshotTests : IDisposable
         Assert.NotEqual(direct.path, alias.path);
         Assert.Equal(direct.resolvedPath, alias.resolvedPath);
         Assert.Equal(direct.digest, alias.digest);
-        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot));
+        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot, m_paths));
 
         DateTime timestamp = File.GetLastWriteTimeUtc(fixture.original);
         byte previous;
@@ -48,7 +50,7 @@ public sealed class ScopedFileSnapshotTests : IDisposable
         }
         File.SetLastWriteTimeUtc(fixture.original, timestamp);
         InputDependency earliest = fixture.snapshot.files.First(input => input.resolvedPath == direct.resolvedPath);
-        Assert.Equal("Input file bytes changed: " + earliest.path, SourceSnapshotVerifier.GetMismatch(fixture.snapshot));
+        Assert.Equal("Input file bytes changed: " + earliest.path, SourceSnapshotVerifier.GetMismatch(fixture.snapshot, m_paths));
         Assert.Equal(timestamp, File.GetLastWriteTimeUtc(fixture.original));
 
         using (FileStream file = new(fixture.original, FileMode.Open, FileAccess.Write, FileShare.None))
@@ -57,7 +59,7 @@ public sealed class ScopedFileSnapshotTests : IDisposable
             file.WriteByte(previous);
         }
         File.SetLastWriteTimeUtc(fixture.original, timestamp);
-        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot));
+        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot, m_paths));
     }
 
     [Theory]
@@ -72,8 +74,8 @@ public sealed class ScopedFileSnapshotTests : IDisposable
         ImmutableArray<InputDependency> inputs = ImmutableArray.Create(original, wrongBytes, wrongIdentity)
             .AddRange(fixture.snapshot.files.Skip(1));
         SourceSnapshot contradictory = fixture.snapshot with { files = inputs };
-        Assert.Equal("Input file bytes changed: " + original.path, SourceSnapshotVerifier.GetMismatch(contradictory));
-        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot));
+        Assert.Equal("Input file bytes changed: " + original.path, SourceSnapshotVerifier.GetMismatch(contradictory, m_paths));
+        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot, m_paths));
     }
 
     [Theory]
@@ -82,7 +84,7 @@ public sealed class ScopedFileSnapshotTests : IDisposable
     public async Task ANewCallRechecksAnAncestorAliasEvenWhenReplacementBytesAreIdentical(bool manyFiles)
     {
         var fixture = await Capture(manyFiles ? "many" : "small");
-        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot));
+        Assert.Null(SourceSnapshotVerifier.GetMismatch(fixture.snapshot, m_paths));
         string replacement = Directory.CreateDirectory(Path.Combine(m_root, "replacement")).FullName;
         File.Copy(fixture.original, Path.Combine(replacement, Path.GetFileName(fixture.original)));
         string alias = Path.GetDirectoryName(fixture.aliasFile)!;
@@ -91,12 +93,12 @@ public sealed class ScopedFileSnapshotTests : IDisposable
         await Link(alias, replacement);
 
         Assert.Equal("An input file disappeared or was redirected: " + fixture.aliasFile,
-            SourceSnapshotVerifier.GetMismatch(fixture.snapshot));
+            SourceSnapshotVerifier.GetMismatch(fixture.snapshot, m_paths));
         SourceSnapshot current = new ExternalInputSnapshotBuilder().Capture(
-            [new(fixture.aliasFile, ExternalInputKind.File)], m_root);
+            [new(fixture.aliasFile, ExternalInputKind.File)], m_root, m_paths);
         Assert.NotEqual(Assert.Single(current.files).resolvedPath,
             Assert.Single(fixture.snapshot.files, input => input.path == fixture.aliasFile).resolvedPath);
-        Assert.Null(SourceSnapshotVerifier.GetMismatch(current));
+        Assert.Null(SourceSnapshotVerifier.GetMismatch(current, m_paths));
     }
 
     private async Task<(SourceSnapshot snapshot, string original, string aliasFile)> Capture(string mode)
@@ -118,7 +120,7 @@ public sealed class ScopedFileSnapshotTests : IDisposable
         await Link(alias, input);
         string aliasFile = Path.Combine(alias, Path.GetFileName(original));
         inputs.Add(new(aliasFile, ExternalInputKind.File));
-        SourceSnapshot snapshot = new ExternalInputSnapshotBuilder().Capture(inputs.ToImmutable(), m_root);
+        SourceSnapshot snapshot = new ExternalInputSnapshotBuilder().Capture(inputs.ToImmutable(), m_root, m_paths);
         Assert.Equal(mode == "many" ? 65 : 4, snapshot.files.Length);
         return (snapshot, original, aliasFile);
     }

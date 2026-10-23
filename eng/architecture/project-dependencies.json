@@ -1,51 +1,94 @@
 {
   "schemaVersion": 1,
   "projects": {
-    "BGCS.Contracts": [],
+    "BGCS.Core": [],
+    "BGCS.Runtime": [],
     "BGCS.Infrastructure": [
-      "BGCS.Contracts"
-    ],
-    "BGCS.Frontend.Clang": [
-      "BGCS.Contracts",
-      "BGCS.Infrastructure"
-    ],
-    "BGCS.Frontend.Clang.Worker": [
-      "BGCS.Contracts",
-      "BGCS.Infrastructure",
-      "BGCS.Frontend.Clang"
-    ],
-    "BGCS.Platforms": [
-      "BGCS.Contracts",
-      "BGCS.Infrastructure"
+      "BGCS.Core"
     ],
     "BGCS.Analysis": [
-      "BGCS.Contracts"
+      "BGCS.Core"
     ],
-    "BGCS.Cpp2C": [
-      "BGCS.Contracts",
+    "BGCS.NativeBridge": [
+      "BGCS.Core",
       "BGCS.Analysis"
     ],
     "BGCS.CSharp": [
-      "BGCS.Contracts",
+      "BGCS.Core",
       "BGCS.Analysis"
     ],
-    "BGCS.Runtime": [],
-    "BGCS": [
-      "BGCS.Contracts",
+    "BGCS.Engine": [
+      "BGCS.Core",
       "BGCS.Infrastructure",
-      "BGCS.Platforms",
       "BGCS.Analysis",
-      "BGCS.Cpp2C",
-      "BGCS.CSharp",
-      "BGCS.Runtime"
+      "BGCS.NativeBridge",
+      "BGCS.CSharp"
+    ],
+    "BGCS": [
+      "BGCS.Engine",
+      "BGCS.Hosting.Standard",
+      "BGCS.Targets.Desktop",
+      "BGCS.Interop.DotNet",
+      "BGCS.Frontend.Clang"
     ],
     "BGCS.Tool": [
       "BGCS",
-      "BGCS.Contracts"
+      "BGCS.Core"
+    ],
+    "BGCS.Hosting.Standard": [
+      "BGCS.Core",
+      "BGCS.Infrastructure"
+    ],
+    "BGCS.Targets.Desktop": [
+      "BGCS.Core"
+    ],
+    "BGCS.Interop.DotNet": [
+      "BGCS.Core"
+    ],
+    "BGCS.Frontend.Clang": [
+      "BGCS.Core",
+      "BGCS.Infrastructure"
+    ],
+    "BGCS.Frontend.Clang.Worker": [
+      "BGCS.Core",
+      "BGCS.Infrastructure",
+      "BGCS.Frontend.Clang",
+      "BGCS.Hosting.Standard"
+    ],
+    "BGCS.Extension.BrowserWasm": [
+      "BGCS.Core"
+    ],
+    "BGCS.Extension.NativeAot": [
+      "BGCS.Core",
+      "BGCS.Interop.DotNet"
+    ],
+    "BGCS.Extension.Android": [
+      "BGCS.Core"
+    ],
+    "BGCS.Extension.AppleMobile": [
+      "BGCS.Core"
+    ],
+    "BGCS.Extension.FreeBsd": [
+      "BGCS.Core"
     ]
   },
   "executables": [
     "BGCS.Tool",
     "BGCS.Frontend.Clang.Worker"
+  ],
+  "neutralProjects": [
+    "BGCS.Core",
+    "BGCS.Infrastructure",
+    "BGCS.Analysis",
+    "BGCS.NativeBridge",
+    "BGCS.CSharp",
+    "BGCS.Engine",
+    "BGCS.Runtime"
+  ],
+  "contractProjects": [
+    "BGCS.Core"
+  ],
+  "standaloneRuntimeProjects": [
+    "BGCS.Runtime"
   ]
 }

@@ -5,12 +5,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 
 namespace BGCS.Tests.NeutralPlugin;
 
@@ -39,7 +39,7 @@ public sealed class SourceFixturePlugin : IBindingPlugin, ICacheFingerprintProvi
     {
         m_increment = configuration.settings.TryGetProperty("increment", out JsonElement increment) ? increment.GetInt32() : 12;
         m_invalidManaged = configuration.settings.TryGetProperty("invalidManaged", out JsonElement invalid) && invalid.GetBoolean();
-        registry.RegisterFactory<ISourceContributor>("fixture.source/helpers", () => new Sources(m_increment, m_invalidManaged));
+        registry.RegisterFactory<ISourceContributor>("fixture.source/helpers", _ => new Sources(m_increment, m_invalidManaged));
     }
 
     /// <inheritdoc/>

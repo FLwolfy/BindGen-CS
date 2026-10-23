@@ -4,8 +4,8 @@
 
 核心功能/配置基线属于强制验收。必需 CI 是 Windows 完整生成器检查、Linux/macOS
 生成器 smoke，以及一个完整产品安装任务。原有各宿主性能预算不变。
-AOT/Wasm 应用发布/调用仅为可选手动私有检查，不属于强制发布 CI；目标事实与源码生成
-行为仍受核心基线约束。
+Linux smoke 执行本轮固定 Browser Mono Wasm/AOT aggregate 与回调回归一次；
+其他应用发布矩阵单独记录。目标事实与源码生成仍受核心基线约束。
 
 准确 workflow、选定 case 和回执策略位于 `eng/acceptance/required-release-gates.json`
 及当前清单，必须与实际执行对应。源码存在或 `implementationReady` 不能替代可执行回执。

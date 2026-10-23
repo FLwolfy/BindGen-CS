@@ -6,12 +6,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -36,12 +36,12 @@ public sealed class DirectCOwnershipTests
         var model = new DefaultManagedProjection().Project(module, new("Generated.COwnedUnit", "Api"), CancellationToken.None);
         Sink sink = new();
         EmissionRequest request = new("fixture", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Empty(plan.directOwnedFactories);
         CSharpOwnedProjectionOmissionPlan omission = Assert.Single(plan.ownedProjectionOmissions);
         Assert.Equal(new StableId("make"), omission.nativeExport);
         Assert.Contains("direct owned factory", omission.reason, StringComparison.OrdinalIgnoreCase);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.contents.Select(pair => (pair.Key, pair.Value)), "fixture");
         Assert.Contains(plan.methods, method => method.nativeExport == new StableId("make"));
         Assert.DoesNotContain(plan.sharedContext?.methods ?? [], method => method.nativeExport == new StableId("make"));
@@ -56,7 +56,7 @@ public sealed class DirectCOwnershipTests
     {
         InteropModule module = Module(receiverCondition: condition);
         var model = new DefaultManagedProjection().Project(module, Request(), CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("fixture", new Sink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("fixture", new Sink()));
         Assert.Single(plan.directOwnedFactories);
         Assert.Empty(Assert.Single(plan.objects).directMethods);
         CSharpOwnedProjectionOmissionPlan omission = Assert.Single(plan.ownedProjectionOmissions);
@@ -72,11 +72,11 @@ public sealed class DirectCOwnershipTests
         var model = new DefaultManagedProjection().Project(module, new("Generated.COwnedUnit", "Api"), CancellationToken.None);
         Sink sink = new();
         EmissionRequest request = new("fixture", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Null(Assert.Single(plan.directOwnedFactories).ownership.objectName);
         Assert.Empty(plan.objects);
         Assert.Empty(plan.ownedProjectionOmissions);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.contents.Select(pair => (pair.Key, pair.Value)), "fixture");
         Assert.Contains(sink.contents.Values, source => source.Contains("public global::BGCS.Runtime.OwnedNativeHandle Make()", StringComparison.Ordinal));
     }
@@ -88,10 +88,10 @@ public sealed class DirectCOwnershipTests
         var model = new DefaultManagedProjection().Project(module, Request(), CancellationToken.None);
         Sink sink = new();
         EmissionRequest request = new("fixture", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal("WidgetObject", Assert.Single(plan.directOwnedFactories).ownership.objectName);
         Assert.Equal("configured-release-domain:a", Assert.Single(Assert.Single(plan.objects).directMethods).requiredReleaseDomain);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         var sources = sink.contents.Select(pair => (Path: pair.Key, Text: pair.Value)).ToArray();
         new EmittedInteropContractReader().Verify(plan, sources, "fixture");
         foreach (string target in new[] { "__BgcsBelongsTo(this)", "m_handle.Invoke(", "__BgcsReleaseDirect0", "m_handle.releaseDomain" })
@@ -145,7 +145,7 @@ public sealed class DirectCOwnershipTests
         }).ToImmutableArray();
         InteropModule module = new(baseline.libraryId, baseline.targetId, baseline.pointerSize, types.ToImmutable(), functions, []) { byteOrder = baseline.byteOrder };
         var model = new DefaultManagedProjection().Project(module, Request(), CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("fixture", new Sink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("fixture", new Sink()));
         Assert.Single(plan.directOwnedFactories);
         if (allowed) Assert.Single(Assert.Single(plan.objects).directMethods);
         else
@@ -163,7 +163,7 @@ public sealed class DirectCOwnershipTests
         InteropType first = new(new("first"), "FirstHandle", NativeTypeCategory.Alias, 8, 8) { elementType = address.id };
         InteropType second = new(new("second"), "SecondHandle", NativeTypeCategory.Alias, 8, 8) { elementType = address.id };
         types.AddRange(ImmutableArray.Create(address, first, second));
-        InteropModule module = new("opaque", "windows-x64-msvc", 8, types.ToImmutable(), [], []);
+        InteropModule module = new("opaque", "windows-x64-msvc", 8, types.ToImmutable(), [], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.True(NativeReceiverTypeMatcher.Matches(module, first.id, first.id));
         Assert.False(NativeReceiverTypeMatcher.Matches(module, first.id, second.id));
         Assert.False(NativeReceiverTypeMatcher.Matches(module, first.id, address.id));

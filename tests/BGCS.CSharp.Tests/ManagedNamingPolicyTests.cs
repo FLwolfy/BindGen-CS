@@ -7,11 +7,11 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using Microsoft.CodeAnalysis;
@@ -60,12 +60,12 @@ public sealed class ManagedNamingPolicyTests
         };
         ManagedApiModel model = new DefaultManagedProjection().Project(native, new("Generated.Policy", "Api")
         { naming = policy, names = ImmutableDictionary<string, string>.Empty.Add("BGCS_HTTP_result_t::m_override_value", "event") }, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("unused", new Sink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("unused", new Sink()));
         Assert.Equal("bgcs_http_request", Assert.Single(plan.methods).exportName);
         Assert.Equal("HttpRequest", plan.methods[0].name);
         Assert.Equal("itemArgument", Assert.Single(plan.methods[0].parameterNames));
         Sink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
         CSharpCompilation compilation = CSharpCompilation.Create("NamedPolicy" + Guid.NewGuid().ToString("N"),
             sink.sources.Select(source => CSharpSyntaxTree.ParseText(source.Value, path: source.Key)),
             ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
@@ -97,7 +97,7 @@ public sealed class ManagedNamingPolicyTests
     {
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropModule native = new("replacement_names", "windows-x64-msvc", 8, [integer],
-            [new(new("read"), "api_http_request", integer.id, [], "C"), new(new("exact"), "api_exact", integer.id, [], "C")], []);
+            [new(new("read"), "api_http_request", integer.id, [], "C"), new(new("exact"), "api_exact", integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedNamingPolicy policy = new()
         {
             functions = new() { casing = ManagedNameCasing.Pascal, removePrefixes = ["api_"], prefix = "Pre", suffix = "Suffix" },
@@ -106,7 +106,7 @@ public sealed class ManagedNamingPolicyTests
         };
         ManagedApiModel model = new DefaultManagedProjection().Project(native, new("Generated.Replacements", "Api")
         { naming = policy, names = ImmutableDictionary<string, string>.Empty.Add("api_exact", "HttpExact") }, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("unused", new Sink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("unused", new Sink()));
         Assert.Equal("NetRequestSuffixMember", Assert.Single(plan.methods, method => method.exportName == "api_http_request").name);
         Assert.Equal("HttpExact", Assert.Single(plan.methods, method => method.exportName == "api_exact").name);
         Assert.Equal(new[] { "api_http_request", "api_exact" }, native.functions.Select(function => function.exportName));
@@ -117,11 +117,11 @@ public sealed class ManagedNamingPolicyTests
     {
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropModule native = new("replacement_names", "windows-x64-msvc", 8, [integer],
-            [new(new("left"), "left", integer.id, [], "C"), new(new("right"), "right", integer.id, [], "C")], []);
+            [new(new("left"), "left", integer.id, [], "C"), new(new("right"), "right", integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(native, new("Generated.Replacements", "Api")
         { naming = new() { replacements = [new("Left", "Same"), new("Right", "Same")] } }, CancellationToken.None);
         Sink sink = new();
-        Assert.ThrowsAny<Exception>(() => new CSharpEmissionPlanner().Plan(model, new("unused", sink)));
+        Assert.ThrowsAny<Exception>(() => new CSharpTestPlanner().Plan(model, new("unused", sink)));
         Assert.Empty(sink.sources);
         Assert.Throws<ArgumentException>(() => new DefaultManagedProjection().Project(native, new("Generated.Replacements", "Api")
         { naming = new() { replacements = [new("Left", "")] } }, CancellationToken.None));

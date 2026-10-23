@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.CSharp.Planning;
 
@@ -82,8 +82,8 @@ internal static class StatusMethodPlanner
                 if (parameter.text is not null || parameter.buffer is not null || parameter.callback is not null || parameter.singleValue is not null) { unsupported = true; break; }
                 if (Scalar(parameter.type) && parameter.ownership is null) continue;
                 InteropType pointer = Resolve(parameter.type);
-                if (instance >= 0 || function.sourceOwnerType is null || pointer.category != NativeTypeCategory.Pointer
-                    || pointer.elementType is not StableId receiver || Resolve(receiver).sourceNativeType != function.sourceOwnerType
+                if (instance >= 0 || pointer.category != NativeTypeCategory.Pointer
+                    || pointer.elementType is not StableId receiver || !MatchesOwner(function, Resolve(receiver))
                     || parameter.ownership is not { kind: NativeOwnershipKind.Borrowed, lifetime.kind: NativeLifetimeKind.Call } borrowed
                     || !Known(borrowed.evidence) || !Known(borrowed.lifetime.evidence)) { unsupported = true; break; }
                 instance = input;
@@ -99,6 +99,14 @@ internal static class StatusMethodPlanner
             while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified) type = plan.api.interop.GetType(type.elementType!.Value);
             return type;
         }
+        static bool MatchesOwner(
+            InteropFunction function,
+            InteropType record
+        )
+            => function.sourceOwnerType is not null && function.sourceGeneratedOwnerType is null
+                ? record.sourceNativeType == function.sourceOwnerType && record.sourceGeneratedType is null
+                : function.sourceGeneratedOwnerType is not null && function.sourceOwnerType is null
+                    && record.sourceGeneratedType == function.sourceGeneratedOwnerType && record.sourceNativeType is null;
         bool Scalar(StableId id) => Resolve(id).category is NativeTypeCategory.Primitive or NativeTypeCategory.Enumeration
             || plan.externalTypeProjections.Any(projection => projection.nativeType == Resolve(id).id);
         CSharpOwnedResultPlan? OwnedResult(

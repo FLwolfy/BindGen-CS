@@ -8,15 +8,18 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Interop;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Calls;
+using BGCS.Interop.DotNet;
+using BGCS.Targets.Desktop.Targeting;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
@@ -47,17 +50,15 @@ public sealed class VaListNeutralGenerationTests
         foreach (BindingImportMode mode in Enum.GetValues<BindingImportMode>())
         {
             Sink forbidden = new();
-            CSharpPlanningException failure = Assert.Throws<CSharpPlanningException>(() => new CSharpEmissionPlanner().Plan(valueApi,
-                new("va_list", forbidden) { importMode = mode, managedRuntime = Runtime(mode) }));
+            CSharpPlanningException failure = Assert.Throws<CSharpPlanningException>(() => new CSharpEmissionPlanner().Plan(valueApi, Request(valueApi, forbidden, mode)));
             Assert.Contains("calling", failure.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(forbidden.sources);
             Sink sink = new();
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(pointerApi, new("va_list", sink)
-            { importMode = mode, managedRuntime = Runtime(mode) });
+            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(pointerApi, Request(pointerApi, sink, mode));
             Assert.Empty(plan.aggregateCalls);
             Assert.EndsWith("*", Assert.Single(Assert.Single(plan.methods).parameterTypes), StringComparison.Ordinal);
             Assert.Equal(32, Assert.Single(plan.storage, storage => storage.nativeType == carrier.id).size);
-            await new CSharpBackend().EmitAsync(pointerApi, new("va_list", sink) { importMode = mode, managedRuntime = Runtime(mode) }, CancellationToken.None);
+            await new CSharpBackend().EmitAsync(pointerApi, Request(pointerApi, sink, mode), CancellationToken.None);
             if (mode != BindingImportMode.LibraryImport) AssertCarrierLayout(sink, plan, carrier, [0, 8, 16, 24, 28]);
         }
     }
@@ -90,11 +91,11 @@ public sealed class VaListNeutralGenerationTests
         foreach (BindingImportMode mode in Enum.GetValues<BindingImportMode>())
         {
             Sink sink = new();
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(api, new("va_list", sink) { importMode = mode, managedRuntime = Runtime(mode) });
+            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(api, Request(api, sink, mode));
             Assert.Empty(plan.aggregateCalls);
             string raw = Assert.Single(Assert.Single(plan.methods).parameterTypes);
             Assert.True(raw == "nint" || raw.EndsWith("*", StringComparison.Ordinal), raw);
-            await new CSharpBackend().EmitAsync(api, new("va_list", sink) { importMode = mode, managedRuntime = Runtime(mode) }, CancellationToken.None);
+            await new CSharpBackend().EmitAsync(api, Request(api, sink, mode), CancellationToken.None);
             if (mode != BindingImportMode.LibraryImport) AssertCarrierLayout(sink, plan, carrier, [0, 4, 8, 16]);
         }
     }
@@ -106,8 +107,18 @@ public sealed class VaListNeutralGenerationTests
         while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified && type.elementType is StableId element && visited.Add(type.id)) type = module.GetType(element);
         return type;
     }
-    private static ManagedRuntimeProfile Runtime(BindingImportMode mode)
-        => new("storage-proof", ManagedRuntimeKind.CoreClr, NativeModuleMechanism.DynamicLibrary, [mode], false, true);
+    private static EmissionRequest Request(ManagedApiModel model, Sink sink, BindingImportMode mode)
+    {
+        NativeTargetDescriptor target = new TargetResolver().Resolve(new(new(model.interop.targetId)));
+        ManagedRuntimeProfile runtime = TestComposition.ResolveRuntime(target);
+        var plans = ImmutableArray.CreateBuilder<NativeCallPlan>();
+        foreach (InteropFunction function in model.interop.functions)
+        {
+            CallAbiAssessment assessment = DotNetCallAbi.Assess(new(model.interop, target, runtime, NativeCallSignature.FromFunction(function)), runtime);
+            if (assessment.disposition == NativeCallDisposition.Direct) plans.Add(assessment.plan!);
+        }
+        return new("va_list", sink) { importMode = mode, managedRuntime = runtime, callPlans = plans.ToImmutable() };
+    }
     private static void AssertCarrierLayout(Sink sink, CSharpEmissionPlan plan, InteropType native, int[] offsets)
     {
         var compilation = Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create("VaListStorage" + Guid.NewGuid().ToString("N"),
@@ -140,8 +151,8 @@ public sealed class VaListNeutralGenerationTests
             DirectoryInfo? repository = new(AppContext.BaseDirectory);
             while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
             string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(repository!.FullName,
-                "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(repository!.FullName,
+                "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
             AnalysisResult result = await host.AnalyzeAsync(new([header], SourceLanguage.C, m_root) { targetId = target, parseMacros = false, parseSystemIncludes = true });
             Assert.True(result.success, result.GetDiagnosticSummary());
             return result.module!;

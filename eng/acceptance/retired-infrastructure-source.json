@@ -94,7 +94,7 @@
     {
       "tests": [
         "BGCS.Tests.GroupedConfigurationCompositionTests",
-        "BGCS.Contracts.Tests"
+        "BGCS.Core.Tests"
       ],
       "policy": "Mutable reflection normalization is removed. Typed immutable grouped defaults and frozen configuration validation replace null mutation; supplied configuration objects are not modified.",
       "source": [
@@ -264,7 +264,7 @@
       }
     ],
     "source": [
-      "src/BGCS.Contracts/Managed/ManagedNamingPolicy.cs",
+      "src/BGCS.Core/Managed/ManagedNamingPolicy.cs",
       "src/BGCS.CSharp/Projection/FlatIdentifierWordIndex.cs",
       "src/BGCS.CSharp/Projection/ManagedNamingResolver.cs",
       "tests/BGCS.CSharp.Tests/FlatIdentifierNamingTests.cs",

@@ -2,11 +2,11 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -30,7 +30,7 @@ public sealed class CallbackStateRegistrationTests
         var model = new DefaultManagedProjection().Project(module, new("Generated.Retained", "CallbackApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpRetainedCallbackPlan operation = Assert.Single(plan.retainedCallbacks);
         Assert.Empty(plan.callbackOmissions);
         Assert.Equal(NativeCallbackRegistrationKind.CallbackAndUserData, operation.kind);
@@ -38,7 +38,7 @@ public sealed class CallbackStateRegistrationTests
         Assert.Equal(1, operation.unregisterCallbackIndex);
         Assert.Equal(0, operation.unregisterUserDataIndex);
         Assert.Equal("(int)(1)", operation.successExpression);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string source = sink.sources.Single(item => item.Key.Contains("Registration_", StringComparison.Ordinal)).Value;
         Assert.Contains("DangerousGetNativeUserData", source);
         Assert.Contains("KeepOpenUntilUnregistered", source);
@@ -90,9 +90,9 @@ public sealed class CallbackStateRegistrationTests
         var functions = module.functions.SetItem(0, register);
         if (fault == "prototype") functions = functions.SetItem(1, functions[1] with
         { parameters = functions[1].parameters.SetItem(1, functions[1].parameters[1] with { type = new("pointer") }) });
-        module = new(module.libraryId, module.targetId, module.pointerSize, module.types, functions, []);
+        module = new(module.libraryId, module.targetId, module.pointerSize, module.types, functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Retained", "CallbackApi"), CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.retainedCallbacks);
         Assert.Single(plan.callbackOmissions);
         Assert.Equal(2, plan.methods.Length);
@@ -109,14 +109,14 @@ public sealed class CallbackStateRegistrationTests
         CallbackContract callback = register.parameters[0].callback!;
         register = register with { returnType = new("void"), parameters = register.parameters.SetItem(0, register.parameters[0] with
         { callback = callback with { registration = callback.registration! with { successfulReturn = null, failureResultQuiescence = NativeQuiescenceKind.Unknown } } }) };
-        module = new(module.libraryId, module.targetId, module.pointerSize, module.types, module.functions.SetItem(0, register), []);
+        module = new(module.libraryId, module.targetId, module.pointerSize, module.types, module.functions.SetItem(0, register), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Retained", "CallbackApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Null(Assert.Single(plan.retainedCallbacks).successExpression);
         Assert.Empty(plan.callbackOmissions);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(item => (item.Key, item.Value)), "native");
     }
 
@@ -134,6 +134,6 @@ public sealed class CallbackStateRegistrationTests
         };
         register = register with { returnType = new("int"), parameters = register.parameters.SetItem(0, register.parameters[0] with { callback = callback with { registration = registration } }) };
         InteropFunction stop = module.functions[1] with { parameters = [new(new("unregister-state"), "state", new("pointer")), new(new("unregister-callback"), "callback", new("callback-pointer"))] };
-        return new(module.libraryId, module.targetId, module.pointerSize, module.types, [register, stop], []);
+        return new(module.libraryId, module.targetId, module.pointerSize, module.types, [register, stop], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

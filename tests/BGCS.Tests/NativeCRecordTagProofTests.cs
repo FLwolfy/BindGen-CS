@@ -3,14 +3,14 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Targets;
 using BGCS.Infrastructure.Execution;
-using BGCS.Cpp2C.Emission;
-using BGCS.Platforms.Targeting;
-using BGCS.Platforms.Toolchains;
+using BGCS.NativeBridge.Emission;
+using BGCS.Targets.Desktop.Targeting;
+using BGCS.Targets.Desktop.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -44,7 +44,7 @@ public sealed class NativeCRecordTagProofTests
                  new(field, "Field", "value", "Pair::value", integer, new(header, 1, 1)) { parent = record, visibility = "Public", offset = 0, bitOffset = 0 },
                  new(function, "Function", "read_pair", "read_pair", null, new(header, 3, 1)) { role = "Function", returnType = integer, children = [parameter], callingConvention = "C" },
                  new(parameter, "Parameter", "value", "value", pointer, new(header, 3, 1)) { parent = function }], []) { language = SourceLanguage.C };
-            string proof = new NativeStorageAssertionEmitter().Emit(module, [header]);
+            string proof = new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module));
             Assert.Contains("sizeof(" + storageType + ") == 4", proof, StringComparison.Ordinal);
             Assert.Contains(storageType + " *", proof, StringComparison.Ordinal);
             if (anonymous) Assert.DoesNotContain(keyword + " Pair", proof, StringComparison.Ordinal);

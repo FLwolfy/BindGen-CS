@@ -1,6 +1,13 @@
 {
-  "schemaVersion": 1,
-  "extends": ["bindgen.json"],
-  "runtime": { "mode": "source" },
-  "output": { "root": "GeneratedStandalone", "layout": "singleFile" }
+  "schemaVersion": 2,
+  "extends": [
+    "bindgen.json"
+  ],
+  "runtime": {
+    "mode": "source"
+  },
+  "output": {
+    "root": "GeneratedStandalone",
+    "layout": "singleFile"
+  }
 }

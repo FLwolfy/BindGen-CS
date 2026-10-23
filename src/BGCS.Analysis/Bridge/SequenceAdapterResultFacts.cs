@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -15,7 +15,7 @@ public static class SequenceAdapterResultFacts
     /// <param name="export">The primary operation or its identical input adapter.</param>
     /// <returns>Whether its result cannot borrow the temporary input under the finite supported protocol.</returns>
     public static bool IsNonEscaping(
-        CppBridgeModule module,
+        NativeBridgePlan module,
         BridgeExport export
     ) {
         ArgumentNullException.ThrowIfNull(module); ArgumentNullException.ThrowIfNull(export);

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "neutralModels": [
-    "BGCS.Contracts",
+    "BGCS.Core",
     "BGCS.Runtime"
   ],
   "nativeParserOwners": [
     "BGCS.Frontend.Clang"
   ],
-  "standardExtensionAssembly": "BGCS.Contracts",
+  "standardExtensionAssembly": "BGCS.Core",
   "forbiddenNeutralNamespaces": [
     "ClangSharp",
     "Microsoft.CodeAnalysis",
@@ -15,5 +15,5 @@
   ],
   "productionCompileLinksAllowed": false,
   "productionFriendAssemblyBoundaryBypassesAllowed": false,
-  "testFriendExceptionRegistry": "eng/architecture/test-friends.json"
+  "testFriendExceptionsAllowed": false
 }

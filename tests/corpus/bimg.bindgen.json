@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/bindgen.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "bimg",
     "nativeName": "bimg_bridge",
@@ -39,7 +39,8 @@
       "bimg::getBitsPerPixel": "CorpusBits",
       "bimg::imageGetNumMips": "CorpusMips",
       "bimg::imageSolid": "CorpusSolid"
-    }
+    },
+    "runtime": "dotnet.coreclr"
   },
   "runtime": {
     "mode": "package"

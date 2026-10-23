@@ -1,0 +1,2204 @@
+{
+  "historicalOnly": true,
+  "certifiesCurrentRevision": false,
+  "formalSourceRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "record": {
+    "schemaVersion": 1,
+    "productVersion": "3.0.0",
+    "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+    "implementationReady": true,
+    "releaseReady": false,
+    "evidenceScope": "Local checkpoints are pinned observations, not certification of the current or a future release revision. Historical evidence and phase logs below are retained for audit only.",
+    "latestLocalEvidence": {
+      "scope": "final generator-only source epoch; implementation complete pending static audit and tests",
+      "testsExecuted": false,
+      "sameHeadCiVerified": false,
+      "releaseCertification": false,
+      "remainingExecution": "Architecture/coupling/cleanliness audit, one full local retained suite and unchanged performance, current SDK/CLI package closure, then exact-head three-generator/one-product CI and public release verification."
+    },
+    "historicalLocalEvidence": {
+      "date": "2026-10-16",
+      "sourceWorktreeDirty": true,
+      "commonBuildWarnings": 0,
+      "commonBuildErrors": 0,
+      "hostToolRid": "win-x64",
+      "hostToolBuildWarnings": 0,
+      "hostToolBuildErrors": 0,
+      "lastCompleteSuite": {
+        "total": 1605,
+        "passed": 1604,
+        "failed": 1,
+        "sourceFixesPendingVerification": true,
+        "remainingFailure": "CMake nested shell argument handling was fixed and the subsequent NativeBuild47 suite passed; the complete suite has not been rerun after current changes."
+      },
+      "subsequentCSharpSuite": {
+        "total": 455,
+        "passed": 455,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/async-constant-placeholder-guards-csharp-corrected-full.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "subsequentParserOverrideSuite": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "deepWindowsWorkerParsePassed": true,
+      "subsequentNativeManifestWideStaticSuite": {
+        "total": 13,
+        "passed": 13,
+        "failed": 0
+      },
+      "subsequentNativeBuildSuite": {
+        "total": 198,
+        "passed": 198,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/native-neutral-full-consolidated-corrected.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "subsequentOwnedClearPluginSuite": {
+        "total": 20,
+        "passed": 20,
+        "failed": 0
+      },
+      "subsequentMsbuildBuildCleanRebuildSuite": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0
+      },
+      "boundedEmissionCacheSuite": {
+        "total": 8,
+        "passed": 8,
+        "failed": 0
+      },
+      "emissionCacheOverloadAndTemplateSuite": {
+        "total": 7,
+        "passed": 7,
+        "failed": 0
+      },
+      "defaultConstructionCacheAndDiffSuite": {
+        "total": 15,
+        "passed": 15,
+        "failed": 0
+      },
+      "workspaceCacheDirectoryDiffSuite": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0
+      },
+      "nativeCppSequenceRowsPassed": 5,
+      "finiteSequenceNegativeContractChecksPassed": 9,
+      "windowsNativeAotCheckpoint": {
+        "passedChecks": 56,
+        "sourceWorktreeDirty": true,
+        "originalImplicitConstructorFinalRerunPending": false,
+        "generatedCustomManagedEnumNotCovered": true,
+        "originalConstructorReceipt": "artifacts/implementation/native-aot-original-implicit-constructor/f0b7c7c58072463f86c935df154c607a/report.json"
+      },
+      "browserWasmInterpreterCheckpoint": {
+        "nativeLinked": true,
+        "managedCompiled": true,
+        "invoked": true,
+        "passedChecks": 56,
+        "sourceWorktreeDirty": true,
+        "browserAotPassed": true,
+        "browserAotReceipt": "artifacts/implementation/wasm-unified-aot-default-convention/b71e6daf6a774dcda42e28dab4337518/report.json"
+      },
+      "performanceCheckpoint": {
+        "declarations": 10000,
+        "coldElapsedSeconds": 18.98344450001605,
+        "warmElapsedSeconds": 8.576125999970827,
+        "warmTimedOut": false,
+        "warmBudgetSeconds": 10,
+        "budgetPassed": true,
+        "cacheScope": [
+          "primaryFrontend",
+          "csharpEmission"
+        ],
+        "fullPipelineCacheCertified": false,
+        "warmWorkerLaunched": false,
+        "controlledReleaseRerunPending": false,
+        "restoredAfterOutputDeletion": true,
+        "sourceWorktreeDirty": true,
+        "receipt": "artifacts/implementation/selection-release-performance-10000/2080eafe30d64c4abc9ca3093d2bc9a8/report.json",
+        "sameRevisionReleaseCertification": false
+      },
+      "installedMsbuildMultiTfmGraphChecksPassed": 2,
+      "partialInstalledSdkToolChecksPassed": 11,
+      "partialInstalledNativeAotSmokeChecksPassed": 3,
+      "repeatHostPackageContentComparisonPassed": true,
+      "architectureViolations": 0,
+      "fullProductPackageCertificationPassed": false,
+      "sameRevisionPlatformCiPassed": false,
+      "expandedNativeArgumentUnitChecksPassed": 3,
+      "frontendArgumentBoundaryChecksPassed": 4,
+      "neutralDtoStorageChecksPassed": 8,
+      "nativeDtoStorageChecksPassed": 3,
+      "managedEnumActualRoundTrips": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "runtimeModes": [
+          "package",
+          "source"
+        ],
+        "importModes": [
+          "functionTable",
+          "dllImport",
+          "libraryImport"
+        ]
+      },
+      "centralVersionCliChecksPassed": 7,
+      "primaryFrontendCache": {
+        "status": "localRegressionPassed",
+        "certified": false,
+        "actualHostTestsPassed": 3,
+        "fullPipelineCacheCertified": false,
+        "nextChecks": [
+          "same revision platform and installation matrices"
+        ]
+      },
+      "requiredSdkAndResourceChecks": {
+        "total": 19,
+        "passed": 19,
+        "failed": 0
+      },
+      "effectiveSourceCacheManifestSuite": {
+        "total": 29,
+        "passed": 24,
+        "failed": 5,
+        "remainingFailure": "All five manifest-path failures passed in the subsequent 34-case focused Host selection/native proof suite; original 29-case combined suite still needs a current full rerun.",
+        "targetedFailureRerunPassed": 5
+      },
+      "nativeProviderPreprocessingSuite": {
+        "total": 56,
+        "passed": 55,
+        "failed": 1,
+        "remainingFailure": "Meson prerequisite not configured in first local invocation",
+        "mesonPinnedRerunPassed": 1,
+        "subsequentFullSuite": {
+          "total": 61,
+          "passed": 61,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "sourceSelectionTemplateAndNativeProofSuite": {
+        "total": 34,
+        "passed": 34,
+        "failed": 0,
+        "skipped": 0
+      },
+      "sourceSelectionNeutralTemplateSuite": {
+        "total": 28,
+        "passed": 28,
+        "failed": 0,
+        "skipped": 0
+      },
+      "doctorCheckpoint": {
+        "total": 10,
+        "passed": 7,
+        "failed": 3,
+        "testConfigurationFixPendingVerification": true
+      },
+      "generatedEnumAcceptance": {
+        "desktopNativeAotPassed": 56,
+        "browserInterpreterPassed": 56,
+        "browserAotPassed": 56,
+        "browserNegativeRejected": true,
+        "desktopNativeAotNegativeRejected": true,
+        "sourceWorktreeDirty": true
+      },
+      "aggregateCallingCheckpoint": {
+        "sourceWorktreeDirty": true,
+        "commonCSharpBuildWarnings": 0,
+        "commonCSharpBuildErrors": 0,
+        "cSharpSuiteTotal": 219,
+        "cSharpSuitePassed": 219,
+        "actualNativeCallsPending": false,
+        "supportedAlgorithms": [
+          "windows-x64",
+          "sysv-amd64"
+        ],
+        "additionalPlatformCertificationPassed": false,
+        "receipt": "artifacts/implementation/test-results/aggregate-csharp-full_net10.0_20261015104926.trx",
+        "coreClrWindowsNativeRowsPassed": 6,
+        "nativeAotAndSystemVInvocationPending": true,
+        "invocationReceipt": "artifacts/implementation/test-results/aggregate-contribution-native_net10.0_20261015110350.trx"
+      },
+      "pointerSpecializationNativeCheckpoint": {
+        "total": 11,
+        "passed": 10,
+        "failed": 1,
+        "remainingFailure": "Virtual member volatile qualifier was read from the this pointer instead of its pointee; source fix exists and needs coherent build and rerun.",
+        "scalarNativeChecksPassed": 6,
+        "standardProtocolChecksPassed": 55,
+        "receipt": "artifacts/implementation/test-results/pointer-facts-native-regressions_net10.0_20261015025850.trx"
+      },
+      "correctedSourceContributionAndAggregateCheckpoint": {
+        "total": 15,
+        "passed": 15,
+        "failed": 0,
+        "sourceContributionRows": 9,
+        "coreClrWindowsAggregateRows": 6,
+        "singletonFloatAndDoubleCovered": true,
+        "sourceWorktreeDirty": true,
+        "receipt": "artifacts/implementation/test-results/aggregate-contribution-corrected_net10.0_20261015111742.trx",
+        "installedProductCertificationPending": true
+      },
+      "boolBitfieldAndOpaqueCallbackInvocation": {
+        "total": 9,
+        "passed": 9,
+        "failed": 0,
+        "receipt": "artifacts/implementation/test-results/callback-bool-native_net10.0_20261015114209.trx",
+        "runtime": "Windows x64 CoreCLR",
+        "sourceWorktreeDirty": true,
+        "doesNotCertify": "NativeAOT, browser, Linux or macOS"
+      },
+      "explicitStaticApiCheckpoint": {
+        "implemented": true,
+        "unitTests": 8,
+        "unitTestsPassed": 8,
+        "cSharpSuiteReceipt": "artifacts/implementation/test-results/shared-api-csharp-full_net10.0_20261015120204.trx",
+        "realNativeSixModeRows": "passed",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "nativeRowsPassed": 6,
+        "receipt": "artifacts/implementation/test-results/shared-api-native_net10.0_20261015120516.trx",
+        "covered": [
+          "FunctionTable/DllImport/LibraryImport",
+          "Runtime package/source",
+          "split/singleFile",
+          "owned wrappers and exact release after replacement",
+          "UTF-8 string and pinned span projection",
+          "independent concrete contexts",
+          "shared DisposeAsync resource drain"
+        ],
+        "newConcurrencyAndSourceDiagnosticChecksPending": false,
+        "concurrentReplacementAndFailurePreservationPassed": true
+      },
+      "latestCommonDebugBuild": {
+        "log": "artifacts/implementation/sourceview-input-scope-managed-transform-corrected-build.log",
+        "warnings": 0,
+        "errors": 0,
+        "closed": true
+      },
+      "subsequentToolSuite": {
+        "passed": 101,
+        "total": 101,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/tool-defaults-capacity-value-full.trx",
+        "sourceWorktreeDirty": true
+      },
+      "realUpstreamBindingsCheckpoint": {
+        "passed": [
+          "miniaudio",
+          "bgfx",
+          "cimgui",
+          "cimguizmo"
+        ],
+        "pending": [
+          "SDL3 inline helper native bridge",
+          "bimg bridge enum qualified type emission"
+        ],
+        "receipts": [
+          "artifacts/implementation/corpus-three-native-managed-current.json",
+          "artifacts/implementation/corpus-imgui-native-managed-current.json"
+        ],
+        "independentNativeComparison": true,
+        "sourceBytesStable": false,
+        "releaseCertification": false
+      },
+      "msvcStandardLibraryAndScalarProofCheckpoint": {
+        "total": 17,
+        "passed": 16,
+        "failed": 1,
+        "log": "artifacts/implementation/host-msvc-stl-and-scalar-proof-tests.log",
+        "passedScope": [
+          "actual MSVC std::string/std::vector/std::optional object bridge and exact native cleanup",
+          "C/C++ native-flag scalar mismatch rejection and old publication byte preservation",
+          "full UInt64 and negative-zero representations",
+          "three concrete unsupported intrinsic refusals"
+        ],
+        "remainingFailure": "SFINAE helper was selected as an ordinary variadic export before proof; test fixture now selects Probe only and must rerun.",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "nativeAotAggregateInvocationCheckpoint": {
+        "totalChecks": 95,
+        "passed": 95,
+        "failed": 0,
+        "nativeComparisonChecks": 13,
+        "allThreeImportModesMatchNativeSignature": true,
+        "platform": "Windows x64 NativeAOT",
+        "receipt": "artifacts/implementation/aot-aggregate-private-current/5468c362b6904d53828749382b399586/report.json",
+        "installedProducts": false,
+        "privateRepositoryCheckpoint": true,
+        "releaseCertification": false
+      },
+      "sourceDiagnosticHeaderCheckpoint": {
+        "previousRows": 3,
+        "previousPassed": 0,
+        "previousFailed": 3,
+        "receipt": "artifacts/implementation/test-results/source-diagnostic-native-header_net10.0_20261015122258.trx",
+        "finding": "Over-alignment32 was correctly refused in native C analysis before C# planning; early diagnostics lacked source locations.",
+        "sourceFix": "C analysis now attaches nearest original source. Revised six-row fixture distinguishes alignment16 C# backend refusal from alignment32 earlier C analysis refusal.",
+        "revisedChecksPending": false,
+        "revisedRows": 6,
+        "revisedPassed": 6,
+        "revisedFailed": 0,
+        "revisedReceipt": "artifacts/implementation/test-results/remote-source-location-workspace.trx"
+      },
+      "pinnedHttpsConfigurationCheckpoint": {
+        "sourceImplementation": true,
+        "tested": true,
+        "newTests": 17,
+        "passed": 17,
+        "failed": 0,
+        "receipt": "artifacts/implementation/test-results/remote-local-base-rejection.trx",
+        "actualHostGenerationProvenanceAndChangedPinPassed": true,
+        "networkRequiresExplicitUrlSha256PathBase": true,
+        "diskCache": false,
+        "asyncSdkAndWorkspaceReady": true,
+        "cliAndMsbuildWiringPending": false,
+        "releaseCertification": false,
+        "cliAndMsbuildSourceReady": true
+      },
+      "neutralCppCurrentCheckpoint": {
+        "total": 197,
+        "passed": 197,
+        "failed": 0,
+        "receipt": "artifacts/test-results/cpp-neutral-full-after-retirement.trx",
+        "sourceWorktreeDirty": true,
+        "laterFrontendBodyQualificationPresumedFixesPendingBuild": false,
+        "legacyCppFacadeRemoved": true
+      },
+      "managedVirtualCallbackCheckpoint": {
+        "passed": 6,
+        "failed": 0,
+        "receipt": "artifacts/implementation/test-results/managed-virtual-native-tamper.trx",
+        "platform": "Windows x64 CoreCLR",
+        "allThreeImportsAndBothRuntimeModes": true,
+        "sharedFacadeAndSingleFileSourceRuntime": true,
+        "staticThunksScalarBoolBorrowedPointerAndReference": true,
+        "managedExceptionContainmentAndNativeErrorCleanup": true,
+        "selfDisposalAndContextClosingModuleDrain": true,
+        "requiresCallerAssertedNativeStopAndJoin": true,
+        "doesNotCertifyUnknownUpstreamWorkerExceptionHandling": true,
+        "artifactTamperAssertionsSourceReadyPendingRebuild": false,
+        "releaseCertification": false,
+        "artifactTamperRejectionsPassed": 18
+      },
+      "runtimeCallbackRegistryCheckpoint": {
+        "total": 133,
+        "passed": 133,
+        "failed": 0,
+        "receipt": "artifacts/implementation/test-results/virtual-callback-runtime-full.trx",
+        "nonReusedStaticCallbackTokens": true,
+        "keepOpenUntilNativeUnregisterAcknowledgement": true,
+        "failedStopRetainsAdmissionAndResources": true,
+        "releaseCertification": false
+      },
+      "neutralCppSpecializationAndOptionalCheckpoint": {
+        "passed": 2,
+        "failed": 0,
+        "receipt": "artifacts/test-results/cpp-specialization-optional-native-parity.trx",
+        "nestedTemplateGuardPassed": 1,
+        "releaseCertification": false,
+        "sourceWorktreeDirty": true
+      },
+      "documentationProjectionCheckpoint": {
+        "literalProjectionSourceReady": true,
+        "structuredNeutralSectionsSourceReady": true,
+        "initialTests": 4,
+        "passed": 0,
+        "failed": 4,
+        "finding": "Roslyn normalization inserted spaces between adjacent escaped XML entities; formatter now preserves original documentation trivia while formatting code. New six unit plus four actual worker/Host tests pending coherent build.",
+        "releaseCertification": false,
+        "initialFailureFixed": true,
+        "unitPassed": 6,
+        "actualWorkerHostPassed": 4,
+        "fullCSharpSuitePassed": 240,
+        "unitReceipt": "artifacts/implementation/test-results/native-documentation-structured-preserved-xml.trx",
+        "hostReceipt": "artifacts/implementation/test-results/neutral-documentation-worker-bridge.trx",
+        "pending": "Expanded member/parameter naming adds four units and updates actual worker/Host name expectations; next coherent build running."
+      },
+      "architectureCheckpoint": {
+        "productionProjects": 13,
+        "violations": 29,
+        "passed": false,
+        "receipt": "artifacts/implementation/current-actual-architecture-blockers.log"
+      },
+      "nativeIntrinsicAndSignedCharCheckpoint": {
+        "passed": 1,
+        "failed": 0,
+        "receipt": "artifacts/test-results/cpp-native-intrinsic-signed-char.trx",
+        "actualMsvcFunctionTableRoundTrips": true,
+        "releaseCertification": false
+      },
+      "concurrentCompletePublicationCheckpoint": {
+        "passed": 1,
+        "writers": 4,
+        "revisionsPerWriter": 3,
+        "receipt": "artifacts/implementation/test-results/native-asset-concurrent-publication.trx",
+        "releaseCertification": false
+      },
+      "allSixActualLibrariesCheckpoint": {
+        "libraries": [
+          "SDL3",
+          "miniaudio",
+          "cimgui",
+          "cimguizmo",
+          "bgfx",
+          "bimg"
+        ],
+        "independentNativeComparison": true,
+        "sourceBytesStable": false,
+        "singleRevisionCertified": false,
+        "latestSdlReceipt": "artifacts/implementation/corpus-sdl3-native-neutral-retirement-intrinsics.json",
+        "otherReceipts": [
+          "artifacts/implementation/corpus-c-native-msvc-dump-provenance.json",
+          "artifacts/implementation/corpus-bimg-native-msvc-dump-provenance.json"
+        ],
+        "releaseCertification": false
+      },
+      "configurationParityReadOnlyAudit": {
+        "baselineRows": 243,
+        "counts": {
+          "mapped_builtin": 70,
+          "mapped_extension_port": 7,
+          "partial_builtin": 68,
+          "missing_builtin": 87,
+          "superseded_policy": 11
+        },
+        "countsAreNestedPropertyRowsNotIndependentFeatures": true,
+        "receipt": "artifacts/implementation/configuration-parity-readonly-audit.json",
+        "testedCertification": false
+      },
+      "nativeManagedAliases": {
+        "passed": 6,
+        "receipt": "artifacts/implementation/test-results/native-managed-function-aliases.trx",
+        "sourceWorktreeDirty": true
+      },
+      "externalManagedProjectionFirstNative": {
+        "passed": 1,
+        "receipt": "artifacts/implementation/test-results/native-external-first-correct-runtime-profile.trx",
+        "remainingMatrixPending": true
+      },
+      "customAllocatorCodecsRuntime": {
+        "passed": 167,
+        "receipt": "artifacts/implementation/test-results/runtime-generated-allocator-current-full.trx",
+        "sourceClosurePassed": 2,
+        "newFailureRetentionFixPending": true
+      },
+      "externalManagedProjectionMatrix": {
+        "passed": 6,
+        "runtimeModes": [
+          "package",
+          "source"
+        ],
+        "importModes": [
+          "functionTable",
+          "dllImport",
+          "libraryImport"
+        ],
+        "receipt": "artifacts/implementation/test-results/native-external-projections-six.trx",
+        "actualNativeInvocation": true,
+        "publicationPreservedAfterRejection": true,
+        "releaseCertification": false
+      },
+      "namedFunctionContainerMatrix": {
+        "passed": 6,
+        "receipt": "artifacts/implementation/test-results/native-alias-function-groups-six.trx",
+        "releaseCertification": false
+      },
+      "finiteVariadicNativeMatrix": {
+        "passed": 8,
+        "receipt": "artifacts/test-results/cpp-finite-variadic-native-corrected.trx",
+        "releaseCertification": false
+      },
+      "confirmedResourceRetentionBlocker": {
+        "status": "corrected_local_checkpoint",
+        "regressionPassed": 17,
+        "fullRuntimePassed": 184,
+        "sourceClosurePassed": 2,
+        "mechanism": "Provider GC anchor remains until successful unload; ambiguous resource cleanup keeps the module retained. Explicit disposal required for provider-to-session cycles.",
+        "releaseCertification": false
+      },
+      "neutralCppSuite": {
+        "passed": 222,
+        "receipt": "artifacts/test-results/cpp-neutral-full-callback-checkpoint.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "literalNativeConsumerMatrix": {
+        "passed": 6,
+        "receipt": "artifacts/test-results/cpp-string-literal-native-consumers-runtime-compare.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "bufferValueOwnedAndLiteralReceiptSuite": {
+        "passed": 11,
+        "receipt": "artifacts/implementation/test-results/host-buffer-value-owned-literal-receipts11.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "literalNativeProofReceipts": {
+        "passed": 7,
+        "receipt": "artifacts/implementation/test-results/native-literal-receipt-proof7.trx",
+        "releaseCertification": false
+      },
+      "typedDefaultArgumentMatrix": {
+        "passed": 6,
+        "receipt": "artifacts/implementation/test-results/native-default-arguments-six.trx",
+        "releaseCertification": false
+      },
+      "externalRecipeNamespaceComposition": {
+        "passed": 26,
+        "receipt": "artifacts/implementation/test-results/external-carrier-recipe-using-composition.trx",
+        "releaseCertification": false
+      },
+      "typedCategoryConfiguration": {
+        "passed": 12,
+        "receipt": "artifacts/implementation/test-results/typed-source-category-configuration.trx",
+        "releaseCertification": false
+      },
+      "cBooleanAndScalarProjectionFirst": {
+        "passed": 1,
+        "receipt": "artifacts/implementation/test-results/native-c-bool-custom-projection-first-explicit-value.trx",
+        "remainingMatrixPending": true,
+        "recordCustomizationAddedAfterThisReceipt": true
+      },
+      "callbackNativeFirstAttempt": {
+        "passed": 0,
+        "failed": 6,
+        "receipt": "artifacts/test-results/cpp-call-scoped-callback-native.trx",
+        "cause": "Anonymous native function-pointer type has empty declaration names. Source fix selects available native spelling or stable ordinary fallback; strict affix rejection remains.",
+        "correctedRerunPending": true
+      },
+      "currentInfrastructureSuite": {
+        "total": 176,
+        "passed": 176,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/current-neutral-infrastructure-full.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "currentRuntimeSuite": {
+        "total": 184,
+        "passed": 184,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/runtime-provider-anchor-current-full.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "providerRetentionRegression": {
+        "total": 17,
+        "passed": 17,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/runtime-provider-anchor-seventeen.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "runtimeSourceClosure": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/runtime-provider-anchor-source-closure-two.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "cBooleanCustomProjectionAndRecordMatrix": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/native-c-bool-custom-record-six.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "callScopedCallbackMatrix": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-call-scoped-callback-native-named.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "frontendCurrentSuite": {
+        "total": 215,
+        "passed": 215,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-frontend-full-literal-callback-checkpoint.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "currentWorkerSuite": {
+        "total": 52,
+        "passed": 52,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/worker-opaque-response-deployment-bounded-full.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "deployedWorkerIsolatedRetry": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/deployed-worker-isolated-failure-audit.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "currentPrivatePortableCheckpoint": {
+        "closureDigest": "f77d73ee9a3b04fd94f0c6f2150375c6cbf10ae23f2e03e6a6a98fbb1a99d2f1",
+        "assets": 111,
+        "sourceWorktreeDirty": true,
+        "installedProducts": false,
+        "releaseCertification": false,
+        "matrices": {
+          "nativeAot": {
+            "passedChecks": 101,
+            "receipt": "artifacts/implementation/aot-managed-callback-private-current/40ebbc49759e4a0cb6377fc23f712084/report.json"
+          },
+          "browserInterpreter": {
+            "passedChecks": 62,
+            "receipt": "artifacts/implementation/wasm-interpreter-managed-callback-private-current/4fb97082eeba41f1a98f8080ee7230d8/report.json"
+          },
+          "browserAot": {
+            "passedChecks": 62,
+            "receipt": "artifacts/implementation/wasm-aot-managed-callback-private-current/7521efc6f087451ab2bf1f75a3b3387d/report.json"
+          }
+        }
+      },
+      "allContractNamespacesBoundary": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/all-contract-namespaces-architecture-boundary.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "priorityNeutralAbiCacheRegressions": {
+        "total": 11,
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/neutral-priority-abi-cache-eleven.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "neutralModelImmutability": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/neutral-model-immutability-four.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "managedPresentationConfiguration": {
+        "total": 13,
+        "passed": 13,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/managed-presentation-configuration-thirteen.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "directCOwnershipReceiverMatrix": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/host-c-owned-receiver-acquisition6.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "directCOwnershipQualifierSuite": {
+        "total": 22,
+        "passed": 22,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/csharp-direct-c-ownership-qualifier22.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "composedCallScopedCallbackMatrix": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-call-scoped-callback-native-composed.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "retainedCallbackMatrix": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-retained-callback-native-six.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "retainedCallbackPlanningSuite": {
+        "total": 9,
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-retained-callback-planning.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "currentParserContractsAndConfiguration": {
+        "total": 20,
+        "passed": 20,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/parser-only-contract-config-boundaries-corrected.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "constantPresentationUnitCheckpoint": {
+        "total": 26,
+        "passed": 26,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/managed-constant-presentation-twentysix-corrected.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "asyncNativeFirstCheckpoint": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-async-operation-native-first-corrected.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "asyncTerminalGuardCheckpoint": {
+        "total": 13,
+        "passed": 13,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-async-planning-terminal-guards.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "nativeDriverSourceViewActualCheckpoint": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/native-driver-source-current-actual5.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "platformGatedGnuRowsExcluded": 2,
+        "semanticCacheIdentityGuardPending": true
+      },
+      "currentBuild": {
+        "log": "artifacts/implementation/module-borrowed-selector-auto-build-corrected.log",
+        "warnings": 0,
+        "errors": 0,
+        "closed": true,
+        "completeReleaseBuild": false,
+        "sourceChangesSinceBuild": true
+      },
+      "nestedTypeInputVariationUnits": {
+        "total": 28,
+        "passed": 28,
+        "failed": 0,
+        "receipt": "artifacts/implementation/test-results/nested-types-input-variations-corrected-twentyeight.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "constantPresentationNested": {
+        "total": 32,
+        "passed": 32,
+        "failed": 0,
+        "receipt": "artifacts/implementation/test-results/managed-constant-presentation-thirtytwo.trx",
+        "releaseCertification": false
+      },
+      "managedTransformInitial": {
+        "total": 9,
+        "passed": 8,
+        "failed": 1,
+        "receipt": "artifacts/implementation/test-results/contracts-only-managed-transform-nine.trx",
+        "failure": "Comparison relied on immutable nested record reference equality; complete serialized enum facts assertion corrected, awaiting rerun.",
+        "releaseCertification": false
+      },
+      "nestedCarrierInputVariationNative": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "receipt": "artifacts/implementation/test-results/nested-carrier-input-variations-native-six.trx",
+        "releaseCertification": false
+      },
+      "pairedCallbackNative": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "receipt": "artifacts/test-results/cpp-paired-callback-native-six.trx",
+        "releaseCertification": false
+      },
+      "currentVerifiedCheckpoint": {
+        "csharpFull": {
+          "total": 552,
+          "passed": 552,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/module-borrowed-csharp-full.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "originalStorageBorrowNative": {
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-borrowed-ref-alias-six.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "ownedReceiverBorrowNative": {
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-c-owned-pinned-alias-six.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "constantPresentationNative": {
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/native-constant-presentation-six.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "cppStatusCallbackNative": {
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-status-callback-native-six.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "verifiedWorkerNativeCache": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-native-source-cache-verified-worker4.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "managedTransformCorrectedCase": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/contracts-managed-transform-cache-corrected-one.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "workerOnlyProtocol": {
+          "total": 11,
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-advanced-worker-plugins.trx",
+          "releaseCertification": false
+        },
+        "workerOnlyHost": {
+          "total": 7,
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/advanced-worker-host-seven.trx",
+          "releaseCertification": false
+        },
+        "workerOnlyNativeManifest": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-native-worker-contributors-roundtrip1.trx",
+          "releaseCertification": false
+        },
+        "independentCategorySelection": {
+          "total": 33,
+          "passed": 33,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/independent-category-selection-unit-full.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "independentCategoryConfiguration": {
+          "total": 17,
+          "passed": 17,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/independent-category-selection-config-full.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "actualCompilerIdentity": {
+          "total": 3,
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/native-gcc-reported-driver-identity3.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "cppCacheAndDiff": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-cpp-warm-cache-logical-receipt1.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "workerNativePurpose": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-native-worker-purpose-roundtrip1.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "workerFull": {
+          "total": 66,
+          "passed": 66,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-advanced-worker-full.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "workerPurposes": {
+          "total": 14,
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-advanced-worker-purpose-fourteen.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "nativeBuildFull": {
+          "total": 212,
+          "passed": 212,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/native-neutral-full-sourceview-worker-purpose.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "frozenManagedSourceVerified": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/managed-constant-frozen-source-verified-worker.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "managedCompilationCacheGuard": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/managed-input-cache-compilation-guard.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "vaListNeutral": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/neutral-valist-storage-array-decay-two.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "languageStandardConfig": {
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/language-standard-config-six.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "configuredFamiliesUnit": {
+          "total": 18,
+          "passed": 18,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-configured-family-unit.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "cppFull": {
+          "total": 247,
+          "passed": 247,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-configured-family-full-cpp.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "exactLegacyIrBackend": {
+          "total": 7,
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/neutral-ir-exact-parity-seven-corrected.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "groupedConfigurationFirstBatch": {
+          "total": 34,
+          "passed": 34,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/grouped-configuration-full-thirtyfour.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "configuredFamiliesNative": {
+          "total": 9,
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-configured-family-native-nine.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "definitionFactModes": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-definition-facts-corrected.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "customExternalTableNative": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-runtime-only-custom-table1-corrected.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "workerCppPurposeCorrected": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/advanced-worker-cpp-purpose-corrected-one.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "runtimeFull": {
+          "total": 193,
+          "passed": 193,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/runtime-full-module-borrowed.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "runtimeModuleBorrowed": {
+          "total": 9,
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/runtime-module-borrowed-nine.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "moduleBorrowedProjection": {
+          "total": 13,
+          "passed": 13,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/module-borrowed-projection-thirteen.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "moduleBorrowedConfiguration": {
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/module-borrowed-configuration-six.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "moduleBorrowedNative": {
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/module-borrowed-native-six.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "exactNativeBodyModes": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/host-native-source-retention-two-canonical.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "frontendAutoDefinitionModes": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-definition-auto-canonical-corrected.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "frontendFull": {
+          "total": 215,
+          "passed": 215,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-frontend-definition-auto-full.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "scopedSelectorIdentity": {
+          "total": 24,
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/family-selector-identity-twentyfour.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "scopedSelectorSmokeCorrected": {
+          "total": 5,
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/grouped-configuration-selection-smoke-five-corrected.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        }
+      },
+      "currentSourcePending": [
+        "Common15164 allprojects GREEN0/0. Pointer18/config3/nativefirst1, addressplanning11/nativefirst1, Runtimefoundation9, actualMSVCsourceview1, strictSBOM22 GREEN as separate dirty local receipts.",
+        "Root Externaladdressfull6 running B45891; CPP pointerfull6 A active. No common/sharedproductionwrites until both closed.",
+        "Root source-only externalbounds subtraction/overflow/overrun hardening adds3 units (now14) and exact native enum64/pointer/allimports SDK compilation6 authored. Root docs externalmapping EN/CN added.",
+        "Native source nonblocking eventloop retained/async helpers progressing, browser capability rejection remains until all protocol/guard/actual fixtures done. CPP documentation follow-up queued afterfirst feature closes. Dist strictconfig243baseline/proofPythongate inprogress.",
+        "No fullcurrent Host/backend/Runtime certification or fresh installedproducts yet; legacy Host/config/IR and architecture29 notretired. Same-revision remote CI/main/tag/NuGet outstanding."
+      ],
+      "integratedStringRuntimeCheckpoint": {
+        "runtime": {
+          "passed": 207,
+          "receipt": "artifacts/implementation/test-results/runtime-full-string-result-codecs.trx"
+        },
+        "nativeStrings": {
+          "passed": 6,
+          "receipt": "artifacts/implementation/test-results/host-direct-string-result-six.trx"
+        },
+        "frontendProvenance": {
+          "passed": 13,
+          "receipt": "artifacts/implementation/test-results/project-source-identities-literal-templates-corrected-thirteen.trx"
+        },
+        "csharpIntegrated": {
+          "total": 602,
+          "passed": 601,
+          "failed": 1,
+          "receipt": "artifacts/implementation/test-results/strings-owned-callback-anonymous-enum-csharp-full.trx",
+          "requiredSourceDependencyCountAssertionCorrected": true,
+          "rerunPending": true
+        },
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "integratedSourceOwnershipCheckpoint": {
+        "commonBuild": {
+          "log": "artifacts/implementation/value-receiver-source-cleanup-unified-parity-build.log",
+          "warnings": 1,
+          "errors": 0,
+          "testOnlyCorrectionLog": "artifacts/implementation/source-cleanup-assertion-test-only-build.log",
+          "testOnlyCorrectionWarnings": 0,
+          "testOnlyCorrectionErrors": 0
+        },
+        "verified": {
+          "groupedManagedEnums": {
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false,
+            "passed": 3,
+            "receipt": "artifacts/implementation/test-results/grouped-configuration-managed-enum-three.trx",
+            "total": 3
+          },
+          "csharpIntegrated": {
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false,
+            "passed": 602,
+            "receipt": "artifacts/implementation/test-results/strings-owned-callback-anonymous-enum-csharp-full-corrected.trx",
+            "total": 602
+          },
+          "frontendSourceIdentityFull": {
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false,
+            "passed": 221,
+            "receipt": "artifacts/implementation/test-results/project-source-identities-frontend-full.trx",
+            "total": 221
+          },
+          "neutralSafety": {
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false,
+            "passed": 53,
+            "receipt": "artifacts/implementation/test-results/neutral-safety-analysis-fifty-three.trx",
+            "total": 53
+          },
+          "ownedInstanceCallbacks": {
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false,
+            "passed": 6,
+            "receipt": "artifacts/test-results/cpp-owned-instance-callback-native-six.trx",
+            "total": 6
+          },
+          "unifiedSourcePolicyAndCleanup": {
+            "total": 12,
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "valueReceiverPlanning": {
+            "total": 24,
+            "passed": 24,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/test-results/cpp-value-receiver-planning-sdk-corrected.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "valueReceiverNativeFirst": {
+            "total": 1,
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/test-results/cpp-value-receiver-native-first.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "neutralHeaderAndRetention": {
+            "total": 74,
+            "passed": 74,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/neutral-header-policy-retention-seventy-four.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "cHeaderDefaultPrebuilt": {
+            "total": 4,
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/host-c-header-default-three-imports-and-config.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "valueReceiverNative": {
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/test-results/cpp-value-receiver-native-six.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "friendlyComposition": {
+            "total": 3,
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/neutral-friendly-composition-three-imports.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "externalAddressPlanning": {
+            "total": 11,
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/external-native-address-field-planning-eleven.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "externalAddressNativeFirst": {
+            "total": 1,
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/external-native-address-field-first.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "pointerCarrierPlanning": {
+            "total": 18,
+            "passed": 18,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/test-results/cpp-pointer-carrier-planning-corrected.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "pointerCarrierConfiguration": {
+            "total": 3,
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/test-results/cpp-pointer-carrier-configuration-current.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "pointerCarrierNativeFirst": {
+            "total": 1,
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/test-results/cpp-pointer-carrier-native-first.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "nonblockingRuntimeFoundation": {
+            "total": 9,
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/runtime-nonblocking-foundation-nine.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "intentionalMsvcHeaderHelper": {
+            "total": 1,
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/host-msvc-source-view-explicit-helper-optin.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "acceptedArchiveSupplyChain": {
+            "total": 22,
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/sbom-accepted-inventory-twentytwo.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "externalAddressNative": {
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/implementation/test-results/external-native-address-field-six.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          },
+          "pointerCarrierNative": {
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "receipt": "artifacts/test-results/cpp-pointer-carrier-native-six.trx",
+            "sourceWorktreeDirty": true,
+            "releaseCertification": false
+          }
+        },
+        "unifiedSourcePolicy": {
+          "total": 12,
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/neutral-unified-source-policy-cleanup-twelve.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "subsequentRuntimeEventLoopSuite": {
+        "failed": 0,
+        "skipped": 0,
+        "passed": 218,
+        "receipt": "artifacts/implementation/test-results/runtime-full-event-loop-dispatcher.trx",
+        "total": 218,
+        "releaseCertification": false,
+        "sourceWorktreeDirty": true
+      },
+      "subsequentPointerCarrierSurface": {
+        "sourceWorktreeDirty": true,
+        "nativePassed": 6,
+        "nativeReceipt": "artifacts/test-results/cpp-pointer-carrier-native-six.trx",
+        "releaseCertification": false,
+        "planningPassed": 20,
+        "planningReceipt": "artifacts/test-results/cpp-pointer-carrier-planning-documentation-twenty.trx"
+      },
+      "subsequentExternalAddressAndEnumContracts": {
+        "sourceWorktreeDirty": true,
+        "nativeExternalAddressPassed": 6,
+        "nativeReceipt": "artifacts/implementation/test-results/external-native-address-field-six.trx",
+        "scope": "Synthetic wasm32 native-enum SDK compile is not wasm/ARM invocation certification.",
+        "releaseCertification": false,
+        "planningPassed": 20,
+        "planningReceipt": "artifacts/implementation/test-results/external-address-bounds-native-enum-twenty.trx"
+      },
+      "subsequentEventLoopProfile": {
+        "sourceWorktreeDirty": true,
+        "emittedPassed": 14,
+        "virtualCallbackNonblockingProtocolMissing": true,
+        "browserAotPending": true,
+        "actualBrowserPending": true,
+        "configurationPassed": 4,
+        "releaseCertification": false,
+        "emittedReceipt": "artifacts/implementation/test-results/csharp-event-loop-nonblocking-profile-fourteen-stable.trx",
+        "actualBrowserFirstFailure": "Mono interpreter function-pointer signature transport failure in first async raw start; raw74 and retained phases independently execute in private diagnostic; full74+33 still fail."
+      },
+      "subsequentNativeMetadataPlanning": {
+        "failed": 0,
+        "actualNativeHostSixPending": false,
+        "skipped": 0,
+        "passed": 19,
+        "receipt": "artifacts/implementation/test-results/native-metadata-csharp-nineteen-corrected.trx",
+        "releaseCertification": false,
+        "sourceWorktreeDirty": true,
+        "actualNativePassed": 6,
+        "actualNativeReceipt": "artifacts/implementation/test-results/metadata-and-external-library-constant-native-eleven.trx"
+      },
+      "subsequentConfiguredAssociativeFamilies": {
+        "sourceWorktreeDirty": true,
+        "cppReceipt": "artifacts/test-results/cpp-configured-associative-full-module.trx",
+        "planningPassed": 21,
+        "nativePassed": 7,
+        "nativeReceipt": "artifacts/test-results/cpp-configured-associative-native-seven.trx",
+        "releaseCertification": false,
+        "fullCppPassed": 274
+      },
+      "subsequentExternalLibraryNameConstant": {
+        "planningPassed": 16,
+        "nativeReceipt": "artifacts/implementation/test-results/metadata-and-external-library-constant-native-eleven.trx",
+        "planningReceipt": "artifacts/implementation/test-results/external-import-library-constant-sixteen.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "nativeAndConfigurationPassed": 5
+      },
+      "subsequentOpaquePointerContracts": {
+        "passed": 9,
+        "sourceWorktreeDirty": true,
+        "receipt": "artifacts/implementation/test-results/opaque-native-pointer-contract-nine.trx",
+        "scope": "Synthetic three target facts x3imports +SDK WAE compile; no actual wasm/ARM invocation certification",
+        "releaseCertification": false
+      },
+      "subsequentFullCSharpSuite": {
+        "total": 757,
+        "passed": 757,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/csharp-full-physical-event-loop-extended.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "subsequentConfiguredExtendedFamilies": {
+        "unitSuite": {
+          "total": 295,
+          "passed": 295,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-configured-extended-full-module.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false
+        },
+        "nativeMatrix": {
+          "total": 7,
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/test-results/cpp-configured-extended-native-seven.trx",
+          "sourceWorktreeDirty": true,
+          "releaseCertification": false,
+          "actualNativeInvocation": true
+        }
+      },
+      "subsequentBrowserPhysicalLifecycle": {
+        "closureDigest": "485af9184b6796ac03f5e3e557dc8e90f65dd944635703090bf87d40737b7af7",
+        "installedProducts": false,
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "interpreter": {
+          "rawChecks": 74,
+          "lifecycleChecks": 33,
+          "success": true,
+          "receipt": "artifacts/wasm-nonblocking-physical/06b7b56e46094b0188544b184673f6bf/report.json"
+        },
+        "aot": {
+          "rawChecks": 74,
+          "lifecycleChecks": 33,
+          "success": true,
+          "receipt": "artifacts/wasm-nonblocking-physical/ac8a7cbb078444c6b975323c81dd6f8d/report.json"
+        },
+        "scope": "Three import modes; explicit wasm32 direct function-pointer physical table-index transport; static adapter; no aggregate-by-value or general virtual-callback certification"
+      },
+      "subsequentPresentationAndPhysicalMetadata": {
+        "total": 37,
+        "passed": 37,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/physical-metadata-selection-thirtyseven.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "subsequentPresentationGroupedConfiguration": {
+        "total": 8,
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/explicit-presentation-grouped-configuration-eight.trx",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "architectureSourceRetirementCheckpoint": {
+        "projects": 13,
+        "violations": 0,
+        "receipt": "artifacts/implementation/primary-retired-strict-architecture.log",
+        "compiledRetirementPending": true,
+        "releaseCertification": false
+      },
+      "subsequentAnalysisRegistrationSafety": {
+        "total": 130,
+        "passed": 130,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/implementation/test-results/analysis-registration-terminal-safety-130.trx",
+        "releaseCertification": false
+      },
+      "subsequentExactTypeCpp": {
+        "total": 312,
+        "passed": 312,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "artifacts/test-results/cpp-configured-exact-full-module.trx",
+        "actualExactTypeNativePassed": false,
+        "sourceSelectorFixPending": true,
+        "releaseCertification": false
+      },
+      "subsequentDesktopAot1387": {
+        "checks": 113,
+        "success": true,
+        "nativeAggregateChecks": 13,
+        "installedProducts": false,
+        "closureDigest": "6f0596e9e9abc7f72835cd315b4e16584b78be7235b8b5b779e88994a7abc3df",
+        "receipt": "artifacts/native-aot-1387/45cfd2259cf148e6a91b456a1fe33a9e/report.json",
+        "releaseCertification": false
+      },
+      "retiredPrimaryCompiledCheckpoint": {
+        "sourceWorktreeDirty": true,
+        "sourceArchitectureViolations": 0,
+        "compiledContractsCases": 4,
+        "compiledPlatformsCases": 3,
+        "compiledArchitectureCases": 6,
+        "csharpFullCases": 779,
+        "runtimeFullCases": 210,
+        "infrastructureFullCases": 170,
+        "cppFullCases": 331,
+        "toolPassed": 121,
+        "toolTotal": 122,
+        "toolFailure": "Original compiler #warning lost after native preprocessing; fix pending common compilation and actual validation",
+        "featureParityCertified": false,
+        "countedInputState": "sourceReadyAwaitingCommonBuild"
+      },
+      "subsequentCountedAndScopedText": {
+        "date": "2026-10-16T04:53:50.0803784+08:00",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "cppFull": 372,
+        "toolFull": 122,
+        "countedTextInput": {
+          "runtime": 15,
+          "csharp": 22,
+          "configuration": 5,
+          "native": 6,
+          "receipt": "artifacts/implementation/test-results/counted-string-native-six.trx"
+        },
+        "scopedTextValue": {
+          "csharp": 23,
+          "runtime": 4,
+          "cppFocused": 41,
+          "actualBulkOracle": 1,
+          "standardReturnFullSix": "running",
+          "ownedReceiver": "sourceReadyUnbuilt"
+        },
+        "pathInputNative": 6,
+        "externalAbiPlanning": 3,
+        "externalAbiActual": 3,
+        "strictRegistrationActual": 2,
+        "warningPresentation": 4,
+        "macroActualWindowsRows": 6,
+        "macroGnuPlatformNoopRows": 3,
+        "booleanValueParameters": "sourceReadyUnbuilt"
+      },
+      "publicSurfaceAndCompleteRuntimeCheckpoint": {
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "commonBuildWarnings": 0,
+        "commonBuildErrors": 0,
+        "fullCSharpPassed": 850,
+        "retiredAuthoringImplementationTestFiles": 8,
+        "retiredAuthoringProductionFiles": 44,
+        "completeRuntimeAndPreprocessorPassed": 10,
+        "publicHostCompleteRuntimeAndCachePassed": 8,
+        "fullToolPassed": 123,
+        "publicApiMetadataPassed": 5,
+        "workerPassed": 80,
+        "frontendPassed": 226,
+        "analysisPassed": 130,
+        "cpp2cPassed": 379,
+        "ownedCppTextNativeModesPassed": 6,
+        "nullDefaultMsvcNativeImportsPassed": 3,
+        "cacheFocusedInitialPassed": 17,
+        "cacheFocusedInitialFailed": 1,
+        "cacheConcurrentFixVerified": false,
+        "finalPublicApiBaselinesApproved": false
+      },
+      "finalCallbackNamingPublicApiCheckpoint": {
+        "commonBuild": {
+          "warnings": 0,
+          "errors": 0,
+          "log": "artifacts/implementation/final-callback-word-retirement-common-build.log"
+        },
+        "csharp": {
+          "passed": 887,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/csharp-final-callback-naming-exact-ir-full.trx"
+        },
+        "analysis": {
+          "passed": 153,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/analysis-final-callback-safety-full-corrected.trx"
+        },
+        "exactHostSource": {
+          "passed": 4,
+          "failed": 0,
+          "receipt": "artifacts/implementation/test-results/host-exact-ir-retirement-source-four-corrected.trx"
+        },
+        "nativeBuild": {
+          "passed": 221,
+          "failed": 0,
+          "receipt": "artifacts/implementation/test-results/native-final-callback-word-retirement-full.trx"
+        },
+        "runtime": {
+          "passed": 229,
+          "failed": 0,
+          "receipt": "artifacts/implementation/test-results/runtime-final-callback-word-retirement-full.trx"
+        },
+        "toolFull": {
+          "passed": 155,
+          "failed": 0,
+          "receipt": "artifacts/implementation/test-results/tool-full-resource-hardened.trx"
+        },
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false
+      },
+      "finalPlannerAndFixtureCheckpoint": {
+        "date": "2026-10-16",
+        "scope": "independent dirty local diagnostic cohorts, not release certification",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "csharpFullPassed": 892,
+        "configurationFullPassed": 84,
+        "ninthBooleanIndexFocusedPassed": 53,
+        "publicApiChanged": false,
+        "solutionFixtureProjectsAdded": 5,
+        "fixtureReleaseBuildsPassed": 5,
+        "originalPerformanceGate": {
+          "declarations": 10000,
+          "coldPassed": true,
+          "coldSeconds": 35.0486393,
+          "coldBudgetSeconds": 60,
+          "warmPassed": false,
+          "warmTimeoutSeconds": 10.0252238,
+          "warmBudgetSeconds": 10
+        },
+        "physicalFinal1": {
+          "packPassed": true,
+          "installedVerificationPassed": false,
+          "reason": "initial managed compilation changes input-root directory membership; stable third invocation hits",
+          "newStrictStabilizationHarnessFullRerunPassed": false
+        }
+      },
+      "finalIoMetadataCheckpoint": {
+        "date": "2026-10-16",
+        "scope": "independent dirty local diagnostic cohorts, not same-revision release certification",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "commonBuildWarnings": 0,
+        "commonBuildErrors": 0,
+        "csharpFullPassed": 909,
+        "infrastructureFullPassed": 152,
+        "nativeBuildFullPassed": 221,
+        "msbuildFullPassed": 3,
+        "publicApiAssembliesUnchanged": 10,
+        "architectureProductionProjects": 13,
+        "architectureViolations": 0,
+        "documentationAccessibleDeclarations": 2978,
+        "documentationViolations": 0,
+        "originalPerformanceGate": {
+          "declarations": 10000,
+          "coldPassed": true,
+          "coldSeconds": 23.3174061,
+          "coldBudgetSeconds": 60,
+          "warmPassed": false,
+          "warmTimeoutSeconds": 10.011146,
+          "warmBudgetSeconds": 10,
+          "report": "artifacts/implementation/performance-final-metadata-original-budget/61e131ca94f04cd883906e9d40fee2bf/report.json"
+        },
+        "physicalFinal2Pending": false,
+        "physicalFinal2InstalledPassed": false,
+        "physicalFinal2Failure": "The installed tool correctly rejected an unlisted stale Newtonsoft.Json.dll in a reused publish-worker subtree. SDK and MSBuild installed consumption passed. The owned subtree replacement and exact archived worker manifest gate are fixed; 20 package closure controls pass. Fresh final3 physical verification is pending.",
+        "compilerTestEnvironmentIsolation": "Six pure parent-preservation, exact-argv and ambient native-input isolation controls pass; Host shard controls pass 19/19. Production untracked-environment cache refusal and original 60/10-second budgets remain unchanged.",
+        "allControlledCiGatesPending": true
+      },
+      "preGeneratorOnlyScopeCheckpoint": {
+        "date": "2026-10-16",
+        "referenceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
+        "releaseCertification": false,
+        "sameRevisionPlatformCiPassed": false,
+        "fullProductPackageCertificationPassed": false,
+        "frontendSuite": {
+          "sourceCohortCommit": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
+          "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
+          "passed": 252,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/anonymous-access-complete-frontend.trx"
+        },
+        "nativeBuildSuite": {
+          "sourceCohortCommit": "cc171550294972462bb0cdd2d4ac82b2d8c1e34c",
+          "scope": "The tested source was subsequently committed in this cohort; this is not an exact-revision release certificate.",
+          "passed": 329,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/owned-compiler-mutation-complete-native.trx"
+        },
+        "sdkOnlyPackagePreflight": {
+          "sourceRevision": "38f4d85b081c5f3b053c17b031b0de6f87553cc4",
+          "sourceWorktreeDirty": false,
+          "success": true,
+          "hostRid": "win-x64",
+          "packageVersion": "0.0.0-local.sdkpreflight20261016a",
+          "archiveCount": 6,
+          "consumerCheckCount": 14,
+          "repeatContentVerified": true,
+          "sourceAndProductionBytesStable": true,
+          "hostToolCertified": false,
+          "releaseCertification": false,
+          "receipt": "artifacts/sdk-preflight-38f4d85-20261016-76471a20f5f34c018297fe330f0816e4/local-sdk-only-preflight.json"
+        },
+        "performanceCheckpoint": {
+          "sourceRevision": "068f45431d9d2414ab5a5d1d3a0c69b1e4bf3198",
+          "sourceWorktreeDirty": false,
+          "host": "windows-x64",
+          "declarations": 10000,
+          "coldElapsedSeconds": 21.26191160000053,
+          "warmWatchdogElapsedSeconds": 10.027832799998578,
+          "warmTimedOut": true,
+          "warmCompletedElapsedSeconds": null,
+          "warmBudgetSeconds": 10,
+          "budgetPassed": false,
+          "controlledReleaseRerunPending": true,
+          "sameRevisionReleaseCertification": false,
+          "receipt": "artifacts/implementation/performance-068f-anonymous-strict-current/39bbe86474da4c1d95fadfa5711ece21/report.json"
+        },
+        "remainingExecution": "Exact-revision desktop components and complete Host partitions, controlled performance, corpus, complete installed SDK/tool/Runtime/plugin/MSBuild products, browser/NativeAOT matrices and publication proofs remain mandatory. Independent checkpoint counts must not be added into a full-suite certification."
+      },
+      "preGeneratorOnlySourceReadinessReview": {
+        "date": "2026-10-16",
+        "features": 64,
+        "configurationRows": 243,
+        "semanticGroups": 100,
+        "reviewCandidatesSha256": "4abb2c14de597794a5b50cfb844f3f42b65365c9bfd1649d9edb73a251fb4bcd",
+        "publicApiReview": "eng/acceptance/public-api-baseline-review.json",
+        "sourceAssertionScope": "Original identities preserved. Superseded unsafe/inert legacy policies explicitly documented; no old parser/API compatibility layer.",
+        "featureAcceptanceVerified": false,
+        "releaseCertification": false,
+        "remainingExecution": "Final clean same-revision desktop, browser/AOT, complete Host partitions, corpus/performance and actual installed products/attestations/public NuGet remain required."
+      },
+      "beforeFinalLeanGeneratorScope": {
+        "date": "2026-10-18",
+        "scope": "Generator-only current local Windows source cohort; dirty/uncommitted source, no clean exact-head CI or complete release certification.",
+        "referenceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+        "sourceWorktreeDirty": true,
+        "releaseCertification": false,
+        "sameRevisionPlatformCiPassed": false,
+        "fullProductPackageCertificationPassed": false,
+        "allGeneratorSuites": {
+          "passed": 3330,
+          "failed": 0,
+          "skipped": 0,
+          "assemblies": 15,
+          "receipt": "artifacts/implementation/generator-only-verified-test-results.json",
+          "trxDirectory": "artifacts/test-results/generator-only-verified",
+          "scope": "Original verified generator-only product-source cohort, before the subsequent test-display-ID and Python receipt-validator changes; not a fresh run at the final edited source identity. Retired NativeBuild suite is historical only."
+        },
+        "subsequentImportConstantIdentityRegression": {
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "receipt": "artifacts/implementation/test-results/import-constant-case-identities/import-constant-case-identities-eleven.trx",
+          "scope": "Only one existing theory, with finite case IDs added to preserve all11 original inputs/assertions and remove display collisions. Not added to the3330 count."
+        },
+        "performanceCheckpoint": {
+          "host": "windows-x64",
+          "declarations": 10000,
+          "coldElapsedSeconds": 16.094678900000872,
+          "warmElapsedSeconds": 6.571884199991473,
+          "coldBudgetSeconds": 60.0,
+          "warmBudgetSeconds": 10.0,
+          "budgetPassed": true,
+          "fullPipelineCacheCertified": false,
+          "releaseCertification": false,
+          "receipt": "artifacts/performance/generator-only-verified/530f64b5888e457db583652daade721b/report.json"
+        },
+        "sdkOnlyPackagePreflight": {
+          "success": true,
+          "consumerCheckCount": 14,
+          "hostRid": "win-x64",
+          "sourceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+          "sourceWorktreeDirty": true,
+          "sourceBytesStable": true,
+          "completeProductSet": false,
+          "releaseCertification": false,
+          "receipt": "artifacts/verification/generator-only-local-sdk-verified/verification.json"
+        },
+        "hostPackageRepeat": {
+          "archiveCount": 8,
+          "hostRid": "win-x64",
+          "repeatContentVerified": true,
+          "sourceBytesStable": true,
+          "sourceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+          "sourceWorktreeDirty": true,
+          "completeProductSet": false,
+          "releaseCertification": false,
+          "receipt": "artifacts/packages-generator-only-host-verified/package-verification.json"
+        },
+        "installedHostProductsAttempt": {
+          "success": false,
+          "observedChecksBeforeFailure": 22,
+          "failure": "The actual archived source-contributor report contradicts its source or execution summary.",
+          "sourceRevision": "14f7da7a14b1e8739a5dbe07bc9000a43071e210",
+          "sourceWorktreeDirty": true,
+          "completeProductSet": false,
+          "finalSourceSealPassed": false,
+          "releaseCertification": false,
+          "receipt": "artifacts/verification/generator-only-host-products/verification.json",
+          "fixStatus": "Default-strict receipt verifier now permits exact matching dirty source only for an explicitly partial local parent. Focused pure controls passed; installed rerun is still required."
+        },
+        "remainingExecution": "Clean exact-revision desktop/Host partitions, full installed product closure, corpus/performance/supply chain, Browser/NativeAOT matrices, VS2026 and public NuGet proofs remain required. Dirty local receipts are never same-revision release evidence."
+      },
+      "beforeFinalLeanSourceReadiness": {
+        "date": "2026-10-18",
+        "features": 62,
+        "configurationRows": 238,
+        "generatorOnlyPendingRowsReviewed": {
+          "features": 9,
+          "configurationRows": 31
+        },
+        "retainedPreviouslyReviewedActiveRows": {
+          "features": 53,
+          "configurationRows": 207
+        },
+        "publicApiReview": "eng/acceptance/public-api-baseline-review.json",
+        "scopeRemovals": "eng/acceptance/scope-removals.json",
+        "sourceAssertionScope": "Frozen active identities and original definitions retained. The generator-only contracts and exact local assertions were reviewed; policy replacements explicitly do not claim removed legacy transports, layout inference, build services or raw ABI bypasses.",
+        "exactCaseReview": "All active test mappings match original15 local TRXs overlaid with focused11 unique import-constant cases and6 configured static-module cases. This local merged correspondence is not a new full run or same-revision CI proof.",
+        "featureAcceptanceVerified": false,
+        "releaseCertification": false,
+        "remainingExecution": "Fresh clean same-revision required-host CI, complete Host partitions, corpus/performance, installed SDK/tool/MSBuild/Runtime products, Browser/NativeAOT, VS2026, attestations and public NuGet remain required.",
+        "currentEpoch": "Final generator SDK/CLI source scope; old review counts/receipts are historical and not current acceptance."
+      }
+    },
+    "phases": {
+      "sourceImplementation": {
+        "status": "sourceReady",
+        "scope": "Generator SDK/CLI only; standard worker content and immutable plugin ports; no MSBuild task integration."
+      },
+      "staticArchitectureAudit": {
+        "status": "pending"
+      },
+      "localValidation": {
+        "status": "pending",
+        "scope": "All retained tests once; original60/10 performance; package closure and installed SDK/CLI."
+      },
+      "sameHeadCiAndRelease": {
+        "status": "pending",
+        "scope": "Three generator roles and one Windows complete product baseline; accepted-byte publication only."
+      }
+    },
+    "historicalDevelopmentPhases": {
+      "earlierHistory": [
+        {
+          "id": "foundation",
+          "status": "inProgress",
+          "remaining": [
+            "eliminate all thirteen-project dependency violations",
+            "complete feature inventory",
+            "remove replaced public APIs"
+          ]
+        },
+        {
+          "id": "contracts",
+          "status": "inProgress",
+          "remaining": [
+            "remove replaced mixed binding models",
+            "complete lifecycle and ABI evidence contracts",
+            "typed bridge operations",
+            "all standard extension ports",
+            "complete native fact coverage"
+          ]
+        },
+        {
+          "id": "frontend-worker",
+          "status": "inProgress",
+          "remaining": [
+            "complete SDK and CLI generation routing",
+            "advanced worker plugins",
+            "complete external and volatile input tracking",
+            "real native crash fixture",
+            "package asset deployment"
+          ]
+        },
+        {
+          "id": "analysis",
+          "status": "inProgress",
+          "remaining": [
+            "neutral-model analysis",
+            "complete calling ABI capability matrix",
+            "strict semantic evidence",
+            "external type verification"
+          ]
+        },
+        {
+          "id": "cpp-bridge",
+          "status": "inProgress",
+          "remaining": [
+            "complete all standard library and configured lowerings",
+            "template instantiation and virtual callbacks",
+            "neutral extension registry integration",
+            "complete typed operations and result semantics",
+            "complete independent bridge contract verification"
+          ]
+        },
+        {
+          "id": "csharp-backend",
+          "status": "inProgress",
+          "remaining": [
+            "complete friendly semantic projections",
+            "verified aggregate calling ABI profiles",
+            "bitfield storage plans and real native storage round trips",
+            "shared static API lifecycle",
+            "complete runtime feature source closures",
+            "multiple-library source identity"
+          ]
+        },
+        {
+          "id": "runtime",
+          "status": "inProgress",
+          "remaining": [
+            "generated owned and borrowed handle integration",
+            "retained callback registry",
+            "native concurrency round trips",
+            "generated context integration",
+            "aligned allocation integration"
+          ]
+        },
+        {
+          "id": "host",
+          "status": "inProgress",
+          "remaining": [
+            "complete grouped configuration and composition",
+            "complete plugin lifetimes, external inputs and fingerprint protocol",
+            "complete neutral C++ lowerings",
+            "all native build providers and static platforms",
+            "complete candidate contract verification",
+            "workspace graph",
+            "complete cache inputs",
+            "real publication crash and IO fault injection"
+          ]
+        },
+        {
+          "id": "distribution",
+          "status": "inProgress",
+          "remaining": [
+            "complete MSBuild resource deployment, native items and incremental graph validation",
+            "Visual Studio TaskHost certification",
+            "four product packages",
+            "SDK and worker closures",
+            "six tool RIDs",
+            "macOS Intel parser package"
+          ]
+        },
+        {
+          "id": "certification",
+          "status": "pending",
+          "remaining": [
+            "same-revision desktop CI",
+            "Wasm and NativeAOT",
+            "real library corpus",
+            "package installation",
+            "performance",
+            "supply chain",
+            "documentation"
+          ]
+        },
+        {
+          "id": "additional-platforms",
+          "status": "pending",
+          "remaining": [
+            "ARM64",
+            "musl",
+            "Android",
+            "iOS",
+            "FreeBSD"
+          ]
+        }
+      ],
+      "beforeFinalLeanScope": [
+        {
+          "id": "source-implementation",
+          "status": "implementationReviewed",
+          "scope": "The 64 feature groups and 243 configuration identities have reviewed source mappings; this is not execution certification."
+        },
+        {
+          "id": "certification",
+          "status": "pending",
+          "remaining": [
+            "same-revision complete desktop and Host test matrices",
+            "same-revision browser and NativeAOT invocation",
+            "controlled performance and real-library corpus",
+            "complete installed products including Visual Studio 2026",
+            "authenticated feature, package and supply-chain evidence"
+          ]
+        },
+        {
+          "id": "publication",
+          "status": "pending",
+          "remaining": [
+            "immutable v3.0.0 tag after accepted release preflight",
+            "automatic NuGet publication and public payload verification",
+            "final evidence-based engineering assessment"
+          ]
+        },
+        {
+          "id": "additional-platforms",
+          "status": "deferredCertification",
+          "remaining": [
+            "ARM64",
+            "musl",
+            "Android",
+            "iOS",
+            "FreeBSD"
+          ]
+        }
+      ]
+    },
+    "releaseActions": {
+      "branch": "main",
+      "tag": "v3.0.0",
+      "requireSuccessfulCi": true,
+      "requireConfirmedNugetPublication": true,
+      "completed": false
+    },
+    "finalAssessment": {
+      "requested": true,
+      "status": "pendingImplementationAndCertification",
+      "dimensions": [
+        "functionality",
+        "code elegance",
+        "architecture cleanliness",
+        "extensibility",
+        "ease of use",
+        "decoupling",
+        "cross-platform capability"
+      ],
+      "requiredExplanations": [
+        "how to extend with concrete current APIs and examples",
+        "whether platform adaptations represent sufficient verified support or limitations",
+        "how module and model boundaries achieve decoupling",
+        "which C/C++ library classes bind easily and which require semantic configuration, lowering or native shims"
+      ],
+      "requireCurrentSourceAndActualEvidence": true,
+      "remainingExecution": "Architecture/coupling/cleanliness audit, one full local retained suite and unchanged performance, current SDK/CLI package closure, then exact-head three-generator/one-product CI and public release verification.",
+      "currentProductScope": "Generator SDK and CLI, Contracts extension ports and binding Runtime; consumers own builds. Application AOT/browser and full upstream application builds are optional developer evidence, not mandatory generator release gates."
+    },
+    "sourceReadinessReview": {
+      "sourceReviewedFeatures": 61,
+      "sourceReviewedConfigurations": 238,
+      "sourceReviewOnly": true,
+      "sameRevisionAcceptanceVerified": false,
+      "releaseReady": false,
+      "remainingExecution": "Architecture/coupling/cleanliness audit, one full local retained suite and unchanged performance, current SDK/CLI package closure, then exact-head three-generator/one-product CI and public release verification."
+    },
+    "currentReleasePolicy": {
+      "authorization": "Explicit user-approved final generator-only and lean CI plan.",
+      "functionalBaseline": "All retained functional cases execute once on Windows, with exact structured discovery/TRX equality and zero skips.",
+      "platformBaselines": "Linux/macOS execute finite real C/C++ parser/generator/ABI/native-consumer smoke plus unchanged per-host 60/10 performance and isolated host SDK/CLI install.",
+      "productBaseline": "One Windows clean four-product install validates physical six-RID archive closure; not six-RID invocation certification.",
+      "removedMandatoryChecks": [
+        "MSBuild integration/TaskHost/VS2026",
+        "Eight-way Host partition topology",
+        "Application NativeAOT and browser publishing/invocation",
+        "Complete upstream native application builds"
+      ],
+      "previousEvidenceGitRevision": "34674f566c0d3e8766f498cf722a17dd90295d6c",
+      "previousInventoryGitBlobs": {
+        "eng/acceptance/feature-inventory.json": "0c13882869f7a9bb0e79dcdb0dd93d301290b0a7",
+        "eng/acceptance/configuration-inventory.json": "89393ce2f96031696ee903b230af76bc3e57ffcd"
+      },
+      "hostMappingScopeChanges": 6441,
+      "hostMappingScopeChangesSha256": "933dcb7e6253beb57a00a539f70a453416ca46fc36d7824082627ebc5d88a0f2",
+      "releaseReady": false,
+      "removedEvidenceCertified": false
+    }
+  }
+}

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using BGCS.Contracts;
+using BGCS.Core;
 
 namespace BGCS.Tool.Commands;
 
@@ -70,7 +70,7 @@ internal static class DoctorCommand
                 }
                 return 1;
             }
-            await using BindingHost host = BindingHost.CreateDefault();
+            await using BindingHost host = BindingGenerator.CreateDefault();
             InspectionResult inspection = await host.InspectAsync(request, cancellation.token).ConfigureAwait(false);
             cancellation.token.ThrowIfCancellationRequested();
             ImmutableArray<BindingDiagnostic> diagnostics = worker.diagnostics.AddRange(inspection.diagnostics);

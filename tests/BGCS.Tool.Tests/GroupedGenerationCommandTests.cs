@@ -74,7 +74,7 @@ public sealed class GroupedGenerationCommandTests
     {
         File.WriteAllText(Path.Combine(directory, "native.h"), "int native_add(int left, int right);");
         File.WriteAllText(Path.Combine(directory, "bindgen.json"), """
-            { "schemaVersion": 1, "library": { "id": "native", "nativeName": "native" },
+            { "schemaVersion": 2, "library": { "id": "native", "nativeName": "native" },
               "source": { "headers": ["native.h"] }, "api": { "namespace": "Generated.Native", "name": "NativeApi" } }
             """);
     }

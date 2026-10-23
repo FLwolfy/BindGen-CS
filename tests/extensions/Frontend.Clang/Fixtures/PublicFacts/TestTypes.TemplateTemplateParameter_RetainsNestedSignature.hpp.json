@@ -1,0 +1,705 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:0918c8d0596486f54576296866592bc2d84d421b58071b46a6ab165a415db615"
+      },
+      "category": "Unexposed",
+      "spelling": "template-parameter-0-0\u003Ctype-parameter-0-1\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:177458761c5aeb1da7bd2ad3772df3300ec1e7811b92e9f816f02f18af4b3abf"
+      },
+      "category": "Template",
+      "spelling": "Value",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:1ed22b4449a9678f053c69b4cb7f3f98dcf04d94a8b689c72315d8736f496353"
+      },
+      "category": "Template",
+      "spelling": "T",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:2ed1a250e6741d13f73b210cc089261f53a5c095625b1d12585f5f7ecd5d6ef3"
+      },
+      "category": "Pointer",
+      "spelling": "template-parameter-0-0\u003Ctype-parameter-0-1\u003E *",
+      "size": null,
+      "alignment": null,
+      "elementType": {
+        "value": "type:0918c8d0596486f54576296866592bc2d84d421b58071b46a6ab165a415db615"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:2f95906762a604f2e65989aa2bc6cdb33700e88b716ec5efe08bc56b0814df9b"
+      },
+      "category": "Record",
+      "spelling": "Box\u003CT\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:7e05d9cf4ca05fe7dcbeac5c54bd187d3df483f4afdb995df8a999101cecf2a8"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:6e6c0e42c279923c520dc6a4c9a92bff703333016bffa65260ae500526249237"
+      },
+      "category": "Pointer",
+      "spelling": "GenericHolder *",
+      "size": 8,
+      "alignment": 8,
+      "elementType": {
+        "value": "type:d0f04b756fdee0982af1552d0cb12ad9e75edba13192959de1dac4d3cb76c27c"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "category": "Primitive",
+      "spelling": "int",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Int",
+      "isSigned": true,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:861e9e0b8e66ab46fed45e18efd923cd1b8970b399a4b764829c0ed4f5f290a8"
+      },
+      "category": "Unexposed",
+      "spelling": "T",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:d0f04b756fdee0982af1552d0cb12ad9e75edba13192959de1dac4d3cb76c27c"
+      },
+      "category": "Record",
+      "spelling": "GenericHolder\u003CBox, int\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:3377556d05d8fcf63c2db4648c5f23e22a604c410b3bd47caf0155d0657dcb92"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:e7102edf480c03caa78afc83c715fd7c355eb260eb8c1732711a1afca2d803b6"
+      },
+      "category": "Template",
+      "spelling": "Container",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:e9e9b03a7dc48d3e4dcf3343aacd8e577888b90986592226fa875e8cf61bd116"
+      },
+      "category": "Record",
+      "spelling": "GenericHolder\u003CContainer, Value\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:2e967d0a979c9deaf7908330dde16f6a6dde78839d4e4606938bb69fd6631f99"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:2e967d0a979c9deaf7908330dde16f6a6dde78839d4e4606938bb69fd6631f99"
+      },
+      "kind": "Class",
+      "name": "GenericHolder",
+      "qualifiedName": "GenericHolder\u003CContainer, Value\u003E",
+      "type": {
+        "value": "type:e9e9b03a7dc48d3e4dcf3343aacd8e577888b90986592226fa875e8cf61bd116"
+      },
+      "source": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:506efd44adeb3e27683401a09fde41ae2256ba3df35b4e4213d455e2489ef73d"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [
+        {
+          "value": "type:e7102edf480c03caa78afc83c715fd7c355eb260eb8c1732711a1afca2d803b6"
+        },
+        {
+          "value": "type:177458761c5aeb1da7bd2ad3772df3300ec1e7811b92e9f816f02f18af4b3abf"
+        }
+      ],
+      "templateKind": "TemplateClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:3377556d05d8fcf63c2db4648c5f23e22a604c410b3bd47caf0155d0657dcb92"
+      },
+      "kind": "Class",
+      "name": "GenericHolder",
+      "qualifiedName": "GenericHolder\u003CBox, int\u003E",
+      "type": {
+        "value": "type:d0f04b756fdee0982af1552d0cb12ad9e75edba13192959de1dac4d3cb76c27c"
+      },
+      "source": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 3,
+        "column": 8
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": "Struct",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [
+        {
+          "kind": "Unknown",
+          "spelling": "ClangSharp.Interop.CX_TemplateArgument",
+          "type": null
+        },
+        {
+          "kind": "AsType",
+          "spelling": "int",
+          "type": {
+            "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+          }
+        }
+      ],
+      "templateParameters": [],
+      "templateKind": "TemplateSpecializedClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:506efd44adeb3e27683401a09fde41ae2256ba3df35b4e4213d455e2489ef73d"
+      },
+      "kind": "Field",
+      "name": "value",
+      "qualifiedName": "GenericHolder::value",
+      "type": {
+        "value": "type:2ed1a250e6741d13f73b210cc089261f53a5c095625b1d12585f5f7ecd5d6ef3"
+      },
+      "source": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 3,
+        "column": 24
+      },
+      "parent": {
+        "value": "declaration:2e967d0a979c9deaf7908330dde16f6a6dde78839d4e4606938bb69fd6631f99"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:7e05d9cf4ca05fe7dcbeac5c54bd187d3df483f4afdb995df8a999101cecf2a8"
+      },
+      "kind": "Class",
+      "name": "Box",
+      "qualifiedName": "Box\u003CT\u003E",
+      "type": {
+        "value": "type:2f95906762a604f2e65989aa2bc6cdb33700e88b716ec5efe08bc56b0814df9b"
+      },
+      "source": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 4,
+        "column": 1
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:94a4e183b4105970685c576349001297ed7b75ff710d5320880ee18b11ceb715"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [
+        {
+          "value": "type:1ed22b4449a9678f053c69b4cb7f3f98dcf04d94a8b689c72315d8736f496353"
+        }
+      ],
+      "templateKind": "TemplateClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:94a4e183b4105970685c576349001297ed7b75ff710d5320880ee18b11ceb715"
+      },
+      "kind": "Field",
+      "name": "value",
+      "qualifiedName": "Box::value",
+      "type": {
+        "value": "type:861e9e0b8e66ab46fed45e18efd923cd1b8970b399a4b764829c0ed4f5f290a8"
+      },
+      "source": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 4,
+        "column": 36
+      },
+      "parent": {
+        "value": "declaration:7e05d9cf4ca05fe7dcbeac5c54bd187d3df483f4afdb995df8a999101cecf2a8"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:bf5a48c0ac8cad459a0ffd9c7f034dd5ad54bdc40d7f303c6f13b9b09499cc39"
+      },
+      "kind": "Field",
+      "name": "holder",
+      "qualifiedName": "holder",
+      "type": {
+        "value": "type:6e6c0e42c279923c520dc6a4c9a92bff703333016bffa65260ae500526249237"
+      },
+      "source": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 5,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": "Variable",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "Warning",
+      "message": "Unhandled declaration: CXCursor_TemplateTemplateParameter/Container in GenericHolder.",
+      "code": "BGCS-FRONTEND-CLANG",
+      "location": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 2,
+        "column": 42
+      }
+    },
+    {
+      "severity": "Warning",
+      "message": "Unhandled template argument with type CXTemplateArgumentKind_Template: CXCursor_StructDecl/GenericHolder",
+      "code": "BGCS-FRONTEND-CLANG",
+      "location": {
+        "file": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+        "line": 3,
+        "column": 8
+      }
+    }
+  ]
+}

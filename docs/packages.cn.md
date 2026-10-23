@@ -1,63 +1,51 @@
-# 包与安装消费
-
-[English](packages.md) | [快速开始](getting-started.cn.md) | [发布](publish.cn.md)
+# 产品与资源交付
 
 | 产品 | 用途 |
 | --- | --- |
-| BGCS | 完整嵌入式 C/C++ 源码生成 SDK |
-| BGCS.Contracts | 中立模型与普通插件契约 |
-| BGCS.Runtime | 不依赖生成器/parser 的绑定消费支持 |
-| BindGen-CS | 使用相同 `BindingHost` 协调器的 CLI |
+| BGCS | 完整生成库与基础组合。 |
+| BGCS.Core | 独立的中立模型和生成扩展接口。 |
+| BGCS.Runtime | 生成绑定在应用中使用的独立运行辅助。 |
+| BindGen-CS | 使用同一生成流程的 CLI。 |
 
-全部产品使用 .NET 10。C++ lowering 等内部模块包含在完整 SDK/工具中，不需按工程
-安装功能包。实现共十一个产品工程，不交付 BGCS MSBuild 集成资产。
+Engine、Analysis、NativeBridge、CSharp、Infrastructure 等内部程序集随完整产品交付，不要求用户逐个安装。4.0 没有 BGCS.Defaults、Contracts 别名包或 BGCS MSBuild 接入。
 
-## 安装与生成
+## 按需官方实现
 
-声明版本实际发布后：
+| 包 | 职责 |
+| --- | --- |
+| BGCS.Extension.BrowserWasm | Emscripten 输入、Mono Wasm profile、静态表和回调策略。 |
+| BGCS.Extension.NativeAot | NativeAOT profile 以及已有调用/thunk 机制。 |
+| BGCS.Extension.Android | NDK 目标和头文件环境。 |
+| BGCS.Extension.AppleMobile | 设备/模拟器目标与 SDK 输入。 |
+| BGCS.Extension.FreeBsd | 目标与显式 sysroot 输入。 |
 
-```bash
-dotnet tool install --global BindGen-CS --version 3.0.0
-bindgen-cs init include/native.h --language c
-bindgen-cs doctor bindgen.json
-bindgen-cs generate bindgen.json
+BGCS 不依赖这些包。安装后必须显式注册；不会自动改变全局状态。Android、Apple mobile、FreeBSD 的目标解析本身不提供 managed runtime，也不证明实际调用。需要时必须另行提供适用的 runtime/ABI 实现。能力声明不等于运行回执。
+
+```csharp
+using BGCS;
+using BGCS.Extension.NativeAot;
+
+await using BindingHost generator = BindingGenerator.CreateBuilder()
+    .AddPlugin<NativeAotPlugin>()
+    .Build();
 ```
 
-发布前使用源码或显式准备的本地 feed。CLI 和普通 C# SDK 调用生成 C#、按需 C ABI
-bridge 源码、manifest 和诊断；消费者负责编译、链接、打包、部署。产品没有原生构建
-或消费者构建 API。见[公开 API](api.cn.md)。
+配置再选择对应 runtime ID。自定义实现可直接写在自己的 C# 生成项目中，无需独立插件包。
 
-## Worker 资源与 SDK 部署
+## 解析资源
 
-parser 资源跟随生成器宿主，不跟随生成目标。Windows→Android 使用 Windows parser
-和真实 Android SDK 输入；Clang builtin headers 不替代目标 SDK/libc/C++ 头文件。
+完整 SDK 通过普通 NuGet 内容资产交付锁定的 worker 托管闭包和资源清单；固定 parser runtime 依赖提供原生库。CLI 携带自己的宿主闭包。资源由实际生成器宿主决定，与绑定目标分离。
 
-SDK 通过标准 NuGet `contentFiles` 交付锁定的 worker/resource payload；本地首次使用
-按 version/host/manifest digest 选择所属缓存、验证来源及缓存闭包，再准备 worker，不依赖 BGCS `.props`/`.targets`、TaskHost 或运行时搜索
-NuGet 全局缓存。Restore 必须交付完整内容。普通 Contracts-only 插件不加载 Clang，
-高级事实贡献器在 worker 运行。
+首次使用时校验资源，并按版本、宿主和内容身份在用户本地 BGCS 目录准备。不会联网下载、从全局 NuGet 缓存补文件、随机选系统 LLVM 或执行编译器。高级宿主仍可显式指定部署好的 worker 根。
 
-工具 pointer/RID 实现包提供声明的六种桌面宿主闭包，技术性 Intel macOS supplement
-补齐上游资源缺口。产品、RID、archive 集合与大小限制以
-[product-packages.json](../distribution/manifests/product-packages.json)为准，不使用历史固定任务数。
-parser 来源、许可证和 hash 证据仍需保留。
+普通应用 build/publish 输出移动到干净位置后仍须具备完整生成资源。特殊发布形式需显式安排资源部署，不能一概宣称支持。
 
-## Runtime 包或源码
+## Runtime
 
-生成应用通常只引用 `BGCS.Runtime`；`runtime.mode = "source"` 将所需闭包发射到
-API 本地 namespace，单文件模式可放入 `Bindings.cs`。Runtime 不安装编译器、不构建库、
-不部署原生依赖。package/source 的 Raw ABI 和友好投影边界相同。
+应用通常只引用 BGCS.Runtime；它不依赖 Core、Clang、Roslyn、MSBuild 或生成器。`runtime.mode = "source"` 在 API 自己的 namespace 输出所需源码闭包，也可合入单文件。两种形式遵守相同生命周期契约。
 
-## 打包与认证
+## 仓库包验收
 
-必需 CI 是三个生成器任务（Windows 完整、Linux/macOS smoke）和一个完整产品安装任务。
-安装任务在干净私有工作区使用实际新包，检查 SDK、工具、Contracts 插件、Runtime
-消费者、schema 和 worker/resource 闭包；不能用旧包或仓库工程引用替代。
-核心功能基线和原有各宿主性能限制仍为必需。
+`eng/pack.py` 制作候选包，`eng/verify-packages.py` 验证真实归档。候选版本绑定 commit 和源码摘要。隔离消费者只使用包内容，不以工作区 DLL 替代。门禁检查闭包、许可、parser 来源、扩展激活、Runtime-only 和资源重定位。
 
-AOT/Wasm 应用发布/调用是可选手动私有工作，不是强制安装矩阵；目标事实与静态 adapter
-生成仍在范围内。Visual Studio TaskHost 认证不属于产品要求。
-
-`eng/pack.py` 和 `eng/verify-packages.py` 是仓库打包/验证工具，成本较高的本地运行前
-先查看当前 `--help`。partial/dirty 回执仍是本地证据。最终发布另需适用的干净 revision
-检查、不可变包身份和真实公开可用性验证；本文不宣称 3.0.0 已发布或已认证。
+这些脚本制作 BGCS 自身产品，不是消费项目打包 API。见[验收](acceptance.cn.md)与[发布](publish.cn.md)。

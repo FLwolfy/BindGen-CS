@@ -4,9 +4,10 @@
 
 Core feature/configuration baselines are mandatory. Required CI consists of Windows
 full generator checks, Linux/macOS generator smoke and one full installed-product job.
-All original per-host performance budgets remain unchanged. AOT/Wasm application
-publication/invocation is optional manual private work, not mandatory release CI.
-Target facts and source-generation behavior remain subject to core baselines.
+All original per-host performance budgets remain unchanged. Linux smoke includes
+the fixed Browser Mono Wasm/AOT aggregate and callback regression for this revision.
+Broader application publication matrices remain separate; target facts and source
+generation are still subject to core baselines.
 
 Exact workflows, selected cases and receipt policy are represented by
 `eng/acceptance/required-release-gates.json` and the current inventories. These files

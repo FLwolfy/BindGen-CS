@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Requests;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -64,7 +64,7 @@ internal sealed class ManagedConstantCompilerInputs
         if (!inputs.assemblies.Any(input => input?.isFramework == true)) references.AddRange(framework);
         var images = ImmutableArray.CreateBuilder<(MetadataReference, ManagedAssemblyInput)>();
         var trees = ImmutableArray.CreateBuilder<SyntaxTree>();
-        HashSet<string> paths = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        HashSet<string> paths = new(StringComparer.Ordinal);
         long total = 0;
         foreach (ManagedAssemblyInput input in inputs.assemblies)
         {

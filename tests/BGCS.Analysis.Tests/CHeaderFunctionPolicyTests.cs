@@ -5,10 +5,10 @@ using System.Linq;
 using BGCS.Analysis.Bridge;
 using BGCS.Analysis.Declarations;
 using BGCS.Analysis.Interop;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Analysis.Tests;
@@ -35,7 +35,9 @@ public sealed class CHeaderFunctionPolicyTests
         DeclarationSelection selection = Select(include: true);
         Assert.Equal(5, selection.callables.Length);
         Assert.Contains(new StableId("helper-alias"), selection.publicDeclarations);
-        Assert.Equal(4, new CHeaderBridgePlanner().Plan(selection.module, selection.callables, "fixture").exports.Length);
+        var interop = new CDeclarationAnalyzer().Analyze(selection.module, "fixture", selection.callables, CDeclarationAnalysisPurpose.NativeBridgePlanning);
+        Assert.Equal(5, interop.functions.Length);
+        Assert.Equal(4, selection.callables.Select(selection.module.GetDeclaration).Count(CHeaderFunctionPolicy.RequiresAdapter));
     }
 
     [Theory]
@@ -67,7 +69,9 @@ public sealed class CHeaderFunctionPolicyTests
         Assert.Contains(new StableId("static"), selection.callables);
         Assert.DoesNotContain(new StableId("inline"), selection.callables);
         Assert.DoesNotContain(new StableId("helper-alias"), selection.publicDeclarations);
-        Assert.Equal(new StableId("static"), Assert.Single(new CHeaderBridgePlanner().Plan(selection.module, selection.callables, "fixture").exports).sourceDeclaration);
+        var interop = new CDeclarationAnalyzer().Analyze(selection.module, "fixture", selection.callables, CDeclarationAnalysisPurpose.NativeBridgePlanning);
+        Assert.Contains(interop.functions, function => function.id == new StableId("static"));
+        Assert.Single(selection.callables.Select(selection.module.GetDeclaration), CHeaderFunctionPolicy.RequiresAdapter);
     }
 
     [Fact]
@@ -83,7 +87,7 @@ public sealed class CHeaderFunctionPolicyTests
 
     private static DeclarationSelection Select(DeclarationSelectionRequest? request = null, bool include = false,
         ImmutableArray<string> required = default, ImmutableArray<string> additional = default)
-        => new DeclarationSelector().Select(Module(), request ?? new(), [Header], Path.GetDirectoryName(Header)!,
+        => new DeclarationSelector(StringComparer.Ordinal).Select(Module(), request ?? new(), [Header], Path.GetDirectoryName(Header)!,
             requiredDeclarations: required.IsDefault ? [] : required, additionalPublicDeclarations: additional.IsDefault ? [] : additional,
             includeCHeaderHelpers: include);
 

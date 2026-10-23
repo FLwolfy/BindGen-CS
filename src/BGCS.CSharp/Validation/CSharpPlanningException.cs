@@ -1,6 +1,6 @@
 using System;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
+using BGCS.Core;
+using BGCS.Core.Common;
 
 namespace BGCS.CSharp.Validation;
 

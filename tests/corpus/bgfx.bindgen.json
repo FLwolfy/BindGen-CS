@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/bindgen.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "bgfx",
     "nativeName": "bgfx"
@@ -38,7 +38,8 @@
       "bgfx_vertex_layout_get_size": "CorpusLayoutSize",
       "bgfx_calc_texture_size": "CorpusTextureSize",
       "bgfx_get_renderer_name": "CorpusRendererName"
-    }
+    },
+    "runtime": "dotnet.coreclr"
   },
   "runtime": {
     "mode": "package"

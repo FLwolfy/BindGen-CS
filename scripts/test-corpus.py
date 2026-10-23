@@ -23,7 +23,7 @@ import xml.etree.ElementTree as ET
 
 from acceptance_evidence import digest, publication
 from corpus import DEFAULT_LOCK, load_lock, verify
-from corpus_policy import selection_policy
+from corpus_policy import policy_digest, selection_policy
 from native_fixture_build import msvc_sdk_inputs
 from cpp_acceptance_fixture import execution_identity, stage_repository_generator, tool_command
 
@@ -47,7 +47,7 @@ def _validate_group_report(path: Path, group: str, status: int) -> dict:
             or "failure" in report or report.get("corpusLockSha256") != digest(DEFAULT_LOCK)
             or not isinstance(libraries, list) or any(not isinstance(item, dict) for item in libraries)
             or [item.get("libraryId") for item in libraries] != list(GROUPS[group])
-            or report.get("selectedApiPolicy") != {"schemaVersion": policy["schemaVersion"], "policySha256": digest(policy_path),
+            or report.get("selectedApiPolicy") != {"schemaVersion": policy["schemaVersion"], "policySha256": policy_digest(policy_path),
                 "scope": policy["scope"], "libraries": policy["libraries"]}):
         raise RuntimeError("The corpus collector received an incomplete or unrelated group report: " + group)
     repositories = report.get("repositories")
@@ -157,10 +157,17 @@ def compile_bridge(root: Path, manifest: dict, request: dict, run) -> dict:
     artifacts = manifest["artifacts"]
     native_sources = [item for item in artifacts if item["mediaType"] in ("text/x-c", "text/x-c++")
                       and Path(item["relativePath"]).suffix in (".c", ".cpp", ".cc", ".cxx")]
-    manifests = [root / item["relativePath"] for item in artifacts if item["relativePath"].endswith("/bridge.manifest.json")]
+    manifests = [root / item["relativePath"] for item in artifacts if item["relativePath"].endswith("/metadata/native-source.manifest.json")]
     if not native_sources or len(manifests) != 1:
         raise RuntimeError("Generated native sources require one exact neutral source manifest.")
     native = json.loads(manifests[0].read_text(encoding="utf-8-sig"))
+    module = native.get("module")
+    bindings = native.get("exportBindings")
+    if (native.get("schemaVersion") != 2 or not isinstance(module, dict)
+            or not module.get("id") or not module.get("nativeName") or not isinstance(bindings, list)
+            or any(not isinstance(binding, dict) or not binding.get("callableId")
+                or not binding.get("exportName") or binding.get("moduleId") != module["id"] for binding in bindings)):
+        raise RuntimeError("The corpus fixture requires the current typed native source manifest and exact export bindings.")
     if sorted(native["sources"], key=lambda item: item["relativePath"]) != sorted(native_sources, key=lambda item: item["relativePath"]):
         raise RuntimeError("The neutral source manifest differs from the authenticated native source artifacts.")
     targets = request.get("targets", [])

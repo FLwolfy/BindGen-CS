@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using BGCS.Contracts.Versioning;
+using BGCS.Core.Versioning;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -19,11 +19,11 @@ public sealed class VersionCommandTests
         using JsonDocument json = JsonDocument.Parse(output.ToString());
         JsonElement root = json.RootElement;
         Assert.Equal("BindGen-CS", root.GetProperty("product").GetString());
-        Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("runtimeVersion").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("runtimeSourceVersion").GetString()));
         Assert.Equal(ContractVersion.C_MAJOR, root.GetProperty("contracts").GetProperty("major").GetInt32());
         Assert.Equal(ContractVersion.C_API_MINOR, root.GetProperty("contracts").GetProperty("apiMinor").GetInt32());
         Assert.Equal(ModelRevision.C_NATIVE, root.GetProperty("models").GetProperty("native").GetInt32());
-        Assert.Equal(ModelRevision.C_CPP_BRIDGE, root.GetProperty("models").GetProperty("cppBridge").GetInt32());
+        Assert.Equal(ModelRevision.C_NATIVE_BRIDGE, root.GetProperty("models").GetProperty("nativeBridge").GetInt32());
         Assert.Equal(ModelRevision.C_FRONTEND_PROTOCOL, root.GetProperty("frontendProtocol").GetInt32());
         JsonElement parser = root.GetProperty("parser");
         Assert.False(parser.GetProperty("parseExecuted").GetBoolean());

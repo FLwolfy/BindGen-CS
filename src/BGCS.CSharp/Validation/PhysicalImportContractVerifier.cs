@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Emission;
 using BGCS.CSharp.Planning;
 using Microsoft.CodeAnalysis;
@@ -37,7 +37,7 @@ internal static class PhysicalImportContractVerifier
             contexts.SelectMany(context => context.Members.OfType<ClassDeclarationSyntax>()).Where(type => type.Identifier.ValueText == "RawApi").SelectMany(type => type.Members));
         ClassDeclarationSyntax context = (ClassDeclarationSyntax)SyntaxFactory.ParseMemberDeclaration(ContextEmitter.Emit(plan, libraryName))!;
         CheckMembers(context.Members, contexts.SelectMany(type => type.Members));
-        if (plan.importMode != BGCS.Contracts.BindingImportMode.FunctionTable)
+        if (plan.importMode != BGCS.Core.BindingImportMode.FunctionTable)
         {
             ClassDeclarationSyntax imports = (ClassDeclarationSyntax)SyntaxFactory.ParseMemberDeclaration(NativeImportEmitter.Emit(plan, new EmissionRequest(libraryName, new Sink())))!;
             CheckMembers(imports.Members.OfType<ClassDeclarationSyntax>().Single().Members,

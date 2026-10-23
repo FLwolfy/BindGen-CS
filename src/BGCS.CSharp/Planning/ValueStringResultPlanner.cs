@@ -4,10 +4,10 @@ using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Bridge;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 
 namespace BGCS.CSharp.Planning;
 

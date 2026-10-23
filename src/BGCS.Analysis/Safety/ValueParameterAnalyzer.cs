@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Safety;
 
@@ -58,6 +58,17 @@ public sealed class ValueParameterAnalyzer
         if (pointer.category != NativeTypeCategory.Pointer || pointer.elementType is not StableId element)
             return "A typed value parameter requires one known native pointer level.";
         InteropType leaf = Resolve(module, element);
+        if (value.copySource is { } copy)
+        {
+            if (nullBinding || copy.bridgeExport != function.nativeBridgeExport || copy.sourceCallable != function.sourceDeclaration
+                || copy.storageType != leaf.id || copy.sourceType != leaf.sourceNativeType || copy.direction != value.direction || copy.evidence.level != EvidenceLevel.Declared
+                || string.IsNullOrWhiteSpace(copy.evidence.origin) || value.evidence.level != EvidenceLevel.Declared
+                || copy.direction is not (NativeParameterDirection.Input or NativeParameterDirection.Output)
+                || copy.direction == NativeParameterDirection.Input && (copy.sourceParameter is null || copy.sourceParameter != parameter.sourceDeclaration)
+                || copy.direction == NativeParameterDirection.Output && (copy.sourceParameter is not null || parameter.sourceDeclaration is not null
+                    || Resolve(module, function.returnType).primitiveKind != "Void" || function.error is not null))
+                return "A native value-copy projection lost its exact bridge, source declaration, storage or direction provenance.";
+        }
         bool boolean = leaf.category == NativeTypeCategory.Primitive && leaf.primitiveKind == "Bool";
         if (boolean && (leaf.size != 1 || leaf.alignment != 1))
             return "A Boolean value borrow requires an actual one-byte, one-byte-aligned native Bool; integer Boolean conventions require an explicit adapter.";

@@ -1,4 +1,7 @@
 using System;
+using System.IO;
+using BGCS.Core.Hosting;
+using BGCS.Hosting.Standard;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -20,8 +23,9 @@ internal static class WorkspaceCommand
 
         async System.Threading.Tasks.Task<int> ExecuteAsync()
         {
-            BindingWorkspace workspace = await new WorkspaceLoader().LoadAsync(positional[1], cancellation.token).ConfigureAwait(false);
-            await using BindingHost host = BindingHost.CreateDefault();
+            await using HostServices services = new HostServicesProvider().Create(new(Path.GetDirectoryName(Path.GetFullPath(positional[1]))!, JsonSerializer.SerializeToElement(new { })));
+            BindingWorkspace workspace = await new WorkspaceLoader(services.paths).LoadAsync(positional[1], cancellation.token).ConfigureAwait(false);
+            await using BindingHost host = BindingGenerator.CreateDefault();
             if (positional[0] == "diff")
             {
                 WorkspaceDiffResult result = await host.DiffWorkspaceAsync(workspace, cancellation.token).ConfigureAwait(false);

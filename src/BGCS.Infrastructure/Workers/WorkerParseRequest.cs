@@ -1,5 +1,5 @@
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Plugins;
+using BGCS.Core.Requests;
+using BGCS.Core.Plugins;
 using System.Collections.Immutable;
 
 namespace BGCS.Infrastructure.Workers;

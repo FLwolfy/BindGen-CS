@@ -1,0 +1,146 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:74f7009756fb7dace6c501c7c0b2478ec227e34d4fa0abf55f7ae036186ba11c"
+      },
+      "category": "Pointer",
+      "spelling": "void const *",
+      "size": 8,
+      "alignment": 8,
+      "elementType": {
+        "value": "type:8f6a2f6e808e6ba049403b71046f4ead2a486d8ee473804bec0dfdd3593e1dc6"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:8f6a2f6e808e6ba049403b71046f4ead2a486d8ee473804bec0dfdd3593e1dc6"
+      },
+      "category": "Qualified",
+      "spelling": "void const",
+      "size": null,
+      "alignment": null,
+      "elementType": {
+        "value": "type:9ace587e75a461699761f11b1dc9ddc95ad7d9ffc48acc02c759b75711bcbdd8"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": "Const",
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:9ace587e75a461699761f11b1dc9ddc95ad7d9ffc48acc02c759b75711bcbdd8"
+      },
+      "category": "Primitive",
+      "spelling": "void",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Void",
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:2341e2c480a737851d2a4b65d03d25eaa455a4513e3486703909e8e22d5fffac"
+      },
+      "kind": "Field",
+      "name": "NullPtr",
+      "qualifiedName": "NullPtr",
+      "type": {
+        "value": "type:74f7009756fb7dace6c501c7c0b2478ec227e34d4fa0abf55f7ae036186ba11c"
+      },
+      "source": {
+        "file": "TestExpressions.TestNullPtrExpression.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": "Variable",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": "nullptr",
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

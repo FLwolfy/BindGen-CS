@@ -1,0 +1,100 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:9ace587e75a461699761f11b1dc9ddc95ad7d9ffc48acc02c759b75711bcbdd8"
+      },
+      "category": "Primitive",
+      "spelling": "void",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Void",
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:876afa5109427b2d5f3be695512a5911c5b60e475913eea8e688728817ed4b5a"
+      },
+      "kind": "Function",
+      "name": "x",
+      "qualifiedName": "x",
+      "type": null,
+      "source": {
+        "file": "TestTokenAttributes.TestCppNoParseOptionsAttributes.hpp",
+        "line": 2,
+        "column": 14
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Function",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": {
+        "value": "type:9ace587e75a461699761f11b1dc9ddc95ad7d9ffc48acc02c759b75711bcbdd8"
+      },
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "External",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": "C\u002B\u002B",
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": false,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": "C",
+      "attributes": [
+        "cxx11noreturn"
+      ],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

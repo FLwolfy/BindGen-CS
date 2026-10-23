@@ -1,0 +1,74 @@
+class BGCS.NativeBridge.Emission.CppSourceWriter [sealed; interfaces=BGCS.Core.Artifacts.ICodeWriter|System.IDisposable]
+  ctor(System.IO.TextWriter writer, System.Boolean leaveOpen [optional; default=true])
+  property System.Int32 indentLevel { get } [virtual; final]
+  method System.IDisposable PushBlock(System.String declaration) [virtual; final]
+  method System.Void BeginBlock(System.String content) [virtual; final]
+  method System.Void Dispose() [virtual; final]
+  method System.Void EndBlock(System.String marker [optional; default="}"]) [virtual; final]
+  method System.Void Indent(System.Int32 count [optional; default=1]) [virtual; final]
+  method System.Void Unindent(System.Int32 count [optional; default=1]) [virtual; final]
+  method System.Void Write(System.Char chr) [virtual; final]
+  method System.Void Write(System.String text) [virtual; final]
+  method System.Void WriteLine() [virtual; final]
+  method System.Void WriteLine(System.String text) [virtual; final]
+  method System.Void WriteLines(System.Collections.Generic.IEnumerable<System.String> lines) [virtual; final]
+  method System.Void WriteLines(System.String text) [virtual; final]
+class BGCS.NativeBridge.Emission.NativeStorageAssertionEmitter [sealed]
+  ctor()
+  method System.String Emit(BGCS.Core.Native.NativeModule module, System.Collections.Immutable.ImmutableArray<System.String> headers, BGCS.Core.Targets.NativeSourceConventions conventions, System.String preamble [optional; default=""], System.String postamble [optional; default=""])
+class BGCS.NativeBridge.Emission.StaticExportTableEmitter [abstract; sealed]
+  method BGCS.NativeBridge.Emission.StaticExportTableSource Emit(BGCS.Core.Interop.InteropModule module, System.Collections.Immutable.ImmutableArray<System.String> headers) [static]
+class BGCS.NativeBridge.Emission.StaticExportTableSource [sealed; interfaces=System.IEquatable<BGCS.NativeBridge.Emission.StaticExportTableSource>]
+  ctor(System.String source, BGCS.Core.Requests.StaticExportTableDescriptor descriptor)
+  property BGCS.Core.Requests.StaticExportTableDescriptor descriptor { get; init }
+  property System.String source { get; init }
+  method BGCS.NativeBridge.Emission.StaticExportTableSource <Clone>$()
+  method System.Boolean Equals(BGCS.NativeBridge.Emission.StaticExportTableSource other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.NativeBridge.Emission.StaticExportTableSource left, BGCS.NativeBridge.Emission.StaticExportTableSource right) [static]
+  method System.Boolean op_Inequality(BGCS.NativeBridge.Emission.StaticExportTableSource left, BGCS.NativeBridge.Emission.StaticExportTableSource right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String source, out BGCS.Core.Requests.StaticExportTableDescriptor descriptor)
+class BGCS.NativeBridge.Emission.TypedBridgeEmitter [sealed]
+  ctor()
+  method System.Collections.Immutable.ImmutableArray<BGCS.Core.Artifacts.ArtifactDescriptor> Emit(BGCS.Core.Bridge.NativeBridgePlan module, BGCS.Core.Artifacts.IArtifactSink sink, System.String fileStem, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.NativeBridge.Planning.CppBridgeLanguageValidator [sealed]
+  ctor()
+  method System.Void Validate(BGCS.Core.Bridge.NativeBridgePlan module, System.String standard)
+class BGCS.NativeBridge.Planning.LoweringRegistry [sealed]
+  ctor(System.Collections.Generic.IEnumerable<System.ValueTuple<BGCS.Core.Plugins.ExtensionDescriptor,BGCS.Core.Ports.INativeTypeLowering>> types [optional; default=null], System.Collections.Generic.IEnumerable<System.ValueTuple<BGCS.Core.Plugins.ExtensionDescriptor,BGCS.Core.Ports.INativeCallableLowering>> callables [optional; default=null])
+  method BGCS.Core.Bridge.NativeCallableLoweringPlan LowerCallable(BGCS.Core.Native.NativeDeclaration callable, BGCS.Core.Requests.LoweringContext context, System.Threading.CancellationToken cancellationToken)
+  method BGCS.Core.Bridge.NativeTypeLoweringPlan LowerType(BGCS.Core.Native.NativeTypeView type, BGCS.Core.Requests.LoweringContext context, System.Threading.CancellationToken cancellationToken)
+class BGCS.NativeBridge.Planning.NativeBridgePlanner [sealed]
+  ctor(BGCS.NativeBridge.Planning.LoweringRegistry lowerings [optional; default=null], System.Collections.Generic.IEnumerable<BGCS.Core.Bridge.CallableLoweringRecipe> callableRecipes [optional; default=null], System.Collections.Generic.IEnumerable<BGCS.Core.Bridge.CppFamilyBinding> familyBindings [optional; default=null])
+  method BGCS.Core.Bridge.NativeBridgePlan Plan(BGCS.Core.Requests.LoweringContext context, System.Collections.Generic.IEnumerable<BGCS.Core.Common.StableId> selectedCallables [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null], System.Collections.Generic.IEnumerable<BGCS.Core.Common.StableId> publicDeclarations [optional; default=null], System.Collections.Generic.IEnumerable<BGCS.Core.Bridge.CppVirtualProxyPlan> virtualProxies [optional; default=null], System.Collections.Generic.IEnumerable<BGCS.Core.Bridge.NativeVariadicAdapter> variadicAdapters [optional; default=null])
+class BGCS.NativeBridge.Planning.NativeVariadicAdapterPlanner [sealed]
+  ctor()
+  method BGCS.Core.Bridge.NativeVariadicAdapterPlan Plan(BGCS.Core.Native.NativeModule module, System.Collections.Immutable.ImmutableArray<BGCS.Core.Requests.VariadicVariantRequest> requests)
+  method System.String TypeProbePostamble(System.Collections.Immutable.ImmutableArray<BGCS.Core.Requests.VariadicVariantRequest> requests, BGCS.Core.Inputs.SourceLanguage language)
+  method System.Void ValidateRequests(System.Collections.Immutable.ImmutableArray<BGCS.Core.Requests.VariadicVariantRequest> requests)
+class BGCS.NativeBridge.Planning.SequenceInputAdapterPlanner [sealed]
+  ctor()
+  method BGCS.Core.Bridge.NativeBridgePlan Apply(BGCS.Core.Bridge.NativeBridgePlan module, System.Collections.Immutable.ImmutableArray<BGCS.Core.Bridge.SequenceInputAdapterRequest> requests, System.Threading.CancellationToken cancellationToken [optional; default=null])
+class BGCS.NativeBridge.Planning.StandardPathInputProbe [abstract; sealed]
+  field System.String C_ALIAS [static; const="BGCSGeneratedPathInputFacts::Utf8Unit"]
+  property System.String postamble { get } [static]
+  method System.Nullable<BGCS.Core.Common.StableId> Find(BGCS.Core.Native.NativeModule module) [static]
+class BGCS.NativeBridge.Planning.TemplateInstantiationPlanner [sealed]
+  ctor()
+  method BGCS.Core.Bridge.TemplateInstantiationPlan Plan(BGCS.Core.Bridge.TemplateInstantiationRequest request)
+  method System.Collections.Immutable.ImmutableArray<BGCS.Core.Common.StableId> SelectCallables(BGCS.Core.Native.NativeModule module, BGCS.Core.Bridge.TemplateInstantiationPlan plan)
+class BGCS.NativeBridge.Planning.VirtualCallbackPlanner [sealed]
+  ctor()
+  property System.String preamble { get } [static]
+  method BGCS.Core.Bridge.CppVirtualProxyPlan Plan(BGCS.Core.Native.NativeModule module, BGCS.Core.Bridge.VirtualCallbackRequest request, BGCS.Core.Targets.NativeSourceConventions conventions)
+class BGCS.NativeBridge.Recipes.LoweringRecipeCompiler [sealed]
+  ctor()
+  method BGCS.Core.Bridge.ControlledSourceFragment Expression(System.String origin, System.String text) [static]
+  method BGCS.Core.Ports.INativeTypeLowering Compile(BGCS.Core.Bridge.TypeLoweringRecipe recipe)
+  method System.ValueTuple<BGCS.Core.Common.StableId,System.Collections.Immutable.ImmutableArray<BGCS.Core.Bridge.BridgeType>> GetCarrier(BGCS.Core.Bridge.TypeLoweringRecipe recipe, System.Int32 pointerSize)
+class BGCS.NativeBridge.Shims.NativeShimPlanner [sealed]
+  ctor()
+  method BGCS.Core.Bridge.NativeShimPlan Plan(BGCS.Core.Bridge.NativeShimRequest request, System.String pathBase)
+  method System.Collections.Immutable.ImmutableArray<BGCS.Core.Common.StableId> SelectCallables(BGCS.Core.Native.NativeModule module, BGCS.Core.Bridge.NativeShimPlan plan)

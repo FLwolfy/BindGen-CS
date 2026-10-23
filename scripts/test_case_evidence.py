@@ -63,13 +63,14 @@ def validate_driver(report: dict, execute: bool) -> dict:
         target = {case['id']: case for case in selected}
         for item in executed:
             _require(isinstance(item, dict) and item.get('id') in target and item['id'] not in seen, 'Duplicate or unknown executed case.')
-            _require(set(item) == {'id', 'fullyQualifiedName', 'displayName', 'outcome', 'duration'}
+            _require(set(item) == {'id', 'fullyQualifiedName', 'displayName', 'outcome', 'duration', 'errorMessage', 'errorStackTrace'}
                      and isinstance(item.get('duration'), str) and bool(re.fullmatch(r'\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?', item['duration'])),
                      'Unknown execution result schema or invalid recorded duration.')
             seen.add(item['id'])
             wanted = target[item['id']]
             _require(item.get('fullyQualifiedName') == wanted['fullyQualifiedName'] and item.get('displayName') == wanted['displayName'], 'Executed theory/FQN identity changed.')
             _require(item.get('outcome') == 'Passed', 'Required case failed or was skipped.')
+            _require(item['errorMessage'] is None and item['errorStackTrace'] is None, 'A passing case contains failure diagnostics.')
     platform = report.get('vstestIdentity', {})
     _require(set(platform) == {'consoleSha256', 'translationLayerSha256', 'objectModelSha256'}
              and all(isinstance(value, str) and bool(SHA.fullmatch(value)) for value in platform.values()), 'Missing exact test-platform identity.')

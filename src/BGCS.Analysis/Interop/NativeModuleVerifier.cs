@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Interop;
 
@@ -22,6 +22,7 @@ public sealed class NativeModuleVerifier
             Add(diagnostics, "The native graph contains an undefined byte-order fact.");
         HashSet<StableId> typeIds = module.types.Select(type => type.id).ToHashSet();
         HashSet<StableId> declarationIds = module.declarations.Select(declaration => declaration.id).ToHashSet();
+        ValidateOwnership(module, declarationIds, diagnostics);
         foreach (NativeType type in module.types)
         {
             CheckReference(type.elementType, typeIds, type.id, diagnostics);
@@ -112,6 +113,58 @@ public sealed class NativeModuleVerifier
                 Add(diagnostics, $"Bitfield '{declaration.qualifiedName}' exceeds its record's {bitfieldExtent}-byte extent.");
         }
         return diagnostics.ToImmutable();
+    }
+
+    private static void ValidateOwnership(
+        NativeModule module,
+        ISet<StableId> known,
+        ImmutableArray<BindingDiagnostic>.Builder diagnostics
+    ) {
+        Dictionary<StableId, StableId> owners = [];
+        HashSet<StableId> children = [];
+        foreach (NativeDeclaration owner in module.declarations)
+        {
+            children.Clear();
+            foreach (StableId child in owner.children)
+            {
+                if (!children.Add(child))
+                    Add(diagnostics, $"Native declaration '{owner.qualifiedName}' owns child '{child}' more than once.");
+                if (!known.Contains(child)) continue;
+                if (owners.TryGetValue(child, out StableId previous) && previous != owner.id)
+                    Add(diagnostics, $"Native declaration '{child}' is owned by more than one declaration.");
+                else owners.TryAdd(child, owner.id);
+                if (module.GetDeclaration(child).parent != owner.id)
+                    Add(diagnostics, $"Native declaration '{child}' does not reciprocate its declared owner '{owner.id}'.");
+            }
+        }
+        foreach (NativeDeclaration declaration in module.declarations)
+            if (declaration.parent is StableId parent && known.Contains(parent)
+                && (!owners.TryGetValue(declaration.id, out StableId owner) || owner != parent))
+                Add(diagnostics, $"Native declaration '{declaration.qualifiedName}' has a parent that does not own it.");
+
+        // Only declaration parent/children edges own nodes. Shared types and
+        // template arguments are references and deliberately do not enter this walk.
+        HashSet<StableId> complete = [];
+        List<StableId> chain = [];
+        HashSet<StableId> active = [];
+        foreach (NativeDeclaration declaration in module.declarations)
+        {
+            if (complete.Contains(declaration.id)) continue;
+            chain.Clear();
+            active.Clear();
+            StableId? cursor = declaration.id;
+            while (cursor is StableId id && known.Contains(id) && !complete.Contains(id))
+            {
+                if (!active.Add(id))
+                {
+                    Add(diagnostics, $"Native declaration '{declaration.qualifiedName}' participates in an ownership cycle.");
+                    break;
+                }
+                chain.Add(id);
+                cursor = module.GetDeclaration(id).parent;
+            }
+            complete.UnionWith(chain);
+        }
     }
 
     private static NativeType ResolveFieldType(

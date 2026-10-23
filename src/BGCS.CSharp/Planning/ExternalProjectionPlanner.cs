@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.CSharp.Planning;
 
@@ -41,6 +41,12 @@ internal static class ExternalProjectionPlanner
                     native = Resolve(native.elementType!.Value);
                 if (!conversions.TryGetValue(native.id, out CSharpRecipeProjectionPlan? conversion)) continue;
                 CSharpValueParameterPlan? borrowed = method.valueParameters.SingleOrDefault(value => value.parameterIndex == index);
+                if (borrowed is { allocationMode: CSharpValueAllocationMode.NativeValueCopy })
+                {
+                    if (!inputs.TryAdd(index, conversion)) throw new ArgumentException("A copied external native value has conflicting conversions.");
+                    values[values.IndexOf(borrowed)] = borrowed with { managedElementType = conversion.managedType };
+                    continue;
+                }
                 if (borrowed is not null)
                 {
                     omissions.Add(new(function.id, function.parameters[index].id, function.parameters[index].source ?? function.source,

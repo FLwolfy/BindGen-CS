@@ -90,6 +90,17 @@
       }
     },
     {
+      "code": "BGCS-CALL-ABI",
+      "title": "Physical calling ABI is unsupported",
+      "cause": "The selected ABI provider cannot establish a safe forward or reverse call for the final physical signature. The diagnostic retains the exact rejected native type location when supplied.",
+      "resolution": "Use a supported pointer bridge or explicit native shim, or supply an applicable ABI implementation with an exact call plan. Do not substitute equal-sized storage for calling compatibility.",
+      "zh": {
+        "title": "物理调用 ABI 不受支持",
+        "cause": "所选 ABI 实现无法确认最终物理签名的正向或反向调用安全；实现提供被拒绝的原生类型身份时，诊断保留其准确源码位置。",
+        "resolution": "使用受支持的指针桥接或显式原生 shim，或提供具有准确调用计划的适用 ABI 实现。不能用大小相同代替调用兼容性。"
+      }
+    },
+    {
       "code": "BGCS-CONSTANT-OMITTED",
       "title": "Object macro has no supported scalar value",
       "cause": "The compiler did not establish a supported scalar constant for an object macro; its original replacement remains in native facts.",

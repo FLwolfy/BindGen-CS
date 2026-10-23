@@ -54,7 +54,7 @@ class PackageClosureTests(unittest.TestCase):
     def sdk_payload(self, archive, *, tamper=False, extra=False, missing=False, copy=True):
         prefix = "contentFiles/any/net10.0/bgcs/worker-assets/"
         files = {"BGCS.Frontend.Clang.Worker.dll": b"worker", "BGCS.Frontend.Clang.Worker.deps.json": b"{}",
-                 "BGCS.Frontend.Clang.Worker.runtimeconfig.json": b"{}", "fr/resources.dll": b"localized", "runtimes/unix/lib/net10.0/helper.dll": b"rid-managed"}
+                 "BGCS.Frontend.Clang.Worker.runtimeconfig.json": b"{}", "BGCS.Hosting.Standard.dll": b"host", "fr/resources.dll": b"localized", "runtimes/unix/lib/net10.0/helper.dll": b"rid-managed"}
         manifest = {"schemaVersion": 1, "hostRid": "win-x64", "parserIdentity": "ClangSharp/20.1.2.4;LLVM/20",
             "artifacts": [{"relativePath": name, "digest": {"value": hashlib.sha256(data).hexdigest()}} for name, data in files.items()]
                 + [{"relativePath": "runtimes/win-x64/native/" + name + ".dll", "digest": {"value": "c" * 64}} for name in ("libclang", "libClangSharp")]}
@@ -65,6 +65,9 @@ class PackageClosureTests(unittest.TestCase):
             if extra: common.writestr("stale.dll", b"not declared")
         archive.writestr(prefix + "worker-common.zip", stream.getvalue())
         archive.writestr(prefix + "manifests/win-x64.json", json.dumps(manifest))
+        for name in ('bindgen.schema.json', 'workspace.schema.json', 'extension.schema.json',
+                     'native-source-manifest.schema.json', 'capability-report.schema.json'):
+            archive.writestr('schemas/' + name, json.dumps({'fixtureOnly': True}))
         archive.writestr("BGCS.nuspec", '<package><metadata><contentFiles><files include="any/net10.0/bgcs/worker-assets/**/*" buildAction="None" copyToOutput="' + str(copy).lower() + '" flatten="false" /></contentFiles></metadata></package>')
 
     def test_sdk_standard_content_copy_metadata_and_exact_localized_worker_closure(self):
@@ -227,15 +230,48 @@ class PackageClosureTests(unittest.TestCase):
     def create_packages(self):
         output = self.root / "delivered"
         output.mkdir()
-        for product in PACK.MANIFEST["products"]:
+        for product in PACK.MANIFEST["products"] + PACK.MANIFEST["optionalProducts"]:
             if product != "BindGen-CS":
                 with zipfile.ZipFile(output / (product + ".0.0.0-test.nupkg"), "w") as archive:
-                    archive.writestr("lib/net10.0/" + product + ".dll", b"reviewed managed payload")
+                    assemblies = PACK.MANIFEST["optionalPackageAssemblies"].get(product, PACK.SDK_MODULES if product == "BGCS" else [product])
+                    for assembly in assemblies:
+                        archive.writestr("lib/net10.0/" + assembly + ".dll", b"reviewed managed payload")
                     if product == "BGCS": self.sdk_payload(archive)
+                    elif product in ("BGCS.Core", "BGCS.Runtime"):
+                        archive.writestr(product + ".nuspec", "<package><metadata><dependencies><group targetFramework='net10.0' /></dependencies></metadata></package>")
+                    elif product in PACK.OPTIONAL_PRODUCTS:
+                        archive.writestr(product + ".nuspec", '<package><metadata><dependencies><group targetFramework="net10.0"><dependency id="BGCS.Core" version="[0.0.0-test]" /></group></dependencies></metadata></package>')
         for product in PACK.MANIFEST["symbolProducts"]:
             with zipfile.ZipFile(output / (product + ".0.0.0-test.snupkg"), "w") as archive:
                 archive.writestr("lib/net10.0/" + product + ".pdb", b"reviewed symbol payload")
         return output
+
+    def test_optional_extensions_reject_engine_dependencies_and_extra_assemblies(self):
+        product = "BGCS.Extension.Android"
+        for fault in ("valid", "engine-dependency", "extra-assembly", "build-hook"):
+            with self.subTest(fault=fault):
+                path = self.root / (fault + ".nupkg")
+                with zipfile.ZipFile(path, "w") as archive:
+                    archive.writestr("lib/net10.0/" + product + ".dll", b"extension")
+                    dependency = "BGCS" if fault == "engine-dependency" else "BGCS.Core"
+                    archive.writestr(product + ".nuspec", '<package><metadata><dependencies><group><dependency id="' + dependency + '" version="[4.0.0-ci.local]" /></group></dependencies></metadata></package>')
+                    if fault == "extra-assembly": archive.writestr("lib/net10.0/BGCS.Engine.dll", b"forbidden engine")
+                    if fault == "build-hook": archive.writestr("buildTransitive/BGCS.targets", b"forbidden hook")
+                with zipfile.ZipFile(path) as archive:
+                    if fault == "valid": PACK.verify_extension_archive(archive, product, "4.0.0-ci.local")
+                    else:
+                        with self.assertRaises(RuntimeError): PACK.verify_extension_archive(archive, product, "4.0.0-ci.local")
+
+    def test_shared_foundation_bytes_cannot_diverge_between_sdk_and_optional_product(self):
+        output = self.create_packages()
+        path = output / "BGCS.Extension.NativeAot.0.0.0-test.nupkg"
+        with zipfile.ZipFile(path) as archive:
+            files = {name: archive.read(name) for name in archive.namelist()}
+        files["lib/net10.0/BGCS.Interop.DotNet.dll"] = b"different implementation"
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, data in files.items(): archive.writestr(name, data)
+        with self.assertRaisesRegex(RuntimeError, "divergent bytes"):
+            PACK.verify_packages(output, "0.0.0-test", False)
 
     def test_declared_symbol_packages_are_mandatory(self):
         output = self.create_packages()
@@ -290,8 +326,8 @@ class PackageClosureTests(unittest.TestCase):
         extension = ".dll" if rid.startswith("win-") else ".dylib" if rid.startswith("osx-") else ".so"
         payload = {name: name.encode("utf-8") for name in (
             "BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json",
-            "BGCS.Frontend.Clang.Worker.runtimeconfig.json", "BGCS.Contracts.dll", "BGCS.Infrastructure.dll",
-            "BGCS.Frontend.Clang.dll", "ClangSharp.dll", "ClangSharp.Interop.dll",
+            "BGCS.Frontend.Clang.Worker.runtimeconfig.json", "BGCS.Core.dll", "BGCS.Infrastructure.dll",
+            "BGCS.Frontend.Clang.dll", "BGCS.Hosting.Standard.dll", "ClangSharp.dll", "ClangSharp.Interop.dll",
             *(f"runtimes/{rid}/native/{name}{extension}" for name in ("libclang", "libClangSharp")))}
         manifest = {"schemaVersion": 1, "hostRid": rid, "parserIdentity": "ClangSharp/20.1.2.4;LLVM/20",
                     "artifacts": [{"relativePath": name, "mediaType": "application/octet-stream",
@@ -325,7 +361,7 @@ class PackageClosureTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError): PACK.verify_tool_worker_archive(archive, "win-x64")
 
     def test_changed_worker_executable_bytes_are_rejected(self):
-        with zipfile.ZipFile(self.worker_archive(tamper="BGCS.Contracts.dll")) as archive:
+        with zipfile.ZipFile(self.worker_archive(tamper="BGCS.Core.dll")) as archive:
             with self.assertRaisesRegex(RuntimeError, "content digest differs"):
                 PACK.verify_tool_worker_archive(archive, "win-x64")
 
@@ -344,7 +380,7 @@ class PackageClosureTests(unittest.TestCase):
         for change in (wrong_host, traversal, duplicate, bad_digest):
             with self.subTest(change=change.__name__), zipfile.ZipFile(self.worker_archive(change_manifest=change)) as archive:
                 with self.assertRaises(RuntimeError): PACK.verify_tool_worker_archive(archive, "win-x64")
-        with zipfile.ZipFile(self.worker_archive(extra={"bgcs.contracts.dll": b"case alias"})) as archive:
+        with zipfile.ZipFile(self.worker_archive(extra={"bgcs.core.dll": b"case alias"})) as archive:
             with self.assertRaisesRegex(RuntimeError, "case-colliding"):
                 PACK.verify_tool_worker_archive(archive, "win-x64")
 
@@ -408,10 +444,10 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(3, len(calls))
-        self.assertEqual([None, str(fixture.directory.resolve()), None], [call["parserRoot"] for call in calls])
-        self.assertEqual(["parent-unchanged"] * 3, [call["sentinel"] for call in calls])
-        self.assertEqual("src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj", calls[1]["arguments"][0])
+        self.assertEqual(3 + len(PACK.OPTIONAL_PRODUCTS), len(calls))
+        self.assertEqual([None, str(fixture.directory.resolve()), *([None] * (1 + len(PACK.OPTIONAL_PRODUCTS)))], [call["parserRoot"] for call in calls])
+        self.assertEqual(["parent-unchanged"] * (3 + len(PACK.OPTIONAL_PRODUCTS)), [call["sentinel"] for call in calls])
+        self.assertEqual("extensions/frontends/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj", calls[1]["arguments"][0])
         self.assertTrue(all(call["arguments"][-1] == "-p:Version=0.0.0-control" for call in calls))
 
     def test_accepted_explicit_parser_overrides_worker_ambient_value_without_changing_other_children(self):
@@ -422,7 +458,7 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", fixture.directory, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["caller-native-root", str(fixture.directory.resolve()), "caller-native-root"],
+        self.assertEqual(["caller-native-root", str(fixture.directory.resolve()), *(["caller-native-root"] * (1 + len(PACK.OPTIONAL_PRODUCTS)))],
                          [call["parserRoot"] for call in calls])
 
     def test_without_explicit_parser_all_builds_keep_the_callers_runtime_selection(self):
@@ -432,7 +468,22 @@ class PackageClosureTests(unittest.TestCase):
             PACK.build_products(sys.executable, "Release", "0.0.0-control", None, "c" * 40)
             self.assertEqual(before, dict(os.environ))
         calls = [json.loads(line) for line in capture.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(["caller-native-root"] * 3, [call["parserRoot"] for call in calls])
+        self.assertEqual(["caller-native-root"] * (3 + len(PACK.OPTIONAL_PRODUCTS)), [call["parserRoot"] for call in calls])
+
+    def test_requested_tool_rids_are_built_with_one_explicit_restore_set_before_packaging(self):
+        capture = self.capture_product_builds()
+        for rids in (list(PACK.RIDS), ["win-x64"]):
+            with self.subTest(rids=rids):
+                previous = len(capture.read_text(encoding="utf-8").splitlines()) if capture.exists() else 0
+                PACK.build_tool_rids(sys.executable, "Release", "0.0.0-control", rids)
+                calls = [json.loads(line)["arguments"] for line in capture.read_text(encoding="utf-8").splitlines()[previous:]]
+                self.assertEqual(len(rids), len(calls))
+                for rid, arguments in zip(rids, calls):
+                    self.assertEqual("src/BGCS.Tool/BGCS.Tool.csproj", arguments[0])
+                    self.assertEqual(rid, arguments[arguments.index("--runtime") + 1])
+                    self.assertIn("-p:RuntimeIdentifiers=" + "%3B".join(rids), arguments)
+                    self.assertIn("-p:Version=0.0.0-control", arguments)
+                    self.assertNotIn("--no-build", arguments)
 
     def test_managed_child_removes_every_platform_case_without_changing_parent_or_native_discovery(self):
         for index, names in enumerate((("Platform",), ("PLATFORM",), ("pLaTfOrM",), ("Platform", "PLATFORM", "platform"))):

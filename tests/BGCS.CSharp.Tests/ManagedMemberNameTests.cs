@@ -8,12 +8,12 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using Microsoft.CodeAnalysis;
@@ -37,12 +37,12 @@ public sealed class ManagedMemberNameTests
         };
         ManagedApiModel model = new DefaultManagedProjection().Project(native, request, CancellationToken.None);
         model = JsonSerializer.Deserialize<ManagedApiModel>(JsonSerializer.SerializeToUtf8Bytes(model))!;
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("unused", new Sink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("unused", new Sink()));
         Assert.Equal(native.functions[0].id, Assert.Single(plan.methods).nativeExport);
         Assert.Equal("read", plan.methods[0].exportName);
         Assert.Equal("managedInput", Assert.Single(plan.methods[0].parameterNames));
         Sink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
         string trusted = (string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!;
         CSharpCompilation compilation = CSharpCompilation.Create("MappedMembers" + Guid.NewGuid().ToString("N"),
             sink.sources.Select(source => CSharpSyntaxTree.ParseText(source.Value, path: source.Key)),
@@ -81,7 +81,7 @@ public sealed class ManagedMemberNameTests
             : record.memberNames.Select(member => member with { name = "Same" }).ToImmutableArray() };
         model = model with { types = model.types.Select(type => type.nativeType == record.nativeType ? record : type).ToImmutableArray() };
         Sink sink = new();
-        Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(model, new("unused", sink)));
+        Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(model, new("unused", sink)));
         Assert.Empty(sink.sources);
     }
 

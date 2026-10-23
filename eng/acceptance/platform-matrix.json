@@ -13,9 +13,9 @@
   "certificationStatus": "pending",
   "releaseRevision": null,
   "runtimeProfiles": [
-    "CoreClr",
-    "NativeAot",
-    "BrowserWasm"
+    "dotnet.coreclr",
+    "dotnet.native-aot",
+    "dotnet.mono-wasm"
   ],
   "importModes": [
     "FunctionTable",
@@ -35,8 +35,8 @@
         "Invoked"
       ],
       "runtimeProfiles": [
-        "CoreClr",
-        "NativeAot"
+        "dotnet.coreclr",
+        "dotnet.native-aot"
       ],
       "certification": {
         "status": "pending",
@@ -72,11 +72,12 @@
         }
       ],
       "requiredExecutionProfiles": [
-        "CoreClr"
+        "dotnet.coreclr"
       ],
       "optionalApplicationRuntimeProfiles": [
-        "NativeAot"
-      ]
+        "dotnet.native-aot"
+      ],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "linux-x64-gnu",
@@ -90,8 +91,8 @@
         "Invoked"
       ],
       "runtimeProfiles": [
-        "CoreClr",
-        "NativeAot"
+        "dotnet.coreclr",
+        "dotnet.native-aot"
       ],
       "certification": {
         "status": "pending",
@@ -129,11 +130,12 @@
         }
       ],
       "requiredExecutionProfiles": [
-        "CoreClr"
+        "dotnet.coreclr"
       ],
       "optionalApplicationRuntimeProfiles": [
-        "NativeAot"
-      ]
+        "dotnet.native-aot"
+      ],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "macos-x64-darwin",
@@ -147,8 +149,8 @@
         "Invoked"
       ],
       "runtimeProfiles": [
-        "CoreClr",
-        "NativeAot"
+        "dotnet.coreclr",
+        "dotnet.native-aot"
       ],
       "certification": {
         "status": "pending",
@@ -186,49 +188,57 @@
         }
       ],
       "requiredExecutionProfiles": [
-        "CoreClr"
+        "dotnet.coreclr"
       ],
       "optionalApplicationRuntimeProfiles": [
-        "NativeAot"
-      ]
+        "dotnet.native-aot"
+      ],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "emscripten-wasm32-emscripten",
-      "releaseGate": "target-facts-only",
+      "releaseGate": "targeted-optional-extension-regression",
       "requiredStages": [
-        "Resolved"
+        "Resolved",
+        "Parsed",
+        "Generated",
+        "ManagedCompiled",
+        "NativeLinked",
+        "Invoked"
       ],
       "runtimeProfiles": [
-        "BrowserWasm"
+        "dotnet.mono-wasm"
       ],
       "certification": {
         "status": "pending",
         "revision": null,
         "receipts": []
       },
-      "executionMappings": [],
+      "executionMappings": [
+        {
+          "workflow": ".github/workflows/ci.yml",
+          "job": "generator",
+          "jobName": "Generator smoke (Linux x64)",
+          "phase": "Verify the explicit browser extension with aggregate and callback calls",
+          "script": "scripts/test-wasm-bindings.py",
+          "arguments": [
+            "--targeted",
+            "--no-build"
+          ],
+          "scope": "Exactly three import modes, scalar, typed aggregate pointer input/output, raw aggregate-return reverse callback with user data; separate real MonoWasm and AOT consumers."
+        }
+      ],
       "constraints": [
         "The external consuming project registers and links native object/archive references with the import identity required by generated bindings; BGCS emits source only.",
         "LibraryImport uses the explicitly resolved browser default Cdecl convention profile.",
         "Chromium evidence does not certify Firefox or Safari."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
-      "developerExecutionMappings": [
-        {
-          "script": "scripts/test-wasm-bindings.py",
-          "stages": [
-            "ManagedCompiled",
-            "NativeLinked",
-            "Invoked"
-          ],
-          "mandatory": false,
-          "scope": "Manual developer application evidence only; not a generator release requirement."
-        }
+      "developerExecutionMappings": [],
+      "requiredExecutionProfiles": [
+        "dotnet.mono-wasm"
       ],
-      "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": [
-        "BrowserWasm"
-      ],
+      "optionalApplicationRuntimeProfiles": [],
       "optionalApplicationHostExamples": [
         "windows-x64-msvc",
         "linux-x64-gnu",
@@ -237,6 +247,11 @@
       "optionalApplicationExecutionModes": [
         "interpreter",
         "aot"
+      ],
+      "implementationExtension": "BGCS.Extension.BrowserWasm",
+      "executionModes": [
+        "MonoWasm interpreter",
+        "MonoWasm AOT"
       ]
     },
     {
@@ -257,7 +272,8 @@
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "linux-arm64-gnu",
@@ -277,7 +293,8 @@
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "macos-arm64-darwin",
@@ -297,7 +314,8 @@
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "linux-x64-musl",
@@ -317,7 +335,8 @@
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "linux-arm64-musl",
@@ -337,7 +356,8 @@
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Targets.Desktop"
     },
     {
       "id": "android-arm64",
@@ -352,12 +372,15 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations.",
+        "A target/SDK provider alone does not implement a managed runtime or calling-ABI algorithm. No runtime support is inferred from the target name."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Extension.Android",
+      "runtimeProfiles": []
     },
     {
       "id": "android-x64",
@@ -372,12 +395,15 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations.",
+        "A target/SDK provider alone does not implement a managed runtime or calling-ABI algorithm. No runtime support is inferred from the target name."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Extension.Android",
+      "runtimeProfiles": []
     },
     {
       "id": "ios-arm64-darwin",
@@ -392,12 +418,15 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations.",
+        "A target/SDK provider alone does not implement a managed runtime or calling-ABI algorithm. No runtime support is inferred from the target name."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Extension.AppleMobile",
+      "runtimeProfiles": []
     },
     {
       "id": "ios-simulator-x64-darwin",
@@ -412,12 +441,15 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations.",
+        "A target/SDK provider alone does not implement a managed runtime or calling-ABI algorithm. No runtime support is inferred from the target name."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Extension.AppleMobile",
+      "runtimeProfiles": []
     },
     {
       "id": "ios-simulator-arm64-darwin",
@@ -432,12 +464,15 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations.",
+        "A target/SDK provider alone does not implement a managed runtime or calling-ABI algorithm. No runtime support is inferred from the target name."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Extension.AppleMobile",
+      "runtimeProfiles": []
     },
     {
       "id": "freebsd-x64-gnu",
@@ -452,12 +487,15 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations.",
+        "A target/SDK provider alone does not implement a managed runtime or calling-ABI algorithm. No runtime support is inferred from the target name."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Extension.FreeBsd",
+      "runtimeProfiles": []
     },
     {
       "id": "freebsd-arm64-gnu",
@@ -472,21 +510,24 @@
       },
       "executionMappings": [],
       "knownLimits": [
-        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations."
+        "Target/ABI/parse inputs and independent consumer mechanisms must be verified independently on this environment; no production support claim is inferred from generic family implementations.",
+        "A target/SDK provider alone does not implement a managed runtime or calling-ABI algorithm. No runtime support is inferred from the target name."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
       "developerExecutionMappings": [],
       "requiredExecutionProfiles": [],
-      "optionalApplicationRuntimeProfiles": []
+      "optionalApplicationRuntimeProfiles": [],
+      "implementationExtension": "BGCS.Extension.FreeBsd",
+      "runtimeProfiles": []
     }
   ],
   "sharedTestMappings": [
     {
-      "path": "tests/BGCS.Frontend.Clang.Tests/Targeting/NativeTargetProviderTests.cs",
+      "path": "tests/extensions/Frontend.Clang/Targeting/NativeTargetProviderTests.cs",
       "scope": "provider claims, immutable SDK inputs and distinct Apple device/simulator targets"
     },
     {
-      "path": "tests/BGCS.Frontend.Clang.Tests/Targeting/CppTargetTests.cs",
+      "path": "tests/extensions/Frontend.Clang/Targeting/CppTargetTests.cs",
       "scope": "target triple/layout and C++ SDK include-order parsing regressions; no target invocation or package certification"
     },
     {
@@ -494,7 +535,7 @@
       "scope": "generated managed-to-native static-table protocol on desktop; not Wasm/AOT certification"
     },
     {
-      "path": "tests/BGCS.Platforms.Tests/AutomaticToolchainTargetTests.cs",
+      "path": "tests/extensions/Targets.Desktop/AutomaticToolchainTargetTests.cs",
       "scope": "Explicit and automatically discovered parse SDK inputs, separate target identities and module capabilities; no native asset packaging claim."
     }
   ],
@@ -517,22 +558,39 @@
   "knownLimits": [
     "Source/model byte-order facts never default Unknown to verified LittleEndian.",
     "NativeTargetId is an opaque identity; generation uses explicit platform/CPU/ABI facts; native distribution belongs to the consumer.",
-    "Postponed platforms remain visibly uncertified until their real matrix completes."
+    "Postponed platforms remain visibly uncertified until their real matrix completes.",
+    "Optional Android, AppleMobile and FreeBsd extensions currently supply target/SDK resolution. They do not supply a matching managed runtime or calling-ABI provider; the neutral engine rejects missing implementations."
   ],
   "responsibilityBoundary": "BGCS resolves target facts, parses and generates sources. ManagedCompiled, NativeLinked and Invoked describe independent repository consumer tests; Packaged describes BGCS product installation. They are not product build, link or native asset packaging services.",
-  "mandatoryApplicationPublishChecks": [],
+  "mandatoryApplicationPublishChecks": [
+    "Fixed Linux BrowserWasm extension aggregate/callback regression in MonoWasm and AOT modes only"
+  ],
   "optionalDeveloperApplicationChecks": [
-    "NativeAOT",
-    "BrowserWasm interpreter",
-    "BrowserWasm AOT"
+    "Broader NativeAOT application certification",
+    "Broader browser interpreter application certification",
+    "Broader browser AOT application certification"
   ],
   "completeFunctionalBaselineHost": "windows-x64",
-  "runtimeProfilesMeaning": "Declared generation strategies and target facts; listed profiles do not imply mandatory application publish or runtime certification.",
+  "runtimeProfilesMeaning": "Explicit implemented extension identities. Target descriptors, parsed facts and physical resources do not certify a managed execution model or application runtime.",
   "requiredExecutionProfiles": [
-    "CoreClr"
+    "dotnet.coreclr"
   ],
   "optionalApplicationRuntimeProfiles": [
-    "NativeAot",
-    "BrowserWasm"
-  ]
+    "dotnet.native-aot",
+    "dotnet.mono-wasm"
+  ],
+  "productVersion": "4.0.0",
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "targetedApplicationRegression": {
+    "host": "linux-x64",
+    "extension": "BGCS.Extension.BrowserWasm",
+    "script": "scripts/test-wasm-bindings.py --targeted",
+    "modes": [
+      "MonoWasm interpreter",
+      "MonoWasm AOT"
+    ],
+    "currentRevisionCertified": false,
+    "reason": "Specific ABI regression for an explicitly implemented optional extension; no broad browser/platform certification or product build API.",
+    "releasePolicy": "eng/acceptance/required-release-gates.json#/evidencePolicy/targetedBrowserRegression"
+  }
 }

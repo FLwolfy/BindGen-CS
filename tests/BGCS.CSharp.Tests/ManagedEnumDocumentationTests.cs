@@ -6,8 +6,8 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using Microsoft.CodeAnalysis;
@@ -126,8 +126,8 @@ public sealed class ManagedEnumDocumentationTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { singleFile = sourceRuntime, includeRuntimeSource = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         CSharpCompilation compilation = CSharpCompilation.Create("ManagedEnumDocs_" + Guid.NewGuid().ToString("N"),

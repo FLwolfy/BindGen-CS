@@ -5,10 +5,10 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -26,19 +26,19 @@ public sealed class ExplicitTargetTripleTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "native.h"), "/* synthetic frontend boundary fixture */");
             CapturingFrontend frontend = new();
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => frontend).Build();
-            const string triple = "x86_64-unknown-freebsd14.2";
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => frontend).Build();
+            const string triple = "x86_64-privatevendor-linux-gnu";
             if (generation)
             {
                 BindingConfiguration configuration = new()
                 {
-                    schemaVersion = 1, library = new() { id = "triple", nativeName = "triple" }, source = new() { headers = ["native.h"] },
-                    targets = [new() { id = "freebsd-x64-gnu", triple = triple }], cache = new() { enabled = false }
+                    schemaVersion = 2, library = new() { id = "triple", nativeName = "triple" }, source = new() { headers = ["native.h"] },
+                    targets = [new() { id = "linux-x64-gnu", triple = triple }], cache = new() { enabled = false }
                 };
                 string path = Path.Combine(root, "bindgen.json");
                 await File.WriteAllTextAsync(path, JsonSerializer.Serialize(configuration, new JsonSerializerOptions
                     { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
-                BindingConfiguration loaded = new BindingConfigurationLoader().Load(path);
+                BindingConfiguration loaded = new BindingConfigurationLoader(TestHostPaths.Create()).Load(path);
                 Assert.Equal(triple, Assert.Single(loaded.targets).triple);
                 GenerationResult result = await host.GenerateAsync(new(loaded, root));
                 Assert.True(result.success, result.GetDiagnosticSummary());
@@ -46,7 +46,7 @@ public sealed class ExplicitTargetTripleTests
             }
             else
             {
-                AnalysisResult result = await host.AnalyzeAsync(AnalysisRequest.FromFiles(["native.h"], baseDirectory: root) with { targetId = "freebsd-x64-gnu", triple = triple });
+                AnalysisResult result = await host.AnalyzeAsync(AnalysisRequest.FromFiles(["native.h"], baseDirectory: root) with { targetId = "linux-x64-gnu", triple = triple });
                 Assert.True(result.success, result.GetDiagnosticSummary());
                 Assert.Equal(triple, result.target!.triple);
             }
@@ -59,7 +59,7 @@ public sealed class ExplicitTargetTripleTests
     public async Task IncompatibleTripleFailsBeforeFrontendCreation()
     {
         bool created = false;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => { created = true; return new CapturingFrontend(); }).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => { created = true; return new CapturingFrontend(); }).Build();
         AnalysisResult result = await host.AnalyzeAsync(AnalysisRequest.FromFiles(["native.h"]) with { targetId = "linux-x64-gnu", triple = "x86_64-unknown-linux-musl" });
         Assert.False(result.success);
         Assert.False(created);
@@ -68,6 +68,12 @@ public sealed class ExplicitTargetTripleTests
 
     private sealed class CapturingFrontend : IFrontend
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         internal FrontendRequest? request;
         public ValueTask<FrontendResult> ParseAsync(FrontendRequest input, CancellationToken cancellationToken)
         {

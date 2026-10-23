@@ -1,4 +1,9 @@
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
+using BGCS.Core.Plugins;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -9,11 +14,17 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Hosting;
+using BGCS.Core.Native;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Workers;
+using BGCS.Infrastructure.Caching;
+using BGCS.Hosting.Standard;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -63,7 +74,7 @@ public sealed class PrimaryFrontendCacheTests
     {
         using Scratch scratch = new();
         int validations = 0;
-        await using BindingHost host = scratch.Builder().AddValidator("count", 0, () => new Validator(() => validations++)).Build();
+        await using BindingHost host = scratch.Builder().RegisterFactory<IGenerationValidator>(new("count", ExtensionPort.GenerationValidator, 0), _ => new Validator(() => validations++)).Build();
         GenerationRequest request = scratch.Request();
         GenerationResult cold = await host.GenerateAsync(request);
         Assert.True(cold.success, cold.GetDiagnosticSummary());
@@ -118,20 +129,113 @@ public sealed class PrimaryFrontendCacheTests
     }
 
     [Fact]
+    public async Task AContentVerifiedCacheEntryWithAnInvalidNativeGraphIsReparsed()
+    {
+        using Scratch scratch = new();
+        await using BindingHost host = scratch.Builder().Build();
+        GenerationRequest request = scratch.Request();
+        GenerationResult cold = await host.GenerateAsync(request);
+        Assert.True(cold.success, cold.GetDiagnosticSummary());
+        string[] original = Bytes(cold);
+        JsonNode stored = JsonNode.Parse(File.ReadAllText(scratch.FrontendEntry()))!;
+        byte[] content = Convert.FromBase64String(stored["artifacts"]![0]!["content"]!.GetValue<string>());
+        FrontendResult parsed = JsonSerializer.Deserialize<FrontendResult>(content, WorkerProtocol.jsonOptions)!;
+        NativeModule module = parsed.module;
+        Assert.NotEmpty(module.types);
+        NativeModule invalid = new(module.targetId, module.triple, module.pointerSize,
+            module.types.SetItem(0, module.types[0] with { elementType = new StableId("fixture:missing-native-type") }), module.declarations, module.diagnostics)
+        { language = module.language, byteOrder = module.byteOrder };
+        byte[] malformed = JsonSerializer.SerializeToUtf8Bytes(parsed with { module = invalid }, WorkerProtocol.jsonOptions);
+        ContentDigest key = new(stored["key"]!.GetValue<string>());
+        ArtifactDescriptor descriptor = new("frontend-result.json", "application/json", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(malformed))));
+        using HostServices cacheHost = new HostServicesProvider().Create(new(scratch.source, JsonSerializer.SerializeToElement(new { })));
+        GenerationStageCache cache = new(Path.Combine(scratch.source, ".bgcs", "cache"), cacheHost.paths);
+        Assert.True(cache.Store(key, [new CachedStageArtifact(descriptor, malformed)]));
+        Assert.True(cache.TryRead(key, out ImmutableArray<CachedStageArtifact> verified, out string? miss));
+        Assert.Null(miss);
+        Assert.Equal(malformed, Assert.Single(verified).content.ToArray());
+
+        GenerationResult repaired = await host.GenerateAsync(request);
+        Assert.True(repaired.success, repaired.GetDiagnosticSummary());
+        Assert.Equal("miss", Primary(repaired).status);
+        Assert.Contains("native graph", Primary(repaired).reason!, StringComparison.Ordinal);
+        Assert.Equal(original, Bytes(repaired));
+        GenerationResult warm = await host.GenerateAsync(request);
+        Assert.True(warm.success, warm.GetDiagnosticSummary());
+        Assert.Equal("hit", Primary(warm).status);
+    }
+
+    [Fact]
+    public async Task AProcessorChangingTheHeaderAfterWarmAdmissionCannotReplaceThePublication()
+    {
+        using Scratch scratch = new();
+        string header = Path.Combine(scratch.source, "native.h");
+        string original = File.ReadAllText(header);
+        bool armed = false;
+        int processed = 0;
+        await using BindingHost host = scratch.Builder().RegisterFactory<IArtifactProcessor>(
+            new("fixture.late-native-mutation", ExtensionPort.ArtifactProcessor), _ => new MutatingProcessor(() =>
+            {
+                processed++;
+                if (armed) File.WriteAllText(header, "double echo(double value);\n");
+            })).Build();
+        GenerationRequest request = scratch.Request();
+        GenerationResult cold = await host.GenerateAsync(request);
+        Assert.True(cold.success, cold.GetDiagnosticSummary());
+        GenerationResult warm = await host.GenerateAsync(request);
+        Assert.True(warm.success, warm.GetDiagnosticSummary());
+        Assert.Equal("hit", Primary(warm).status);
+        Dictionary<string, string> before = Publication(warm.outputRoot);
+        armed = true;
+        GenerationResult rejected = await host.GenerateAsync(request);
+        Assert.False(rejected.success);
+        Assert.False(rejected.published);
+        Assert.Equal("hit", Primary(rejected).status);
+        Assert.Contains("Input file bytes changed", rejected.GetDiagnosticSummary(), StringComparison.Ordinal);
+        Assert.Equal("double echo(double value);\n", File.ReadAllText(header));
+        Assert.Equal(before.OrderBy(item => item.Key), Publication(warm.outputRoot).OrderBy(item => item.Key));
+        Assert.Equal(3, processed);
+
+        armed = false;
+        File.WriteAllText(header, original);
+        GenerationResult recovered = await host.GenerateAsync(request);
+        Assert.True(recovered.success, recovered.GetDiagnosticSummary());
+        Assert.Equal("hit", Primary(recovered).status);
+        Assert.Equal(4, processed);
+
+        static Dictionary<string, string> Publication(string output)
+            => Directory.GetFiles(output, "*", SearchOption.AllDirectories).ToDictionary(
+                file => Path.GetRelativePath(output, file), file => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file))), StringComparer.Ordinal);
+    }
+
+    [Fact]
     public async Task VolatilePreprocessingAlwaysParsesAndWorkerTamperCannotPublish()
     {
         using Scratch scratch = new();
         File.WriteAllText(Path.Combine(scratch.source, "native.h"), "#define BUILD_CLOCK __TIME__\nint echo(int value);\n");
-        await using BindingHost host = scratch.Builder().Build();
+        ConcurrentQueue<SourceLanguage> parses = new();
+        await using BindingHost host = scratch.Builder().ObserveWorkerParses(scratch.worker, parses).Build();
         GenerationRequest request = scratch.Request();
         GenerationResult first = await host.GenerateAsync(request);
         Assert.True(first.success, first.GetDiagnosticSummary());
         Assert.Equal("disabled", Primary(first).status);
         Assert.Contains("Volatile", Primary(first).reason);
+        Assert.Equal("miss", Assert.Single(first.cacheStages, stage => stage.stage == "csharpEmission").status);
+        string[] original = Bytes(first);
         GenerationResult second = await host.GenerateAsync(request);
         Assert.True(second.success, second.GetDiagnosticSummary());
         Assert.Equal("disabled", Primary(second).status);
-        string formal = Path.Combine(second.outputRoot, "generation.report.json");
+        Assert.Equal("hit", Assert.Single(second.cacheStages, stage => stage.stage == "csharpEmission").status);
+        Assert.Equal(original, Bytes(second));
+        Assert.Equal(new[] { SourceLanguage.C, SourceLanguage.C }, parses.ToArray());
+        File.WriteAllText(Path.Combine(scratch.source, "native.h"), "#define BUILD_CLOCK __TIME__\ndouble echo(double value);\n");
+        GenerationResult changed = await host.GenerateAsync(request);
+        Assert.True(changed.success, changed.GetDiagnosticSummary());
+        Assert.Equal("disabled", Primary(changed).status);
+        Assert.Equal("miss", Assert.Single(changed.cacheStages, stage => stage.stage == "csharpEmission").status);
+        Assert.NotEqual(original, Bytes(changed));
+        Assert.Equal(new[] { SourceLanguage.C, SourceLanguage.C, SourceLanguage.C }, parses.ToArray());
+        string formal = Path.Combine(changed.outputRoot, "generation.report.json");
         byte[] before = File.ReadAllBytes(formal);
         File.AppendAllText(Path.Combine(scratch.worker, "BGCS.Frontend.Clang.Worker.runtimeconfig.json"), "tampered");
         GenerationResult failed = await host.GenerateAsync(request);
@@ -148,8 +252,21 @@ public sealed class PrimaryFrontendCacheTests
     {
         public string id => "count";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BGCS.Contracts.BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        { validate(); return ValueTask.FromResult(ImmutableArray<BGCS.Contracts.BindingDiagnostic>.Empty); }
+        public ValueTask<ImmutableArray<BGCS.Core.BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
+        { validate(); return ValueTask.FromResult(ImmutableArray<BGCS.Core.BindingDiagnostic>.Empty); }
+    }
+
+    private sealed class MutatingProcessor(Action process) : IArtifactProcessor, ICacheFingerprintProvider
+    {
+        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+            => new(new ContentDigest(new string('d', 64)), []);
+        public ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
+        {
+            // Deliberately violate the processor's declared-input contract to
+            // prove the independent native-input publication fence still holds.
+            process();
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class Scratch : IDisposable
@@ -162,7 +279,7 @@ public sealed class PrimaryFrontendCacheTests
             DirectoryInfo? repository = new(AppContext.BaseDirectory);
             while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
             string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-            string compiled = Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+            string compiled = Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
             Directory.CreateDirectory(source);
             Directory.CreateDirectory(worker);
             File.WriteAllText(Path.Combine(source, "native.h"), "int echo(int value);\n");
@@ -171,7 +288,7 @@ public sealed class PrimaryFrontendCacheTests
             string destination = Path.Combine(worker, "runtimes", RuntimeInformation.RuntimeIdentifier, "native");
             Directory.CreateDirectory(destination);
             foreach (string file in Directory.GetFiles(nativeRoot)) File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
-            WorkerAssetManifest manifest = new(1, RuntimeInformation.RuntimeIdentifier, WorkerProtocol.C_PARSER_IDENTITY,
+            WorkerAssetManifest manifest = new(1, RuntimeInformation.RuntimeIdentifier, ClangParserIdentity.C_IDENTITY,
                 Directory.GetFiles(worker, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).Select(file =>
                 {
                     using FileStream stream = File.OpenRead(file);
@@ -180,10 +297,10 @@ public sealed class PrimaryFrontendCacheTests
                 }).ToImmutableArray());
             File.WriteAllText(Path.Combine(worker, "worker-assets.manifest.json"), JsonSerializer.Serialize(manifest));
         }
-        internal BindingHostBuilder Builder() => BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker);
+        internal BindingHostBuilder Builder() => BindingGenerator.CreateBuilder().UseWorkerDirectory(worker);
         internal GenerationRequest Request() => new(new BindingConfiguration
         {
-            schemaVersion = 1, library = new() { id = "primary_cache", nativeName = "primary_cache" },
+            schemaVersion = 2, library = new() { id = "primary_cache", nativeName = "primary_cache" },
             source = new() { headers = ["native.h"], parseMacros = false }, api = new() { @namespace = "Generated.PrimaryCache", name = "CacheApi" }
         }, source);
         internal string FrontendEntry() => Directory.GetFiles(Path.Combine(source, ".bgcs", "cache"), "*.stage.json")

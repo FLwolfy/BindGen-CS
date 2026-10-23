@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Projection;
 
 namespace BGCS.CSharp.Planning;
@@ -27,11 +27,13 @@ internal static class InputVariationPlanner
     ) {
         var variations = ImmutableArray.CreateBuilder<CSharpInputVariationPlan>();
         var conversions = plan.recipeProjections.ToDictionary(projection => projection.id, StringComparer.Ordinal);
-        var bases = SharedContextPlanner.CreateMethods(plan with { aliases = [], defaultOverloads = [], inputVariations = [] }, request);
+        ImmutableArray<CSharpFacadeMethodPlan> bases = default;
         foreach (ManagedMember member in plan.api.methods)
         {
             if (member.inputVariations.IsDefault) throw new ArgumentException("Managed input variations must be initialized.");
             if (member.inputVariations.IsEmpty) continue;
+            if (bases.IsDefault)
+                bases = SharedContextPlanner.CreateMethods(plan with { aliases = [], defaultOverloads = [], inputVariations = [] }, request);
             CSharpFacadeMethodPlan[] candidates = bases.Where(method => method.nativeExport == member.nativeExport && method.name == member.name).ToArray();
             if (candidates.Length != 1) throw new NotSupportedException("An input variation requires one unambiguous existing checked friendly operation.");
             CSharpFacadeMethodPlan target = candidates[0];

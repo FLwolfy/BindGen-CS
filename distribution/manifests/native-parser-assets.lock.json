@@ -6,7 +6,7 @@
   "upstreamRuntimeVersion": "20.1.2",
   "builtinHeaders": {
     "llvmVersion": "20.1.8",
-    "path": "src/BGCS.Frontend.Clang/Resources/Clang/Headers.zip",
+    "path": "extensions/frontends/BGCS.Frontend.Clang/Resources/Clang/Headers.zip",
     "sha256": "16927be0948f2e287d2f20e34e8f8ce0ee287b833ee04cb7cd671fdf4a7c2b84",
     "sourcePackageSha256": "8e2b5e6530df9835c571db4c12a278f43863d3401ae7008dd9739e4b9c62bc2e"
   },

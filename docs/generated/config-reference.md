@@ -7,14 +7,14 @@ Both languages use the same schema. Object-schema required fields do not replace
 a base document may supply an omitted value. A null language standard freezes to C17 or C++23 according to the source language.
 Target, toolchain and extension capabilities still require actual evidence.
 
-Schema SHA-256: `35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0ce`.
+Schema SHA-256: `239e344e6468f413dbf0cf8807c29259609fff79d832c1352941eeef5918a26d`.
 
 [Configuration Guide](../configuration-guide.md) | [Getting Started](../getting-started.md)
 
 | Field | Type / values | Default or constant | Required by object schema | Constraints / description |
 | --- | --- | --- | --- | --- |
 | `$schema` | `["string","null"]` | `null` | no |  |
-| `schemaVersion` | `"integer"` | `1` (constant) | yes |  |
+| `schemaVersion` | `"integer"` | `2` (constant) | yes |  |
 | `extends` | `"array"` | `[]` | no |  |
 | `extends[]` | `"string"` | — | no | minLength=1 |
 | `profile` | `["string","null"]` | `null` | no |  |
@@ -350,7 +350,7 @@ Schema SHA-256: `35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0c
 | `profiles.*.api.importMode` | `["dllImport","libraryImport","functionTable"]` | `"functionTable"` | no |  |
 | `profiles.*.api.framework` | `"string"` | `"net10.0"` (constant) | no |  |
 | `profiles.*.api.maximumValueStringCodeUnits` | `"integer"` | `1048576` | no | minimum=1 |
-| `profiles.*.api.runtime` | `["coreClr","nativeAot","browserWasm",null]` | — | no |  |
+| `profiles.*.api.runtime` | `["string","null"]` | — | no | minLength=1; An open execution-model identity registered by the selected runtime extension; null lets that extension explicitly resolve an applicable default. |
 | `profiles.*.api.names` | `"object"` | — | no |  |
 | `profiles.*.api.names.*` | `"string"` | — | no |  |
 | `profiles.*.api.enums` | `"array"` | `[]` | no |  |
@@ -472,139 +472,141 @@ Schema SHA-256: `35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0c
 | `profiles.*.semantics.valueParameters[].retainsPointer` | `["boolean","null"]` | — | no |  |
 | `profiles.*.semantics.valueParameters[].allowsNull` | `["boolean","null"]` | — | no |  |
 | `profiles.*.semantics.valueParameters[].requiredAlignment` | `["integer","null"]` | — | no |  |
-| `profiles.*.cpp` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.familyBindings` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.familyBindings[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].nativeTemplate` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.familyBindings[].nativeType` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.familyBindings[].family` | `["string","vector","span","array","map","set","optional","variant","expected","path","duration","timePoint","uniquePointer","sharedPointer"]` | `"string"` | yes |  |
-| `profiles.*.cpp.familyBindings[].evidence` | `"object"` | — | yes | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].evidence.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].stringEncoding` | `["unknown","utf8","utf16","utf32"]` | `"unknown"` | no |  |
-| `profiles.*.cpp.familyBindings[].stringAccess` | `["indexed","cStrNullTerminated"]` | `"indexed"` | no |  |
-| `profiles.*.cpp.familyBindings[].cStr` | `["object","null"]` | — | no | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].cStr.readableLifetime` | `"object"` | — | yes | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].cStr.readableLifetime.kind` | `["unknown","call","owner","registration","operation","static","module"]` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].cStr.readableLifetime.owner` | `["object","null"]` | — | yes | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].cStr.readableLifetime.owner.value` | `"string"` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].cStr.readableLifetime.evidence` | `"object"` | — | yes | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].cStr.readableLifetime.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].cStr.readableLifetime.evidence.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].cStr.nullTerminated` | `"object"` | — | yes | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].cStr.nullTerminated.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].cStr.nullTerminated.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].cStr.maximumCodeUnits` | `"integer"` | `1048576` | no |  |
-| `profiles.*.cpp.familyBindings[].cStr.constructorCopiesInput` | `["object","null"]` | — | no | additionalProperties=false |
-| `profiles.*.cpp.familyBindings[].cStr.constructorCopiesInput.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].cStr.constructorCopiesInput.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.familyBindings[].variantAccess` | `["none","memberGet"]` | `"none"` | no |  |
-| `profiles.*.cpp.familyBindings[].pathFormat` | `["genericUtf8","nativeUtf8",null]` | — | no |  |
-| `profiles.*.cpp.templateInstantiations` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.templateInstantiations.types` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.templateInstantiations.types[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.templateInstantiations.types[].id` | `"string"` | — | yes |  |
-| `profiles.*.cpp.templateInstantiations.types[].nativeType` | `"string"` | — | yes |  |
-| `profiles.*.cpp.templateInstantiations.functions` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.templateInstantiations.functions[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.templateInstantiations.functions[].id` | `"string"` | — | yes |  |
-| `profiles.*.cpp.templateInstantiations.functions[].nativeCallable` | `"string"` | — | yes |  |
-| `profiles.*.cpp.templateInstantiations.functions[].returnType` | `"string"` | — | yes |  |
-| `profiles.*.cpp.templateInstantiations.functions[].parameterTypes` | `"array"` | — | yes |  |
-| `profiles.*.cpp.templateInstantiations.functions[].parameterTypes[]` | `"string"` | — | no |  |
-| `profiles.*.cpp.typeLowerings` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.typeLowerings[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].id` | `"string"` | `""` | no |  |
-| `profiles.*.cpp.typeLowerings[].typePattern` | `"string"` | `""` | no |  |
-| `profiles.*.cpp.typeLowerings[].priority` | `"integer"` | `100` | no |  |
-| `profiles.*.cpp.typeLowerings[].cAbiType` | `"string"` | `"int32_t"` | no |  |
-| `profiles.*.cpp.typeLowerings[].abiParameters` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.typeLowerings[].abiParameters[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].abiParameters[].name` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].abiParameters[].cAbiType` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].parameterExpression` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.typeLowerings[].resultExpression` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].managedProjection` | `["object","null"]` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].managedProjection.managedType` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].managedProjection.managedToNativeExpression` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.typeLowerings[].managedProjection.nativeToManagedExpression` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.typeLowerings[].managedProjection.requiredNamespace` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.typeLowerings[].ownedResultRelease` | `["object","null"]` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].ownedResultRelease.nativeFunction` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].ownedResultRelease.allocatorDomain` | `"string"` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].ownedResultRelease.releaseThreadDomain` | `"string"` | — | no |  |
-| `profiles.*.cpp.typeLowerings[].ownedResultRelease.evidence` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.typeLowerings[].ownedResultRelease.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.typeLowerings[].ownedResultRelease.evidence.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.callableLowerings` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.callableLowerings[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.callableLowerings[].id` | `"string"` | `""` | no |  |
-| `profiles.*.cpp.callableLowerings[].functionPattern` | `"string"` | `""` | no |  |
-| `profiles.*.cpp.callableLowerings[].priority` | `"integer"` | `100` | no |  |
-| `profiles.*.cpp.callableLowerings[].exportName` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.callableLowerings[].exclude` | `"boolean"` | `false` | no |  |
-| `profiles.*.cpp.callableLowerings[].invocationExpression` | `["string","null"]` | `null` | no |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.callableLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.nativeShims` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.nativeShims[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.nativeShims[].id` | `"string"` | `""` | no |  |
-| `profiles.*.cpp.nativeShims[].publicHeaders` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.nativeShims[].publicHeaders[]` | `"string"` | — | no |  |
-| `profiles.*.cpp.nativeShims[].sourceFiles` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.nativeShims[].sourceFiles[]` | `"string"` | — | no |  |
-| `profiles.*.cpp.nativeShims[].exports` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.nativeShims[].exports[]` | `"string"` | — | no |  |
-| `profiles.*.cpp.nativeShims[].evidence` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.nativeShims[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `profiles.*.cpp.nativeShims[].evidence.origin` | `"string"` | — | yes |  |
-| `profiles.*.cpp.virtualCallbacks` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.virtualCallbacks[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.virtualCallbacks[].id` | `"string"` | — | yes |  |
-| `profiles.*.cpp.virtualCallbacks[].nativeInterface` | `"string"` | — | yes |  |
-| `profiles.*.cpp.virtualCallbacks[].releaseThreadDomain` | `["unknown","any"]` | `"unknown"` | no | unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence. |
-| `profiles.*.cpp.sequenceInputAdapters` | `"array"` | `[]` | no |  |
-| `profiles.*.cpp.sequenceInputAdapters[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.sequenceInputAdapters[].function` | `"string"` | — | yes |  |
-| `profiles.*.cpp.sequenceInputAdapters[].parameters` | `"array"` | — | yes |  |
-| `profiles.*.cpp.sequenceInputAdapters[].parameters[]` | `"object"` | — | no | additionalProperties=false |
-| `profiles.*.cpp.sequenceInputAdapters[].parameters[].parameter` | `"string"` | — | yes |  |
-| `profiles.*.cpp.sequenceInputAdapters[].parameters[].retainsArgument` | `["boolean","null"]` | — | no |  |
-| `profiles.*.cpp.sequenceInputAdapters[].parameters[].lifetime` | `["unknown","call","owner","registration","operation","static","module"]` | — | no |  |
+| `profiles.*.bridge` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.aggregateStrategy` | `["pointerBridge","direct"]` | `"pointerBridge"` | no |  |
+| `profiles.*.bridge.cpp` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.cpp.familyBindings[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].nativeTemplate` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.cpp.familyBindings[].nativeType` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.cpp.familyBindings[].family` | `["string","vector","span","array","map","set","optional","variant","expected","path","duration","timePoint","uniquePointer","sharedPointer"]` | `"string"` | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].evidence` | `"object"` | — | yes | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].evidence.origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].stringEncoding` | `["unknown","utf8","utf16","utf32"]` | `"unknown"` | no |  |
+| `profiles.*.bridge.cpp.familyBindings[].stringAccess` | `["indexed","cStrNullTerminated"]` | `"indexed"` | no |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr` | `["object","null"]` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.readableLifetime` | `"object"` | — | yes | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.readableLifetime.kind` | `["unknown","call","owner","registration","operation","static","module"]` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.readableLifetime.owner` | `["object","null"]` | — | yes | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.readableLifetime.owner.value` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.readableLifetime.evidence` | `"object"` | — | yes | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.readableLifetime.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.readableLifetime.evidence.origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.nullTerminated` | `"object"` | — | yes | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.nullTerminated.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.nullTerminated.origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.maximumCodeUnits` | `"integer"` | `1048576` | no |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.constructorCopiesInput` | `["object","null"]` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.constructorCopiesInput.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].cStr.constructorCopiesInput.origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.familyBindings[].variantAccess` | `["none","memberGet"]` | `"none"` | no |  |
+| `profiles.*.bridge.cpp.familyBindings[].pathFormat` | `["genericUtf8","nativeUtf8",null]` | — | no |  |
+| `profiles.*.bridge.cpp.templateInstantiations` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.templateInstantiations.types` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.cpp.templateInstantiations.types[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.templateInstantiations.types[].id` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.templateInstantiations.types[].nativeType` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.templateInstantiations.functions` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.cpp.templateInstantiations.functions[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.templateInstantiations.functions[].id` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.templateInstantiations.functions[].nativeCallable` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.templateInstantiations.functions[].returnType` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.templateInstantiations.functions[].parameterTypes` | `"array"` | — | yes |  |
+| `profiles.*.bridge.cpp.templateInstantiations.functions[].parameterTypes[]` | `"string"` | — | no |  |
+| `profiles.*.bridge.cpp.virtualCallbacks` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.cpp.virtualCallbacks[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.virtualCallbacks[].id` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.virtualCallbacks[].nativeInterface` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.virtualCallbacks[].releaseThreadDomain` | `["unknown","any"]` | `"unknown"` | no | unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence. |
+| `profiles.*.bridge.cpp.sequenceInputAdapters` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.cpp.sequenceInputAdapters[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.sequenceInputAdapters[].function` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.sequenceInputAdapters[].parameters` | `"array"` | — | yes |  |
+| `profiles.*.bridge.cpp.sequenceInputAdapters[].parameters[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.cpp.sequenceInputAdapters[].parameters[].parameter` | `"string"` | — | yes |  |
+| `profiles.*.bridge.cpp.sequenceInputAdapters[].parameters[].retainsArgument` | `["boolean","null"]` | — | no |  |
+| `profiles.*.bridge.cpp.sequenceInputAdapters[].parameters[].lifetime` | `["unknown","call","owner","registration","operation","static","module"]` | — | no |  |
+| `profiles.*.bridge.typeLowerings` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.typeLowerings[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].id` | `"string"` | `""` | no |  |
+| `profiles.*.bridge.typeLowerings[].typePattern` | `"string"` | `""` | no |  |
+| `profiles.*.bridge.typeLowerings[].priority` | `"integer"` | `100` | no |  |
+| `profiles.*.bridge.typeLowerings[].cAbiType` | `"string"` | `"int32_t"` | no |  |
+| `profiles.*.bridge.typeLowerings[].abiParameters` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.typeLowerings[].abiParameters[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].abiParameters[].name` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].abiParameters[].cAbiType` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].parameterExpression` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.typeLowerings[].resultExpression` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].managedProjection` | `["object","null"]` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].managedProjection.managedType` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].managedProjection.managedToNativeExpression` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.typeLowerings[].managedProjection.nativeToManagedExpression` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.typeLowerings[].managedProjection.requiredNamespace` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.typeLowerings[].ownedResultRelease` | `["object","null"]` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].ownedResultRelease.nativeFunction` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].ownedResultRelease.allocatorDomain` | `"string"` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].ownedResultRelease.releaseThreadDomain` | `"string"` | — | no |  |
+| `profiles.*.bridge.typeLowerings[].ownedResultRelease.evidence` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.typeLowerings[].ownedResultRelease.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.typeLowerings[].ownedResultRelease.evidence.origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.callableLowerings` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.callableLowerings[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.callableLowerings[].id` | `"string"` | `""` | no |  |
+| `profiles.*.bridge.callableLowerings[].functionPattern` | `"string"` | `""` | no |  |
+| `profiles.*.bridge.callableLowerings[].priority` | `"integer"` | `100` | no |  |
+| `profiles.*.bridge.callableLowerings[].exportName` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.callableLowerings[].exclude` | `"boolean"` | `false` | no |  |
+| `profiles.*.bridge.callableLowerings[].invocationExpression` | `["string","null"]` | `null` | no |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.callableLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
+| `profiles.*.bridge.nativeShims` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.nativeShims[]` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.nativeShims[].id` | `"string"` | `""` | no |  |
+| `profiles.*.bridge.nativeShims[].publicHeaders` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.nativeShims[].publicHeaders[]` | `"string"` | — | no |  |
+| `profiles.*.bridge.nativeShims[].sourceFiles` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.nativeShims[].sourceFiles[]` | `"string"` | — | no |  |
+| `profiles.*.bridge.nativeShims[].exports` | `"array"` | `[]` | no |  |
+| `profiles.*.bridge.nativeShims[].exports[]` | `"string"` | — | no |  |
+| `profiles.*.bridge.nativeShims[].evidence` | `"object"` | — | no | additionalProperties=false |
+| `profiles.*.bridge.nativeShims[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `profiles.*.bridge.nativeShims[].evidence.origin` | `"string"` | — | yes |  |
 | `profiles.*.runtime` | `"object"` | — | no | additionalProperties=false |
 | `profiles.*.runtime.mode` | `["package","source"]` | `"package"` | no |  |
 | `profiles.*.runtime.namespace` | `["string","null"]` | `null` | no |  |
@@ -979,7 +981,7 @@ Schema SHA-256: `35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0c
 | `api.importMode` | `["dllImport","libraryImport","functionTable"]` | `"functionTable"` | no |  |
 | `api.framework` | `"string"` | `"net10.0"` (constant) | no |  |
 | `api.maximumValueStringCodeUnits` | `"integer"` | `1048576` | no | minimum=1 |
-| `api.runtime` | `["coreClr","nativeAot","browserWasm",null]` | — | no |  |
+| `api.runtime` | `["string","null"]` | — | no | minLength=1; An open execution-model identity registered by the selected runtime extension; null lets that extension explicitly resolve an applicable default. |
 | `api.names` | `"object"` | — | no |  |
 | `api.names.*` | `"string"` | — | no |  |
 | `api.enums` | `"array"` | `[]` | no |  |
@@ -1101,139 +1103,141 @@ Schema SHA-256: `35db24c1105aada5fb37808eba70c6afdfded9604d104c7a2921d5e26616f0c
 | `semantics.valueParameters[].retainsPointer` | `["boolean","null"]` | — | no |  |
 | `semantics.valueParameters[].allowsNull` | `["boolean","null"]` | — | no |  |
 | `semantics.valueParameters[].requiredAlignment` | `["integer","null"]` | — | no |  |
-| `cpp` | `"object"` | — | no | additionalProperties=false |
-| `cpp.familyBindings` | `"array"` | `[]` | no |  |
-| `cpp.familyBindings[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.familyBindings[].nativeTemplate` | `["string","null"]` | `null` | no |  |
-| `cpp.familyBindings[].nativeType` | `["string","null"]` | `null` | no |  |
-| `cpp.familyBindings[].family` | `["string","vector","span","array","map","set","optional","variant","expected","path","duration","timePoint","uniquePointer","sharedPointer"]` | `"string"` | yes |  |
-| `cpp.familyBindings[].evidence` | `"object"` | — | yes | additionalProperties=false |
-| `cpp.familyBindings[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.familyBindings[].evidence.origin` | `"string"` | — | yes |  |
-| `cpp.familyBindings[].stringEncoding` | `["unknown","utf8","utf16","utf32"]` | `"unknown"` | no |  |
-| `cpp.familyBindings[].stringAccess` | `["indexed","cStrNullTerminated"]` | `"indexed"` | no |  |
-| `cpp.familyBindings[].cStr` | `["object","null"]` | — | no | additionalProperties=false |
-| `cpp.familyBindings[].cStr.readableLifetime` | `"object"` | — | yes | additionalProperties=false |
-| `cpp.familyBindings[].cStr.readableLifetime.kind` | `["unknown","call","owner","registration","operation","static","module"]` | — | yes |  |
-| `cpp.familyBindings[].cStr.readableLifetime.owner` | `["object","null"]` | — | yes | additionalProperties=false |
-| `cpp.familyBindings[].cStr.readableLifetime.owner.value` | `"string"` | — | yes |  |
-| `cpp.familyBindings[].cStr.readableLifetime.evidence` | `"object"` | — | yes | additionalProperties=false |
-| `cpp.familyBindings[].cStr.readableLifetime.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.familyBindings[].cStr.readableLifetime.evidence.origin` | `"string"` | — | yes |  |
-| `cpp.familyBindings[].cStr.nullTerminated` | `"object"` | — | yes | additionalProperties=false |
-| `cpp.familyBindings[].cStr.nullTerminated.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.familyBindings[].cStr.nullTerminated.origin` | `"string"` | — | yes |  |
-| `cpp.familyBindings[].cStr.maximumCodeUnits` | `"integer"` | `1048576` | no |  |
-| `cpp.familyBindings[].cStr.constructorCopiesInput` | `["object","null"]` | — | no | additionalProperties=false |
-| `cpp.familyBindings[].cStr.constructorCopiesInput.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.familyBindings[].cStr.constructorCopiesInput.origin` | `"string"` | — | yes |  |
-| `cpp.familyBindings[].variantAccess` | `["none","memberGet"]` | `"none"` | no |  |
-| `cpp.familyBindings[].pathFormat` | `["genericUtf8","nativeUtf8",null]` | — | no |  |
-| `cpp.templateInstantiations` | `"object"` | — | no | additionalProperties=false |
-| `cpp.templateInstantiations.types` | `"array"` | `[]` | no |  |
-| `cpp.templateInstantiations.types[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.templateInstantiations.types[].id` | `"string"` | — | yes |  |
-| `cpp.templateInstantiations.types[].nativeType` | `"string"` | — | yes |  |
-| `cpp.templateInstantiations.functions` | `"array"` | `[]` | no |  |
-| `cpp.templateInstantiations.functions[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.templateInstantiations.functions[].id` | `"string"` | — | yes |  |
-| `cpp.templateInstantiations.functions[].nativeCallable` | `"string"` | — | yes |  |
-| `cpp.templateInstantiations.functions[].returnType` | `"string"` | — | yes |  |
-| `cpp.templateInstantiations.functions[].parameterTypes` | `"array"` | — | yes |  |
-| `cpp.templateInstantiations.functions[].parameterTypes[]` | `"string"` | — | no |  |
-| `cpp.typeLowerings` | `"array"` | `[]` | no |  |
-| `cpp.typeLowerings[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].id` | `"string"` | `""` | no |  |
-| `cpp.typeLowerings[].typePattern` | `"string"` | `""` | no |  |
-| `cpp.typeLowerings[].priority` | `"integer"` | `100` | no |  |
-| `cpp.typeLowerings[].cAbiType` | `"string"` | `"int32_t"` | no |  |
-| `cpp.typeLowerings[].abiParameters` | `"array"` | `[]` | no |  |
-| `cpp.typeLowerings[].abiParameters[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].abiParameters[].name` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].abiParameters[].cAbiType` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].parameterExpression` | `["string","null"]` | `null` | no |  |
-| `cpp.typeLowerings[].resultExpression` | `["string","null"]` | `null` | no |  |
-| `cpp.typeLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
-| `cpp.typeLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
-| `cpp.typeLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
-| `cpp.typeLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
-| `cpp.typeLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
-| `cpp.typeLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
-| `cpp.typeLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
-| `cpp.typeLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.typeLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].managedProjection` | `["object","null"]` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].managedProjection.managedType` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].managedProjection.managedToNativeExpression` | `["string","null"]` | `null` | no |  |
-| `cpp.typeLowerings[].managedProjection.nativeToManagedExpression` | `["string","null"]` | `null` | no |  |
-| `cpp.typeLowerings[].managedProjection.requiredNamespace` | `["string","null"]` | `null` | no |  |
-| `cpp.typeLowerings[].ownedResultRelease` | `["object","null"]` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].ownedResultRelease.nativeFunction` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].ownedResultRelease.allocatorDomain` | `"string"` | — | yes |  |
-| `cpp.typeLowerings[].ownedResultRelease.releaseThreadDomain` | `"string"` | — | no |  |
-| `cpp.typeLowerings[].ownedResultRelease.evidence` | `"object"` | — | no | additionalProperties=false |
-| `cpp.typeLowerings[].ownedResultRelease.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.typeLowerings[].ownedResultRelease.evidence.origin` | `"string"` | — | yes |  |
-| `cpp.callableLowerings` | `"array"` | `[]` | no |  |
-| `cpp.callableLowerings[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.callableLowerings[].id` | `"string"` | `""` | no |  |
-| `cpp.callableLowerings[].functionPattern` | `"string"` | `""` | no |  |
-| `cpp.callableLowerings[].priority` | `"integer"` | `100` | no |  |
-| `cpp.callableLowerings[].exportName` | `["string","null"]` | `null` | no |  |
-| `cpp.callableLowerings[].exclude` | `"boolean"` | `false` | no |  |
-| `cpp.callableLowerings[].invocationExpression` | `["string","null"]` | `null` | no |  |
-| `cpp.callableLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
-| `cpp.callableLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.callableLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
-| `cpp.callableLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
-| `cpp.callableLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
-| `cpp.callableLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
-| `cpp.callableLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
-| `cpp.callableLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
-| `cpp.callableLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.callableLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
-| `cpp.callableLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
-| `cpp.callableLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.callableLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
-| `cpp.callableLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
-| `cpp.callableLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
-| `cpp.callableLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
-| `cpp.callableLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.callableLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
-| `cpp.nativeShims` | `"array"` | `[]` | no |  |
-| `cpp.nativeShims[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.nativeShims[].id` | `"string"` | `""` | no |  |
-| `cpp.nativeShims[].publicHeaders` | `"array"` | `[]` | no |  |
-| `cpp.nativeShims[].publicHeaders[]` | `"string"` | — | no |  |
-| `cpp.nativeShims[].sourceFiles` | `"array"` | `[]` | no |  |
-| `cpp.nativeShims[].sourceFiles[]` | `"string"` | — | no |  |
-| `cpp.nativeShims[].exports` | `"array"` | `[]` | no |  |
-| `cpp.nativeShims[].exports[]` | `"string"` | — | no |  |
-| `cpp.nativeShims[].evidence` | `"object"` | — | no | additionalProperties=false |
-| `cpp.nativeShims[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
-| `cpp.nativeShims[].evidence.origin` | `"string"` | — | yes |  |
-| `cpp.virtualCallbacks` | `"array"` | `[]` | no |  |
-| `cpp.virtualCallbacks[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.virtualCallbacks[].id` | `"string"` | — | yes |  |
-| `cpp.virtualCallbacks[].nativeInterface` | `"string"` | — | yes |  |
-| `cpp.virtualCallbacks[].releaseThreadDomain` | `["unknown","any"]` | `"unknown"` | no | unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence. |
-| `cpp.sequenceInputAdapters` | `"array"` | `[]` | no |  |
-| `cpp.sequenceInputAdapters[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.sequenceInputAdapters[].function` | `"string"` | — | yes |  |
-| `cpp.sequenceInputAdapters[].parameters` | `"array"` | — | yes |  |
-| `cpp.sequenceInputAdapters[].parameters[]` | `"object"` | — | no | additionalProperties=false |
-| `cpp.sequenceInputAdapters[].parameters[].parameter` | `"string"` | — | yes |  |
-| `cpp.sequenceInputAdapters[].parameters[].retainsArgument` | `["boolean","null"]` | — | no |  |
-| `cpp.sequenceInputAdapters[].parameters[].lifetime` | `["unknown","call","owner","registration","operation","static","module"]` | — | no |  |
+| `bridge` | `"object"` | — | no | additionalProperties=false |
+| `bridge.aggregateStrategy` | `["pointerBridge","direct"]` | `"pointerBridge"` | no |  |
+| `bridge.cpp` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.familyBindings` | `"array"` | `[]` | no |  |
+| `bridge.cpp.familyBindings[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.familyBindings[].nativeTemplate` | `["string","null"]` | `null` | no |  |
+| `bridge.cpp.familyBindings[].nativeType` | `["string","null"]` | `null` | no |  |
+| `bridge.cpp.familyBindings[].family` | `["string","vector","span","array","map","set","optional","variant","expected","path","duration","timePoint","uniquePointer","sharedPointer"]` | `"string"` | yes |  |
+| `bridge.cpp.familyBindings[].evidence` | `"object"` | — | yes | additionalProperties=false |
+| `bridge.cpp.familyBindings[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.cpp.familyBindings[].evidence.origin` | `"string"` | — | yes |  |
+| `bridge.cpp.familyBindings[].stringEncoding` | `["unknown","utf8","utf16","utf32"]` | `"unknown"` | no |  |
+| `bridge.cpp.familyBindings[].stringAccess` | `["indexed","cStrNullTerminated"]` | `"indexed"` | no |  |
+| `bridge.cpp.familyBindings[].cStr` | `["object","null"]` | — | no | additionalProperties=false |
+| `bridge.cpp.familyBindings[].cStr.readableLifetime` | `"object"` | — | yes | additionalProperties=false |
+| `bridge.cpp.familyBindings[].cStr.readableLifetime.kind` | `["unknown","call","owner","registration","operation","static","module"]` | — | yes |  |
+| `bridge.cpp.familyBindings[].cStr.readableLifetime.owner` | `["object","null"]` | — | yes | additionalProperties=false |
+| `bridge.cpp.familyBindings[].cStr.readableLifetime.owner.value` | `"string"` | — | yes |  |
+| `bridge.cpp.familyBindings[].cStr.readableLifetime.evidence` | `"object"` | — | yes | additionalProperties=false |
+| `bridge.cpp.familyBindings[].cStr.readableLifetime.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.cpp.familyBindings[].cStr.readableLifetime.evidence.origin` | `"string"` | — | yes |  |
+| `bridge.cpp.familyBindings[].cStr.nullTerminated` | `"object"` | — | yes | additionalProperties=false |
+| `bridge.cpp.familyBindings[].cStr.nullTerminated.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.cpp.familyBindings[].cStr.nullTerminated.origin` | `"string"` | — | yes |  |
+| `bridge.cpp.familyBindings[].cStr.maximumCodeUnits` | `"integer"` | `1048576` | no |  |
+| `bridge.cpp.familyBindings[].cStr.constructorCopiesInput` | `["object","null"]` | — | no | additionalProperties=false |
+| `bridge.cpp.familyBindings[].cStr.constructorCopiesInput.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.cpp.familyBindings[].cStr.constructorCopiesInput.origin` | `"string"` | — | yes |  |
+| `bridge.cpp.familyBindings[].variantAccess` | `["none","memberGet"]` | `"none"` | no |  |
+| `bridge.cpp.familyBindings[].pathFormat` | `["genericUtf8","nativeUtf8",null]` | — | no |  |
+| `bridge.cpp.templateInstantiations` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.templateInstantiations.types` | `"array"` | `[]` | no |  |
+| `bridge.cpp.templateInstantiations.types[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.templateInstantiations.types[].id` | `"string"` | — | yes |  |
+| `bridge.cpp.templateInstantiations.types[].nativeType` | `"string"` | — | yes |  |
+| `bridge.cpp.templateInstantiations.functions` | `"array"` | `[]` | no |  |
+| `bridge.cpp.templateInstantiations.functions[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.templateInstantiations.functions[].id` | `"string"` | — | yes |  |
+| `bridge.cpp.templateInstantiations.functions[].nativeCallable` | `"string"` | — | yes |  |
+| `bridge.cpp.templateInstantiations.functions[].returnType` | `"string"` | — | yes |  |
+| `bridge.cpp.templateInstantiations.functions[].parameterTypes` | `"array"` | — | yes |  |
+| `bridge.cpp.templateInstantiations.functions[].parameterTypes[]` | `"string"` | — | no |  |
+| `bridge.cpp.virtualCallbacks` | `"array"` | `[]` | no |  |
+| `bridge.cpp.virtualCallbacks[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.virtualCallbacks[].id` | `"string"` | — | yes |  |
+| `bridge.cpp.virtualCallbacks[].nativeInterface` | `"string"` | — | yes |  |
+| `bridge.cpp.virtualCallbacks[].releaseThreadDomain` | `["unknown","any"]` | `"unknown"` | no | unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence. |
+| `bridge.cpp.sequenceInputAdapters` | `"array"` | `[]` | no |  |
+| `bridge.cpp.sequenceInputAdapters[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.sequenceInputAdapters[].function` | `"string"` | — | yes |  |
+| `bridge.cpp.sequenceInputAdapters[].parameters` | `"array"` | — | yes |  |
+| `bridge.cpp.sequenceInputAdapters[].parameters[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.cpp.sequenceInputAdapters[].parameters[].parameter` | `"string"` | — | yes |  |
+| `bridge.cpp.sequenceInputAdapters[].parameters[].retainsArgument` | `["boolean","null"]` | — | no |  |
+| `bridge.cpp.sequenceInputAdapters[].parameters[].lifetime` | `["unknown","call","owner","registration","operation","static","module"]` | — | no |  |
+| `bridge.typeLowerings` | `"array"` | `[]` | no |  |
+| `bridge.typeLowerings[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].id` | `"string"` | `""` | no |  |
+| `bridge.typeLowerings[].typePattern` | `"string"` | `""` | no |  |
+| `bridge.typeLowerings[].priority` | `"integer"` | `100` | no |  |
+| `bridge.typeLowerings[].cAbiType` | `"string"` | `"int32_t"` | no |  |
+| `bridge.typeLowerings[].abiParameters` | `"array"` | `[]` | no |  |
+| `bridge.typeLowerings[].abiParameters[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].abiParameters[].name` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].abiParameters[].cAbiType` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].parameterExpression` | `["string","null"]` | `null` | no |  |
+| `bridge.typeLowerings[].resultExpression` | `["string","null"]` | `null` | no |  |
+| `bridge.typeLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
+| `bridge.typeLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
+| `bridge.typeLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
+| `bridge.typeLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
+| `bridge.typeLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
+| `bridge.typeLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
+| `bridge.typeLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
+| `bridge.typeLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.typeLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].managedProjection` | `["object","null"]` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].managedProjection.managedType` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].managedProjection.managedToNativeExpression` | `["string","null"]` | `null` | no |  |
+| `bridge.typeLowerings[].managedProjection.nativeToManagedExpression` | `["string","null"]` | `null` | no |  |
+| `bridge.typeLowerings[].managedProjection.requiredNamespace` | `["string","null"]` | `null` | no |  |
+| `bridge.typeLowerings[].ownedResultRelease` | `["object","null"]` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].ownedResultRelease.nativeFunction` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].ownedResultRelease.allocatorDomain` | `"string"` | — | yes |  |
+| `bridge.typeLowerings[].ownedResultRelease.releaseThreadDomain` | `"string"` | — | no |  |
+| `bridge.typeLowerings[].ownedResultRelease.evidence` | `"object"` | — | no | additionalProperties=false |
+| `bridge.typeLowerings[].ownedResultRelease.evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.typeLowerings[].ownedResultRelease.evidence.origin` | `"string"` | — | yes |  |
+| `bridge.callableLowerings` | `"array"` | `[]` | no |  |
+| `bridge.callableLowerings[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.callableLowerings[].id` | `"string"` | `""` | no |  |
+| `bridge.callableLowerings[].functionPattern` | `"string"` | `""` | no |  |
+| `bridge.callableLowerings[].priority` | `"integer"` | `100` | no |  |
+| `bridge.callableLowerings[].exportName` | `["string","null"]` | `null` | no |  |
+| `bridge.callableLowerings[].exclude` | `"boolean"` | `false` | no |  |
+| `bridge.callableLowerings[].invocationExpression` | `["string","null"]` | `null` | no |  |
+| `bridge.callableLowerings[].sourceFragments` | `"array"` | `[]` | no |  |
+| `bridge.callableLowerings[].sourceFragments[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.callableLowerings[].sourceFragments[].origin` | `"string"` | — | yes |  |
+| `bridge.callableLowerings[].sourceFragments[].kind` | `["expression","translationUnit"]` | — | yes |  |
+| `bridge.callableLowerings[].sourceFragments[].text` | `"string"` | — | yes |  |
+| `bridge.callableLowerings[].sourceFragments[].digest` | `"object"` | — | yes | additionalProperties=false |
+| `bridge.callableLowerings[].sourceFragments[].digest.value` | `"string"` | — | yes |  |
+| `bridge.callableLowerings[].sourceFragments[].declarationDependencies` | `"array"` | — | no |  |
+| `bridge.callableLowerings[].sourceFragments[].declarationDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.callableLowerings[].sourceFragments[].declarationDependencies[].value` | `"string"` | — | yes |  |
+| `bridge.callableLowerings[].sourceFragments[].typeDependencies` | `"array"` | — | no |  |
+| `bridge.callableLowerings[].sourceFragments[].typeDependencies[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.callableLowerings[].sourceFragments[].typeDependencies[].value` | `"string"` | — | yes |  |
+| `bridge.callableLowerings[].sourceFragments[].requiredHeaders` | `"array"` | — | no |  |
+| `bridge.callableLowerings[].sourceFragments[].requiredHeaders[]` | `"string"` | — | no |  |
+| `bridge.callableLowerings[].sourceFragments[].evidence` | `"object"` | — | no | additionalProperties=false |
+| `bridge.callableLowerings[].sourceFragments[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.callableLowerings[].sourceFragments[].evidence.origin` | `"string"` | — | yes |  |
+| `bridge.nativeShims` | `"array"` | `[]` | no |  |
+| `bridge.nativeShims[]` | `"object"` | — | no | additionalProperties=false |
+| `bridge.nativeShims[].id` | `"string"` | `""` | no |  |
+| `bridge.nativeShims[].publicHeaders` | `"array"` | `[]` | no |  |
+| `bridge.nativeShims[].publicHeaders[]` | `"string"` | — | no |  |
+| `bridge.nativeShims[].sourceFiles` | `"array"` | `[]` | no |  |
+| `bridge.nativeShims[].sourceFiles[]` | `"string"` | — | no |  |
+| `bridge.nativeShims[].exports` | `"array"` | `[]` | no |  |
+| `bridge.nativeShims[].exports[]` | `"string"` | — | no |  |
+| `bridge.nativeShims[].evidence` | `"object"` | — | no | additionalProperties=false |
+| `bridge.nativeShims[].evidence.level` | `["unknown","inferred","declared","userAsserted","verified"]` | — | yes |  |
+| `bridge.nativeShims[].evidence.origin` | `"string"` | — | yes |  |
 | `runtime` | `"object"` | — | no | additionalProperties=false |
 | `runtime.mode` | `["package","source"]` | `"package"` | no |  |
 | `runtime.namespace` | `["string","null"]` | `null` | no |  |

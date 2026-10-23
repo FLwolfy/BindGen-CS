@@ -3,7 +3,7 @@
   "libraryId": "bgfx",
   "platform": "windows-x64",
   "sourceNormalization": "quoted-locked-corpus-include-root-v1",
-  "selectionPolicySha256": "72e98800299edc085c3f90f09451aea3752c1e4dc08d2ebcc85d2e9b493a8d0a",
+  "selectionPolicySha256": "a30534e7dda000005976f33bc7c093fbdba6d603bcd55ca5075e89f4b23167f1",
   "omittedDeclarations": {
     "excludedDeclarations": [
       "bgfx_dbg_text_printf"
@@ -11,7 +11,10 @@
     "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "fa4d7158c5c3f426022a2ee995f1347bd6eba475ce5763a55ad63e789e1614be"
+    "windows-x64-msvc/managed/Bindings.cs": "32b89f2e8a170f15f100b2d8d0bf3445a28663e50c4a428ca0d22a886e17bc04",
+    "windows-x64-msvc/native/include/bgcs_bgfx.h": "b25e2e5dd61c51343068fc778dbcf36587210ae62b383fbf09192993bedac509",
+    "windows-x64-msvc/native/src/bgcs_bgfx.c": "c748f97769aacfe9f04a19efdce016b544518c0adc3dbfa4a1a4b2a927efdfa0",
+    "windows-x64-msvc/native/src/storage.assertions.c": "5770a487aecffdd2e3dbc77d996f7db63f728400e86cd0344765a0a1beafdc70"
   },
-  "publicApiSha256": "9aaa54a7635ff1940cfb713a58599da52a07883a3cc7120f22b056bed6c7602f"
+  "publicApiSha256": "e46635fa622172821ab947ea16b72fb574a24e546d25c8b04d6a3d6d1f4c3e94"
 }

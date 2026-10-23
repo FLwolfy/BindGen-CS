@@ -2,7 +2,7 @@
 
 [简体中文](lowering.cn.md) | [Cookbook](cpp-extension-cookbook.md) | [Architecture](architecture.md) | [Native inputs](native-source-inputs.md)
 
-The C++ backend accepts detached native facts and produces typed C ABI operations. Standard plugins reference `BGCS.Contracts`; parsing and worker execution stay outside the lowering layer.
+The C++ backend accepts detached native facts and produces typed C ABI operations. Standard plugins reference `BGCS.Core`; parsing and worker execution stay outside the lowering layer.
 
 ```mermaid
 flowchart TD
@@ -10,9 +10,9 @@ flowchart TD
     Worker --> Native["NativeModule"]
     Native --> Extra["Concrete templates / optional virtual proxy planning"]
     Extra --> Expanded["Worker reparse for generated native declarations"]
-    Native --> Plan["CppBridgePlanner"]
+    Native --> Plan["NativeBridgePlanner"]
     Expanded --> Plan
-    Plan --> Bridge["CppBridgeModule"]
+    Plan --> Bridge["NativeBridgePlan"]
     Bridge --> Emit["TypedBridgeEmitter"]
     Emit --> CWorker["Independent C header worker reparse"]
     CWorker --> Verify["BridgeContractVerifier"]
@@ -29,7 +29,7 @@ flowchart TD
 | Model | Responsibility |
 | --- | --- |
 | `NativeModule` | Original declarations, types, layouts, templates, source identities, target facts |
-| `CppBridgeModule` | C carriers, source actions, argument/result conversions, exception/release protocols |
+| `NativeBridgePlan` | C carriers, source actions, argument/result conversions, exception/release protocols |
 | `InteropModule` | Independently reparsed C ABI enriched with original semantics |
 | `ManagedApiModel` | Public managed API and explicit conversions |
 | C# emission plan | Concrete imports, cleanup, runtime dependencies, files |
@@ -38,7 +38,7 @@ No standard model contains Clang cursors, native handles, Roslyn nodes, open fil
 
 ## Ports and registration
 
-`ICppTypeLowering` receives `NativeTypeView` and `LoweringContext`, then returns `CppTypeLoweringPlan`. Its complete type graph includes the primary carrier and every referenced input shape. `ICppCallableLowering` receives the exact `NativeDeclaration` and returns a complete `CppCallableLoweringPlan`.
+`INativeTypeLowering` receives `NativeTypeView` and `LoweringContext`, then returns `NativeTypeLoweringPlan`. Its complete type graph includes the primary carrier and every referenced input shape. `INativeCallableLowering` receives the exact `NativeDeclaration` and returns a complete `NativeCallableLoweringPlan`.
 
 Frozen registration rejects duplicate identities. Priority descends; stable ID orders a tier; competing exclusive matches within that tier fail. Session factories own their service instances. Both matching and planning verify that service IDs/priorities have not changed.
 
@@ -50,7 +50,7 @@ Ordinary C inputs preserve one original native parameter each. An expanded param
 
 The verifier rejects missing, duplicate, unrelated, or out-of-order bindings. The emitter substitutes only declared names and emits one invocation of the native callable; that call executes in the consumer's compiled bridge. A group cannot infer ownership or a managed pinning protocol. The recipe form is `cpp.typeLowerings[].abiParameters`; the cookbook contains complete examples.
 
-Finite standard sequence adapters use `BridgeArgumentGroup.standardSequence` instead of a source-expression template. The model records the exact original element, compiler extent, copy/borrow operation, and evidence. Additional exports link to a preserved primary through `inputAdapterOf`; exact data/length coverage and unchanged result identity are checked before emission. Results are limited to scalar/void or a fresh owned default-standard `basic_string`/`filesystem::path` value with its complete destruction pair and creating-call cleanup proof. Borrowed, pointer/reference, custom-text and other container results remain unavailable through this adapter, as do construction and custom invocation/result expressions. See the cookbook for `cpp.sequenceInputAdapters` and its explicit borrowing constraints.
+Finite standard sequence adapters use `BridgeArgumentGroup.standardSequence` instead of a source-expression template. The model records the exact original element, compiler extent, copy/borrow operation, and evidence. Additional exports link to a preserved primary through `inputAdapterOf`; exact data/length coverage and unchanged result identity are checked before emission. Results are limited to scalar/void or a fresh owned default-standard `basic_string`/`filesystem::path` value with its complete destruction pair and creating-call cleanup proof. Borrowed, pointer/reference, custom-text and other container results remain unavailable through this adapter, as do construction and custom invocation/result expressions. See the cookbook for `bridge.cpp.sequenceInputAdapters` and its explicit borrowing constraints.
 
 ## Operations, ownership, and errors
 
@@ -70,7 +70,7 @@ C++ `char8_t`, `char16_t`, and `char32_t` retain distinct native primitive ident
 
 Standard values use opaque holders and finite checked operations for strings, containers, optional/variant/expected, paths, chrono, and smart pointers. `vector<bool>` copies normalized elements. Paths use explicit UTF-8 extraction. General string encoding and buffer retention require semantic contracts.
 
-`cpp.familyBindings` offers exact opt-in custom template matching for String, Vector,
+`bridge.cpp.familyBindings` offers exact opt-in custom template matching for String, Vector,
 Span, Array, Optional, Map, Set, Expected, UniquePointer, SharedPointer, Variant,
 Path, Duration and TimePoint. Custom variants require explicit member-template access;
 custom paths require explicit GenericUtf8 or NativeUtf8 conversion. Chrono keeps native representation,
@@ -112,6 +112,6 @@ Virtual proxy metadata records exact status-returning Cdecl callback slots. The 
 
 Before writing candidates, operation verification checks source identities, arity, carriers, ownership pairs, fragments, and argument groups. C header reparse checks the actual export set and signature shapes. Semantic merging preserves original parameter identities and assertion levels.
 
-BGCS validates source and contracts before publication; it does not compile managed consumers, link native code or invoke generated APIs. A generation validation failure prevents publication. Generated typed plans live in `bridge.module.json`; the typed `NativeSourceManifest` stays in `<target>/native/metadata/bridge.manifest.json`. Use `GenerationResult.nativeSources` or verified `BindingArtifactManifest.ReadNativeSources`, then map input roots as described in the [source-input guide](native-source-inputs.md). Verification metadata records generator stages, not completion of the consumer's later build.
+BGCS validates source and contracts before publication; it does not compile managed consumers, link native code or invoke generated APIs. A generation validation failure prevents publication. Generated typed plans live in `bridge.module.json`; the typed `NativeSourceManifest` stays in `<target>/metadata/native-source.manifest.json`. Use `GenerationResult.nativeSources` or verified `BindingArtifactManifest.ReadNativeSources`, then map input roots as described in the [source-input guide](native-source-inputs.md). Verification metadata records generator stages, not completion of the consumer's later build.
 
 Native value operations and high-level managed projections have separate repository consumer fixtures. Raw/status container checks do not establish automatic C# array returns. Counted string inputs retain their exact data/length text contract. Text fixtures cover CStr inputs, fresh default-standard string/path copies to C# `string`, and owned members such as `SetNameWithSequence(string)`, `GetName()` and `PrefixWithSequence(string)`. Their native body can retain `this` until destruction without changing unknown self retention to false. Those external fixture runs are distinct from generation and from release certification. Chrono preserves native count, ratio and clock rather than assuming a managed date epoch.

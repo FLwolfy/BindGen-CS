@@ -5,11 +5,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using BGCS.CSharp.Projection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -50,7 +50,7 @@ public sealed class NativeDocumentationTests
         ManagedApiModel model = new DefaultManagedProjection().Project(module,
             new("Generated.Documentation", "Api") { style = shared ? ManagedApiStyle.Static : ManagedApiStyle.Instance }, CancellationToken.None);
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
         XDocument document = CompileXml(sink);
         Assert.Empty(document.Descendants("include"));
         Assert.Empty(document.Descendants("param"));
@@ -78,11 +78,11 @@ public sealed class NativeDocumentationTests
             documentationContent = new("Computes A && B.", [new("native_input", 0, "A < B && C."), new("unknown_name", null, "Unresolved native parameter.")], "The native result.")
             { typeParameters = [new("T", "Concrete native template argument.")] }
         };
-        ManagedApiModel model = new DefaultManagedProjection().Project(new("fixture", "windows-x64-msvc", 8, [integer], [function], []),
+        ManagedApiModel model = new DefaultManagedProjection().Project(new("fixture", "windows-x64-msvc", 8, [integer], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian },
             new("Generated.Documentation", "Api") { style = shared ? ManagedApiStyle.Static : ManagedApiStyle.Instance }, CancellationToken.None);
         model = model with { methods = [model.methods[0] with { parameterNames = ["renamed"] }] };
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         XDocument document = CompileXml(sink);
         XElement[] parameters = document.Descendants("param").ToArray();
         Assert.Equal(shared ? 3 : 2, parameters.Length);

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using BGCS.Configuration;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -18,12 +18,12 @@ public sealed class ManagedEnumOptionalConfigurationParityTests
         {
             string path = Path.Combine(root, "bindgen.json");
             const string input = """
-                {"schemaVersion":1,"library":{"id":"enum_defaults","nativeName":"enum_defaults"},
+                {"schemaVersion":2,"library":{"id":"enum_defaults","nativeName":"enum_defaults"},
                  "source":{"headers":["native.h"]},
                  "api":{"enums":[{"name":"CustomMode","underlyingType":"int32","values":[{"name":"One","value":"1"}]}]}}
                 """;
             File.WriteAllText(path, input);
-            BindingConfiguration configuration = new BindingConfigurationLoader().Load(path);
+            BindingConfiguration configuration = new BindingConfigurationLoader(TestHostPaths.Create()).Load(path);
             ManagedEnumDefinition declaration = Assert.Single(configuration.api.enums);
             Assert.Equal(ManagedIntegralKind.Int32, declaration.underlyingType);
             Assert.False(declaration.isFlags);
@@ -35,7 +35,7 @@ public sealed class ManagedEnumOptionalConfigurationParityTests
             Assert.Empty(configuration.api.nativeEnums);
             Assert.Empty(configuration.api.constants);
             File.WriteAllText(path, input.Replace("\"name\":\"CustomMode\"", "\"name\":\"CustomMode\",\"attributes\":[\"[System.Obsolete]\"]", StringComparison.Ordinal));
-            Assert.Throws<JsonException>(() => new BindingConfigurationLoader().Load(path));
+            Assert.Throws<JsonException>(() => new BindingConfigurationLoader(TestHostPaths.Create()).Load(path));
         }
         finally { Directory.Delete(root, recursive: true); }
     }

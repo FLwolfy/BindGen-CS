@@ -1,17 +1,18 @@
+using BGCS.Frontend.Clang.Workers;
 using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.Workers;
-using BGCS.Cpp2C.Emission;
-using BGCS.Platforms.Targeting;
-using BGCS.Platforms.Toolchains;
+using BGCS.NativeBridge.Emission;
+using BGCS.Targets.Desktop.Targeting;
+using BGCS.Targets.Desktop.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -75,7 +76,7 @@ public sealed class NativeSdkStorageAccessibilityTests
             {
                 pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false
             };
-            FrontendWorkerClient worker = new(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"));
+            FrontendWorkerClient worker = new(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost());
             NativeModule module = (await worker.ParseAsync(request, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
             NativeDeclaration privateRep = Record("PrivateRep"), protectedRep = Record("ProtectedRep"), publicRep = Record("PublicRep");
@@ -93,7 +94,7 @@ public sealed class NativeSdkStorageAccessibilityTests
             Assert.DoesNotContain(module.declarations, declaration => declaration.name == "unrelated_sdk_function");
             Assert.False(Record("UserStorage").isStandardLayout);
 
-            string proof = new NativeStorageAssertionEmitter().Emit(module, [header]);
+            string proof = new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module));
             Assert.Contains("sizeof(" + publicRep.qualifiedName + ")", proof);
             Assert.Contains("alignof(" + publicRep.qualifiedName + ")", proof);
             Assert.Contains("decltype(((" + publicRep.qualifiedName + "*)nullptr)->value)", proof);
@@ -137,6 +138,6 @@ public sealed class NativeSdkStorageAccessibilityTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

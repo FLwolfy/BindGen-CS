@@ -2,49 +2,51 @@
 
 [简体中文](cpp-extension-cookbook.cn.md) | [Lowering contracts](lowering.md) | [Portable native inputs](native-source-inputs.md)
 
-The complete SDK and tool use the same grouped `bindgen.json`. Choose a recipe for a finite conversion, a Contracts-only plugin for a typed planning decision, or a project-owned C shim for native semantics that require handwritten implementation. Each route participates in the Host's worker parsing, ABI verification, caching, candidate validation, and publication.
+The complete SDK and tool use the same grouped `bindgen.json`. Choose a recipe for a finite conversion, a Core-only plugin for a typed planning decision, or a project-owned C shim for native semantics that require handwritten implementation. Each route participates in the Host's worker parsing, ABI verification, caching, candidate validation, and publication.
 
 | Requirement | Extension |
 | --- | --- |
-| A fixed C carrier and explicit conversion expression | `cpp.typeLowerings` |
+| A fixed C carrier and explicit conversion expression | `bridge.typeLowerings` |
 | Multiple C inputs representing one native parameter | `abiParameters` and a typed argument group |
-| Exclude, rename, or wrap an ordinary native invocation | `cpp.callableLowerings` |
-| Match detached declarations and plan additional typed actions | Contracts-only lowering plugin |
-| Expose project-private implementation behind exact C exports | `cpp.nativeShims` |
-| Materialize a concrete template | `cpp.templateInstantiations` |
-| Generate a raw virtual interface adapter | `cpp.virtualCallbacks` |
-| Add a checked scalar-element sequence input without removing the raw export | `cpp.sequenceInputAdapters` |
-| Reuse a finite container protocol for an exact custom template family | `cpp.familyBindings` |
+| Exclude, rename, or wrap an ordinary native invocation | `bridge.callableLowerings` |
+| Match detached declarations and plan additional typed actions | Core-only lowering plugin |
+| Expose project-private implementation behind exact C exports | `bridge.nativeShims` |
+| Materialize a concrete template | `bridge.cpp.templateInstantiations` |
+| Generate a raw virtual interface adapter | `bridge.cpp.virtualCallbacks` |
+| Add a checked scalar-element sequence input without removing the raw export | `bridge.cpp.sequenceInputAdapters` |
+| Reuse a finite container protocol for an exact custom template family | `bridge.cpp.familyBindings` |
 
 ## Exact custom container families
 
-`cpp.familyBindings` opts a concrete custom template family into one of the finite
+`bridge.cpp.familyBindings` opts a concrete custom template family into one of the finite
 `string`, `vector`, `span`, `array`, `optional`, `map`, `set`, `expected`,
 `uniquePointer`, `sharedPointer`, `variant`, `path`, `duration` or `timePoint` protocols. Match its exact qualified
 template name, without arguments or wildcards:
 
 ```json
 {
-  "cpp": {
-    "familyBindings": [
-      {
-        "nativeTemplate": "Engine::Vector",
-        "family": "vector",
-        "evidence": {
-          "level": "userAsserted",
-          "origin": "Engine Vector protocol reviewed against its public implementation"
+  "bridge": {
+    "cpp": {
+      "familyBindings": [
+        {
+          "nativeTemplate": "Engine::Vector",
+          "family": "vector",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "Engine Vector protocol reviewed against its public implementation"
+          }
+        },
+        {
+          "nativeTemplate": "Engine::Text",
+          "family": "string",
+          "stringEncoding": "utf8",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "Engine Text stores UTF-8 code units"
+          }
         }
-      },
-      {
-        "nativeTemplate": "Engine::Text",
-        "family": "string",
-        "stringEncoding": "utf8",
-        "evidence": {
-          "level": "userAsserted",
-          "origin": "Engine Text stores UTF-8 code units"
-        }
-      }
-    ]
+      ]
+    }
   }
 }
 ```
@@ -116,7 +118,7 @@ family binding does not prove that a returned element borrow outlives its owner 
 that destruction is valid on any thread. Custom bool vectors are not classified as
 packed storage merely because they select the vector protocol.
 
-Sequence input overloads still require `cpp.sequenceInputAdapters`; borrowed spans
+Sequence input overloads still require `bridge.cpp.sequenceInputAdapters`; borrowed spans
 still require explicit call lifetime and nonretention. String bindings require an
 explicit UTF encoding matching the compiler's code-unit width. Different member
 protocols and additional ownership semantics use a typed recipe,
@@ -140,32 +142,58 @@ index, append and reserve operations. A smaller native API can explicitly select
 
 ```json
 {
-  "cpp": {
-    "familyBindings": [{
-      "nativeType": "Engine::Text",
-      "family": "string",
-      "stringEncoding": "utf8",
-      "stringAccess": "cStrNullTerminated",
-      "evidence": { "level": "userAsserted", "origin": "reviewed Engine Text protocol" },
-      "cStr": {
-        "maximumCodeUnits": 1048576,
-        "readableLifetime": {
-          "kind": "call",
-          "evidence": { "level": "userAsserted", "origin": "readable throughout each access call" }
+  "bridge": {
+    "cpp": {
+      "familyBindings": [
+        {
+          "nativeType": "Engine::Text",
+          "family": "string",
+          "stringEncoding": "utf8",
+          "stringAccess": "cStrNullTerminated",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "reviewed Engine Text protocol"
+          },
+          "cStr": {
+            "maximumCodeUnits": 1048576,
+            "readableLifetime": {
+              "kind": "call",
+              "evidence": {
+                "level": "userAsserted",
+                "origin": "readable throughout each access call"
+              }
+            },
+            "nullTerminated": {
+              "level": "userAsserted",
+              "origin": "terminator within the declared readable bound"
+            },
+            "constructorCopiesInput": {
+              "level": "userAsserted",
+              "origin": "Text(const char*) copies before returning"
+            }
+          }
         },
-        "nullTerminated": { "level": "userAsserted", "origin": "terminator within the declared readable bound" },
-        "constructorCopiesInput": { "level": "userAsserted", "origin": "Text(const char*) copies before returning" }
-      }
-    }, {
-      "nativeType": "Engine::Path",
-      "family": "path",
-      "pathFormat": "nativeUtf8",
-      "evidence": { "level": "userAsserted", "origin": "u8string returns counted UTF-8 with native separators" }
-    }],
-    "sequenceInputAdapters": [{
-      "function": "Engine::CheckText",
-      "parameters": [{ "parameter": "value" }]
-    }]
+        {
+          "nativeType": "Engine::Path",
+          "family": "path",
+          "pathFormat": "nativeUtf8",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "u8string returns counted UTF-8 with native separators"
+          }
+        }
+      ],
+      "sequenceInputAdapters": [
+        {
+          "function": "Engine::CheckText",
+          "parameters": [
+            {
+              "parameter": "value"
+            }
+          ]
+        }
+      ]
+    }
   }
 }
 ```
@@ -203,13 +231,29 @@ For `int Demo::SumVector(std::vector<int> values)` and `int Demo::SumSpan(std::s
 
 ```json
 {
-  "cpp": {
-    "sequenceInputAdapters": [
-      { "function": "Demo::SumVector", "parameters": [{ "parameter": "values" }] },
-      { "function": "Demo::SumSpan", "parameters": [{
-        "parameter": "values", "retainsArgument": false, "lifetime": "call"
-      }] }
-    ]
+  "bridge": {
+    "cpp": {
+      "sequenceInputAdapters": [
+        {
+          "function": "Demo::SumVector",
+          "parameters": [
+            {
+              "parameter": "values"
+            }
+          ]
+        },
+        {
+          "function": "Demo::SumSpan",
+          "parameters": [
+            {
+              "parameter": "values",
+              "retainsArgument": false,
+              "lifetime": "call"
+            }
+          ]
+        }
+      ]
+    }
   }
 }
 ```
@@ -228,21 +272,23 @@ Add this fragment to a complete configuration whose source headers declare `Engi
 
 ```json
 {
-  "cpp": {
-    "typeLowerings": [{
-      "id": "engine.entity-id",
-      "typePattern": "Engine::EntityId",
-      "priority": 100,
-      "cAbiType": "uint64_t",
-      "parameterExpression": "Engine::EntityId::FromRaw({value})",
-      "resultExpression": "({value}).Raw()",
-      "managedProjection": {
-        "managedType": "EntityId",
-        "managedToNativeExpression": "{value}.Value",
-        "nativeToManagedExpression": "new EntityId({value})",
-        "requiredNamespace": "Engine.Managed"
+  "bridge": {
+    "typeLowerings": [
+      {
+        "id": "engine.entity-id",
+        "typePattern": "Engine::EntityId",
+        "priority": 100,
+        "cAbiType": "uint64_t",
+        "parameterExpression": "Engine::EntityId::FromRaw({value})",
+        "resultExpression": "({value}).Raw()",
+        "managedProjection": {
+          "managedType": "EntityId",
+          "managedToNativeExpression": "{value}.Value",
+          "nativeToManagedExpression": "new EntityId({value})",
+          "requiredNamespace": "Engine.Managed"
+        }
       }
-    }]
+    ]
   }
 }
 ```
@@ -259,17 +305,25 @@ A native `Range` value can be reconstructed from a borrowed data address and len
 
 ```json
 {
-  "cpp": {
-    "typeLowerings": [{
-      "id": "engine.range",
-      "typePattern": "Engine::Range",
-      "cAbiType": "uint64_t",
-      "abiParameters": [
-        { "name": "data", "cAbiType": "const int32_t*" },
-        { "name": "length", "cAbiType": "size_t" }
-      ],
-      "parameterExpression": "{nativeType}({data}, {length})"
-    }]
+  "bridge": {
+    "typeLowerings": [
+      {
+        "id": "engine.range",
+        "typePattern": "Engine::Range",
+        "cAbiType": "uint64_t",
+        "abiParameters": [
+          {
+            "name": "data",
+            "cAbiType": "const int32_t*"
+          },
+          {
+            "name": "length",
+            "cAbiType": "size_t"
+          }
+        ],
+        "parameterExpression": "{nativeType}({data}, {length})"
+      }
+    ]
   }
 }
 ```
@@ -290,7 +344,7 @@ For an explicitly allocated nonconst pointer result, add `ownedResultRelease` wi
 
 ```json
 {
-  "cpp": {
+  "bridge": {
     "callableLowerings": [
       {
         "id": "engine.checked-add",
@@ -311,9 +365,9 @@ For an explicitly allocated nonconst pointer result, add `ownedResultRelease` wi
 
 The wrapper contains exactly one `{invocation}`. Its headers must already be declared source inputs. An exclusion cannot simultaneously declare helpers, a wrapper, or an export name. Renaming cannot change the actual source parameter/return identities.
 
-## A Contracts-only plugin
+## A Core-only plugin
 
-The runnable source is [examples/LoweringPlugin](../examples/LoweringPlugin/README.md). Its `BGCS.Contracts.Plugins.IBindingPlugin` registers a session-owned `ICppCallableLowering` factory. The service inspects `NativeDeclaration` and returns a complete `CppCallableLoweringPlan`: receiver representation, exact native member action, C export, and all referenced shapes.
+The runnable source is [examples/LoweringPlugin](../examples/LoweringPlugin/README.md). Its `BGCS.Core.Plugins.IBindingPlugin` registers a session-owned `INativeCallableLowering` factory. The service inspects `NativeDeclaration` and returns a complete `NativeCallableLoweringPlan`: receiver representation, exact native member action, C export, and all referenced shapes.
 
 ```bash
 cd examples/LoweringPlugin
@@ -333,13 +387,23 @@ The canonical complete example is [examples/NativeShim/bindgen.json](../examples
 
 ```json
 {
-  "cpp": {
-    "nativeShims": [{
-      "id": "widget",
-      "publicHeaders": ["shims/widget_c.h"],
-      "sourceFiles": ["shims/widget_c.cpp"],
-      "exports": ["bgcs_widget_create", "bgcs_widget_destroy", "bgcs_widget_sum"]
-    }]
+  "bridge": {
+    "nativeShims": [
+      {
+        "id": "widget",
+        "publicHeaders": [
+          "shims/widget_c.h"
+        ],
+        "sourceFiles": [
+          "shims/widget_c.cpp"
+        ],
+        "exports": [
+          "bgcs_widget_create",
+          "bgcs_widget_destroy",
+          "bgcs_widget_sum"
+        ]
+      }
+    ]
   }
 }
 ```
@@ -351,13 +415,13 @@ bindgen-cs bridge examples/NativeShim/bindgen.json
 bindgen-cs generate examples/NativeShim/bindgen.json
 ```
 
-Inspect `<target>/native/metadata/bridge.module.json` for typed operations and `bridge.manifest.json` for the portable `NativeSourceManifest`. The [source-input guide](native-source-inputs.md) shows `GenerationResult.nativeSources`, session root bindings and verified `ReadNativeSources` selection. Compilation, linking and invocation belong to the consumer. Native C symbols alone do not establish correct release affinity or callback quiescence; supply those semantics explicitly before requesting owning or retained convenience wrappers.
+Inspect `<target>/native/metadata/bridge.module.json` for typed operations and `<target>/metadata/native-source.manifest.json` for the portable `NativeSourceManifest`. The [source-input guide](native-source-inputs.md) shows `GenerationResult.nativeSources`, session root bindings and verified `ReadNativeSources` selection. Compilation, linking and invocation belong to the consumer. Native C symbols alone do not establish correct release affinity or callback quiescence; supply those semantics explicitly before requesting owning or retained convenience wrappers.
 
 ## Concrete templates and virtual slots
 
 `cpp.templateInstantiations.types` contains `{ "id": "...", "nativeType": "Engine::Box<int>" }`. Function entries contain `id`, `nativeCallable`, `returnType`, and `parameterTypes`. The worker materializes concrete facts; generated function wrappers use `std::forward` according to the declared parameter types.
 
-`cpp.virtualCallbacks` contains `{ "id": "listener", "nativeInterface": "Engine::Listener" }`. A second ordinary C++ parse validates the generated proxy. Named C callback typedefs are independently reparsed; final `InteropModule.virtualProxies` records exact method names, callback value channels, factory/user-data identities, the real pointer-adjusting interface cast, and paired concrete destruction. The native retention boundary and quiescence remain unknown.
+`bridge.cpp.virtualCallbacks` contains `{ "id": "listener", "nativeInterface": "Engine::Listener" }`. A second ordinary C++ parse validates the generated proxy. Named C callback typedefs are independently reparsed; final `InteropModule.virtualProxies` records exact method names, callback value channels, factory/user-data identities, the real pointer-adjusting interface cast, and paired concrete destruction. The native retention boundary and quiescence remain unknown.
 
 The default `releaseThreadDomain: "unknown"` preserves the raw API. Set `releaseThreadDomain: "any"` only when you can assert that the concrete proxy and its interface base are safe to destroy on any closing thread; this claim remains `UserAsserted`. It enables an eligible caller-controlled managed registration, which still needs a stop-and-join action guaranteeing that **all native proxy execution has ended** before destruction. Preventing new calls and draining only managed thunk entries does not prove that C++ proxy frames have returned.
 

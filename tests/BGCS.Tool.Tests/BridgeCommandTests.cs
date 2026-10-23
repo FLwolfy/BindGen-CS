@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tool.Tests;
@@ -32,8 +32,7 @@ public sealed class BridgeCommandTests : IDisposable
         var previous = Directory.GetFiles(published, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes);
         Assert.Contains(previous.Keys, path => path.EndsWith(".cpp", StringComparison.Ordinal));
         Assert.Contains(previous.Keys, path => path.EndsWith(".cs", StringComparison.Ordinal));
-        BindingConfiguration invalid = valid with { cpp = valid.cpp with
-        { typeLowerings = [valid.cpp.typeLowerings[0] with { managedProjection = new("uint", "{value} +", "checked((uint){value})") }] } };
+        BindingConfiguration invalid = valid with { bridge = valid.bridge with { typeLowerings = [valid.bridge.typeLowerings[0] with { managedProjection = new("uint", "{value} +", "checked((uint){value})") }] } };
         Write(invalid);
 
         var result = Invoke("generate");
@@ -47,7 +46,7 @@ public sealed class BridgeCommandTests : IDisposable
 
     [Theory]
     [InlineData("windows-x64-msvc", "ulong")]
-    [InlineData("emscripten-wasm32-emscripten", "uint")]
+    [InlineData("windows-x86-msvc", "uint")]
     public void ManagedProjectionUsesTheParsedTargetAbi(string target, string expectedCarrier)
     {
         Write(CreateConfig(target, "size_t"));
@@ -72,7 +71,7 @@ public sealed class BridgeCommandTests : IDisposable
         Assert.True(result.ExitCode == 0, result.Output + Environment.NewLine + result.Error);
         Assert.Empty(Directory.GetFiles(Path.Combine(m_root, "Generated"), "*.cs", SearchOption.AllDirectories));
         Assert.NotEmpty(Directory.GetFiles(Path.Combine(m_root, "Generated"), "*.cpp", SearchOption.AllDirectories));
-        Assert.Single(Directory.GetFiles(Path.Combine(m_root, "Generated"), "bridge.manifest.json", SearchOption.AllDirectories));
+        Assert.Single(Directory.GetFiles(Path.Combine(m_root, "Generated"), "native-source.manifest.json", SearchOption.AllDirectories));
     }
 
     public void Dispose() => Directory.Delete(m_root, true);
@@ -87,13 +86,13 @@ public sealed class BridgeCommandTests : IDisposable
     }
     private static BindingConfiguration CreateConfig(string target, string carrier) => new()
     {
-        schemaVersion = 1,
+        schemaVersion = 2,
         library = new() { id = "fixture", nativeName = "fixture" },
         source = new() { language = SourceLanguage.Cpp, headers = ["api.hpp"] },
         api = new() { name = "Bridge", @namespace = "Fixture.Generated" },
         targets = [new() { id = target }],
         output = new() { root = "Generated" },
-        cpp = new() { typeLowerings = [new TypeLoweringRecipe
+        bridge = new() { typeLowerings = [new TypeLoweringRecipe
         { id = "count", typePattern = "Unused::Count", cAbiType = carrier, managedProjection = new("uint", "{value}", "checked((uint){value})") }] }
     };
 }

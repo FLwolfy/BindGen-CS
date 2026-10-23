@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -31,6 +31,7 @@ internal static class OverloadPlanner
         if (plan.api.emitLibraryNameConstant && !contextNames.Add(Emission.LibraryNameEmitter.C_NAME))
             throw new ArgumentException("The managed context name conflicts with its public native library name constant.");
         bool temporaryAllocator = Emission.ContextEmitter.HasTemporaryAllocator(plan);
+        bool callbackDispatcher = Emission.ContextEmitter.HasCallbackDispatcher(plan);
         string[] AllocatorParameters(params string[] prefix) => temporaryAllocator
             ? [.. prefix, Emission.ContextEmitter.TemporaryAllocatorType(request.runtimeNamespace)] : prefix;
         void AddFactory(
@@ -40,11 +41,19 @@ internal static class OverloadPlanner
             string origin,
             bool optionalLibraryPath = false
         ) {
-            scope.Add(name, AllocatorParameters(prefix), origin);
-            if (temporaryAllocator) scope.Add(name, prefix, origin + " with its optional allocator omitted");
-            if (optionalLibraryPath) scope.Add(name, [], origin + " with its optional library path omitted");
+            string dispatcher = "global::" + request.runtimeNamespace + ".NativeCallbackDispatcher";
+            string[] required = callbackDispatcher ? name == "Load" ? [dispatcher, .. prefix] : [.. prefix, dispatcher] : prefix;
+            scope.Add(name, AllocatorParameters(required), origin);
+            if (temporaryAllocator) scope.Add(name, required, origin + " with its optional allocator omitted");
+            if (optionalLibraryPath)
+            {
+                string[] withoutPath = callbackDispatcher ? [dispatcher] : [];
+                scope.Add(name, withoutPath, origin + " with its optional library path omitted");
+                if (temporaryAllocator) scope.Add(name, AllocatorParameters(withoutPath), origin + " with an explicitly named allocator and omitted path");
+            }
         }
         if (temporaryAllocator) contextNames.Add("m_temporaryAllocator");
+        if (callbackDispatcher) contextNames.Add("m_callbackDispatcher");
         foreach (CSharpValueStringResultPlan result in plan.valueStringResults.Where(result => result.receiver is not null))
             contextNames.Add(Emission.ValueStringResultEmitter.Helper(result.factory.methodIndex));
         foreach (CSharpFunctionContainerPlan container in plan.functionContainers)
@@ -292,6 +301,7 @@ internal static class OverloadPlanner
     ) {
         HashSet<int> lengths = method.bufferInputs.Select(input => input.lengthIndex).ToHashSet();
         lengths.UnionWith(method.stringInputs.Where(input => input.lengthIndex is not null).Select(input => input.lengthIndex!.Value));
+        if (method.copiedResultIndex is int result) lengths.Add(result);
         return inputs.Where(index => !lengths.Contains(index));
     }
 
@@ -314,7 +324,7 @@ internal static class OverloadPlanner
         int index
     )
         => method.bufferProtocols.Any(buffer => buffer.writtenCountIndex == index) ? "out"
-            : method.valueParameters.SingleOrDefault(value => value.parameterIndex == index) is { } value
+            : method.valueParameters.SingleOrDefault(value => value.parameterIndex == index) is { allocationMode: CSharpValueAllocationMode.AddressCheckedPinnedBorrow } value
                 ? value.direction switch { NativeParameterDirection.Input => "in", NativeParameterDirection.Output => "out", _ => "ref" } : string.Empty;
 
     internal static string InputDeclaration(

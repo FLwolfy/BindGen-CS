@@ -5,10 +5,10 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -108,7 +108,7 @@ public sealed class NativeRegistrationSafetyPolicyTests
             };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "registration-safety", nativeName = "registration_safety_fixture" },
+                schemaVersion = 2, library = new() { id = "registration-safety", nativeName = "registration_safety_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["registration.h"], parseMacros = false,
                     includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.RegistrationSafety", name = "RegistrationApi" },
@@ -209,7 +209,7 @@ public sealed class NativeRegistrationSafetyPolicyTests
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(root!.FullName,
-            "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(root!.FullName,
+            "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
     }
 }

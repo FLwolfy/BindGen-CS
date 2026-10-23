@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.IO;
 using System.Threading;
@@ -6,24 +7,27 @@ namespace BGCS.Infrastructure.IO;
 
 internal sealed class DirectoryPublicationOwnership : IDisposable
 {
+    private readonly IHostPathService m_paths;
     private readonly FileStream m_first;
     private readonly FileStream m_second;
 
     internal DirectoryPublicationOwnership(
         string first,
-        string second
+        string second,
+        IHostPathService paths
     ) {
-        string firstPath = DirectoryPublicationLease.GetPath(first);
-        string secondPath = DirectoryPublicationLease.GetPath(second);
-        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        if (comparer.Equals(firstPath, secondPath))
+        m_paths = paths;
+        string firstPath = DirectoryPublicationLease.GetPath(first, paths);
+        string secondPath = DirectoryPublicationLease.GetPath(second, paths);
+
+        if (paths.Equals(firstPath, secondPath))
             throw new ArgumentException("Publication requires two different output directories.", nameof(second));
-        if (comparer.Compare(firstPath, secondPath) > 0)
+        if (StringComparer.Ordinal.Compare(paths.GetIdentityKey(firstPath), paths.GetIdentityKey(secondPath)) > 0)
             (first, second) = (second, first);
-        m_first = DirectoryPublicationLease.Acquire(first, TimeSpan.FromMinutes(5), CancellationToken.None);
+        m_first = DirectoryPublicationLease.Acquire(first, paths, TimeSpan.FromMinutes(5), CancellationToken.None);
         try
         {
-            m_second = DirectoryPublicationLease.Acquire(second, TimeSpan.FromMinutes(5), CancellationToken.None);
+            m_second = DirectoryPublicationLease.Acquire(second, paths, TimeSpan.FromMinutes(5), CancellationToken.None);
         }
         catch
         {
@@ -34,10 +38,10 @@ internal sealed class DirectoryPublicationOwnership : IDisposable
 
     internal FileStream GetLease(string directory)
     {
-        string path = DirectoryPublicationLease.GetPath(directory);
-        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        return string.Equals(m_first.Name, path, comparison) ? m_first
-            : string.Equals(m_second.Name, path, comparison) ? m_second
+        string path = DirectoryPublicationLease.GetPath(directory, m_paths);
+
+        return m_paths.Equals(m_first.Name, path) ? m_first
+            : m_paths.Equals(m_second.Name, path) ? m_second
             : throw new InvalidOperationException("This ownership does not cover the requested directory.");
     }
 

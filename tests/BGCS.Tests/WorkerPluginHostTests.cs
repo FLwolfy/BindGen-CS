@@ -7,11 +7,11 @@ using System.Runtime.Loader;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Workers;
 using Xunit;
 
@@ -78,7 +78,7 @@ public sealed class WorkerPluginHostTests
         string basePath = Path.Combine(fixture.settings, "base.json");
         File.WriteAllText(basePath, JsonSerializer.Serialize(new
         {
-            schemaVersion = 1, library = new { id = "worker_host", nativeName = "worker_host" },
+            schemaVersion = 2, library = new { id = "worker_host", nativeName = "worker_host" },
             source = new { headers = new[] { Path.Combine(fixture.source, "native.h") }, includeDirectories = new[] { fixture.source }, parseMacros = false },
             output = new { root = fixture.output }, cache = new { directory = Path.Combine(fixture.root, "cache") },
             extensions = new { plugins = new[] { fixture.manifest }, options = new Dictionary<string, object>
@@ -87,16 +87,16 @@ public sealed class WorkerPluginHostTests
         string path = Path.Combine(child, "bindgen.json");
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
-            schemaVersion = 1, extends = new[] { basePath },
+            schemaVersion = 2, extends = new[] { basePath },
             extensions = new { options = new Dictionary<string, object> { ["clang.fixture"] = new { values = new { mode = "normal" } } } }
         }));
-        GenerationRequest request = GenerationRequest.FromFile(path);
+        GenerationRequest request = TestInputs.LoadRequest(path);
         var configured = request.configuration.extensions.options["clang.fixture"];
         PluginConfiguration origins = new("clang.fixture", configured.values, configured.pathBase!, configured.valuePathBases);
         Assert.Equal(fixture.external, origins.ResolveInputPath("/externalFile"));
         Assert.Equal(child, origins.GetPathBase("/mode"));
         Assert.Throws<InvalidOperationException>(() => origins.pathBase);
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(fixture.worker).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(fixture.worker).Build();
         GenerationResult cold = await host.GenerateAsync(request);
         AssertSuccess(cold, "first");
         GenerationResult warm = await host.GenerateAsync(request);
@@ -138,7 +138,7 @@ public sealed class WorkerPluginHostTests
         using WorkerPluginFixture fixture = new();
         await using (BindingHost original = fixture.Builder().Build()) AssertSuccess(await original.GenerateAsync(fixture.Request()), "first");
         Dictionary<string, byte[]> before = Snapshot(fixture.output);
-        await using BindingHost changed = fixture.Builder().AddValidator("late-input-change", 0, () => new LateMutation(fixture.external)).Build();
+        await using BindingHost changed = fixture.Builder().RegisterFactory<IGenerationValidator>(new("late-input-change", ExtensionPort.GenerationValidator, 0), _ => new LateMutation(fixture.external)).Build();
         GenerationResult failed = await changed.GenerateAsync(fixture.Request());
         Assert.False(failed.success);
         Assert.Contains(failed.diagnostics, diagnostic => diagnostic.isFailure);
@@ -147,14 +147,19 @@ public sealed class WorkerPluginHostTests
     }
 
     [Fact]
-    public void WorkerParserIdentityAndServiceBoundaryAndSettingsAreValidatedWithoutActivation()
+    public async Task WorkerParserIdentityAndServiceBoundaryAndSettingsAreValidatedWithoutActivation()
     {
         using WorkerPluginFixture fixture = new();
-        Assert.ThrowsAny<Exception>(() => BindingHost.CreateBuilder().AddBuiltIns().AddPluginManifest(fixture.manifest,
-            JsonSerializer.SerializeToElement(new { unexpected = true }), fixture.settings));
+        Assert.ThrowsAny<Exception>(() => BindingGenerator.CreateBuilder().AddPluginManifest(fixture.manifest, TestHostPaths.Create(), JsonSerializer.SerializeToElement(new { unexpected = true }), fixture.settings));
         PluginManifest original = JsonSerializer.Deserialize<PluginManifest>(File.ReadAllBytes(fixture.manifest), WorkerProtocol.jsonOptions)!;
         fixture.WriteManifest(original with { workerParserIdentity = "different-parser" });
-        Assert.ThrowsAny<Exception>(() => fixture.Builder());
+        await using (BindingHost mismatched = fixture.Builder().Build())
+        {
+            GenerationResult rejected = await mismatched.GenerateAsync(fixture.Request());
+            Assert.False(rejected.success);
+            Assert.False(rejected.published);
+            Assert.Contains("parser identity", rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
+        }
         fixture.WriteManifest(original with { plugin = original.plugin with
         { services = [new("clang.fixture.facts", ExtensionPort.FrontendFactContributor), new("ordinary", ExtensionPort.InteropTransform)] } });
         Assert.ThrowsAny<Exception>(() => fixture.Builder());

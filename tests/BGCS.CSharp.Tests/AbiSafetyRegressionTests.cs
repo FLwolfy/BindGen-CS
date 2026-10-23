@@ -7,10 +7,10 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 using BGCS.CSharp;
 using BGCS.CSharp.Projection;
 using Microsoft.CodeAnalysis;
@@ -31,9 +31,9 @@ public sealed class AbiSafetyRegressionTests
         InteropType outer = new(new("outer"), "Outer", NativeTypeCategory.Record, 96, 32)
         { declarationName = "Outer", fields = [new(new("prefix"), "prefix", octet.id, 0, 0, null),
             new(new("nested"), "nested", nested.id, 32, 256, null), new(new("suffix"), "suffix", integer.id, 64, 512, null)] };
-        InteropModule module = new("regression", "windows-x64-msvc", 8, [integer, octet, nested, outer], [], []);
+        InteropModule module = new("regression", "windows-x64-msvc", 8, [integer, octet, nested, outer], [], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(Project(module), new("native", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(Project(module), new("native", sink), CancellationToken.None);
         string[] platformReferences = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         MetadataReference[] references = platformReferences.Append(typeof(BGCS.Runtime.NativeModuleSession).Assembly.Location)
             .Distinct(StringComparer.OrdinalIgnoreCase).Select(path => MetadataReference.CreateFromFile(path)).ToArray();
@@ -69,17 +69,17 @@ public sealed class AbiSafetyRegressionTests
         InteropType address = new(new("aligned-address"), "Aligned*", NativeTypeCategory.Pointer, 8, 8) { elementType = record.id };
         InteropType nothing = new(new("void"), "void", NativeTypeCategory.Primitive, 0, 1) { primitiveKind = "Void" };
         InteropFunction function = new(new("consume"), "consume", nothing.id, [new(new("value"), "value", pointer ? address.id : record.id)], "C");
-        InteropModule module = new("regression", "windows-x64-msvc", 8, [integer, record, address, nothing], [function], []);
+        InteropModule module = new("regression", "windows-x64-msvc", 8, [integer, record, address, nothing], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         MemorySink sink = new();
         if (pointer)
         {
-            Assert.NotEmpty(await new CSharpBackend().EmitAsync(Project(module), new("native", sink), CancellationToken.None));
+            Assert.NotEmpty(await new CSharpTestBackend().EmitAsync(Project(module), new("native", sink), CancellationToken.None));
             Assert.Contains("Aligned*", string.Join("\n", sink.sources.Values), StringComparison.Ordinal);
         }
         else
         {
-            var failure = await Assert.ThrowsAnyAsync<NotSupportedException>(async () => await new CSharpBackend().EmitAsync(Project(module), new("native", sink), CancellationToken.None));
-            Assert.Contains("calling-ABI evidence", failure.Message, StringComparison.Ordinal);
+            var failure = await Assert.ThrowsAnyAsync<NotSupportedException>(async () => await new CSharpTestBackend().EmitAsync(Project(module), new("native", sink), CancellationToken.None));
+            Assert.Contains("complete plan", failure.Message, StringComparison.Ordinal);
             Assert.Empty(sink.sources);
         }
     }
@@ -92,9 +92,9 @@ public sealed class AbiSafetyRegressionTests
     {
         InteropType value = new(new("long-double"), "long double", NativeTypeCategory.Primitive, 16, 16) { primitiveKind = "LongDouble" };
         InteropFunction function = new(new("native-value"), "native_value", value.id, [], "C");
-        InteropModule module = new("regression", "linux-x64-gnu", 8, [value], [function], []);
+        InteropModule module = new("regression", "linux-x64-gnu", 8, [value], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         MemorySink sink = new();
-        var failure = await Assert.ThrowsAnyAsync<NotSupportedException>(async () => await new CSharpBackend().EmitAsync(Project(module), new("native", sink) { importMode = mode }, CancellationToken.None));
+        var failure = await Assert.ThrowsAnyAsync<NotSupportedException>(async () => await new CSharpTestBackend().EmitAsync(Project(module), new("native", sink) { importMode = mode }, CancellationToken.None));
         Assert.Contains("long double", failure.Message, StringComparison.Ordinal);
         Assert.Empty(sink.sources);
     }
@@ -102,7 +102,7 @@ public sealed class AbiSafetyRegressionTests
     private static InteropType Integer() => new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
     private static InteropType Aligned(InteropType integer) => new(new("aligned"), "Aligned", NativeTypeCategory.Record, 32, 32)
     { declarationName = "Aligned", fields = [new(new("value"), "value", integer.id, 0, 0, null)] };
-    private static BGCS.Contracts.Managed.ManagedApiModel Project(InteropModule module)
+    private static BGCS.Core.Managed.ManagedApiModel Project(InteropModule module)
         => new DefaultManagedProjection().Project(module, new("Regression", "Api"), CancellationToken.None);
     private sealed class MemorySink : IArtifactSink
     {

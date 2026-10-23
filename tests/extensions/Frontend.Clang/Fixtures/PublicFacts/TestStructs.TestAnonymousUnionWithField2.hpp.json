@@ -1,0 +1,526 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:0b2e893812cccd5b7c9146f286923c2ddd35c36bb87e70aba154412061218553"
+      },
+      "category": "Record",
+      "spelling": "HelloWorld::(unnamed union at TestStructs.TestAnonymousUnionWithField2.hpp:5:5)",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:0a96e17bda4e9ac36036b26729dc59281817549d04c98c523a83b6347a7a6834"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:78d3ef871276b096090f70ca8000249a0566509b9c48eccde6e2a40819a04926"
+      },
+      "category": "Array",
+      "spelling": "[4]",
+      "size": 16,
+      "alignment": 4,
+      "elementType": {
+        "value": "type:0b2e893812cccd5b7c9146f286923c2ddd35c36bb87e70aba154412061218553"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": 4,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "category": "Primitive",
+      "spelling": "int",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Int",
+      "isSigned": true,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:e7c1562b90426d96c13379c1df18288d93b6071305b4e876ced984cacb24d9dc"
+      },
+      "category": "Record",
+      "spelling": "HelloWorld",
+      "size": 20,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:733484a2d7a5952c419e47d6ab07d9f51a6e1e08609c3c5074db869554b59e88"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:0a96e17bda4e9ac36036b26729dc59281817549d04c98c523a83b6347a7a6834"
+      },
+      "kind": "Class",
+      "name": "",
+      "qualifiedName": "HelloWorld::",
+      "type": {
+        "value": "type:0b2e893812cccd5b7c9146f286923c2ddd35c36bb87e70aba154412061218553"
+      },
+      "source": {
+        "file": "TestStructs.TestAnonymousUnionWithField2.hpp",
+        "line": 5,
+        "column": 5
+      },
+      "parent": {
+        "value": "declaration:733484a2d7a5952c419e47d6ab07d9f51a6e1e08609c3c5074db869554b59e88"
+      },
+      "children": [
+        {
+          "value": "declaration:5e1d8b1dac1ecf88eab0e71af5698bb72ff8e9818e6fda5edc97bc6abc8a2d53"
+        },
+        {
+          "value": "declaration:705378e1a81e901ecfad3840883472f1d70b1d2eb068f8a73166f0a897de6e2f"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Union",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": true,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": "NormalClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:56c260b115e1075f1b7c82e333112b893791662ab214af3609ccccf00610762c"
+      },
+      "kind": "Field",
+      "name": "a",
+      "qualifiedName": "HelloWorld::a",
+      "type": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "source": {
+        "file": "TestStructs.TestAnonymousUnionWithField2.hpp",
+        "line": 4,
+        "column": 5
+      },
+      "parent": {
+        "value": "declaration:733484a2d7a5952c419e47d6ab07d9f51a6e1e08609c3c5074db869554b59e88"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": 0,
+      "storageSize": 4,
+      "storageEvidence": {
+        "level": "Declared",
+        "origin": "clang.field-storage:HelloWorld::a"
+      },
+      "bitOffset": 0,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:5e1d8b1dac1ecf88eab0e71af5698bb72ff8e9818e6fda5edc97bc6abc8a2d53"
+      },
+      "kind": "Field",
+      "name": "c",
+      "qualifiedName": "HelloWorld::::c",
+      "type": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "source": {
+        "file": "TestStructs.TestAnonymousUnionWithField2.hpp",
+        "line": 6,
+        "column": 9
+      },
+      "parent": {
+        "value": "declaration:0a96e17bda4e9ac36036b26729dc59281817549d04c98c523a83b6347a7a6834"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": 0,
+      "storageSize": 4,
+      "storageEvidence": {
+        "level": "Declared",
+        "origin": "clang.field-storage:HelloWorld::::c"
+      },
+      "bitOffset": 0,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:705378e1a81e901ecfad3840883472f1d70b1d2eb068f8a73166f0a897de6e2f"
+      },
+      "kind": "Field",
+      "name": "d",
+      "qualifiedName": "HelloWorld::::d",
+      "type": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "source": {
+        "file": "TestStructs.TestAnonymousUnionWithField2.hpp",
+        "line": 7,
+        "column": 9
+      },
+      "parent": {
+        "value": "declaration:0a96e17bda4e9ac36036b26729dc59281817549d04c98c523a83b6347a7a6834"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": 0,
+      "storageSize": 4,
+      "storageEvidence": {
+        "level": "Declared",
+        "origin": "clang.field-storage:HelloWorld::::d"
+      },
+      "bitOffset": 0,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:733484a2d7a5952c419e47d6ab07d9f51a6e1e08609c3c5074db869554b59e88"
+      },
+      "kind": "Class",
+      "name": "HelloWorld",
+      "qualifiedName": "HelloWorld",
+      "type": {
+        "value": "type:e7c1562b90426d96c13379c1df18288d93b6071305b4e876ced984cacb24d9dc"
+      },
+      "source": {
+        "file": "TestStructs.TestAnonymousUnionWithField2.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:0a96e17bda4e9ac36036b26729dc59281817549d04c98c523a83b6347a7a6834"
+        },
+        {
+          "value": "declaration:56c260b115e1075f1b7c82e333112b893791662ab214af3609ccccf00610762c"
+        },
+        {
+          "value": "declaration:92b373144708ca0919de6c0669ccabb996c572cb0e9af6bbd3711369ff3988a1"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Struct",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": true,
+      "isDefaultConstructible": true,
+      "isStandardLayout": true,
+      "isTriviallyCopyable": true,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": "NormalClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:92b373144708ca0919de6c0669ccabb996c572cb0e9af6bbd3711369ff3988a1"
+      },
+      "kind": "Field",
+      "name": "e",
+      "qualifiedName": "HelloWorld::e",
+      "type": {
+        "value": "type:78d3ef871276b096090f70ca8000249a0566509b9c48eccde6e2a40819a04926"
+      },
+      "source": {
+        "file": "TestStructs.TestAnonymousUnionWithField2.hpp",
+        "line": 5,
+        "column": 5
+      },
+      "parent": {
+        "value": "declaration:733484a2d7a5952c419e47d6ab07d9f51a6e1e08609c3c5074db869554b59e88"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": 4,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": 32,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

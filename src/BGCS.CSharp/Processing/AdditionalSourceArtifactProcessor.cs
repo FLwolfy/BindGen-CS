@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,28 +18,19 @@ public sealed class AdditionalSourceArtifactProcessor : IArtifactProcessor, ICac
     private readonly string m_content;
 
     /// <summary>Freezes a portable managed-relative path and complete source text.</summary>
-    /// <param name="id">The unique processor identity.</param>
-    /// <param name="priority">Descending execution priority, followed by ordinal identity.</param>
     /// <param name="path">A new relative C# path inside the managed candidate root.</param>
     /// <param name="content">Complete regular C# source; top-level executable statements are not allowed.</param>
     public AdditionalSourceArtifactProcessor(
-        string id,
-        int priority,
         string path,
         string content
     ) {
-        SourceProcessingSupport.Identity(id); ManagedArtifactSelector.ValidatePath(path, pattern: false);
+        ManagedArtifactSelector.ValidatePath(path, pattern: false);
         ArgumentNullException.ThrowIfNull(content);
         if (!path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || content.Length > 4 * 1024 * 1024)
             throw new ArgumentException("An added source requires a C# filename and at most 4 MiB of declared text.");
         ValidateSyntax(content, path, CancellationToken.None);
-        this.id = id; this.priority = priority; m_path = path; m_content = content;
+        m_path = path; m_content = content;
     }
-
-    /// <inheritdoc/>
-    public string id { get; }
-    /// <inheritdoc/>
-    public int priority { get; }
 
     /// <inheritdoc/>
     public async ValueTask ProcessAsync(
@@ -59,7 +50,7 @@ public sealed class AdditionalSourceArtifactProcessor : IArtifactProcessor, ICac
         CancellationToken cancellationToken
     ) {
         cancellationToken.ThrowIfCancellationRequested();
-        return SourceProcessingSupport.Fingerprint(new { revision = 1, kind = "addSource", id, priority, path = m_path, content = m_content });
+        return SourceProcessingSupport.Fingerprint(new { revision = 2, kind = "addSource", path = m_path, content = m_content });
     }
 
     internal static void ValidateSyntax(

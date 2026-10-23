@@ -41,11 +41,11 @@ public sealed class SchemaCommandTests
     {
         WithDirectory(directory =>
         {
-            Assert.Equal(0, Run(directory, "--kind", "plugin"));
-            using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "plugin.schema.json")));
+            Assert.Equal(0, Run(directory, "--kind", "extension"));
+            using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "extension.schema.json")));
             Assert.Equal("object", schema.RootElement.GetProperty("type").GetString());
             Assert.Equal(1, schema.RootElement.GetProperty("properties").GetProperty("schemaVersion").GetProperty("const").GetInt32());
-            Assert.Equal(3, schema.RootElement.GetProperty("properties").GetProperty("plugin").GetProperty("properties").GetProperty("contractsMajor").GetProperty("const").GetInt32());
+            Assert.Equal(BGCS.Core.Versioning.ContractVersion.C_MAJOR, schema.RootElement.GetProperty("properties").GetProperty("plugin").GetProperty("properties").GetProperty("contractsMajor").GetProperty("const").GetInt32());
         });
     }
 

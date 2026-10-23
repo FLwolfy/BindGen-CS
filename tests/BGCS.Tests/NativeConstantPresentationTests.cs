@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Managed;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -47,7 +47,7 @@ public sealed class NativeConstantPresentationTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "presentation", nativeName = "presentation_fixture" },
+                schemaVersion = 2, library = new() { id = "presentation", nativeName = "presentation_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["values.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
@@ -64,7 +64,7 @@ public sealed class NativeConstantPresentationTests
 
                 cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             var target = Assert.Single(result.targetModels);
@@ -72,7 +72,7 @@ public sealed class NativeConstantPresentationTests
             var nativeEnum = Assert.Single(target.interop.types.Where(type => type.enumValues.Any(value => value.name == "NATIVE_MODE_FIRST")));
             Assert.Equal("7", nativeEnum.enumValues.Single(value => value.name == "NATIVE_MODE_FIRST").evaluatedValue);
             Assert.Equal(4L, nativeEnum.size);
-            Assert.Equal(BGCS.Contracts.Common.EvidenceLevel.UserAsserted,
+            Assert.Equal(BGCS.Core.Common.EvidenceLevel.UserAsserted,
                 target.managed!.constants.Single(item => item.name == "PresentedValue").presentation!.evidence.level);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
             using JsonDocument receipt = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(targetRoot, "metadata", "abi.manifest.json")));
@@ -81,13 +81,13 @@ public sealed class NativeConstantPresentationTests
             Assert.Equal("42", nativeValue.GetProperty("value").GetProperty("value").GetString());
             JsonElement managedValue = metadata.GetProperty("managedConstants").EnumerateArray().Single(item => item.GetProperty("name").GetString() == "PresentedValue");
             Assert.Equal("43L", managedValue.GetProperty("expression").GetString());
-            Assert.Equal((int)BGCS.Contracts.Common.EvidenceLevel.UserAsserted, managedValue.GetProperty("presentationEvidence").GetProperty("level").GetInt32());
+            Assert.Equal((int)BGCS.Core.Common.EvidenceLevel.UserAsserted, managedValue.GetProperty("presentationEvidence").GetProperty("level").GetInt32());
             JsonElement presentedEnum = metadata.GetProperty("managedNativeEnumPresentation").EnumerateArray().Single(item => item.GetProperty("name").GetString() == "Mode");
             JsonElement first = presentedEnum.GetProperty("enumValues").EnumerateArray().Single(item => item.GetProperty("name").GetString() == "First");
             string underlying = presentedEnum.GetProperty("enumUnderlyingType").GetString()!;
             Assert.True(underlying is "int" or "uint");
             Assert.Equal(underlying == "uint" ? "11U" : "11", first.GetProperty("value").GetString());
-            Assert.Equal((int)BGCS.Contracts.Common.EvidenceLevel.UserAsserted, first.GetProperty("presentationEvidence").GetProperty("level").GetInt32());
+            Assert.Equal((int)BGCS.Core.Common.EvidenceLevel.UserAsserted, first.GetProperty("presentationEvidence").GetProperty("level").GetInt32());
             Assert.True(metadata.GetProperty("managedLibrary").GetProperty("emitLibraryNameConstant").GetBoolean());
             Assert.Equal(configuration.library.nativeName, metadata.GetProperty("managedLibrary").GetProperty("nativeName").GetString());
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
@@ -123,6 +123,6 @@ public sealed class NativeConstantPresentationTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

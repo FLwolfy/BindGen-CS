@@ -9,6 +9,44 @@ namespace BGCS.Runtime.Tests;
 public sealed class NonBlockingCallbackTests
 {
     [Fact]
+    public void CaptureWithoutContextRequiresAnExplicitConsumerQueue()
+    {
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(null);
+            Assert.Throws<InvalidOperationException>(() => NativeCallbackDispatcher.CaptureCurrent());
+        }
+        finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }
+
+    [Fact]
+    public void CaptureUsesTheProvidedContextWithoutSelectingAnOperatingSystemPolicy()
+    {
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        QueueContext context = new();
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+            NativeCallbackDispatcher dispatcher = NativeCallbackDispatcher.CaptureCurrent();
+            int calls = 0;
+            Task queued = dispatcher.InvokeAsync(() => { calls++; return ValueTask.CompletedTask; }).AsTask();
+            Assert.False(queued.IsCompleted);
+            Assert.Equal(0, calls);
+            context.Pump();
+            Complete(queued);
+            Assert.Equal(1, calls);
+        }
+        finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }
+
+    private sealed class QueueContext : SynchronizationContext
+    {
+        private readonly ConcurrentQueue<Action> m_queue = new();
+        public override void Post(SendOrPostCallback callback, object? state) => m_queue.Enqueue(() => callback(state));
+        internal void Pump() { while (m_queue.TryDequeue(out Action? action)) action(); }
+    }
+    [Fact]
     public void QueueRunsLaterOnItsCapturedThread()
     {
         Loop loop = new();

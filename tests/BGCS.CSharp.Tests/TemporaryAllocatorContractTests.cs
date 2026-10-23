@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -36,13 +36,13 @@ public sealed class TemporaryAllocatorContractTests
             new(NativeLifetimeKind.Call, null, evidence), evidence) { zeroTerminated = true, retainsPointer = false, allowsNull = false };
         InteropParameter parameter = new(new("text"), "text", pointer.id) { text = contract };
         InteropModule interop = new("temporary-allocator", "windows-x64-msvc", 8, [octet, pointer, integer],
-            [new(new("text-size"), "text_size", integer.id, [parameter], "C")], []);
+            [new(new("text-size"), "text_size", integer.id, [parameter], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop,
             new("Generated.Allocator", "AllocatorApi") { style = shared ? ManagedApiStyle.Static : ManagedApiStyle.Instance }, CancellationToken.None);
         Sink sink = new();
         EmissionRequest request = new("fixture", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         var sources = sink.sources.Select(pair => (Path: pair.Key, Text: pair.Value)).ToArray();
         EmittedInteropContractReader reader = new();
         reader.Verify(plan, sources, request.libraryName);
@@ -77,11 +77,11 @@ public sealed class TemporaryAllocatorContractTests
         string factory = mode == BindingImportMode.FunctionTable ? "load" : "create";
         InteropModule interop = new("collision", "windows-x64-msvc", 8, [octet, pointer, integer],
             [new(new("read"), "read", integer.id, [new(new("text"), "text", pointer.id) { text = text }], "C"),
-             new(new("factory"), factory, integer.id, [], "C")], []);
+             new(new("factory"), factory, integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, new("Generated.Collision", "CollisionApi"), CancellationToken.None);
         Sink sink = new();
         InvalidOperationException rejected = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await new CSharpBackend().EmitAsync(model, new("fixture", sink) { importMode = mode }, CancellationToken.None));
+            await new CSharpTestBackend().EmitAsync(model, new("fixture", sink) { importMode = mode }, CancellationToken.None));
         Assert.Contains("factory", rejected.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(sink.sources);
     }

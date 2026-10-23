@@ -27,7 +27,7 @@ proved all of its ABI, runtime or import combinations.
 Install the released command-line tool:
 
 ```bash
-dotnet tool install --global BindGen-CS --version 3.0.0
+dotnet tool install --global BindGen-CS --version 4.0.0
 bindgen-cs --help
 ```
 
@@ -40,7 +40,7 @@ dotnet run --project src/BGCS.Tool -- version
 
 Replace `bindgen-cs` below with that source command, keeping `--` before tool arguments.
 Only four product packages need to be understood: the complete `BGCS` SDK,
-`BGCS.Contracts` for neutral plugins, `BGCS.Runtime` for consumers and the
+`BGCS.Core` for neutral plugins, `BGCS.Runtime` for consumers and the
 `BindGen-CS` tool. Internal implementation assemblies are delivered by the full SDK
 or tool. RID tool shards and parser runtime packages are distribution details; see
 [packages](packages.md).
@@ -62,7 +62,7 @@ Both C and C++ use `bindgen.json`. The grouped versioned format starts with:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": { "id": "example", "nativeName": "example" },
   "source": { "language": "c", "languageStandard": "c17", "headers": ["native.h"] },
   "api": { "namespace": "Example.Bindings", "name": "NativeApi" },
@@ -82,7 +82,7 @@ Each configuration's relative paths are resolved from its own directory. A CLI
 `--output` override is resolved from the invocation directory. Local `extends` inputs
 retain their own path origins; ordinary lists replace inherited lists. Unknown
 fields and old flat configurations are rejected. Create a new configuration with
-`init`; 3.0 contains no legacy reader or migration wrapper.
+`init`; 4.0 contains no legacy reader or migration wrapper.
 
 ## Output and consumer builds
 
@@ -96,7 +96,7 @@ fields and old flat configurations are rejected. Create a new configuration with
   <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="BGCS.Runtime" Version="3.0.0" />
+  <PackageReference Include="BGCS.Runtime" Version="4.0.0" />
 </ItemGroup>
 ```
 
@@ -166,7 +166,7 @@ using System;
 using System.Threading;
 using BGCS;
 
-await using BindingHost host = BindingHost.CreateDefault();
+await using BindingHost host = BindingGenerator.CreateDefault();
 GenerationResult result = await host.GenerateAsync(
     GenerationRequest.FromFile("bindgen.json"), CancellationToken.None);
 if (!result.success)
@@ -175,7 +175,7 @@ if (!result.success)
 
 `InspectAsync`, `BridgeAsync`, `DiffAsync` and workspace methods use the same Host.
 `Host` means coordinator, not a server or network service. A session freezes configuration and extension registrations before parsing begins.
-Ordinary plugins reference `BGCS.Contracts` and operate on detached facts, not Clang AST.
+Ordinary plugins reference `BGCS.Core` and operate on detached facts, not Clang AST.
 Their manifest locks the executable asset closure; artifact-affecting state and external
 inputs must be fingerprinted for cache reuse.
 

@@ -1,3 +1,5 @@
+using System.Threading;
+using BGCS.Core.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -11,9 +13,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
 using BGCS.Infrastructure.Plugins;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.IO;
@@ -34,7 +36,7 @@ public sealed class PluginManifestTests : IDisposable
     {
         var schema = new SchemaCatalog().CreatePluginSchema();
         Assert.False(schema["additionalProperties"]!.GetValue<bool>());
-        Assert.Equal(3, schema["properties"]!["plugin"]!["properties"]!["contractsMajor"]!["const"]!.GetValue<int>());
+        Assert.Equal(ContractVersion.C_MAJOR, schema["properties"]!["plugin"]!["properties"]!["contractsMajor"]!["const"]!.GetValue<int>());
         Assert.Equal("^[0-9a-f]{64}$", schema["properties"]!["assets"]!["items"]!["properties"]!["digest"]!["properties"]!["value"]!["pattern"]!.GetValue<string>());
     }
 
@@ -57,7 +59,7 @@ public sealed class PluginManifestTests : IDisposable
             await CreateAlias(logical, physical);
             linked = true;
             LockedPluginManifest locked = PrivateDependencyManifest(logical);
-            LockedPluginManifest canonical = locked with { path = PhysicalPathResolver.Resolve(locked.path) };
+            LockedPluginManifest canonical = locked with { path = PhysicalPathResolver.Resolve(locked.path, TestHostPaths.Create()) };
             Assert.NotEqual(locked.path, canonical.path);
             Assert.All(locked.inputs, input => Assert.StartsWith(logical + Path.DirectorySeparatorChar, input.path, StringComparison.Ordinal));
             _ = RunIsolated(canonical);
@@ -65,22 +67,23 @@ public sealed class PluginManifestTests : IDisposable
             string untracked = Path.Combine(m_root, "untracked");
             Directory.CreateDirectory(untracked);
             foreach (string file in Directory.GetFiles(physical)) File.Copy(file, Path.Combine(untracked, Path.GetFileName(file)));
-            FileLoadException outside = Assert.Throws<FileLoadException>(() => new PluginLoader().Activate(canonical with { path = Path.Combine(untracked, "plugin.json") }));
+            FileLoadException outside = Assert.Throws<FileLoadException>(() => new PluginLoader(TestHostPaths.Create()).Activate(canonical with { path = Path.Combine(untracked, "plugin.json") }));
             Assert.Contains("outside its declared private asset closure", outside.Message, StringComparison.Ordinal);
 
             string dependency = Assert.Single(Directory.GetFiles(physical, "BgcsPrivateDependency*.dll"));
             byte[] original = File.ReadAllBytes(dependency), changed = original.ToArray();
             changed[^1] ^= 1;
             File.WriteAllBytes(dependency, changed);
-            try { Assert.Throws<IOException>(() => new PluginLoader().Activate(canonical)); }
+            try { Assert.Throws<IOException>(() => new PluginLoader(TestHostPaths.Create()).Activate(canonical)); }
             finally { File.WriteAllBytes(dependency, original); }
 
             DeleteAlias(logical);
             linked = false;
             await CreateAlias(logical, untracked);
             linked = true;
-            IOException retargeted = Assert.Throws<IOException>(() => new PluginLoader().Activate(canonical));
-            Assert.Contains("physical identity", retargeted.Message, StringComparison.Ordinal);
+            IOException retargeted = Assert.Throws<IOException>(() => new PluginLoader(TestHostPaths.Create()).Activate(canonical));
+            Assert.Contains("redirected", retargeted.Message, StringComparison.Ordinal);
+            Assert.Contains(logical, retargeted.Message, StringComparison.Ordinal);
             Assert.Equal(original, File.ReadAllBytes(Path.Combine(untracked, Path.GetFileName(dependency))));
         }
         finally { if (linked) DeleteAlias(logical); }
@@ -96,15 +99,15 @@ public sealed class PluginManifestTests : IDisposable
         byte[] entry = Compile("EntryPlugin", """
             using System;
             using System.Threading;
-            using BGCS.Contracts.Native;
-            using BGCS.Contracts.Requests;
-            using BGCS.Contracts.Ports;
-            using BGCS.Contracts.Plugins;
+            using BGCS.Core.Native;
+            using BGCS.Core.Requests;
+            using BGCS.Core.Ports;
+            using BGCS.Core.Plugins;
             public sealed class Entry : IBindingPlugin {
                 public PluginDescriptor descriptor => new("dynamic.plugin", "1.0.0", [new("dynamic.transform", ExtensionPort.NativeModuleTransform)]);
                 public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) {
                     if (Dependency.Value() != "private") throw new InvalidOperationException("The host dependency leaked into the plugin.");
-                    registry.RegisterFactory<INativeModuleTransform>("dynamic.transform", () => new Probe());
+                    registry.RegisterFactory<INativeModuleTransform>("dynamic.transform", _ => new Probe());
                 }
                 private sealed class Probe : INativeModuleTransform {
                     public string id => "dynamic.transform";
@@ -121,7 +124,7 @@ public sealed class PluginManifestTests : IDisposable
         };
         string path = Path.Combine(root, "plugin.json");
         File.WriteAllText(path, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
-        return new PluginManifestReader().Read(path);
+        return new PluginManifestReader(TestHostPaths.Create()).Read(path);
     }
 
     private async Task CreateAlias(string path, string target)
@@ -167,7 +170,7 @@ public sealed class PluginManifestTests : IDisposable
         Assert.Throws<InvalidDataException>(() => Read(manifest with { assets = [manifest.assets[0], manifest.assets[0]] }));
         LockedPluginManifest locked = Read(manifest);
         File.WriteAllText(Path.Combine(m_root, "QuantityPlugin.deps.json"), "{}");
-        Assert.Throws<IOException>(() => new PluginManifestReader().Verify(locked));
+        Assert.Throws<IOException>(() => new PluginManifestReader(TestHostPaths.Create()).Verify(locked));
         Assert.Throws<InvalidDataException>(() => Read(manifest));
     }
 
@@ -181,7 +184,7 @@ public sealed class PluginManifestTests : IDisposable
         PluginManifest manifest = QuantityManifest(entry);
         manifest = workerOnly ? manifest with { workerOnly = true } : manifest with { plugin = manifest.plugin with { version = "9.0.0" } };
         LockedPluginManifest locked = Read(manifest);
-        Assert.Throws<InvalidOperationException>(() => new PluginLoader().Activate(locked));
+        Assert.Throws<InvalidOperationException>(() => new PluginLoader(TestHostPaths.Create()).Activate(locked));
     }
 
     [Fact]
@@ -193,13 +196,14 @@ public sealed class PluginManifestTests : IDisposable
         _ = Read(QuantityManifest(entry));
         GenerationRequest request = new(new()
         {
-            schemaVersion = 1, library = new() { id = "fixture", nativeName = "fixture" }, source = new() { headers = ["unused.h"] },
+            schemaVersion = 2, library = new() { id = "fixture", nativeName = "fixture" }, source = new() { headers = ["unused.h"] },
             extensions = new() { plugins = ["plugin.json"] }, cache = new() { enabled = false }
         }, m_root);
-        Assert.Equal(2, request.pluginInputs.Length);
+        request = await request.MaterializeAsync(TestHostPaths.Create(), CancellationToken.None);
+        Assert.Equal(2, request.pluginSnapshots.SelectMany(snapshot => snapshot.files).Count());
         File.AppendAllText(assembly, "changed");
         bool frontendCreated = false;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => { frontendCreated = true; throw new InvalidOperationException(); }).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => { frontendCreated = true; throw new InvalidOperationException(); }).Build();
         GenerationResult result = await host.GenerateAsync(request);
         Assert.False(result.success);
         Assert.False(frontendCreated);
@@ -210,7 +214,7 @@ public sealed class PluginManifestTests : IDisposable
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference RunIsolated(LockedPluginManifest manifest)
     {
-        using IBindingPlugin plugin = new PluginLoader().Activate(manifest);
+        using IBindingPlugin plugin = new PluginLoader(TestHostPaths.Create()).Activate(manifest);
         ProbeRegistry registry = new();
         plugin.Configure(registry, new(plugin.descriptor.id, JsonSerializer.SerializeToElement(ImmutableDictionary<string, string>.Empty), Path.GetDirectoryName(manifest.path)!));
         INativeModuleTransform service = Assert.IsAssignableFrom<INativeModuleTransform>(registry.factory!());
@@ -224,7 +228,7 @@ public sealed class PluginManifestTests : IDisposable
     private sealed class ProbeRegistry : IExtensionRegistryBuilder
     {
         public Func<object>? factory { get; private set; }
-        public void RegisterFactory<TService>(string id, Func<TService> factory) where TService : class => this.factory = () => factory();
+        public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class => this.factory = () => factory(new(null, AppContext.BaseDirectory));
     }
 
     private LockedPluginManifest Read(PluginManifest manifest)
@@ -232,7 +236,7 @@ public sealed class PluginManifestTests : IDisposable
         string path = Path.Combine(m_root, "plugin.json");
         JsonSerializerOptions options = new() { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } };
         File.WriteAllText(path, JsonSerializer.Serialize(manifest, options));
-        return new PluginManifestReader().Read(path);
+        return new PluginManifestReader(TestHostPaths.Create()).Read(path);
     }
 
     private static PluginManifest QuantityManifest(byte[] entry) => new()

@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using Microsoft.CodeAnalysis;
@@ -70,8 +70,8 @@ public sealed class NativeMetadataDisabledGuardTests
         Assert.False(model.emitNativeMetadata);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("metadata_disabled", sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        return (new CSharpEmissionPlanner().Plan(model, request), sink, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        return (new CSharpTestPlanner().Plan(model, request), sink, request);
     }
 
     private static void Verify((CSharpEmissionPlan Plan, NeutralBackendTests.MemorySink Sink, EmissionRequest Request) fixture)

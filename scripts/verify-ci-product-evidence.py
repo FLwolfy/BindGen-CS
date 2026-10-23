@@ -21,6 +21,8 @@ ADVANCED_CHECKS = ("installed-advanced-clang-plugin-sdk-and-runtime-compile",
 COMPLETE_SOURCE_CHECK = 'installed-complete-runtime-source-primitives-without-bgcs-references'
 SDK_CONTENT_CHECKS = ('installed-sdk-standard-contentfiles-build-and-publish',
                       'installed-sdk-clean-published-worker-without-global-package-fallback')
+PRODUCT_MANIFEST = json.loads((Path(__file__).resolve().parents[1] / 'distribution/manifests/product-packages.json').read_text(encoding='utf-8'))
+OPTIONAL_CHECK = 'installed-five-optional-extensions-core-only-registration-and-closure'
 
 
 def validate(receipt: dict, revision: str, rid: str) -> None:
@@ -49,16 +51,22 @@ def validate(receipt: dict, revision: str, rid: str) -> None:
     version = receipt.get("version")
     if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?", version):
         raise RuntimeError("The installed product version is invalid.")
-    libraries = ("BGCS.Contracts", "BGCS", "BGCS.Runtime")
-    rids = ("win-x64", "win-arm64", "linux-x64", "linux-arm64", "osx-x64", "osx-arm64")
-    expected = {f"{name}.{version}.{extension}" for name in libraries for extension in ("nupkg", "snupkg")}
-    expected |= {f"BindGen-CS.{rid}.{version}.nupkg" for rid in rids}
-    expected |= {f"BindGen-CS.{version}.nupkg", f"BGCS.ParserRuntime.osx-x64.{version}.nupkg"}
+    expected = {f"{name}.{version}.nupkg" for name in
+        PRODUCT_MANIFEST['products'] + PRODUCT_MANIFEST['optionalProducts'] + PRODUCT_MANIFEST['technicalPackages']}
+    expected |= {f"{name}.{version}.snupkg" for name in PRODUCT_MANIFEST['symbolProducts']}
+    expected |= {f"BindGen-CS.{rid}.{version}.nupkg" for rid in PRODUCT_MANIFEST['toolRuntimeIdentifiers']}
     packages = package.get("packages", [])
     if (len(packages) != len(expected) or {item.get("file") for item in packages} != expected
             or any(not isinstance(item.get("bytes"), int) or not 0 < item["bytes"] < 250 * 1024 ** 2
                    or not isinstance(item.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) for item in packages)):
         raise RuntimeError("The physical product/symbol set or digest evidence is incomplete.")
+    optional = receipt.get('optionalExtensions', [])
+    if (OPTIONAL_CHECK not in receipt.get('checks', []) or len(optional) != len(PRODUCT_MANIFEST['optionalProducts'])
+            or {entry.get('product') for entry in optional} != set(PRODUCT_MANIFEST['optionalProducts'])
+            or any(entry.get('coreOnlyProductDependency') is not True or not entry.get('pluginType')
+                or any(not re.fullmatch(r'[0-9a-f]{64}', entry.get(key, '')) for key in ('assemblySha256', 'coreSha256'))
+                for entry in optional)):
+        raise RuntimeError('Each optional extension needs its own clean Core-only registration and closure receipt.')
     matrices = receipt.get("featureMatrices", [])
     names = [item.get("name") for item in matrices]
     if (len(set(names)) != len(names) or any(name not in MATRICES for name in names)

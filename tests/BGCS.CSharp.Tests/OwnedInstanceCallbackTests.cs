@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -32,7 +32,7 @@ public sealed class OwnedInstanceCallbackTests
         ManagedApiModel model = Model(userData);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal(2, plan.callScopedCallbacks.Length);
         Assert.Empty(plan.callbackOmissions);
         CSharpObjectPlan owner = Assert.Single(plan.objects);
@@ -47,7 +47,7 @@ public sealed class OwnedInstanceCallbackTests
         }
         Assert.Contains(plan.statusMethods, status => status.instanceIndex == 0 && status.ownedResult is not null
             && plan.methods[status.methodIndex].nativeExport == new StableId("clone"));
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string callbacks = string.Join("\n", sink.sources.Where(source => source.Key.StartsWith("Callbacks/", StringComparison.Ordinal)).Select(source => source.Value));
         Assert.Contains(".__BgcsBelongsTo(this)", callbacks);
         Assert.Contains(".Invoke(__bgcsCallbackReceiverAddress =>", callbacks);
@@ -109,23 +109,23 @@ public sealed class OwnedInstanceCallbackTests
             InteropFunction release = functions[1];
             functions = functions.SetItem(1, release with { parameters = release.parameters.SetItem(0, release.parameters[0] with { type = pointer.id }) });
         }
-        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, functions, []);
+        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel changed = new DefaultManagedProjection().Project(module, new(model.@namespace, model.name), CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(changed, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(changed, new("native", new NeutralBackendTests.MemorySink()));
         Assert.DoesNotContain(plan.callScopedCallbacks, operation => plan.methods[operation.methodIndex].nativeExport == run.id);
         Assert.Contains(plan.callbackOmissions, omission => omission.nativeExport == run.id);
         Assert.Contains(plan.methods, method => method.nativeExport == run.id);
     }
 
     [Theory]
-    [InlineData(ManagedRuntimeKind.NativeAot)]
-    [InlineData(ManagedRuntimeKind.BrowserWasm)]
-    public void StaticReverseCallCapabilityStillRequiresExplicitUserData(ManagedRuntimeKind runtime)
+    [InlineData("fixture.static-runtime")]
+    [InlineData("fixture.nonblocking-runtime")]
+    public void StaticReverseCallCapabilityStillRequiresExplicitUserData(string runtime)
     {
         ManagedApiModel Prepare(bool userData)
         {
             ManagedApiModel model = Model(userData);
-            return runtime != ManagedRuntimeKind.BrowserWasm ? model : model with
+            return runtime != "fixture.nonblocking-runtime" ? model : model with
             {
                 interop = new(model.interop.libraryId, model.interop.targetId, 4,
                     model.interop.types.Select(type => type.category == NativeTypeCategory.Pointer ? type with { size = 4, alignment = 4 } : type).ToImmutableArray(),
@@ -135,17 +135,17 @@ public sealed class OwnedInstanceCallbackTests
         ManagedApiModel initial = Prepare(false);
         EmissionRequest request = new("native", new NeutralBackendTests.MemorySink())
         {
-            managedRuntime = new("static-reverse", runtime,
-                runtime == ManagedRuntimeKind.BrowserWasm ? NativeModuleMechanism.StaticAdapter : NativeModuleMechanism.ExternalFunctionTable,
+            managedRuntime = new("static-reverse", new(runtime),
+                runtime == "fixture.nonblocking-runtime" ? NativeModuleMechanism.StaticAdapter : NativeModuleMechanism.ExternalFunctionTable,
                 [BindingImportMode.FunctionTable], true, false)
-            { functionPointerTransport = runtime == ManagedRuntimeKind.BrowserWasm ? ManagedFunctionPointerTransport.BrowserWasm32TableIndex : ManagedFunctionPointerTransport.Typed },
-            staticExportTable = runtime == ManagedRuntimeKind.BrowserWasm ? new("owned_callbacks", "owned_callbacks_get", "owned_callbacks_revision", "owned_callbacks_count",
+            { functionPointerTransport = runtime == "fixture.nonblocking-runtime" ? ManagedFunctionPointerTransport.NativeInteger : ManagedFunctionPointerTransport.Typed },
+            staticExportTable = runtime == "fixture.nonblocking-runtime" ? new("owned_callbacks", "owned_callbacks_get", "owned_callbacks_revision", "owned_callbacks_count",
                 "owned_callbacks_identity", "owned_callbacks_pointer_size", new string('a', 64), initial.interop.functions.Select(function => function.exportName).ToImmutableArray()) : null
         };
-        CSharpEmissionPlan without = new CSharpEmissionPlanner().Plan(initial, request);
+        CSharpEmissionPlan without = new CSharpTestPlanner().Plan(initial, request);
         Assert.Empty(without.callScopedCallbacks);
         Assert.Equal(2, without.callbackOmissions.Length);
-        CSharpEmissionPlan withState = new CSharpEmissionPlanner().Plan(Prepare(true), request);
+        CSharpEmissionPlan withState = new CSharpTestPlanner().Plan(Prepare(true), request);
         Assert.Equal(2, withState.callScopedCallbacks.Length);
         Assert.All(withState.callScopedCallbacks, operation => Assert.True(Assert.Single(operation.callbacks).staticThunk));
     }
@@ -162,7 +162,7 @@ public sealed class OwnedInstanceCallbackTests
                 receiver = new(new("widget"), new("run-self"), "BorrowedWidget") { kind = ManagedReceiverKind.ModuleBorrowed }
             })
         };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         Assert.DoesNotContain(plan.callScopedCallbacks, operation => plan.methods[operation.methodIndex].nativeExport == run.nativeExport);
         Assert.Contains(plan.callbackOmissions, omission => omission.nativeExport == run.nativeExport && omission.reason.Contains("module-borrowed", StringComparison.Ordinal));
         Assert.Contains(plan.methods, method => method.nativeExport == run.nativeExport);
@@ -203,7 +203,7 @@ public sealed class OwnedInstanceCallbackTests
         }
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize,
             original.types.AddRange(ImmutableArray.Create(state, callable, callbackPointer, integerOutput)),
-            original.functions.AddRange(ImmutableArray.Create(Member("run", false, true), Member("spawn", true, true), Member("clone", true, false))), []);
+            original.functions.AddRange(ImmutableArray.Create(Member("run", false, true), Member("spawn", true, true), Member("clone", true, false))), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.OwnedCallbacks", "WidgetApi"), CancellationToken.None);
     }
 }

@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -6,7 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using BGCS.Contracts.Artifacts;
+using BGCS.Core.Artifacts;
 using BGCS.Infrastructure.IO;
 using BGCS.Infrastructure.Verification;
 
@@ -21,34 +22,39 @@ public sealed class ArtifactPublisher : IDisposable
     private readonly OwnedPathBoundary m_boundary;
     private readonly string m_libraryId;
     private readonly string m_journalPath;
-    private readonly ArtifactDigestVerifier m_verifier = new();
+    private readonly IHostPathService m_paths;
+    private readonly ArtifactDigestVerifier m_verifier;
     private bool m_committed;
     private bool m_disposed;
 
     /// <summary>Locks the destination, recovers interrupted publication and prepares an independent candidate.</summary>
     /// <param name="destination">The explicitly owned output directory.</param>
     /// <param name="libraryId">The stable logical library owner.</param>
+    /// <param name="paths">The explicitly selected host path service.</param>
     /// <param name="protectedInputs">Source, cache and other roots that may not overlap this output.</param>
     /// <param name="cancellationToken">Cancels waiting for publication ownership.</param>
     /// <exception cref="IOException">Ownership, paths, previous artifacts or recovery records are invalid.</exception>
     public ArtifactPublisher(
         string destination,
         string libraryId,
+        IHostPathService paths,
         IEnumerable<string>? protectedInputs = null,
         CancellationToken cancellationToken = default
     ) {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryId);
-        m_boundary = new(destination);
+        m_paths = paths;
+        m_verifier = new(paths);
+        m_boundary = new(destination, paths);
         m_destination = m_boundary.physicalPath;
         m_libraryId = libraryId;
         string parent = Path.GetDirectoryName(m_destination) ?? throw new IOException("A filesystem root cannot be a BGCS output directory.");
         ArtifactDigestVerifier.RejectLinkedAncestors(m_destination);
         foreach (string input in protectedInputs ?? [])
-            if (Overlap(m_destination, PhysicalPathResolver.Resolve(input))) throw new IOException($"Output overlaps protected input '{input}'.");
-        string identity = OperatingSystem.IsWindows() ? m_destination.ToUpperInvariant() : m_destination;
+            if (Overlap(m_destination, PhysicalPathResolver.Resolve(input, paths))) throw new IOException($"Output overlaps protected input '{input}'.");
+        string identity = paths.GetIdentityKey(m_destination);
         m_journalPath = Path.Combine(parent, ".bgcs-publication-" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(identity))) + ".json");
-        m_transaction = new(m_destination, cancellationToken: cancellationToken);
+        m_transaction = new(m_destination, paths, cancellationToken: cancellationToken);
         try
         {
             m_boundary.Verify();
@@ -71,6 +77,7 @@ public sealed class ArtifactPublisher : IDisposable
     /// <summary>Clears a fully verified owned output under the same recovery and publication lock as generation.</summary>
     /// <param name="destination">The complete owned output directory.</param>
     /// <param name="libraryId">The expected stable output owner.</param>
+    /// <param name="paths">The explicitly selected host path service.</param>
     /// <param name="protectedInputs">Inputs that the output must not overlap.</param>
     /// <param name="cancellationToken">Cancels before the verified replacement begins.</param>
     /// <returns>False if the output is absent; true after its artifacts are removed and a valid empty ownership manifest remains.</returns>
@@ -78,10 +85,11 @@ public sealed class ArtifactPublisher : IDisposable
     public static bool ClearOwned(
         string destination,
         string libraryId,
+        IHostPathService paths,
         IEnumerable<string>? protectedInputs = null,
         CancellationToken cancellationToken = default
     ) {
-        using ArtifactPublisher publisher = new(destination, libraryId, protectedInputs, cancellationToken);
+        using ArtifactPublisher publisher = new(destination, libraryId, paths, protectedInputs, cancellationToken);
         if (!Directory.Exists(publisher.m_destination)) return false;
         if (!File.Exists(Path.Combine(publisher.m_destination, C_OWNERSHIPFILE)))
             throw new IOException("Clearing output requires an existing BGCS ownership manifest.");
@@ -108,7 +116,7 @@ public sealed class ArtifactPublisher : IDisposable
         ValidatePrevious();
         if (File.Exists(Path.Combine(m_destination, C_OWNERSHIPFILE)))
         {
-            PublicationOwnership previous = PublicationJournalStorage.Read<PublicationOwnership>(Path.Combine(m_destination, C_OWNERSHIPFILE));
+            PublicationOwnership previous = PublicationJournalStorage.Read<PublicationOwnership>(Path.Combine(m_destination, C_OWNERSHIPFILE), m_paths);
             if (previous.artifacts.OrderBy(artifact => artifact.relativePath, StringComparer.Ordinal)
                 .SequenceEqual(snapshot.OrderBy(artifact => artifact.relativePath, StringComparer.Ordinal)))
             {
@@ -122,13 +130,13 @@ public sealed class ArtifactPublisher : IDisposable
                     File.SetLastWriteTimeUtc(Path.Combine(candidateRoot, artifact.relativePath), File.GetLastWriteTimeUtc(Path.Combine(m_destination, artifact.relativePath)));
         }
         PublicationOwnership owner = new(1, m_libraryId, snapshot);
-        PublicationJournalStorage.Write(Path.Combine(candidateRoot, C_OWNERSHIPFILE), owner);
+        PublicationJournalStorage.Write(Path.Combine(candidateRoot, C_OWNERSHIPFILE), owner, m_paths);
         m_verifier.Verify(candidateRoot, snapshot, [C_OWNERSHIPFILE]);
         cancellationToken.ThrowIfCancellationRequested();
         m_boundary.Verify();
         string? backup = Directory.Exists(m_destination) ? Path.Combine(Path.GetDirectoryName(m_destination)!, ".bgcs-backup-" + Guid.NewGuid().ToString("N")) : null;
         PublicationJournal journal = new(m_destination, candidateRoot, backup, m_libraryId, "prepared", snapshot);
-        PublicationJournalStorage.Write(m_journalPath, journal);
+        PublicationJournalStorage.Write(m_journalPath, journal, m_paths);
         bool installed = false;
         try
         {
@@ -136,7 +144,7 @@ public sealed class ArtifactPublisher : IDisposable
             installed = true;
             m_verifier.Verify(m_destination, snapshot, [C_OWNERSHIPFILE]);
             m_boundary.Verify();
-            PublicationJournalStorage.Write(m_journalPath, journal with { state = "committed" });
+            PublicationJournalStorage.Write(m_journalPath, journal with { state = "committed" }, m_paths);
             m_committed = true;
         }
         catch (Exception failure)
@@ -182,7 +190,7 @@ public sealed class ArtifactPublisher : IDisposable
         string path = Path.Combine(m_destination, C_OWNERSHIPFILE);
         ArtifactDigestVerifier.RejectLinkedAncestors(path);
         if (!File.Exists(path)) throw new IOException("A nonempty output directory has no BGCS ownership manifest.");
-        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(path);
+        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(path, m_paths);
         if (owner.schemaVersion != 1 || owner.libraryId != m_libraryId || owner.artifacts.IsDefault)
             throw new IOException("The output belongs to a different library or an unsupported manifest revision.");
         m_verifier.Verify(m_destination, owner.artifacts, [C_OWNERSHIPFILE]);
@@ -196,13 +204,13 @@ public sealed class ArtifactPublisher : IDisposable
         ArtifactDigestVerifier.RejectLinkedAncestors(temporaryJournal);
         if (File.Exists(temporaryJournal))
         {
-            PublicationJournal temporary = PublicationJournalStorage.Read<PublicationJournal>(temporaryJournal);
+            PublicationJournal temporary = PublicationJournalStorage.Read<PublicationJournal>(temporaryJournal, m_paths);
             ValidateJournal(temporary);
             if (!File.Exists(m_journalPath)) File.Move(temporaryJournal, m_journalPath);
             else File.Delete(temporaryJournal);
         }
         if (!File.Exists(m_journalPath)) return;
-        PublicationJournal journal = PublicationJournalStorage.Read<PublicationJournal>(m_journalPath);
+        PublicationJournal journal = PublicationJournalStorage.Read<PublicationJournal>(m_journalPath, m_paths);
         ValidateJournal(journal);
         if (journal.state == "committed")
         {
@@ -221,14 +229,14 @@ public sealed class ArtifactPublisher : IDisposable
                 {
                     if (Directory.Exists(journal.candidate)) throw new IOException("Publication recovery found an ambiguous candidate and destination.");
                     VerifyRecordedOwner(m_destination, journal.artifacts);
-                    DirectoryPublication.Move(m_destination, journal.candidate);
+                    DirectoryPublication.Move(m_destination, journal.candidate, m_paths);
                 }
-                DirectoryPublication.Move(journal.backup, m_destination);
+                DirectoryPublication.Move(journal.backup, m_destination, m_paths);
             }
             else if (journal.backup is null && !Directory.Exists(journal.candidate) && Directory.Exists(m_destination))
             {
                 VerifyRecordedOwner(m_destination, journal.artifacts);
-                DirectoryPublication.Move(m_destination, journal.candidate);
+                DirectoryPublication.Move(m_destination, journal.candidate, m_paths);
             }
             DeleteTemporary(journal.candidate);
         }
@@ -249,7 +257,7 @@ public sealed class ArtifactPublisher : IDisposable
     ) {
         string path = Path.Combine(root, C_OWNERSHIPFILE);
         ArtifactDigestVerifier.RejectLinkedAncestors(path);
-        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(path);
+        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(path, m_paths);
         if (owner.schemaVersion != 1 || owner.libraryId != m_libraryId || owner.artifacts.IsDefault || !owner.artifacts.SequenceEqual(expected))
             throw new IOException("A recovery output does not match the journaled publication ownership manifest.");
     }
@@ -259,7 +267,7 @@ public sealed class ArtifactPublisher : IDisposable
         if (!Directory.EnumerateFileSystemEntries(root).Any()) return;
         string path = Path.Combine(root, C_OWNERSHIPFILE);
         ArtifactDigestVerifier.RejectLinkedAncestors(path);
-        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(path);
+        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(path, m_paths);
         if (owner.schemaVersion != 1 || owner.libraryId != m_libraryId || owner.artifacts.IsDefault)
             throw new IOException("A recovery backup belongs to a different output owner.");
         m_verifier.Verify(root, owner.artifacts, [C_OWNERSHIPFILE]);
@@ -284,13 +292,12 @@ public sealed class ArtifactPublisher : IDisposable
         Directory.Delete(path, recursive: true);
     }
 
-    private static bool Equal(
+    private bool Equal(
         string left,
         string right
-    ) => string.Equals(Path.TrimEndingDirectorySeparator(left), Path.TrimEndingDirectorySeparator(right), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-    private static bool Overlap(
+    ) => m_paths.Equals(left, right);
+    private bool Overlap(
         string left,
         string right
-    ) => Equal(left, right) || Path.GetRelativePath(left, right).Split(Path.DirectorySeparatorChar)[0] != ".." && !Path.IsPathRooted(Path.GetRelativePath(left, right))
-        || Path.GetRelativePath(right, left).Split(Path.DirectorySeparatorChar)[0] != ".." && !Path.IsPathRooted(Path.GetRelativePath(right, left));
+    ) => m_paths.IsWithin(left, right) || m_paths.IsWithin(right, left);
 }

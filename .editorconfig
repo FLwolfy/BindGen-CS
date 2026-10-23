@@ -63,3 +63,8 @@ generated_code = true
 
 [**/extern/**]
 generated_code = true
+
+# Historical parser literals are byte-hashed inputs; preserve their captured whitespace.
+[tests/extensions/Frontend.Clang/Fixtures/PublicFacts/*.hpp]
+trim_trailing_whitespace = false
+insert_final_newline = false

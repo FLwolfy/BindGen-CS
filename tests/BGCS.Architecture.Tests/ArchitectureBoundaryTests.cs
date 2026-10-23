@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using BGCS.Contracts.Native;
+using BGCS.Core.Native;
 using BGCS.Runtime;
 using Xunit;
 
@@ -30,7 +30,7 @@ public class ArchitectureBoundaryTests
         ];
         Type[] intermediateTypes = typeof(NativeModule).Assembly.GetExportedTypes();
         Assert.Contains(intermediateTypes, type => type == typeof(NativeModule));
-        Assert.All(intermediateTypes, type => Assert.StartsWith("BGCS.Contracts", type.Namespace ?? string.Empty));
+        Assert.All(intermediateTypes, type => Assert.StartsWith("BGCS.Core", type.Namespace ?? string.Empty));
 
         foreach (Type type in intermediateTypes)
         {

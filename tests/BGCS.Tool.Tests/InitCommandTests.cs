@@ -43,7 +43,7 @@ public sealed class InitCommandTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument config = directory.ReadJson("bindgen.json");
         JsonElement root = config.RootElement;
-        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(2, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("include/native.h", root.GetProperty("source").GetProperty("headers")[0].GetString());
         Assert.Equal("include", root.GetProperty("source").GetProperty("includeDirectories")[0].GetString());
         Assert.DoesNotContain(directory.Path, File.ReadAllText(directory.Resolve("bindgen.json")), StringComparison.Ordinal);

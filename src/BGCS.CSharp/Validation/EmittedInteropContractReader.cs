@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Threading;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Requests;
+using System.Threading.Tasks;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Emission;
 using Microsoft.CodeAnalysis;
@@ -30,24 +33,40 @@ public sealed class EmittedInteropContractReader
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(sources);
         if (plan.libraryImportUsesPlatformDefault && (plan.importMode != BindingImportMode.LibraryImport
-            || plan.managedRuntime?.libraryImportConvention != BGCS.Contracts.Targets.ManagedImportConventionStrategy.BrowserCdeclDefault
-            || plan.managedRuntime.kind != BGCS.Contracts.Targets.ManagedRuntimeKind.BrowserWasm
-            || plan.managedRuntime.moduleMechanism != BGCS.Contracts.Targets.NativeModuleMechanism.StaticAdapter || plan.api.interop.pointerSize != 4
-            || plan.methods.Any(method => method.callingConvention != "Cdecl")))
-            throw new InvalidOperationException("The emitted import plan has no established browser Cdecl default.");
+            || plan.managedRuntime?.libraryImportConvention != BGCS.Core.Targets.ManagedImportConventionStrategy.RuntimeDefault
+            || string.IsNullOrWhiteSpace(plan.managedRuntime.defaultCallingConvention)
+            || plan.methods.Any(method => method.callingConvention != plan.managedRuntime.defaultCallingConvention)))
+            throw new InvalidOperationException("The emitted import plan has no established runtime-default calling convention.");
         Dictionary<string, TypeSyntax> expectedTypes = new(StringComparer.Ordinal);
         string context = string.Join(".", plan.api.@namespace.Split('.').Select(part => part.TrimStart('@'))) + "." + plan.contextName.TrimStart('@');
         List<CompilationUnitSyntax> roots = [];
         List<string> sourceTexts = [];
-        foreach ((string path, string text) in sources)
+        if (sources is (string Path, string Text)[] eager && eager.Length > 1 && HasLargeSourceSet(eager))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            SyntaxTree tree = CSharpSyntaxTree.ParseText(text, new(LanguageVersion.CSharp14), path, cancellationToken: cancellationToken);
-            Diagnostic[] errors = tree.GetDiagnostics(cancellationToken).Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
-            if (errors.Length != 0) throw new InvalidOperationException("A processed C# artifact is syntactically invalid: " + string.Join("; ", errors.Select(error => error.ToString())));
-            roots.Add((CompilationUnitSyntax)tree.GetRoot(cancellationToken));
-            sourceTexts.Add(text);
+            (string Path, string Text)[] snapshot = eager.ToArray();
+            CompilationUnitSyntax?[] parsed = new CompilationUnitSyntax?[snapshot.Length];
+            ExceptionDispatchInfo?[] failures = new ExceptionDispatchInfo?[snapshot.Length];
+            // Each parser owns one immutable source. Capture failures per input so
+            // concurrency cannot reorder diagnostics or wrap cancellation exceptions.
+            Parallel.For(0, snapshot.Length, new ParallelOptions { MaxDegreeOfParallelism = 2 }, index =>
+            {
+                try { parsed[index] = ParseSource(snapshot[index].Path, snapshot[index].Text, cancellationToken); }
+                catch (Exception failure) { failures[index] = ExceptionDispatchInfo.Capture(failure); }
+            });
+            for (int index = 0; index < snapshot.Length; index++)
+            {
+                failures[index]?.Throw();
+                roots.Add(parsed[index] ?? throw new InvalidOperationException("A processed C# source returned no syntax root."));
+                sourceTexts.Add(snapshot[index].Text);
+            }
         }
+        else
+            foreach ((string path, string text) in sources)
+            {
+                roots.Add(ParseSource(path, text, cancellationToken));
+                sourceTexts.Add(text);
+            }
         if (plan.api.emitNativeMetadata) roots = NativeMetadataSyntaxDecorator.VerifyAndRemove(plan, roots);
         // Build indexes from the actual processed syntax on every verification.
         // Bodies can contain local-function and lambda attributes. Only omit
@@ -94,10 +113,65 @@ public sealed class EmittedInteropContractReader
             ClassDeclarationSyntax[] owners = classDeclarations[ownerName].ToArray();
             if (owners.Length == 0 || owners.Any(owner => !owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PublicKeyword))
                 || !owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword))
-                || owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.StaticKeyword)) != (plan.api.style == BGCS.Contracts.Managed.ManagedApiStyle.Static)
-                || plan.api.style == BGCS.Contracts.Managed.ManagedApiStyle.Instance && !owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.SealedKeyword))))
+                || owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.StaticKeyword)) != (plan.api.style == BGCS.Core.Managed.ManagedApiStyle.Static)
+                || plan.api.style == BGCS.Core.Managed.ManagedApiStyle.Instance && !owner.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.SealedKeyword))))
                 throw new InvalidOperationException("The nested generated type owner changed its planned identity, visibility or API lifetime style.");
         }
+        // Capability reports describe the planned public surface. Artifact processors may add
+        // source, but removing or changing that surface must fail before any report is published.
+        EmissionRequest publicRequest = new(libraryName, new InspectionSink())
+        {
+            importMode = plan.importMode,
+            runtimeNamespace = plan.runtimeNamespace,
+            managedRuntime = plan.managedRuntime,
+            staticExportTable = plan.staticExportTable
+        };
+        Dictionary<string, ILookup<string, MethodDeclarationSyntax>> publicMethods = new(StringComparer.Ordinal);
+        Dictionary<(string Owner, string Name), ILookup<string, MethodDeclarationSyntax>> overloadedPublicMethods = [];
+        foreach (string projection in new[] { FriendlyApiEmitter.EmitForSignatureInspection(plan, publicRequest), OwnedObjectEmitter.Emit(plan, publicRequest) })
+        {
+            ClassDeclarationSyntax expected = (ClassDeclarationSyntax)SyntaxFactory.ParseMemberDeclaration(projection)!;
+            VerifyPublicMethods(expected, context);
+        }
+        void VerifyPublicMethods(
+            ClassDeclarationSyntax expected,
+            string owner
+        ) {
+            ClassDeclarationSyntax[] owners = classDeclarations[owner].ToArray();
+            if (owners.Length == 0) throw new InvalidOperationException("A planned public API owner is missing: " + owner);
+            // Friendly and owned projections share the same immutable context
+            // declarations. Index those exact processed members once per owner;
+            // every expected signature still receives its complete comparison.
+            if (!publicMethods.TryGetValue(owner, out ILookup<string, MethodDeclarationSyntax>? actual))
+            {
+                actual = owners.SelectMany(type => type.Members).OfType<MethodDeclarationSyntax>()
+                    .ToLookup(method => method.Identifier.ValueText, StringComparer.Ordinal);
+                publicMethods.Add(owner, actual);
+            }
+            foreach (MethodDeclarationSyntax method in expected.Members.OfType<MethodDeclarationSyntax>()
+                .Where(method => method.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PublicKeyword))))
+            {
+                string name = method.Identifier.ValueText;
+                MethodDeclarationSyntax[] matches = actual[name].ToArray();
+                if (matches.Length > 1)
+                {
+                    // A unique name needs no overload key. Multiple declarations keep
+                    // the original exact key, matching-count and full-signature checks.
+                    if (!overloadedPublicMethods.TryGetValue((owner, name), out ILookup<string, MethodDeclarationSyntax>? overloads))
+                    {
+                        overloads = matches.ToLookup(candidate => SharedMemberKey(candidate), StringComparer.Ordinal);
+                        overloadedPublicMethods.Add((owner, name), overloads);
+                    }
+                    matches = overloads[SharedMemberKey(method)].ToArray();
+                }
+                if (matches.Length != 1 || !SyntaxFactory.AreEquivalent(Signature(matches[0]), Signature(method)))
+                    throw new InvalidOperationException("A processed artifact removed or changed a planned public API signature: " + owner + "." + method.Identifier.ValueText);
+            }
+            foreach (ClassDeclarationSyntax nested in expected.Members.OfType<ClassDeclarationSyntax>())
+                VerifyPublicMethods(nested, owner + "." + nested.Identifier.ValueText);
+        }
+        static MethodDeclarationSyntax Signature(MethodDeclarationSyntax method)
+            => method.WithBody(null).WithExpressionBody(null).WithSemicolonToken(default);
         LibraryNameContractVerifier.Verify(plan, libraryName, roots, contexts);
         ImportLibraryNameContractVerifier.Verify(plan, libraryName, roots);
         foreach (CSharpAbiDelegatePlan declaration in plan.abiDelegates)
@@ -495,15 +569,48 @@ public sealed class EmittedInteropContractReader
         }
     }
 
+    private static bool HasLargeSourceSet((string Path, string Text)[] sources)
+    {
+        long characters = 0;
+        foreach (var source in sources)
+        {
+            if (source.Text is null) return false;
+            characters += source.Text.Length;
+        }
+        return characters >= 1024 * 1024;
+    }
+
+    private static CompilationUnitSyntax ParseSource(
+        string path,
+        string text,
+        CancellationToken cancellationToken
+    ) {
+        cancellationToken.ThrowIfCancellationRequested();
+        SyntaxTree tree = CSharpSyntaxTree.ParseText(text, new(LanguageVersion.CSharp14), path, cancellationToken: cancellationToken);
+        Diagnostic[] errors = tree.GetDiagnostics(cancellationToken).Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
+        if (errors.Length != 0) throw new InvalidOperationException("A processed C# artifact is syntactically invalid: " + string.Join("; ", errors.Select(error => error.ToString())));
+        return (CompilationUnitSyntax)tree.GetRoot(cancellationToken);
+    }
+
     private static string SharedMemberKey(MemberDeclarationSyntax member) => member switch
     {
-        MethodDeclarationSyntax method => "method:" + method.Identifier.ValueText + "`" + (method.TypeParameterList?.Parameters.Count ?? 0) + "(" + string.Join(",", method.ParameterList.Parameters.Select(parameter => string.Join(" ", parameter.Modifiers.Select(modifier => modifier.ValueText)) + ":" + parameter.Type!.WithoutTrivia().NormalizeWhitespace().ToFullString())) + ")",
+        MethodDeclarationSyntax method => "method:" + method.Identifier.ValueText + "`" + (method.TypeParameterList?.Parameters.Count ?? 0) + "(" + string.Join(",", method.ParameterList.Parameters.Select(parameter => string.Join(" ", parameter.Modifiers.Select(modifier => modifier.ValueText)) + ":" + TypeTokenKey(parameter.Type!))) + ")",
         PropertyDeclarationSyntax property => "property:" + property.Identifier.ValueText,
         FieldDeclarationSyntax field => "field:" + string.Join(",", field.Declaration.Variables.Select(variable => variable.Identifier.ValueText)),
         BaseTypeDeclarationSyntax type => "type:" + type.Identifier.ValueText,
         DelegateDeclarationSyntax type => "delegate:" + type.Identifier.ValueText,
         _ => "extension:" + member.Kind() + ":" + member.WithoutTrivia().NormalizeWhitespace().ToFullString()
     };
+
+    private static string TypeTokenKey(TypeSyntax type)
+    {
+        // Keys only select candidates; complete signature equivalence is checked separately.
+        // Length-prefixed token text preserves boundaries without copying or normalizing syntax.
+        StringBuilder key = new();
+        foreach (SyntaxToken token in type.DescendantTokens())
+            key.Append(token.RawKind).Append(':').Append(token.Text.Length).Append(':').Append(token.Text).Append(';');
+        return key.ToString();
+    }
 
     private static bool Equivalent(
         TypeSyntax actual,

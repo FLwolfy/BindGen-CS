@@ -1,0 +1,42 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.JavaScript;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace WasmAcceptance;
+
+internal static unsafe partial class Program
+{
+    private static readonly List<string> m_checks = [];
+    private static string m_report = "{}";
+
+    private static int Main()
+    {
+        try
+        {
+            if (sizeof(nint) != 4) throw new InvalidOperationException("The consumer did not run inside wasm32.");
+            RunFunctionTable();
+            RunDllImport();
+            RunLibraryImport();
+            m_report = JsonSerializer.Serialize(new Result(true, sizeof(nint), m_checks.ToArray(), null), ResultContext.Default.Result);
+            return 0;
+        }
+        catch (Exception failure)
+        {
+            m_report = JsonSerializer.Serialize(new Result(false, sizeof(nint), m_checks.ToArray(), failure.ToString()), ResultContext.Default.Result);
+            return 1;
+        }
+    }
+
+    [JSExport]
+    public static string GetReport() => m_report;
+
+__RUNNERS__
+}
+
+internal sealed record Result(bool success, int pointerSize, string[] checks, string? error);
+[JsonSerializable(typeof(Result))]
+internal partial class ResultContext : JsonSerializerContext;

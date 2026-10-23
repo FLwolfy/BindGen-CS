@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Interop;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -20,12 +20,14 @@ public sealed class BridgeContractVerifier
     /// <param name="libraryId">The logical library identity.</param>
     /// <returns>The exact reparsed C ABI enriched with declared lowering semantics.</returns>
     public InteropModule VerifyAndMerge(
-        CppBridgeModule plan,
+        NativeBridgePlan plan,
         NativeModule reparsed,
         string libraryId
     ) {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(reparsed);
+        if (plan.source.language == SourceLanguage.C)
+            return new CPointerBridgeVerifier().VerifyAndMerge(plan, reparsed, libraryId);
         new CppBridgeOperationVerifier().Verify(plan);
         if (reparsed.language != SourceLanguage.C || plan.source.targetId != reparsed.targetId || plan.source.triple != reparsed.triple
             || plan.source.pointerSize != reparsed.pointerSize || plan.source.byteOrder != reparsed.byteOrder)
@@ -54,8 +56,11 @@ public sealed class BridgeContractVerifier
         Dictionary<StableId, SourceLocation> sourceOrigins = [];
         foreach (BridgeExport export in plan.exports)
         {
+            CppVirtualProxyPlan? generatedProxy = export.operation.virtualProxyId is { } proxyId
+                ? plan.virtualProxies.Single(proxy => proxy.id == proxyId) : null;
             SourceLocation? callableSource = export.operation.declaration is StableId sourceCallable ? plan.source.GetDeclaration(sourceCallable).source
-                : export.operation.ownerType is StableId ownerSource ? originalLocations.Locate(ownerSource) : null;
+                : export.operation.ownerType is StableId ownerSource ? originalLocations.Locate(ownerSource)
+                : generatedProxy is not null ? originalLocations.Locate(generatedProxy.nativeInterface) : null;
             string? defaultSignature = export.operation.kind == BridgeOperationKind.DefaultConstruct
                 ? new BGCS.Analysis.Types.NativeTypeFormatter().DefaultConstructionSignature(plan.source, export.operation.ownerType!.Value) : null;
             ControlledSourceFragment[] explicitSources = export.parameters.Where(parameter => parameter.conversionExpression is not null).Select(parameter => parameter.conversionExpression!)
@@ -122,7 +127,7 @@ public sealed class BridgeContractVerifier
                     sourceDeclaration = original?.id,
                     source = original?.source ?? callableSource,
                     sourceName = groupedBinding is null || argumentGroup is { expression: null, standardSequence: null }
-                        ? original?.name : original!.name + "_" + groupedBinding.name
+                        ? original?.name : original is null ? expected.name : original.name + "_" + groupedBinding.name
                 });
             }
             StableId? resultParameter = null;
@@ -141,10 +146,9 @@ public sealed class BridgeContractVerifier
                     releaseThreadDomain = export.resultOwnership?.releaseThreadDomain
                 }
                     : export.resultBorrowsInstance || export.resultConversion is BridgeConversionKind.PointerCast or BridgeConversionKind.ReferenceAddress ? new(NativeOwnershipKind.Borrowed,
-                        new(export.operation.kind is BridgeOperationKind.BaseCast or BridgeOperationKind.CheckedDerivedCast ? NativeLifetimeKind.Owner : NativeLifetimeKind.Unknown,
-                            export.operation.kind is BridgeOperationKind.BaseCast or BridgeOperationKind.CheckedDerivedCast ? export.operation.instanceParameter : null, exportEvidence), exportEvidence) : null;
-                CppVirtualProxyPlan? proxy = export.operation.declaration is StableId proxyFactory ? plan.virtualProxies.SingleOrDefault(candidate =>
-                    plan.source.GetDeclaration(proxyFactory).qualifiedName == candidate.factory) : null;
+                        new(export.operation.kind is BridgeOperationKind.BaseCast or BridgeOperationKind.CheckedDerivedCast or BridgeOperationKind.VirtualProxyCast ? NativeLifetimeKind.Owner : NativeLifetimeKind.Unknown,
+                            export.operation.kind is BridgeOperationKind.BaseCast or BridgeOperationKind.CheckedDerivedCast or BridgeOperationKind.VirtualProxyCast ? export.operation.instanceParameter : null, exportEvidence), exportEvidence) : null;
+                CppVirtualProxyPlan? proxy = export.operation.kind == BridgeOperationKind.VirtualProxyConstruct ? generatedProxy : null;
                 if (proxy?.releaseThreadDomain == "any" && ownership is not null)
                     ownership = ownership with { releaseThreadDomain = "any", evidence = proxy.cleanupEvidence };
                 Track(parameter.type, callableSource);
@@ -171,15 +175,21 @@ public sealed class BridgeContractVerifier
                 inputAdapterOf = export.inputAdapterOf,
                 sourceDeclaration = export.operation.declaration,
                 source = callableSource,
-                sourceQualifiedName = export.operation.declaration is StableId callable ? plan.source.GetDeclaration(callable).qualifiedName : defaultSignature?[..^2],
+                sourceQualifiedName = export.operation.finiteVariadic?.wrapper ?? (generatedProxy is not null ? generatedProxy.factory
+                    : export.operation.declaration is StableId callable ? plan.source.GetDeclaration(callable).qualifiedName : defaultSignature?[..^2]),
                 sourceSignature = export.operation.declaration is StableId signatureCallable
                     ? new BGCS.Analysis.Types.NativeTypeFormatter().CallableSignature(plan.source, plan.source.GetDeclaration(signatureCallable)) : defaultSignature,
-                sourceName = export.operation.declaration is StableId namedCallable ? plan.source.GetDeclaration(namedCallable).name
+                sourceName = export.operation.finiteVariadic is { } variant ? variant.wrapper.Split("::", StringSplitOptions.None)[^1]
+                    : generatedProxy is not null ? generatedProxy.factory.Split("::", StringSplitOptions.None)[^1]
+                    : export.operation.declaration is StableId namedCallable ? plan.source.GetDeclaration(namedCallable).name
                     : export.operation.standardValue is { } standard ? standard.action.ToString()
                     : export.operation.castTarget is StableId castTarget ? plan.source.GetDeclaration(StandardLibraryFactReader.Resolve(plan.source, castTarget).declaration!.Value).name : null,
-                sourceRole = export.operation.declaration is StableId roleCallable ? plan.source.GetDeclaration(roleCallable).role
+                sourceRole = export.operation.kind == BridgeOperationKind.VirtualProxyDestroy ? "Destroy"
+                    : export.operation.kind == BridgeOperationKind.VirtualProxyCast ? "BaseCast"
+                    : export.operation.declaration is StableId roleCallable ? plan.source.GetDeclaration(roleCallable).role
                     : export.operation.kind.ToString(),
                 sourceOwnerType = export.operation.ownerType,
+                sourceGeneratedOwnerType = generatedProxy?.generatedType,
                 error = new("0", exportEvidence) { valueParameter = resultParameter, errorParameter = errorId, errorOwnership = errorOwnership }
             });
         }
@@ -205,6 +215,17 @@ public sealed class BridgeContractVerifier
         {
             if (sourceOrigins.TryGetValue(type.id, out SourceLocation typeSource)) type = type with { source = typeSource };
             if (type.declarationName is null || !handles.TryGetValue(type.declarationName, out BridgeType? handle)) return type;
+            if (handle.generatedType is StableId generated)
+            {
+                CppVirtualProxyPlan proxy = plan.virtualProxies.Single(candidate => candidate.generatedType == generated);
+                return type with
+                {
+                    sourceGeneratedType = generated,
+                    sourceNativeType = null,
+                    source = originalLocations.Locate(proxy.nativeInterface),
+                    sourceQualifiedName = proxy.proxyType
+                };
+            }
             NativeType source = plan.source.GetType(handle.nativeType!.Value);
             NativeDeclaration original = plan.source.GetDeclaration(source.declaration!.Value);
             if (handle.kind == BridgeTypeKind.Enumeration)

@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using BGCS.Runtime;
@@ -27,7 +27,7 @@ public sealed class StaticAdapterEmissionTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(sink) with
         { includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime", singleFile = singleFile };
-        await new CSharpBackend().EmitAsync(NeutralBackendTests.Model(), request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(NeutralBackendTests.Model(), request, CancellationToken.None);
         string text = string.Join("\n", sink.sources.Values);
         Assert.Contains("FromStatic()", text);
         Assert.Contains("StaticNativeAdapter.GetRevision()", text);
@@ -52,8 +52,8 @@ public sealed class StaticAdapterEmissionTests
     {
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(NeutralBackendTests.Model(), request);
-        await new CSharpBackend().EmitAsync(NeutralBackendTests.Model(), request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(NeutralBackendTests.Model(), request);
+        await new CSharpTestBackend().EmitAsync(NeutralBackendTests.Model(), request, CancellationToken.None);
         var changed = sink.sources.Select(source => (source.Key, change switch
         {
             "symbol" => source.Value.Replace("bgcs_example_get_export", "wrong_export", StringComparison.Ordinal),
@@ -80,13 +80,13 @@ public sealed class StaticAdapterEmissionTests
             "revision" => request.staticExportTable! with { revision = 2 },
             _ => throw new ArgumentException(nameof(fault))
         } };
-        Assert.ThrowsAny<Exception>(() => new CSharpEmissionPlanner().Plan(NeutralBackendTests.Model(), request));
+        Assert.ThrowsAny<Exception>(() => new CSharpTestPlanner().Plan(NeutralBackendTests.Model(), request));
         Assert.Empty(sink.sources);
     }
 
     private static EmissionRequest Request(NeutralBackendTests.MemorySink sink) => new("__Internal", sink)
     {
-        managedRuntime = new("static-fixture", ManagedRuntimeKind.NativeAot, NativeModuleMechanism.StaticAdapter,
+        managedRuntime = new("static-fixture", new ManagedRuntimeId("fixture.static-runtime"), NativeModuleMechanism.StaticAdapter,
             [BindingImportMode.FunctionTable], true, false),
         staticExportTable = new("bgcs_example", "bgcs_example_get_export", "bgcs_example_get_revision", "bgcs_example_get_count",
             "bgcs_example_get_abi_identity", "bgcs_example_get_pointer_size", new string('a', 64),

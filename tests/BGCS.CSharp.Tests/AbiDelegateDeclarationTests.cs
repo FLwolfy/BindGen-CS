@@ -2,11 +2,11 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -22,14 +22,14 @@ public sealed class AbiDelegateDeclarationTests
         ManagedApiModel model = Model(withMethod: false);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpAbiDelegatePlan declaration = Assert.Single(plan.abiDelegates);
         Assert.Equal("ManagedNativeCallbackHandler", declaration.name);
         Assert.Equal("int", declaration.returnType);
         Assert.Equal("int", Assert.Single(declaration.parameterTypes));
         Assert.Empty(plan.methods);
         Assert.Empty(plan.callScopedCallbacks);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string text = sink.sources["Types/ManagedNativeCallbackHandler.g.cs"];
         Assert.Contains("public unsafe delegate int ManagedNativeCallbackHandler(int argument0)", text);
         Assert.Contains("UnmanagedFunctionPointer", text);
@@ -39,7 +39,7 @@ public sealed class AbiDelegateDeclarationTests
     public void CoreClrCallScopeReusesTheOriginalExactNamedAbiDelegate()
     {
         ManagedApiModel model = Model(withMethod: true);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         CSharpCallbackInputPlan callback = Assert.Single(Assert.Single(plan.callScopedCallbacks).callbacks);
         Assert.Equal("global::Generated.Delegates.ManagedNativeCallbackHandler", callback.abiDelegateType);
         Assert.Equal(callback.abiDelegateType, plan.callScopedCallbacks[0].signature.parameterTypes[0]);
@@ -53,11 +53,11 @@ public sealed class AbiDelegateDeclarationTests
             { emitCallbackDelegates = false }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Empty(plan.abiDelegates);
         Assert.Contains("delegate* unmanaged[Cdecl]<int, int>", plan.methods[0].parameterTypes[0]);
         Assert.Null(Assert.Single(Assert.Single(plan.callScopedCallbacks).callbacks).abiDelegateType);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         Assert.DoesNotContain(sink.sources.Keys, path => path.StartsWith("Types/", StringComparison.Ordinal));
         Assert.Contains(sink.sources.Keys, path => path.StartsWith("Callbacks/", StringComparison.Ordinal));
     }
@@ -72,8 +72,8 @@ public sealed class AbiDelegateDeclarationTests
         ManagedApiModel model = Model(withMethod: false);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string path = "Types/ManagedNativeCallbackHandler.g.cs", original = sink.sources[path];
         string changed = mutation switch
         {
@@ -102,7 +102,7 @@ public sealed class AbiDelegateDeclarationTests
                 callback = new(callable.id, new(NativeLifetimeKind.Call, null, evidence), evidence)
                 { retained = false, threading = NativeCallbackThreading.CallerThread, failureReturn = new(NativeScalarConstantKind.Integer, "-1", 4, true, evidence) }
             }], "C");
-        InteropModule module = new("delegates", "windows-x64-msvc", 8, [integer, callable, pointer, alias], withMethod ? [function] : [], []);
+        InteropModule module = new("delegates", "windows-x64-msvc", 8, [integer, callable, pointer, alias], withMethod ? [function] : [], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.Delegates", "NativeApi")
         { naming = new() { callbacks = new() { prefix = "Managed", suffix = "Handler" } } }, CancellationToken.None);
     }

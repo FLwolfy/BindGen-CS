@@ -162,6 +162,7 @@ def main():
     parser.add_argument("--dotnet", default=os.environ.get("DOTNET_HOST_PATH") or shutil.which("dotnet"))
     parser.add_argument("--browser", help="Path to Chrome, Chromium, or Edge; otherwise discover locally.")
     parser.add_argument("--aot", action="store_true", help="Compile managed code ahead of time instead of interpreting it.")
+    parser.add_argument("--targeted", action="store_true", help="Run the exact optional browser aggregate and callback regression.")
     parser.add_argument("--tool-path", type=Path, help="Use an already deployed/installed BGCS tool instead of building repository projects.")
     parser.add_argument("--runtime-path", type=Path, help="Use the matching BGCS.Runtime product assembly with --tool-path.")
     parser.add_argument("--local-checkpoint", action="store_true", help="Mark the selected tool/runtime as private repository binaries rather than installed products.")
@@ -183,7 +184,7 @@ def main():
     work.mkdir(parents=True)
     report_path = work / "report.json"
     print(f"Wasm acceptance evidence: {work}", flush=True)
-    report = {"success": False, "target": "emscripten-wasm32-emscripten", "managedRuntime": "browserWasm",
+    report = {"success": False, "target": "emscripten-wasm32-emscripten", "managedRuntime": "dotnet.mono-wasm",
               "host": platform.platform(), "browser": browser, "modes": list(MODES), "aot": args.aot,
               "installedProducts": bool(args.tool_path) and not args.local_checkpoint, "privateRepositoryCheckpoint": args.local_checkpoint,
               "injectedNativeError": args.inject_native_error,
@@ -192,11 +193,16 @@ def main():
     try:
         # Scope SDK selection to the fixture. Repository packaging still uses its own global.json.
         (work / "global.json").write_text(json.dumps({"sdk": {
-            "version": "10.0.100", "rollForward": "latestFeature"}}), encoding="utf-8")
+            "version": "10.0.402", "rollForward": "latestPatch", "allowPrerelease": False}}), encoding="utf-8")
         report["dotnetSdkVersion"] = run([dotnet, "--version"], work, work / "dotnet-version.log", environment).strip()
-        if not report["dotnetSdkVersion"].startswith("10."):
+        if report["dotnetSdkVersion"] != "10.0.402":
             raise RuntimeError("The browser gate requires an actual .NET 10 SDK.")
         report["workloadSet"] = run([dotnet, "workload", "list"], work, work / "workload-list.log", environment)
+        if args.targeted:
+            import sys
+            import wasm_typed_bridge
+            wasm_typed_bridge.execute(ROOT, work, args, dotnet, environment, browser, sys.modules[__name__], report)
+            return 0
         fixture = ROOT / "tests/wasm"
         shutil.copytree(ROOT / "tests/fixtures/NativeApi", work / "Native")
         if args.inject_native_error:
@@ -210,8 +216,8 @@ def main():
                 raise RuntimeError("The explicitly selected installed tool/runtime product is missing.")
         else:
             if not args.no_build:
-                for name in ("BGCS.Tool", "BGCS.Frontend.Clang.Worker", "BGCS.Runtime"):
-                    build_project(dotnet, ROOT / f"src/{name}/{name}.csproj", work, work / (name + "-build.log"), environment, args.configuration)
+                for name, directory in (("BGCS.Tool", "src/BGCS.Tool"), ("BGCS.Frontend.Clang.Worker", "extensions/frontends/BGCS.Frontend.Clang.Worker"), ("BGCS.Runtime", "src/BGCS.Runtime"), ("BGCS.Extension.BrowserWasm", "extensions/BGCS.Extension.BrowserWasm"), ("BGCS.Extension.NativeAot", "extensions/BGCS.Extension.NativeAot")):
+                    build_project(dotnet, ROOT / directory / (name + ".csproj"), work, work / (name + "-build.log"), environment, args.configuration)
             tool = cpp_acceptance_fixture.stage_repository_generator(ROOT, work, args.configuration)
             runtime = ROOT / f"src/BGCS.Runtime/bin/{args.configuration}/net10.0/BGCS.Runtime.dll"
         report.update(cpp_acceptance_fixture.execution_identity(ROOT, tool, runtime))
@@ -226,7 +232,7 @@ def main():
             raise RuntimeError("The selected .NET 10 SDK does not have a complete wasm-tools workload.")
         report["sdk"] = sdk
         report["nativeCompilerVersion"] = run([str(compiler), "--version"], work, work / "native-compiler-version.log", environment).strip()
-        bridge = cpp_acceptance_fixture.prepare(ROOT, work, dotnet, tool, compiler, environment, run, sysroot)
+        bridge = cpp_acceptance_fixture.prepare(ROOT, work, dotnet, tool, compiler, environment, run, sysroot, args.configuration)
         project = work / "Consumer.csproj"
         project.write_text(project.read_text(encoding="utf-8").replace("__BRIDGE_SOURCE__", bridge["source"].relative_to(work).as_posix()), encoding="utf-8")
         for mode in MODES:

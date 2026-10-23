@@ -2,14 +2,14 @@
 
 [Wiki](README.cn.md) | [English](configuration-guide.md) | [自动生成的字段参考](generated/config-reference.cn.md)
 
-BGCS 3.0 的 C 与 C++ 使用同一份严格分组的 `bindgen.json`。生成器、Runtime 和默认消费者
+BGCS 4.0 的 C 与 C++ 使用同一份严格分组的 `bindgen.json`。生成器、Runtime 和默认消费者
 采用 .NET 10 / C# 14。配置冻结成会话输入，不在其中保存服务实例或解析器句柄。
 当前安装版本的完整 schema 是字段名称和默认值的权威来源：
 
 ```bash
 bindgen-cs schema bindgen.schema.json
 bindgen-cs schema workspace.schema.json --kind workspace
-bindgen-cs schema plugin.schema.json --kind plugin
+bindgen-cs schema extension.schema.json --kind extension
 ```
 
 [英文参考](generated/config-reference.md)和[中文参考](generated/config-reference.cn.md)
@@ -17,7 +17,7 @@ bindgen-cs schema plugin.schema.json --kind plugin
 临时目录导出 schema，并通过 `--check` 拒绝过期文档；不会根据旧测试目录名称推断新行为。
 
 schema 拒绝未知内置字段。插件选项只有在 bootstrap 注册所属 namespace 的 schema 后才被
-接受，不提供全局忽略未知字段的开关。仅接受 `schemaVersion: 1`，不读取旧平铺配置或
+接受，不提供全局忽略未知字段的开关。仅接受 `schemaVersion: 2`，不读取旧平铺配置或
 旧 facade API。文档与 fragment 的 schema 校验之外，还会对组合后的完整输入、库身份、
 目标、语义和执行限制进行验证。
 
@@ -37,21 +37,36 @@ schema 拒绝未知内置字段。插件选项只有在 bootstrap 注册所属 n
 
 ```json
 {
-  "schemaVersion": 1,
-  "library": { "id": "sample", "nativeName": "sample" },
+  "schemaVersion": 2,
+  "library": {
+    "id": "sample",
+    "nativeName": "sample"
+  },
   "source": {
     "language": "c",
     "languageStandard": "c17",
-    "headers": ["include/sample.h"],
-    "includeDirectories": ["include"]
+    "headers": [
+      "include/sample.h"
+    ],
+    "includeDirectories": [
+      "include"
+    ]
   },
-  "targets": [{ "id": "host" }],
+  "targets": [
+    {
+      "id": "host"
+    }
+  ],
   "api": {
     "namespace": "Example.Sample",
     "name": "SampleApi",
-    "names": { "sample_add": "Add" }
+    "names": {
+      "sample_add": "Add"
+    }
   },
-  "output": { "root": "Generated" }
+  "output": {
+    "root": "Generated"
+  }
 }
 ```
 
@@ -93,10 +108,11 @@ worker 根据**宿主**选择。目标头文件、基础类型宽度、布局、
 根据**目标**选择。Clang 解析不要求最终编译器也是 Clang；使用 MSVC 或 GNU 时仍需匹配
 头文件和目标 ABI。跨目标请求不能混入宿主标准库头。
 
-`api.runtime` 可以选择 `coreClr`、`nativeAot`、`browserWasm`；省略时由 resolver 选择
-符合目标的默认值。托管运行时和导入方式都参与能力判断。浏览器 Wasm 发射
-由消费者显式链接的静态导出表 adapter。GNU 与 musl 保持不同 ABI 身份。
-Android SDK/API level、Apple 设备和模拟器 SDK 要求不能由一个短 target/RID 证明。
+`api.runtime` 使用开放 ID，例如 `dotnet.coreclr`、`dotnet.native-aot`、
+`dotnet.mono-wasm`；选择额外实现前需要显式注册。默认组合只为受支持的桌面目标
+提供 CoreCLR 默认值；自定义和额外目标需要适用的显式 profile。托管运行时和导入方式
+共同参与能力判断。浏览器 Wasm 输出由消费者链接的静态导出表 adapter。
+GNU 与 musl 保持不同 ABI 身份。SDK 版本、设备和模拟器要求不能由短 target/RID 证明。
 
 通过 `doctor`、`inspect` 与[能力证据](capabilities.cn.md)检查实际解析的事实。
 缺失前提会形成诊断，不会隐式下载 SDK 或编译器。
@@ -104,7 +120,7 @@ Android SDK/API level、Apple 设备和模拟器 SDK 要求不能由一个短 ta
 ## API 命名、导入与文件布局
 
 `api.namespace`、`name`、`names` 控制托管身份，不参与原生解析。映射使用准确原生名称
-或无歧义的限定 callable 名。C++ 导出名覆盖属于 `cpp.callableLowerings`；只修改托管名称
+或无歧义的限定 callable 名。C++ 导出名覆盖属于 `bridge.callableLowerings`；只修改托管名称
 不能同时改掉原生 ABI。
 
 所有导入方式使用同一份已检查的 interop 契约。FunctionTable 完整加载必需符号，支持
@@ -129,13 +145,22 @@ marshalling 能力；LibraryImport 验证也检查其生成源码。选择导入
 ```json
 {
   "api": {
-    "enums": [{
-      "name": "WideFlags",
-      "underlyingType": "uInt64",
-      "isFlags": true,
-      "values": [{ "name": "HighBit", "value": "1152921504606846976" }]
-    }],
-    "enumMappings": { "bgcs_wide_flags": "WideFlags" }
+    "enums": [
+      {
+        "name": "WideFlags",
+        "underlyingType": "uInt64",
+        "isFlags": true,
+        "values": [
+          {
+            "name": "HighBit",
+            "value": "1152921504606846976"
+          }
+        ]
+      }
+    ],
+    "enumMappings": {
+      "bgcs_wide_flags": "WideFlags"
+    }
   }
 }
 ```
@@ -150,12 +175,22 @@ marshalling 能力；LibraryImport 验证也检查其生成源码。选择导入
 ```json
 {
   "api": {
-    "externalTypes": [{
-      "nativeType": "NativeVector_int",
-      "managedType": "Consumer.NativeVector<int>",
-      "fields": { "size": "Size", "capacity": "Capacity", "data": "Data" }
-    }],
-    "projectionInputs": { "sources": ["ConsumerTypes.cs"] }
+    "externalTypes": [
+      {
+        "nativeType": "NativeVector_int",
+        "managedType": "Consumer.NativeVector<int>",
+        "fields": {
+          "size": "Size",
+          "capacity": "Capacity",
+          "data": "Data"
+        }
+      }
+    ],
+    "projectionInputs": {
+      "sources": [
+        "ConsumerTypes.cs"
+      ]
+    }
   }
 }
 ```
@@ -180,19 +215,21 @@ marshalling 能力；LibraryImport 验证也检查其生成源码。选择导入
 ```json
 {
   "semantics": {
-    "stringParameters": [{
-      "function": "sample_set_name",
-      "parameter": "name",
-      "encoding": "utf8",
-      "codeUnitWidth": 1,
-      "byteOrder": "native",
-      "lengthUnit": "codeUnits",
-      "direction": "input",
-      "lifetime": "call",
-      "zeroTerminated": true,
-      "retainsPointer": false,
-      "allowsNull": false
-    }]
+    "stringParameters": [
+      {
+        "function": "sample_set_name",
+        "parameter": "name",
+        "encoding": "utf8",
+        "codeUnitWidth": 1,
+        "byteOrder": "native",
+        "lengthUnit": "codeUnits",
+        "direction": "input",
+        "lifetime": "call",
+        "zeroTerminated": true,
+        "retainsPointer": false,
+        "allowsNull": false
+      }
+    ]
   }
 }
 ```
@@ -274,7 +311,7 @@ callable recipe 选择限定名称，可修改导出名、排除声明，或者�
 callback slot 和 native proxy 生命周期协议。
 
 具体 DTO 见[C++ cookbook](cpp-extension-cookbook.cn.md)、[lowering 架构](lowering.cn.md)、
-[Contracts-only 插件](../examples/LoweringPlugin/README.md)和
+[Core-only 插件](../examples/LoweringPlugin/README.md)和
 [自动生成的 C++ 分组参考](generated/cpp-config-reference.cn.md)。不支持的可变参数签名
 需要遵守 C argument promotion 的明确固定 native wrapper。
 非平凡 C++ record 不能只为使生成编译通过，就映射成同大小的托管结构。
@@ -295,7 +332,7 @@ namespace 改写采用结构化方式，单文件布局可以将闭包合入 `Bi
 
 ## 本地组合、profile 与路径归属
 
-`extends` 是本地配置路径列表，按声明顺序组合。路径相对于声明它的文档，URL 不被加载。命名 profile 在本地组合后应用；循环、未知字段和冲突必须明确修复。`GenerationRequest.FromFileAsync(path, cancellationToken: token)` 支持取消本地读取。
+`extends` 是本地配置路径列表，按声明顺序组合。路径相对于声明它的文档，URL 不被加载。命名 profile 在本地组合后应用；循环、未知字段和冲突必须明确修复。`GenerationRequest.FromFile(path)` 将读取延后到宿主选定后；将令牌传给 `GenerateAsync`，即可同时取消配置读取与生成。
 
 ## 插件 bootstrap 与缓存策略
 
@@ -304,7 +341,7 @@ namespace 改写采用结构化方式，单文件布局可以将闭包合入 `Bi
 descriptor/schema。会话 factory 注册中立服务后冻结 registry；重复、独占匹配和输出路径
 冲突会确定性失败。
 
-普通插件使用 `BGCS.Contracts`。Clang 专有事实 contributor 是明确 worker-only 的高级
+普通插件使用 `BGCS.Core`。Clang 专有事实 contributor 是明确 worker-only 的高级
 扩展。Host 与 worker 资源归属分离。普通进程或加载边界不构成安全沙箱。
 
 影响产物的状态需要 `ICacheFingerprintProvider`，包括外部输入内容和存在性。
@@ -332,7 +369,9 @@ target、toolchain、Runtime 模式与 processor 都参与生成身份。
   "execution": {
     "diagnostics": {
       "warningsAsErrors": false,
-      "errorCodes": ["BGCS-SAFETY-OWNERSHIP"]
+      "errorCodes": [
+        "BGCS-SAFETY-OWNERSHIP"
+      ]
     }
   }
 }
@@ -354,8 +393,17 @@ Ctrl+C 与 SDK 取消传给 Host 及 worker/native 进程树。取消或验证�
   "schemaVersion": 1,
   "parallelism": 2,
   "projects": [
-    { "id": "core", "configuration": "core/bindgen.json" },
-    { "id": "addon", "configuration": "addon/bindgen.json", "dependencies": ["core"] }
+    {
+      "id": "core",
+      "configuration": "core/bindgen.json"
+    },
+    {
+      "id": "addon",
+      "configuration": "addon/bindgen.json",
+      "dependencies": [
+        "core"
+      ]
+    }
   ]
 }
 ```
@@ -385,11 +433,34 @@ frontend 提示。支持 `trace`、`debug`、`information`（或 `info`）、`wa
 ```json
 {
   "semantics": {
-    "ownedResults": [{ "function": "widget_create", "releaseFunction": "widget_destroy", "releaseDomain": "widget", "releaseThreadDomain": "any" }],
-    "borrowedParameters": [{ "function": "widget_get", "parameter": "self", "lifetime": "call", "retainsPointer": false }]
+    "ownedResults": [
+      {
+        "function": "widget_create",
+        "releaseFunction": "widget_destroy",
+        "releaseDomain": "widget",
+        "releaseThreadDomain": "any"
+      }
+    ],
+    "borrowedParameters": [
+      {
+        "function": "widget_get",
+        "parameter": "self",
+        "lifetime": "call",
+        "retainsPointer": false
+      }
+    ]
   },
   "api": {
-    "memberFunctions": [{ "function": "widget_get", "nativeType": "Widget", "receiver": "self", "objectName": "WidgetObject", "name": "Get", "releaseDomain": "widget" }]
+    "memberFunctions": [
+      {
+        "function": "widget_get",
+        "nativeType": "Widget",
+        "receiver": "self",
+        "objectName": "WidgetObject",
+        "name": "Get",
+        "releaseDomain": "widget"
+      }
+    ]
   }
 }
 ```
@@ -410,23 +481,32 @@ receiver 必须保留选定 record 指针或 opaque 别名的精确身份。保�
 {
   "api": {
     "emitLibraryNameConstant": true,
-    "constants": [{
-      "constant": "NATIVE_VALUE",
-      "name": "PresentedValue",
-      "managedType": "long",
-      "documentation": "明确声明的托管呈现值。",
-      "expression": "6L * 7L + 1L"
-    }],
-    "nativeEnums": [{
-      "nativeType": "NativeMode",
-      "name": "Mode",
-      "documentation": "保留原生枚举载体，定制公开名称。",
-      "values": [{
-        "member": "NATIVE_MODE_FIRST",
-        "name": "First",
-        "value": { "kind": "integer", "value": "11" }
-      }]
-    }]
+    "constants": [
+      {
+        "constant": "NATIVE_VALUE",
+        "name": "PresentedValue",
+        "managedType": "long",
+        "documentation": "明确声明的托管呈现值。",
+        "expression": "6L * 7L + 1L"
+      }
+    ],
+    "nativeEnums": [
+      {
+        "nativeType": "NativeMode",
+        "name": "Mode",
+        "documentation": "保留原生枚举载体，定制公开名称。",
+        "values": [
+          {
+            "member": "NATIVE_MODE_FIRST",
+            "name": "First",
+            "value": {
+              "kind": "integer",
+              "value": "11"
+            }
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -487,18 +567,24 @@ DllImport、LibraryImport 的属性保留完全限定的字段引用。生成时
 {
   "api": {
     "nestGeneratedTypesInApi": true,
-    "functions": [{
-      "function": "add",
-      "inputVariations": [{
-        "parameters": [{
-          "parameter": "left",
-          "projection": {
-            "managedType": "long",
-            "managedToNativeExpression": "checked((int){value})"
+    "functions": [
+      {
+        "function": "add",
+        "inputVariations": [
+          {
+            "parameters": [
+              {
+                "parameter": "left",
+                "projection": {
+                  "managedType": "long",
+                  "managedToNativeExpression": "checked((int){value})"
+                }
+              }
+            ]
           }
-        }]
-      }]
-    }]
+        ]
+      }
+    ]
   }
 }
 ```
@@ -522,16 +608,34 @@ variation 的可选 `name` 可选择另一方法名。每个转换目标是该�
   "source": {
     "selection": {
       "categories": [
-        { "category": "callables", "includeDeclarations": ["read", "write"] },
-        { "category": "records", "includeDeclarations": ["Packet"] }
+        {
+          "category": "callables",
+          "includeDeclarations": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "category": "records",
+          "includeDeclarations": [
+            "Packet"
+          ]
+        }
       ]
     }
   },
   "api": {
     "naming": {
       "replacements": [
-        { "match": "Http", "replacement": "HTTP", "ignoreCase": true },
-        { "match": "Internal", "replacement": "" }
+        {
+          "match": "Http",
+          "replacement": "HTTP",
+          "ignoreCase": true
+        },
+        {
+          "match": "Internal",
+          "replacement": ""
+        }
       ]
     }
   }
@@ -561,10 +665,20 @@ tag 和 typedef 不会让 `records` 中的 `Item` 产生歧义。未显式选择
 {
   "semantics": {
     "ownedResults": [
-      { "function": "get_text", "releaseFunction": "free_text", "releaseDomain": "library-text", "releaseThreadDomain": "any" }
+      {
+        "function": "get_text",
+        "releaseFunction": "free_text",
+        "releaseDomain": "library-text",
+        "releaseThreadDomain": "any"
+      }
     ],
     "stringResults": [
-      { "function": "get_text", "encoding": "utf8", "zeroTerminated": true, "allowsNull": false }
+      {
+        "function": "get_text",
+        "encoding": "utf8",
+        "zeroTerminated": true,
+        "allowsNull": false
+      }
     ]
   }
 }
@@ -599,12 +713,20 @@ UTF-16、UTF-32 分别使用 `utf16`、`utf32`；`byteOrder` 支持默认 `nativ
 ```json
 {
   "api": {
-    "enums": [{
-      "name": "Status",
-      "underlyingType": "uInt32",
-      "documentation": "应用状态值。",
-      "values": [{ "name": "Ready", "value": "1", "documentation": "操作已经就绪。" }]
-    }]
+    "enums": [
+      {
+        "name": "Status",
+        "underlyingType": "uInt32",
+        "documentation": "应用状态值。",
+        "values": [
+          {
+            "name": "Ready",
+            "value": "1",
+            "documentation": "操作已经就绪。"
+          }
+        ]
+      }
+    ]
   }
 }
 ```

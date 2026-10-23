@@ -4,10 +4,10 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using BGCS.Analysis.Types;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -16,7 +16,7 @@ public sealed class VirtualProxyProtocolBuilder
 {
     /// <summary>Rejects invented proxy, callback, construction or native adjustment relationships before source emission.</summary>
     /// <param name="bridge">The typed operation graph and its independently parsed native adapter facts.</param>
-    public void VerifyBridge(CppBridgeModule bridge)
+    public void VerifyBridge(NativeBridgePlan bridge)
     {
         ArgumentNullException.ThrowIfNull(bridge);
         if (bridge.virtualProxies.IsDefault || bridge.virtualProxies.Select(proxy => proxy.id).Distinct(StringComparer.Ordinal).Count() != bridge.virtualProxies.Length)
@@ -33,25 +33,43 @@ public sealed class VirtualProxyProtocolBuilder
             if (sourceInterface.category != NativeTypeCategory.Record || sourceInterface.declaration is not StableId ownerId
                 || bridge.source.GetDeclaration(ownerId) is not { isAbstract: true, isCompleteDefinition: true })
                 Fail("The original virtual interface lost its complete abstract native identity.");
-            NativeDeclaration concrete = bridge.source.declarations.Single(declaration => declaration.kind == "Class" && declaration.qualifiedName == proxy.proxyType);
-            if (concrete.type is null || !concrete.baseClasses.Any(parent => parent.visibility == "Public" && Source(parent.type).id == sourceInterface.id))
-                Fail("The concrete virtual proxy lost its public native interface base.");
+            BridgeType concrete = bridge.types.Single(type => type.kind == BridgeTypeKind.Handle && type.generatedType == proxy.generatedType);
+            if (concrete.nativeType is not null || bridge.source.types.Any(type => type.id == proxy.generatedType))
+                Fail("A generated proxy identity must remain separate from original native facts.");
             BridgeExport factory = Factory(bridge, proxy);
-            NativeDeclaration sourceFactory = bridge.source.GetDeclaration(factory.operation.declaration!.Value);
-            if (factory.operation.kind != BridgeOperationKind.FreeCall || factory.nativeResultType != concrete.type
-                || factory.resultConversion != BridgeConversionKind.OwnedValue || factory.resultRelease is not StableId releaseId
-                || factory.parameters.Length != proxy.slots.Length + 1 || factory.resultType is null)
-                Fail("The virtual proxy factory lost its exact owned construction or callback inputs.");
+            if (factory.nativeResultType is not null || factory.resultConversion != BridgeConversionKind.OwnedValue
+                || factory.resultRelease is not StableId releaseId || factory.parameters.Length != proxy.slots.Length + 1
+                || factory.resultType is not StableId resultType || !GeneratedPointer(resultType))
+                Fail("The virtual proxy factory lost its exact generated owned construction or callback inputs.");
             BridgeExport destroy = bridge.exports.Single(export => export.id == factory.resultRelease);
-            if (destroy.operation.kind != BridgeOperationKind.Destroy || destroy.operation.ownerType != concrete.type || destroy.parameters.Length != 1)
-                Fail("The virtual proxy factory no longer uses its own exact concrete destruction domain.");
-            BridgeExport cast = Cast(bridge, proxy, concrete.type!.Value);
-            if (cast.parameters.Length != 1 || cast.resultType is null) Fail("The native interface cast lost its exact input and output channels.");
-            if (!IsVoidPointer(types[factory.parameters[0].type]) || factory.parameters.Any(parameter => !IsVoidPointer(types[parameter.type])))
+            if (destroy.operation.kind != BridgeOperationKind.VirtualProxyDestroy || destroy.operation.virtualProxyId != proxy.id
+                || destroy.parameters.Length != 1 || destroy.resultType is not null || destroy.nativeResultType is not null)
+                Fail("The virtual proxy factory no longer uses its own exact generated destruction domain.");
+            BridgeExport cast = Cast(bridge, proxy);
+            if (cast.parameters.Length != 1 || cast.resultType is not StableId castResult || cast.nativeResultType != proxy.nativeInterface
+                || cast.resultConversion != BridgeConversionKind.PointerCast || cast.resultRelease is not null
+                || !NativeInterfacePointer(castResult)) Fail("The native interface cast lost its exact input and output channels.");
+            foreach (BridgeExport operation in new[] { factory, destroy, cast })
+                if (operation.operation.declaration is not null || operation.operation.ownerType is not null
+                    || operation.operation.finiteVariadic is not null || operation.operation.standardValue is not null
+                    || !operation.operation.argumentGroups.IsEmpty || operation.operation.invocationExpression is not null
+                    || operation.resultExpression is not null || operation.resultOwnership is not null || operation.inputAdapterOf is not null
+                    || operation.resultBorrowsInstance || !operation.resultInOutputParameter || !operation.usesErrorChannel
+                    || operation.parameters.Any(parameter => parameter.nativeType is not null || parameter.conversion != BridgeConversionKind.PointerCast
+                        || parameter.conversionExpression is not null || parameter.managedProjection is not null))
+                    Fail("A generated proxy operation carries unrelated original declarations or conversion protocols.");
+            if (factory.operation.instanceParameter is not null || factory.operation.castTarget is not null
+                || destroy.operation.castTarget is not null || cast.operation.castTarget != proxy.nativeInterface
+                || destroy.operation.instanceParameter != destroy.parameters[0].id || cast.operation.instanceParameter != cast.parameters[0].id
+                || !GeneratedPointer(destroy.parameters[0].type) || !GeneratedPointer(cast.parameters[0].type)
+                || destroy.parameters[0].generatedType != proxy.generatedType || cast.parameters[0].generatedType != proxy.generatedType)
+                Fail("Generated proxy cleanup and adjustment must use their exact nonconst generated owner.");
+            if (factory.parameters[0].name != "userData" || factory.parameters.Any(parameter => !IsVoidPointer(types[parameter.type]) || parameter.generatedType is not null))
                 Fail("The virtual proxy factory changed its explicit borrowed address channels.");
-            NativeDeclaration[] factoryInputs = sourceFactory.children.Select(bridge.source.GetDeclaration).Where(declaration => declaration.kind == "Parameter").ToArray();
-            if (factoryInputs.Length != factory.parameters.Length || factoryInputs[0].name != "userData")
-                Fail("The virtual proxy factory lost the exact source user-data parameter.");
+            bool GeneratedPointer(StableId id) => types[id] is { kind: BridgeTypeKind.Pointer, isConst: false, elementType: StableId element }
+                && element == concrete.id;
+            bool NativeInterfacePointer(StableId id) => types[id] is { kind: BridgeTypeKind.Pointer, isConst: false, elementType: StableId element }
+                && types[element] is { kind: BridgeTypeKind.Handle } carrier && carrier.nativeType == proxy.nativeInterface && carrier.generatedType is null;
             if (proxy.slots.IsEmpty || proxy.slots.Select(slot => slot.nativeMethod).Distinct().Count() != proxy.slots.Length
                 || proxy.slots.Select(slot => slot.name).Distinct(StringComparer.Ordinal).Count() != proxy.slots.Length)
                 Fail("The virtual proxy has missing or duplicate source virtual methods.");
@@ -61,13 +79,10 @@ public sealed class VirtualProxyProtocolBuilder
                 NativeDeclaration method = bridge.source.GetDeclaration(slot.nativeMethod);
                 if (method.kind != "Function" || !method.isVirtual || !method.isAbstract || method.isNoThrow != false
                     || !method.hasPrototype || method.isVariadic || !Enum.IsDefined(method.referenceQualifier) || method.referenceQualifier == NativeReferenceQualifier.Unknown
-                    || slot.name != "slot" + index.ToString(CultureInfo.InvariantCulture) || factoryInputs[index + 1].name != slot.name)
+                    || slot.name != "slot" + index.ToString(CultureInfo.InvariantCulture) || factory.parameters[index + 1].name != slot.name)
                     Fail("A virtual callback slot lost its exact source method, exception or factory-position contract.");
-                NativeDeclaration field = concrete.children.Select(bridge.source.GetDeclaration).Single(declaration => declaration.kind == "Field" && declaration.name == "m_" + slot.name);
-                NativeType pointer = Source(field.type!.Value);
-                if (pointer.category != NativeTypeCategory.Pointer || pointer.elementType is not StableId nativeCallback
-                    || slot.bridgeCallableType is not StableId callbackId || !types.TryGetValue(callbackId, out BridgeType? callback)
-                    || callback.kind != BridgeTypeKind.Function || callback.nativeType != Source(nativeCallback).id
+                if (slot.bridgeCallableType is not StableId callbackId || !types.TryGetValue(callbackId, out BridgeType? callback)
+                    || callback.kind != BridgeTypeKind.Function || callback.nativeType is not null
                     || callback.isVariadic || !callback.hasPrototype || callback.callingConvention is not ("C" or "Default")
                     || callback.returnType is not StableId status || types[status] is not { kind: BridgeTypeKind.Scalar, cName: "int32_t" }
                     || callback.parameterTypes.Length != slot.parameters.Length + (slot.result is null ? 1 : 2)
@@ -132,7 +147,7 @@ public sealed class VirtualProxyProtocolBuilder
     /// <param name="module">Its independently reparsed C ABI with restored ownership.</param>
     /// <returns>The same native ABI enriched with finite virtual protocols and unknown caller retention.</returns>
     public InteropModule Attach(
-        CppBridgeModule bridge,
+        NativeBridgePlan bridge,
         InteropModule module
     ) {
         VerifyBridge(bridge);
@@ -146,7 +161,7 @@ public sealed class VirtualProxyProtocolBuilder
             BridgeExport plannedFactory = Factory(bridge, proxy);
             InteropFunction factory = functions[plannedFactory.id];
             InteropFunction destroy = functions[plannedFactory.resultRelease!.Value];
-            InteropFunction cast = functions[Cast(bridge, proxy, plannedFactory.nativeResultType!.Value).id];
+            InteropFunction cast = functions[Cast(bridge, proxy).id];
             InteropParameter owned = factory.parameters.Single(parameter => parameter.id == factory.error!.valueParameter);
             OwnershipContract ownership = owned.ownership ?? throw new InvalidOperationException("A virtual proxy lost its owned factory result contract.");
             if (ownership.kind != NativeOwnershipKind.Owned || ownership.releaseFunction != destroy.id || ownership.allocator is null)
@@ -156,7 +171,7 @@ public sealed class VirtualProxyProtocolBuilder
                 Fail("A virtual proxy lost its exact caller-asserted or unknown cleanup thread evidence.");
             InteropParameter borrowed = cast.parameters.Single(parameter => parameter.id == cast.error!.valueParameter);
             InteropType concrete = OpaqueResult(owned), nativeInterface = OpaqueResult(borrowed);
-            if (concrete.sourceNativeType != plannedFactory.nativeResultType || nativeInterface.sourceNativeType != proxy.nativeInterface
+            if (concrete.sourceNativeType is not null || concrete.sourceGeneratedType != proxy.generatedType || nativeInterface.sourceNativeType != proxy.nativeInterface
                 || borrowed.ownership is not { kind: NativeOwnershipKind.Borrowed, lifetime.kind: NativeLifetimeKind.Owner } borrowing
                 || borrowing.lifetime.owner != cast.parameters[0].id)
                 Fail("A virtual proxy lost its original concrete identity or native-adjusted borrowed interface owner.");
@@ -240,16 +255,15 @@ public sealed class VirtualProxyProtocolBuilder
     }
 
     private static BridgeExport Factory(
-        CppBridgeModule bridge,
+        NativeBridgePlan bridge,
         CppVirtualProxyPlan proxy
-    ) => bridge.exports.Single(export => export.operation.declaration is StableId source
-        && bridge.source.GetDeclaration(source).qualifiedName == proxy.factory);
+    )
+        => bridge.exports.Single(export => export.operation.kind == BridgeOperationKind.VirtualProxyConstruct && export.operation.virtualProxyId == proxy.id);
     private static BridgeExport Cast(
-        CppBridgeModule bridge,
-        CppVirtualProxyPlan proxy,
-        StableId concrete
-    ) => bridge.exports.Single(export => export.operation.kind == BridgeOperationKind.BaseCast
-        && export.operation.ownerType == concrete && export.operation.castTarget == proxy.nativeInterface);
+        NativeBridgePlan bridge,
+        CppVirtualProxyPlan proxy
+    )
+        => bridge.exports.Single(export => export.operation.kind == BridgeOperationKind.VirtualProxyCast && export.operation.virtualProxyId == proxy.id);
     [System.Diagnostics.CodeAnalysis.DoesNotReturn]
     private static void Fail(string message) => throw new InvalidOperationException(message);
 }

@@ -1,0 +1,2 @@
+
+const void* NullPtr = nullptr;

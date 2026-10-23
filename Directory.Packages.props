@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup Label="Repository package versions">
-    <ManagePackageVersionsCentrally Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src')) or $([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)tests')) or '$(MSBuildProjectName)' == 'BGCS.RepositoryTools'">true</ManagePackageVersionsCentrally>
+    <ManagePackageVersionsCentrally Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src')) or $([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)tests')) or $([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)extensions')) or '$(MSBuildProjectName)' == 'BGCS.RepositoryTools'">true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
   <ItemGroup Label="Pinned package dependencies">

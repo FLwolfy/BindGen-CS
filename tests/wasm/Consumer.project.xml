@@ -13,7 +13,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DisableParallelAot>true</DisableParallelAot>
     <DisableParallelEmccCompile>true</DisableParallelEmccCompile>
-    <EmccExtraCFlags>-DBUILD_SHARED=1 -I&quot;$(MSBuildProjectDirectory)/CppFacade&quot;</EmccExtraCFlags>
+    <EmccExtraCFlags>-DBUILD_SHARED=1 -I&quot;$(MSBuildProjectDirectory)&quot; -I&quot;$(MSBuildProjectDirectory)/Native&quot; -I&quot;$(MSBuildProjectDirectory)/CppFacade&quot;</EmccExtraCFlags>
     <EmccExtraLDFlags>$(EmccExtraCFlags)</EmccExtraLDFlags>
   </PropertyGroup>
   <ItemGroup>

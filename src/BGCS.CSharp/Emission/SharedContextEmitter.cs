@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
-using BGCS.Contracts;
+using BGCS.Core;
 using BGCS.CSharp.Planning;
 
 namespace BGCS.CSharp.Emission;
@@ -15,8 +15,10 @@ internal static class SharedContextEmitter
         CSharpSharedContextPlan shared = plan.sharedContext ?? throw new InvalidOperationException("An explicit shared lifecycle plan is required.");
         string context = SharedContextPlanner.ContextType(plan);
         bool allocator = ContextEmitter.HasTemporaryAllocator(plan);
-        string optional = allocator ? ContextEmitter.TemporaryAllocatorParameter(shared.runtimeNamespace) : string.Empty;
-        string forwarded = allocator ? "temporaryAllocatorFactory" : string.Empty;
+        bool dispatcher = ContextEmitter.HasCallbackDispatcher(plan);
+        string optional = string.Join(", ", new[] { dispatcher ? "global::" + shared.runtimeNamespace + ".NativeCallbackDispatcher callbackDispatcher" : null,
+            allocator ? ContextEmitter.TemporaryAllocatorParameter(shared.runtimeNamespace) : null }.OfType<string>());
+        string forwarded = string.Join(", ", new[] { dispatcher ? "callbackDispatcher" : null, allocator ? "temporaryAllocatorFactory" : null }.OfType<string>());
         StringBuilder text = new();
         text.AppendLine("/// <summary>Owns one explicitly shared context. Replacement closes the previous context; existing resource leases retain its native cleanup capability.</summary>")
             .Append("public static unsafe partial class ").AppendLine(shared.name).AppendLine("{")
@@ -37,12 +39,14 @@ internal static class SharedContextEmitter
         if (plan.importMode == BindingImportMode.FunctionTable)
         {
             text.Append("    public static void FromProvider(global::").Append(shared.runtimeNamespace).Append(".INativeModuleProvider provider")
-                .Append(allocator ? ", " + optional : string.Empty).Append(") => Install(")
-                .Append(context).Append(".FromProvider(provider").Append(allocator ? ", " + forwarded : string.Empty).AppendLine("));");
+                .Append(optional.Length != 0 ? ", " + optional : string.Empty).Append(") => Install(")
+                .Append(context).Append(".FromProvider(provider").Append(forwarded.Length != 0 ? ", " + forwarded : string.Empty).AppendLine("));");
             if (shared.canLoad)
-                text.Append("    public static void Load(string libraryPath = ").Append(ContextEmitter.Literal(libraryName))
-                    .Append(allocator ? ", " + optional : string.Empty).Append(") => Install(")
-                    .Append(context).Append(".Load(libraryPath").Append(allocator ? ", " + forwarded : string.Empty).AppendLine("));");
+                text.Append("    public static void Load(").Append(dispatcher ? "global::" + shared.runtimeNamespace + ".NativeCallbackDispatcher callbackDispatcher, " : string.Empty)
+                    .Append("string libraryPath = ").Append(ContextEmitter.Literal(libraryName))
+                    .Append(allocator ? ", " + ContextEmitter.TemporaryAllocatorParameter(shared.runtimeNamespace) : string.Empty).Append(") => Install(")
+                    .Append(context).Append(".Load(").Append(dispatcher ? "callbackDispatcher, " : string.Empty).Append("libraryPath")
+                    .Append(allocator ? ", temporaryAllocatorFactory" : string.Empty).AppendLine("));");
             if (shared.canFromStatic) text.Append("    public static void FromStatic(").Append(optional).Append(") => Install(")
                 .Append(context).Append(".FromStatic(").Append(forwarded).AppendLine("));");
         }

@@ -1,0 +1,297 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:6a4a746e9dc84c25c99d6691e42b2a97f42fdedd9e6888e54b9a9c51c4798298"
+      },
+      "category": "Alias",
+      "spelling": "MyStruct",
+      "size": 4,
+      "alignment": null,
+      "elementType": {
+        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+      },
+      "canonicalType": {
+        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+      },
+      "declaration": {
+        "value": "declaration:a1891ef95ce4c7a8e41923927d114db44b40e0b6acb5bf452b0a4957a7b238a8"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "category": "Primitive",
+      "spelling": "int",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Int",
+      "isSigned": true,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+      },
+      "category": "Record",
+      "spelling": "MyStruct",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:0f4ab80b5c9e3a188be7120bca922a022d53554b88a91e8d28064999bb4d4d02"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:0f4ab80b5c9e3a188be7120bca922a022d53554b88a91e8d28064999bb4d4d02"
+      },
+      "kind": "Class",
+      "name": "MyStruct",
+      "qualifiedName": "MyStruct",
+      "type": {
+        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+      },
+      "source": {
+        "file": "TestTypeAliases.TestSquash.hpp",
+        "line": 3,
+        "column": 18
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:707949303968847f6475757633d7740e55407e7732a166c19aff78260910786d"
+        }
+      ],
+      "documentation": "Test typedef collapsing",
+      "documentationContent": {
+        "summary": "Test typedef collapsing",
+        "parameters": [],
+        "returns": null,
+        "typeParameters": []
+      },
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Struct",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": true,
+      "isDefaultConstructible": true,
+      "isStandardLayout": true,
+      "isTriviallyCopyable": true,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": "NormalClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:707949303968847f6475757633d7740e55407e7732a166c19aff78260910786d"
+      },
+      "kind": "Field",
+      "name": "field0",
+      "qualifiedName": "MyStruct::field0",
+      "type": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "source": {
+        "file": "TestTypeAliases.TestSquash.hpp",
+        "line": 4,
+        "column": 5
+      },
+      "parent": {
+        "value": "declaration:0f4ab80b5c9e3a188be7120bca922a022d53554b88a91e8d28064999bb4d4d02"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": 0,
+      "storageSize": 4,
+      "storageEvidence": {
+        "level": "Declared",
+        "origin": "clang.field-storage:MyStruct::field0"
+      },
+      "bitOffset": 0,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:a1891ef95ce4c7a8e41923927d114db44b40e0b6acb5bf452b0a4957a7b238a8"
+      },
+      "kind": "Typedef",
+      "name": "MyStruct",
+      "qualifiedName": "MyStruct",
+      "type": {
+        "value": "type:6a4a746e9dc84c25c99d6691e42b2a97f42fdedd9e6888e54b9a9c51c4798298"
+      },
+      "source": {
+        "file": "TestTypeAliases.TestSquash.hpp",
+        "line": 3,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": "Test typedef collapsing",
+      "documentationContent": {
+        "summary": "Test typedef collapsing",
+        "parameters": [],
+        "returns": null,
+        "typeParameters": []
+      },
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

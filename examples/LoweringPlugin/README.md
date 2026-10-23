@@ -12,8 +12,8 @@ Compile the emitted bridge sources and `native.hpp` with your native build syste
 then compile the generated C# in a consumer referencing `BGCS.Runtime`. The generator
 does not compile, link or deploy either consumer. See [external compilation](../../docs/native-metadata.md#external-compilation).
 
-The plugin references only `BGCS.Contracts`. The repository project reference can be
-replaced with a `PackageReference` to `BGCS.Contracts` version `3.0.0` after release.
+The plugin references only `BGCS.Core`. The repository project reference can be
+replaced with a `PackageReference` to `BGCS.Core` from the matching development candidate after release.
 It reads detached `NativeDeclaration` facts and matches the exact nonstatic
 `void Engine::World::Tick()` signature. It returns the complete typed instance action,
 opaque receiver representation and stable `engine_world_tick` export. The ordinary

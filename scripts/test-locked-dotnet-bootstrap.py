@@ -38,8 +38,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
     def archive(self, *, tar=False, extra=None):
         path = self.root / ('input.tar.gz' if tar else 'input.zip')
         files = {'dotnet' if tar else 'dotnet.exe': b'locked SDK host',
-                 'sdk/10.0.401/sdk.marker': b'exact SDK',
-                 'shared/Microsoft.NETCore.App/10.0.12/runtime.marker': b'exact runtime'}
+                 'sdk/10.0.402/sdk.marker': b'exact SDK',
+                 'shared/Microsoft.NETCore.App/10.0.13/runtime.marker': b'exact runtime'}
         files.update(extra or {})
         if tar:
             with tarfile.open(path, 'w:gz') as output:
@@ -60,13 +60,13 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
     def test_lock_selects_exact_sdk_archives_and_runtime_workload_versions(self):
         lock = json.loads((ROOT / 'eng/toolchains/toolchains.lock.json').read_text())
         workloads = json.loads((ROOT / 'eng/toolchains/workloads.lock.json').read_text())
-        self.assertEqual('10.0.401', lock['sdkVersion'])
-        self.assertEqual('10.0.12', lock['managedRuntimeVersion'])
+        self.assertEqual('10.0.402', lock['sdkVersion'])
+        self.assertEqual('10.0.13', lock['managedRuntimeVersion'])
         self.assertEqual(lock['sdkVersion'], workloads['sdkVersion'])
         self.assertEqual(lock['managedRuntimeVersion'], workloads['runtimePackVersion'])
         for rid in ('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64'):
             entry = lock['sdkArchives'][rid]
-            self.assertEqual('https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.401/dotnet-sdk-10.0.401-' + rid + ('.zip' if rid.startswith('win-') else '.tar.gz'), entry['url'])
+            self.assertEqual('https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.402/dotnet-sdk-10.0.402-' + rid + ('.zip' if rid.startswith('win-') else '.tar.gz'), entry['url'])
             self.assertRegex(entry['sha512'], r'^[a-f0-9]{128}$')
 
     def test_zip_installs_only_archive_contents_after_staged_verification(self):
@@ -74,8 +74,8 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         checked = []
         def verify(staging):
             self.assertFalse(self.destination.exists())
-            self.assertEqual(['10.0.12'], [item.name for item in (staging / 'shared/Microsoft.NETCore.App').iterdir()])
-            self.assertEqual(['10.0.401'], [item.name for item in (staging / 'sdk').iterdir()])
+            self.assertEqual(['10.0.13'], [item.name for item in (staging / 'shared/Microsoft.NETCore.App').iterdir()])
+            self.assertEqual(['10.0.402'], [item.name for item in (staging / 'sdk').iterdir()])
             checked.append(staging)
         self.install(archive, entry, verify)
         self.assertEqual(1, len(checked))
@@ -86,7 +86,7 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
     def test_tar_preserves_host_executable_mode_and_exact_runtime(self):
         archive, entry = self.archive(tar=True)
         self.install(archive, entry, lambda staging: self.assertTrue((staging / 'dotnet').is_file()))
-        self.assertEqual(b'exact runtime', (self.destination / 'shared/Microsoft.NETCore.App/10.0.12/runtime.marker').read_bytes())
+        self.assertEqual(b'exact runtime', (self.destination / 'shared/Microsoft.NETCore.App/10.0.13/runtime.marker').read_bytes())
         if os.name != 'nt':
             self.assertTrue(os.access(self.destination / 'dotnet', os.X_OK))
 
@@ -188,7 +188,22 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
         self.assertLess(job.index('scripts/setup-locked-dotnet.py'), job.index('dotnet restore tests/BGCS.Tests/'))
         self.assertIn('dotnet build tests/BGCS.Tests/BGCS.Tests.csproj', job)
         self.assertNotIn('dotnet build BindGen-CS.slnx', job)
-        self.assertNotIn('scripts/test-wasm-bindings.py', job)
+        browser_steps = re.findall(r'^      - name: (.*?)(?=^      - |\Z)', job, re.MULTILINE | re.DOTALL)
+        browser = [step for step in browser_steps if 'scripts/test-wasm-bindings.py' in step]
+        self.assertEqual(1, len(browser))
+        self.assertIn("if: runner.os == 'Linux'", browser[0])
+        self.assertIn('scripts/verify-locked-toolchain.py --install-workloads', browser[0])
+        self.assertIn('extensions/BGCS.Extension.BrowserWasm/BGCS.Extension.BrowserWasm.csproj', browser[0])
+        self.assertEqual(2, browser[0].count('scripts/test-wasm-bindings.py'))
+        self.assertEqual(2, browser[0].count('--targeted'))
+        self.assertEqual(1, browser[0].count('--aot'))
+        self.assertNotIn('--native-feature-matrix', browser[0])
+        gates = json.loads((ROOT / 'eng/acceptance/required-release-gates.json').read_text(encoding='utf-8'))
+        targeted = gates['evidencePolicy']['targetedBrowserRegression']
+        self.assertEqual('Generator smoke (Linux x64)', targeted['job'])
+        self.assertEqual(['MonoWasm', 'AOT'], targeted['modes'])
+        self.assertEqual('optional-browser-regression-linux-x64', targeted['artifact'])
+        self.assertIn('name: ' + targeted['artifact'], job)
         self.assertNotIn('scripts/test-native-aot-bindings.py', job)
         self.assertNotIn('run-host-test-shards.py', job)
         self.assertIn('if: always()', job)

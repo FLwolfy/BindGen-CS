@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Requests;
 
 namespace BGCS.CSharp.Planning;
 

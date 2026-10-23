@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -13,7 +13,7 @@ public sealed class StandardValueOperationVerifier
     /// <param name="module">The detached bridge graph.</param>
     /// <param name="export">The generated standard-library export.</param>
     public void Verify(
-        CppBridgeModule module,
+        NativeBridgePlan module,
         BridgeExport export
     ) {
         ArgumentNullException.ThrowIfNull(module);

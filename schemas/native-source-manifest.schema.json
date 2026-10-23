@@ -1,0 +1,550 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgcs.dev/schemas/native-source-manifest.schema.json",
+  "title": "BGCS portable native source requirements, revision 2",
+  "description": "Generated source requirements and exact logical-to-physical export bindings. No build, link, packaging or execution plan. Cross-field target, module, artifact and adapter identities are additionally checked by NativeSourceManifestVerifier.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "targetId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "triple": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "language": {
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "languageStandard": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "headers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "inputRoots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "kind": {
+            "enum": [
+              "project",
+              "user",
+              "sdk",
+              "sdk-root",
+              "generated"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rootId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "relativePath": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "length": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "digest": {
+            "$ref": "#/$defs/digest"
+          },
+          "role": {
+            "enum": [
+              "EntryHeader",
+              "Dependency",
+              "ShimSource"
+            ]
+          }
+        },
+        "required": [
+          "rootId",
+          "relativePath",
+          "length",
+          "digest",
+          "role"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "includeDirectories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rootId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "relativePath": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+$"
+              },
+              {
+                "const": ""
+              }
+            ]
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "isFramework": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rootId",
+          "relativePath",
+          "isSystem",
+          "isFramework"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "headerReferences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rootId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "relativePath": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "include": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "required": [
+          "rootId",
+          "relativePath",
+          "include"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "defines": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[^\\u0000\\r\\n]*$"
+      }
+    },
+    "module": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "nativeName": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        }
+      },
+      "required": [
+        "id",
+        "nativeName"
+      ],
+      "additionalProperties": false
+    },
+    "exportBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "callableId": {
+            "$ref": "#/$defs/identity"
+          },
+          "sourceDeclaration": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/identity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exportName": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "moduleId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "required": [
+          "callableId",
+          "sourceDeclaration",
+          "exportName",
+          "moduleId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "runtimeRequirements": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "execution": {
+              "$ref": "#/$defs/execution"
+            },
+            "importMode": {
+              "enum": [
+                0,
+                1,
+                2
+              ]
+            }
+          },
+          "required": [
+            "execution",
+            "importMode"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "languageRequirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "feature": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "minimumStandard": {
+            "enum": [
+              11,
+              14,
+              17,
+              20,
+              23,
+              26
+            ]
+          }
+        },
+        "required": [
+          "feature",
+          "minimumStandard"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "staticExportTable": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/staticExportTable"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "targetId",
+    "triple",
+    "language",
+    "languageStandard",
+    "sources",
+    "headers",
+    "inputRoots",
+    "inputs",
+    "includeDirectories",
+    "headerReferences",
+    "defines",
+    "module",
+    "exportBindings",
+    "runtimeRequirements",
+    "languageRequirements"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "digest": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "relativePath": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "relativePath",
+        "mediaType",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "runtimeId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "moduleMechanism": {
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "importModes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              0,
+              1,
+              2
+            ]
+          }
+        },
+        "requiresStaticCallbackThunks": {
+          "type": "boolean"
+        },
+        "allowsBlockingDisposal": {
+          "type": "boolean"
+        },
+        "nativeTargetId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "nativeTriple": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "pointerSize": {
+          "enum": [
+            4,
+            8
+          ]
+        },
+        "byteOrder": {
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "callAbi": {
+          "$ref": "#/$defs/identity"
+        },
+        "functionPointerTransport": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "libraryImportConvention": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "defaultCallingConvention": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "runtimeId",
+        "moduleMechanism",
+        "importModes",
+        "requiresStaticCallbackThunks",
+        "allowsBlockingDisposal",
+        "nativeTargetId",
+        "nativeTriple",
+        "pointerSize",
+        "byteOrder",
+        "callAbi",
+        "functionPointerTransport",
+        "libraryImportConvention",
+        "defaultCallingConvention"
+      ],
+      "additionalProperties": false
+    },
+    "staticExportTable": {
+      "type": "object",
+      "properties": {
+        "symbolPrefix": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "getExportSymbol": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "getRevisionSymbol": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "getCountSymbol": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "getAbiIdentitySymbol": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "getPointerSizeSymbol": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "abiIdentity": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "exportNames": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "revision": {
+          "const": 1
+        }
+      },
+      "required": [
+        "symbolPrefix",
+        "getExportSymbol",
+        "getRevisionSymbol",
+        "getCountSymbol",
+        "getAbiIdentitySymbol",
+        "getPointerSizeSymbol",
+        "abiIdentity",
+        "exportNames",
+        "revision"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

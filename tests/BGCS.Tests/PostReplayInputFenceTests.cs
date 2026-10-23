@@ -1,3 +1,5 @@
+using BGCS.Frontend.Clang.Workers;
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -7,12 +9,12 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Workers;
 using BGCS.Infrastructure.IO;
 using Xunit;
@@ -36,7 +38,7 @@ public sealed class PostReplayInputFenceTests
             await File.WriteAllTextAsync(state.header, C_ORIGINAL);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "fence-order-" + Guid.NewGuid().ToString("N"), nativeName = "fence_order" },
+                schemaVersion = 2, library = new() { id = "fence-order-" + Guid.NewGuid().ToString("N"), nativeName = "fence_order" },
                 source = new() { language = SourceLanguage.C, headers = ["original.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.FenceOrder", name = "FenceApi" },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }
@@ -44,10 +46,10 @@ public sealed class PostReplayInputFenceTests
             // The public worker-backed wrapper exposes the contributed store
             // path while keeping the original header a parsed-only input.
             // Existing native-view integration cases cover real replay calls.
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-                .WithFrontendFactory(() => new ObservingFrontend(WorkerRoot(), state))
-                .AddSourceContributor("fence.order", 0, () => new Contributor())
-                .AddValidator("fence-order-mutation", 0, () => new MutationValidator(state)).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder()
+                .UseDetachedFrontend(() => new ObservingFrontend(WorkerRoot(), state))
+                .RegisterFactory<ISourceContributor>(new("fence.order", ExtensionPort.SourceContributor, 0), _ => new Contributor())
+                .RegisterFactory<IGenerationValidator>(new("fence-order-mutation", ExtensionPort.GenerationValidator, 0), _ => new MutationValidator(state)).Build();
             GenerationRequest request = new(configuration, root);
             GenerationResult first = await host.GenerateAsync(request);
             Assert.True(first.success, first.GetDiagnosticSummary());
@@ -113,7 +115,7 @@ public sealed class PostReplayInputFenceTests
             string store = file[..^suffix.Length];
             Assert.Equal(64, Path.GetFileName(store).Length);
             Assert.All(Path.GetFileName(store), character => Assert.True(char.IsAsciiHexDigit(character)));
-            Assert.Equal(Path.Combine(PhysicalPathResolver.Resolve(Path.GetTempPath()), "BGCS", "source-inputs", "v1"), Path.GetDirectoryName(store));
+            Assert.Equal(Path.Combine(PhysicalPathResolver.Resolve(Path.GetTempPath(), TestHostPaths.Create()), "BGCS", "source-inputs", "v1"), Path.GetDirectoryName(store));
             return store;
         }
 
@@ -131,7 +133,13 @@ public sealed class PostReplayInputFenceTests
 
     private sealed class ObservingFrontend(string workerRoot, State state) : IFrontend
     {
-        private readonly FrontendWorkerClient m_worker = new(Path.Combine(workerRoot, "BGCS.Frontend.Clang.Worker.dll"));
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
+        private readonly FrontendWorkerClient m_worker = new(Path.Combine(workerRoot, "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost());
         public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
             string file = request.sourcePathMappings.Single(pair => pair.Value == "contributions/fence.order/generated.h").Key;
@@ -170,6 +178,6 @@ public sealed class PostReplayInputFenceTests
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         Assert.NotNull(root);
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

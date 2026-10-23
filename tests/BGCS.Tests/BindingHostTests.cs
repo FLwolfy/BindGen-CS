@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
-using BGCS.Contracts.Plugins;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
+using BGCS.Core.Plugins;
 using System.Diagnostics.CodeAnalysis;
 using Xunit;
 
@@ -28,9 +28,9 @@ public sealed class BindingHostTests
         {
             string input = Path.Combine(temporary, "external.dat");
             File.WriteAllText(input, "before");
-            BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() =>
+            BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseDetachedFrontend(() =>
                 providerMutation ? new ProbeFrontend(() => { }) : new DeclaredFrontend(input));
-            if (providerMutation) builder.AddTargetProvider("declared-inputs", () => new DeclaredProvider(input));
+            if (providerMutation) builder.RegisterFactory<INativeTargetProvider>(new("declared-inputs", ExtensionPort.NativeTargetProvider), _ => new DeclaredProvider(input));
             await using BindingHost host = builder.Build();
             AnalysisResult result = await host.AnalyzeAsync(Request() with { baseDirectory = temporary });
             Assert.False(result.success);
@@ -42,7 +42,7 @@ public sealed class BindingHostTests
     [Fact]
     public async Task InvalidAnalysisInputBase_ReleasesSessionAdmissionBeforeHostShutdown()
     {
-        BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(() => { })).Build();
+        BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ProbeFrontend(() => { })).Build();
         AnalysisResult result = await host.AnalyzeAsync(Request() with { baseDirectory = null! });
         Assert.False(result.success);
         await host.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
@@ -61,6 +61,12 @@ public sealed class BindingHostTests
 
     private sealed class DeclaredFrontend(string input) : IFrontend, IExternalInputProvider, IDisposable
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken) => [new(input, ExternalInputKind.File)];
         public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
             => new ProbeFrontend(() => { }).ParseAsync(request, cancellationToken);
@@ -72,7 +78,7 @@ public sealed class BindingHostTests
     {
         bool created = false;
         string hint = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing-compiler");
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => { created = true; return new ProbeFrontend(() => { }); }).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => { created = true; return new ProbeFrontend(() => { }); }).Build();
         AnalysisResult result = await host.AnalyzeAsync(Request() with { toolchain = new NativeToolchainDescriptor(compilerPath: hint) });
         Assert.True(result.success, result.GetDiagnosticSummary());
         Assert.True(created);
@@ -84,7 +90,7 @@ public sealed class BindingHostTests
     {
         int created = 0;
         int disposed = 0;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() =>
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() =>
         {
             Interlocked.Increment(ref created);
             return new ProbeFrontend(() => Interlocked.Increment(ref disposed));
@@ -102,8 +108,8 @@ public sealed class BindingHostTests
     {
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int disposed = 0;
-        BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-            .WithFrontendFactory(() => new HangingFrontend(entered, () => Interlocked.Increment(ref disposed))).Build();
+        BindingHost host = BindingGenerator.CreateBuilder()
+            .UseDetachedFrontend(() => new HangingFrontend(entered, () => Interlocked.Increment(ref disposed))).Build();
         Task analyze = host.AnalyzeAsync(Request());
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await host.DisposeAsync();
@@ -116,8 +122,8 @@ public sealed class BindingHostTests
     [Fact]
     public async Task FrontendFailure_BecomesAnOwnedSessionDiagnostic()
     {
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-            .WithFrontendFactory(() => throw new IOException("Parser assets unavailable.")).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder()
+            .UseDetachedFrontend(() => throw new IOException("Parser assets unavailable.")).Build();
         AnalysisResult result = await host.AnalyzeAsync(Request());
         Assert.False(result.success);
         Assert.Null(result.module);
@@ -138,20 +144,27 @@ public sealed class BindingHostTests
     [Fact]
     public void DuplicatePrimaryFrontendFactory_IsRejected()
     {
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(() => { }));
-        Assert.Throws<InvalidOperationException>(() => builder.WithFrontendFactory(() => new ProbeFrontend(() => { })));
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder()
+            .RegisterFactory<IFrontend>(new("fixture.duplicate-frontend", ExtensionPort.Frontend), _ => new ProbeFrontend(() => { }));
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
     }
 
     private static AnalysisRequest Request() => AnalysisRequest.FromFiles(["native.h"], baseDirectory: AppContext.BaseDirectory) with
     {
-        targetId = "emscripten-wasm32-emscripten"
+        targetId = "host"
     };
 
     private sealed class ProbeFrontend(Action dispose) : IFrontend, IDisposable
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
-            NativeModule module = new(request.target.targetId.value, request.target.triple, 4, [], [], []) { language = request.language };
+            NativeModule module = new(request.target.targetId.value, request.target.triple, TestComposition.PointerSize(request.target), [], [], []) { language = request.language };
             return ValueTask.FromResult(new FrontendResult(module, new SourceSnapshot([], [])));
         }
         public void Dispose() => dispose();
@@ -159,6 +172,12 @@ public sealed class BindingHostTests
 
     private sealed class HangingFrontend(TaskCompletionSource entered, Action dispose) : IFrontend, IDisposable
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
             entered.TrySetResult();
@@ -172,26 +191,26 @@ public sealed class BindingHostTests
     public async Task NativeTransforms_UseFrozenPriorityOrderAndContractsOnlyInputs()
     {
         List<string> order = [];
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns()
-            .WithFrontendFactory(() => new ProbeFrontend(() => { }))
-            .AddNativeTransform("second", 0, () => new ProbeTransform("second", 0, order, () => { }))
-            .AddNativeTransform("first", 1, () => new ProbeTransform("first", 1, order, () => { }));
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder()
+            .UseDetachedFrontend(() => new ProbeFrontend(() => { }))
+            .RegisterFactory<INativeModuleTransform>(new("second", ExtensionPort.NativeModuleTransform, 0), _ => new ProbeTransform("second", 0, order, () => { }))
+            .RegisterFactory<INativeModuleTransform>(new("first", ExtensionPort.NativeModuleTransform, 1), _ => new ProbeTransform("first", 1, order, () => { }));
         await using BindingHost host = builder.Build();
-        builder.AddNativeTransform("later", 99, () => new ProbeTransform("later", 99, order, () => { }));
+        builder.RegisterFactory<INativeModuleTransform>(new("later", ExtensionPort.NativeModuleTransform, 99), _ => new ProbeTransform("later", 99, order, () => { }));
         AnalysisResult result = await host.AnalyzeAsync(Request());
         Assert.True(result.success);
         Assert.Equal(new[] { "first", "second" }, order);
-        Assert.Throws<InvalidOperationException>(() => builder.AddNativeTransform("first", 1, () => null!));
+        Assert.Throws<InvalidOperationException>(() => builder.RegisterFactory<INativeModuleTransform>(new("first", ExtensionPort.NativeModuleTransform, 1), _ => null!));
     }
 
     [Fact]
     public async Task ServiceCleanupFailure_StillReleasesRemainingServicesAndReturnsFailureDiagnostics()
     {
         int released = 0;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-            .WithFrontendFactory(() => new ProbeFrontend(() => released++))
-            .AddNativeTransform("normal", 1, () => new ProbeTransform("normal", 1, [], () => released++))
-            .AddNativeTransform("fault", 0, () => new ProbeTransform("fault", 0, [], () => throw new IOException("cleanup failure"))).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder()
+            .UseDetachedFrontend(() => new ProbeFrontend(() => released++))
+            .RegisterFactory<INativeModuleTransform>(new("normal", ExtensionPort.NativeModuleTransform, 1), _ => new ProbeTransform("normal", 1, [], () => released++))
+            .RegisterFactory<INativeModuleTransform>(new("fault", ExtensionPort.NativeModuleTransform, 0), _ => new ProbeTransform("fault", 0, [], () => throw new IOException("cleanup failure"))).Build();
         AnalysisResult result = await host.AnalyzeAsync(Request());
         Assert.False(result.success);
         Assert.Equal(2, released);

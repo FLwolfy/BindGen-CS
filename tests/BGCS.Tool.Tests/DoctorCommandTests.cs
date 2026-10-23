@@ -1,3 +1,5 @@
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -5,8 +7,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.Workers;
 using Xunit;
 
@@ -57,7 +59,7 @@ public sealed class DoctorCommandTests
         using Scenario scenario = new();
         WorkerAssetManifest manifest = scenario.WriteFixtureClosure();
         if (failure == "tampered")
-            File.AppendAllText(Path.Combine(scenario.worker, "BGCS.Contracts.dll"), "changed");
+            File.AppendAllText(Path.Combine(scenario.worker, "BGCS.Core.dll"), "changed");
         else
         {
             manifest = failure == "wrongHost" ? manifest with { hostRid = "unrelated-host" }
@@ -87,7 +89,7 @@ public sealed class DoctorCommandTests
         File.WriteAllText(Path.Combine(scenario.root, "native.h"), "int native_value(void);\n");
         File.WriteAllText(Path.Combine(scenario.root, "bindgen.json"), JsonSerializer.Serialize(new
         {
-            schemaVersion = 1, library = new { id = "doctor_probe", nativeName = "doctor_probe" },
+            schemaVersion = 2, library = new { id = "doctor_probe", nativeName = "doctor_probe" },
             source = new { language = "c", headers = new[] { "native.h" } },
             cache = new { enabled = false }
         }));
@@ -136,7 +138,7 @@ public sealed class DoctorCommandTests
             string rid = RuntimeInformation.RuntimeIdentifier;
             string extension = OperatingSystem.IsWindows() ? ".dll" : OperatingSystem.IsMacOS() ? ".dylib" : ".so";
             string[] entries = ["BGCS.Frontend.Clang.Worker.dll", "BGCS.Frontend.Clang.Worker.deps.json", "BGCS.Frontend.Clang.Worker.runtimeconfig.json",
-                "BGCS.Contracts.dll", "BGCS.Infrastructure.dll", "BGCS.Frontend.Clang.dll", "ClangSharp.dll", "ClangSharp.Interop.dll",
+                "BGCS.Core.dll", "BGCS.Infrastructure.dll", "BGCS.Frontend.Clang.dll", "BGCS.Hosting.Standard.dll", "ClangSharp.dll", "ClangSharp.Interop.dll",
                 "runtimes/" + rid + "/native/libclang" + extension, "runtimes/" + rid + "/native/libClangSharp" + extension];
             foreach (string name in entries)
             {
@@ -163,7 +165,7 @@ public sealed class DoctorCommandTests
 
         private WorkerAssetManifest WriteCurrentManifest(string rid)
         {
-            WorkerAssetManifest manifest = new(1, rid, WorkerProtocol.C_PARSER_IDENTITY,
+            WorkerAssetManifest manifest = new(1, rid, ClangParserIdentity.C_IDENTITY,
                 Directory.EnumerateFiles(worker, "*", SearchOption.AllDirectories)
                     .Where(path => Path.GetFileName(path) != "worker-assets.manifest.json")
                     .Select(path => new ArtifactDescriptor(Path.GetRelativePath(worker, path).Replace('\\', '/'), "application/octet-stream",

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "source": "https://api.nuget.org/v3-flatcontainer/bgcs/3.0.1/bgcs.3.0.1.nupkg",
+  "packageSha256": "c7c11ad03d50d4b27e55a1a3050775b03bdc34a04a8de0e9f8b80cd27e0a70e7",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FLwolfy/BindGen-CS",
+    "commit": "e619418c0c9f8422aad706de9b6544de63ebeff8"
+  },
+  "capture": "Public ClangFrontend.ParseAsync from immutable official3.0.1; test-only projection removes modelRevision. No workspace assemblies.",
+  "caseCount": 87,
+  "currentRevisionCertified": false,
+  "dependencyIsolation": "All exact literal source bodies remain. One repository-owned GUID declaration-shape header replaces a host SDK dependency, with an explicit local include root and unavailable compiler location hint; real SDK discovery has separate public tests.",
+  "fixtureDependencySha256": {
+    "guiddef.h": "42fd61d22a2f0a56301343cba377c06dc13d5139c616598d02158758a933d4e0"
+  },
+  "lineEndings": "Repository fixture source bytes normalized to LF, matching .gitattributes; source declarations unchanged."
+}

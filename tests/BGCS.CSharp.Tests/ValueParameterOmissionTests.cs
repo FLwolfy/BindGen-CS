@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -45,7 +45,7 @@ public sealed class ValueParameterOmissionTests
         Assert.Equal(parameter.id, Assert.Single(Assert.Single(model.methods).valuePointers));
         Sink sink = new();
         EmissionRequest request = new("fixture", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpValueParameterOmissionPlan omission = Assert.Single(plan.valueParameterOmissions);
         Assert.Equal(parameter.id, omission.parameter);
         Assert.Equal(function.id, omission.nativeExport);
@@ -53,7 +53,7 @@ public sealed class ValueParameterOmissionTests
         Assert.Contains("verified generated raw storage and managed alignment", omission.reason);
         Assert.Empty(Assert.Single(plan.methods).valueParameters);
         Assert.Equal("Record*", Assert.Single(Assert.Single(plan.methods).parameterTypes));
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.contents.Select(pair => (pair.Key, pair.Value)), "fixture");
         var roots = sink.contents.Values.Select(source => CSharpSyntaxTree.ParseText(source).GetRoot()).ToArray();
         MethodDeclarationSyntax raw = Assert.Single(roots.SelectMany(root => root.DescendantNodes().OfType<MethodDeclarationSyntax>()),

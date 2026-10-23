@@ -7,13 +7,13 @@ using System.Text;
 using System.Threading.Tasks;
 using BGCS.Analysis.Bridge;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using Xunit;
 
@@ -35,11 +35,11 @@ public sealed class NativeMinimalStringProtocolTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "exact.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(built.targetModels);
-            CppBridgeModule bridge = target.bridge!;
+            NativeBridgePlan bridge = target.bridge!;
             Assert.All(bridge.familyBindings, binding => { Assert.Null(binding.nativeTemplate); Assert.NotNull(binding.nativeType); });
             NativeValueProtocol text = Assert.Single(target.interop.types, type => type.valueProtocol?.family == NativeValueFamily.String).valueProtocol!;
             Assert.Equal(NativeTextEncoding.Utf8, text.text!.encoding);
@@ -56,7 +56,7 @@ public sealed class NativeMinimalStringProtocolTests
             foreach (BridgeExport owned in bridge.exports.Where(export => export.resultRelease is not null)) Assert.Null(owned.resultOwnership);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
                 { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Exact.Runtime" : "BGCS.Runtime" });
             string context = sourceRuntime ? "ExactApiContext" : "ExactApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
@@ -86,14 +86,14 @@ public sealed class NativeMinimalStringProtocolTests
             string header = Path.Combine(root, "exact.hpp");
             await File.WriteAllTextAsync(header, Header);
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
             string[] previous = Hashes(first.outputRoot);
             foreach ((BindingConfiguration request, string source, string cause) in new[]
             {
-                (configuration with { cpp = configuration.cpp with { familyBindings = configuration.cpp.familyBindings.SetItem(0, configuration.cpp.familyBindings[0] with { cStr = configuration.cpp.familyBindings[0].cStr! with { constructorCopiesInput = null } }) } }, Header, "constructorCopiesInput"),
-                (configuration with { cpp = configuration.cpp with { familyBindings = configuration.cpp.familyBindings.SetItem(0, configuration.cpp.familyBindings[0] with { cStr = configuration.cpp.familyBindings[0].cStr! with { maximumCodeUnits = 0 } }) } }, Header, "scan bound"),
+                (configuration with { bridge = configuration.bridge with { cpp = configuration.bridge.cpp with { familyBindings = configuration.bridge.cpp.familyBindings.SetItem(0, configuration.bridge.cpp.familyBindings[0] with { cStr = configuration.bridge.cpp.familyBindings[0].cStr! with { constructorCopiesInput = null } }) } } }, Header, "constructorCopiesInput"),
+                (configuration with { bridge = configuration.bridge with { cpp = configuration.bridge.cpp with { familyBindings = configuration.bridge.cpp.familyBindings.SetItem(0, configuration.bridge.cpp.familyBindings[0] with { cStr = configuration.bridge.cpp.familyBindings[0].cStr! with { maximumCodeUnits = 0 } }) } } }, Header, "scan bound"),
                 (configuration, Header.Replace("const char* c_str(){", "int c_str(){", StringComparison.Ordinal)
                     .Replace("return mode==1?nullptr:mode==2?unterminated:units.c_str();", "return 42;", StringComparison.Ordinal)
                     .Replace("return std::strcmp(value.c_str(),\"copied\\xF0\\x9F\\x98\\x80\")==0?42:-1;", "return 42;", StringComparison.Ordinal), "data pointer")
@@ -116,7 +116,7 @@ public sealed class NativeMinimalStringProtocolTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static string ConsumerBody(CppBridgeModule bridge, CSharpEmissionPlan plan)
+    private static string ConsumerBody(NativeBridgePlan bridge, CSharpEmissionPlan plan)
     {
         StringBuilder source = new();
         string Call(BridgeExport export, params string[] arguments)
@@ -179,16 +179,15 @@ public sealed class NativeMinimalStringProtocolTests
 
     private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime) => new()
     {
-        schemaVersion = 1, library = new() { id = "exact", nativeName = "exact_fixture" },
+        schemaVersion = 2, library = new() { id = "exact", nativeName = "exact_fixture" },
         source = new() { language = SourceLanguage.Cpp, headers = ["exact.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
             selection = new() { includeDeclarations = ["exact::MakeText", "exact::MakePath", "exact::MakeNull", "exact::MakeUnterminated", "exact::CheckCopy"] } },
         api = new() { @namespace = "Generated.Exact", name = "ExactApi", importMode = mode,
-            style = sourceRuntime ? BGCS.Contracts.Managed.ManagedApiStyle.Static : BGCS.Contracts.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
-        cpp = new() { familyBindings = [
+            style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
+        bridge = new() { cpp = new() { familyBindings = [
             new() { nativeType = "exact::Text", family = StandardValueKind.String, stringEncoding = NativeTextEncoding.Utf8, stringAccess = CppStringAccess.CStrNullTerminated, evidence = new(EvidenceLevel.UserAsserted, "minimal-UTF8-string-protocol"),
                 cStr = new() { maximumCodeUnits = 64, readableLifetime = new(NativeLifetimeKind.Call, null, new(EvidenceLevel.UserAsserted,"native-cstr-readable-during-call")), nullTerminated = new(EvidenceLevel.UserAsserted,"native-cstr-termination"), constructorCopiesInput = new(EvidenceLevel.UserAsserted,"native-Text-constructor-copies-before-return") } },
-            new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.NativeUtf8, evidence = new(EvidenceLevel.UserAsserted, "minimal-native-UTF8-path-protocol") }],
-            sequenceInputAdapters = [new("exact::CheckCopy", [new("value")])] },
+            new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.NativeUtf8, evidence = new(EvidenceLevel.UserAsserted, "minimal-native-UTF8-path-protocol") }], sequenceInputAdapters = [new("exact::CheckCopy", [new("value")])] } },
         runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
          cache = new() { enabled = false }
     };
@@ -201,7 +200,7 @@ public sealed class NativeMinimalStringProtocolTests
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
     private sealed class NoWrites : IArtifactSink { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot emit artifacts."); }
 

@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,6 +18,7 @@ namespace BGCS.Infrastructure.IO;
 /// </remarks>
 public sealed class OutputDirectorySetTransaction : IDisposable
 {
+    private readonly IHostPathService m_paths;
     private readonly SortedDictionary<string, OutputDirectoryTransaction> m_transactions;
     private readonly IReadOnlyDictionary<string, string> m_stagingPaths;
     private readonly OwnedPathBoundary[] m_boundaries;
@@ -28,6 +30,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
     /// Acquires all output owners in canonical path order under one shared deadline.
     /// </summary>
     /// <param name="destinationPaths">Distinct output directories; none may contain another.</param>
+    /// <param name="paths">The explicitly selected host path service.</param>
     /// <param name="lockTimeout">Maximum combined ownership wait; null uses five minutes.</param>
     /// <param name="cancellationToken">Cancels ownership acquisition before any output is replaced.</param>
     /// <exception cref="ArgumentNullException">The destination sequence is null.</exception>
@@ -37,6 +40,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
     /// <exception cref="OperationCanceledException">Ownership acquisition is canceled.</exception>
     public OutputDirectorySetTransaction(
         IEnumerable<string> destinationPaths,
+        IHostPathService paths,
         TimeSpan? lockTimeout = null,
         CancellationToken cancellationToken = default
     ) {
@@ -44,12 +48,16 @@ public sealed class OutputDirectorySetTransaction : IDisposable
         TimeSpan timeout = lockTimeout ?? TimeSpan.FromMinutes(5);
         if (timeout < TimeSpan.Zero && timeout != Timeout.InfiniteTimeSpan)
             throw new ArgumentOutOfRangeException(nameof(lockTimeout));
-        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        var captured = destinationPaths.Select(path => (logical: Path.GetFullPath(path), boundary: new OwnedPathBoundary(path)))
+        m_paths = paths;
+        IComparer<string> comparer = Comparer<string>.Create((
+            left,
+            right
+        ) => StringComparer.Ordinal.Compare(paths.GetIdentityKey(left), paths.GetIdentityKey(right)));
+        var captured = destinationPaths.Select(path => (logical: Path.GetFullPath(path), boundary: new OwnedPathBoundary(path, m_paths)))
             .OrderBy(entry => entry.boundary.physicalPath, comparer).ToArray();
         m_boundaries = captured.Select(entry => entry.boundary).ToArray();
-        string[] paths = m_boundaries.Select(boundary => boundary.physicalPath).ToArray();
-        ValidatePaths(paths, comparer);
+        string[] outputs = m_boundaries.Select(boundary => boundary.physicalPath).ToArray();
+        ValidatePaths(outputs, paths);
         m_transactions = new(comparer);
         Stopwatch elapsed = Stopwatch.StartNew();
         try
@@ -60,7 +68,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
                 if (remaining < TimeSpan.Zero && timeout != Timeout.InfiniteTimeSpan)
                     remaining = TimeSpan.Zero;
                 entry.boundary.Verify();
-                m_transactions.Add(entry.boundary.physicalPath, new(entry.logical, remaining, cancellationToken));
+                m_transactions.Add(entry.boundary.physicalPath, new(entry.logical, paths, remaining, cancellationToken));
             }
         }
         catch (Exception acquisitionFailure)
@@ -76,7 +84,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
             throw;
         }
         m_stagingPaths = new ReadOnlyDictionary<string, string>(m_transactions.ToDictionary(
-            entry => entry.Key, entry => entry.Value.stagingPath, comparer));
+            entry => entry.Key, entry => entry.Value.stagingPath, paths.comparer));
     }
 
     /// <summary>
@@ -180,10 +188,10 @@ public sealed class OutputDirectorySetTransaction : IDisposable
             throw new AggregateException("Output candidate cleanup failed; publication ownership has been released.", failures);
     }
 
-    private static string NormalizePath(string path)
+    private string NormalizePath(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        string fullPath = new OwnedPathBoundary(path).physicalPath;
+        string fullPath = new OwnedPathBoundary(path, m_paths).physicalPath;
         if (Path.GetDirectoryName(fullPath) == null)
             throw new ArgumentException("An output path must have a parent directory.", nameof(path));
         return fullPath;
@@ -191,7 +199,7 @@ public sealed class OutputDirectorySetTransaction : IDisposable
 
     private static void ValidatePaths(
         IReadOnlyList<string> paths,
-        StringComparer comparer
+        IHostPathService host
     ) {
         if (paths.Count == 0)
             throw new ArgumentException("At least one output path is required.", nameof(paths));
@@ -199,8 +207,8 @@ public sealed class OutputDirectorySetTransaction : IDisposable
         {
             for (int previous = 0; previous < index; previous++)
             {
-                string relative = Path.GetRelativePath(paths[previous], paths[index]);
-                if (comparer.Equals(paths[previous], paths[index])
+                string relative = host.GetRelativePath(paths[previous], paths[index]);
+                if (host.Equals(paths[previous], paths[index])
                     || !Path.IsPathRooted(relative) && relative != ".."
                         && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
                 {

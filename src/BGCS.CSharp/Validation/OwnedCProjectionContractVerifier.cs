@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Emission;
 using BGCS.CSharp.Planning;
 using Microsoft.CodeAnalysis.CSharp;

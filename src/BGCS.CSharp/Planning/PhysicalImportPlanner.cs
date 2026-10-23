@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Targets;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -43,18 +43,11 @@ internal static class PhysicalImportPlanner
     {
         ManagedFunctionPointerTransport transport = plan.managedRuntime?.functionPointerTransport ?? ManagedFunctionPointerTransport.Typed;
         if (!Enum.IsDefined(transport)) throw new NotSupportedException("The managed function-pointer import transport is undefined.");
-        if (transport == ManagedFunctionPointerTransport.Typed)
-        {
-            if (plan.managedRuntime?.kind == ManagedRuntimeKind.BrowserWasm && plan.methods.Any(method =>
-                SyntaxFactory.ParseTypeName(method.returnType) is FunctionPointerTypeSyntax
-                || method.parameterTypes.Any(type => SyntaxFactory.ParseTypeName(type) is FunctionPointerTypeSyntax)))
-                throw new NotSupportedException("Browser function-pointer imports require the explicitly implemented wasm32 function-table index transport capability.");
-            return [];
-        }
-        if (plan.managedRuntime is not { kind: ManagedRuntimeKind.BrowserWasm, moduleMechanism: NativeModuleMechanism.StaticAdapter }
-            || plan.api.interop.pointerSize != 4 || plan.api.interop.byteOrder != NativeByteOrder.LittleEndian
-            || plan.methods.Any(method => method.callingConvention != "Cdecl"))
-            throw new NotSupportedException("Function-table index transport requires the browser wasm32 static C ABI and exact Cdecl signatures.");
+        if (transport == ManagedFunctionPointerTransport.Typed) return [];
+        if (plan.managedRuntime is null || plan.managedRuntime.pointerSize != plan.api.interop.pointerSize
+            || plan.managedRuntime.byteOrder != plan.api.interop.byteOrder
+            || plan.managedRuntime.defaultCallingConvention is string convention && plan.methods.Any(method => method.callingConvention != convention))
+            throw new NotSupportedException("Native-integer function-address transport requires matching physical width, byte order and convention facts.");
         var result = ImmutableArray.CreateBuilder<CSharpPhysicalImportPlan>();
         for (int index = 0; index < plan.methods.Length; index++)
         {

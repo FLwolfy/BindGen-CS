@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 2,
+  "library": { "id": "measure", "nativeName": "measure_native" },
+  "source": { "language": "c", "headers": ["native.h"], "parseMacros": false },
+  "api": { "namespace": "Example.Measure", "name": "MeasureApi" },
+  "output": { "root": "Generated" }
+}

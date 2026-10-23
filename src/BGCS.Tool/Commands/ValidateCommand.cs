@@ -19,7 +19,7 @@ internal static class ValidateCommand
         async System.Threading.Tasks.Task<int> ExecuteAsync()
         {
             GenerationRequest request = await GenerationArguments.CreateRequestAsync(options, cancellation.token).ConfigureAwait(false);
-            await using BindingHost host = BindingHost.CreateDefault();
+            await using BindingHost host = BindingGenerator.CreateDefault();
             InspectionResult result = await host.InspectAsync(request, cancellation.token).ConfigureAwait(false);
             cancellation.token.ThrowIfCancellationRequested();
             GenerateCommand.WriteDiagnostics(result.diagnostics, options.diagnostics);

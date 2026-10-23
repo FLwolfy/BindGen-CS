@@ -19,7 +19,7 @@ class ReleasePayloadTests(unittest.TestCase):
         self.revision = self.git('rev-parse', 'HEAD').strip()
         self.old_root = payload.ROOT; payload.ROOT = self.root; self.addCleanup(setattr, payload, 'ROOT', self.old_root)
         (self.tools / 'BGCS.RepositoryTools.dll').write_bytes(b'synthetic test executable bytes')
-        (self.tools / 'BGCS.Contracts.dll').write_bytes(b'synthetic exact dependency bytes')
+        (self.tools / 'BGCS.Core.dll').write_bytes(b'synthetic exact dependency bytes')
 
     def git(self, *args):
         return subprocess.check_output(['git', '-c', 'core.hooksPath=' + str(self.hooks), *args], cwd=self.root, text=True, stderr=subprocess.DEVNULL)
@@ -32,7 +32,7 @@ class ReleasePayloadTests(unittest.TestCase):
 
     def test_missing_extra_changed_dependency_and_nested_receipt_are_rejected(self):
         payload.tooling(self.tools, self.revision, seal=True)
-        path = self.tools / 'BGCS.Contracts.dll'; content = path.read_bytes()
+        path = self.tools / 'BGCS.Core.dll'; content = path.read_bytes()
         path.write_bytes(b'changed')
         with self.assertRaises(RuntimeError): payload.tooling(self.tools, self.revision)
         path.unlink()

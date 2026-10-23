@@ -8,12 +8,12 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Layout;
-using BGCS.Contracts.Common;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -35,7 +35,7 @@ public sealed class ExternalCarrierPlanningTests
         model = model with { externalTypeProjections = [projection], recipeHelpers =
             [new("vector", "float", new("Vector2", "{value}.X", "new Vector2({value}, 0)", "System.Numerics"))] };
         NamespaceSink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile, additionalUsings = ["System.Text", "System.Text"] }, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile, additionalUsings = ["System.Text", "System.Text"] }, CancellationToken.None);
         SyntaxTree[] trees = sink.sources.Select(source => CSharpSyntaxTree.ParseText(source.Value, path: source.Key))
             .Append(CSharpSyntaxTree.ParseText("namespace Consumer { public struct Pair<T> where T : unmanaged { public T X; public T Y; } }")).ToArray();
         string[] paths = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
@@ -51,7 +51,7 @@ public sealed class ExternalCarrierPlanningTests
         Assert.Equal(new Vector2(11, 0), conversions.GetMethod("FromNative_vector")!.Invoke(null, [11f]));
     }
 
-    private sealed class NamespaceSink : BGCS.Contracts.Artifacts.IArtifactSink
+    private sealed class NamespaceSink : BGCS.Core.Artifacts.IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
         public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
@@ -153,8 +153,8 @@ public sealed class ExternalCarrierPlanningTests
             with { externalTypeProjections = [projection] };
         NeutralBackendTests.MemorySink rejected = new();
         CSharpPlanningException failure = await Assert.ThrowsAsync<CSharpPlanningException>(async () =>
-            await new CSharpBackend().EmitAsync(valueModel, new("external", rejected) { importMode = mode }, CancellationToken.None));
-        Assert.Contains("calling-ABI evidence", failure.Message, StringComparison.Ordinal);
+            await new CSharpTestBackend().EmitAsync(valueModel, new("external", rejected) { importMode = mode }, CancellationToken.None));
+        Assert.Contains("complete plan", failure.Message, StringComparison.Ordinal);
         Assert.Contains("pointer bridge", failure.Message, StringComparison.Ordinal);
         Assert.Empty(rejected.sources);
         Assert.Equal(EvidenceLevel.Verified, projection.managedStorage!.evidence.level);
@@ -169,12 +169,12 @@ public sealed class ExternalCarrierPlanningTests
             with { externalTypeProjections = [projection] };
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("external", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(pointerModel, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(pointerModel, request);
         Assert.Empty(plan.aggregateCalls);
         Assert.Single(plan.externalTypeProjections);
         Assert.All(plan.methods, method => Assert.All(method.parameterTypes, type => Assert.Equal("Point*", type)));
         Assert.All(plan.methods, method => Assert.Empty(method.valueProjections));
-        await new CSharpBackend().EmitAsync(pointerModel, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(pointerModel, request, CancellationToken.None);
         new BGCS.CSharp.Validation.EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), "external");
         const string consumer = """
             namespace Consumer { public struct Pair<T> where T : unmanaged { public T X; public T Y; } }
@@ -208,7 +208,7 @@ public sealed class ExternalCarrierPlanningTests
             with { externalTypeProjections = [projection] };
         NamespaceSink sink = new();
         EmissionRequest request = new("external", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpValueParameterOmissionPlan omitted = Assert.Single(plan.valueParameterOmissions);
         Assert.Equal(parameter.id, omitted.parameter);
         Assert.Equal(parameter.source, omitted.source);
@@ -217,11 +217,96 @@ public sealed class ExternalCarrierPlanningTests
         Assert.Empty(method.valueParameters);
         Assert.Empty(method.valueProjections);
         Assert.Equal("Point*", Assert.Single(method.parameterTypes));
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new BGCS.CSharp.Validation.EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), "external");
         var raw = Assert.Single(sink.sources.Values.SelectMany(source => CSharpSyntaxTree.ParseText(source).GetRoot().DescendantNodes()
             .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>()), method => method.Identifier.ValueText == "Change");
         Assert.Equal("RawApi", ((Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax)raw.Parent!).Identifier.ValueText);
+    }
+
+    [Theory]
+    [InlineData(BindingImportMode.FunctionTable)]
+    [InlineData(BindingImportMode.DllImport)]
+    [InlineData(BindingImportMode.LibraryImport)]
+    public async Task ExactNativeValueCopyProvenanceRestoresExternalValuesWithoutChangingTheRawPointerAbi(BindingImportMode mode)
+    {
+        ManagedApiModel model = CopiedModel();
+        NeutralBackendTests.MemorySink sink = new();
+        EmissionRequest request = new("external", sink) { importMode = mode };
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        CSharpMethodPlan method = Assert.Single(plan.methods);
+        Assert.Equal("void", method.returnType);
+        Assert.Equal(1, method.copiedResultIndex);
+        Assert.All(method.parameterTypes, carrier => Assert.Equal("Point*", carrier));
+        Assert.All(method.valueParameters, value => Assert.Equal(CSharpValueAllocationMode.NativeValueCopy, value.allocationMode));
+        Assert.Equal(2, method.valueProjections.Count);
+        Assert.Empty(plan.aggregateCalls);
+        Assert.Empty(plan.valueParameterOmissions);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        new BGCS.CSharp.Validation.EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), "external");
+        await ValueReceiverTests.CompileWithSdkAsync(sink, """
+            namespace Consumer { public struct Pair<T> where T : unmanaged { public T X; public T Y; } }
+            namespace Generated.Copied { public static class ConsumerProbe {
+                public static Consumer.Pair<float> Copy(Api api, Consumer.Pair<float> value) => api.Copy(value);
+            } }
+            """, sourceRuntime: false);
+    }
+
+    [Theory]
+    [InlineData("bridge")]
+    [InlineData("callable")]
+    [InlineData("parameter")]
+    [InlineData("source-type")]
+    [InlineData("storage")]
+    [InlineData("direction")]
+    [InlineData("evidence")]
+    public void MutatedCopyProvenanceCannotTurnAnOrdinaryPointerIntoAnExternalValue(string fault)
+    {
+        ManagedApiModel model = CopiedModel();
+        InteropFunction function = Assert.Single(model.interop.functions);
+        InteropParameter input = function.parameters[0];
+        NativeValueCopyContract copy = input.singleValue!.copySource!;
+        copy = fault switch
+        {
+            "bridge" => copy with { bridgeExport = new("wrong-bridge") },
+            "callable" => copy with { sourceCallable = new("wrong-callable") },
+            "parameter" => copy with { sourceParameter = new("wrong-parameter") },
+            "source-type" => copy with { sourceType = new("wrong-source-type") },
+            "storage" => copy with { storageType = new("wrong-storage") },
+            "direction" => copy with { direction = NativeParameterDirection.Output },
+            _ => copy with { evidence = new(EvidenceLevel.Verified, "unrelated-observation") }
+        };
+        input = input with { singleValue = input.singleValue with { copySource = copy } };
+        function = function with { parameters = function.parameters.SetItem(0, input) };
+        InteropModule module = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types, [function], [])
+            { byteOrder = model.interop.byteOrder };
+        Assert.Contains("provenance", new BGCS.Analysis.Safety.ValueParameterAnalyzer().GetRestriction(module, function, input)!, StringComparison.Ordinal);
+        ManagedApiModel changed = new DefaultManagedProjection().Project(module, new("Generated.Copied", "Api"), CancellationToken.None)
+            with { externalTypeProjections = model.externalTypeProjections };
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(changed, new("external", new NeutralBackendTests.MemorySink()));
+        Assert.DoesNotContain(Assert.Single(plan.methods).valueParameters, value => value.parameterIndex == 0);
+        Assert.Equal(BGCS.Core.Capabilities.DeclarationGenerationStatus.GeneratedRaw,
+            Assert.Single(plan.capabilities, report => report.declarationId == function.id).status);
+    }
+
+    private static ManagedApiModel CopiedModel()
+    {
+        (InteropModule original, ExternalTypeProjection projection) = Create();
+        StableId sourceType = new("source-point"), sourceCallable = new("source-copy"), sourceParameter = new("source-input"), bridge = new("copy-bridge");
+        InteropType record = original.GetType(projection.nativeType) with { sourceNativeType = sourceType };
+        InteropType pointer = new(new("point-pointer"), "Point*", NativeTypeCategory.Pointer, 8, 8) { elementType = record.id };
+        InteropType nothing = new(new("void"), "void", NativeTypeCategory.Primitive, 0, 1) { primitiveKind = "Void" };
+        Evidence evidence = new(EvidenceLevel.Declared, "fixture:exact-bridge-operation");
+        ValueParameterContract Value(NativeParameterDirection direction, StableId? source) => new(direction, new(NativeLifetimeKind.Call, null, evidence), evidence)
+            { retainsPointer = false, allowsNull = false, copySource = new(bridge, sourceCallable, source, sourceType, record.id, direction, evidence) };
+        InteropFunction function = new(new("copy"), "copy", nothing.id,
+            [new(new("input"), "value", pointer.id) { sourceDeclaration = sourceParameter, singleValue = Value(NativeParameterDirection.Input, sourceParameter) },
+                new(new("output"), "result", pointer.id) { singleValue = Value(NativeParameterDirection.Output, null) }], "C")
+            { nativeBridgeExport = bridge, sourceDeclaration = sourceCallable };
+        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types.Replace(original.GetType(record.id), record).Add(pointer).Add(nothing), [function], [])
+            { byteOrder = original.byteOrder };
+        return new DefaultManagedProjection().Project(module, new("Generated.Copied", "Api"), CancellationToken.None)
+            with { externalTypeProjections = [projection] };
     }
 
     private static InteropModule WithRecord(InteropModule module, InteropType record)

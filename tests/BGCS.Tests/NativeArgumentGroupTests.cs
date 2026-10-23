@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -37,10 +37,10 @@ public sealed class NativeArgumentGroupTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1,
+                schemaVersion = 2,
                 library = new() { id = "arguments", nativeName = "arguments_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                cpp = new() { typeLowerings = [new()
+                bridge = new() { typeLowerings = [new()
                 {
                     id = "range", typePattern = "Demo::Range", cAbiType = "uint64_t",
                     abiParameters = [new("data", "const int32_t*"), new("length", "uint64_t")],
@@ -48,12 +48,12 @@ public sealed class NativeArgumentGroupTests
                 }] },
                 api = new() { @namespace = "Generated.Arguments", name = "ArgumentsApi" },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }};
-            string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
+            string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
-            CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
+            NativeBridgePlan plan = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
             BridgeExport sum = plan.exports.Single(export => export.operation.declaration is { } id && plan.source.GetDeclaration(id).qualifiedName == "Demo::Sum");
             Assert.Equal(3, sum.parameters.Length);
             Assert.Equal(2, sum.operation.argumentGroups.Length);

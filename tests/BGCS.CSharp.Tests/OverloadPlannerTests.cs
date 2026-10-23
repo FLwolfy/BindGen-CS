@@ -9,11 +9,11 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Projection;
 using BGCS.Runtime;
 using Microsoft.CodeAnalysis;
@@ -30,7 +30,7 @@ public sealed class OverloadPlannerTests
         ManagedApiModel model = Project(Module());
         Assert.All(model.methods, method => Assert.Equal("Evaluate", method.name));
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type apiType = compiled.assembly.GetType("Generated.Overloads.OverloadApi", true)!;
         using IDisposable api = (IDisposable)apiType.GetMethod("FromProvider")!.InvokeFactory([new StaticModuleProvider(Exports())])!;
@@ -50,7 +50,7 @@ public sealed class OverloadPlannerTests
             valueProjections = [new(model.interop.functions[1].parameters[0].id, new("global::System.Int32", "(double){value}"))]
         }) };
         NeutralBackendTests.MemorySink sink = new();
-        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Contains("Evaluate(System.Int32)", error.Message);
         Assert.Contains("native_eval_i32", error.Message);
         Assert.Contains("native_eval_f64", error.Message);
@@ -87,7 +87,7 @@ public sealed class OverloadPlannerTests
             valueProjections = [new(new("late_value"), new("global::System.Int32", "(double){value}"))]
         }) };
         NeutralBackendTests.MemorySink sink = new();
-        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Contains("OverloadApi.Evaluate0(System.Int32)", error.Message);
         Assert.Contains("native_eval_0", error.Message);
         Assert.Contains("native_late_eval_f64", error.Message);
@@ -112,7 +112,7 @@ public sealed class OverloadPlannerTests
                 new(new("read16"), "read16", original.types[0].id, [new(new("text16"), "text", utf16.id) { text = Text(NativeTextEncoding.Utf16, 2, true) }], "C") { sourceName = "Read" }], original.diagnostics)
         { byteOrder = original.byteOrder };
         NeutralBackendTests.MemorySink sink = new();
-        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpBackend().EmitAsync(Project(module), new("unused", sink), CancellationToken.None));
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(Project(module), new("unused", sink), CancellationToken.None));
         Assert.Contains("Read(System.String)", error.Message);
         Assert.Empty(sink.sources);
     }
@@ -124,7 +124,7 @@ public sealed class OverloadPlannerTests
         InteropModule module = WithFunctions(original, original.functions.SetItem(1, original.functions[1] with
         { parameters = [original.functions[1].parameters[0] with { type = original.types[0].id }] }));
         NeutralBackendTests.MemorySink sink = new();
-        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpBackend().EmitAsync(Project(module), new("unused", sink), CancellationToken.None));
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(Project(module), new("unused", sink), CancellationToken.None));
         Assert.Contains("RawApi.Evaluate(System.Int32)", error.Message);
         Assert.Empty(sink.sources);
     }
@@ -140,7 +140,7 @@ public sealed class OverloadPlannerTests
         ManagedApiModel model = new DefaultManagedProjection().Project(module, request, CancellationToken.None);
         Assert.Equal("EvaluateOther", model.methods[1].name);
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Assert.NotNull(compiled.assembly.GetType("Generated.Overloads.OverloadApi", true)!.GetMethod("EvaluateOther"));
     }
@@ -156,7 +156,7 @@ public sealed class OverloadPlannerTests
             [new(new("eval_i32"), "native_eval_i32", integer.id, [new(new("i32"), "value", integer.id)], "C")
             { sourceName = "Evaluate", sourceQualifiedName = "Demo::Evaluate", sourceSignature = "Demo::Evaluate(int)", sourceRole = "Function" },
                 new(new("eval_f64"), "native_eval_f64", real.id, [new(new("f64"), "value", real.id)], "C")
-            { sourceName = "Evaluate", sourceQualifiedName = "Demo::Evaluate", sourceSignature = "Demo::Evaluate(double)", sourceRole = "Function" }], []);
+            { sourceName = "Evaluate", sourceQualifiedName = "Demo::Evaluate", sourceSignature = "Demo::Evaluate(double)", sourceRole = "Function" }], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
     private static unsafe IEnumerable<KeyValuePair<string, nint>> Exports() => new Dictionary<string, nint>
     {

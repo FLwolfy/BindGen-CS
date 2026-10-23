@@ -5,12 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
 using BGCS.CSharp.Planning;
 using Xunit;
 
@@ -35,21 +35,21 @@ public sealed class NativeValueStringResultTests
             string[] names=["Utf8","Utf16","Utf32","Empty","Path","Invalid8","Invalid16","Invalid32","TooLong"];
             BindingConfiguration configuration=new()
             {
-                schemaVersion=1,library=new(){id="textvalues",nativeName="text_value_fixture"},
+                schemaVersion = 2,library=new(){id="textvalues",nativeName="text_value_fixture"},
                 source=new(){language=SourceLanguage.Cpp,headers=["values.hpp"],parseMacros=false,includeTransitivelyReferencedHeaders=false,
                     selection=new(){includeDeclarations=names.Select(name=>"values::"+name).ToImmutableArray()}},
                 api=new(){@namespace="Generated.ValueText",name="ValueApi",importMode=mode,maximumValueStringCodeUnits=32,
-                    style=sourceRuntime?BGCS.Contracts.Managed.ManagedApiStyle.Static:BGCS.Contracts.Managed.ManagedApiStyle.Instance,nestGeneratedTypesInApi=sourceRuntime},
-                cpp=new(){familyBindings=[Text("std::string",NativeTextEncoding.Utf8),Text("std::u16string",NativeTextEncoding.Utf16),Text("std::u32string",NativeTextEncoding.Utf32),
-                    new(){nativeType="std::filesystem::path",family=StandardValueKind.Path,pathFormat=NativePathFormat.NativeUtf8,evidence=new(EvidenceLevel.UserAsserted,"preserve-native-separators")} ]},
+                    style=sourceRuntime?BGCS.Core.Managed.ManagedApiStyle.Static:BGCS.Core.Managed.ManagedApiStyle.Instance,nestGeneratedTypesInApi=sourceRuntime},
+                bridge = new() { cpp = new() { familyBindings=[Text("std::string",NativeTextEncoding.Utf8),Text("std::u16string",NativeTextEncoding.Utf16),Text("std::u32string",NativeTextEncoding.Utf32),
+                    new(){nativeType="std::filesystem::path",family=StandardValueKind.Path,pathFormat=NativePathFormat.NativeUtf8,evidence=new(EvidenceLevel.UserAsserted,"preserve-native-separators")} ] } },
                 runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},
                 cache=new(){enabled=false}
             };
-            await using BindingHost host=BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host=BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built=await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration,root));
             Assert.True(built.success,built.GetDiagnosticSummary());
             TargetInspection target=Assert.Single(built.targetModels);
-            CSharpEmissionPlan plan=new CSharpEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
+            CSharpEmissionPlan plan=new HostTestEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
                 {importMode=mode,runtimeNamespace=sourceRuntime?"Generated.ValueText.Runtime":"BGCS.Runtime",maximumValueStringCodeUnits=32});
             foreach(var type in target.interop.types.Where(type=>type.valueProtocol is not null))
             {
@@ -96,7 +96,7 @@ public sealed class NativeValueStringResultTests
     {
         DirectoryInfo? root=new(AppContext.BaseDirectory);while(root is not null&&!File.Exists(Path.Combine(root.FullName,"BindGen-CS.slnx")))root=root.Parent;
         string configuration=AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar+"Release"+Path.DirectorySeparatorChar,StringComparison.Ordinal)?"Release":"Debug";
-        return Path.Combine(root!.FullName,"src","BGCS.Frontend.Clang.Worker","bin",configuration,"net10.0");
+        return Path.Combine(root!.FullName,"extensions","frontends","BGCS.Frontend.Clang.Worker","bin",configuration,"net10.0");
     }
     private sealed class NoWrites:IArtifactSink{public string WriteText(string relativePath,string content)=>throw new InvalidOperationException("Planning cannot emit artifacts.");}
     private const string Header="""

@@ -2,7 +2,8 @@
   "legacyFixture": "entryTests/TypeNamingConvention",
   "legacyVariant": "config.alt",
   "configuration": {
-    "/api/naming/types/casing": "pascal"
+    "/api/naming/types/casing": "pascal",
+    "/bridge/aggregateStrategy": "pointerBridge"
   },
   "types": [
     {
@@ -20,7 +21,27 @@
       "parameterNames": [
         "value"
       ],
-      "returns": "SampleType"
+      "returns": "SampleType",
+      "parameterRefKinds": [
+        "None"
+      ]
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+RawApi",
+      "name": "MakeSample",
+      "parameters": [
+        "int",
+        "SampleType*"
+      ],
+      "parameterNames": [
+        "value",
+        "bgcs_result"
+      ],
+      "returns": "void",
+      "parameterRefKinds": [
+        "None",
+        "None"
+      ]
     }
   ],
   "absentTypes": [

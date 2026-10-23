@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "epoch": "4.0",
+  "baselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "policy": "An implementation or local focused pass is not a current-commit release certificate. Closure requires accepted evidence for the exact delivered source.",
+  "issues": [
+    {
+      "id": "P01",
+      "problem": "Aggregate boundaries require portable physical carriers",
+      "owner": "src/BGCS.NativeBridge/C/AggregatePointerLowering.cs",
+      "implementation": "Native aggregate values are normalized to typed pointer/output channels; actual Browser Mono/AOT invocation remains a required remote gate.",
+      "validationSources": [
+        "tests/BGCS.Tests/CNativeBridgePipelineTests.cs",
+        "tests/wasm/TypedBridge"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P02",
+      "problem": "Managed runtime and call ABI implementations belong outside the Engine",
+      "owner": "extensions/foundation/BGCS.Interop.DotNet",
+      "implementation": "Engine consumes independent runtime and ABI ports; optional execution implementations are explicitly registered.",
+      "validationSources": [
+        "tests/BGCS.Engine.Tests",
+        "tests/extensions/Interop.DotNet"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P03",
+      "problem": "Target SDK rules are implementation responsibilities",
+      "owner": "extensions/foundation/BGCS.Targets.Desktop",
+      "implementation": "Desktop discovery and optional target implementations live under extensions; no consumer build providers exist.",
+      "validationSources": [
+        "tests/extensions/Targets.Desktop"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P04",
+      "problem": "Host path semantics and frontend argument interpretation are explicit",
+      "owner": "extensions/foundation/BGCS.Hosting.Standard",
+      "implementation": "Injected host path identities and independently prepared frontend inputs are verified before publication.",
+      "validationSources": [
+        "tests/BGCS.Infrastructure.Tests/InputPathSemanticsTests.cs",
+        "tests/extensions/Frontend.Clang.Worker"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P05",
+      "problem": "Runtime scheduling must be explicit",
+      "owner": "src/BGCS.Runtime",
+      "implementation": "General dispatcher interfaces remain; runtime-specific automatic Browser dispatch selection is removed.",
+      "validationSources": [
+        "tests/BGCS.Runtime.Tests"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P06",
+      "problem": "C lowering must participate in the actual generation flow",
+      "owner": "src/BGCS.NativeBridge/C",
+      "implementation": "Typed C lowering is emitted and reparsed, with native consumer tests outside the product.",
+      "validationSources": [
+        "tests/BGCS.Tests/CNativeBridgePipelineTests.cs",
+        "tests/BGCS.NativeBridge.Tests"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P07",
+      "problem": "Source contribution and post-parse lowering are separate stages",
+      "owner": "src/BGCS.Engine/Pipeline",
+      "implementation": "Original source contribution runs before the first parse; bridge verification does not repeat it.",
+      "validationSources": [
+        "tests/BGCS.Tests/SourceContributionIntegrationTests.cs"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P08",
+      "problem": "C and C++ share the formal bridge model",
+      "owner": "src/BGCS.Core/Bridge",
+      "implementation": "Common bridge settings and ports replace C++-only authoring contracts; language-specific behavior stays explicit.",
+      "validationSources": [
+        "tests/BGCS.NativeBridge.Tests",
+        "tests/BGCS.Configuration.Tests"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P09",
+      "problem": "Runtime and call ABI require their own extension ports",
+      "owner": "src/BGCS.Core/Ports",
+      "implementation": "Independent providers and exact profile-bound call plans do not infer support from target names.",
+      "validationSources": [
+        "tests/BGCS.Engine.Tests",
+        "examples/CustomCallAbi"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false,
+      "behaviorReplacementIndex": "eng/acceptance/feature-evidence-map.json#/behaviorReplacements"
+    },
+    {
+      "id": "P10",
+      "problem": "Generation, cleanup and publication ordering must be reviewable",
+      "owner": "src/BGCS.Engine/Pipeline",
+      "implementation": "Generation services close before commit; host infrastructure survives final input fences and publication; committed cleanup failure is represented accurately.",
+      "validationSources": [
+        "tests/BGCS.Tests",
+        "tests/BGCS.Infrastructure.Tests/ArtifactPublicationTests.cs"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P11",
+      "problem": "The affected Browser path needs actual invocation evidence",
+      "owner": ".github/workflows/ci.yml",
+      "implementation": "A fixed Mono Wasm/AOT aggregate and callback regression executes once in Linux smoke; not yet certified by source presence.",
+      "validationSources": [
+        "tests/wasm/TypedBridge",
+        "scripts/wasm_typed_bridge.py"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P12",
+      "problem": "Frontend tests must use public contracts",
+      "owner": "extensions/frontends/BGCS.Frontend.Clang",
+      "implementation": "No friend assembly or private behavior reflection is retained; original fact cases map to public frontend results.",
+      "validationSources": [
+        "eng/acceptance/frontend-public-surface-migration.json",
+        "tests/BGCS.Architecture.Tests"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P13",
+      "problem": "Documentation and installed examples must match the current product",
+      "owner": "README.md",
+      "implementation": "Current documentation uses Core, schema2 and4.0.0; installation examples still require actual accepted packages.",
+      "validationSources": [
+        "scripts/test-cli-examples.py",
+        "scripts/generate-config-docs.py"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "P14",
+      "problem": "SDK declarations and installation locks must agree",
+      "owner": "global.json",
+      "implementation": "SDK10.0.402/latestPatch/no previews and exact isolated runtime/resource hashes are synchronized.",
+      "validationSources": [
+        "scripts/verify-locked-toolchain.py",
+        "eng/toolchains/toolchains.lock.json"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    }
+  ],
+  "outsideProduct": [
+    "Consumer diagnostic presentation",
+    "Library-specific ownership declarations and facade design",
+    "Consumer compilation, linking, packaging, deployment and package updates"
+  ],
+  "retainedRegressions": [
+    "Portable logical input roots and relocated generated source",
+    "Shared dependent-template type references preserve declaration ownership"
+  ],
+  "evidenceIndex": "records/acceptance/CURRENT_ISSUES.md"
+}

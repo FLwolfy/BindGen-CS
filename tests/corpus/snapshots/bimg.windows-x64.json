@@ -3,7 +3,7 @@
   "libraryId": "bimg",
   "platform": "windows-x64",
   "sourceNormalization": "quoted-locked-corpus-include-root-v1",
-  "selectionPolicySha256": "72e98800299edc085c3f90f09451aea3752c1e4dc08d2ebcc85d2e9b493a8d0a",
+  "selectionPolicySha256": "a30534e7dda000005976f33bc7c093fbdba6d603bcd55ca5075e89f4b23167f1",
   "omittedDeclarations": {
     "excludedDeclarations": [
       "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)"
@@ -20,15 +20,15 @@
         "sourceSignature": "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)",
         "headerSha256": "d3c82fdf973eda2f1dedeb7f3104c87184fcf1a5c5cf80be191bb95f5633fc99",
         "declaration": "ImageContainer* imageConvert(\n\t\t  bx::AllocatorI* _allocator\n\t\t, TextureFormat::Enum _dstFormat\n\t\t, const void* _src\n\t\t, uint32_t _size\n\t\t);",
-        "diagnosticEvidence": "Complete locked source search finds only the declaration. Linking the full generated bridge against upstream core, astc, bx and image_decode emits one unresolved imageConvert(AllocatorI*,Enum,const void*,uint32_t) symbol. The gate selects this exact overload in a separate negative build and requires failure without replacing its prior owned publication."
+        "diagnosticEvidence": "Historical full-source verification at this locked upstream revision found only the declaration and reported an unresolved imageConvert(AllocatorI*,Enum,const void*,uint32_t) symbol when linking the complete generated bridge. The current generator corpus baseline rechecks the exact locked header declaration and disclosed selection; it does not repeat a full upstream application link."
       }
     ]
   },
   "sources": {
     "windows-x64-msvc/managed/Bindings.cs": "5ba58a7a341ff2e72d5fd296f66bf133c41208ec786fc4af092931693ce0fc58",
     "windows-x64-msvc/native/include/Bimg_.h": "8d49292fce8d83e17a4b12370d72a832aedcfe25aa778951622c38fcf8169609",
-    "windows-x64-msvc/native/src/Bimg_.cpp": "ba10facc6b23e9d1ba6e01d71a876a77941685d7a81cb08f2a7d70cd506fbb99",
-    "windows-x64-msvc/native/src/storage.assertions.cpp": "fd5ce3e4c035dd6738b85e5605fa12573f0bb93233a267fe021729db10b7d2bf"
+    "windows-x64-msvc/native/src/Bimg_.cpp": "d2a2e165be64bbab2c89504caf9d5ba56325f954fc5b927134fec7d83f54f269",
+    "windows-x64-msvc/native/src/storage.assertions.cpp": "c9d629a97c02ea422ec4b83892c2ac621b9183eac3a92982291bac3f699fa376"
   },
   "publicApiSha256": "63b42f43d1dc7849da43620c234c407b156abd0de14dbc25897f004c031f1e90"
 }

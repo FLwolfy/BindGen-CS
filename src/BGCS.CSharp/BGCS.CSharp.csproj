@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup Label="Project dependencies">
-    <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
+    <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
     <ProjectReference Include="../BGCS.Analysis/BGCS.Analysis.csproj" />
   </ItemGroup>
 

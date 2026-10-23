@@ -1,4 +1,4 @@
-using BGCS.Contracts.Common;
+using BGCS.Core.Common;
 
 namespace BGCS.Analysis.Bridge;
 

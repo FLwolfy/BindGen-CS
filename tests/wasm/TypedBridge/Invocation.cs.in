@@ -1,0 +1,24 @@
+    private static void Run__MODE__()
+    {
+        using var api = __FACTORY__;
+        if (api.Raw.Scalar(20, 22) != 42) throw new InvalidOperationException("__MODE__: scalar");
+        __MODE__.Sample input = new() { first = 11, scale = 1.25, second = 31 }, result = default;
+        api.Raw.Echo(&input, &result);
+        if (result.first != 16 || result.scale != 2.5 || result.second != 28)
+            throw new InvalidOperationException("__MODE__: aggregate input/output");
+        int state = 7;
+        api.Raw.Invoke(&Transform__MODE__, &input, &state, &result);
+        if (result.first != 18 || result.scale != 3.75 || result.second != 24)
+            throw new InvalidOperationException("__MODE__: reverse aggregate callback input/output or user data");
+        m_checks.Add("__MODE__:scalar");
+        m_checks.Add("__MODE__:aggregate-input-output");
+        m_checks.Add("__MODE__:reverse-aggregate-callback-user-data");
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void Transform__MODE__(__MODE__.Sample* input, void* state, __MODE__.Sample* result)
+    {
+        result->first = input->first + *(int*)state;
+        result->scale = input->scale * 3;
+        result->second = input->second - *(int*)state;
+    }

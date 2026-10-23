@@ -6,10 +6,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using BGCS.Analysis.Interop;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace BGCS.CSharp.Planning;

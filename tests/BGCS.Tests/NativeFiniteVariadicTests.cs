@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -42,9 +43,11 @@ public sealed class NativeFiniteVariadicTests
                 }
                 """);
             BindingConfiguration configuration = Configuration(language, importMode) with { };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            ConcurrentQueue<SourceLanguage> parses = new();
+            await using BindingHost host = BindingGenerator.CreateBuilder().ObserveWorkerParses(WorkerRoot(), parses).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
+            Assert.Equal(new[] { language, SourceLanguage.C }, parses.ToArray());
             TargetInspection target = Assert.Single(result.targetModels);
             Assert.True(Assert.Single(target.native.declarations, declaration => declaration.kind == "Function" && declaration.name == "Analyze" && declaration.isVariadic).isVariadic);
             Assert.Contains(target.interop.functions, function => function.sourceName == "AnalyzeValues" && !function.isVariadic);
@@ -73,6 +76,30 @@ public sealed class NativeFiniteVariadicTests
     [Theory]
     [InlineData(SourceLanguage.C)]
     [InlineData(SourceLanguage.Cpp)]
+    public async Task ExplicitFiniteVariantsRemainPublicWhenOrdinaryDeclarationFiltersSelectOtherFunctions(SourceLanguage language)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-selected-varargs-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(root, "variadic.h"), Header + "\nFIXTURE_EXPORT int Unrelated(void);\n");
+            BindingConfiguration configuration = Configuration(language, BindingImportMode.FunctionTable);
+            configuration = configuration with { source = configuration.source with
+                { selection = new() { includeDeclarations = ["Unrelated"] } } };
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
+            GenerationResult result = await host.GenerateAsync(new(configuration, root));
+            Assert.True(result.success, result.GetDiagnosticSummary());
+            var module = Assert.Single(result.targetModels).interop;
+            Assert.Contains(module.functions, function => function.sourceName == "Unrelated");
+            Assert.Contains(module.functions, function => function.sourceName == "AnalyzeValues" && !function.isVariadic);
+            Assert.DoesNotContain(module.functions, function => function.sourceName == "Analyze" || function.isVariadic);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData(SourceLanguage.C)]
+    [InlineData(SourceLanguage.Cpp)]
     public async Task UnconfiguredSelectedVariadicDeclarationsRemainExplicitlyUnsupported(SourceLanguage language)
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-unconfigured-varargs-" + Guid.NewGuid().ToString("N"));
@@ -82,7 +109,7 @@ public sealed class NativeFiniteVariadicTests
             await File.WriteAllTextAsync(Path.Combine(root, "variadic.h"), Header);
             BindingConfiguration configuration = Configuration(language, BindingImportMode.FunctionTable);
             configuration = configuration with { source = configuration.source with { variadicVariants = [] } };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.False(result.success);
             string reason = result.GetDiagnosticSummary();
@@ -95,7 +122,7 @@ public sealed class NativeFiniteVariadicTests
 
     private static BindingConfiguration Configuration(SourceLanguage language, BindingImportMode importMode) => new()
     {
-        schemaVersion = 1, library = new() { id = "finitevarargs", nativeName = "variadic_fixture" },
+        schemaVersion = 2, library = new() { id = "finitevarargs", nativeName = "variadic_fixture" },
         source = new()
         {
             language = language, headers = ["variadic.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
@@ -139,6 +166,6 @@ public sealed class NativeFiniteVariadicTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

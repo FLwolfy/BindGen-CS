@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -5,20 +6,24 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
 using BGCS.Infrastructure.IO;
 using System.Text.Json;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Inputs;
 
 namespace BGCS.Infrastructure.Plugins;
 
 /// <summary>Activates one neutral plugin in a collectible context that shares only the host Contracts identity.</summary>
 public sealed class PluginLoader
 {
+    private readonly IHostPathService m_paths;
+    /// <summary>Captures the explicitly selected host path identity service.</summary>
+    /// <param name="paths">The host path service.</param>
+    public PluginLoader(IHostPathService paths) => m_paths = paths ?? throw new ArgumentNullException(nameof(paths));
     /// <summary>Loads a verified explicit entry without sharing other application dependencies.</summary>
     /// <param name="manifest">The immutable local input closure.</param>
     /// <returns>A session-owned plugin that releases its load context after plugin disposal.</returns>
@@ -35,17 +40,17 @@ public sealed class PluginLoader
     )
         => ActivateCore(manifest, worker: true, sharedAssemblies);
 
-    private static IBindingPlugin ActivateCore(
+    private IBindingPlugin ActivateCore(
         LockedPluginManifest manifest,
         bool worker,
         ImmutableArray<Assembly> sharedAssemblies
     ) {
         ArgumentNullException.ThrowIfNull(manifest);
-        new PluginManifestReader().Verify(manifest);
+        new PluginManifestReader(m_paths).Verify(manifest);
         if (manifest.manifest.workerOnly != worker) throw new InvalidOperationException(worker
             ? "Worker activation requires an explicitly worker-only manifest." : "A worker-only plugin cannot be activated in the SDK host.");
         if (sharedAssemblies.IsDefault) throw new ArgumentException("Shared worker assembly identities must be initialized.", nameof(sharedAssemblies));
-        PluginLoadContext context = new(manifest, sharedAssemblies);
+        PluginLoadContext context = new(manifest, sharedAssemblies, m_paths);
         IBindingPlugin? plugin = null;
         try
         {
@@ -125,6 +130,7 @@ public sealed class PluginLoader
 
     private sealed class PluginLoadContext : AssemblyLoadContext
     {
+        private readonly IHostPathService m_paths;
         private readonly LockedPluginManifest m_manifest;
         private readonly AssemblyDependencyResolver m_resolver;
         private readonly string m_entryPath;
@@ -133,11 +139,13 @@ public sealed class PluginLoader
 
         internal PluginLoadContext(
             LockedPluginManifest manifest,
-            ImmutableArray<Assembly> sharedAssemblies
+            ImmutableArray<Assembly> sharedAssemblies,
+            IHostPathService paths
         ) : base("BGCS.Plugin:" + manifest.manifest.plugin.id + ":" + Guid.NewGuid().ToString("N"), isCollectible: true)
         {
+            m_paths = paths;
             m_manifest = manifest;
-            m_entryPath = PluginManifestReader.ResolveAsset(Path.GetDirectoryName(manifest.path)!, manifest.manifest.assembly);
+            m_entryPath = PluginManifestReader.ResolveAsset(Path.GetDirectoryName(manifest.path)!, manifest.manifest.assembly, paths);
             foreach (Assembly assembly in sharedAssemblies)
             {
                 ArgumentNullException.ThrowIfNull(assembly);
@@ -149,7 +157,7 @@ public sealed class PluginLoader
             string framework = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
             string[] platform = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")
                 ?? throw new PlatformNotSupportedException("The plugin loader requires an explicit framework assembly directory.")).Split(Path.PathSeparator);
-            m_framework = platform.Where(path => string.Equals(Path.GetDirectoryName(path), framework, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            m_framework = platform.Where(path => paths.Equals(Path.GetDirectoryName(path)!, framework))
                 .Select(path => Path.GetFileNameWithoutExtension(path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -180,8 +188,7 @@ public sealed class PluginLoader
         protected override nint LoadUnmanagedDll(string name)
         {
             string? path = m_resolver.ResolveUnmanagedDllToPath(name);
-            path ??= m_manifest.inputs.Select(input => input.path).FirstOrDefault(candidate =>
-                new[] { name, name + ".dll", "lib" + name + ".so", "lib" + name + ".dylib" }.Contains(Path.GetFileName(candidate), StringComparer.Ordinal));
+
             if (path is null) throw new DllNotFoundException("A native plugin dependency must resolve from its declared private asset closure.");
             _ = ReadLocked(path);
             return LoadUnmanagedDllFromPath(path);
@@ -195,26 +202,26 @@ public sealed class PluginLoader
 
         private byte[] ReadLocked(string path)
         {
-            StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
             string absolute = Path.GetFullPath(path);
-            string physical = PhysicalPathResolver.Resolve(absolute);
-            var expected = m_manifest.inputs.FirstOrDefault(input => string.Equals(input.path, absolute, comparison))
-                ?? m_manifest.inputs.FirstOrDefault(input => string.Equals(input.resolvedPath, physical, comparison))
+            string physical = PhysicalPathResolver.Resolve(absolute, m_paths);
+            var expected = m_manifest.inputs.FirstOrDefault(input => m_paths.Equals(input.path, absolute))
+                ?? m_manifest.inputs.FirstOrDefault(input => m_paths.Equals(input.resolvedPath, physical))
                 ?? throw new FileLoadException("A plugin dependency resolved outside its declared private asset closure.", path);
-            if (!string.Equals(physical, expected.resolvedPath, comparison)
-                || !string.Equals(PhysicalPathResolver.Resolve(expected.path), expected.resolvedPath, comparison))
+            if (!m_paths.Equals(physical, expected.resolvedPath)
+                || !m_paths.Equals(PhysicalPathResolver.Resolve(expected.path, m_paths), expected.resolvedPath))
                 throw new FileLoadException("A plugin dependency changed its physical identity before loading.", path);
             byte[] bytes = File.ReadAllBytes(path);
             if (bytes.LongLength != expected.length || new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))) != expected.digest)
                 throw new FileLoadException("A plugin dependency changed before its exact bytes could be loaded.", path);
-            if (!string.Equals(absolute, expected.path, comparison))
+            if (!m_paths.Equals(absolute, expected.path))
             {
                 byte[] original = File.ReadAllBytes(expected.path);
                 if (original.LongLength != expected.length || new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(original))) != expected.digest)
                     throw new FileLoadException("A locked logical plugin dependency changed while loading its canonical path.", expected.path);
             }
-            if (!string.Equals(PhysicalPathResolver.Resolve(absolute), expected.resolvedPath, comparison)
-                || !string.Equals(PhysicalPathResolver.Resolve(expected.path), expected.resolvedPath, comparison))
+            if (!m_paths.Equals(PhysicalPathResolver.Resolve(absolute, m_paths), expected.resolvedPath)
+                || !m_paths.Equals(PhysicalPathResolver.Resolve(expected.path, m_paths), expected.resolvedPath))
                 throw new FileLoadException("A plugin dependency changed its physical identity while loading.", path);
             return bytes;
         }

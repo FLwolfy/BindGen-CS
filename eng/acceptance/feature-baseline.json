@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "baselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
   "features": [
     {
       "featureId": "native.c-declarations",
@@ -308,5 +308,7 @@
       "origin": "Final generator-only SDK and CLI source generation; no product MSBuild integration."
     }
   ],
-  "scopeRemovals": "eng/acceptance/scope-removals.json"
+  "scopeRemovals": "eng/acceptance/scope-removals.json",
+  "historicalDefinitionRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "baselineMeaning": "Frozen retained identities at immutable formal3.0.1; original definition provenance predates that formal baseline. Current implementation paths, owners and execution evidence live in the inventory."
 }

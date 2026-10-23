@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 using BGCS.CSharp.Projection;
 using Xunit;
 
@@ -31,11 +31,11 @@ public sealed class TextOwnershipProjectionTests
         { zeroTerminated = true, allowsNull = false, retainsPointer = false, ownership = kind == "text-owned" ? ownership : null };
         InteropParameter parameter = new(new("text"), "text", pointer.id) { text = text, ownership = kind == "text-owned" ? null : ownership };
         InteropFunction function = new(new("consume"), "consume", integer.id, [parameter], "C");
-        InteropModule module = new("ownership", "windows-x64-msvc", 8, [integer, octet, pointer], [function], []);
+        InteropModule module = new("ownership", "windows-x64-msvc", 8, [integer, octet, pointer], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Ownership", "TextApi"), CancellationToken.None);
         Assert.Equal(kind == "borrowed-call" ? 1 : 0, Assert.Single(model.methods).stringInputs.Length);
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         Assert.Contains("public int Consume(byte* text)", sink.sources["Api/TextApi.Raw.g.cs"]);
         Assert.Equal(kind == "borrowed-call", sink.sources["Api/TextApi.Methods.g.cs"].Contains("public int Consume(string text)", StringComparison.Ordinal));
     }

@@ -11,11 +11,11 @@ completed native-build receipt.
 
 After successful generation, `GenerationResult.nativeSources` contains a typed
 `NativeSourceManifest` for each target. The same data is published at
-`<target>/native/metadata/bridge.manifest.json`. To reopen an existing output, use:
+`<target>/metadata/native-source.manifest.json`. To reopen an existing output, use:
 
 ```csharp
 var manifests = BindingArtifactManifest.ReadNativeSources(
-    outputRoot, libraryId, cancellationToken);
+    outputRoot, libraryId, paths, cancellationToken);
 ```
 
 This SDK method holds the publication lock, verifies its ownership and complete
@@ -34,7 +34,7 @@ The manifest separates:
 | `includeDirectories` | Ordered search directories, retaining system/framework distinctions |
 | `headerReferences` | Original entry identities and their portable include references |
 | `defines`, `languageStandard`, `languageRequirements` | Declared source and lowering requirements |
-| `requiredExports`, `staticExportTable` | Expected exported symbols and an optional static adapter protocol |
+| `module`, `exportBindings`, `runtimeRequirements`, `staticExportTable` | Expected exported symbols and an optional static adapter protocol |
 
 Only an input with role `ShimSource` requests an additional consumer translation
 unit. `EntryHeader` and `Dependency` inputs are not a list of files to compile.
@@ -78,16 +78,18 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using BGCS;
-using BGCS.Contracts.Artifacts;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Hosting;
 
 static (string[] Sources,
     (string Directory, bool IsSystem, bool IsFramework)[] Includes)
     ReadNativeInputs(string outputRoot, string libraryId, string targetId,
+        IHostPathService paths,
         IReadOnlyDictionary<string, string> remappedRoots,
         CancellationToken cancellationToken)
 {
     NativeSourceManifest manifest = BindingArtifactManifest
-        .ReadNativeSources(outputRoot, libraryId, cancellationToken)
+        .ReadNativeSources(outputRoot, libraryId, paths, cancellationToken)
         .Single(item => item.targetId == targetId);
 
     string Resolve(string rootId, string relativePath)

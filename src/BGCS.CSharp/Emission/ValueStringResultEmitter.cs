@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Interop;
 using BGCS.CSharp.Planning;
 
 namespace BGCS.CSharp.Emission;

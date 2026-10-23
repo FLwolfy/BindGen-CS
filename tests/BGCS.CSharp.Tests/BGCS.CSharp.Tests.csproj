@@ -14,7 +14,6 @@
 
   <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../../src/BGCS.CSharp/BGCS.CSharp.csproj" />
-    <ProjectReference Include="../../src/BGCS/BGCS.csproj" />
     <ProjectReference Include="../../src/BGCS.Runtime/BGCS.Runtime.csproj" />
   </ItemGroup>
 </Project>

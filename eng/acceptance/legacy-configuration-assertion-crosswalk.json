@@ -207,17 +207,17 @@
       "replacementReason": "Alias identity is selected in its declaration family; required native storage remains in the dependency closure and cannot be removed to satisfy a filter.",
       "replacementTests": [
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "TypedNamesResolveTagsBeforeTheirSameNamedTypedefs",
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "CallableUseOfACoNamedAliasStillRequiresItsExcludedTagStorage",
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist",
           "methodVerified": true
         }
@@ -239,7 +239,7 @@
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "ExactIdsDoNotRebindToANameInTheRequestedFamily",
           "methodVerified": true
         },
@@ -269,7 +269,7 @@
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "ExactIdsDoNotRebindToANameInTheRequestedFamily",
           "methodVerified": true
         },
@@ -1101,17 +1101,17 @@
       "replacementReason": "Alias identity is selected in its declaration family; required native storage remains in the dependency closure and cannot be removed to satisfy a filter.",
       "replacementTests": [
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "TypedNamesResolveTagsBeforeTheirSameNamedTypedefs",
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "CallableUseOfACoNamedAliasStillRequiresItsExcludedTagStorage",
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist",
           "methodVerified": true
         }
@@ -1128,17 +1128,17 @@
       "replacementReason": "Alias identity is selected in its declaration family; required native storage remains in the dependency closure and cannot be removed to satisfy a filter.",
       "replacementTests": [
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "TypedNamesResolveTagsBeforeTheirSameNamedTypedefs",
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "CallableUseOfACoNamedAliasStillRequiresItsExcludedTagStorage",
           "methodVerified": true
         },
         {
-          "file": "tests/BGCS.Cpp2C.Tests/FamilySelectorIdentityTests.cs",
+          "file": "tests/BGCS.NativeBridge.Tests/FamilySelectorIdentityTests.cs",
           "method": "ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist",
           "methodVerified": true
         }

@@ -66,9 +66,18 @@ def main() -> None:
         receipt.parent.mkdir(parents=True, exist_ok=True)
         (receipt.parent / 'run.log').write_text(result.stdout + result.stderr, encoding='utf-8')
         if mode == 'skipped':
-            if result.returncode == 0 or receipt.exists() or 'failed, skipped, aborted' not in result.stderr:
+            if result.returncode == 0 or not receipt.exists() or 'failed, skipped, aborted' not in result.stderr:
                 raise RuntimeError('The actual skipped required case was incorrectly certified.')
-            checks.append('skipped-required-case-rejected')
+            failure = json.loads(receipt.read_text(encoding='utf-8'))
+            if failure['success'] is not False or not any(case['outcome'] != 'Passed' for case in failure['executedCases']):
+                raise RuntimeError('Failed run lost its actual case diagnostics.')
+            try:
+                validate_driver(failure, True)
+            except ValueError:
+                pass
+            else:
+                raise RuntimeError('A failed diagnostic report became a successful certificate.')
+            checks.append('skipped-required-case-rejected-with-diagnostic-report')
         else:
             if result.returncode != 0:
                 raise RuntimeError('The exact discovered argument objects could not be executed: ' + result.stderr)

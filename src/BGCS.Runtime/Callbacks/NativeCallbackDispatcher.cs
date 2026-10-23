@@ -19,19 +19,14 @@ public sealed class NativeCallbackDispatcher
         m_enqueue = enqueue;
     }
 
-    /// <summary>Captures the current synchronization context, or the single-thread browser runtime's asynchronous background queue.</summary>
+    /// <summary>Captures the current synchronization context without selecting a platform scheduling policy.</summary>
     /// <returns>A dispatcher whose queued invocations are checked for inline execution and original-thread affinity.</returns>
-    /// <exception cref="InvalidOperationException">No captured context or browser event-loop queue is available.</exception>
+    /// <exception cref="InvalidOperationException">No synchronization context is available; the consumer must supply an explicit dispatcher.</exception>
     public static NativeCallbackDispatcher CaptureCurrent()
     {
         SynchronizationContext? context = SynchronizationContext.Current;
         if (context is not null) return new(action => context.Post(static state => ((Action)state!)(), action));
-        if (!OperatingSystem.IsBrowser())
-            throw new InvalidOperationException("Nonblocking native callback cleanup requires a captured event-loop synchronization context or an explicitly injected dispatcher.");
-        // The .NET 10 single-thread browser runtime schedules background work on a
-        // later JS event-loop turn (runtime/v10.0.12/src/mono/browser/runtime/scheduling.ts).
-        // A threaded runtime without an affine context is still checked by VerifyAccess.
-        return new(action => ThreadPool.QueueUserWorkItem(static (Action work) => work(), action, preferLocal: false));
+        throw new InvalidOperationException("Nonblocking native callback cleanup requires a captured event-loop synchronization context or an explicitly injected dispatcher.");
     }
 
     /// <summary>Refuses direct native use from a thread other than the captured event-loop thread.</summary>

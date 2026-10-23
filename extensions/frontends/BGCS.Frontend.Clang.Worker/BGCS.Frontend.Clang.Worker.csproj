@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Compilation">
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup Label="Project dependencies">
+    <ProjectReference Include="../../../src/BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../../../src/BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
+    <ProjectReference Include="../BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
+    <ProjectReference Include="../../foundation/BGCS.Hosting.Standard/BGCS.Hosting.Standard.csproj" />
+  </ItemGroup>
+
+  <Target Name="BGCSStageVerifiedIntelParser" AfterTargets="Build" Condition="'$(BGCSParserAssetRid)' == 'osx-x64'">
+    <Error Condition="'$(BGCS_CLANG_RUNTIME_DIR)' == ''" Text="Building the Intel macOS worker requires BGCS_CLANG_RUNTIME_DIR from scripts/setup-macos-x64-clang-runtime.sh." />
+    <Error Condition="'$(TargetDir)' == ''" Text="The Intel parser requires an explicit worker build output." />
+    <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../../scripts/parser_runtime_provenance.py&quot; stage-worker &quot;$(BGCS_CLANG_RUNTIME_DIR)&quot; --worker-output &quot;$(TargetDir).&quot;" />
+  </Target>
+</Project>

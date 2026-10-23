@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Managed;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -40,7 +40,7 @@ public sealed class NativeMetadataTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "metadata", nativeName = "metadata_fixture" },
+                schemaVersion = 2, library = new() { id = "metadata", nativeName = "metadata_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
@@ -52,7 +52,7 @@ public sealed class NativeMetadataTests
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             var target = Assert.Single(result.targetModels);
@@ -63,12 +63,18 @@ public sealed class NativeMetadataTests
             string context = sourceRuntime ? "MetadataApiContext" : "MetadataApi";
             string runtime = sourceRuntime ? "Generated.Metadata.Runtime" : "BGCS.Runtime";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
-            string privateImport = mode == BindingImportMode.FunctionTable ? "" : """
-                var imports = typeof(ApiContext).GetNestedType("NativeImports", BindingFlags.NonPublic)!;
-                var import = imports.GetMethod("Function0", BindingFlags.NonPublic | BindingFlags.Static)!;
-                if (!Has(import, Names.NativeNameType.Func, "sample_add")) return 7;
-                if (!Has(import.ReturnParameter, Names.NativeNameType.Type, "int")) return 8;
-                """;
+            if (mode != BindingImportMode.FunctionTable)
+            {
+                var imports = result.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp")
+                    .Select(artifact => Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(File.ReadAllText(Path.Combine(result.outputRoot, artifact.relativePath))).GetRoot())
+                    .SelectMany(unit => unit.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>())
+                    .Where(method => method.Identifier.ValueText == "Function0").ToArray();
+                var import = Assert.Single(imports);
+                var attributes = import.AttributeLists.SelectMany(list => list.Attributes).ToArray();
+                Assert.Contains(attributes, attribute => attribute.ToString().Contains("sample_add", StringComparison.Ordinal));
+                Assert.Contains(import.AttributeLists, list => list.Target?.Identifier.ValueText == "return"
+                    && list.ToString().Contains("NativeNameType.Type", StringComparison.Ordinal) && list.ToString().Contains("int", StringComparison.Ordinal));
+            }
             string probe = $$"""
                 using global::System;
                 using global::System.Linq;
@@ -87,7 +93,6 @@ public sealed class NativeMetadataTests
                         if(!Has(parameters[0],Names.NativeNameType.Param,"a") || !Has(parameters[0],Names.NativeNameType.Type,"int")) return 3;
                         if(!Has(parameters[1],Names.NativeNameType.Param,"b") || !Has(parameters[1],Names.NativeNameType.Type,"int")) return 4;
                         if(typeof(ApiContext).GetMethod("ManagedAdd")!.GetCustomAttributes(typeof(Names.NativeNameAttribute),false).Length!=0) return 5;
-                        {{privateImport}}
                         using var api={{factory}};
                         if(api.Raw.ManagedAdd(10,12)!=42 || api.ManagedAdd(4,5)!=17) return 6;
                         return 42;
@@ -105,6 +110,6 @@ public sealed class NativeMetadataTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

@@ -102,10 +102,12 @@ touch "${GATE_DIR}/solution-build"
 log "Production source ownership, declaration style and public documentation"
 "${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
   --configuration "${CONFIGURATION}" --no-build -- validate architecture "${ROOT_DIR}"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
-  --configuration "${CONFIGURATION}" --no-build -- validate style "${ROOT_DIR}/src"
-"${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
-  --configuration "${CONFIGURATION}" --no-build -- validate documentation "${ROOT_DIR}/src"
+for source_root in src extensions; do
+  "${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
+    --configuration "${CONFIGURATION}" --no-build -- validate style "${ROOT_DIR}/${source_root}"
+  "${DOTNET_CMD}" run --project "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
+    --configuration "${CONFIGURATION}" --no-build -- validate documentation "${ROOT_DIR}/${source_root}"
+done
 touch "${GATE_DIR}/architecture" "${GATE_DIR}/style" "${GATE_DIR}/documentation"
 
 log "Strict performance and cache budget before the long native-consumer baseline"

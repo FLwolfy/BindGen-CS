@@ -34,7 +34,9 @@ internal static class PointerFunctionEmitter
         if (method.returnType != "void") text.Append(method.returnType).Append(' ').Append(result).Append(" = ");
         text.Append(DirectOwnedFactoryEmitter.Invoke(plan, operation.methodIndex)).Append('(').Append(string.Join(", ", arguments)).AppendLine(");");
         BufferInputEmitter.Complete(text, method, selected);
-        if (method.returnType != "void")
+        if (method.copiedResultIndex is int copiedResult)
+            text.Append("        return ").Append(RecipeConversionEmitter.Result(method, copiedResult, ValueInputEmitter.CopiedLocal(method, copiedResult))).AppendLine(";");
+        else if (method.returnType != "void")
         {
             text.Append("        return ");
             if (operation.returnCarrier is null) text.Append(RecipeConversionEmitter.DirectResult(method, result));

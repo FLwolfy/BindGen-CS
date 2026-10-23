@@ -1,3 +1,5 @@
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -7,11 +9,11 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
 using BGCS.Infrastructure.Workers;
-using BGCS.Platforms.Targeting;
+using BGCS.Targets.Desktop;
 using Xunit;
 using ExamplePlugin = BGCS.Examples.CustomTargetPlugin.CustomTargetPlugin;
 
@@ -33,11 +35,12 @@ public sealed class CustomTargetPluginCommandTests
             File.Copy(Path.Combine(example, "native.h"), Path.Combine(root, "native.h"));
             string configuration = Path.Combine(root, "bindgen.json");
             File.Copy(Path.Combine(example, "bindgen.json"), configuration);
-            var host = new TargetResolver().Resolve(new(new("host")));
+            Assert.True(new DesktopTargetProvider().TryResolve(new(new("host"), new(compilerPath: "uninstalled-parser-location")), out var host));
             File.WriteAllText(Path.Combine(root, "target-sdk.json"), JsonSerializer.Serialize(new
             {
-                platformId = "private-desktop", host.architectureId, host.abiId, host.triple,
+                platformId = host.platformId, host.architectureId, host.abiId, host.triple,
                 byteOrder = "littleEndian", requiresExplicitSdk = true, supportsDynamicModules = true,
+                host.sourceConventions, headerSearchPaths = host.headerSearchPaths,
                 systemIncludeDirectories = new[] { "sdk/include" }, defines = new[] { "PROFILE_VERSION=1" }
             }));
             string sdkHeader = Path.Combine(root, "sdk", "include", "private_sdk.h");
@@ -65,6 +68,10 @@ public sealed class CustomTargetPluginCommandTests
             JsonNode config = JsonNode.Parse(File.ReadAllText(configuration))!;
             config["api"]!.AsObject().Remove("runtime");
             File.WriteAllText(configuration, config.ToJsonString());
+            string profilePath = Path.Combine(root, "target-sdk.json");
+            JsonNode unknownProfile = JsonNode.Parse(File.ReadAllText(profilePath))!;
+            unknownProfile["platformId"] = "private-desktop";
+            File.WriteAllText(profilePath, unknownProfile.ToJsonString());
             using StringWriter error = new();
             Assert.NotEqual(0, CliInvocation.Run(["generate", configuration, "--json"], root, TextWriter.Null, error, toolPath));
             Assert.Contains("api.runtime", error.ToString());
@@ -104,7 +111,7 @@ public sealed class CustomTargetPluginCommandTests
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             File.Copy(source, destination);
         }
-        WorkerAssetManifest assets = new(1, RuntimeInformation.RuntimeIdentifier, WorkerProtocol.C_PARSER_IDENTITY,
+        WorkerAssetManifest assets = new(1, RuntimeInformation.RuntimeIdentifier, ClangParserIdentity.C_IDENTITY,
             Directory.GetFiles(worker, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal)
                 .Select(file => new ArtifactDescriptor(Path.GetRelativePath(worker, file).Replace('\\', '/'), "application/octet-stream",
                     new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file)))))).ToImmutableArray());

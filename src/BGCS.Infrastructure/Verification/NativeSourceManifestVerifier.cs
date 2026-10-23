@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 
 namespace BGCS.Infrastructure.Verification;
 
@@ -20,13 +24,15 @@ public static class NativeSourceManifestVerifier
         ImmutableArray<ArtifactDescriptor> artifacts
     ) {
         ArgumentNullException.ThrowIfNull(manifest);
-        if (manifest.schemaVersion != 1 || string.IsNullOrWhiteSpace(manifest.targetId) || string.IsNullOrWhiteSpace(manifest.triple)
+        if (manifest.schemaVersion != 2 || string.IsNullOrWhiteSpace(manifest.targetId) || string.IsNullOrWhiteSpace(manifest.triple)
             || manifest.language is not (SourceLanguage.C or SourceLanguage.Cpp) || string.IsNullOrWhiteSpace(manifest.languageStandard)
             || manifest.sources.IsDefault || manifest.headers.IsDefault || manifest.inputRoots.IsDefault || manifest.inputs.IsDefault
             || manifest.includeDirectories.IsDefault || manifest.headerReferences.IsDefault || manifest.defines.IsDefault
-            || manifest.requiredExports.IsDefault || manifest.languageRequirements.IsDefault || artifacts.IsDefault)
+            || manifest.module is null || manifest.exportBindings.IsDefault || manifest.languageRequirements.IsDefault || artifacts.IsDefault)
             throw new InvalidDataException("The native source manifest has an unsupported revision or incomplete requirements.");
         Path(manifest.targetId);
+        Text(manifest.triple); Text(manifest.languageStandard);
+        Text(manifest.module.id); Text(manifest.module.nativeName);
         Dictionary<string, NativeInputRoot> roots = new(StringComparer.Ordinal);
         foreach (NativeInputRoot root in manifest.inputRoots)
         {
@@ -75,8 +81,41 @@ public static class NativeSourceManifestVerifier
         foreach (ArtifactDescriptor artifact in artifacts.Where(artifact => artifact.relativePath.StartsWith(manifest.targetId + "/native/", StringComparison.Ordinal)
             && artifact.mediaType is "text/x-c" or "text/x-c++" or "text/x-c-header" or "text/x-c++-header"))
             if (!emitted.Contains(artifact.relativePath)) throw new InvalidDataException("The native source manifest omitted a generated source or header.");
-        if (manifest.requiredExports.Any(string.IsNullOrWhiteSpace) || manifest.defines.Any(value => value.Contains('\0') || value.Contains('\n') || value.Contains('\r')))
-            throw new InvalidDataException("A native source requirement contains an invalid export or definition.");
+        HashSet<StableId> callables = [];
+        HashSet<string> exports = new(StringComparer.Ordinal);
+        foreach (NativeExportBinding binding in manifest.exportBindings)
+        {
+            Text(binding.callableId.value); Text(binding.exportName);
+            if (binding.sourceDeclaration is { } declaration) Text(declaration.value);
+            if (binding.moduleId != manifest.module.id || !callables.Add(binding.callableId) || !exports.Add(binding.exportName))
+                throw new InvalidDataException("A native export binding has a conflicting callable, symbol or module identity.");
+        }
+        if (manifest.defines.Any(value => value is null || value.Contains('\0') || value.Contains('\n') || value.Contains('\r')))
+            throw new InvalidDataException("A native source requirement contains an invalid definition.");
+        HashSet<string> languageFeatures = new(StringComparer.Ordinal);
+        foreach (var requirement in manifest.languageRequirements)
+        {
+            Text(requirement.feature);
+            if (requirement.minimumStandard is not (11 or 14 or 17 or 20 or 23 or 26) || !languageFeatures.Add(requirement.feature))
+                throw new InvalidDataException("A native language requirement has an unsupported standard or conflicting feature identity.");
+        }
+        if (manifest.runtimeRequirements is { } runtime)
+        {
+            ManagedRuntimeProfile profile = runtime.execution ?? throw new InvalidDataException("Native runtime requirements must contain an execution profile.");
+            Text(profile.id); Text(profile.runtimeId.value); Text(profile.callAbi.value);
+            if (profile.nativeTargetId != manifest.targetId || profile.nativeTriple != manifest.triple
+                || profile.pointerSize is not (4 or 8) || profile.byteOrder is not (NativeByteOrder.LittleEndian or NativeByteOrder.BigEndian)
+                || !Enum.IsDefined(profile.moduleMechanism) || !Enum.IsDefined(profile.functionPointerTransport)
+                || !Enum.IsDefined(profile.libraryImportConvention) || !Enum.IsDefined(runtime.importMode)
+                || profile.importModes.IsDefaultOrEmpty || profile.importModes.Any(mode => !Enum.IsDefined(mode))
+                || profile.importModes.Distinct().Count() != profile.importModes.Length || !profile.importModes.Contains(runtime.importMode))
+                throw new InvalidDataException("The native execution profile must match the exact target and admit its selected import mechanism.");
+            if (profile.libraryImportConvention == ManagedImportConventionStrategy.RuntimeDefault) Text(profile.defaultCallingConvention);
+            if (profile.moduleMechanism == NativeModuleMechanism.StaticAdapter && runtime.importMode == BindingImportMode.FunctionTable
+                && manifest.staticExportTable is null)
+                throw new InvalidDataException("A static function-table execution profile requires its native export adapter contract.");
+        }
+        if (manifest.staticExportTable is { } table) ValidateTable(table);
 
         void RequireRoot(string id)
         {
@@ -86,6 +125,24 @@ public static class NativeSourceManifestVerifier
         {
             if (ArtifactDigestVerifier.ValidateRelativePath(path) != path || path.Any(character => character < 32))
                 throw new InvalidDataException("Native source identities must be canonical portable relative paths.");
+        }
+        static void Text(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Any(char.IsControl))
+                throw new InvalidDataException("Native source identities must be nonempty and contain no control characters.");
+        }
+        void ValidateTable(StaticExportTableDescriptor table)
+        {
+            static bool Identifier(string value) => !string.IsNullOrEmpty(value) && (char.IsAsciiLetter(value[0]) || value[0] == '_')
+                && value.All(character => char.IsAsciiLetterOrDigit(character) || character == '_');
+            string[] entries = [table.getExportSymbol, table.getRevisionSymbol, table.getCountSymbol, table.getAbiIdentitySymbol, table.getPointerSizeSymbol];
+            if (table.revision != 1 || !Identifier(table.symbolPrefix) || entries.Any(symbol => !Identifier(symbol))
+                || entries.Distinct(StringComparer.Ordinal).Count() != entries.Length || entries.Any(exports.Contains)
+                || table.exportNames.IsDefault || table.exportNames.Any(symbol => !Identifier(symbol))
+                || table.exportNames.Distinct(StringComparer.Ordinal).Count() != table.exportNames.Length
+                || !exports.SetEquals(table.exportNames))
+                throw new InvalidDataException("The static export adapter protocol does not match the manifest's exact physical export bindings.");
+            _ = new ContentDigest(table.abiIdentity);
         }
     }
 }

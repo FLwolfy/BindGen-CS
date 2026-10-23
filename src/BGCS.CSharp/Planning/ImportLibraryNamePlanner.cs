@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using System.Threading;
-using BGCS.Contracts;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Requests;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

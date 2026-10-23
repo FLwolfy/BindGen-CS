@@ -1,26 +1,39 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "products": [
     "BGCS",
-    "BGCS.Contracts",
+    "BGCS.Core",
     "BGCS.Runtime",
     "BindGen-CS"
   ],
   "symbolProducts": [
     "BGCS",
-    "BGCS.Contracts",
-    "BGCS.Runtime"
+    "BGCS.Core",
+    "BGCS.Runtime",
+    "BGCS.Extension.Android",
+    "BGCS.Extension.AppleMobile",
+    "BGCS.Extension.BrowserWasm",
+    "BGCS.Extension.FreeBsd",
+    "BGCS.Extension.NativeAot"
   ],
   "publicApiAssemblies": [
-    "BGCS.Contracts",
+    "BGCS.Core",
     "BGCS.Runtime",
     "BGCS",
+    "BGCS.Engine",
     "BGCS.Infrastructure",
-    "BGCS.Platforms",
     "BGCS.Analysis",
-    "BGCS.Cpp2C",
+    "BGCS.NativeBridge",
     "BGCS.CSharp",
-    "BGCS.Frontend.Clang"
+    "BGCS.Hosting.Standard",
+    "BGCS.Targets.Desktop",
+    "BGCS.Interop.DotNet",
+    "BGCS.Frontend.Clang",
+    "BGCS.Extension.Android",
+    "BGCS.Extension.AppleMobile",
+    "BGCS.Extension.BrowserWasm",
+    "BGCS.Extension.FreeBsd",
+    "BGCS.Extension.NativeAot"
   ],
   "technicalPackages": [
     "BGCS.ParserRuntime.osx-x64"
@@ -33,5 +46,63 @@
     "osx-x64",
     "osx-arm64"
   ],
-  "maximumPackageBytes": 262144000
+  "maximumPackageBytes": 262144000,
+  "sdkAssemblies": [
+    "BGCS",
+    "BGCS.Engine",
+    "BGCS.Infrastructure",
+    "BGCS.Analysis",
+    "BGCS.NativeBridge",
+    "BGCS.CSharp",
+    "BGCS.Hosting.Standard",
+    "BGCS.Targets.Desktop",
+    "BGCS.Interop.DotNet",
+    "BGCS.Frontend.Clang"
+  ],
+  "optionalProducts": [
+    "BGCS.Extension.Android",
+    "BGCS.Extension.AppleMobile",
+    "BGCS.Extension.BrowserWasm",
+    "BGCS.Extension.FreeBsd",
+    "BGCS.Extension.NativeAot"
+  ],
+  "optionalPackageAssemblies": {
+    "BGCS.Extension.Android": [
+      "BGCS.Extension.Android"
+    ],
+    "BGCS.Extension.AppleMobile": [
+      "BGCS.Extension.AppleMobile"
+    ],
+    "BGCS.Extension.BrowserWasm": [
+      "BGCS.Extension.BrowserWasm"
+    ],
+    "BGCS.Extension.FreeBsd": [
+      "BGCS.Extension.FreeBsd"
+    ],
+    "BGCS.Extension.NativeAot": [
+      "BGCS.Extension.NativeAot",
+      "BGCS.Interop.DotNet"
+    ]
+  },
+  "assemblyProjects": {
+    "BGCS.Core": "src/BGCS.Core",
+    "BGCS.Runtime": "src/BGCS.Runtime",
+    "BGCS": "src/BGCS",
+    "BGCS.Engine": "src/BGCS.Engine",
+    "BGCS.Infrastructure": "src/BGCS.Infrastructure",
+    "BGCS.Analysis": "src/BGCS.Analysis",
+    "BGCS.NativeBridge": "src/BGCS.NativeBridge",
+    "BGCS.CSharp": "src/BGCS.CSharp",
+    "BGCS.Tool": "src/BGCS.Tool",
+    "BGCS.Hosting.Standard": "extensions/foundation/BGCS.Hosting.Standard",
+    "BGCS.Targets.Desktop": "extensions/foundation/BGCS.Targets.Desktop",
+    "BGCS.Interop.DotNet": "extensions/foundation/BGCS.Interop.DotNet",
+    "BGCS.Frontend.Clang": "extensions/frontends/BGCS.Frontend.Clang",
+    "BGCS.Frontend.Clang.Worker": "extensions/frontends/BGCS.Frontend.Clang.Worker",
+    "BGCS.Extension.Android": "extensions/BGCS.Extension.Android",
+    "BGCS.Extension.AppleMobile": "extensions/BGCS.Extension.AppleMobile",
+    "BGCS.Extension.BrowserWasm": "extensions/BGCS.Extension.BrowserWasm",
+    "BGCS.Extension.FreeBsd": "extensions/BGCS.Extension.FreeBsd",
+    "BGCS.Extension.NativeAot": "extensions/BGCS.Extension.NativeAot"
+  }
 }

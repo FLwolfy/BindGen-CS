@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using BGCS.Analysis.Declarations;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 using Xunit;
 
 namespace BGCS.CSharp.Tests;
@@ -22,7 +22,7 @@ public sealed class NativeSourceLocatorTests
         NativeDeclaration own = new(new("application"), "Parameter", "callback", "callback", callback.id, application);
         NativeDeclaration sdk = new(new("sdk"), "Parameter", "callback", "callback", callback.id, new("sdk/system.h", 100, 3)) { isSystemDeclaration = true };
         ImmutableArray<NativeType> types = reverse ? [callback, alias, pointer, integer] : [integer, pointer, alias, callback];
-        NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, types, reverse ? [sdk, own] : [own, sdk], []);
+        NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, types, reverse ? [sdk, own] : [own, sdk], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         NativeSourceLocator source = new(module);
         Assert.Equal(application, source.Locate(callback.id));
         Assert.Equal(application, source.Locate(alias.id));
@@ -38,7 +38,7 @@ public sealed class NativeSourceLocatorTests
         NativeType record = new(new("record"), NativeTypeCategory.Record, "Record", 4, 4) { declaration = declaration.id };
         NativeType anonymous = new(new("anonymous"), NativeTypeCategory.Pointer, "void*", 8, 8) { canonicalType = new("anonymous") };
         NativeDeclaration synthetic = new(new("synthetic"), "Parameter", "value", "value", anonymous.id, new("synthetic", 0, 0));
-        NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, [record, anonymous], [synthetic, declaration], []);
+        NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, [record, anonymous], [synthetic, declaration], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         NativeSourceLocator locator = new(module);
         Assert.Equal(declaration.source, locator.Locate(record.id));
         Assert.Null(locator.Locate(anonymous.id));

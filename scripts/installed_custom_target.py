@@ -106,7 +106,7 @@ def _phases(state: dict, entry: str, command: list[str], evidence: Path, run) ->
 
 def prepare(dotnet: str, version: str, root: Path, work: Path, evidence: Path, run, write_project) -> dict:
     plugin = work / "custom-target-plugin"
-    write_project(plugin, version, ["BGCS.Contracts"])
+    write_project(plugin, version, ["BGCS.Core"])
     project = ET.parse(plugin / "Consumer.csproj")
     properties = project.find("./PropertyGroup")
     properties.find("OutputType").text = "Library"
@@ -118,16 +118,16 @@ def prepare(dotnet: str, version: str, root: Path, work: Path, evidence: Path, r
     run([dotnet, "build", "Consumer.csproj", "-c", "Release", "-m:1", "-nr:false"],
         plugin, evidence, "custom-target-contracts-plugin-build")
     plugin_output = plugin / "bin/Release/net10.0"
-    assets = [plugin_output / name for name in (ASSEMBLY + ".dll", ASSEMBLY + ".deps.json", "BGCS.Contracts.dll")]
+    assets = [plugin_output / name for name in (ASSEMBLY + ".dll", ASSEMBLY + ".deps.json", "BGCS.Core.dll")]
     if not all(path.is_file() for path in assets):
         raise RuntimeError("The installed Contracts-only target plugin closure is incomplete.")
     dependencies = json.loads(assets[1].read_text(encoding="utf-8-sig"))["libraries"]
-    if {name.split("/")[0] for name in dependencies} != {ASSEMBLY, "BGCS.Contracts"}:
-        raise RuntimeError("The custom-target plugin did not depend exclusively on installed BGCS.Contracts.")
+    if {name.split("/")[0] for name in dependencies} != {ASSEMBLY, "BGCS.Core"}:
+        raise RuntimeError("The custom-target plugin did not depend exclusively on installed BGCS.Core.")
     manifest = plugin_output / "plugin.json"
     _write(manifest, {"schemaVersion": 1, "assembly": ASSEMBLY + ".dll",
         "entryType": "BGCS.Examples.CustomTargetPlugin.CustomTargetPlugin", "plugin": {
-            "id": "bgcs.examples.custom-target", "version": "3.0.0", "contractsMajor": 3,
+            "id": "bgcs.examples.custom-target", "version": "4.0.0", "contractsMajor": 4,
             "services": [{"id": "example.custom-target", "port": "nativeTargetProvider"}],
             "configurationSchema": {"type": "object", "additionalProperties": False, "required": ["profile"],
                 "properties": {"profile": {"type": "string", "minLength": 1}}}},
@@ -139,18 +139,18 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BGCS;
-using BGCS.Platforms.Targeting;
+using BGCS.Targets.Desktop;
 JsonSerializerOptions options = new() { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } };
 if (args.Length == 1 && args[0] == "describe")
 {
-    var target = new TargetResolver().Resolve(new(new("host")));
-    Console.WriteLine(JsonSerializer.Serialize(new { platformId = "private-desktop", target.architectureId,
-        target.abiId, target.triple, target.byteOrder, requiresExplicitSdk = true, supportsDynamicModules = true,
+    if (!new DesktopTargetProvider().TryResolve(new(new("host"), new(compilerPath: "uninstalled-parser-location")), out var target)) throw new InvalidOperationException("Desktop host profile declined.");
+    Console.WriteLine(JsonSerializer.Serialize(new { target.platformId, target.architectureId,
+        target.abiId, target.triple, target.byteOrder, target.sourceConventions, target.headerSearchPaths, requiresExplicitSdk = true, supportsDynamicModules = true,
         systemIncludeDirectories = new[] { "sdk/include" } }, options));
     return;
 }
-await using BindingHost host = BindingHost.CreateDefault();
-GenerationResult result = await host.GenerateAsync(await GenerationRequest.FromFileAsync(args.Single()));
+await using BindingHost host = BindingGenerator.CreateDefault();
+GenerationResult result = await host.GenerateAsync(GenerationRequest.FromFile(args.Single()));
 if (!result.success) throw new InvalidOperationException(result.GetDiagnosticSummary());
 Console.WriteLine(JsonSerializer.Serialize(new { result.success, result.cacheStages,
     native = result.targetModels.Single().native }, options));
@@ -158,7 +158,7 @@ Console.WriteLine(JsonSerializer.Serialize(new { result.success, result.cacheSta
     run([dotnet, "build", "Consumer.csproj", "-c", "Release", "-m:1", "-nr:false"],
         host, evidence, "custom-target-installed-sdk-build")
     host_output = host / "bin/Release/net10.0"
-    if digest(host_output / "BGCS.Contracts.dll") != digest(assets[-1]):
+    if digest(host_output / "BGCS.Core.dll") != digest(assets[-1]):
         raise RuntimeError("Installed SDK and Contracts-only target plugin resolved different Contracts bytes.")
     driver = [dotnet, str(host_output / "Consumer.dll")]
     host_profile = json.loads(run([*driver, "describe"], host, evidence, "custom-target-host-description"))
@@ -174,7 +174,7 @@ Console.WriteLine(JsonSerializer.Serialize(new { result.success, result.cacheSta
     state = {"input": source, "configuration": path, "manifest": manifest, "output": work / "custom-target-generated",
         "profile": source / "target-sdk.json", "header": source / "sdk/include/private_sdk.h", "hostProfile": host_profile,
         "evidence": {"manifestSha256": digest(manifest), "configurationSha256": digest(path),
-            "pluginSourceSha256": digest(plugin / "CustomTargetPlugin.cs"), "pluginReferences": ["BGCS.Contracts"],
+            "pluginSourceSha256": digest(plugin / "CustomTargetPlugin.cs"), "pluginReferences": ["BGCS.Core"],
             "pluginAssets": [{"file": asset.name, "sha256": digest(asset)} for asset in assets], "entries": {}},
         "sealed": {str(asset): digest(asset) for asset in [*assets, manifest, path, source / "native.h", plugin / "CustomTargetPlugin.cs"]}}
     state["evidence"]["entries"]["sdk"] = _phases(state, "sdk", [*driver, str(path)], evidence, run)
@@ -192,9 +192,9 @@ def validate_evidence(value: dict) -> None:
     """Validate only this finite installed fixture; it does not certify other target platforms."""
     valid_hash = lambda item: isinstance(item, str) and re.fullmatch(r"[0-9a-f]{64}", item)
     assets = value.get("pluginAssets", [])
-    if (value.get("pluginReferences") != ["BGCS.Contracts"]
+    if (value.get("pluginReferences") != ["BGCS.Core"]
             or any(not valid_hash(value.get(name)) for name in ("manifestSha256", "configurationSha256", "pluginSourceSha256"))
-            or len(assets) != 3 or {item.get("file") for item in assets} != {ASSEMBLY + ".dll", ASSEMBLY + ".deps.json", "BGCS.Contracts.dll"}
+            or len(assets) != 3 or {item.get("file") for item in assets} != {ASSEMBLY + ".dll", ASSEMBLY + ".deps.json", "BGCS.Core.dll"}
             or any(not valid_hash(item.get("sha256")) for item in assets)
             or set(value.get("entries", {})) != {"sdk", "cli"}):
         raise RuntimeError("Installed Contracts-only custom-target closure or entry points are incomplete.")
@@ -240,7 +240,7 @@ def main() -> None:
         "packageSourceReceipt": json.loads((packages / "package-verification.json").read_text(encoding="utf-8")),
         "packageDigests": [{"file": path.name, "sha256": digest(path)} for path in sorted(packages.glob(f"*.{args.version}.nupkg"))]}
     try:
-        required = {f"{name}.{args.version}.nupkg" for name in ("BGCS.Contracts", "BGCS", "BindGen-CS")}
+        required = {f"{name}.{args.version}.nupkg" for name in ("BGCS.Core", "BGCS", "BindGen-CS")}
         if not required.issubset({item["file"] for item in report["packageDigests"]}):
             raise RuntimeError("The explicit local feed does not contain the required installed products.")
         parent = ROOT / "artifacts/temporary"

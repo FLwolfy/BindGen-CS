@@ -64,7 +64,7 @@ public sealed class DiagnosticPresentationTests
         {
             File.WriteAllText(Path.Combine(directory, "native.h"), source);
             File.WriteAllText(Path.Combine(directory, "bindgen.json"), """
-                { "schemaVersion": 1, "library": { "id": "native", "nativeName": "native" },
+                { "schemaVersion": 2, "library": { "id": "native", "nativeName": "native" },
                   "source": { "headers": ["native.h"] }, "api": { "namespace": "Reporting.Native", "name": "NativeApi" } }
                 """);
             action(directory);

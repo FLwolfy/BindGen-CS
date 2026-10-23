@@ -1,13 +1,13 @@
+using System.Linq;
+using BGCS.Core.Hosting;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.IO;
 using BGCS.Infrastructure.Publishing;
@@ -17,10 +17,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class OwnedFileCleanupTests : IDisposable
 {
-    private static readonly Action<string?, Exception?> s_delete = typeof(CandidateTextEditor).Assembly
-        .GetType("BGCS.Infrastructure.IO.OwnedFileCleanup", throwOnError: true)!
-        .GetMethod("Delete", BindingFlags.Static | BindingFlags.NonPublic)!
-        .CreateDelegate<Action<string?, Exception?>>();
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     private readonly string m_root;
     private string? m_link;
 
@@ -28,7 +25,7 @@ public sealed class OwnedFileCleanupTests : IDisposable
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-owned-cleanup-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
-        m_root = PhysicalPathResolver.Resolve(root);
+        m_root = PhysicalPathResolver.Resolve(root, m_paths);
     }
 
     [Theory]
@@ -39,43 +36,50 @@ public sealed class OwnedFileCleanupTests : IDisposable
     public async Task ReplacedPhysicalParentCannotRedirectPendingFileCleanup(bool nested, bool priorFailure)
     {
         string owner = Path.Combine(m_root, "owner"), foreign = Path.Combine(m_root, "foreign"), moved = Path.Combine(m_root, "moved");
-        string relative = nested ? Path.Combine("nested", "pending.tmp") : "pending.tmp";
-        string pending = Path.Combine(owner, relative), foreignFile = Path.Combine(foreign, relative);
-        Directory.CreateDirectory(Path.GetDirectoryName(pending)!);
+        string relative = nested ? Path.Combine("nested", "original.txt") : "original.txt";
+        string original = Path.Combine(owner, relative), foreignFile = Path.Combine(foreign, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(original)!);
         Directory.CreateDirectory(Path.GetDirectoryName(foreignFile)!);
-        File.WriteAllText(pending, "owned pending bytes");
+        File.WriteAllText(original, "original", new UTF8Encoding(false));
         File.WriteAllText(foreignFile, "unrelated foreign bytes");
-
-        // The file is already pending when its captured physical owner is replaced.
-        // Invoke the production cleanup boundary directly to avoid a timing-dependent
-        // race between FileStream disposal and an asynchronous continuation.
-        Directory.Move(owner, moved);
-        await Link(owner, foreign);
-        InvalidDataException original = new("The post-write ownership verification failed.");
-        if (priorFailure)
+        string replacement = Path.Combine(m_root, "replacement");
+        await Link(replacement, foreign);
+        FaultInjectingPaths observed = new(m_paths);
+        ArtifactDescriptor descriptor = new(relative.Replace('\\', '/'), "text/plain", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("original")))));
+        using CandidateTextEditor editor = new(owner, [descriptor], observed);
+        observed.beforeEquality = (_, _) =>
         {
-            AggregateException failure = Assert.Throws<AggregateException>(() => s_delete(pending, original));
-            Assert.Collection(failure.InnerExceptions,
-                error => Assert.Same(original, error),
-                error => Assert.IsType<IOException>(error));
-        }
-        else Assert.Throws<IOException>(() => s_delete(pending, null));
-
+            if (!Directory.EnumerateFiles(owner, ".bgcs-edit-*", SearchOption.AllDirectories).Any()) return;
+            observed.beforeEquality = null;
+            Directory.Move(owner, moved);
+            Directory.Move(replacement, owner);
+            m_link = owner;
+            if (priorFailure) throw new InvalidDataException("Original post-write verification failure");
+        };
+        AggregateException failure = await Assert.ThrowsAsync<AggregateException>(async () => await editor.ReplaceTextAsync(relative.Replace('\\', '/'), "replacement", default));
+        Assert.Equal(2, failure.InnerExceptions.Count);
+        if (priorFailure) Assert.IsType<InvalidDataException>(failure.InnerExceptions[0]);
+        else Assert.IsType<IOException>(failure.InnerExceptions[0]);
+        Assert.IsType<IOException>(failure.InnerExceptions[1]);
         Assert.Equal("unrelated foreign bytes", File.ReadAllText(foreignFile));
-        Assert.Equal("owned pending bytes", File.ReadAllText(Path.Combine(moved, relative)));
+        Assert.Equal("original", File.ReadAllText(Path.Combine(moved, relative)));
+        Assert.Single(Directory.EnumerateFiles(moved, ".bgcs-edit-*", SearchOption.AllDirectories));
     }
 
     [Fact]
-    public void UnchangedOwnerRemovesOnlyItsPendingFileAndAcceptsAlreadyAbsentFiles()
+    public async Task UnchangedOwnerRemovesOnlyItsPendingFileAndAcceptsAlreadyAbsentFiles()
     {
-        string pending = Path.Combine(m_root, "pending.tmp"), retained = Path.Combine(m_root, "retained.txt");
-        File.WriteAllText(pending, "pending");
+        string original = Path.Combine(m_root, "original.txt"), retained = Path.Combine(m_root, "retained.txt");
+        File.WriteAllText(original, "original", new UTF8Encoding(false));
         File.WriteAllText(retained, "retained");
-        s_delete(pending, new InvalidOperationException("Original operation failure"));
-        Assert.False(File.Exists(pending));
+        ArtifactDescriptor descriptor = new("original.txt", "text/plain", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("original")))));
+        using CandidateTextEditor editor = new(m_root, [descriptor], m_paths);
+        await editor.ReplaceTextAsync("original.txt", "replacement", default);
+        Assert.Empty(Directory.EnumerateFiles(m_root, ".bgcs-edit-*", SearchOption.AllDirectories));
+        Assert.Equal("replacement", File.ReadAllText(original));
         Assert.Equal("retained", File.ReadAllText(retained));
-        s_delete(pending, null);
-        s_delete(null, null);
+        await editor.ReplaceTextAsync("original.txt", "next", default);
+        Assert.Empty(Directory.EnumerateFiles(m_root, ".bgcs-edit-*", SearchOption.AllDirectories));
     }
 
     [Theory]
@@ -86,7 +90,7 @@ public sealed class OwnedFileCleanupTests : IDisposable
         string original = Path.Combine(m_root, "original.txt");
         File.WriteAllText(original, "original", new UTF8Encoding(false));
         ArtifactDescriptor descriptor = new("original.txt", "text/plain", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("original")))));
-        CandidateTextEditor editor = new(m_root, [descriptor], "extra/");
+        CandidateTextEditor editor = new(m_root, [descriptor], m_paths, "extra/");
         await Assert.ThrowsAsync<EncoderFallbackException>(async () =>
         {
             if (addition) await editor.AddTextAsync("extra/new.txt", "text/plain", "\ud800", default);
@@ -110,17 +114,20 @@ public sealed class OwnedFileCleanupTests : IDisposable
     [Fact]
     public void JournalCreateNewCollisionPreservesThePreExistingPendingJournal()
     {
-        Action<string, Dictionary<string, string>> write = typeof(CandidateTextEditor).Assembly
-            .GetType("BGCS.Infrastructure.Publishing.PublicationJournalStorage", throwOnError: true)!
-            .GetMethod("Write", BindingFlags.Static | BindingFlags.NonPublic)!
-            .MakeGenericMethod(typeof(Dictionary<string, string>))
-            .CreateDelegate<Action<string, Dictionary<string, string>>>();
-        string journal = Path.Combine(m_root, "publication.json");
+        string output = Path.Combine(m_root, "output");
+        FaultInjectingPaths observed = new(m_paths);
+        using ArtifactPublisher publisher = new(output, "fixture", observed);
+        new DirectoryArtifactSink(publisher.candidateRoot, observed).WriteText("value.txt", "value");
         byte[] pending = Encoding.UTF8.GetBytes("previous recovery journal bytes");
-        File.WriteAllBytes(journal + ".tmp", pending);
-
-        Assert.Throws<IOException>(() => write(journal, new() { ["state"] = "new" }));
-
+        string journal = Path.Combine(publisher.candidateRoot, ".bgcs-artifacts.json");
+        observed.beforeEquality = (left, _) =>
+        {
+            if (!m_paths.Equals(left, journal)) return;
+            observed.beforeEquality = null;
+            File.WriteAllBytes(journal + ".tmp", pending);
+        };
+        ArtifactDescriptor descriptor = new("value.txt", "text/plain", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("value")))));
+        Assert.Throws<IOException>(() => publisher.Commit([descriptor]));
         Assert.Equal(pending, File.ReadAllBytes(journal + ".tmp"));
         Assert.False(File.Exists(journal));
     }

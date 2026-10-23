@@ -24,7 +24,7 @@
           "sourceSignature": "bimg::imageConvert(bx::AllocatorI *, bimg::TextureFormat::Enum, void const *, uint32_t)",
           "headerSha256": "d3c82fdf973eda2f1dedeb7f3104c87184fcf1a5c5cf80be191bb95f5633fc99",
           "declaration": "ImageContainer* imageConvert(\n\t\t  bx::AllocatorI* _allocator\n\t\t, TextureFormat::Enum _dstFormat\n\t\t, const void* _src\n\t\t, uint32_t _size\n\t\t);",
-          "diagnosticEvidence": "Complete locked source search finds only the declaration. Linking the full generated bridge against upstream core, astc, bx and image_decode emits one unresolved imageConvert(AllocatorI*,Enum,const void*,uint32_t) symbol. The gate selects this exact overload in a separate negative build and requires failure without replacing its prior owned publication."
+          "diagnosticEvidence": "Historical full-source verification at this locked upstream revision found only the declaration and reported an unresolved imageConvert(AllocatorI*,Enum,const void*,uint32_t) symbol when linking the complete generated bridge. The current generator corpus baseline rechecks the exact locked header declaration and disclosed selection; it does not repeat a full upstream application link."
         }
       ]
     },

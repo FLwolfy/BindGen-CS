@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -39,12 +39,12 @@ public sealed class NativeFunctionPointerTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "callbacks", nativeName = "callback_bridge" },
+                schemaVersion = 2, library = new() { id = "callbacks", nativeName = "callback_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["callbacks.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Callbacks", name = "CallbackApi", importMode = importMode },
                 runtime = new() { mode = "source" },  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             var target = Assert.Single(result.targetModels);
@@ -88,7 +88,7 @@ public sealed class NativeFunctionPointerTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 
     [Theory]
@@ -104,11 +104,11 @@ public sealed class NativeFunctionPointerTests
             await File.WriteAllTextAsync(Path.Combine(root, "callbacks.hpp"), "struct Payload { int value; };\nusing Callback = " + callback + ";\ninline void Set(Callback value) { (void)value; }\n");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "callbacks", nativeName = "callback_bridge" },
+                schemaVersion = 2, library = new() { id = "callbacks", nativeName = "callback_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["callbacks.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.False(result.success);
             Assert.Contains("typed callback conversion adapter", result.GetDiagnosticSummary(), StringComparison.Ordinal);

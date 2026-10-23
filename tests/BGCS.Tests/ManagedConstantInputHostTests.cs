@@ -1,3 +1,6 @@
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -10,11 +13,11 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Workers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -163,7 +166,7 @@ public sealed class ManagedConstantInputHostTests
         await using (BindingHost original = Builder().Build()) Success(await original.GenerateAsync(request), "43L", "miss");
         string output = Path.Combine(scratch.root, "Generated");
         Dictionary<string, byte[]> before = Published(output);
-        await using BindingHost changed = Builder().AddArtifactProcessor("fixture.mutate-managed-input", 0, () => new Mutator(mutate)).Build();
+        await using BindingHost changed = Builder().RegisterFactory<IArtifactProcessor>(new("fixture.mutate-managed-input", ExtensionPort.ArtifactProcessor, 0), _ => new Mutator(mutate)).Build();
         GenerationResult rejected = await changed.GenerateAsync(request);
         Assert.False(rejected.success);
         Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.message.Contains("Managed projection inputs changed", StringComparison.Ordinal));
@@ -205,7 +208,7 @@ public sealed class ManagedConstantInputHostTests
     private static string Source(int value) => "namespace Vendor { public static class Values { public const long Answer = " + value + "L; } }";
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "external_constants", nativeName = "external_constants" },
+        schemaVersion = 2, library = new() { id = "external_constants", nativeName = "external_constants" },
         source = new() { headers = ["native.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.External", name = "ExternalApi", constants = [new("SELECTED") { name = "Presented", managedType = "long", expression = "global::Vendor.Values.Answer" }] }
     };
@@ -241,14 +244,14 @@ public sealed class ManagedConstantInputHostTests
     }
 
     private static BindingHostBuilder Builder(string? verifiedWorker = null)
-        => BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(verifiedWorker ?? CompiledWorkerRoot());
+        => BindingGenerator.CreateBuilder().UseWorkerDirectory(verifiedWorker ?? CompiledWorkerRoot());
 
     private static string CompiledWorkerRoot()
     {
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 
     private sealed class VerifiedWorker : IDisposable
@@ -264,7 +267,7 @@ public sealed class ManagedConstantInputHostTests
             Directory.CreateDirectory(Path.Combine(root, native));
             foreach (string file in Directory.GetFiles(Path.Combine(compiled, native)))
                 File.Copy(file, Path.Combine(root, native, Path.GetFileName(file)));
-            WorkerAssetManifest manifest = new(1, RuntimeInformation.RuntimeIdentifier, WorkerProtocol.C_PARSER_IDENTITY,
+            WorkerAssetManifest manifest = new(1, RuntimeInformation.RuntimeIdentifier, ClangParserIdentity.C_IDENTITY,
                 Directory.GetFiles(root, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).Select(file =>
                 {
                     using FileStream stream = File.OpenRead(file);

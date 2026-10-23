@@ -3,7 +3,7 @@
   "libraryId": "cimguizmo",
   "platform": "windows-x64",
   "sourceNormalization": "quoted-locked-corpus-include-root-v1",
-  "selectionPolicySha256": "72e98800299edc085c3f90f09451aea3752c1e4dc08d2ebcc85d2e9b493a8d0a",
+  "selectionPolicySha256": "a30534e7dda000005976f33bc7c093fbdba6d603bcd55ca5075e89f4b23167f1",
   "omittedDeclarations": {
     "excludedDeclarations": [
       "igText",
@@ -28,7 +28,10 @@
     "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "10dd6397ee01740d51ea7f322667fbf19711a148bd16470a1e849381b6449217"
+    "windows-x64-msvc/managed/Bindings.cs": "34b48adcc1853e4c3c479e91a3ac4e1a117f63767933a4544d481cc7a4b17465",
+    "windows-x64-msvc/native/include/bgcs_cimguizmo.h": "e7568e689d56dd078f7e1904e76eb49ed308c92c8217e245f9779c0c8c43c93d",
+    "windows-x64-msvc/native/src/bgcs_cimguizmo.c": "662cca53a4e66f41086979a193e60d10cf80f1815a4da5352b6d450f9ae863dd",
+    "windows-x64-msvc/native/src/storage.assertions.c": "a43194ba4b30d6f352c7c1759de1c46269076cc553d53215088b2919cedd4984"
   },
-  "publicApiSha256": "0009e21b363e9bd9584ebf6b268714f2e48d438a146c908f91527cb036ada4a9"
+  "publicApiSha256": "4d3d67cb3e15ddeac05a64bedc1eccf6f9abfdbac68c3519be70ba42b1307321"
 }

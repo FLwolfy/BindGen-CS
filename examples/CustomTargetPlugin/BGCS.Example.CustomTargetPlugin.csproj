@@ -4,6 +4,6 @@
     <GenerateDependencyFile>true</GenerateDependencyFile>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/BGCS.Contracts/BGCS.Contracts.csproj" />
+    <ProjectReference Include="../../src/BGCS.Core/BGCS.Core.csproj" />
   </ItemGroup>
 </Project>

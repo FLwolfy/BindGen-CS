@@ -6,10 +6,10 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Workers;
 using Xunit;
 
@@ -27,7 +27,7 @@ public sealed class NativeCustomFunctionTableTests
             string example = Path.Combine(Repository(), "examples", "CustomFunctionTable");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "custom-table", nativeName = "custom_table" },
+                schemaVersion = 2, library = new() { id = "custom-table", nativeName = "custom_table" },
                 source = new() { headers = [Path.Combine(example, "native.h")], includeDirectories = [example], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
@@ -36,7 +36,7 @@ public sealed class NativeCustomFunctionTableTests
                 },
                 runtime = new() { mode = "package" }, cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await host.GenerateAsync(new(configuration, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());
             var selected = Assert.Single(generated.targetModels);
@@ -130,7 +130,7 @@ public sealed class NativeCustomFunctionTableTests
             Assert.Equal(42, answer);
             string project = await File.ReadAllTextAsync(Path.Combine(NativeConsumerHarness.NativeDirectory(Path.Combine(generated.outputRoot, selected.targetId)), "Consumer", "Consumer.csproj"));
             Assert.Contains("BGCS.Runtime", project);
-            Assert.DoesNotContain("BGCS.Contracts", project);
+            Assert.DoesNotContain("BGCS.Core", project);
             Assert.DoesNotContain("BGCS.Frontend", project);
             Assert.DoesNotContain("ClangSharp", project);
         }
@@ -140,12 +140,12 @@ public sealed class NativeCustomFunctionTableTests
     private static InputDependency Snapshot(string path)
     {
         byte[] bytes = File.ReadAllBytes(path);
-        return new(path, BGCS.Infrastructure.IO.PhysicalPathResolver.Resolve(path), bytes.LongLength, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))));
+        return new(path, BGCS.Infrastructure.IO.PhysicalPathResolver.Resolve(path, TestHostPaths.Create()), bytes.LongLength, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))));
     }
     private static string WorkerRoot()
     {
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
     private static string Repository()
     {

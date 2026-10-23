@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using BGCS.Analysis.Bridge;
 
 namespace BGCS.CSharp.Projection;
@@ -19,12 +19,13 @@ public sealed class ManagedRecipeProjectionBinder
     /// <returns>A new immutable managed model with exact input and original-result conversion associations.</returns>
     public ManagedApiModel Apply(
         ManagedApiModel model,
-        CppBridgeModule bridge,
+        NativeBridgePlan bridge,
         ImmutableArray<TypeLoweringRecipe> recipes
     ) {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(bridge);
         new ManagedRecipeProjectionValidator().ValidateRecipes(recipes);
+        if (bridge.source.language == BGCS.Core.Inputs.SourceLanguage.C) return BindC(model, bridge, recipes);
         var exports = bridge.exports.ToDictionary(export => export.id);
         var functions = model.interop.functions.ToDictionary(function => function.id);
         var bridgeTypes = bridge.types.ToDictionary(type => type.id);
@@ -54,7 +55,7 @@ public sealed class ManagedRecipeProjectionBinder
                 }
                 foreach (BridgeParameter parameter in export.parameters)
                 {
-                    if (parameter.conversion != BridgeConversionKind.ScalarCast || !Boolean(parameter.nativeType, parameter.type)
+                    if (parameter.conversion != BridgeConversionKind.ScalarCast || parameter.nativeType is not StableId sourceParameterType || !Boolean(sourceParameterType, parameter.type)
                         || values.Any(value => value.nativeParameter == parameter.id)) continue;
                     values.Add(new(parameter.id, new("bool", "{value} ? (byte)1 : (byte)0", null)));
                 }
@@ -76,5 +77,40 @@ public sealed class ManagedRecipeProjectionBinder
             return source.category == NativeTypeCategory.Primitive && source.primitiveKind == "Bool" && source.size == 1
                 && representation.kind == BridgeTypeKind.Scalar && representation.cName == "uint8_t";
         }
+    }
+    private static ManagedApiModel BindC(
+        ManagedApiModel model,
+        NativeBridgePlan bridge,
+        ImmutableArray<TypeLoweringRecipe> recipes
+    ) {
+        var exports = bridge.exports.ToDictionary(export => export.operation.finiteVariadic is null ? export.operation.declaration!.Value : export.id);
+        var functions = model.interop.functions.ToDictionary(function => function.id);
+        return model with
+        {
+            recipeHelpers = model.recipeHelpers.AddRange(recipes.Where(recipe => recipe.managedProjection is not null)
+                .Select(recipe => new ManagedRecipeHelper(recipe.id, recipe.cAbiType, recipe.managedProjection!))),
+            methods = model.methods.Select(member =>
+            {
+                if (!exports.TryGetValue(member.nativeExport, out BridgeExport? export)) return member;
+                var function = functions[member.nativeExport];
+                var values = member.valueProjections.ToBuilder();
+                foreach (BridgeParameter parameter in export.parameters.Where(parameter => parameter.managedProjection is not null))
+                {
+                    StableId original = export.operation.finiteVariadic is not null ? parameter.id : export.operation.argumentGroups.IsEmpty
+                        ? bridge.source.GetDeclaration(export.operation.declaration!.Value).children.Select(bridge.source.GetDeclaration)
+                            .Where(declaration => declaration.kind == "Parameter").ElementAt(export.parameters.IndexOf(parameter)).id
+                        : export.operation.argumentGroups.Single(group => group.inputs.Any(input => input.parameter == parameter.id)).sourceParameter;
+                    var candidates = function.parameters.Where(candidate => candidate.sourceDeclaration == original || candidate.id == original).ToArray();
+                    if (candidates.Length != 1 || values.Any(value => value.nativeParameter == candidates[0].id))
+                        throw new InvalidOperationException("A C managed value projection must identify one exact unexpanded physical input.");
+                    values.Add(new(candidates[0].id, parameter.managedProjection!));
+                }
+                if (export.managedResultProjection is not null && export.resultInOutputParameter)
+                    throw new NotSupportedException("A C managed aggregate result projection requires its explicit output-channel projection rather than an inferred return conversion.");
+                if (export.managedResultProjection is not null && member.returnProjection is not null)
+                    throw new InvalidOperationException("A C managed direct-return projection was registered more than once.");
+                return member with { valueProjections = values.ToImmutable(), returnProjection = export.managedResultProjection ?? member.returnProjection };
+            }).ToImmutableArray()
+        };
     }
 }

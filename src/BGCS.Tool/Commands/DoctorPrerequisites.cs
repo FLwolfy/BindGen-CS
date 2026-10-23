@@ -1,4 +1,9 @@
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
 using System;
+using System.Text.Json;
+using BGCS.Core.Hosting;
+using BGCS.Hosting.Standard;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -6,14 +11,14 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.Workers;
-using BGCS.Platforms.Capabilities;
+using BGCS.Targets.Desktop.Capabilities;
 
 namespace BGCS.Tool.Commands;
 
@@ -34,6 +39,7 @@ internal static class DoctorPrerequisites
 
     internal static WorkerReadiness InspectWorker(string applicationBase)
     {
+        using HostServices host = new HostServicesProvider().Create(new(Path.GetFullPath(applicationBase), JsonSerializer.SerializeToElement(new { })));
         string root = Path.GetFullPath(Path.Combine(applicationBase, "bgcs", "worker"));
         string manifestPath = Path.Combine(root, "worker-assets.manifest.json");
         if (!File.Exists(manifestPath))
@@ -43,9 +49,9 @@ internal static class DoctorPrerequisites
                     "BGCS-DOCTOR-WORKER")]);
         try
         {
-            WorkerAssetDeployer deployer = new();
+            WorkerAssetDeployer deployer = new(host.paths);
             WorkerAssetManifest manifest = deployer.ReadManifest(manifestPath);
-            deployer.VerifyDeployment(root, manifest, RuntimeInformation.RuntimeIdentifier);
+            deployer.VerifyDeployment(root, manifest, host.execution.hostRuntimeIdentifier);
             return new(true, "verified", root, manifest.hostRid, manifest.parserIdentity, []);
         }
         catch (Exception failure)

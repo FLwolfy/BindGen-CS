@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/bindgen.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "custom_allocator",
     "nativeName": "custom_allocator"

@@ -3,8 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -36,13 +36,13 @@ public sealed class NativeCompilerIntrinsicTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "intrinsics", nativeName = "intrinsic_fixture" },
+                schemaVersion = 2, library = new() { id = "intrinsics", nativeName = "intrinsic_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["intrinsics.h"], parseMacros = false, includeHeaderHelpers = true },
                 api = new() { @namespace = "Generated.Intrinsics", name = "IntrinsicApi" },
 
                 cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(result.targetModels);
@@ -50,7 +50,7 @@ public sealed class NativeCompilerIntrinsicTests
             {
                 NativeDeclaration native = Assert.Single(target.native.declarations, declaration => declaration.kind == "Function" && declaration.name == name);
                 Assert.Equal(NativeCallableAddressability.DirectCallOnly, native.addressability);
-                Assert.StartsWith("bgcs_intrinsics_helper_", Assert.Single(target.interop.functions, function => function.sourceName == name).exportName);
+                Assert.StartsWith(target.bridge!.exportPrefix + "_", Assert.Single(target.interop.functions, function => function.sourceName == name).exportName);
             }
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
@@ -77,6 +77,6 @@ public sealed class NativeCompilerIntrinsicTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

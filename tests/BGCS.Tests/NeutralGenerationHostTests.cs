@@ -6,16 +6,16 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
+using BGCS.Core;
 using BGCS.Infrastructure.Verification;
 using Xunit;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Common;
+using BGCS.Core.Plugins;
+using BGCS.Core.Common;
 
 namespace BGCS.Tests;
 
@@ -26,12 +26,12 @@ public sealed class NeutralGenerationHostTests
     {
         using Scratch scratch = new();
         GenerationRequest request = new(Configuration(), scratch.root);
-        await using (BindingHost baseline = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build())
+        await using (BindingHost baseline = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend()).Build())
             Assert.True((await baseline.GenerateAsync(request)).success);
         string input = Path.Combine(scratch.root, "Generated", "generation.report.json");
         byte[] previous = File.ReadAllBytes(input);
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddArtifactProcessor("formal-input", 0, () => new FormalInputProcessor(input)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IArtifactProcessor>(new("formal-input", ExtensionPort.ArtifactProcessor, 0), _ => new FormalInputProcessor(input)).Build();
         GenerationResult result = await host.GenerateAsync(request);
         Assert.False(result.success);
         Assert.Contains("formal BGCS output", result.GetDiagnosticSummary());
@@ -57,15 +57,15 @@ public sealed class NeutralGenerationHostTests
     {
         using Scratch scratch = new();
         GenerationRequest request = new(Configuration(), scratch.root);
-        await using (BindingHost baseline = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build())
+        await using (BindingHost baseline = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend()).Build())
             Assert.True((await baseline.GenerateAsync(request)).success);
         string report = Path.Combine(scratch.root, "Generated", "generation.report.json");
         byte[] previous = File.ReadAllBytes(report);
         string input = Path.Combine(scratch.root, "extension-state.dat");
         if (initiallyPresent) File.WriteAllText(input, "before");
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddArtifactProcessor("external", 0, () => new ExternalProcessor(input))
-            .AddValidator("mutate-input", 0, () => new ExternalMutationValidator(input)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IArtifactProcessor>(new("external", ExtensionPort.ArtifactProcessor, 0), _ => new ExternalProcessor(input))
+            .RegisterFactory<IGenerationValidator>(new("mutate-input", ExtensionPort.GenerationValidator, 0), _ => new ExternalMutationValidator(input)).Build();
         GenerationResult result = await host.GenerateAsync(request);
         Assert.False(result.success);
         Assert.Contains("external inputs changed", result.GetDiagnosticSummary());
@@ -101,8 +101,8 @@ public sealed class NeutralGenerationHostTests
     public async Task CriticalValidatorDiagnostic_BlocksFormalPublication()
     {
         using Scratch scratch = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddValidator("fatal", 0, () => new CriticalValidator()).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IGenerationValidator>(new("fatal", ExtensionPort.GenerationValidator, 0), _ => new CriticalValidator()).Build();
         GenerationResult result = await host.GenerateAsync(new(Configuration(), scratch.root));
         Assert.False(result.success);
         Assert.False(result.published);
@@ -127,20 +127,20 @@ public sealed class NeutralGenerationHostTests
         using Scratch scratch = new();
         BindingConfiguration configuration = Configuration() with { api = Configuration().api with { importMode = mode } };
         ProbeProcessor? successful = null;
-        await using (BindingHost initial = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddArtifactProcessor("annotate", 0, () => successful = new("annotate", 0)).Build())
+        await using (BindingHost initial = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IArtifactProcessor>(new("annotate", ExtensionPort.ArtifactProcessor, 0), _ => successful = new("annotate", 0)).Build())
         {
             GenerationResult result = await initial.GenerateAsync(new(configuration, scratch.root));
             Assert.True(result.success, result.GetDiagnosticSummary());
-            new ArtifactDigestVerifier().Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
+            new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
             Assert.True(successful!.disposed);
             await Assert.ThrowsAsync<ObjectDisposedException>(() => successful.retained!.ReplaceTextAsync(successful.path!, "late", CancellationToken.None).AsTask());
         }
         string output = Path.Combine(scratch.root, "Generated");
         string before = File.ReadAllText(Path.Combine(output, "generation.report.json"));
         ProbeProcessor? corrupt = null;
-        await using BindingHost failing = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddArtifactProcessor("corrupt", 0, () => corrupt = new("corrupt", 0, changeAbi: true)).Build();
+        await using BindingHost failing = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IArtifactProcessor>(new("corrupt", ExtensionPort.ArtifactProcessor, 0), _ => corrupt = new("corrupt", 0, changeAbi: true)).Build();
         GenerationResult failure = await failing.GenerateAsync(new(configuration, scratch.root));
         Assert.True(corrupt!.changedAbi, "The processor must change an actual native export before exercising the final contract guard.");
         Assert.False(failure.success);
@@ -154,15 +154,15 @@ public sealed class NeutralGenerationHostTests
     public async Task ArtifactProcessorHelpers_AreManifestedCompiledAndConfinedToTheManagedTarget()
     {
         using Scratch scratch = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddArtifactProcessor("helper", 0, () => new ProbeProcessor("helper", 0, addHelper: true)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IArtifactProcessor>(new("helper", ExtensionPort.ArtifactProcessor, 0), _ => new ProbeProcessor("helper", 0, addHelper: true)).Build();
         BindingConfiguration configuration = Configuration() with { runtime = new() { mode = "source" } };
         GenerationRequest request = new(configuration, scratch.root);
         GenerationResult result = await host.GenerateAsync(request);
         Assert.True(result.success, result.GetDiagnosticSummary());
         await NativeConsumerHarness.CompileManagedAsync(result, request);
         Assert.Contains(result.artifacts, artifact => artifact.relativePath.EndsWith("/managed/Helpers/ExtensionHelper.g.cs", StringComparison.Ordinal));
-        new ArtifactDigestVerifier().Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
+        new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
         GenerationRequest singleRequest = new(configuration with { output = new() { root = "Single", layout = "singleFile" } }, scratch.root);
         GenerationResult single = await host.GenerateAsync(singleRequest);
         Assert.True(single.success, single.GetDiagnosticSummary());
@@ -177,8 +177,8 @@ public sealed class NeutralGenerationHostTests
     {
         using Scratch scratch = new();
         ProbeProcessor? processor = null;
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddArtifactProcessor("release", 0, () => processor = new("release", 0, releaseFailure: true)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IArtifactProcessor>(new("release", ExtensionPort.ArtifactProcessor, 0), _ => processor = new("release", 0, releaseFailure: true)).Build();
         GenerationResult result = await host.GenerateAsync(new(Configuration(), scratch.root));
         Assert.False(result.success);
         Assert.Contains("processor cleanup failed", result.GetDiagnosticSummary());
@@ -217,7 +217,7 @@ public sealed class NeutralGenerationHostTests
     {
         var schema = new SchemaCatalog().CreateBindingSchema();
         Assert.False(schema["additionalProperties"]!.GetValue<bool>());
-        Assert.Equal(1, schema["properties"]!["schemaVersion"]!["const"]!.GetValue<int>());
+        Assert.Equal(2, schema["properties"]!["schemaVersion"]!["const"]!.GetValue<int>());
         Assert.Equal("functionTable", schema["properties"]!["api"]!["properties"]!["importMode"]!["default"]!.GetValue<string>());
         Assert.Equal("instance", schema["properties"]!["api"]!["properties"]!["style"]!["default"]!.GetValue<string>());
         Assert.Equal("package", schema["properties"]!["runtime"]!["properties"]!["mode"]!["default"]!.GetValue<string>());
@@ -229,23 +229,23 @@ public sealed class NeutralGenerationHostTests
     {
         using Scratch scratch = new();
         System.Collections.Generic.List<string> trace = [];
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddInteropTransform("second", 0, () => new ProbeInterop("second", 0, trace))
-            .AddInteropTransform("first", 1, () => new ProbeInterop("first", 1, trace));
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IInteropTransform>(new("second", ExtensionPort.InteropTransform, 0), _ => new ProbeInterop("second", 0, trace))
+            .RegisterFactory<IInteropTransform>(new("first", ExtensionPort.InteropTransform, 1), _ => new ProbeInterop("first", 1, trace));
         await using BindingHost host = builder.Build();
-        builder.AddInteropTransform("later", 9, () => new ProbeInterop("later", 9, trace));
+        builder.RegisterFactory<IInteropTransform>(new("later", ExtensionPort.InteropTransform, 9), _ => new ProbeInterop("later", 9, trace));
         GenerationResult result = await host.GenerateAsync(new(Configuration(), scratch.root));
         Assert.True(result.success, result.GetDiagnosticSummary());
         Assert.Equal(new[] { "first", "second", "dispose:second", "dispose:first" }, trace);
-        Assert.Throws<InvalidOperationException>(() => builder.AddNativeTransform("first", 0, () => null!));
+        Assert.Throws<InvalidOperationException>(() => builder.RegisterFactory<INativeModuleTransform>(new("first", ExtensionPort.NativeModuleTransform, 0), _ => null!));
     }
 
     [Fact]
     public async Task UnverifiedInteropSignatureChange_IsRejectedBeforePublication()
     {
         using Scratch scratch = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddInteropTransform("rewrite", 0, () => new ProbeInterop("rewrite", 0, [], rewriteAbi: true)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IInteropTransform>(new("rewrite", ExtensionPort.InteropTransform, 0), _ => new ProbeInterop("rewrite", 0, [], rewriteAbi: true)).Build();
         GenerationResult result = await host.GenerateAsync(new(Configuration(), scratch.root));
         Assert.False(result.success);
         Assert.Contains("validated bridge", result.GetDiagnosticSummary());
@@ -256,7 +256,7 @@ public sealed class NeutralGenerationHostTests
     {
         public string id => identity;
         public int priority => ordering;
-        public BGCS.Contracts.Interop.InteropModule Transform(BGCS.Contracts.Interop.InteropModule module, AnalysisContext context, CancellationToken cancellationToken)
+        public BGCS.Core.Interop.InteropModule Transform(BGCS.Core.Interop.InteropModule module, AnalysisContext context, CancellationToken cancellationToken)
         {
             Assert.Equal(module.targetId, context.target.targetId.value);
             trace.Add(identity);
@@ -276,39 +276,39 @@ public sealed class NeutralGenerationHostTests
         {
             runtime = new() { mode = "source" },
             semantics = new() { stringParameters = [new() { function = "echo", parameter = "value",
-                encoding = BGCS.Contracts.Interop.NativeTextEncoding.Utf8, codeUnitWidth = 1, lengthUnit = BGCS.Contracts.Interop.NativeLengthUnit.CodeUnits,
-                direction = BGCS.Contracts.Interop.NativeParameterDirection.Input, lifetime = BGCS.Contracts.Interop.NativeLifetimeKind.Call,
+                encoding = BGCS.Core.Interop.NativeTextEncoding.Utf8, codeUnitWidth = 1, lengthUnit = BGCS.Core.Interop.NativeLengthUnit.CodeUnits,
+                direction = BGCS.Core.Interop.NativeParameterDirection.Input, lifetime = BGCS.Core.Interop.NativeLifetimeKind.Call,
                 zeroTerminated = true, retainsPointer = retains, allowsNull = false }] }
         };
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend(text: true)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend(text: true)).Build();
         GenerationRequest request = new(configuration, scratch.root);
         GenerationResult result = await host.GenerateAsync(request);
         Assert.True(result.success, result.GetDiagnosticSummary());
         await NativeConsumerHarness.CompileManagedAsync(result, request);
-        string methods = File.ReadAllText(Path.Combine(result.outputRoot, "emscripten-wasm32-emscripten/managed/Api/NativeApi.Methods.g.cs"));
+        string methods = File.ReadAllText(Path.Combine(result.outputRoot, TestComposition.HostTargetId() + "/managed/Api/NativeApi.Methods.g.cs"));
         if (retains)
         {
             Assert.DoesNotContain("Echo(string", methods);
             Assert.Contains(result.diagnostics, diagnostic => diagnostic.code == "BGCS-FRIENDLY-OMITTED");
         }
         else Assert.Contains("Echo(string", methods);
-        using JsonDocument abi = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.outputRoot, "emscripten-wasm32-emscripten/metadata/abi.manifest.json")));
+        using JsonDocument abi = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.outputRoot, TestComposition.HostTargetId() + "/metadata/abi.manifest.json")));
         int evidence = abi.RootElement.GetProperty("module").GetProperty("functions")[0].GetProperty("parameters")[0].GetProperty("text").GetProperty("evidence").GetProperty("level").GetInt32();
-        Assert.Equal((int)BGCS.Contracts.Common.EvidenceLevel.UserAsserted, evidence);
+        Assert.Equal((int)BGCS.Core.Common.EvidenceLevel.UserAsserted, evidence);
     }
 
     [Fact]
     public async Task GenerateAsync_UsesNeutralFactsAndPublishesAccurateStageMetadata()
     {
         using Scratch scratch = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend()).Build();
         GenerationResult result = await host.GenerateAsync(new(Configuration(), scratch.root));
         Assert.True(result.success, result.GetDiagnosticSummary());
-        new ArtifactDigestVerifier().Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
-        string managed = File.ReadAllText(Path.Combine(result.outputRoot, "emscripten-wasm32-emscripten/managed/Api/NativeApi.g.cs"));
+        new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
+        string managed = File.ReadAllText(Path.Combine(result.outputRoot, TestComposition.HostTargetId() + "/managed/Api/NativeApi.g.cs"));
         Assert.Contains("NativeModuleSession", managed);
         Assert.Contains("delegate* unmanaged[Cdecl]<int, int>", managed);
-        using JsonDocument receipt = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.outputRoot, "emscripten-wasm32-emscripten/metadata/verification.json")));
+        using JsonDocument receipt = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.outputRoot, TestComposition.HostTargetId() + "/metadata/verification.json")));
         Assert.True(receipt.RootElement.GetProperty("generated").GetBoolean());
         Assert.False(receipt.RootElement.TryGetProperty("managedCompiled", out _));
         Assert.False(receipt.RootElement.TryGetProperty("nativeLinked", out _));
@@ -320,12 +320,12 @@ public sealed class NeutralGenerationHostTests
     public async Task BackendReleaseFailure_PreventsReplacingPreviousPublishedArtifacts()
     {
         using Scratch scratch = new();
-        await using (BindingHost initial = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build())
+        await using (BindingHost initial = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend()).Build())
             Assert.True((await initial.GenerateAsync(new(Configuration(), scratch.root))).success);
         string output = Path.Combine(scratch.root, "Generated");
         string before = File.ReadAllText(Path.Combine(output, "generation.report.json"));
-        await using BindingHost failing = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .WithBackendFactory(() => new ReleaseFailureBackend()).Build();
+        await using BindingHost failing = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IBindingBackend>(new("fixture.backend", ExtensionPort.BindingBackend), _ => new ReleaseFailureBackend()).Build();
         GenerationResult result = await failing.GenerateAsync(new(Configuration(), scratch.root));
         Assert.False(result.success);
         Assert.False(result.published);
@@ -340,7 +340,7 @@ public sealed class NeutralGenerationHostTests
     {
         using Scratch scratch = new();
         BindingConfiguration configuration = Configuration() with { runtime = new() { mode = "source" }, output = new() { layout = "singleFile" } };
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend()).Build();
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.root));
         Assert.True(result.success, result.GetDiagnosticSummary());
         ArtifactDescriptor managed = Assert.Single(result.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp"));
@@ -357,23 +357,23 @@ public sealed class NeutralGenerationHostTests
     {
         using Scratch scratch = new();
         string path = Path.Combine(scratch.root, "bindgen.json");
-        File.WriteAllText(path, "{\"schemaVersion\":1,\"library\":{\"id\":\"example\",\"nativeName\":\"example\"},\"source\":{\"headers\":[\"native.h\"],\"typo\":true}}");
-        Assert.Throws<JsonException>(() => GenerationRequest.FromFile(path));
+        File.WriteAllText(path, "{\"schemaVersion\":2,\"library\":{\"id\":\"example\",\"nativeName\":\"example\"},\"source\":{\"headers\":[\"native.h\"],\"typo\":true}}");
+        Assert.Throws<JsonException>(() => TestInputs.LoadRequest(path));
         File.WriteAllText(path, "{\"apiName\":\"OldApi\",\"libName\":\"old\"}");
-        Assert.Throws<JsonException>(() => GenerationRequest.FromFile(path));
-        File.WriteAllText(path, "{\"schemaVersion\":1,\"library\":{\"id\":\"example\",\"nativeName\":\"example\"},\"source\":{\"headers\":[\"native.h\"]}}");
-        GenerationRequest request = GenerationRequest.FromFile(path);
+        Assert.Throws<JsonException>(() => TestInputs.LoadRequest(path));
+        File.WriteAllText(path, "{\"schemaVersion\":2,\"library\":{\"id\":\"example\",\"nativeName\":\"example\"},\"source\":{\"headers\":[\"native.h\"]}}");
+        GenerationRequest request = TestInputs.LoadRequest(path);
         Assert.Equal(scratch.root, request.baseDirectory);
         Assert.Equal("c17", request.configuration.source.languageStandard);
-        Assert.Equal(BGCS.Contracts.BindingImportMode.FunctionTable, request.configuration.api.importMode);
+        Assert.Equal(BGCS.Core.BindingImportMode.FunctionTable, request.configuration.api.importMode);
     }
 
     [Fact]
     public async Task WrongFrontendTarget_DiscardsTheJointCandidate()
     {
         using Scratch scratch = new();
-        BindingConfiguration configuration = Configuration() with { targets = [new() { id = "emscripten-wasm32-emscripten" }, new() { id = "host" }] };
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend(forceTarget: true)).Build();
+        BindingConfiguration configuration = Configuration() with { targets = [new() { id = "host" }] };
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend(forceTarget: true)).Build();
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.root));
         Assert.False(result.success);
         Assert.Contains("frontend result changed", result.GetDiagnosticSummary());
@@ -382,22 +382,29 @@ public sealed class NeutralGenerationHostTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "example", nativeName = "example" },
-        source = new() { headers = ["native.h"] }, targets = [new() { id = "emscripten-wasm32-emscripten" }],
+        schemaVersion = 2, library = new() { id = "example", nativeName = "example" },
+        source = new() { headers = ["native.h"] }, targets = [new() { id = "host" }],
         api = new() { @namespace = "Generated.Example", name = "NativeApi" }, cache = new() { enabled = false }
     };
 
     private sealed class ScalarFrontend(bool forceTarget = false, bool text = false) : IFrontend
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
             NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
             NativeType octet = new(new("char"), NativeTypeCategory.Primitive, "char", 1, 1) { primitiveKind = "Char", isSigned = true };
-            NativeType pointer = new(new("text-pointer"), NativeTypeCategory.Pointer, "char*", 4, 4) { elementType = octet.id };
-            NativeDeclaration parameter = new(new("parameter"), "Parameter", "value", "echo::value", text ? pointer.id : integer.id, new("native.h", 1, 1));
+            NativeType pointer = new(new("text-pointer"), NativeTypeCategory.Pointer, "char*", TestComposition.PointerSize(request.target), TestComposition.PointerSize(request.target)) { elementType = octet.id };
+            NativeDeclaration parameter = new(new("parameter"), "Parameter", "value", "echo::value", text ? pointer.id : integer.id, new("native.h", 1, 1))
+            { parent = new("function") };
             NativeDeclaration function = new(new("function"), "Function", "echo", "echo", null, new("native.h", 1, 1))
             { returnType = integer.id, children = [parameter.id], callingConvention = "C" };
-            NativeModule module = new(forceTarget ? "emscripten-wasm32-emscripten" : request.target.targetId.value, request.target.triple, 4, text ? [integer, octet, pointer] : [integer], [parameter, function], [])
+            NativeModule module = new(forceTarget ? "fixture-wrong-target" : request.target.targetId.value, request.target.triple, TestComposition.PointerSize(request.target), text ? [integer, octet, pointer] : [integer], [parameter, function], [])
             { language = SourceLanguage.C, byteOrder = request.target.byteOrder };
             return ValueTask.FromResult(new FrontendResult(module, new([], [])));
         }
@@ -405,7 +412,7 @@ public sealed class NeutralGenerationHostTests
 
     private sealed class ReleaseFailureBackend : IBindingBackend, IDisposable
     {
-        public ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(BGCS.Contracts.Managed.ManagedApiModel model, EmissionRequest request, CancellationToken cancellationToken)
+        public ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(BGCS.Core.Managed.ManagedApiModel model, EmissionRequest request, CancellationToken cancellationToken)
             => new BGCS.CSharp.CSharpBackend().EmitAsync(model, request, cancellationToken);
         public void Dispose() => throw new IOException("backend release failed");
     }

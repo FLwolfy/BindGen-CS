@@ -6,3 +6,7 @@
 *.csproj text eol=lf
 *.props text eol=lf
 *.targets text eol=lf
+
+# Historical parser literals retain byte-hashed trailing spaces and blank final lines.
+# Other whitespace checks still apply within these fixtures and throughout the repository.
+tests/extensions/Frontend.Clang/Fixtures/PublicFacts/*.hpp whitespace=-blank-at-eol,-blank-at-eof

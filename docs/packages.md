@@ -1,76 +1,51 @@
-# Packages and installed products
+# Products and deployment
 
-[简体中文](packages.cn.md) | [Getting started](getting-started.md) | [Publishing](publish.md)
-
-| Product | Use |
+| Product | Purpose |
 | --- | --- |
-| BGCS | Complete embedded C/C++ source generator SDK |
-| BGCS.Contracts | Detached models and ordinary plugin contracts |
-| BGCS.Runtime | Binding consumer support without generator/parser dependencies |
-| BindGen-CS | CLI using the same `BindingHost` coordinator |
+| BGCS | Complete generation library and standard composition. |
+| BGCS.Core | Independent neutral models and generation interfaces. |
+| BGCS.Runtime | Independent support for applications using generated bindings. |
+| BindGen-CS | CLI over the same generation flow. |
 
-All products target .NET 10. C++ lowering and other internal modules are included in
-the full SDK/tool; consumers do not install a feature package per implementation project.
-The implementation has eleven product projects and no BGCS MSBuild integration assets.
+Internal Engine, Analysis, NativeBridge, CSharp and Infrastructure assemblies ship with the complete product. Users do not install them one by one. There is no `BGCS.Defaults`, no Contracts alias package in 4.0, and no BGCS MSBuild integration.
 
-## Install and generate
+## Optional official implementations
 
-After the declared version has actually been published:
+| Package | Scope |
+| --- | --- |
+| BGCS.Extension.BrowserWasm | Emscripten inputs, Mono Wasm profile, static table/callback strategies. |
+| BGCS.Extension.NativeAot | NativeAOT execution profile and existing call/thunk mechanisms. |
+| BGCS.Extension.Android | NDK target and header environment resolution. |
+| BGCS.Extension.AppleMobile | Device/simulator target and SDK inputs. |
+| BGCS.Extension.FreeBsd | Target and explicit sysroot inputs. |
 
-```bash
-dotnet tool install --global BindGen-CS --version 3.0.0
-bindgen-cs init include/native.h --language c
-bindgen-cs doctor bindgen.json
-bindgen-cs generate bindgen.json
+BGCS does not depend on these packages. Install the needed implementation, then explicitly register it. Android, Apple mobile and FreeBSD target resolution does not itself supply a managed runtime or prove calls. Provide applicable runtime/ABI implementations where required. A declared capability is not a real execution receipt.
+
+```csharp
+using BGCS;
+using BGCS.Extension.NativeAot;
+
+await using BindingHost generator = BindingGenerator.CreateBuilder()
+    .AddPlugin<NativeAotPlugin>()
+    .Build();
 ```
 
-Use a checkout or explicitly prepared local feed before publication. CLI and ordinary
-C# SDK calls generate C#, optional C ABI bridge source, manifests and diagnostics.
-The consumer owns compilation, linking, packaging and deployment; there are no product
-native-build or consumer-build APIs. See [public API](api.md).
+Select its runtime ID in configuration. Package installation does not activate code through a module initializer or assembly scan. A custom implementation can live directly in your C# generation project.
 
-## Worker resources and SDK deployment
+## Parser resources
 
-Parser resources follow the generator host, not the generated target. Windows→Android
-uses Windows parser resources and actual Android SDK inputs. Clang builtin headers do
-not substitute for target SDK/libc/C++ headers.
+The complete SDK includes its locked worker managed payload and resource manifest as normal NuGet content assets. Fixed parser runtime dependencies provide native libraries. The CLI carries its own host closure. Resources follow the actual generator host, independently of the binding target.
 
-The SDK uses standard NuGet `contentFiles` for its locked worker/resource payload.
-Local first-use provisioning keys its owned cache by version, host and manifest digest,
-verifies both source and cached closure, and prepares the worker;
-it does not depend on BGCS `.props`/`.targets`, a TaskHost or a NuGet-cache search at
-parser execution time. Restore must deliver the complete package content. Ordinary
-Contracts-only plugins do not load Clang; advanced fact contributors run in the worker.
+First use verifies and prepares resources in an owned user-local directory, keyed by version, host and content identity. It does not download files, search the global NuGet cache for missing dependencies, select arbitrary system LLVM or run a compiler. An explicit deployed worker root remains available to advanced hosts.
 
-The tool pointer and RID implementation packages deliver the declared six desktop
-host closures. The technical Intel macOS parser supplement fills the upstream closure
-gap. Exact products, RIDs, archive set and size limits come from
-[product-packages.json](../distribution/manifests/product-packages.json), not a historic
-fixed job count. Parser source/license/hash provenance remains required.
+An ordinary application build/publish output, moved to a clean location, must contain enough deployed resources to generate. Special application publishing forms need explicit resource deployment and are not assumed supported automatically.
 
-## Runtime package or source
+## Runtime
 
-Generated applications normally reference only `BGCS.Runtime`. With
-`runtime.mode = "source"`, BGCS emits the required source closure in an API-local
-namespace; single-file output can include it in `Bindings.cs`. Runtime does not
-install compilers, build libraries or deploy native dependencies. Raw ABI and friendly
-projection limits apply equally to package and source modes.
+Applications normally reference BGCS.Runtime only. It has no Core, Clang, Roslyn, MSBuild or generator dependencies. `runtime.mode = "source"` emits the required source closure in an API-local namespace; single-file output can include it. Both forms have the same lifecycle contracts.
 
-## Packaging and certification
+## Repository package verification
 
-The required CI plan has three generator jobs (Windows full, Linux/macOS smoke) and
-one full product-install job. The install job consumes actual new package bytes in
-clean private workspaces and verifies SDK, tool, Contracts plugins, Runtime consumers,
-schemas and worker/resource closure. It cannot use old packages or repository project
-references to satisfy installed-product proof. Core feature baselines and all original
-per-host performance limits remain required.
+`eng/pack.py` builds candidate products; `eng/verify-packages.py` checks exact archives. Candidate versions contain source commit and digest. Clean consumers use package bytes, not workspace DLLs. Product gates verify closures, licenses, parser provenance, optional extension activation, Runtime-only use and relocation.
 
-AOT/Wasm application publication/invocation is optional manual private work, not a
-mandatory installation matrix. Target facts and generated static adapters remain in
-scope. Visual Studio TaskHost certification is not a product requirement.
-
-`eng/pack.py` and `eng/verify-packages.py` implement repository packaging/verification;
-consult their current `--help` before a costly local run. Partial or dirty-source
-receipts remain local evidence. Final publication requires the applicable clean-revision
-checks, immutable package identities and actual public availability verification.
-This page does not claim 3.0.0 is already published or certified.
+Repository packaging scripts publish BGCS itself. They are not consumer packaging APIs. See [acceptance](acceptance.md) and [publishing](publish.md).

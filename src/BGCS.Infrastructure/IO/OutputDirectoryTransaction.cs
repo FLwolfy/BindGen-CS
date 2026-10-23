@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.IO;
 using System.Threading;
@@ -9,6 +10,7 @@ namespace BGCS.Infrastructure.IO;
 /// </summary>
 public sealed class OutputDirectoryTransaction : IDisposable
 {
+    private readonly IHostPathService m_paths;
     private readonly string m_destinationPath;
     private readonly OwnedPathBoundary m_boundary;
     private readonly FileStream m_publicationLease;
@@ -21,6 +23,7 @@ public sealed class OutputDirectoryTransaction : IDisposable
     /// <param name="destinationPath">
     /// The final output directory replaced by <see cref="Commit"/>.
     /// </param>
+    /// <param name="paths">The explicitly selected host path service.</param>
     /// <param name="lockTimeout">
     /// The maximum wait for another publisher, or null for five minutes. Infinite waiting is explicit.
     /// </param>
@@ -41,9 +44,10 @@ public sealed class OutputDirectoryTransaction : IDisposable
     /// </exception>
     public OutputDirectoryTransaction(
         string destinationPath,
+        IHostPathService paths,
         TimeSpan? lockTimeout = null,
         CancellationToken cancellationToken = default
-    ) : this(new OwnedPathBoundary(destinationPath), null, ownsLease: true, lockTimeout ?? TimeSpan.FromMinutes(5), cancellationToken)
+    ) : this(new OwnedPathBoundary(destinationPath, paths), paths, null, ownsLease: true, lockTimeout ?? TimeSpan.FromMinutes(5), cancellationToken)
     {
     }
 
@@ -54,23 +58,26 @@ public sealed class OutputDirectoryTransaction : IDisposable
 
     internal OutputDirectoryTransaction(
         string destinationPath,
+        IHostPathService paths,
         FileStream publicationLease
-    ) : this(new OwnedPathBoundary(destinationPath), publicationLease, ownsLease: false, TimeSpan.Zero, CancellationToken.None)
+    ) : this(new OwnedPathBoundary(destinationPath, paths), paths, publicationLease, ownsLease: false, TimeSpan.Zero, CancellationToken.None)
     {
     }
 
     private OutputDirectoryTransaction(
         OwnedPathBoundary boundary,
+        IHostPathService paths,
         FileStream? publicationLease,
         bool ownsLease,
         TimeSpan timeout,
         CancellationToken cancellationToken
     ) {
+        m_paths = paths;
         m_boundary = boundary;
         m_destinationPath = boundary.physicalPath;
         string parent = Path.GetDirectoryName(m_destinationPath)
             ?? throw new ArgumentException("The output path must have a parent directory.", nameof(boundary));
-        m_publicationLease = publicationLease ?? DirectoryPublicationLease.Acquire(m_destinationPath, timeout, cancellationToken);
+        m_publicationLease = publicationLease ?? DirectoryPublicationLease.Acquire(m_destinationPath, paths, timeout, cancellationToken);
         m_ownsLease = ownsLease;
         try
         {
@@ -93,7 +100,7 @@ public sealed class OutputDirectoryTransaction : IDisposable
     /// </summary>
     /// <remarks>
     /// Readers must participate in publication ownership during the two directory moves.
-    /// Windows access and sharing failures are retried for at most two seconds per move.
+    /// Host-classified temporary access and sharing failures are retried for at most two seconds per move.
     /// A persistent failure is reported and the previous tree is restored when installation fails.
     /// Backup cleanup runs after commit and cannot roll back an installed candidate.
     /// </remarks>
@@ -143,13 +150,13 @@ public sealed class OutputDirectoryTransaction : IDisposable
                 throw new IOException("An output directory appeared after publication was prepared.");
             backupPath = preparedBackupPath ?? Path.Combine(Path.GetDirectoryName(m_destinationPath)!, ".bgcs-backup-" + Guid.NewGuid().ToString("N"));
             OwnedPathBoundary.RejectPhysicalLinks(backupPath);
-            DirectoryPublication.Move(m_destinationPath, backupPath);
+            DirectoryPublication.Move(m_destinationPath, backupPath, m_paths);
         }
 
         bool installed = false;
         try
         {
-            DirectoryPublication.Move(stagingPath, m_destinationPath);
+            DirectoryPublication.Move(stagingPath, m_destinationPath, m_paths);
             installed = true;
             m_boundary.Verify();
             m_committed = true;
@@ -162,9 +169,9 @@ public sealed class OutputDirectoryTransaction : IDisposable
                 // was redirected while installation was in progress.
                 OwnedPathBoundary.RejectPhysicalLinks(m_destinationPath);
                 OwnedPathBoundary.RejectPhysicalLinks(stagingPath);
-                if (installed) DirectoryPublication.Move(m_destinationPath, stagingPath);
+                if (installed) DirectoryPublication.Move(m_destinationPath, stagingPath, m_paths);
                 if (backupPath != null && !Directory.Exists(m_destinationPath) && Directory.Exists(backupPath))
-                    DirectoryPublication.Move(backupPath, m_destinationPath);
+                    DirectoryPublication.Move(backupPath, m_destinationPath, m_paths);
             }
             catch (Exception restorationFailure)
             {
@@ -186,10 +193,10 @@ public sealed class OutputDirectoryTransaction : IDisposable
         if (backupPath is not null) OwnedPathBoundary.RejectPhysicalLinks(backupPath);
         if (!m_committed)
             throw new InvalidOperationException("No candidate has been installed by this transaction.");
-        DirectoryPublication.Move(m_destinationPath, stagingPath);
+        DirectoryPublication.Move(m_destinationPath, stagingPath, m_paths);
         m_committed = false;
         if (backupPath != null)
-            DirectoryPublication.Move(backupPath, m_destinationPath);
+            DirectoryPublication.Move(backupPath, m_destinationPath, m_paths);
     }
 
     internal void RemoveBackup(string? backupPath)

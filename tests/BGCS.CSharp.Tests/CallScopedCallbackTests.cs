@@ -3,13 +3,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -31,14 +31,14 @@ public sealed class CallScopedCallbackTests
         ManagedApiModel model = Model(userData);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpCallbackMethodPlan operation = Assert.Single(plan.callScopedCallbacks);
         CSharpCallbackInputPlan callback = Assert.Single(operation.callbacks);
         Assert.Equal(userData, callback.staticThunk);
         Assert.Equal("(int)(-7)", callback.fallbackExpression);
         Assert.Equal(2, operation.signature.parameterTypes.Length);
         Assert.Empty(plan.callbackOmissions);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string text = sink.sources.Single(source => source.Key.StartsWith("Callbacks/", StringComparison.Ordinal)).Value;
         Assert.Contains("ExceptionDispatchInfo.Throw", text);
         Assert.Contains("m_session.AcquireCall()", text);
@@ -92,13 +92,13 @@ public sealed class CallScopedCallbackTests
             _ => contract
         };
         InteropModule interop = new(model.interop.libraryId, model.interop.targetId, 8, model.interop.types,
-            [function with { parameters = function.parameters.SetItem(0, parameter with { callback = contract }) }], []);
+            [function with { parameters = function.parameters.SetItem(0, parameter with { callback = contract }) }], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         EmissionRequest request = new("native", new NeutralBackendTests.MemorySink())
         {
-            managedRuntime = missing == "aot" ? new("native-aot", ManagedRuntimeKind.NativeAot, NativeModuleMechanism.DynamicLibrary,
+            managedRuntime = missing == "aot" ? new("native-aot", new ManagedRuntimeId("fixture.static-runtime"), NativeModuleMechanism.DynamicLibrary,
                 [BindingImportMode.FunctionTable], true, true) : null
         };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model with { interop = interop }, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model with { interop = interop }, request);
         Assert.Empty(plan.callScopedCallbacks);
         Assert.Single(plan.methods);
         Assert.False(string.IsNullOrWhiteSpace(Assert.Single(plan.callbackOmissions).reason));
@@ -111,9 +111,9 @@ public sealed class CallScopedCallbackTests
         InteropFunction function = original.interop.functions[0];
         InteropType pointer = original.interop.types.Single(type => type.id == new StableId("state"));
         function = function with { parameters = function.parameters.Insert(2, new(new("raw-pointer"), "rawPointer", pointer.id)) };
-        InteropModule module = new(original.interop.libraryId, original.interop.targetId, 8, original.interop.types, [function], []);
+        InteropModule module = new(original.interop.libraryId, original.interop.targetId, 8, original.interop.types, [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Callbacks", "CallbackApi"), CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         CSharpCallbackMethodPlan operation = Assert.Single(plan.callScopedCallbacks);
         Assert.Equal("void*", operation.signature.parameterTypes[2]);
         Assert.Equal(3, Assert.Single(operation.callbacks).userDataIndex);
@@ -140,7 +140,7 @@ public sealed class CallScopedCallbackTests
         ImmutableArray<InteropParameter> parameters = [new(new("callback"), "callback", pointer.id) { callback = contract }, new(new("value"), "value", integer.id)];
         if (userData) parameters = parameters.Add(new(new("userdata"), "userdata", state.id));
         InteropFunction function = new(new("invoke"), "invoke", integer.id, parameters, "C");
-        InteropModule module = new("callbacks", "windows-x64-msvc", 8, [integer, empty, state, callable, pointer], [function], []);
+        InteropModule module = new("callbacks", "windows-x64-msvc", 8, [integer, empty, state, callable, pointer], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.Callbacks", "CallbackApi"), CancellationToken.None);
     }
 }

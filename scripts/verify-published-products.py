@@ -104,7 +104,7 @@ def main() -> None:
     packages = args.packages.resolve()
     helper.verify_package_receipt(packages, args.version, source["revision"], True)
     manifest = helper.PRODUCT_MANIFEST
-    identities = [*manifest["products"], *manifest["technicalPackages"],
+    identities = [*manifest["products"], *manifest["optionalProducts"], *manifest["technicalPackages"],
                   *("BindGen-CS." + rid for rid in manifest["toolRuntimeIdentifiers"])]
     selected = Path(args.dotnet) if Path(args.dotnet).is_file() else Path(shutil.which(args.dotnet) or "")
     if not selected.is_file():
@@ -132,7 +132,11 @@ def main() -> None:
                 "DOTNET_ROOT": str(Path(dotnet).parent), "DOTNET_HOST_PATH": dotnet}
             def run(command, cwd, name):
                 return helper.run_process(command, cwd, evidence, name, environment_overrides=environment)
+            def run_optional(command, cwd, logs, name):
+                return helper.run_process(command, cwd, logs, name, environment_overrides=environment)
             (work / "NuGet.Config").write_text('<configuration><packageSources><clear/><add key="nuget.org" value="' + INDEX + '"/></packageSources></configuration>\n', encoding="utf-8")
+            report['optionalExtensions'] = helper.verify_optional_extension_consumers(dotnet, args.version, work, evidence, run_optional)
+            report['checks'].append('public-five-optional-extensions-independent-core-only-consumption')
             tool_root = work / "tool"
             run([dotnet, "tool", "install", "BindGen-CS", "--version", args.version, "--tool-path", str(tool_root),
                  "--configfile", str(work / "NuGet.Config")], work, "public-tool-install")
@@ -150,16 +154,16 @@ def main() -> None:
             (inputs / "native.h").write_text("int native_add(int left,int right);\n", encoding="utf-8")
             (inputs / "widget.hpp").write_text("class Widget { public: Widget()=default; int Read()const{return 42;} };\n", encoding="utf-8")
             for language, header, namespace, output in (("c", "native.h", "PublicRelease.C", "GeneratedC"), ("cpp", "widget.hpp", "PublicRelease.Cpp", "GeneratedCpp")):
-                config = {"schemaVersion": 1, "library": {"id": "public_probe", "nativeName": "public_probe"},
+                config = {"schemaVersion": 2, "library": {"id": "public_probe", "nativeName": "public_probe"},
                     "source": {"language": language, "headers": [str(inputs / header)], "parseMacros": False},
                     "api": {"namespace": namespace, "name": "Api"},
                     "output": {"root": str(sdk / output)}, "cache": {"enabled": False}}
                 (sdk / (language + ".json")).write_text(json.dumps(config), encoding="utf-8")
             (sdk / "Program.cs").write_text('''using System;
 using BGCS;
-await using BindingHost host=BindingHost.CreateDefault();
+await using BindingHost host=BindingGenerator.CreateDefault();
 foreach(string path in new[]{"c.json","cpp.json"}) {
-    GenerationResult result=await host.GenerateAsync(await GenerationRequest.FromFileAsync(path));
+    GenerationResult result=await host.GenerateAsync(GenerationRequest.FromFile(path));
     if(!result.success)throw new InvalidOperationException(result.GetDiagnosticSummary());
 }
 ''', encoding="utf-8")
@@ -170,12 +174,12 @@ foreach(string path in new[]{"c.json","cpp.json"}) {
                 raise RuntimeError("The publicly restored SDK lost its C++ bridge capability.")
             report["checks"].append("public-sdk-and-tool-c-cpp-generation")
             contracts = work / "contracts"
-            helper.write_project(contracts, args.version, ["BGCS.Contracts"])
+            helper.write_project(contracts, args.version, ["BGCS.Core"])
             (contracts / "Program.cs").write_text('''using System;
-using BGCS.Contracts.Versioning;
+using BGCS.Core.Versioning;
 int major=ContractVersion.C_MAJOR;
 if(major!=3)throw new InvalidOperationException("Wrong public contract major.");
-Console.WriteLine(typeof(BGCS.Contracts.Native.NativeModule).FullName);
+Console.WriteLine(typeof(BGCS.Core.Native.NativeModule).FullName);
 ''', encoding="utf-8")
             run([dotnet, "build", "Consumer.csproj", "-c", "Release", "-m:1", "-nr:false"], contracts, "public-contracts-build")
             run([dotnet, str(contracts / "bin/Release/net10.0/Consumer.dll")], contracts, "public-contracts-consumer")
@@ -190,7 +194,7 @@ Console.WriteLine(typeof(BGCS.Contracts.Native.NativeModule).FullName);
             (runtime / "Program.cs").write_text('using System; Console.WriteLine(typeof(PublicRelease.C.Api).FullName);\n', encoding="utf-8")
             run([dotnet, "build", "Consumer.csproj", "-c", "Release", "-m:1", "-nr:false"], runtime, "public-runtime-build")
             run([dotnet, str(runtime / "bin/Release/net10.0/Consumer.dll")], runtime, "public-runtime-consumer")
-            for project, only in ((contracts, "BGCS.Contracts"), (runtime, "BGCS.Runtime")):
+            for project, only in ((contracts, "BGCS.Core"), (runtime, "BGCS.Runtime")):
                 assets = json.loads((project / "obj/project.assets.json").read_text(encoding="utf-8"))
                 if any(name.split("/")[0] != only for name in assets["libraries"]):
                     raise RuntimeError("A public standalone Contracts/Runtime consumer acquired another package dependency.")

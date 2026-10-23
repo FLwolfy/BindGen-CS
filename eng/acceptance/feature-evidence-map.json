@@ -1,0 +1,452 @@
+{
+  "schemaVersion": 1,
+  "role": "Navigation index only; feature-inventory.json owns current implementation and exact acceptance declarations.",
+  "canonicalInventory": "eng/acceptance/feature-inventory.json",
+  "canonicalBaseline": "eng/acceptance/feature-baseline.json",
+  "currentRevisionCertified": false,
+  "certificationPolicy": "eng/acceptance/required-release-gates.json",
+  "features": [
+    {
+      "featureId": "native.c-declarations",
+      "inventoryPointer": "#/features/0",
+      "ownerPointer": "#/features/0/owner",
+      "implementationPointer": "#/features/0/implementation",
+      "releaseEvidencePointer": "#/features/0/releaseEvidence"
+    },
+    {
+      "featureId": "native.type-graph",
+      "inventoryPointer": "#/features/1",
+      "ownerPointer": "#/features/1/owner",
+      "implementationPointer": "#/features/1/implementation",
+      "releaseEvidencePointer": "#/features/1/releaseEvidence"
+    },
+    {
+      "featureId": "native.macros-and-expressions",
+      "inventoryPointer": "#/features/2",
+      "ownerPointer": "#/features/2/owner",
+      "implementationPointer": "#/features/2/implementation",
+      "releaseEvidencePointer": "#/features/2/releaseEvidence"
+    },
+    {
+      "featureId": "native.source-and-documentation",
+      "inventoryPointer": "#/features/3",
+      "ownerPointer": "#/features/3/owner",
+      "implementationPointer": "#/features/3/implementation",
+      "releaseEvidencePointer": "#/features/3/releaseEvidence"
+    },
+    {
+      "featureId": "analysis.selection-and-closure",
+      "inventoryPointer": "#/features/4",
+      "ownerPointer": "#/features/4/owner",
+      "implementationPointer": "#/features/4/implementation",
+      "releaseEvidencePointer": "#/features/4/releaseEvidence"
+    },
+    {
+      "featureId": "analysis.storage-layout",
+      "inventoryPointer": "#/features/5",
+      "ownerPointer": "#/features/5/owner",
+      "implementationPointer": "#/features/5/implementation",
+      "releaseEvidencePointer": "#/features/5/releaseEvidence"
+    },
+    {
+      "featureId": "analysis.aggregate-calling-abi",
+      "inventoryPointer": "#/features/6",
+      "ownerPointer": "#/features/6/owner",
+      "implementationPointer": "#/features/6/implementation",
+      "releaseEvidencePointer": "#/features/6/releaseEvidence"
+    },
+    {
+      "featureId": "analysis.external-types",
+      "inventoryPointer": "#/features/7",
+      "ownerPointer": "#/features/7/owner",
+      "implementationPointer": "#/features/7/implementation",
+      "releaseEvidencePointer": "#/features/7/releaseEvidence"
+    },
+    {
+      "featureId": "analysis.semantic-evidence",
+      "inventoryPointer": "#/features/8",
+      "ownerPointer": "#/features/8/owner",
+      "implementationPointer": "#/features/8/implementation",
+      "releaseEvidencePointer": "#/features/8/releaseEvidence"
+    },
+    {
+      "featureId": "api.naming-and-type-mapping",
+      "inventoryPointer": "#/features/9",
+      "ownerPointer": "#/features/9/owner",
+      "implementationPointer": "#/features/9/implementation",
+      "releaseEvidencePointer": "#/features/9/releaseEvidence"
+    },
+    {
+      "featureId": "api.function-containers-and-member-extensions",
+      "inventoryPointer": "#/features/10",
+      "ownerPointer": "#/features/10/owner",
+      "implementationPointer": "#/features/10/implementation",
+      "releaseEvidencePointer": "#/features/10/releaseEvidence"
+    },
+    {
+      "featureId": "api.raw-and-friendly",
+      "inventoryPointer": "#/features/11",
+      "ownerPointer": "#/features/11/owner",
+      "implementationPointer": "#/features/11/implementation",
+      "releaseEvidencePointer": "#/features/11/releaseEvidence"
+    },
+    {
+      "featureId": "api.function-table",
+      "inventoryPointer": "#/features/12",
+      "ownerPointer": "#/features/12/owner",
+      "implementationPointer": "#/features/12/implementation",
+      "releaseEvidencePointer": "#/features/12/releaseEvidence"
+    },
+    {
+      "featureId": "api.dllimport",
+      "inventoryPointer": "#/features/13",
+      "ownerPointer": "#/features/13/owner",
+      "implementationPointer": "#/features/13/implementation",
+      "releaseEvidencePointer": "#/features/13/releaseEvidence"
+    },
+    {
+      "featureId": "api.libraryimport",
+      "inventoryPointer": "#/features/14",
+      "ownerPointer": "#/features/14/owner",
+      "implementationPointer": "#/features/14/implementation",
+      "releaseEvidencePointer": "#/features/14/releaseEvidence"
+    },
+    {
+      "featureId": "api.instances-and-static-context",
+      "inventoryPointer": "#/features/15",
+      "ownerPointer": "#/features/15/owner",
+      "implementationPointer": "#/features/15/implementation",
+      "releaseEvidencePointer": "#/features/15/releaseEvidence"
+    },
+    {
+      "featureId": "storage.struct-and-union",
+      "inventoryPointer": "#/features/16",
+      "ownerPointer": "#/features/16/owner",
+      "implementationPointer": "#/features/16/implementation",
+      "releaseEvidencePointer": "#/features/16/releaseEvidence"
+    },
+    {
+      "featureId": "storage.bitfields",
+      "inventoryPointer": "#/features/17",
+      "ownerPointer": "#/features/17/owner",
+      "implementationPointer": "#/features/17/implementation",
+      "releaseEvidencePointer": "#/features/17/releaseEvidence"
+    },
+    {
+      "featureId": "storage.fixed-and-flexible-arrays",
+      "inventoryPointer": "#/features/18",
+      "ownerPointer": "#/features/18/owner",
+      "implementationPointer": "#/features/18/implementation",
+      "releaseEvidencePointer": "#/features/18/releaseEvidence"
+    },
+    {
+      "featureId": "storage.enum-high-bits",
+      "inventoryPointer": "#/features/19",
+      "ownerPointer": "#/features/19/owner",
+      "implementationPointer": "#/features/19/implementation",
+      "releaseEvidencePointer": "#/features/19/releaseEvidence"
+    },
+    {
+      "featureId": "storage.special-scalars-and-va-list",
+      "inventoryPointer": "#/features/20",
+      "ownerPointer": "#/features/20/owner",
+      "implementationPointer": "#/features/20/implementation",
+      "releaseEvidencePointer": "#/features/20/releaseEvidence"
+    },
+    {
+      "featureId": "semantics.strings-and-encoding",
+      "inventoryPointer": "#/features/21",
+      "ownerPointer": "#/features/21/owner",
+      "implementationPointer": "#/features/21/implementation",
+      "releaseEvidencePointer": "#/features/21/releaseEvidence"
+    },
+    {
+      "featureId": "semantics.buffers-and-direction",
+      "inventoryPointer": "#/features/22",
+      "ownerPointer": "#/features/22/owner",
+      "implementationPointer": "#/features/22/implementation",
+      "releaseEvidencePointer": "#/features/22/releaseEvidence"
+    },
+    {
+      "featureId": "semantics.ownership-and-allocators",
+      "inventoryPointer": "#/features/23",
+      "ownerPointer": "#/features/23/owner",
+      "implementationPointer": "#/features/23/implementation",
+      "releaseEvidencePointer": "#/features/23/releaseEvidence"
+    },
+    {
+      "featureId": "semantics.retained-callbacks",
+      "inventoryPointer": "#/features/24",
+      "ownerPointer": "#/features/24/owner",
+      "implementationPointer": "#/features/24/implementation",
+      "releaseEvidencePointer": "#/features/24/releaseEvidence"
+    },
+    {
+      "featureId": "semantics.asynchronous-completion",
+      "inventoryPointer": "#/features/25",
+      "ownerPointer": "#/features/25/owner",
+      "implementationPointer": "#/features/25/implementation",
+      "releaseEvidencePointer": "#/features/25/releaseEvidence"
+    },
+    {
+      "featureId": "semantics.error-and-cleanup",
+      "inventoryPointer": "#/features/26",
+      "ownerPointer": "#/features/26/owner",
+      "implementationPointer": "#/features/26/implementation",
+      "releaseEvidencePointer": "#/features/26/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.objects-and-operators",
+      "inventoryPointer": "#/features/27",
+      "ownerPointer": "#/features/27/owner",
+      "implementationPointer": "#/features/27/implementation",
+      "releaseEvidencePointer": "#/features/27/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.string-vector-span-array",
+      "inventoryPointer": "#/features/28",
+      "ownerPointer": "#/features/28/owner",
+      "implementationPointer": "#/features/28/implementation",
+      "releaseEvidencePointer": "#/features/28/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.map-set-optional-variant-expected",
+      "inventoryPointer": "#/features/29",
+      "ownerPointer": "#/features/29/owner",
+      "implementationPointer": "#/features/29/implementation",
+      "releaseEvidencePointer": "#/features/29/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.path-and-chrono",
+      "inventoryPointer": "#/features/30",
+      "ownerPointer": "#/features/30/owner",
+      "implementationPointer": "#/features/30/implementation",
+      "releaseEvidencePointer": "#/features/30/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.unique-and-shared-pointers",
+      "inventoryPointer": "#/features/31",
+      "ownerPointer": "#/features/31/owner",
+      "implementationPointer": "#/features/31/implementation",
+      "releaseEvidencePointer": "#/features/31/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.templates-and-function-templates",
+      "inventoryPointer": "#/features/32",
+      "ownerPointer": "#/features/32/owner",
+      "implementationPointer": "#/features/32/implementation",
+      "releaseEvidencePointer": "#/features/32/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.inheritance-and-native-casts",
+      "inventoryPointer": "#/features/33",
+      "ownerPointer": "#/features/33/owner",
+      "implementationPointer": "#/features/33/implementation",
+      "releaseEvidencePointer": "#/features/33/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.virtual-callbacks",
+      "inventoryPointer": "#/features/34",
+      "ownerPointer": "#/features/34/owner",
+      "implementationPointer": "#/features/34/implementation",
+      "releaseEvidencePointer": "#/features/34/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.exception-boundaries",
+      "inventoryPointer": "#/features/35",
+      "ownerPointer": "#/features/35/owner",
+      "implementationPointer": "#/features/35/implementation",
+      "releaseEvidencePointer": "#/features/35/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.custom-lowering-recipes-and-shims",
+      "inventoryPointer": "#/features/36",
+      "ownerPointer": "#/features/36/owner",
+      "implementationPointer": "#/features/36/implementation",
+      "releaseEvidencePointer": "#/features/36/releaseEvidence"
+    },
+    {
+      "featureId": "cpp.typed-operations-and-semantic-reparse",
+      "inventoryPointer": "#/features/37",
+      "ownerPointer": "#/features/37/owner",
+      "implementationPointer": "#/features/37/implementation",
+      "releaseEvidencePointer": "#/features/37/releaseEvidence"
+    },
+    {
+      "featureId": "output.source-patch-and-regex-processing",
+      "inventoryPointer": "#/features/38",
+      "ownerPointer": "#/features/38/owner",
+      "implementationPointer": "#/features/38/implementation",
+      "releaseEvidencePointer": "#/features/38/releaseEvidence"
+    },
+    {
+      "featureId": "output.split-and-single-file",
+      "inventoryPointer": "#/features/39",
+      "ownerPointer": "#/features/39/owner",
+      "implementationPointer": "#/features/39/implementation",
+      "releaseEvidencePointer": "#/features/39/releaseEvidence"
+    },
+    {
+      "featureId": "output.metadata-and-documentation",
+      "inventoryPointer": "#/features/40",
+      "ownerPointer": "#/features/40/owner",
+      "implementationPointer": "#/features/40/implementation",
+      "releaseEvidencePointer": "#/features/40/releaseEvidence"
+    },
+    {
+      "featureId": "runtime.package-and-source",
+      "inventoryPointer": "#/features/41",
+      "ownerPointer": "#/features/41/owner",
+      "implementationPointer": "#/features/41/implementation",
+      "releaseEvidencePointer": "#/features/41/releaseEvidence"
+    },
+    {
+      "featureId": "runtime.module-handle-and-call-lifetimes",
+      "inventoryPointer": "#/features/42",
+      "ownerPointer": "#/features/42/owner",
+      "implementationPointer": "#/features/42/implementation",
+      "releaseEvidencePointer": "#/features/42/releaseEvidence"
+    },
+    {
+      "featureId": "runtime.callback-and-async-lifetimes",
+      "inventoryPointer": "#/features/43",
+      "ownerPointer": "#/features/43/owner",
+      "implementationPointer": "#/features/43/implementation",
+      "releaseEvidencePointer": "#/features/43/releaseEvidence"
+    },
+    {
+      "featureId": "runtime.aligned-memory-and-utf32",
+      "inventoryPointer": "#/features/44",
+      "ownerPointer": "#/features/44/owner",
+      "implementationPointer": "#/features/44/implementation",
+      "releaseEvidencePointer": "#/features/44/releaseEvidence"
+    },
+    {
+      "featureId": "runtime.custom-allocator-and-owned-buffer",
+      "inventoryPointer": "#/features/45",
+      "ownerPointer": "#/features/45/owner",
+      "implementationPointer": "#/features/45/implementation",
+      "releaseEvidencePointer": "#/features/45/releaseEvidence"
+    },
+    {
+      "featureId": "extensions.neutral-plugins-and-custom-targets",
+      "inventoryPointer": "#/features/46",
+      "ownerPointer": "#/features/46/owner",
+      "implementationPointer": "#/features/46/implementation",
+      "releaseEvidencePointer": "#/features/46/releaseEvidence"
+    },
+    {
+      "featureId": "extensions.schema-lifetime-and-fingerprints",
+      "inventoryPointer": "#/features/47",
+      "ownerPointer": "#/features/47/owner",
+      "implementationPointer": "#/features/47/implementation",
+      "releaseEvidencePointer": "#/features/47/releaseEvidence"
+    },
+    {
+      "featureId": "host.configuration-composition",
+      "inventoryPointer": "#/features/48",
+      "ownerPointer": "#/features/48/owner",
+      "implementationPointer": "#/features/48/implementation",
+      "releaseEvidencePointer": "#/features/48/releaseEvidence"
+    },
+    {
+      "featureId": "host.cache-dependencies-and-extension-invalidation",
+      "inventoryPointer": "#/features/49",
+      "ownerPointer": "#/features/49/owner",
+      "implementationPointer": "#/features/49/implementation",
+      "releaseEvidencePointer": "#/features/49/releaseEvidence"
+    },
+    {
+      "featureId": "host.candidate-publication-and-recovery",
+      "inventoryPointer": "#/features/50",
+      "ownerPointer": "#/features/50/owner",
+      "implementationPointer": "#/features/50/implementation",
+      "releaseEvidencePointer": "#/features/50/releaseEvidence"
+    },
+    {
+      "featureId": "host.workspace-inspection-and-diff",
+      "inventoryPointer": "#/features/51",
+      "ownerPointer": "#/features/51/owner",
+      "implementationPointer": "#/features/51/implementation",
+      "releaseEvidencePointer": "#/features/51/releaseEvidence"
+    },
+    {
+      "featureId": "host.worker-isolation-and-cancellation",
+      "inventoryPointer": "#/features/52",
+      "ownerPointer": "#/features/52/owner",
+      "implementationPointer": "#/features/52/implementation",
+      "releaseEvidencePointer": "#/features/52/releaseEvidence"
+    },
+    {
+      "featureId": "platforms.targets-sdks-and-runtime-capabilities",
+      "inventoryPointer": "#/features/53",
+      "ownerPointer": "#/features/53/owner",
+      "implementationPointer": "#/features/53/implementation",
+      "releaseEvidencePointer": "#/features/53/releaseEvidence"
+    },
+    {
+      "featureId": "distribution.four-products-and-resource-closures",
+      "inventoryPointer": "#/features/54",
+      "ownerPointer": "#/features/54/owner",
+      "implementationPointer": "#/features/54/implementation",
+      "releaseEvidencePointer": "#/features/54/releaseEvidence"
+    },
+    {
+      "featureId": "validation.corpus-package-and-performance",
+      "inventoryPointer": "#/features/55",
+      "ownerPointer": "#/features/55/owner",
+      "implementationPointer": "#/features/55/implementation",
+      "releaseEvidencePointer": "#/features/55/releaseEvidence"
+    },
+    {
+      "featureId": "validation.api-architecture-documentation-and-supply-chain",
+      "inventoryPointer": "#/features/56",
+      "ownerPointer": "#/features/56/owner",
+      "implementationPointer": "#/features/56/implementation",
+      "releaseEvidencePointer": "#/features/56/releaseEvidence"
+    },
+    {
+      "featureId": "extensions.source-contribution",
+      "inventoryPointer": "#/features/57",
+      "ownerPointer": "#/features/57/owner",
+      "implementationPointer": "#/features/57/implementation",
+      "releaseEvidencePointer": "#/features/57/releaseEvidence"
+    },
+    {
+      "featureId": "runtime.binding-primitives",
+      "inventoryPointer": "#/features/58",
+      "ownerPointer": "#/features/58/owner",
+      "implementationPointer": "#/features/58/implementation",
+      "releaseEvidencePointer": "#/features/58/releaseEvidence"
+    },
+    {
+      "featureId": "platforms.libc-and-musl-identities",
+      "inventoryPointer": "#/features/59",
+      "ownerPointer": "#/features/59/owner",
+      "implementationPointer": "#/features/59/implementation",
+      "releaseEvidencePointer": "#/features/59/releaseEvidence"
+    },
+    {
+      "featureId": "integration.cli-and-sdk",
+      "inventoryPointer": "#/features/60",
+      "ownerPointer": "#/features/60/owner",
+      "implementationPointer": "#/features/60/implementation",
+      "releaseEvidencePointer": "#/features/60/releaseEvidence"
+    }
+  ],
+  "behaviorReplacements": [
+    {
+      "source": "tests/BGCS.Tests/ManagedTransformTests.cs",
+      "reason": "Descriptor-owned frozen ID/priority replace removed mutable service-instance metadata. Invalid model/null/cleanup rows remain unchanged.",
+      "historicalCases": [
+        "BGCS.Tests.ManagedTransformTests.InvalidManagedTransformationCannotReplaceTheLastCompletePublication(fault: \"identity\")",
+        "BGCS.Tests.ManagedTransformTests.InvalidManagedTransformationCannotReplaceTheLastCompletePublication(fault: \"priority\")"
+      ],
+      "currentCases": [
+        "BGCS.Tests.ManagedTransformTests.FrozenRegistrationMetadataCannotReplaceTheLastCompletePublication(mutation: \"identity\")",
+        "BGCS.Tests.ManagedTransformTests.FrozenRegistrationMetadataCannotReplaceTheLastCompletePublication(mutation: \"priority\")"
+      ],
+      "currentRevisionCertified": false
+    }
+  ]
+}

@@ -3,9 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
 
 namespace BGCS.Tests.NeutralPlugin;
 
@@ -27,7 +27,7 @@ public sealed class ManagedNamesPlugin : IBindingPlugin, ICacheFingerprintProvid
     public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
     {
         string prefix = configuration.settings.TryGetProperty("prefix", out JsonElement value) ? value.GetString()! : "custom_";
-        registry.RegisterFactory<IManagedApiTransform>("fixture.managed-names", () => transform = new(prefix));
+        registry.RegisterFactory<IManagedApiTransform>("fixture.managed-names", _ => transform = new(prefix));
     }
     /// <inheritdoc/>
     public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)

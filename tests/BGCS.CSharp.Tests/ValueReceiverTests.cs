@@ -5,12 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -39,14 +39,14 @@ public sealed class ValueReceiverTests
             importMode = mode, includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.Values.Runtime" : "BGCS.Runtime"
         };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpStoragePlan carrier = Assert.Single(plan.storage, item => item.nativeType == new StableId("record"));
         Assert.True(carrier.valueMembers.Length == 2, string.Join(Environment.NewLine, plan.valueParameterOmissions.Select(omission => omission.reason)));
         Assert.Empty(plan.objects);
         Assert.Empty(plan.valueParameterOmissions);
         Assert.Contains(carrier.valueMembers, member => member.isReadOnly && member.signature.name == "Read");
         Assert.Contains(carrier.valueMembers, member => !member.isReadOnly && member.signature.name == "Add");
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string allSource = string.Join("\n", sink.sources.Values);
         Assert.Contains(".Add(ref this, delta)", allSource);
         Assert.Contains(".Read(in this)", allSource);
@@ -105,7 +105,7 @@ public sealed class ValueReceiverTests
     public void MissingOrIncompatibleReceiverProofKeepsTheRawImport(string fault)
     {
         ManagedApiModel model = Model(fault);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         Assert.DoesNotContain(plan.storage.SelectMany(carrier => carrier.valueMembers), member => plan.methods[member.methodIndex].nativeExport == new StableId("add"));
         Assert.Contains(plan.valueParameterOmissions, omission => omission.nativeExport == new StableId("add"));
         Assert.Contains(plan.methods, method => method.nativeExport == new StableId("add"));
@@ -125,7 +125,7 @@ public sealed class ValueReceiverTests
         };
         InteropModule source = original.interop;
         if (fault == "pointer-alias") source = new(source.libraryId, source.targetId, source.pointerSize,
-            source.types.Add(new(new("alias"), "Alias", NativeTypeCategory.Alias, 8, 8) { elementType = new("record-pointer") }), source.functions, []);
+            source.types.Add(new(new("alias"), "Alias", NativeTypeCategory.Alias, 8, 8) { elementType = new("record-pointer") }), source.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.Throws<ArgumentException>(() => new DefaultManagedProjection().Project(source,
             new("Generated.Values", "ValueApi") { memberFunctions = [request] }, CancellationToken.None));
     }
@@ -138,7 +138,7 @@ public sealed class ValueReceiverTests
     public void CarrierMembersCannotShadowStorageOrRequiredPresentation(string fault)
     {
         ManagedApiModel model = Model(collision: fault);
-        Assert.Throws<InvalidOperationException>(() => new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
+        Assert.Throws<InvalidOperationException>(() => new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
     }
 
     internal static async Task CompileWithSdkAsync(NeutralBackendTests.MemorySink sink, string consumer, bool sourceRuntime)
@@ -164,7 +164,7 @@ public sealed class ValueReceiverTests
             string? sdk = Environment.GetEnvironmentVariable("DOTNET_ROOT");
             string executable = string.IsNullOrEmpty(sdk) ? "dotnet" : Path.Combine(sdk, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
             ProcessStartInfo start = new(executable) { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
-            foreach (string argument in new[] { "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
+            foreach (string argument in new[] { "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
             using Process process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the SDK consumer build.");
             Task<string> output = process.StandardOutput.ReadToEndAsync(), error = process.StandardError.ReadToEndAsync();
             using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(2));
@@ -214,7 +214,7 @@ public sealed class ValueReceiverTests
             [new(new("read-self"), "self", constPointer.id) { singleValue = Value(NativeParameterDirection.Input) }], "C");
         if (collision == "member-overload") read = read with
         { parameters = [new(new("read-delta"), "delta", integer.id), new(new("read-self"), "self", pointer.id) { singleValue = Value(NativeParameterDirection.InputOutput) }] };
-        InteropModule module = new("values", "windows-x64-msvc", 8, [integer, record, qualified, pointer, constPointer], [add, read], []);
+        InteropModule module = new("values", "windows-x64-msvc", 8, [integer, record, qualified, pointer, constPointer], [add, read], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         string addName = collision == "size" ? "NativeSize" : collision == "carrier-name" ? "NativeValue" : "Add";
         return new DefaultManagedProjection().Project(module, new("Generated.Values", "ValueApi")
         {

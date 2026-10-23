@@ -1,4 +1,4 @@
-using BGCS.Contracts.Interop;
+using BGCS.Core.Interop;
 using BGCS.CSharp.Planning;
 
 namespace BGCS.CSharp.Emission;
@@ -25,7 +25,7 @@ internal static class EventLoopCallbackStateEmitter
                 private global::System.Exception? m_creationFailure;
                 private readonly global::System.Threading.Tasks.TaskCompletionSource m_published = new(global::System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
                 private global::System.Threading.Tasks.TaskCompletionSource m_drained = CompletedDrain();
-                internal readonly {{runtime}}.NativeCallbackDispatcher dispatcher = {{runtime}}.NativeCallbackDispatcher.CaptureCurrent();
+                internal readonly {{runtime}}.NativeCallbackDispatcher dispatcher;
                 internal readonly nint callbackPointer;
                 internal readonly {{callback.delegateName}} target;
                 internal readonly {{runtime}}.CallbackExceptionBoundary exceptions = new();
@@ -34,7 +34,7 @@ internal static class EventLoopCallbackStateEmitter
                 internal nint nativeHandle;
                 internal bool isPublicUseClosed => m_context.m_session.isClosing || registration!.isClosing;
                 internal {{state}}({{plan.contextName}} context, {{callback.delegateName}} target)
-                { m_context = context; this.target = target; callbackPointer = (nint){{RetainedCallbackEmitter.ThunkPointer(callback)}}; }
+                { m_context = context; dispatcher = context.m_callbackDispatcher; this.target = target; callbackPointer = (nint){{RetainedCallbackEmitter.ThunkPointer(callback)}}; }
                 private static global::System.Threading.Tasks.TaskCompletionSource CompletedDrain()
                 {
                     var ready = new global::System.Threading.Tasks.TaskCompletionSource(global::System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);

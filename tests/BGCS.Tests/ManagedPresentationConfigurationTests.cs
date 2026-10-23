@@ -1,6 +1,6 @@
 using System;
 using BGCS.Configuration;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -37,7 +37,7 @@ public sealed class ManagedPresentationConfigurationTests
             "duplicate-member" => new() { nativeEnums = [new("Flags") { values = [new("None"), new("None")] }] },
             _ => new() { nativeEnums = [new("Flags") { values = [new("None") { value = new(ManagedDefaultValueKind.Integer, "0"), expression = "1" }] }] }
         };
-        ArgumentException failure = Assert.ThrowsAny<ArgumentException>(() => new BindingConfigurationLoader().ValidateAndFreeze(Configuration(api)));
+        ArgumentException failure = Assert.ThrowsAny<ArgumentException>(() => BindingConfigurationLoader.ValidateAndFreeze(Configuration(api)));
         Assert.Contains(reason, failure.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -50,7 +50,7 @@ public sealed class ManagedPresentationConfigurationTests
             constants = [new("LIMIT") { value = new(ManagedDefaultValueKind.Integer, "0"), documentation = string.Empty }],
             nativeEnums = [new("Flags") { documentation = string.Empty, values = [new("None") { expression = "0" }] }]
         };
-        ApiConfiguration frozen = new BindingConfigurationLoader().ValidateAndFreeze(Configuration(api)).api;
+        ApiConfiguration frozen = BindingConfigurationLoader.ValidateAndFreeze(Configuration(api)).api;
         Assert.False(frozen.emitLibraryNameConstant);
         Assert.Equal("0", Assert.Single(frozen.constants).value!.value);
         Assert.Equal(string.Empty, Assert.Single(frozen.constants).documentation);
@@ -61,7 +61,7 @@ public sealed class ManagedPresentationConfigurationTests
 
     private static BindingConfiguration Configuration(ApiConfiguration api) => new()
     {
-        schemaVersion = 1,
+        schemaVersion = 2,
         library = new() { id = "presentation", nativeName = "presentation" },
         source = new() { headers = ["native.h"] },
         api = api

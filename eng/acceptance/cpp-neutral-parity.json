@@ -10,7 +10,7 @@
   ],
   "files": [
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/AdvancedCppLoweringTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/AdvancedCppLoweringTests.cs",
       "baselineTestMethods": [
         "Generate_AdvancedStandardAdapters_ShouldCompileAndInvokeNativeBridge",
         "Generate_ComplexInheritance_ShouldPerformRealPointerAdjustmentAndCheckedDowncast",
@@ -38,7 +38,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/ConfigurationCompositionTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/ConfigurationCompositionTests.cs",
       "baselineTestMethods": [
         "FileCompositionKeepsExplicitDefaultValuesAndClearsInheritance"
       ],
@@ -56,7 +56,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CDefaultPipelineTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/Cpp2CDefaultPipelineTests.cs",
       "baselineTestMethods": [
         "Generate_WithoutManualSteps_ShouldApplyDefaultPipeline"
       ],
@@ -74,7 +74,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CEndToEndWorkflowTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/Cpp2CEndToEndWorkflowTests.cs",
       "baselineTestMethods": [
         "LoadConfigWithBaseFile_ThenGenerate_ShouldProduceExpectedOutputStructure"
       ],
@@ -108,7 +108,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CGeneratedOutputSemanticsTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/Cpp2CGeneratedOutputSemanticsTests.cs",
       "baselineTestMethods": [
         "Generate_VirtualClassAndEnum_OutputShouldContainBridgeSemantics",
         "Generate_ConstructorsStaticAndReferenceMethods_ShouldProduceAbiSafeSignatures"
@@ -141,7 +141,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/Cpp2CGeneratorTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/Cpp2CGeneratorTests.cs",
       "baselineTestMethods": [
         "Config_DefaultCollections_ShouldBeInitialized",
         "Config_GetCType_ShouldPreservePointerReferenceAndQualificationShape",
@@ -237,7 +237,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppBridgeBuildManifestTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/CppBridgeBuildManifestTests.cs",
       "baselineTestMethods": [
         "Generate_EmitsPortableDeterministicBuildContract",
         "Generate_RelativeCompilerPath_IsManifestRelativeToConfiguration",
@@ -274,7 +274,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppBridgeIntermediateTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/CppBridgeIntermediateTests.cs",
       "baselineTestMethods": [
         "Generate_FrozenBridge_CanBeEmittedAfterDeletingSource",
         "Artifact_CopiesMutableAnalysisOperations",
@@ -292,7 +292,7 @@
           "exists": true
         },
         {
-          "path": "tests/BGCS.Cpp2C.Tests/TypedBridgeOperationTests.cs",
+          "path": "tests/BGCS.NativeBridge.Tests/TypedBridgeOperationTests.cs",
           "methods": [
             "CompleteOwnedConstruction_EmitsBothCandidates",
             "InvalidPlans_FailBeforeWritingAnyArtifact"
@@ -311,7 +311,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppBridgeOutputFailureTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/CppBridgeOutputFailureTests.cs",
       "baselineTestMethods": [
         "OutputFailuresRemainDistinctFromUnsupportedDeclarationsAndPreservePreviousOutput",
         "SourceAndFrozenMetadataApplyTheSameExplicitHeaderBoundary"
@@ -334,7 +334,7 @@
           "exists": true
         },
         {
-          "path": "tests/BGCS.Cpp2C.Tests/NeutralDeclarationSelectionTests.cs",
+          "path": "tests/BGCS.NativeBridge.Tests/NeutralDeclarationSelectionTests.cs",
           "methods": [
             "EntrySelection_PreservesRequiredStorageWithoutPromotingDependencyFunctions"
           ],
@@ -345,7 +345,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppLoweringExtensionTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/CppLoweringExtensionTests.cs",
       "baselineTestMethods": [
         "Registration_PublishesReadOnlySnapshotsWithoutChangingPreviousReaders",
         "RegisteredLowerings_ChangeTypeCallableAndInvocationWithoutGeneratorChanges",
@@ -360,17 +360,17 @@
       "capability": "Frozen registries, typed/custom recipes, native shim and contributor artifacts",
       "neutralCoverage": [
         {
-          "path": "tests/BGCS.Cpp2C.Tests/NeutralLoweringRegistryTests.cs",
+          "path": "tests/BGCS.NativeBridge.Tests/NeutralLoweringRegistryTests.cs",
           "methods": [],
           "exists": true
         },
         {
-          "path": "tests/BGCS.Cpp2C.Tests/NeutralRecipeTests.cs",
+          "path": "tests/BGCS.NativeBridge.Tests/NeutralRecipeTests.cs",
           "methods": [],
           "exists": true
         },
         {
-          "path": "tests/BGCS.Cpp2C.Tests/NeutralOwnedRecipeTests.cs",
+          "path": "tests/BGCS.NativeBridge.Tests/NeutralOwnedRecipeTests.cs",
           "methods": [],
           "exists": true
         },
@@ -408,7 +408,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/GenerationLifetimeTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/GenerationLifetimeTests.cs",
       "baselineTestMethods": [
         "RepeatedAttempts_DoNotRetainParserFailuresOrPriorSuccessfulResults"
       ],
@@ -434,7 +434,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/NativeBuildProviderTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/NativeBuildProviderTests.cs",
       "baselineTestMethods": [
         "CMakeProvider_BuildsAndVerifiesGeneratedBridgeOnUnixHost",
         "Provider_BuildsGeneratedBridgeAsHostSharedLibrary",
@@ -473,7 +473,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/TargetTemplateTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/TargetTemplateTests.cs",
       "baselineTestMethods": [
         "TemplatePacksRetainParsedTypesAndTargetLayouts"
       ],
@@ -491,7 +491,7 @@
       "retirement": "Old facade/configuration API removed; equivalent neutral functional tests retained."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/NativeBuildSnapshotTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/NativeBuildSnapshotTests.cs",
       "baselineTestMethods": [
         "PlansOwnTheirArgumentsAndPipelineClosure",
         "ManifestAndInspectionResultsOwnTheirCollections"
@@ -524,7 +524,7 @@
       "retirement": "Old mutable-list native plan/manifest facade removed. Immutable request/command arrays, defensive export results and independently locked standalone construction replace it. Native151 includes the neutral snapshot regression."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/NativeAssetLayoutTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/NativeAssetLayoutTests.cs",
       "baselineTestMethods": [
         "GetRuntimeIdentifier_MapsSupportedDesktopTargets",
         "GetRuntimeIdentifier_DoesNotClaimDeferredTargets",
@@ -565,7 +565,7 @@
       "retirement": "Old per-asset Stage/index merger removed. The neutral packager receives a complete set and emits only candidates; central ArtifactPublisher owns formal output locks, ownership and rollback. RID mapping is separate from platform certification, including deferred mobile/FreeBSD targets. Native151 and the actual four-writer publication receipt cover the replacement."
     },
     {
-      "baselineFile": "tests/BGCS.Cpp2C.Tests/CppSourceWriterTests.cs",
+      "baselineFile": "tests/BGCS.NativeBridge.Tests/CppSourceWriterTests.cs",
       "baselineTestMethods": [
         "Fragments_PreserveMixedLineEndingsAndIndentEveryNewLine",
         "WriteLines_EmitsSeparateLinesWithoutMergingFragments",
@@ -576,7 +576,7 @@
       "capability": "Standalone neutral ICodeWriter utility formatting and owned stream cleanup",
       "neutralCoverage": [
         {
-          "path": "tests/BGCS.Cpp2C.Tests/CppSourceWriterTests.cs",
+          "path": "tests/BGCS.NativeBridge.Tests/CppSourceWriterTests.cs",
           "methods": [],
           "exists": true
         }
@@ -746,7 +746,7 @@
       "TimePoint"
     ],
     "matching": "Exact qualified template head with concrete compiler-derived arguments; no wildcard or storage substitution.",
-    "implementation": "src/BGCS.Cpp2C/Emission/ConfiguredFamilyAssertionEmitter.cs",
+    "implementation": "src/BGCS.NativeBridge/Emission/ConfiguredFamilyAssertionEmitter.cs",
     "independentVerifier": "src/BGCS.Analysis/Bridge/StandardValueOperationVerifier.cs",
     "nativeTests": [
       "tests/BGCS.Tests/NativeConfiguredFamilyTests.cs",
@@ -774,7 +774,7 @@
       "tests/BGCS.Tests/NativeCompilerSourceViewTests.cs",
       "tests/BGCS.Tool.Tests/DiagnosticPresentationTests.cs"
     ],
-    "path": "tests/BGCS.Cpp2C.Configuration.Tests"
+    "path": "tests/BGCS.NativeBridge.Configuration.Tests"
   },
   "configuredExactTypeEvidence": {
     "unitReceipt": "artifacts/test-results/cpp-exact-minimal-focused-thirty-six.trx",
@@ -799,8 +799,8 @@
       "src/BGCS.Tool/Commands/BridgeCommand.cs: generated Classes.h is reparsed by CsCodeGenerator; CppBridgeAbiAnalyzer marshalling IR is not passed into it.",
       "src/BGCS/Analysis/OwnershipAnalyzer.cs:43 infers string encoding from char/wchar pointer spelling.",
       "src/BGCS/Emission/CSharpEmitter.cs:1758 creates managed string inputs;1795/1900 convert native string pointer returns.",
-      "src/BGCS.Cpp2C/Analysis/CppBridgeClassAnalyzer.cs:833 uses native c_str for string return;1194 constructs native string from const char pointer.",
-      "src/BGCS.Cpp2C/Analysis/CppBridgeClassAnalyzer.cs:797 returns vector/array data plus out_count;840 converts chrono counts to int64 nanoseconds."
+      "src/BGCS.NativeBridge/Analysis/CppBridgeClassAnalyzer.cs:833 uses native c_str for string return;1194 constructs native string from const char pointer.",
+      "src/BGCS.NativeBridge/Analysis/CppBridgeClassAnalyzer.cs:797 returns vector/array data plus out_count;840 converts chrono counts to int64 nanoseconds."
     ],
     "verifiedCurrentScope": "Typed native value operations, independently reparsed ABI and generic raw/status wrappers have real local Windows/CoreCLR evidence for fourteen template families.",
     "pendingManagedErgonomics": [
@@ -844,12 +844,12 @@
     "nativeManagedStringProjection": "artifacts/test-results/cpp-standard-value-string-native-six.trx",
     "nativeManagedStringPassed": 6,
     "scope": "Dirty local checkpoint42555 Windows x64 MSVC/CoreCLR only; all imports and Runtime package/source, source static/nested/single-file output. Owned instance string input/result composition is a separate next cohort.",
-    "source": "src/BGCS.Contracts/Interop/NativeValueReleaseContract.cs",
+    "source": "src/BGCS.Core/Interop/NativeValueReleaseContract.cs",
     "semantics": "Unknown is default; CreatingCall is limited to fresh default standard basic_string or filesystem::path, copied and destroyed synchronously on its creating caller thread. Custom traits/allocators and pmr do not acquire this capability.",
     "bulkCopy": "CopyCodeUnits keeps exact writable unit pointer plus unsigned64 capacity inputs and unsigned64 written output, under the fixed owned error boundary; path conversion occurs once per copy.",
     "tests": [
-      "BGCS.Cpp2C.Tests.StandardValueReleaseTests",
-      "BGCS.Cpp2C.Tests.NeutralValueProtocolTests.CompleteCodeUnitCopyAndCreatingCallReleaseAreIndependentlyChecked",
+      "BGCS.NativeBridge.Tests.StandardValueReleaseTests",
+      "BGCS.NativeBridge.Tests.NeutralValueProtocolTests.CompleteCodeUnitCopyAndCreatingCallReleaseAreIndependentlyChecked",
       "BGCS.Tests.NativeValueStringResultTests.FreshStandardValuesCopyCountedUnicodeAndDestroyWithinTheirCreatingCall",
       "BGCS.Tests.NativeStandardLoweringTests.StandardValues_ParseBridgeReparseCompileAndInvokeRealNativeOperations"
     ],
@@ -923,7 +923,7 @@
   "frontendPublicBoundaryCheckpoint": {
     "status": "local-minimal-public-surface-and-complete-parser-worker-regressions-passed",
     "implementation": [
-      "src/BGCS.Frontend.Clang/Properties/AssemblyInfo.cs",
+      "extensions/frontends/BGCS.Frontend.Clang/Properties/AssemblyInfo.cs",
       "src/BGCS.Tool/Validation/ArchitectureFriendPolicy.cs",
       "eng/architecture/test-friends.json",
       "tests/fixtures/ParserLibraryHost/Program.cs"
@@ -954,7 +954,7 @@
   "flatIdentifierNamingCheckpoint": {
     "status": "local-immutable-naming-and-real-worker-cache-passed",
     "implementation": [
-      "src/BGCS.Contracts/Managed/ManagedNamingPolicy.cs",
+      "src/BGCS.Core/Managed/ManagedNamingPolicy.cs",
       "src/BGCS.CSharp/Projection/FlatIdentifierWordIndex.cs",
       "src/BGCS.CSharp/Projection/ManagedNamingResolver.cs"
     ],
@@ -983,5 +983,10 @@
     "hostPassed": 2,
     "historicalFixtureFailure": "artifacts/test-results/cpp-immutable-flat-naming-thirty-three.trx"
   },
-  "historicalScope": "Historical source/parity observations from before generator-only convergence. Paths, exists flags and local receipts describe their recorded revisions, not current implementation or requirements. Current scope is feature-inventory.json plus scope-removals.json; this is not a current architecture specification or release certificate."
+  "historicalScope": "Historical source/parity observations from before generator-only convergence. Paths, exists flags and local receipts describe their recorded revisions, not current implementation or requirements. Current scope is feature-inventory.json plus scope-removals.json; this is not a current architecture specification or release certificate.",
+  "historicalOnly": true,
+  "currentRevisionCertified": false,
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "currentEvidenceInventory": "eng/acceptance/feature-inventory.json",
+  "scopeNotice": "Historical source/assertion correspondence and old local observations only. Current4.0 implementation and exact same-revision execution mappings are authoritative in feature/configuration inventories; no old receipt certifies current behavior."
 }

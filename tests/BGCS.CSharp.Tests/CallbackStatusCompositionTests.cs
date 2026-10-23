@@ -3,11 +3,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -32,14 +32,14 @@ public sealed class CallbackStatusCompositionTests
         var model = new DefaultManagedProjection().Project(Module(shape), new("Generated.Status", "StatusApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpCallbackMethodPlan callback = Assert.Single(plan.callScopedCallbacks);
         Assert.NotNull(callback.statusOperation);
         Assert.Empty(plan.callbackOmissions);
         Assert.Equal(2, callback.signature.parameterTypes.Length);
         Assert.Equal(shape == "owned", callback.statusOperation.ownedResult is not null);
         Assert.Equal(shape == "void" ? "void" : shape == "scalar" ? "int" : "global::Generated.Status.StatusApi.WidgetObject", callback.signature.returnType);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string source = sink.sources.Single(item => item.Key.StartsWith("Callbacks/", StringComparison.Ordinal)).Value;
         Assert.Contains("this." + plan.methods[callback.methodIndex].name + "(", source);
         Assert.Contains("ExceptionDispatchInfo.Throw", source);
@@ -74,11 +74,11 @@ public sealed class CallbackStatusCompositionTests
         if (shape != "owned")
         {
             InteropType output = new(new("scalar-output"), "int*", NativeTypeCategory.Pointer, 8, 8) { elementType = new("int") };
-            module = new(module.libraryId, module.targetId, module.pointerSize, module.types.Add(output), module.functions, []);
+            module = new(module.libraryId, module.targetId, module.pointerSize, module.types.Add(output), module.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
             parameters = parameters.SetItem(3, parameters[3] with { type = output.id, ownership = null });
             if (shape == "void") parameters = parameters.RemoveAt(3);
         }
         create = create with { parameters = parameters, error = create.error! with { valueParameter = shape == "void" ? null : create.error.valueParameter } };
-        return new(module.libraryId, module.targetId, module.pointerSize, module.types.AddRange(ImmutableArray.Create(pointer, callable, callbackPointer)), module.functions.SetItem(0, create), []);
+        return new(module.libraryId, module.targetId, module.pointerSize, module.types.AddRange(ImmutableArray.Create(pointer, callable, callbackPointer)), module.functions.SetItem(0, create), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

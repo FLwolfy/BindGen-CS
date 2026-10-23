@@ -7,21 +7,14 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
 
 namespace BGCS.CSharp.Processing;
 
 internal static class SourceProcessingSupport
 {
     internal const int C_MAXIMUM_TEXT = 64 * 1024 * 1024;
-
-    internal static void Identity(string id)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        if (id.Length > 128 || id.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not ('.' or '_' or '-' or '/')))
-            throw new ArgumentException("A processor identity must use at most 128 stable ASCII identity characters.", nameof(id));
-    }
 
     internal static CacheFingerprintContribution Fingerprint(object settings)
         => new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(settings)))), []);

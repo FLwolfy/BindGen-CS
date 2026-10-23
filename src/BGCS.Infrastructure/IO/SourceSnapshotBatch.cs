@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Inputs;
+using BGCS.Core.Hosting;
 
 namespace BGCS.Infrastructure.IO;
 
@@ -16,15 +17,19 @@ public static class SourceSnapshotBatch
 {
     /// <summary>Returns the first input mismatch while sharing exact file and directory checks within this call.</summary>
     /// <param name="snapshots">The snapshots in their required validation order.</param>
+    /// <param name="paths">The explicitly selected host path identity service.</param>
     /// <param name="cancellationToken">Cancels dependency reads and traversal.</param>
     /// <returns>The first actionable mismatch, or null when all snapshots still match.</returns>
     /// <exception cref="ArgumentNullException">The snapshot sequence or one of its snapshots is null.</exception>
     /// <exception cref="OperationCanceledException">Cancellation is requested while processing the batch.</exception>
     public static string? GetMismatch(
         IEnumerable<SourceSnapshot> snapshots,
+        IHostPathService paths,
         CancellationToken cancellationToken = default
     ) {
         ArgumentNullException.ThrowIfNull(snapshots);
+        ArgumentNullException.ThrowIfNull(paths);
+        List<PhysicalPathResolver.ResolutionScope> resolutions = [];
         // This set belongs to one verification fence, never an entire request.
         // Record equality includes both paths, byte length and content digest;
         // contradictory observations of the same file must still be checked.
@@ -39,7 +44,7 @@ public static class SourceSnapshotBatch
                 || snapshot.excludedDirectories.IsDefault || snapshot.absentInputs.IsDefault
                 || snapshot.files.Any(input => input is null) || snapshot.searchDirectories.Any(input => input is null)
                 || snapshot.absentInputs.Any(input => input is null))
-                return SourceSnapshotVerifier.GetMismatch(snapshot!, cancellationToken);
+                return SourceSnapshotVerifier.GetMismatchWithinBoundary(snapshot!, snapshot!, paths, resolutions, cancellationToken);
             SourceSnapshot remaining = snapshot with
             {
                 files = snapshot.files.Where(checkedFiles.Add).ToImmutableArray(),
@@ -50,10 +55,10 @@ public static class SourceSnapshotBatch
             // exclusion list. A link may reach an exclusion outside the root, so
             // equal directory digests alone never justify merging those queries.
             // Every snapshot's absence checks and collection validation still run.
-            if (SourceSnapshotVerifier.GetMismatch(remaining, cancellationToken) is string mismatch)
+            if (SourceSnapshotVerifier.GetMismatchWithinBoundary(remaining, snapshot, paths, resolutions, cancellationToken) is string mismatch)
                 return mismatch;
         }
-        return null;
+        return SourceSnapshotVerifier.CompleteBoundary(resolutions, paths, cancellationToken);
     }
 
     private readonly record struct DirectoryQuery(

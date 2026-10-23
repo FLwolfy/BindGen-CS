@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -36,6 +36,6 @@ public sealed class LanguageStandardConfigurationTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "standards", nativeName = "standards" }, source = new() { headers = ["native.h"] }
+        schemaVersion = 2, library = new() { id = "standards", nativeName = "standards" }, source = new() { headers = ["native.h"] }
     };
 }

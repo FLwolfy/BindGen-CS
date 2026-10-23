@@ -91,7 +91,7 @@ Runtime registration 和 raw callback ABI 能力，不等于自动生成任意 r
 
 ### C++ 虚接口的生成注册
 
-`cpp.virtualCallbacks` 显式选择抽象接口。默认 `releaseThreadDomain = "unknown"` 保留经过复核的 raw 构造、析构、base cast 和 callback typedef；缺少释放线程依据时省略托管注册并报告原因。显式声明 `releaseThreadDomain = "any"` 是调用者断言，证据保持 `UserAsserted`，不会变成 `Verified`。
+`bridge.cpp.virtualCallbacks` 显式选择抽象接口。默认 `releaseThreadDomain = "unknown"` 保留经过复核的 raw 构造、析构、base cast 和 callback typedef；缺少释放线程依据时省略托管注册并报告原因。显式声明 `releaseThreadDomain = "any"` 是调用者断言，证据保持 `UserAsserted`，不会变成 `Verified`。
 
 例如选择 ID `calculator` 后，具体上下文包含 `ICalculatorCallbacks`、`CalculatorCallbackRegistration`、`CreateCalculatorCallbacks(target, stopAndJoinNative)` 和 `WithCalculatorCallbacks(target, operation)`。静态 API facade 转发到同一实例实现。静态 AOT thunk 使用精确的 Cdecl 参数与结果指针，支持已检查的标量和 bool 转换；原生引用或对象地址以借用的 `nint` 表示，不延长原对象生命周期。
 

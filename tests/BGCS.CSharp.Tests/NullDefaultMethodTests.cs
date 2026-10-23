@@ -4,12 +4,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -39,14 +39,14 @@ public sealed class NullDefaultMethodTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.NullDefaults.Runtime" : "BGCS.Runtime", singleFile = sourceRuntime };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpNullDefaultMethodPlan operation = Assert.Single(plan.nullDefaultMethods);
         Assert.Equal(new StableId("optional"), Assert.Single(operation.nullInputs).nativeParameter);
         Assert.Equal(new[] { 0, 2 }, operation.signature.inputIndices);
         Assert.Equal(new[] { "string", "uint" }, operation.signature.parameterTypes);
         Assert.All(plan.defaultOverloads, overload => Assert.DoesNotContain("byte*", overload.signature.parameterTypes));
         Assert.Equal(new[] { "byte*", "byte*", "uint" }, Assert.Single(plan.methods).parameterTypes);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         int augmented = 0;
         foreach (string path in sink.sources.Keys.ToArray())
         {
@@ -127,7 +127,7 @@ public sealed class NullDefaultMethodTests
     {
         ManagedApiModel model = Model(fault, false);
         NeutralBackendTests.MemorySink sink = new();
-        await Assert.ThrowsAnyAsync<Exception>(async () => await new CSharpBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(async () => await new CSharpTestBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
         Assert.Empty(sink.sources);
         Assert.Single(model.interop.functions);
         Assert.Equal(NativeTypeCategory.Pointer, model.interop.GetType(model.interop.functions[0].parameters[1].type).category);
@@ -165,7 +165,7 @@ public sealed class NullDefaultMethodTests
         ManagedDefaultValue nullable = fault == "nonnull-default" ? new(ManagedDefaultValueKind.Integer, "1") : new(ManagedDefaultValueKind.Null);
         ImmutableArray<ManagedDefaultArgumentRequest> defaults = fault == "no-null-default"
             ? [new("flags", new(ManagedDefaultValueKind.Integer, "0"))] : [new("optional", nullable), new("flags", new(ManagedDefaultValueKind.Integer, "0"))];
-        return new DefaultManagedProjection().Project(new("null-defaults", "windows-x64-msvc", 8, types, [function], []),
+        return new DefaultManagedProjection().Project(new("null-defaults", "windows-x64-msvc", 8, types, [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian },
             new("Generated.NullDefaults", "Api") { style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                 functions = [new("begin") { defaults = defaults }], functionAliases = [new("begin", "BeginAlias")],
                 functionContainers = [new("Begins", [new("begin", "Open")])] }, CancellationToken.None);

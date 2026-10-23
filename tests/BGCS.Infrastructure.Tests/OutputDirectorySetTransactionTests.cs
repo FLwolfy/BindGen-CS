@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.IO;
 using BGCS.Infrastructure.IO;
@@ -7,6 +8,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class OutputDirectorySetTransactionTests : IDisposable
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     private readonly string m_root = Path.Combine(Path.GetTempPath(), "bgcs-output-set-" + Guid.NewGuid().ToString("N"));
 
     public OutputDirectorySetTransactionTests() => Directory.CreateDirectory(m_root);
@@ -18,7 +20,7 @@ public sealed class OutputDirectorySetTransactionTests : IDisposable
         string managed = Path.Combine(m_root, "Generated");
         WritePrevious(native);
         WritePrevious(managed);
-        using var transaction = new OutputDirectorySetTransaction([native, managed]);
+        using var transaction = new OutputDirectorySetTransaction([native, managed], m_paths);
         File.WriteAllText(Path.Combine(transaction.GetStagingPath(native), "api.h"), "new native");
         File.WriteAllText(Path.Combine(transaction.GetStagingPath(managed), "Bindings.cs"), "new managed");
 
@@ -38,7 +40,7 @@ public sealed class OutputDirectorySetTransactionTests : IDisposable
         string second = Path.Combine(m_root, "B");
         WritePrevious(first);
         File.WriteAllText(second, "destination is a file");
-        using (var transaction = new OutputDirectorySetTransaction([second, first]))
+        using (var transaction = new OutputDirectorySetTransaction([second, first], m_paths))
         {
             File.WriteAllText(Path.Combine(transaction.GetStagingPath(first), "candidate.txt"), "candidate");
             File.WriteAllText(Path.Combine(transaction.GetStagingPath(second), "candidate.txt"), "candidate");
@@ -59,11 +61,11 @@ public sealed class OutputDirectorySetTransactionTests : IDisposable
     {
         string first = Path.Combine(m_root, "A");
         string second = Path.Combine(m_root, "B");
-        using var held = new OutputDirectoryTransaction(second);
+        using var held = new OutputDirectoryTransaction(second, m_paths);
 
-        Assert.Throws<TimeoutException>(() => new OutputDirectorySetTransaction([second, first], TimeSpan.FromMilliseconds(80)));
+        Assert.Throws<TimeoutException>(() => new OutputDirectorySetTransaction([second, first], m_paths, TimeSpan.FromMilliseconds(80)));
 
-        using var released = new OutputDirectoryTransaction(first, TimeSpan.Zero);
+        using var released = new OutputDirectoryTransaction(first, m_paths, TimeSpan.Zero);
         Assert.Equal(2, Directory.GetDirectories(m_root, ".bgcs-staging-*").Length);
     }
 
@@ -72,8 +74,8 @@ public sealed class OutputDirectorySetTransactionTests : IDisposable
     {
         string root = Path.Combine(m_root, "Output");
 
-        Assert.Throws<ArgumentException>(() => new OutputDirectorySetTransaction([root, root]));
-        Assert.Throws<ArgumentException>(() => new OutputDirectorySetTransaction([root, Path.Combine(root, "Generated")]));
+        Assert.Throws<ArgumentException>(() => new OutputDirectorySetTransaction([root, root], m_paths));
+        Assert.Throws<ArgumentException>(() => new OutputDirectorySetTransaction([root, Path.Combine(root, "Generated")], m_paths));
 
         Assert.Empty(Directory.GetFiles(m_root));
         Assert.Empty(Directory.GetDirectories(m_root));

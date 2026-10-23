@@ -155,19 +155,15 @@ def main():
     try:
         if args.tool_path is None:
             tool = cpp_acceptance_fixture.stage_repository_generator(ROOT, work, args.configuration)
-        runtime_candidates = list(tool.parent.rglob("BGCS.Runtime.dll"))
-        runtime = tool.parent / "BGCS.Runtime.dll"
-        if not runtime.is_file():
-            if len(runtime_candidates) != 1:
-                raise RuntimeError("The executed generator closure must identify exactly one consumer Runtime assembly.")
-            runtime = runtime_candidates[0]
+        runtime = ROOT / "src/BGCS.Runtime/bin" / args.configuration / "net10.0/BGCS.Runtime.dll"
+        if not runtime.is_file(): raise RuntimeError("The separately built consumer Runtime is missing.")
         report["execution"] = cpp_acceptance_fixture.execution_identity(ROOT, tool, runtime)
         report["toolSha256"] = digest(tool)
         command = [dotnet, str(tool)] if tool.suffix.lower() == ".dll" else [str(tool)]
         (source / "large.h").write_text("".join(f"int bgcs_perf_{index}(int value);\n" for index in range(args.declarations)), encoding="utf-8")
-        config = {"schemaVersion": 1, "library": {"id": "performance", "nativeName": "performance"},
+        config = {"schemaVersion": 2, "library": {"id": "performance", "nativeName": "performance"},
                   "source": {"language": "c", "headers": ["large.h"], "parseMacros": False, "parseComments": False},
-                  "api": {"namespace": "BGCS.Performance.Generated", "name": "PerformanceApi"},
+                  "api": {"namespace": "BGCS.Performance.Generated", "name": "PerformanceApi", "runtime": "dotnet.coreclr"},
                   "cache": {"enabled": True, "directory": ".cache"}}
         configuration = source / "bindgen.json"
         configuration.write_text(json.dumps(config, indent=2), encoding="utf-8")

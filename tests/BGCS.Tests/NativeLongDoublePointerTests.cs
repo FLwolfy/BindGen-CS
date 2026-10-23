@@ -7,11 +7,11 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Platforms.Targeting;
-using BGCS.Platforms.Toolchains;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Targets.Desktop.Targeting;
+using BGCS.Targets.Desktop.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -70,7 +70,7 @@ public sealed class NativeLongDoublePointerTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "long-double-pointer", nativeName = "long_double_pointer_fixture" },
+                schemaVersion = 2, library = new() { id = "long-double-pointer", nativeName = "long_double_pointer_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["extended.h"], parseMacros = false,
                     includeTransitivelyReferencedHeaders = false, selection = new() { excludeDeclarations = ["extended_unproved_value"] } },
                 targets = [new() { id = "host", settings = new() { compilerPath = compiler } }],
@@ -83,7 +83,7 @@ public sealed class NativeLongDoublePointerTests
                     releaseDomain = "extended-native-allocation", releaseThreadDomain = "any" }] },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(built.targetModels);
@@ -134,6 +134,6 @@ public sealed class NativeLongDoublePointerTests
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

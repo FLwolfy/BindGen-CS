@@ -4,8 +4,8 @@ using System.Collections.Immutable;
 using System.IO.Enumeration;
 using System.Linq;
 using System.Threading;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Requests;
 
 namespace BGCS.CSharp.Processing;
 

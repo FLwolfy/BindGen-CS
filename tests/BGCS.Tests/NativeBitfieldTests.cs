@@ -9,8 +9,8 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -74,13 +74,13 @@ public sealed class NativeBitfieldTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "bits", nativeName = "bitfield_fixture" },
+                schemaVersion = 2, library = new() { id = "bits", nativeName = "bitfield_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["bits.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeBits", name = "BitsApi", importMode = mode },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
@@ -134,14 +134,17 @@ public sealed class NativeBitfieldTests
         string? sdk = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         ProcessStartInfo start = new(string.IsNullOrEmpty(sdk) ? "dotnet" : Path.Combine(sdk, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"))
         { WorkingDirectory = consumer, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
-        foreach (string argument in new[] { "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
+        foreach (string argument in new[] { "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
         using Process process = Process.Start(start)!;
         Task<string> output = process.StandardOutput.ReadToEndAsync(), error = process.StandardError.ReadToEndAsync();
         using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(3));
         try { await process.WaitForExitAsync(deadline.Token); }
         finally { if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); } }
-        Assert.True(process.ExitCode == 0, await output + Environment.NewLine + await error);
-        using FileStream image = File.OpenRead(Path.Combine(consumer, "bin", "Debug", "net10.0", "Consumer.dll"));
+        string diagnostics = await output + Environment.NewLine + await error;
+        Assert.True(process.ExitCode == 0, diagnostics);
+        string consumerAssembly = Path.Combine(consumer, "bin", "Release", "net10.0", "Consumer.dll");
+        Assert.True(File.Exists(consumerAssembly), "The SDK did not produce the fixture consumer assembly: " + consumerAssembly + Environment.NewLine + diagnostics);
+        using FileStream image = File.OpenRead(consumerAssembly);
         AssemblyLoadContext load = new("BGCS.NativeBits.Test", isCollectible: true);
         nint native = NativeLibrary.Load(binary);
         try
@@ -158,6 +161,6 @@ public sealed class NativeBitfieldTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

@@ -109,7 +109,7 @@
       "passedCases": 4,
       "receipt": "artifacts/implementation/test-results/neutral-model-immutability-four.trx",
       "currentSources": [
-        "tests/BGCS.Contracts.Tests/BindingImmutabilityTests.cs"
+        "tests/BGCS.Core.Tests/BindingImmutabilityTests.cs"
       ],
       "relocationReverified": false
     },
@@ -156,7 +156,7 @@
       "feature": "Generated type nesting",
       "configuration": "api.nestGeneratedTypesInApi",
       "implementation": [
-        "BGCS.Contracts.Managed.ManagedApiModel",
+        "BGCS.Core.Managed.ManagedApiModel",
         "BGCS.CSharp.Planning.CSharpGeneratedTypeScope",
         "BGCS.CSharp.Validation.EmittedInteropContractReader"
       ],
@@ -170,7 +170,7 @@
       "feature": "Finite alternate managed value inputs",
       "configuration": "api.functions[].inputVariations",
       "implementation": [
-        "BGCS.Contracts.Managed.ManagedInputVariation",
+        "BGCS.Core.Managed.ManagedInputVariation",
         "BGCS.CSharp.Planning.InputVariationPlanner",
         "BGCS.CSharp.Validation.InputVariationContractVerifier"
       ],
@@ -205,5 +205,10 @@
       ],
       "releaseCertification": false
     }
-  ]
+  ],
+  "historicalOnly": true,
+  "currentRevisionCertified": false,
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "currentEvidenceInventory": "eng/acceptance/feature-inventory.json",
+  "scopeNotice": "Historical source/assertion correspondence and old local observations only. Current4.0 implementation and exact same-revision execution mappings are authoritative in feature/configuration inventories; no old receipt certifies current behavior."
 }

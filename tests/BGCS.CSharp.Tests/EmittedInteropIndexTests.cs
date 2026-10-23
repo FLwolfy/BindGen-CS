@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using Microsoft.CodeAnalysis;
@@ -219,6 +220,63 @@ public sealed class EmittedInteropIndexTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task LargeEagerSourcesRetainCompleteImportChecksAndHealthyFollowup(bool metadata)
+    {
+        Candidate candidate = await CreateAsync(metadata);
+        string padding = "/*" + new string(' ', 600_000) + "*/\n";
+        (string Path, string Text)[] eager = [.. candidate.sources,
+            ("LargeFirst.cs", padding + "class LargeFirst { public int Value() => 42; }"),
+            ("LargeSecond.cs", padding + "class LargeSecond { public int Value() => 43; }")];
+        EmittedInteropContractReader reader = new();
+        reader.Verify(candidate.plan, eager, "native_fixture");
+        (string Path, string Text)[] changed = eager.ToArray();
+        changed[^1] = (changed[^1].Path, changed[^1].Text + "\nclass Hidden { [DllImport(\"hidden\")] public static extern int Native(); }");
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => reader.Verify(candidate.plan, changed, "native_fixture"));
+        Assert.Contains("undeclared runtime imports", failure.Message, StringComparison.Ordinal);
+        reader.Verify(candidate.plan, eager, "native_fixture");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LargeEagerSyntaxFailuresKeepInputOrderRatherThanWorkerCompletionOrder(bool metadata)
+    {
+        Candidate candidate = await CreateAsync(metadata);
+        string padding = "/*" + new string(' ', 1_100_000) + "*/\n";
+        (string Path, string Text)[] eager =
+            [("First.cs", padding + "class First { int P = ; }"), ("Later.cs", "class Later { int P = ; }")];
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            new EmittedInteropContractReader().Verify(candidate.plan, eager, "native_fixture"));
+        Assert.Contains("syntactically invalid", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("First.cs", failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Later.cs", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LargeEagerCancellationIsNotWrappedAndDoesNotPoisonTheNextVerification()
+    {
+        Candidate candidate = await CreateAsync(false);
+        string fields = string.Concat(Enumerable.Range(0, 50_000).Select(index => "public int Field" + index.ToString(CultureInfo.InvariantCulture) + ";\n"));
+        (string Path, string Text)[] eager = [.. candidate.sources,
+            ("LargeFirst.cs", "class LargeFirst {\n" + fields + "}"),
+            ("LargeSecond.cs", "class LargeSecond {\n" + fields + "}")];
+        using CancellationTokenSource cancellation = new();
+        using ManualResetEventSlim begin = new();
+        Thread cancel = new(() => { begin.Wait(); cancellation.Cancel(); });
+        cancel.Start();
+        EmittedInteropContractReader reader = new();
+        try
+        {
+            begin.Set();
+            Assert.ThrowsAny<OperationCanceledException>(() => reader.Verify(candidate.plan, eager, "native_fixture", cancellation.Token));
+        }
+        finally { cancel.Join(); }
+        reader.Verify(candidate.plan, eager, "native_fixture");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task CancellationIsPreservedBeforeParsingAndAfterLazyInputEnumeration(bool metadata)
     {
         Candidate candidate = await CreateAsync(metadata);
@@ -246,8 +304,8 @@ public sealed class EmittedInteropIndexTests
         ManagedApiModel model = NeutralBackendTests.Model() with { emitNativeMetadata = metadata };
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native_fixture", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         return new(plan, sink.sources.Select(source => (source.Key, source.Value)).ToArray());
     }
 

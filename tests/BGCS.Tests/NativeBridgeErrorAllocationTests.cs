@@ -7,8 +7,8 @@ using System.Runtime.Loader;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -49,11 +49,11 @@ public sealed class NativeBridgeErrorAllocationTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "allocation", nativeName = "allocation_fixture" },
+                schemaVersion = 2, library = new() { id = "allocation", nativeName = "allocation_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["allocation.hpp"], parseMacros = false },
                 api = new() { @namespace = "Generated.ErrorAllocation", name = "AllocationApi" },
                 runtime = new() { mode = runtimeMode }, cache = new() { enabled = false }};
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             // ELF replacement operators must bind inside this fixture rather than to the process's C++ runtime.
@@ -68,7 +68,7 @@ public sealed class NativeBridgeErrorAllocationTests
                 Assert.Equal("any", function.error.errorOwnership.releaseThreadDomain);
             });
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            CppBridgeModule module = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
+            NativeBridgePlan module = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target)));
             nint library = NativeLibrary.Load(binary);
             try
@@ -133,6 +133,6 @@ public sealed class NativeBridgeErrorAllocationTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

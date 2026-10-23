@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Interop;
 
 namespace BGCS.CSharp.Planning;
 

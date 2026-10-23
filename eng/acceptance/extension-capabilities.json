@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "role": "Source and contract index only; no copied platform capability or current pass assertions.",
+  "canonicalProducts": "distribution/manifests/product-packages.json",
+  "canonicalCapabilities": "eng/acceptance/platform-matrix.json",
+  "canonicalSourceEvidence": "eng/acceptance/feature-inventory.json",
+  "registrationDocumentation": "docs/extensibility.md",
+  "currentRevisionCertified": false,
+  "activation": "Explicit direct registration or plugin grouping; installing a package alone never activates it.",
+  "extensions": [
+    {
+      "assembly": "BGCS.Hosting.Standard",
+      "kind": "foundation",
+      "projectPointer": "#/assemblyProjects/BGCS.Hosting.Standard",
+      "registrationSource": "extensions/foundation/BGCS.Hosting.Standard/HostServicesProvider.cs",
+      "publicApi": "tests/public-api/BGCS.Hosting.Standard.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Hosting.Standard"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Targets.Desktop",
+      "kind": "foundation",
+      "projectPointer": "#/assemblyProjects/BGCS.Targets.Desktop",
+      "registrationSource": "extensions/foundation/BGCS.Targets.Desktop/DesktopTargetsExtension.cs",
+      "publicApi": "tests/public-api/BGCS.Targets.Desktop.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Targets.Desktop"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Interop.DotNet",
+      "kind": "foundation",
+      "projectPointer": "#/assemblyProjects/BGCS.Interop.DotNet",
+      "registrationSource": "extensions/foundation/BGCS.Interop.DotNet/DotNetInteropPlugin.cs",
+      "publicApi": "tests/public-api/BGCS.Interop.DotNet.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Interop.DotNet"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Frontend.Clang",
+      "kind": "frontend",
+      "projectPointer": "#/assemblyProjects/BGCS.Frontend.Clang",
+      "registrationSource": "extensions/frontends/BGCS.Frontend.Clang/ClangFrontendPlugin.cs",
+      "publicApi": "tests/public-api/BGCS.Frontend.Clang.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Frontend.Clang"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Extension.Android",
+      "kind": "optional",
+      "projectPointer": "#/assemblyProjects/BGCS.Extension.Android",
+      "registrationSource": "extensions/BGCS.Extension.Android/AndroidPlugin.cs",
+      "publicApi": "tests/public-api/BGCS.Extension.Android.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Extension.Android"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Extension.AppleMobile",
+      "kind": "optional",
+      "projectPointer": "#/assemblyProjects/BGCS.Extension.AppleMobile",
+      "registrationSource": "extensions/BGCS.Extension.AppleMobile/AppleMobilePlugin.cs",
+      "publicApi": "tests/public-api/BGCS.Extension.AppleMobile.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Extension.AppleMobile"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Extension.BrowserWasm",
+      "kind": "optional",
+      "projectPointer": "#/assemblyProjects/BGCS.Extension.BrowserWasm",
+      "registrationSource": "extensions/BGCS.Extension.BrowserWasm/BrowserWasmPlugin.cs",
+      "publicApi": "tests/public-api/BGCS.Extension.BrowserWasm.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Extension.BrowserWasm"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Extension.FreeBsd",
+      "kind": "optional",
+      "projectPointer": "#/assemblyProjects/BGCS.Extension.FreeBsd",
+      "registrationSource": "extensions/BGCS.Extension.FreeBsd/FreeBsdPlugin.cs",
+      "publicApi": "tests/public-api/BGCS.Extension.FreeBsd.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Extension.FreeBsd"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    },
+    {
+      "assembly": "BGCS.Extension.NativeAot",
+      "kind": "optional",
+      "projectPointer": "#/assemblyProjects/BGCS.Extension.NativeAot",
+      "registrationSource": "extensions/BGCS.Extension.NativeAot/NativeAotPlugin.cs",
+      "publicApi": "tests/public-api/BGCS.Extension.NativeAot.txt",
+      "targetCapabilitySelector": {
+        "field": "implementationExtension",
+        "equals": "BGCS.Extension.NativeAot"
+      },
+      "runtimeCapabilitySource": "eng/acceptance/platform-matrix.json#/runtimeProfiles"
+    }
+  ]
+}

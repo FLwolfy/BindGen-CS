@@ -12,7 +12,10 @@ unset Platform PLATFORM platform
 dotnet_command="$(resolve_dotnet_host)"
 python_command="${PYTHON:-python3}"
 configuration="${CONFIGURATION:-Release}"
-version="${PACKAGE_TEST_VERSION:-0.0.0-local.run$(date -u +%s).$$}"
+version="${PACKAGE_TEST_VERSION:-}"
+if [[ -z "${version}" ]]; then
+  version="$("${python_command}" "${task_root}/scripts/acceptance_evidence.py" package-version "${task_root}" | tr -d '\r')"
+fi
 package_directory="${BGCS_PACKAGE_TEST_ARTIFACTS_ROOT:-${task_root}/artifacts}/nuget"
 pack_arguments=(--dotnet "${dotnet_command}" --configuration "${configuration}" --version "${version}" --output "${package_directory}" --verify-repeat-content)
 verify_arguments=(--dotnet "${dotnet_command}" --version "${version}" --packages "${package_directory}" --output "${task_root}/artifacts/verification/packages")

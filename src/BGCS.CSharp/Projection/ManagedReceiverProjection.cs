@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 
 namespace BGCS.CSharp.Projection;
 
@@ -32,7 +32,7 @@ internal static class ManagedReceiverProjection
             if (request.kind == ManagedReceiverKind.Value && (request.objectName is not null || request.releaseDomain is not null))
                 throw new ArgumentException("A value receiver uses its existing carrier and cannot declare an object wrapper name or release domain.");
             InteropFunction function = resolveFunction(request.function);
-            if (!selected.Add(function.id) || function.sourceOwnerType is not null) throw new ArgumentException("An explicit C receiver must select one free native function exactly once.");
+            if (!selected.Add(function.id) || function.sourceOwnerType is not null || function.sourceGeneratedOwnerType is not null) throw new ArgumentException("An explicit C receiver must select one free native function exactly once.");
             InteropType[] matches = model.interop.types.Where(type => type.id.value == request.nativeType || type.nativeName == request.nativeType
                 || type.declarationName == request.nativeType || type.sourceQualifiedName == request.nativeType).ToArray();
             InteropType[] records = matches.Where(type => type.category == NativeTypeCategory.Record).ToArray();

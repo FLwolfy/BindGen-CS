@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,10 +8,11 @@ using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
 using BGCS.Infrastructure.Plugins;
+using BGCS.Hosting.Standard;
 using BGCS.Tests.Fixtures.FailingFingerprintPlugin;
 using Xunit;
 
@@ -18,6 +20,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class NeutralPluginLoaderTests
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     [Fact]
     public void PublicContractUsesFrozenDescriptorsTypedFactoriesAndCompleteFingerprintInputs()
     {
@@ -29,11 +32,11 @@ public sealed class NeutralPluginLoaderTests
         Assert.Equal("RegisterFactory", register.Name);
         Assert.True(register.IsGenericMethodDefinition);
         Assert.Equal(typeof(string), register.GetParameters()[0].ParameterType);
-        Assert.Equal(typeof(Func<>), register.GetParameters()[1].ParameterType.GetGenericTypeDefinition());
+        Assert.Equal(typeof(Func<,>), register.GetParameters()[1].ParameterType.GetGenericTypeDefinition());
         MethodInfo capture = Assert.Single(typeof(ICacheFingerprintProvider).GetMethods());
         Assert.Equal(typeof(CacheFingerprintContribution), capture.ReturnType);
         Assert.Equal(new[] { typeof(CacheFingerprintContext), typeof(System.Threading.CancellationToken) }, capture.GetParameters().Select(parameter => parameter.ParameterType));
-        Assert.DoesNotContain(typeof(AcceptancePlugin).Assembly.GetReferencedAssemblies(), reference => reference.Name?.StartsWith("BGCS", StringComparison.Ordinal) == true && reference.Name != "BGCS.Contracts");
+        Assert.DoesNotContain(typeof(AcceptancePlugin).Assembly.GetReferencedAssemblies(), reference => reference.Name?.StartsWith("BGCS", StringComparison.Ordinal) == true && reference.Name != "BGCS.Core");
     }
 
     [Fact]
@@ -42,15 +45,16 @@ public sealed class NeutralPluginLoaderTests
         using Scratch scratch = new();
         using AcceptancePlugin metadata = new();
         LockedPluginManifest locked = scratch.Write(typeof(AcceptancePlugin), metadata.descriptor);
-        PluginLoader loader = new();
+        PluginLoader loader = new(m_paths);
         using IBindingPlugin first = loader.Activate(locked);
         using IBindingPlugin second = loader.Activate(locked);
-        Registry firstRegistry = new(), secondRegistry = new();
+        ExtensionActivationContext activation = new(new(m_paths, new("fixture-host", Environment.ProcessPath!, true)), scratch.root);
+        Registry firstRegistry = new(activation), secondRegistry = new(activation);
         PluginConfiguration configuration = new(first.descriptor.id, JsonSerializer.SerializeToElement(new { }), scratch.root);
         first.Configure(firstRegistry, configuration);
         second.Configure(secondRegistry, configuration);
         INativeModuleTransform firstService = firstRegistry.Create(), secondService = secondRegistry.Create();
-        Assert.Equal("acceptance-probe", firstService.id);
+        Assert.Equal("acceptance-probe", Assert.Single(first.descriptor.services).id);
         Assert.Equal(typeof(INativeModuleTransform), firstService.GetType().GetInterface(typeof(INativeModuleTransform).FullName!));
         AssemblyLoadContext firstContext = AssemblyLoadContext.GetLoadContext(firstService.GetType().Assembly)!;
         AssemblyLoadContext secondContext = AssemblyLoadContext.GetLoadContext(secondService.GetType().Assembly)!;
@@ -74,9 +78,16 @@ public sealed class NeutralPluginLoaderTests
         {
             Assembly infrastructure = isolated.LoadFromAssemblyPath(typeof(PluginLoader).Assembly.Location);
             Type reader = infrastructure.GetType(typeof(PluginManifestReader).FullName!, throwOnError: true)!;
-            object privateManifest = reader.GetMethod(nameof(PluginManifestReader.Read))!.Invoke(Activator.CreateInstance(reader), [locked.path])!;
+            Assembly contracts = reader.GetConstructors().Single().GetParameters().Single().ParameterType.Assembly;
+            Type requestType = contracts.GetType(typeof(HostServicesRequest).FullName!, throwOnError: true)!;
+            Assembly hostAssembly = isolated.LoadFromAssemblyPath(typeof(HostServicesProvider).Assembly.Location);
+            Type providerType = hostAssembly.GetType(typeof(HostServicesProvider).FullName!, throwOnError: true)!;
+            object request = Activator.CreateInstance(requestType, [scratch.root, JsonSerializer.SerializeToElement(new { })])!;
+            using IDisposable services = (IDisposable)providerType.GetMethod(nameof(HostServicesProvider.Create))!.Invoke(Activator.CreateInstance(providerType), [request])!;
+            object paths = services.GetType().GetProperty(nameof(HostServices.paths))!.GetValue(services)!;
+            object privateManifest = reader.GetMethod(nameof(PluginManifestReader.Read))!.Invoke(Activator.CreateInstance(reader, [paths]), [locked.path])!;
             Type loader = infrastructure.GetType(typeof(PluginLoader).FullName!, throwOnError: true)!;
-            using IDisposable plugin = (IDisposable)loader.GetMethod(nameof(PluginLoader.Activate))!.Invoke(Activator.CreateInstance(loader), [privateManifest])!;
+            using IDisposable plugin = (IDisposable)loader.GetMethod(nameof(PluginLoader.Activate))!.Invoke(Activator.CreateInstance(loader, [paths]), [privateManifest])!;
             Type contract = Assert.Single(plugin.GetType().GetInterfaces(), type => type.FullName == typeof(IBindingPlugin).FullName);
             Assert.Same(isolated, AssemblyLoadContext.GetLoadContext(contract.Assembly));
             Assert.NotSame(typeof(IBindingPlugin), contract);
@@ -93,22 +104,22 @@ public sealed class NeutralPluginLoaderTests
         using Scratch scratch = new();
         PluginDescriptor failing = new("bgcs.fixtures.constructor", "1.0.0", [new("constructor-probe", ExtensionPort.NativeModuleTransform)]);
         LockedPluginManifest locked = scratch.Write(typeof(ThrowingConstructorPlugin), failing);
-        TargetInvocationException exception = Assert.Throws<TargetInvocationException>(() => new PluginLoader().Activate(locked));
+        TargetInvocationException exception = Assert.Throws<TargetInvocationException>(() => new PluginLoader(m_paths).Activate(locked));
         Assert.Contains("constructor failed", Assert.IsType<InvalidOperationException>(exception.InnerException).Message, StringComparison.Ordinal);
         using AcceptancePlugin metadata = new();
-        using IBindingPlugin plugin = new PluginLoader().Activate(scratch.Write(typeof(AcceptancePlugin), metadata.descriptor));
+        using IBindingPlugin plugin = new PluginLoader(m_paths).Activate(scratch.Write(typeof(AcceptancePlugin), metadata.descriptor));
         Assert.Equal(metadata.descriptor.id, plugin.descriptor.id);
     }
 
-    private sealed class Registry : IExtensionRegistryBuilder
+    private sealed class Registry(ExtensionActivationContext context) : IExtensionRegistryBuilder
     {
         private Func<INativeModuleTransform>? m_factory;
-        public void RegisterFactory<TService>(string id, Func<TService> factory) where TService : class
+        public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class
         {
             Assert.Equal("acceptance-probe", id);
             Assert.Equal(typeof(INativeModuleTransform), typeof(TService));
             Assert.Null(m_factory);
-            m_factory = () => (INativeModuleTransform)(object)factory();
+            m_factory = () => (INativeModuleTransform)(object)factory(context);
         }
         internal INativeModuleTransform Create() => m_factory!();
     }
@@ -122,6 +133,7 @@ public sealed class NeutralPluginLoaderTests
 
     private sealed class Scratch : IDisposable
     {
+        private readonly IHostPathService m_paths = HostTestPaths.Create();
         internal string root { get; } = Path.Combine(Path.GetTempPath(), "bgcs-neutral-plugin-loader-" + Guid.NewGuid().ToString("N"));
         internal Scratch() => Directory.CreateDirectory(root);
         internal LockedPluginManifest Write(Type entry, PluginDescriptor descriptor)
@@ -136,7 +148,7 @@ public sealed class NeutralPluginLoaderTests
             };
             string path = Path.Combine(root, "plugin.json");
             File.WriteAllText(path, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
-            return new PluginManifestReader().Read(path);
+            return new PluginManifestReader(m_paths).Read(path);
         }
         public void Dispose() => Directory.Delete(root, recursive: true);
     }

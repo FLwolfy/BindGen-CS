@@ -1,12 +1,12 @@
 class BGCS.Infrastructure.Caching.CachedStageArtifact [sealed]
-  ctor(BGCS.Contracts.Artifacts.ArtifactDescriptor descriptor, System.ReadOnlyMemory<System.Byte> content)
+  ctor(BGCS.Core.Artifacts.ArtifactDescriptor descriptor, System.ReadOnlyMemory<System.Byte> content)
   property System.ReadOnlyMemory<System.Byte> content { get }
-  property BGCS.Contracts.Artifacts.ArtifactDescriptor descriptor { get }
+  property BGCS.Core.Artifacts.ArtifactDescriptor descriptor { get }
 class BGCS.Infrastructure.Caching.GenerationStageCache [sealed]
-  ctor(System.String root, System.Int64 maximumBytes [optional; default=536870912], System.Int32 maximumEntryBytes [optional; default=67108864])
+  ctor(System.String root, BGCS.Core.Hosting.IHostPathService paths, System.Int64 maximumBytes [optional; default=536870912], System.Int32 maximumEntryBytes [optional; default=67108864])
   property System.Int32 maximumEntryBytes { get }
-  method System.Boolean Store(BGCS.Contracts.Common.ContentDigest key, System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Caching.CachedStageArtifact> artifacts, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Boolean TryRead(BGCS.Contracts.Common.ContentDigest key, out System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Caching.CachedStageArtifact> artifacts, out System.String missReason, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method System.Boolean Store(BGCS.Core.Common.ContentDigest key, System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Caching.CachedStageArtifact> artifacts, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method System.Boolean TryRead(BGCS.Core.Common.ContentDigest key, out System.Collections.Immutable.ImmutableArray<BGCS.Infrastructure.Caching.CachedStageArtifact> artifacts, out System.String missReason, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Void Prepare()
 class BGCS.Infrastructure.Collections.CollectionHelper [abstract; sealed]
   method T Get(System.Collections.Generic.List<T> list, System.Int32 index) [static]
@@ -87,12 +87,12 @@ class BGCS.Infrastructure.Execution.ProcessExecutor [abstract; sealed]
 class BGCS.Infrastructure.IO.ConfigurationPath [abstract; sealed]
   method System.String Resolve(System.String value, System.String baseDirectory, System.Boolean allowCommandName) [static]
 class BGCS.Infrastructure.IO.DirectoryMembershipDigest [abstract; sealed]
-  method BGCS.Contracts.Inputs.DirectoryInputDependency Capture(System.String directory, System.Collections.Generic.IEnumerable<System.String> excludedDirectories [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method BGCS.Core.Inputs.DirectoryInputDependency Capture(System.String directory, BGCS.Core.Hosting.IHostPathService paths, System.Collections.Generic.IEnumerable<System.String> excludedDirectories [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.Infrastructure.IO.ExternalInputSnapshotBuilder [sealed]
   ctor()
-  method BGCS.Contracts.Inputs.SourceSnapshot Capture(System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.DeclaredExternalInput> inputs, System.String pathBase, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method BGCS.Core.Inputs.SourceSnapshot Capture(System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.DeclaredExternalInput> inputs, System.String pathBase, BGCS.Core.Hosting.IHostPathService paths, System.Threading.CancellationToken cancellationToken [optional; default=null])
 class BGCS.Infrastructure.IO.FileSet [sealed; interfaces=System.Collections.Generic.IEnumerable<System.String>|System.Collections.Generic.IReadOnlyCollection<System.String>|System.Collections.Generic.IReadOnlySet<System.String>|System.Collections.IEnumerable]
-  ctor(System.Collections.Generic.IEnumerable<System.String> paths)
+  ctor(System.Collections.Generic.IEnumerable<System.String> paths, BGCS.Core.Hosting.IHostPathService pathService)
   property System.Int32 Count { get } [virtual; final]
   method System.Boolean Contains(System.String path) [virtual; final]
   method System.Boolean IsProperSubsetOf(System.Collections.Generic.IEnumerable<System.String> other) [virtual; final]
@@ -102,44 +102,34 @@ class BGCS.Infrastructure.IO.FileSet [sealed; interfaces=System.Collections.Gene
   method System.Boolean Overlaps(System.Collections.Generic.IEnumerable<System.String> other) [virtual; final]
   method System.Boolean SetEquals(System.Collections.Generic.IEnumerable<System.String> other) [virtual; final]
   method System.Collections.Generic.IEnumerator<System.String> GetEnumerator() [virtual; final]
-class BGCS.Infrastructure.IO.NativeArgumentExpansionResult [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.IO.NativeArgumentExpansionResult>]
-  ctor(System.Collections.Immutable.ImmutableArray<System.String> arguments, System.Collections.Immutable.ImmutableArray<System.String> linkerOnlyArguments, BGCS.Contracts.Inputs.SourceSnapshot snapshot)
-  property System.Collections.Immutable.ImmutableArray<System.String> arguments { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> cacheIneligibilityReasons { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> linkerOnlyArguments { get; init }
-  property BGCS.Contracts.Inputs.SourceSnapshot snapshot { get; init }
-  method BGCS.Infrastructure.IO.NativeArgumentExpansionResult <Clone>$()
-  method System.Boolean Equals(BGCS.Infrastructure.IO.NativeArgumentExpansionResult other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Infrastructure.IO.NativeArgumentExpansionResult left, BGCS.Infrastructure.IO.NativeArgumentExpansionResult right) [static]
-  method System.Boolean op_Inequality(BGCS.Infrastructure.IO.NativeArgumentExpansionResult left, BGCS.Infrastructure.IO.NativeArgumentExpansionResult right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.Collections.Immutable.ImmutableArray<System.String> arguments, out System.Collections.Immutable.ImmutableArray<System.String> linkerOnlyArguments, out BGCS.Contracts.Inputs.SourceSnapshot snapshot)
-class BGCS.Infrastructure.IO.NativeArgumentIdentityValidator [abstract; sealed]
-  method System.Void Validate(System.Collections.Generic.IEnumerable<System.String> arguments, System.String context, System.Boolean rejectParserSubstitution [optional; default=false]) [static]
-class BGCS.Infrastructure.IO.NativeArgumentInputSnapshotBuilder [sealed]
-  ctor()
-  method BGCS.Contracts.Inputs.SourceSnapshot Capture(System.Collections.Generic.IEnumerable<System.String> arguments, System.String pathBase, System.Boolean windowsResponseSyntax [optional; default=false], System.Boolean clangConfigurations [optional; default=true], System.String compilerPath [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method BGCS.Infrastructure.IO.NativeArgumentExpansionResult Expand(System.Collections.Generic.IEnumerable<System.String> arguments, System.String pathBase, System.Boolean windowsResponseSyntax [optional; default=false], System.Boolean clangConfigurations [optional; default=true], System.String compilerPath [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null], System.Collections.Generic.IEnumerable<System.String> snapshotExcludedDirectories [optional; default=null], System.Collections.Generic.IEnumerable<System.String> includeSearchDirectories [optional; default=null], System.String sysRoot [optional; default=null])
+class BGCS.Infrastructure.IO.InputPathSemanticsSnapshot [abstract; sealed]
+  method BGCS.Core.Inputs.SourceSnapshot Capture(BGCS.Core.Inputs.SourceSnapshot snapshot, BGCS.Core.Hosting.IHostPathService paths) [static]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.InputPathSemantics> ForInputIdentity(BGCS.Core.Inputs.SourceSnapshot snapshot) [static]
+  method System.String GetMismatch(BGCS.Core.Inputs.SourceSnapshot snapshot, BGCS.Core.Hosting.IHostPathService paths) [static]
 class BGCS.Infrastructure.IO.OutputDirectorySetTransaction [sealed; interfaces=System.IDisposable]
-  ctor(System.Collections.Generic.IEnumerable<System.String> destinationPaths, System.Nullable<System.TimeSpan> lockTimeout [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
+  ctor(System.Collections.Generic.IEnumerable<System.String> destinationPaths, BGCS.Core.Hosting.IHostPathService paths, System.Nullable<System.TimeSpan> lockTimeout [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
   property System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> stagingPaths { get }
   method System.String GetStagingPath(System.String destinationPath)
   method System.Void Commit()
   method System.Void Dispose() [virtual; final]
 class BGCS.Infrastructure.IO.OutputDirectoryTransaction [sealed; interfaces=System.IDisposable]
-  ctor(System.String destinationPath, System.Nullable<System.TimeSpan> lockTimeout [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
+  ctor(System.String destinationPath, BGCS.Core.Hosting.IHostPathService paths, System.Nullable<System.TimeSpan> lockTimeout [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
   property System.String stagingPath { get }
   method System.Void Commit()
   method System.Void Dispose() [virtual; final]
+class BGCS.Infrastructure.IO.OwnedPathBoundary [sealed]
+  ctor(System.String path, BGCS.Core.Hosting.IHostPathService paths)
+  property System.String physicalPath { get }
+  method System.Void RejectLink(System.String path) [static]
+  method System.Void RejectPhysicalLinks(System.String path) [static]
+  method System.Void Verify()
 class BGCS.Infrastructure.IO.PhysicalPathResolver [abstract; sealed]
-  method System.String Resolve(System.String path) [static]
+  method System.String Resolve(System.String path, BGCS.Core.Hosting.IHostPathService paths) [static]
 class BGCS.Infrastructure.IO.SourceSnapshotBatch [abstract; sealed]
-  method System.String GetMismatch(System.Collections.Generic.IEnumerable<BGCS.Contracts.Inputs.SourceSnapshot> snapshots, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.String GetMismatch(System.Collections.Generic.IEnumerable<BGCS.Core.Inputs.SourceSnapshot> snapshots, BGCS.Core.Hosting.IHostPathService paths, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.Infrastructure.IO.SourceSnapshotVerifier [abstract; sealed]
-  method System.Boolean Matches(BGCS.Contracts.Inputs.SourceSnapshot snapshot, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
-  method System.String GetMismatch(BGCS.Contracts.Inputs.SourceSnapshot snapshot, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.Boolean Matches(BGCS.Core.Inputs.SourceSnapshot snapshot, BGCS.Core.Hosting.IHostPathService paths, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.String GetMismatch(BGCS.Core.Inputs.SourceSnapshot snapshot, BGCS.Core.Hosting.IHostPathService paths, System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
 class BGCS.Infrastructure.Logging.LogEventHandler [sealed; base=System.MulticastDelegate; interfaces=System.ICloneable|System.Runtime.Serialization.ISerializable]
   ctor(System.Object object, System.IntPtr method)
   method System.IAsyncResult BeginInvoke(BGCS.Infrastructure.Logging.LogSeverity severity, System.String message, System.AsyncCallback callback, System.Object object) [virtual]
@@ -175,11 +165,13 @@ class BGCS.Infrastructure.Logging.LoggerBase [abstract]
   method System.Void LogTrace(System.String message)
   method System.Void LogWarn(System.String message)
 class BGCS.Infrastructure.Plugins.LockedPluginManifest [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.Plugins.LockedPluginManifest>]
-  ctor(System.String path, BGCS.Contracts.Plugins.PluginManifest manifest, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> inputs)
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> inputs { get; init }
-  property BGCS.Contracts.Plugins.PluginManifest manifest { get; init }
-  property System.Collections.Immutable.ImmutableArray<System.String> missingInputs { get; init }
+  ctor(System.String path, BGCS.Core.Plugins.PluginManifest manifest, System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.InputDependency> inputs)
+  property System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.MissingInputDependency> absentInputs { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.InputDependency> inputs { get; init }
+  property BGCS.Core.Plugins.PluginManifest manifest { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> missingInputs { get }
   property System.String path { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.InputPathSemantics> pathSemantics { get; init }
   method BGCS.Infrastructure.Plugins.LockedPluginManifest <Clone>$()
   method System.Boolean Equals(BGCS.Infrastructure.Plugins.LockedPluginManifest other) [virtual; final]
   method System.Boolean Equals(System.Object obj) [virtual]
@@ -187,41 +179,41 @@ class BGCS.Infrastructure.Plugins.LockedPluginManifest [sealed; interfaces=Syste
   method System.Boolean op_Inequality(BGCS.Infrastructure.Plugins.LockedPluginManifest left, BGCS.Infrastructure.Plugins.LockedPluginManifest right) [static]
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.String path, out BGCS.Contracts.Plugins.PluginManifest manifest, out System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Inputs.InputDependency> inputs)
+  method System.Void Deconstruct(out System.String path, out BGCS.Core.Plugins.PluginManifest manifest, out System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.InputDependency> inputs)
 class BGCS.Infrastructure.Plugins.PluginLoader [sealed]
-  ctor()
-  method BGCS.Contracts.Plugins.IBindingPlugin Activate(BGCS.Infrastructure.Plugins.LockedPluginManifest manifest)
-  method BGCS.Contracts.Plugins.IBindingPlugin ActivateWorker(BGCS.Infrastructure.Plugins.LockedPluginManifest manifest, System.Collections.Immutable.ImmutableArray<System.Reflection.Assembly> sharedAssemblies)
+  ctor(BGCS.Core.Hosting.IHostPathService paths)
+  method BGCS.Core.Plugins.IBindingPlugin Activate(BGCS.Infrastructure.Plugins.LockedPluginManifest manifest)
+  method BGCS.Core.Plugins.IBindingPlugin ActivateWorker(BGCS.Infrastructure.Plugins.LockedPluginManifest manifest, System.Collections.Immutable.ImmutableArray<System.Reflection.Assembly> sharedAssemblies)
 class BGCS.Infrastructure.Plugins.PluginManifestReader [sealed]
-  ctor()
+  ctor(BGCS.Core.Hosting.IHostPathService paths)
   method BGCS.Infrastructure.Plugins.LockedPluginManifest Read(System.String path)
   method System.Void Verify(BGCS.Infrastructure.Plugins.LockedPluginManifest manifest)
 class BGCS.Infrastructure.Publishing.ArtifactPublicationReader [sealed]
-  ctor()
-  method System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> ReadVerified(System.String outputRoot, System.String libraryId, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method TResult ReadVerified(System.String outputRoot, System.String libraryId, System.Func<System.String,System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor>,TResult> reader, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  ctor(BGCS.Core.Hosting.IHostPathService paths)
+  method System.Collections.Immutable.ImmutableArray<BGCS.Core.Artifacts.ArtifactDescriptor> ReadVerified(System.String outputRoot, System.String libraryId, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method TResult ReadVerified(System.String outputRoot, System.String libraryId, System.Func<System.String,System.Collections.Immutable.ImmutableArray<BGCS.Core.Artifacts.ArtifactDescriptor>,TResult> reader, System.Threading.CancellationToken cancellationToken [optional; default=null])
 class BGCS.Infrastructure.Publishing.ArtifactPublisher [sealed; interfaces=System.IDisposable]
-  ctor(System.String destination, System.String libraryId, System.Collections.Generic.IEnumerable<System.String> protectedInputs [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
+  ctor(System.String destination, System.String libraryId, BGCS.Core.Hosting.IHostPathService paths, System.Collections.Generic.IEnumerable<System.String> protectedInputs [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null])
   property System.String candidateRoot { get }
   property System.Exception cleanupFailure { get }
-  method System.Boolean ClearOwned(System.String destination, System.String libraryId, System.Collections.Generic.IEnumerable<System.String> protectedInputs [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
-  method System.Void Commit(System.Collections.Generic.IEnumerable<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts, System.Threading.CancellationToken cancellationToken [optional; default=null])
+  method System.Boolean ClearOwned(System.String destination, System.String libraryId, BGCS.Core.Hosting.IHostPathService paths, System.Collections.Generic.IEnumerable<System.String> protectedInputs [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
+  method System.Void Commit(System.Collections.Generic.IEnumerable<BGCS.Core.Artifacts.ArtifactDescriptor> artifacts, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Void Dispose() [virtual; final]
-class BGCS.Infrastructure.Publishing.CandidateTextEditor [sealed; interfaces=BGCS.Contracts.Artifacts.IArtifactEditor|BGCS.Contracts.Artifacts.IArtifactReader|System.IDisposable]
-  ctor(System.String root, System.Collections.Generic.IEnumerable<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts, System.String additionPrefix [optional; default=null])
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts { get }
+class BGCS.Infrastructure.Publishing.CandidateTextEditor [sealed; interfaces=BGCS.Core.Artifacts.IArtifactEditor|BGCS.Core.Artifacts.IArtifactReader|System.IDisposable]
+  ctor(System.String root, System.Collections.Generic.IEnumerable<BGCS.Core.Artifacts.ArtifactDescriptor> artifacts, BGCS.Core.Hosting.IHostPathService paths, System.String additionPrefix [optional; default=null])
+  property System.Collections.Immutable.ImmutableArray<BGCS.Core.Artifacts.ArtifactDescriptor> artifacts { get }
   method System.Threading.Tasks.ValueTask DeleteTextAsync(System.String relativePath, System.Threading.CancellationToken cancellationToken) [virtual; final]
-  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Artifacts.ArtifactDescriptor> AddTextAsync(System.String relativePath, System.String mediaType, System.String content, System.Threading.CancellationToken cancellationToken) [virtual; final]
-  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Artifacts.ArtifactDescriptor> ReplaceTextAsync(System.String relativePath, System.String content, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Artifacts.ArtifactDescriptor> AddTextAsync(System.String relativePath, System.String mediaType, System.String content, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Threading.Tasks.ValueTask<BGCS.Core.Artifacts.ArtifactDescriptor> ReplaceTextAsync(System.String relativePath, System.String content, System.Threading.CancellationToken cancellationToken) [virtual; final]
   method System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<System.Byte>> ReadBytesAsync(System.String relativePath, System.Threading.CancellationToken cancellationToken) [virtual; final]
   method System.Threading.Tasks.ValueTask<System.String> ReadTextAsync(System.String relativePath, System.Threading.CancellationToken cancellationToken) [virtual; final]
   method System.Void Dispose() [virtual; final]
-class BGCS.Infrastructure.Publishing.DirectoryArtifactReader [sealed; interfaces=BGCS.Contracts.Artifacts.IArtifactReader]
-  ctor(System.String root, System.Collections.Generic.IEnumerable<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts, System.Int32 maximumArtifactBytes [optional; default=268435456])
+class BGCS.Infrastructure.Publishing.DirectoryArtifactReader [sealed; interfaces=BGCS.Core.Artifacts.IArtifactReader]
+  ctor(System.String root, System.Collections.Generic.IEnumerable<BGCS.Core.Artifacts.ArtifactDescriptor> artifacts, BGCS.Core.Hosting.IHostPathService paths, System.Int32 maximumArtifactBytes [optional; default=268435456])
   method System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<System.Byte>> ReadBytesAsync(System.String relativePath, System.Threading.CancellationToken cancellationToken) [virtual; final]
   method System.Threading.Tasks.ValueTask<System.String> ReadTextAsync(System.String relativePath, System.Threading.CancellationToken cancellationToken) [virtual; final]
-class BGCS.Infrastructure.Publishing.DirectoryArtifactSink [sealed; interfaces=BGCS.Contracts.Artifacts.IArtifactSink]
-  ctor(System.String root)
+class BGCS.Infrastructure.Publishing.DirectoryArtifactSink [sealed; interfaces=BGCS.Core.Artifacts.IArtifactSink]
+  ctor(System.String root, BGCS.Core.Hosting.IHostPathService paths)
   method System.String WriteBytes(System.String relativePath, System.ReadOnlyMemory<System.Byte> content) [virtual; final]
   method System.String WriteText(System.String relativePath, System.String content) [virtual; final]
 class BGCS.Infrastructure.Text.FileNameHelper [abstract; sealed]
@@ -236,37 +228,12 @@ class BGCS.Infrastructure.Text.TextExtensions [abstract; sealed]
   method System.ReadOnlySpan<System.Char> TrimStartFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.Char trim) [static]
   method System.ReadOnlySpan<System.Char> TrimStartFirstOccurrence(System.ReadOnlySpan<System.Char> text, System.ReadOnlySpan<System.Char> trim) [static]
 class BGCS.Infrastructure.Verification.ArtifactDigestVerifier [sealed]
-  ctor()
+  ctor(BGCS.Core.Hosting.IHostPathService paths)
+  method System.Collections.Generic.IEnumerable<System.String> EnumerateFiles(System.String directory, BGCS.Core.Hosting.IHostPathService paths) [static]
   method System.String ValidateRelativePath(System.String path) [static]
-  method System.Void Verify(System.String root, System.Collections.Generic.IEnumerable<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts, System.Collections.Generic.IEnumerable<System.String> additionalFiles [optional; default=null])
+  method System.Void Verify(System.String root, System.Collections.Generic.IEnumerable<BGCS.Core.Artifacts.ArtifactDescriptor> artifacts, System.Collections.Generic.IEnumerable<System.String> additionalFiles [optional; default=null])
 class BGCS.Infrastructure.Verification.NativeSourceManifestVerifier [abstract; sealed]
-  method System.Void Validate(BGCS.Contracts.Artifacts.NativeSourceManifest manifest, System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Artifacts.ArtifactDescriptor> artifacts) [static]
-class BGCS.Infrastructure.Workers.FrontendWorkerClient [sealed; interfaces=BGCS.Contracts.Ports.IFrontend]
-  ctor(System.String workerPath, System.Nullable<System.TimeSpan> timeout [optional; default=null], System.String dotnetPath [optional; default=null], System.String parserIdentity [optional; default="ClangSharp/20.1.2.4;LLVM/20"])
-  method BGCS.Infrastructure.Workers.WorkerExecutionIdentity CaptureExecutionIdentity(System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Plugins.WorkerPluginCapture> CapturePluginInputsAsync(BGCS.Contracts.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Threading.Tasks.ValueTask<BGCS.Contracts.Requests.FrontendResult> ParseAsync(BGCS.Contracts.Requests.FrontendRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
-class BGCS.Infrastructure.Workers.WorkerAssetDeployer [sealed]
-  ctor()
-  method BGCS.Contracts.Artifacts.WorkerAssetManifest ReadManifest(System.String path)
-  method System.Void Deploy(System.String sourceRoot, System.String destinationRoot, BGCS.Contracts.Artifacts.WorkerAssetManifest manifest, System.String hostRid, System.Threading.CancellationToken cancellationToken [optional; default=null])
-  method System.Void VerifyDeployment(System.String root, BGCS.Contracts.Artifacts.WorkerAssetManifest manifest, System.String hostRid)
-class BGCS.Infrastructure.Workers.WorkerAssetLocator [abstract; sealed]
-  method System.String Locate(System.String explicitRoot [optional; default=null], System.String applicationBase [optional; default=null]) [static]
-class BGCS.Infrastructure.Workers.WorkerAssetProvisioner [abstract; sealed]
-  method System.String Prepare(System.String applicationBase, System.String cacheRoot [optional; default=null], System.Threading.CancellationToken cancellationToken [optional; default=null]) [static]
-class BGCS.Infrastructure.Workers.WorkerExecutionIdentity [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.Workers.WorkerExecutionIdentity>]
-  ctor(BGCS.Contracts.Common.ContentDigest digest, BGCS.Contracts.Inputs.SourceSnapshot snapshot)
-  property BGCS.Contracts.Common.ContentDigest digest { get; init }
-  property BGCS.Contracts.Inputs.SourceSnapshot snapshot { get; init }
-  method BGCS.Infrastructure.Workers.WorkerExecutionIdentity <Clone>$()
-  method System.Boolean Equals(BGCS.Infrastructure.Workers.WorkerExecutionIdentity other) [virtual; final]
-  method System.Boolean Equals(System.Object obj) [virtual]
-  method System.Boolean op_Equality(BGCS.Infrastructure.Workers.WorkerExecutionIdentity left, BGCS.Infrastructure.Workers.WorkerExecutionIdentity right) [static]
-  method System.Boolean op_Inequality(BGCS.Infrastructure.Workers.WorkerExecutionIdentity left, BGCS.Infrastructure.Workers.WorkerExecutionIdentity right) [static]
-  method System.Int32 GetHashCode() [virtual]
-  method System.String ToString() [virtual]
-  method System.Void Deconstruct(out BGCS.Contracts.Common.ContentDigest digest, out BGCS.Contracts.Inputs.SourceSnapshot snapshot)
+  method System.Void Validate(BGCS.Core.Artifacts.NativeSourceManifest manifest, System.Collections.Immutable.ImmutableArray<BGCS.Core.Artifacts.ArtifactDescriptor> artifacts) [static]
 class BGCS.Infrastructure.Workers.WorkerHandshake [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.Workers.WorkerHandshake>]
   ctor(System.Int32 protocolRevision, System.Int32 modelRevision, System.String buildVersion, System.String parserIdentity, System.String hostRid)
   property System.String buildVersion { get; init }
@@ -287,12 +254,12 @@ enum BGCS.Infrastructure.Workers.WorkerOperationKind [sealed; underlying=System.
   field BGCS.Infrastructure.Workers.WorkerOperationKind Parse [static; const=0]
   field System.Int32 value__
 class BGCS.Infrastructure.Workers.WorkerParseRequest [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.Workers.WorkerParseRequest>]
-  ctor(System.String requestId, BGCS.Contracts.Requests.FrontendRequest request)
-  property BGCS.Contracts.Plugins.WorkerPluginCapture expectedPluginCapture { get; init }
+  ctor(System.String requestId, BGCS.Core.Requests.FrontendRequest request)
+  property BGCS.Core.Plugins.WorkerPluginCapture expectedPluginCapture { get; init }
   property BGCS.Infrastructure.Workers.WorkerOperationKind operation { get; init }
-  property System.Collections.Immutable.ImmutableArray<BGCS.Contracts.Plugins.WorkerPluginActivation> pluginActivations { get; init }
-  property BGCS.Contracts.Plugins.CacheFingerprintContext pluginContext { get; init }
-  property BGCS.Contracts.Requests.FrontendRequest request { get; init }
+  property System.Collections.Immutable.ImmutableArray<BGCS.Core.Plugins.WorkerPluginActivation> pluginActivations { get; init }
+  property BGCS.Core.Plugins.CacheFingerprintContext pluginContext { get; init }
+  property BGCS.Core.Requests.FrontendRequest request { get; init }
   property System.String requestId { get; init }
   method BGCS.Infrastructure.Workers.WorkerParseRequest <Clone>$()
   method System.Boolean Equals(BGCS.Infrastructure.Workers.WorkerParseRequest other) [virtual; final]
@@ -301,20 +268,19 @@ class BGCS.Infrastructure.Workers.WorkerParseRequest [sealed; interfaces=System.
   method System.Boolean op_Inequality(BGCS.Infrastructure.Workers.WorkerParseRequest left, BGCS.Infrastructure.Workers.WorkerParseRequest right) [static]
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.String requestId, out BGCS.Contracts.Requests.FrontendRequest request)
+  method System.Void Deconstruct(out System.String requestId, out BGCS.Core.Requests.FrontendRequest request)
 class BGCS.Infrastructure.Workers.WorkerProtocol [abstract; sealed]
   field System.Int32 C_MAXIMUM_FRAME_BYTES [static; const=268435456]
-  field System.String C_PARSER_IDENTITY [static; const="ClangSharp/20.1.2.4;LLVM/20"]
-  field System.Int32 C_REVISION [static; const=2]
+  field System.Int32 C_REVISION [static; const=3]
   property System.Text.Json.JsonSerializerOptions jsonOptions { get } [static]
   method System.Threading.Tasks.ValueTask WriteAsync(System.IO.Stream stream, T message, System.Threading.CancellationToken cancellationToken) [static]
   method System.Threading.Tasks.ValueTask<T> ReadAsync(System.IO.Stream stream, System.Threading.CancellationToken cancellationToken) [static]
 class BGCS.Infrastructure.Workers.WorkerResponse [sealed; interfaces=System.IEquatable<BGCS.Infrastructure.Workers.WorkerResponse>]
-  ctor(System.String requestId, BGCS.Contracts.Requests.FrontendResult result, System.String error)
+  ctor(System.String requestId, BGCS.Core.Requests.FrontendResult result, System.String error)
   property System.String error { get; init }
-  property BGCS.Contracts.Plugins.WorkerPluginCapture pluginCapture { get; init }
+  property BGCS.Core.Plugins.WorkerPluginCapture pluginCapture { get; init }
   property System.String requestId { get; init }
-  property BGCS.Contracts.Requests.FrontendResult result { get; init }
+  property BGCS.Core.Requests.FrontendResult result { get; init }
   method BGCS.Infrastructure.Workers.WorkerResponse <Clone>$()
   method System.Boolean Equals(BGCS.Infrastructure.Workers.WorkerResponse other) [virtual; final]
   method System.Boolean Equals(System.Object obj) [virtual]
@@ -322,4 +288,4 @@ class BGCS.Infrastructure.Workers.WorkerResponse [sealed; interfaces=System.IEqu
   method System.Boolean op_Inequality(BGCS.Infrastructure.Workers.WorkerResponse left, BGCS.Infrastructure.Workers.WorkerResponse right) [static]
   method System.Int32 GetHashCode() [virtual]
   method System.String ToString() [virtual]
-  method System.Void Deconstruct(out System.String requestId, out BGCS.Contracts.Requests.FrontendResult result, out System.String error)
+  method System.Void Deconstruct(out System.String requestId, out BGCS.Core.Requests.FrontendResult result, out System.String error)

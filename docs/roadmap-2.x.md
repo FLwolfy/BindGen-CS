@@ -1,4 +1,6 @@
-> Historical 2.x design record. Its old API names, scores and completion claims do not describe BGCS 3.0. See the [current roadmap](roadmap.md) and [release evidence rules](release-evidence-state-flow.md).
+> Historical design record. Superseded by [the current architecture](architecture.md) and [acceptance](acceptance.md); not a current capability or release receipt.
+
+> Historical 2.x design record. Its old API names, scores and completion claims do not describe BGCS 4.0. See the [current roadmap](roadmap.md) and [release evidence rules](release-evidence-state-flow.md).
 
 > Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
 
@@ -86,7 +88,7 @@ Exit: real C library failures are explicit unsupported contracts, never silent m
 
 ### Phase 4 — C++ semantic bridge and final lowering SPI
 
-Status: complete for the declared desktop subset. Built-ins, `typeLowerings` / `callableLowerings`, typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugins, and explicit `nativeShims` use one deterministic registry. The superseded pre-release adapter SPI was deleted without a compatibility layer.
+Status: complete for the declared desktop subset. Built-ins, `typeLowerings` / `callableLowerings`, typed `INativeTypeLowering` / `INativeCallableLowering` / `ICppArtifactContributor` plugins, and explicit `nativeShims` use one deterministic registry. The superseded pre-release adapter SPI was deleted without a compatibility layer.
 
 - Complete callable qualifiers, overloads, operators, namespaces, constructors/destructors, and exception boundaries.
 - Model inheritance, virtual/non-virtual bases, pointer adjustment, and RTTI availability.

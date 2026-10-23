@@ -1,0 +1,666 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:06ed8f83a165416c0de47f8f942485813cd8f2e05d9e546174cae0cdadaf36c5"
+      },
+      "category": "Primitive",
+      "spelling": "float",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Float",
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:4a262c35fd7868b9cf94fbe1446682c3554a1c4c472acf11149b7a1dae5e9085"
+      },
+      "category": "Function",
+      "spelling": "float (*)(void *, double)",
+      "size": 1,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:3f5c3966b0b63e0d4a9266a4055dffd6f0dca6839015ce4b6ceac6caf1a492b8"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": {
+        "value": "type:06ed8f83a165416c0de47f8f942485813cd8f2e05d9e546174cae0cdadaf36c5"
+      },
+      "parameterTypes": [
+        {
+          "value": "type:ac7015643269d67bdab8e5eb9fb8d41d43daa2e8e849820f166aae432e7919e1"
+        },
+        {
+          "value": "type:6663e401c482e4787c017e17f33f509b835997bb3688dafbc6b2e21b1522b2a1"
+        }
+      ],
+      "callingConvention": "C",
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:6663e401c482e4787c017e17f33f509b835997bb3688dafbc6b2e21b1522b2a1"
+      },
+      "category": "Primitive",
+      "spelling": "double",
+      "size": 8,
+      "alignment": 8,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Double",
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "category": "Primitive",
+      "spelling": "int",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Int",
+      "isSigned": true,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:89d4a908074a43927842b34ecfefb20dbd92af583a0b3f6d2802e97b451c0ed8"
+      },
+      "category": "Pointer",
+      "spelling": "float (*)(void *, double) *",
+      "size": 8,
+      "alignment": 8,
+      "elementType": {
+        "value": "type:4a262c35fd7868b9cf94fbe1446682c3554a1c4c472acf11149b7a1dae5e9085"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:9ace587e75a461699761f11b1dc9ddc95ad7d9ffc48acc02c759b75711bcbdd8"
+      },
+      "category": "Primitive",
+      "spelling": "void",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Void",
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:ac7015643269d67bdab8e5eb9fb8d41d43daa2e8e849820f166aae432e7919e1"
+      },
+      "category": "Pointer",
+      "spelling": "void *",
+      "size": 8,
+      "alignment": 8,
+      "elementType": {
+        "value": "type:9ace587e75a461699761f11b1dc9ddc95ad7d9ffc48acc02c759b75711bcbdd8"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:03e5434d7d5d127a1b0d35a97e69bc40908511059f284069ccd3be491368e5b6"
+      },
+      "kind": "Parameter",
+      "name": "",
+      "qualifiedName": "",
+      "type": {
+        "value": "type:6663e401c482e4787c017e17f33f509b835997bb3688dafbc6b2e21b1522b2a1"
+      },
+      "source": {
+        "file": "TestFunctions.TestFunctionPointersByParam.hpp",
+        "line": 2,
+        "column": 61
+      },
+      "parent": {
+        "value": "declaration:3f5c3966b0b63e0d4a9266a4055dffd6f0dca6839015ce4b6ceac6caf1a492b8"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": "double",
+      "sourceType": {
+        "value": "type:6663e401c482e4787c017e17f33f509b835997bb3688dafbc6b2e21b1522b2a1"
+      },
+      "visibility": null,
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:0ae9b25619b6254edf3087a18fe00aac41d71e9bc0fb64acfab4550dff8830c6"
+      },
+      "kind": "Parameter",
+      "name": "",
+      "qualifiedName": "",
+      "type": {
+        "value": "type:ac7015643269d67bdab8e5eb9fb8d41d43daa2e8e849820f166aae432e7919e1"
+      },
+      "source": {
+        "file": "TestFunctions.TestFunctionPointersByParam.hpp",
+        "line": 2,
+        "column": 53
+      },
+      "parent": {
+        "value": "declaration:3f5c3966b0b63e0d4a9266a4055dffd6f0dca6839015ce4b6ceac6caf1a492b8"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": "void *",
+      "sourceType": {
+        "value": "type:ac7015643269d67bdab8e5eb9fb8d41d43daa2e8e849820f166aae432e7919e1"
+      },
+      "visibility": null,
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:191bae4167334197dbd4f4cb63da6cf3df56d87f2e023b57d98fd6b8dcfeaa0c"
+      },
+      "kind": "Parameter",
+      "name": "b",
+      "qualifiedName": "b",
+      "type": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "source": {
+        "file": "TestFunctions.TestFunctionPointersByParam.hpp",
+        "line": 2,
+        "column": 27
+      },
+      "parent": {
+        "value": "declaration:d3b4e7b21391b3f9e6b4899079b2c79c0f047ff4afac43cab047c5ff0550bd08"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": "int",
+      "sourceType": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "visibility": null,
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:2e3e54601fa9b12a2547e421a1c77889ca8592a06c60de5f29bc8a71ac6fb3b8"
+      },
+      "kind": "Parameter",
+      "name": "callback",
+      "qualifiedName": "callback",
+      "type": {
+        "value": "type:89d4a908074a43927842b34ecfefb20dbd92af583a0b3f6d2802e97b451c0ed8"
+      },
+      "source": {
+        "file": "TestFunctions.TestFunctionPointersByParam.hpp",
+        "line": 2,
+        "column": 38
+      },
+      "parent": {
+        "value": "declaration:d3b4e7b21391b3f9e6b4899079b2c79c0f047ff4afac43cab047c5ff0550bd08"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": "float (*)(void *, double)",
+      "sourceType": {
+        "value": "type:89d4a908074a43927842b34ecfefb20dbd92af583a0b3f6d2802e97b451c0ed8"
+      },
+      "visibility": null,
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:3f5c3966b0b63e0d4a9266a4055dffd6f0dca6839015ce4b6ceac6caf1a492b8"
+      },
+      "kind": "FunctionType",
+      "name": "",
+      "qualifiedName": "",
+      "type": {
+        "value": "type:4a262c35fd7868b9cf94fbe1446682c3554a1c4c472acf11149b7a1dae5e9085"
+      },
+      "source": {
+        "file": "",
+        "line": 0,
+        "column": 0
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:0ae9b25619b6254edf3087a18fe00aac41d71e9bc0fb64acfab4550dff8830c6"
+        },
+        {
+          "value": "declaration:03e5434d7d5d127a1b0d35a97e69bc40908511059f284069ccd3be491368e5b6"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": null,
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:9ce0fe2af1729baf8a8a8fd40a68f513f13d60cd7283d16afb2225e6be695d0f"
+      },
+      "kind": "Parameter",
+      "name": "a",
+      "qualifiedName": "a",
+      "type": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "source": {
+        "file": "TestFunctions.TestFunctionPointersByParam.hpp",
+        "line": 2,
+        "column": 20
+      },
+      "parent": {
+        "value": "declaration:d3b4e7b21391b3f9e6b4899079b2c79c0f047ff4afac43cab047c5ff0550bd08"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": "int",
+      "sourceType": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "visibility": null,
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:d3b4e7b21391b3f9e6b4899079b2c79c0f047ff4afac43cab047c5ff0550bd08"
+      },
+      "kind": "Function",
+      "name": "function0",
+      "qualifiedName": "function0",
+      "type": null,
+      "source": {
+        "file": "TestFunctions.TestFunctionPointersByParam.hpp",
+        "line": 2,
+        "column": 1
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:9ce0fe2af1729baf8a8a8fd40a68f513f13d60cd7283d16afb2225e6be695d0f"
+        },
+        {
+          "value": "declaration:191bae4167334197dbd4f4cb63da6cf3df56d87f2e023b57d98fd6b8dcfeaa0c"
+        },
+        {
+          "value": "declaration:2e3e54601fa9b12a2547e421a1c77889ca8592a06c60de5f29bc8a71ac6fb3b8"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": "Function",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": {
+        "value": "type:9ace587e75a461699761f11b1dc9ddc95ad7d9ffc48acc02c759b75711bcbdd8"
+      },
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "External",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": "C\u002B\u002B",
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": false,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": "C",
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

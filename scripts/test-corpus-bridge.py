@@ -25,12 +25,14 @@ class CorpusBridgeInputs(unittest.TestCase):
         self.root.mkdir()
         self.source = {"relativePath": "host/native/src/assertions.cpp", "mediaType": "text/x-c++", "digest": {"value": "source"}}
         self.header = {"relativePath": "host/native/include/bridge.h", "mediaType": "text/x-c-header", "digest": {"value": "header"}}
-        self.receipt = {"relativePath": "host/native/metadata/bridge.manifest.json", "mediaType": "application/json"}
+        self.receipt = {"relativePath": "host/metadata/native-source.manifest.json", "mediaType": "application/json"}
         for item in (self.source, self.header, self.receipt):
             path = self.root / item["relativePath"]
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("/* exact fixture */", encoding="utf-8")
-        self.native = {"schemaVersion": 1, "targetId": "host", "languageStandard": "c++23", "sources": [self.source], "headers": [self.header]}
+        self.native = {"schemaVersion": 2, "targetId": "host", "languageStandard": "c++23",
+            "sources": [self.source], "headers": [self.header], "module": {"id": "fixture", "nativeName": "fixture"},
+            "exportBindings": [], "runtimeRequirements": None}
         self.manifest = {"artifacts": [self.source, self.header, self.receipt]}
         self.compiler = Path(self.temporary.name) / "clang++"
         self.compiler.write_bytes(b"fixture-compiler-not-executed")
@@ -78,6 +80,18 @@ class CorpusBridgeInputs(unittest.TestCase):
             with self.subTest(change=change):
                 change()
                 with self.assertRaises(RuntimeError):
+                    self.run_fixture()
+                self.assertEqual([], self.calls)
+
+    def test_previous_manifest_revision_and_incomplete_export_identity_never_compile(self):
+        for change in (lambda: self.native.update(schemaVersion=1), lambda: self.native.update(module=None),
+                lambda: self.native.update(exportBindings=[{"callableId": "function", "exportName": "Echo", "moduleId": "other"}])):
+            with self.subTest(change=change):
+                self.native["schemaVersion"] = 2
+                self.native["module"] = {"id": "fixture", "nativeName": "fixture"}
+                self.native["exportBindings"] = []
+                change()
+                with self.assertRaisesRegex(RuntimeError, "current typed native source manifest"):
                     self.run_fixture()
                 self.assertEqual([], self.calls)
 

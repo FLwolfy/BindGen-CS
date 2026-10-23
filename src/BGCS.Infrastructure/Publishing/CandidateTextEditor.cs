@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -7,8 +8,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Publishing;
@@ -16,6 +17,7 @@ namespace BGCS.Infrastructure.Publishing;
 /// <summary>Replaces exact candidate text with digest verification and a complete updated descriptor snapshot.</summary>
 public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
 {
+    private readonly IHostPathService m_paths;
     private readonly string m_root;
     private readonly OwnedPathBoundary m_boundary;
     private readonly Dictionary<string, ArtifactDescriptor> m_artifacts;
@@ -26,20 +28,23 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
     /// <summary>Captures the finite source set that this processing stage is permitted to edit.</summary>
     /// <param name="root">The owned candidate root.</param>
     /// <param name="artifacts">The exact candidate text descriptors.</param>
+    /// <param name="paths">The explicitly selected host path service.</param>
     /// <param name="additionPrefix">An optional portable directory prefix for new candidates; null permits replacements only.</param>
     public CandidateTextEditor(
         string root,
         IEnumerable<ArtifactDescriptor> artifacts,
+        IHostPathService paths,
         string? additionPrefix = null
     ) {
-        m_boundary = new(root);
+        m_paths = paths;
+        m_boundary = new(root, paths);
         m_root = m_boundary.physicalPath;
         m_artifacts = artifacts.ToDictionary(artifact => artifact.relativePath, StringComparer.Ordinal);
-        _ = new DirectoryArtifactReader(m_root, m_artifacts.Values);
+        _ = new DirectoryArtifactReader(m_root, m_artifacts.Values, m_paths);
         if (additionPrefix is not null)
         {
             if (!additionPrefix.EndsWith('/') || additionPrefix.Length == 1) throw new ArgumentException("An additional artifact prefix must name a portable directory.");
-            _ = new DirectoryArtifactReader(m_root, [new(additionPrefix + "__path_validation__", "text/plain", new ContentDigest(new string('0', 64)))]);
+            _ = new DirectoryArtifactReader(m_root, [new(additionPrefix + "__path_validation__", "text/plain", new ContentDigest(new string('0', 64)))], m_paths);
         }
         m_additionPrefix = additionPrefix;
     }
@@ -65,7 +70,7 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
         {
             ObjectDisposedException.ThrowIf(m_closed, this);
             m_boundary.Verify();
-            ReadOnlyMemory<byte> bytes = await new DirectoryArtifactReader(m_root, m_artifacts.Values).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
+            ReadOnlyMemory<byte> bytes = await new DirectoryArtifactReader(m_root, m_artifacts.Values, m_paths).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
             m_boundary.Verify();
             return bytes;
         }
@@ -95,7 +100,7 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
             m_boundary.Verify();
             if (!m_artifacts.TryGetValue(relativePath, out ArtifactDescriptor? previous)) throw new ArgumentException("Only declared candidate artifacts can be replaced.");
             if (!previous.mediaType.StartsWith("text/", StringComparison.Ordinal) && previous.mediaType != "application/json") throw new ArgumentException("A text processor cannot replace a binary candidate.");
-            _ = await new DirectoryArtifactReader(m_root, m_artifacts.Values).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
+            _ = await new DirectoryArtifactReader(m_root, m_artifacts.Values, m_paths).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
             byte[] bytes = new UTF8Encoding(false, true).GetBytes(content);
             if (bytes.Length > 256 * 1024 * 1024) throw new IOException("A replacement text artifact exceeds the complete candidate read limit.");
             string destination = Path.GetFullPath(relativePath, m_root);
@@ -140,13 +145,13 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
             m_boundary.Verify();
             if (m_additionPrefix is null || !relativePath.StartsWith(m_additionPrefix, StringComparison.Ordinal)) throw new ArgumentException("An additional artifact must remain inside the stage's owned output prefix.");
             if (!mediaType.StartsWith("text/", StringComparison.Ordinal) && mediaType != "application/json") throw new ArgumentException("A text processing stage cannot add binary candidates.");
-            if (m_artifacts.Keys.Any(path => string.Equals(path, relativePath, StringComparison.OrdinalIgnoreCase))) throw new InvalidOperationException("The additional candidate path conflicts with an existing artifact.");
+            if (m_artifacts.Keys.Any(path => m_paths.Equals(Path.Combine(m_root, path), Path.Combine(m_root, relativePath)))) throw new InvalidOperationException("The additional candidate path conflicts with an existing artifact.");
             byte[] bytes = new UTF8Encoding(false, true).GetBytes(content);
             if (bytes.Length > 256 * 1024 * 1024) throw new IOException("The additional text artifact exceeds the complete-read limit.");
             ArtifactDescriptor artifact = new(relativePath, mediaType, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))));
-            _ = new DirectoryArtifactReader(m_root, [artifact]);
+            _ = new DirectoryArtifactReader(m_root, [artifact], m_paths);
             cancellationToken.ThrowIfCancellationRequested();
-            installed = new DirectoryArtifactSink(m_root).WriteBytes(relativePath, bytes);
+            installed = new DirectoryArtifactSink(m_root, m_paths).WriteBytes(relativePath, bytes);
             m_artifacts.Add(relativePath, artifact);
             m_boundary.Verify();
             installed = null;
@@ -172,7 +177,7 @@ public sealed class CandidateTextEditor : IArtifactEditor, IDisposable
             m_boundary.Verify();
             if (!m_artifacts.TryGetValue(relativePath, out ArtifactDescriptor? previous)) throw new ArgumentException("Only a declared text candidate can be removed.");
             if (!previous.mediaType.StartsWith("text/", StringComparison.Ordinal) && previous.mediaType != "application/json") throw new ArgumentException("A text processing stage cannot remove binary candidates.");
-            _ = await new DirectoryArtifactReader(m_root, m_artifacts.Values).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
+            _ = await new DirectoryArtifactReader(m_root, m_artifacts.Values, m_paths).ReadBytesAsync(relativePath, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             m_boundary.Verify();
             string destination = Path.GetFullPath(relativePath, m_root);

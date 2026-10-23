@@ -36,7 +36,9 @@ internal static class NullDefaultMethodEmitter
         if (method.returnType != "void") text.Append(method.returnType).Append(' ').Append(result).Append(" = ");
         text.Append("this.Raw.").Append(method.name).Append('(').Append(string.Join(", ", arguments)).AppendLine(");");
         BufferInputEmitter.Complete(text, method, inputs);
-        if (method.returnType != "void") text.Append("        return ").Append(RecipeConversionEmitter.DirectResult(method, result)).AppendLine(";");
+        if (method.copiedResultIndex is int copiedResult)
+            text.Append("        return ").Append(RecipeConversionEmitter.Result(method, copiedResult, ValueInputEmitter.CopiedLocal(method, copiedResult))).AppendLine(";");
+        else if (method.returnType != "void") text.Append("        return ").Append(RecipeConversionEmitter.DirectResult(method, result)).AppendLine(";");
         BufferInputEmitter.Close(text, buffers);
         ValueInputEmitter.Close(text, values);
         return text.AppendLine("    }").ToString();

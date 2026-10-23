@@ -4,15 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
-using BGCS.Platforms;
+using BGCS.Interop.DotNet;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -79,7 +79,7 @@ public sealed class NativeBufferValueTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "protocol", nativeName = "protocol_fixture" },
+                schemaVersion = 2, library = new() { id = "protocol", nativeName = "protocol_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["protocol.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
@@ -107,16 +107,16 @@ public sealed class NativeBufferValueTests
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(built.targetModels);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
             {
                 importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Protocol.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
-                managedRuntime = ManagedRuntimeResolver.Resolve(target.resolvedTarget!, ManagedRuntimeKind.CoreClr)
+                managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!)
             });
             Assert.Equal(4, plan.methods.Single(method => method.name == "Transform").valueParameters.Length);
             Assert.All(plan.methods.Where(method => method.name is "Fill" or "FillBytes"), method => Assert.True(Assert.Single(method.bufferProtocols).writtenCountIndex >= 0));
@@ -236,6 +236,6 @@ public sealed class NativeBufferValueTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

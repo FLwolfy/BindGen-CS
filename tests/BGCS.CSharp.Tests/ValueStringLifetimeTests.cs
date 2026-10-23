@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Interop;
+using BGCS.Core.Requests;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -18,7 +18,7 @@ public sealed class ValueStringLifetimeTests
     public async Task ActualFunctionTableCallsKeepCleanupOnTheCreatingThreadAcrossClosureAndFailure()
     {
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(ValueStringResultTests.Project(ValueStringResultTests.Module(NativeTextEncoding.Utf8)),
+        await new CSharpTestBackend().EmitAsync(ValueStringResultTests.Project(ValueStringResultTests.Module(NativeTextEncoding.Utf8)),
             new EmissionRequest("value_strings", sink) { maximumValueStringCodeUnits = 73 }, CancellationToken.None);
         const string consumer = """
             using System;

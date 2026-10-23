@@ -17,7 +17,7 @@ def verify_summary(parent: dict) -> dict:
             or not all(isinstance(value.get(key), str) and SHA.fullmatch(value[key]) for key in ('receiptSha256', 'manifestSha256'))):
         raise RuntimeError('The installed source-contributor same-manifest proof is absent or incomplete.')
     assets = value.get('pluginAssets')
-    names = {'Package.Plugin.dll', 'Package.Plugin.deps.json', 'BGCS.Contracts.dll'}
+    names = {'Package.Plugin.dll', 'Package.Plugin.deps.json', 'BGCS.Core.dll'}
     if (not isinstance(assets, list) or len(assets) != len(names) or any(not isinstance(asset, dict) for asset in assets)
             or {asset.get('path') for asset in assets} != names
             or any(set(asset) != {'path', 'digest'} or not isinstance(asset.get('digest'), dict) or set(asset['digest']) != {'value'}

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 
 namespace BGCS.CSharp.Planning;
 
@@ -29,7 +29,7 @@ internal static class SharedContextPlanner
         {
             InteropFunction function = functionsById[method.nativeExport].Single();
             if (!OverloadPlanner.IsDirect(plan, method, function)) continue;
-            Add(method, method.returnProjection is { fromNativeExpression: not null } projection ? projection.managedType : method.returnType,
+            Add(method, method.projectedReturnType,
                 Enumerable.Range(0, method.parameterTypes.Length).ToImmutableArray());
         }
         foreach (CSharpStatusMethodPlan status in plan.statusMethods.Where(status => status.instanceIndex < 0

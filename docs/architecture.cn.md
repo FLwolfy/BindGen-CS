@@ -1,99 +1,75 @@
-# BGCS 3.0 架构
+# 架构
 
-[English](architecture.md) | [文档](README.cn.md) | [评估](assessment.cn.md)
+BGCS 是源码生成器，另有独立的绑定 Runtime。CLI 与 C# 调用使用同一个 Engine；消费项目自行编译、链接、包装、部署和运行。
 
-BGCS 是源码生成器。`BindingHost` 协调本地生成会话，不是网络服务；CLI 和普通 SDK 调用
-使用相同流程。本文描述源码边界，不是已经完成的验收回执。
+## 分层
 
-## 十一个模块，四个产品
+```mermaid
+flowchart TB
+    CLI["CLI / 自己的 C# 工具"] --> BGCS["BGCS：简单入口与基础组合"]
+    BGCS --> Engine["Engine：配置、会话、流水线"]
+    BGCS --> Base["宿主、桌面目标、.NET 互操作和 Clang 实现"]
+    Engine --> Algorithms["Analysis / NativeBridge / CSharp / Infrastructure"]
+    Algorithms --> Core["Core：不可变模型与扩展端口"]
+    Engine --> Core
+    Base --> Core
+    Optional["按需官方实现 / 私有实现"] --> Core
+    Bindings["生成的绑定"] --> Runtime["独立 Runtime"]
+```
 
-完整 SDK/工具交付内部模块。用户选择 `BGCS`、`BindGen-CS`、供普通插件使用的
-`BGCS.Contracts`，或供生成应用使用的 `BGCS.Runtime`。
+`BGCS` 是组合入口；`BGCS.Engine` 不引用具体 frontend、宿主或目标实现。默认组合只在完整产品入口创建。内部程序集随 BGCS 交付，不要求用户逐个安装。
 
 | 模块 | 职责 |
 | --- | --- |
-| BGCS.Contracts | 分离的不可变 native/bridge/interop/managed 事实及中立端口 |
-| BGCS.Infrastructure | 快照、缓存、发布、插件加载与 worker 传输 |
-| BGCS.Frontend.Clang | C/C++ 解析事实、类型图、源码与布局 |
-| BGCS.Frontend.Clang.Worker | 版本化的独立解析进程及高级贡献器 |
-| BGCS.Platforms | 宿主/目标、ABI 和只读 SDK/工具链描述 |
-| BGCS.Analysis | 选择/闭包、存储、调用 ABI 和语义安全 |
-| BGCS.Cpp2C | 类型化 C++ lowering，发射 C bridge 和断言源码 |
-| BGCS.CSharp | 托管投影、发射规划、C# 与最终契约检查 |
-| BGCS.Runtime | 独立的消费者调用、lease、handle、buffer、codec 和 callback |
-| BGCS | 配置、扩展会话、流水线、工作区与发布 |
-| BGCS.Tool | CLI 请求、诊断和取消 |
+| Core | 中立事实、请求、诊断、类型化计划与接口。 |
+| Analysis | 声明选择、布局、语义、安全与契约复核。 |
+| NativeBridge | C/C++ 转换、类型化操作与桥接源码。 |
+| CSharp | 托管投影、调用/导入计划与 C# 源码。 |
+| Infrastructure | 文件身份、协议、扩展加载、缓存与发布事务。 |
+| Engine | 冻结配置、会话与生成阶段协调。 |
+| BGCS | 简单公开入口和明确的基础注册。 |
+| Runtime | 原生模块、调用、资源与生命周期。 |
+| Tool | 参数与呈现，通过统一公开流程执行。 |
 
-[工程依赖策略](../eng/architecture/project-dependencies.json)是机器可读边界。
-Contracts/Runtime 无其他 BGCS 依赖；Analysis 和普通 lowering 不持有 Clang AST。
-Host 经协议调用 worker，进程隔离不是不可信插件沙箱。生产友元绕过和共享编译源码
-被禁止，登记的 Frontend.Tests 友元仅为测试例外。
+具体实现位于 `extensions/foundation`、`extensions/frontends` 与独立 `BGCS.Extension.*` 工程。边界由工程依赖矩阵和源码检查约束，不能只凭目录判断。
 
-## 模型与流程
+## 数据流
 
-```mermaid
-flowchart TD
-    Input[头文件 + 本地配置 + 插件] --> Host[BindingHost 协调器]
-    Host --> Worker[独立 Clang worker]
-    Worker --> Native[NativeModule]
-    Native --> Bridge[CppBridgeModule / C helper 规划]
-    Bridge --> ABI[重解析 C ABI / InteropModule]
-    Native --> ABI
-    ABI --> Managed[ManagedApiModel]
-    Managed --> Plan[CSharpEmissionPlan]
-    Plan --> Output[C# + bridge + manifest]
-    Output --> Checks[最终源码契约 + 所属产物发布]
-    Checks --> External[消费者编译 / 链接 / 打包 / 部署]
+```text
+配置 + 显式注册
+→ 宿主设施 → 本地配置与扩展输入 → 冻结
+→ 目标/runtime → frontend 准备 → 输入完整的缓存查询
+→ NativeModule → 选择与语义
+→ 按需 NativeBridgePlan → 源码与桥接头复核
+→ InteropModule → 精确调用计划 → ManagedApiModel
+→ CSharpEmissionPlan → 后处理 → 最终静态契约检查
+→ 输入再次校验 → 完整产物发布
 ```
 
-原生事实、bridge 操作、ABI 语义和托管呈现分别归属不同模型，通过稳定 ID 连接。
-未知事实保持未知，发布模型不携带 parser handle 或运行服务；等大小不证明字段、
-对齐或调用约定相同。
+原生事实不提前变成 C# 字符串。存储布局、载体布局和调用兼容性分别验证。调用计划绑定精确签名、方向、target/triple、runtime 摘要和 ABI provider，不能用于另一份签名。
 
-C++ 构造/析构、调用、转换、cast、callback 和异常是有限类型化操作。发射的 C 头文件
-会重解析检查导出 ABI。bridge 和存储断言由外部编译器编译，BGCS 不编译它们或检查
-原生目标文件。C header helper 需显式启用并编译进消费者配置的模块，不能假设已有依赖
-二进制自动具备这些导出。
+C/C++ 共用类型化桥接模块。桥接明确物理导出与原始声明的映射。emitter 不发现或执行编译器；生成的操作与静态断言交给消费项目编译。
 
-## 宿主、目标与 SDK
+## 扩展首先是接口实现
 
-执行宿主选择 parser 资源，省略目标时解析检测到的宿主（含 GNU/musl 区别）。显式目标
-选择 CPU/platform/ABI，provider 映射描述和能力，Clang 观察声明与布局。
-显式 SDK/sysroot/header 输入具有权威性；随包 Clang builtin headers 只补充目标 SDK
-及 C++ 头文件。产品不会运行外部 driver 来修补不支持的源码或替换编译器专属声明。
+普通类可以直接用 `RegisterFactory<T>` 注册。`IBindingPlugin` 只是组织一组注册的便利方式；本地 manifest 为 CLI 加载已经部署的实现。不自动扫描程序集，不在生成时下载包。
 
-Windows 可用 Windows worker 加显式 NDK 输入，为 Android ARM64 生成绑定。消费者构建
-须保持头文件、宏、packing、ABI 一致。私有目标插件可以描述获授权的 SDK，但不能凭空
-提供未知调用分类或托管 runtime 行为。见[平台扩展](platform-extension.cn.md)
-和 [CustomTargetPlugin](../examples/CustomTargetPlugin/README.md)。
+descriptor 是 ID、端口和 priority 的唯一权威。重复注册失败；冻结前替换必须显式指定。独占 provider 必须明确选择或唯一适用；可组合变换按 priority 和稳定 ID 排序。
 
-## 托管投影与 Runtime
+宿主设施在读取配置前通过代码选择。后加载的 manifest 不能替换读取它时使用的路径规则。服务由会话拥有；不能完整描述的可变工厂状态会禁用受影响缓存。
 
-FunctionTable、DllImport、LibraryImport 共用 interop 语义和受检计划。Raw 使用生成的
-原生 carrier；string、span、owned、callback、async 友好层需要明确生命周期、allocator
-和长度证据。无法支持的 ABI/生命周期组合会失败或保留明确说明的 Raw 路径。
+## 生命周期与发布
 
-`api.projectionInputs` 冻结源码、引用镜像和 defines，供静态 Roslyn 绑定。BGCS 不发射/
-加载消费者程序集、不运行工程或布局探针。标量字段复制不能授权未知 CLR 布局直接
-复用原生 ABI，原生存储和按值资格仍单独检查。
+生成服务作用域和宿主基础设施作用域分开。frontend、transform、processor、validator 在最终输入复核和提交前释放；释放失败阻止发布。路径服务持续存活到锁与事务安装结束。
 
-生成上下文拥有模块会话，调用及资源保留清理 lease；关闭后拒绝新调用，不会卸载仍被
-清理使用的代码。Runtime 不依赖生成器。package/source 是交付选择，不改变所有权规则。
-不可阻塞 browser profile 不能采用需要阻塞 stop/join 的拥有型虚代理注册协议。
+结果区分未发布、成功发布，以及已提交产物但后续基础设施清理失败；不会把已经提交伪装成从未发生。
 
-## 扩展、缓存与发布
+Runtime 不依赖 Core 或生成器。调用、对象、回调和异步任务仍需要原生代码时，module lease 阻止卸载。平台调度通过明确的 Runtime 接口或生成适配代码提供。
 
-Contracts-only 服务具有声明身份、顺序和会话生命周期；高级 Clang 贡献器仅在 worker
-调用期间借用 parser handle。指纹包含扩展状态和外部输入，不完整则禁用相应复用。
-相关缓存命中仍执行最终 validator/processor。
+## 维护原则
 
-配置组合只读取本地文件，保留固定内容身份及每份文档的相对路径基准，拒绝网络配置。
-输入字节、目录成员和缺失事实会复核，不用时间戳或旧结论替代。发布按 owner、完整
-产物集合、锁和恢复 journal 检查；不承诺任意变化文件系统的原子快照。
+新 SDK 输入、现有模型能表达的 ABI 规则、库语义与 API 呈现，通常通过新增接口实现解决。已复现缺陷或现有模型无法表达的机制，仍可能要求修复核心；不能承诺核心永不修改。
 
-## 验收边界
+不通过兼容 namespace、旧配置读取、平行注册表、生产友元或私有反射测试绕过边界。仍适用的第三方许可继续保留。
 
-必需 CI 是 Windows 完整生成、Linux/macOS 生成 smoke，以及一个完整产品安装任务。
-核心基线、源码/API/依赖检查和原有各宿主性能预算保持必需。AOT/Wasm 应用构建是可选
-手动私有检查。目标/源码支持仍属范围，平台调用结论另需实际证据。见[测试](testing.cn.md)
-和[验收](acceptance.cn.md)。
+参阅[扩展](extensibility.cn.md)、[原生桥接](native-bridge.cn.md)、[Runtime](runtime-lifetime.cn.md)与[维护](maintenance.cn.md)。

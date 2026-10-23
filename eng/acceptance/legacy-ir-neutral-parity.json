@@ -1125,5 +1125,10 @@
   ],
   "sourceAssertionCorrespondenceReviewed": true,
   "sameRevisionReleaseCertified": false,
-  "reviewedAt": "2026-10-16"
+  "reviewedAt": "2026-10-16",
+  "historicalOnly": true,
+  "currentRevisionCertified": false,
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "currentEvidenceInventory": "eng/acceptance/feature-inventory.json",
+  "scopeNotice": "Historical source/assertion correspondence and old local observations only. Current4.0 implementation and exact same-revision execution mappings are authoritative in feature/configuration inventories; no old receipt certifies current behavior."
 }

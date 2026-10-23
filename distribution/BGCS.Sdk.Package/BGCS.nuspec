@@ -4,7 +4,7 @@
     <id>BGCS</id>
     <version>$version$</version>
     <authors>FLwolfy</authors>
-    <description>Complete BGCS generation SDK, native bridge and isolated parser worker.</description>
+    <description>Complete source-only BGCS generator with explicit standard implementations and an isolated parser worker.</description>
     <license type="expression">MIT</license>
     <readme>README.md</readme>
     <projectUrl>https://github.com/FLwolfy/BindGen-CS</projectUrl>

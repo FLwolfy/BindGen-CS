@@ -3,12 +3,12 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 
 namespace BGCS.Examples.LoweringPlugin;
 
@@ -16,16 +16,16 @@ namespace BGCS.Examples.LoweringPlugin;
 public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.engine-lowering", "3.0.0",
-        [new("engine.rename-tick", ExtensionPort.CppCallableLowering, 100)]);
+    public PluginDescriptor descriptor => new("bgcs.examples.engine-lowering", "4.0.0",
+        [new("engine.rename-tick", ExtensionPort.NativeCallableLowering, 100)]);
 
     /// <inheritdoc />
     public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        => registry.RegisterFactory<ICppCallableLowering>("engine.rename-tick", () => new RenameTickLowering());
+        => registry.RegisterFactory<INativeCallableLowering>("engine.rename-tick", _ => new RenameTickLowering());
 
     /// <inheritdoc />
     public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
-        => Fingerprint("engine-lowering-plugin:3.0.0", cancellationToken);
+        => Fingerprint("engine-lowering-plugin:4.0.0", cancellationToken);
 
     private static CacheFingerprintContribution Fingerprint(string state, CancellationToken cancellationToken)
     {
@@ -33,7 +33,7 @@ public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProv
         return new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(state)))), []);
     }
 
-    private sealed class RenameTickLowering : ICppCallableLowering, ICacheFingerprintProvider
+    private sealed class RenameTickLowering : INativeCallableLowering, ICacheFingerprintProvider
     {
         /// <inheritdoc />
         public string id => "engine.rename-tick";
@@ -49,7 +49,7 @@ public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProv
                 && !callable.children.Select(context.module.GetDeclaration).Any(child => child.kind == "Parameter");
 
         /// <inheritdoc />
-        public CppCallableLoweringPlan Lower(NativeDeclaration callable, LoweringContext context, CancellationToken cancellationToken)
+        public NativeCallableLoweringPlan Lower(NativeDeclaration callable, LoweringContext context, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!CanLower(callable, context)) throw new ArgumentException("The extension supports only void World.Tick() with no parameters.", nameof(callable));
@@ -68,6 +68,6 @@ public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProv
 
         /// <inheritdoc />
         public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
-            => Fingerprint("engine-world-tick:void/no-parameters:3.0.0", cancellationToken);
+            => Fingerprint("engine-world-tick:void/no-parameters:4.0.0", cancellationToken);
     }
 }

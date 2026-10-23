@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -14,7 +14,7 @@ public sealed class BridgeRecordVerifier
 {
     /// <summary>Rejects missing compiler traits, changed fields and cyclic or incompatible inline carriers.</summary>
     /// <param name="module">The detached source and complete C storage graph.</param>
-    public void Verify(CppBridgeModule module)
+    public void Verify(NativeBridgePlan module)
     {
         ArgumentNullException.ThrowIfNull(module);
         var types = module.types.ToDictionary(type => type.id);

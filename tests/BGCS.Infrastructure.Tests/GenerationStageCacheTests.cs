@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -5,7 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
-using BGCS.Contracts.Common;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.Caching;
 using Xunit;
 
@@ -13,11 +14,12 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class GenerationStageCacheTests
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     [Fact]
     public void CompleteSetsAreCopiedVerifiedAndMalformedEntriesAreMisses()
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         ContentDigest key = Digest("generation");
         byte[] bytes = Encoding.UTF8.GetBytes("complete source");
         CachedStageArtifact source = new(new("Types/Value.g.cs", "text/x-csharp", Digest(bytes)), bytes);
@@ -46,7 +48,7 @@ public sealed class GenerationStageCacheTests
     public void CandidatePathEscapesAreRejectedBeforeAnyEntryIsInstalled(string path)
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         Assert.Throws<InvalidDataException>(() => cache.Store(Digest("escape"), [new(new(path, "text/x-csharp", Digest("value")), Encoding.UTF8.GetBytes("value"))]));
         Assert.Empty(Directory.GetFiles(scratch.root));
     }
@@ -55,7 +57,7 @@ public sealed class GenerationStageCacheTests
     public void MissingNullAndIncompleteEntryDescriptorsNeverReturnPartialArtifacts()
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root);
+        GenerationStageCache cache = new(scratch.root, m_paths);
         ContentDigest key = Digest("entry");
         Assert.False(cache.TryRead(key, out var artifacts, out var reason));
         Assert.Null(reason);
@@ -73,7 +75,7 @@ public sealed class GenerationStageCacheTests
     public void EntryAndTotalBudgetsBoundDiskAndPruneOnlyOwnedDigestEntries()
     {
         using Scratch scratch = new();
-        GenerationStageCache cache = new(scratch.root, maximumBytes: 1024, maximumEntryBytes: 1024);
+        GenerationStageCache cache = new(scratch.root, m_paths, maximumBytes: 1024, maximumEntryBytes: 1024);
         byte[] bytes = new byte[400];
         CachedStageArtifact artifact = new(new("Value.g.cs", "text/x-csharp", Digest(bytes)), bytes);
         ContentDigest first = Digest("first");

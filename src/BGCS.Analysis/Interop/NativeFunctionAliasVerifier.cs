@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
 
 namespace BGCS.Analysis.Interop;
 

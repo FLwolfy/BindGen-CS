@@ -7,10 +7,10 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Targets;
 
 namespace BGCS.CSharp.Planning;
 
@@ -37,6 +37,8 @@ internal sealed class ReverseCallbackPlanner
     ) {
         InteropParameter parameter = function.parameters[index];
         CallbackContract contract = parameter.callback ?? throw new InvalidOperationException("The callback protocol is absent.");
+        if (contract.requiredResultOutputIndex is not null)
+            throw new NotSupportedException("This normalized callback requires complete result-output initialization on every invocation; a managed failure-write protocol must be explicitly implemented before a friendly callback can be generated.");
         if (parameter.ownership is not null || parameter.text is not null || parameter.buffer is not null
             || parameter.singleValue is not null || method.valueProjections.ContainsKey(index))
             throw new NotSupportedException("A callback parameter cannot simultaneously replace another native storage or value-conversion protocol.");
@@ -67,8 +69,7 @@ internal sealed class ReverseCallbackPlanner
             if (state.callback is not null || state.ownership is not null || state.text is not null || state.buffer is not null || state.singleValue is not null)
                 throw new NotSupportedException("Generated callback user-data cannot replace another native parameter protocol.");
         }
-        else if (requireStatic || contract.callableUserDataIndex is not null || plan.managedRuntime?.requiresStaticCallbackThunks == true
-            || plan.managedRuntime?.kind is ManagedRuntimeKind.NativeAot or ManagedRuntimeKind.BrowserWasm)
+        else if (requireStatic || contract.callableUserDataIndex is not null || plan.managedRuntime?.requiresStaticCallbackThunks == true)
             throw new NotSupportedException("This callback protocol requires an explicit user-data channel and a generated static callback thunk.");
         string digest = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(function.id.value + ":" + parameter.id.value)))[..10];
         string name = method.name.TrimStart('@') + method.parameterNames[index].TrimStart('@') + "Handler_" + digest;

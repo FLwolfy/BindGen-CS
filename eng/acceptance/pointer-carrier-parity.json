@@ -11,8 +11,8 @@
     "GeneratedCodeCompilationMatrixTests.C_Handle_Properties_With_Named_Anonymous_Unions"
   ],
   "implementation": [
-    "BGCS.Contracts.Managed.ManagedPointerCarrierRequest",
-    "BGCS.Contracts.Managed.ManagedPointerFunctionRequest",
+    "BGCS.Core.Managed.ManagedPointerCarrierRequest",
+    "BGCS.Core.Managed.ManagedPointerFunctionRequest",
     "BGCS.Analysis.Safety.NativePointerShapeReader",
     "BGCS.CSharp.Projection.ManagedPointerProjection",
     "BGCS.CSharp.Planning.PointerCarrierPlanner",
@@ -21,9 +21,39 @@
     "BGCS.CSharp.Validation.PointerCarrierContractVerifier"
   ],
   "evidence": [
-    { "test": "BGCS.CSharp.Tests.PointerCarrierTests", "passed": 20, "failed": 0, "skipped": 0, "receipt": "artifacts/test-results/cpp-pointer-carrier-planning-documentation-twenty.trx" },
-    { "test": "BGCS.Tests.PointerCarrierConfigurationTests", "passed": 3, "failed": 0, "skipped": 0, "receipt": "artifacts/test-results/cpp-pointer-carrier-configuration-current.trx" },
-    { "test": "BGCS.Tests.NativePointerCarrierTests", "passed": 6, "failed": 0, "skipped": 0, "receipt": "artifacts/test-results/cpp-pointer-carrier-native-six.trx", "host": "Windows x64", "managedRuntime": "CoreCLR", "importModes": ["FunctionTable", "DllImport", "LibraryImport"], "runtimeModes": ["package", "source"], "nativeBuildProvider": "auto" }
+    {
+      "test": "BGCS.CSharp.Tests.PointerCarrierTests",
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "receipt": "artifacts/test-results/cpp-pointer-carrier-planning-documentation-twenty.trx"
+    },
+    {
+      "test": "BGCS.Tests.PointerCarrierConfigurationTests",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "receipt": "artifacts/test-results/cpp-pointer-carrier-configuration-current.trx"
+    },
+    {
+      "test": "BGCS.Tests.NativePointerCarrierTests",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "receipt": "artifacts/test-results/cpp-pointer-carrier-native-six.trx",
+      "host": "Windows x64",
+      "managedRuntime": "CoreCLR",
+      "importModes": [
+        "FunctionTable",
+        "DllImport",
+        "LibraryImport"
+      ],
+      "runtimeModes": [
+        "package",
+        "source"
+      ],
+      "nativeBuildProvider": "auto"
+    }
   ],
   "verifiedBehavior": [
     "Opaque record and named void-pointer aliases with no invented extent or dereference",
@@ -44,5 +74,10 @@
     "No arbitrary-size storage or calling ABI is inferred from an address carrier",
     "Local Windows/CoreCLR evidence does not certify NativeAOT, browser Wasm, Linux, macOS or release package consumption",
     "Same-revision release matrices and full verification receipts remain required"
-  ]
+  ],
+  "historicalOnly": true,
+  "currentRevisionCertified": false,
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "currentEvidenceInventory": "eng/acceptance/feature-inventory.json",
+  "scopeNotice": "Historical source/assertion correspondence and old local observations only. Current4.0 implementation and exact same-revision execution mappings are authoritative in feature/configuration inventories; no old receipt certifies current behavior."
 }

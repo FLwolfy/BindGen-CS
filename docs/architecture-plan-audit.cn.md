@@ -1,9 +1,11 @@
+> Historical architecture audit. Superseded by [current architecture](architecture.md) and records/acceptance.
+
 # 架构 Plan 逐项核对
 
 > 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
 
 
-> 历史核对记录：下文是早期八工程方案及当时实现/证据的原始映射，不代表 BGCS 3.0 当前完成状态。3.0 的当前工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
+> 历史核对记录：下文是早期八工程方案及当时实现/证据的原始映射，不代表 BGCS 4.0 当前完成状态。现行工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
 
 [文档索引](README.cn.md) · [完整计划](platform-architecture-refactor-plan.cn.md) · [当前架构](architecture.cn.md) · [独立验收](architecture-refactor-acceptance.cn.md)
 

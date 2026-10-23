@@ -37,6 +37,31 @@ def source_identity(root: Path) -> dict:
     return {"revision": revision, "workingTreeDirty": dirty, "checkedOutSourceSha256": content.hexdigest()}
 
 
+def package_version(root: Path, *, declared: bool = False) -> str:
+    """Select the formal version or one deterministic private commit/content candidate."""
+    version = ET.parse(root / "Directory.Build.props").findtext("./PropertyGroup/Version")
+    if not version or not re.fullmatch(r"4\.0\.0(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
+        raise RuntimeError("The current tree must declare 4.0.0 or its private -ci candidate.")
+    if declared and version == "4.0.0":
+        return version
+    source = source_identity(root)
+    # Prefix the hash segments so NuGet cannot normalize an all-numeric hash's
+    # leading zeroes. Both exact full identities remain in the package receipt.
+    return f"4.0.0-ci.g{source['revision'][:12]}.s{source['checkedOutSourceSha256'][:16]}"
+
+
+def discover_test_projects(root: Path) -> list[Path]:
+    """Discover every retained test project, including nested extension projects."""
+    projects = []
+    for project in sorted((root / "tests").rglob("*.csproj"), key=lambda path: path.relative_to(root).as_posix()):
+        if any(part in {"bin", "obj"} for part in project.relative_to(root / "tests").parts):
+            continue
+        document = ET.parse(project)
+        if any(item.get("Include") == "Microsoft.NET.Test.Sdk" for item in document.findall(".//PackageReference")):
+            projects.append(project)
+    return projects
+
+
 def test_receipt(path: Path, match: str | None = None) -> dict:
     document = ET.parse(path)
     definitions = {}
@@ -92,11 +117,17 @@ def main() -> None:
     tests.add_argument("--output", type=Path, required=True)
     discover = commands.add_parser("discover-tests")
     discover.add_argument("root", type=Path)
+    version = commands.add_parser("package-version")
+    version.add_argument("root", type=Path)
+    version.add_argument("--declared", action="store_true", help="Select exact formal source version for accepted release packages.")
     start = commands.add_parser("start")
     start.add_argument("root", type=Path)
     start.add_argument("--output", type=Path, required=True)
     start.add_argument("--uses-prebuilt-outputs", action="store_true")
     args = parser.parse_args()
+    if args.command == "package-version":
+        print(package_version(args.root.resolve(), declared=args.declared))
+        return
     if args.command == "start":
         result = {"schemaVersion": 1, "startedAtUnixSeconds": time.time(), "source": source_identity(args.root.resolve()),
                   "usesPrebuiltOutputs": args.uses_prebuilt_outputs}
@@ -104,10 +135,8 @@ def main() -> None:
         args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         return
     if args.command == "discover-tests":
-        for project in sorted((args.root / "tests").glob("*/*.csproj")):
-            document = ET.parse(project)
-            if any(item.get("Include") == "Microsoft.NET.Test.Sdk" for item in document.findall(".//PackageReference")):
-                print(project.relative_to(args.root).as_posix())
+        for project in discover_test_projects(args.root):
+            print(project.relative_to(args.root).as_posix())
         return
     result = test_receipt(args.trx, args.match)
     args.output.parent.mkdir(parents=True, exist_ok=True)

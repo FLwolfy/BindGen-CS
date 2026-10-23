@@ -14,25 +14,21 @@ while IFS= read -r project; do
   project="${project%$'\r'}"
   projects+=("${project}")
 done < <(
-  "${PYTHON:-python3}" -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["publicApiAssemblies"]))' \
+  "${PYTHON:-python3}" -c 'import json,sys; m=json.load(open(sys.argv[1])); rows=[name+"|"+m["assemblyProjects"][name] for name in m["publicApiAssemblies"]]; print("\n".join(rows))' \
     "${ROOT_DIR}/distribution/manifests/product-packages.json"
 )
 if (( ${#projects[@]} == 0 )); then
   printf 'The delivered public API assembly manifest is empty.\n' >&2
   exit 1
 fi
-# Standalone API checks prepare their own outputs; the full baseline already
-# built both projects and passes SKIP_RESTORE_BUILD=1 to avoid rebuilding them.
 if [[ "${SKIP_RESTORE_BUILD:-0}" != "1" ]]; then
-  "${DOTNET_CMD}" build "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" \
-    --configuration "${CONFIGURATION}"
-  # The advanced frontend is delivered independently of Host's reference graph.
-  "${DOTNET_CMD}" build "${ROOT_DIR}/src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" \
-    --configuration "${CONFIGURATION}"
+  "${DOTNET_CMD}" build "${ROOT_DIR}/BindGen-CS.slnx" --configuration "${CONFIGURATION}"
+  "${DOTNET_CMD}" build "${ROOT_DIR}/eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" --configuration "${CONFIGURATION}"
 fi
 
-for project in "${projects[@]}"; do
-  assembly="${ROOT_DIR}/src/${project}/bin/${CONFIGURATION}/net10.0/${project}.dll"
+for record in "${projects[@]}"; do
+  IFS="|" read -r project project_directory <<< "${record}"
+  assembly="${ROOT_DIR}/${project_directory}/bin/${CONFIGURATION}/net10.0/${project}.dll"
   baseline="${BASELINE_DIR}/${project}.txt"
   current="${CURRENT_DIR}/${project}.txt"
   if [[ ! -f "${assembly}" ]]; then

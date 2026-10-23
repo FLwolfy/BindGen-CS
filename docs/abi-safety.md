@@ -22,6 +22,10 @@ Verify native storage, managed carrier storage and by-value calling ABI
 independently. ExplicitLayout can represent offsets but does not fix parameter
 register classification, stack alignment or runtime marshalling.
 
+The default `bridge.aggregateStrategy = pointerBridge` converts boundary aggregates
+to typed pointer and output channels. The native bridge performs the original
+by-value call. Explicit `direct` requires an exact applicable call plan.
+
 Current C# planning admits supported primitive, enum, pointer and fixed callback
 ABI signatures. A resolved .NET 10 CoreCLR/NativeAOT aggregate profile also admits
 representable C structs/unions for the implemented Windows x64 and System V AMD64
@@ -41,8 +45,9 @@ and [.NET 10 runtime classification implementation](https://github.com/dotnet/ru
 
 Unknown profiles, unrepresentable alignment, bitfields, flexible arrays, empty or
 incomplete records and special scalars still require a pointer or native bridge.
-Browser and other CPU aggregate profiles remain unsupported until their calling
-path is implemented and validated. Every import mode and execution model needs
+The Browser managed/native boundary admits implemented scalar/address carriers;
+aggregate values are converted through the bridge. This does not admit direct
+aggregate ABI calls. Other CPUs also need an applicable call plan. Every import mode and execution model needs
 real argument, return and reverse callback tests; compilation is insufficient.
 
 The over-aligned nested regression checks three independent native facts:

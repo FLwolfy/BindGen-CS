@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BGCS.Contracts;
+using BGCS.Core;
 
 namespace BGCS.Tool.Commands;
 
@@ -17,7 +17,7 @@ internal static class GenerateCommand
         async System.Threading.Tasks.Task<int> ExecuteAsync()
         {
             GenerationRequest request = await GenerationArguments.CreateRequestAsync(options, cancellation.token).ConfigureAwait(false);
-            await using BindingHost host = BindingHost.CreateDefault();
+            await using BindingHost host = BindingGenerator.CreateDefault();
             GenerationDiffResult result = await host.DiffAsync(request, cancellation.token).ConfigureAwait(false);
             cancellation.token.ThrowIfCancellationRequested();
             WriteDiagnostics(result.diagnostics, options.diagnostics);
@@ -39,7 +39,7 @@ internal static class GenerateCommand
         async System.Threading.Tasks.Task<int> ExecuteAsync()
         {
             GenerationRequest request = await GenerationArguments.CreateRequestAsync(options, cancellation.token).ConfigureAwait(false);
-            await using BindingHost host = BindingHost.CreateDefault();
+            await using BindingHost host = BindingGenerator.CreateDefault();
             GenerationResult result = await host.GenerateAsync(request, cancellation.token).ConfigureAwait(false);
             cancellation.token.ThrowIfCancellationRequested();
             WriteDiagnostics(result.diagnostics, options.diagnostics);

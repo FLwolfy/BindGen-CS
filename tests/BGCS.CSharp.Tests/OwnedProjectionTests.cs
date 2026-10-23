@@ -2,10 +2,10 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using Xunit;
@@ -26,7 +26,7 @@ public sealed class OwnedProjectionTests
     {
         InteropModule valid = Module();
         var projection = new DefaultManagedProjection();
-        CSharpEmissionPlan verified = new CSharpEmissionPlanner().Plan(projection.Project(valid, new("Generated.Owned", "WidgetApi"), CancellationToken.None), new("unused", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan verified = new CSharpTestPlanner().Plan(projection.Project(valid, new("Generated.Owned", "WidgetApi"), CancellationToken.None), new("unused", new NeutralBackendTests.MemorySink()));
         Assert.Single(verified.objects);
         Assert.Single(verified.statusMethods, method => method.ownedResult is not null);
         InteropFunction create = valid.functions[0];
@@ -52,8 +52,8 @@ public sealed class OwnedProjectionTests
             OwnershipContract error = release.error!.errorOwnership! with { releaseThreadDomain = null };
             functions = functions.SetItem(1, release with { error = release.error with { errorOwnership = error }, parameters = release.parameters.SetItem(1, release.parameters[1] with { ownership = error }) });
         }
-        InteropModule incomplete = new(valid.libraryId, valid.targetId, valid.pointerSize, valid.types, functions, []);
-        CSharpEmissionPlan restricted = new CSharpEmissionPlanner().Plan(projection.Project(incomplete, new("Generated.Owned", "WidgetApi"), CancellationToken.None), new("unused", new NeutralBackendTests.MemorySink()));
+        InteropModule incomplete = new(valid.libraryId, valid.targetId, valid.pointerSize, valid.types, functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+        CSharpEmissionPlan restricted = new CSharpTestPlanner().Plan(projection.Project(incomplete, new("Generated.Owned", "WidgetApi"), CancellationToken.None), new("unused", new NeutralBackendTests.MemorySink()));
         Assert.Empty(restricted.objects);
         Assert.DoesNotContain(restricted.statusMethods, method => method.ownedResult is not null);
         Assert.Equal(verified.methods.Select(method => method.nativeExport), restricted.methods.Select(method => method.nativeExport));
@@ -82,6 +82,6 @@ public sealed class OwnedProjectionTests
         InteropFunction destroy = new(cleanup, "destroy_widget", integer.id, [new(new("self"), "self", pointer.id), destroyError], "C")
         { sourceOwnerType = native, error = new("0", evidence) { errorParameter = destroyError.id, errorOwnership = destroyError.ownership } };
         InteropFunction releaseError = new(errorCleanup, "release_error", empty.id, [new(new("error-value"), "error", errorPointer.id)], "C");
-        return new("widget", "windows-x64-msvc", 8, [integer, empty, handle, pointer, output, errorType, errorPointer, errorOutput], [create, destroy, releaseError], []);
+        return new("widget", "windows-x64-msvc", 8, [integer, empty, handle, pointer, output, errorType, errorPointer, errorOutput], [create, destroy, releaseError], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

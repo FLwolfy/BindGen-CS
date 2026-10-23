@@ -7,16 +7,21 @@ using System.Threading;
 using BGCS.Analysis.Interop;
 using BGCS.Analysis.Bridge;
 using BGCS.Analysis.Types;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 
 namespace BGCS.Analysis.Declarations;
 
 /// <summary>Separates public selection from the native facts required by selected declarations.</summary>
 public sealed class DeclarationSelector
 {
+    private readonly IEqualityComparer<string> m_paths;
+    /// <summary>Captures explicitly established header path identity comparisons without selecting host rules.</summary>
+    /// <param name="headerPathComparer">The caller's comparer for normalized source path identities.</param>
+    public DeclarationSelector(IEqualityComparer<string> headerPathComparer)
+        => m_paths = headerPathComparer ?? throw new ArgumentNullException(nameof(headerPathComparer));
     /// <summary>Validates typed family choices before any source is parsed.</summary>
     /// <param name="request">The immutable source selection.</param>
     /// <exception cref="ArgumentException">A list is uninitialized, duplicated, undefined or contradictory.</exception>
@@ -103,7 +108,7 @@ public sealed class DeclarationSelector
         foreach (ImmutableArray<string> values in new[] { request.includeHeaders, request.excludeHeaders, request.includeDeclarations, request.excludeDeclarations })
             if (values.IsDefault) throw new ArgumentException("Source selection lists must be initialized immutable arrays.", nameof(request));
         baseDirectory = Path.GetFullPath(baseDirectory);
-        StringComparer paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        IEqualityComparer<string> paths = m_paths;
         HashSet<string> entries = HeaderPaths(entryHeaders, "entry headers");
         if (entries.Count == 0) throw new ArgumentException("At least one entry header is required.", nameof(entryHeaders));
         HashSet<string> includedHeaders = HeaderPaths(request.includeHeaders, "includeHeaders");

@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -174,7 +174,7 @@ public sealed class NativeSourceSelectionTests
         BindingConfiguration configuration = Configuration(SourceLanguage.Cpp) with
         {
             source = Configuration(SourceLanguage.Cpp).source with { selection = new() { excludeDeclarations = ["Demo::Box<int>"] } },
-            cpp = new() { templateInstantiations = new() { types = [new("box", "Demo::Box<int>")] } }
+            bridge = new() { cpp = new() { templateInstantiations = new() { types = [new("box", "Demo::Box<int>")] } } }
         };
         await using BindingHost host = Host();
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.root));
@@ -194,7 +194,7 @@ public sealed class NativeSourceSelectionTests
         BindingConfiguration configuration = Configuration(SourceLanguage.Cpp) with
         {
             source = Configuration(SourceLanguage.Cpp).source with { selection = new() { excludeHeaders = byHeader ? ["shim.h"] : [], excludeDeclarations = byHeader ? [] : ["shim_step"] } },
-            cpp = new() { nativeShims = [new() { id = "shim", publicHeaders = ["shim.h"], exports = ["shim_step"] }] }
+            bridge = new() { nativeShims = [new() { id = "shim", publicHeaders = ["shim.h"], exports = ["shim_step"] }] }
         };
         await using BindingHost host = Host();
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.root));
@@ -213,7 +213,7 @@ public sealed class NativeSourceSelectionTests
         BindingConfiguration configuration = Configuration(SourceLanguage.Cpp) with
         {
             source = Configuration(SourceLanguage.Cpp).source with { selection = new() { includeDeclarations = ["Demo::Ordinary"], excludeDeclarations = [excluded] } },
-            cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator")] }
+            bridge = new() { cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator")] } }
         };
         await using BindingHost host = Host();
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.root));
@@ -224,7 +224,7 @@ public sealed class NativeSourceSelectionTests
 
     private static BindingConfiguration Configuration(SourceLanguage language) => new()
     {
-        schemaVersion = 1, library = new() { id = "selection", nativeName = "selection" },
+        schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" },
         source = new() { language = language, headers = ["entry.h"], parseMacros = false },
         api = new() { @namespace = "Generated.Selection", name = "SelectionApi" }, cache = new() { enabled = false }
     };
@@ -234,7 +234,7 @@ public sealed class NativeSourceSelectionTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
     }
 
     private sealed class Scratch : IDisposable

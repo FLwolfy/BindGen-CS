@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Projection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -27,7 +27,7 @@ public sealed class AnonymousRecordNamingTests
         Assert.Equal("Parent", model.types.Single(type => type.nativeType == new StableId("parent")).name);
         Assert.All(records, type => Assert.DoesNotContain("physical", type.name, StringComparison.OrdinalIgnoreCase));
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("native", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("native", sink), CancellationToken.None);
         CSharpCompilation compilation = CSharpCompilation.Create("AnonymousRecordStorage",
             sink.sources.Select(source => CSharpSyntaxTree.ParseText(source.Value, path: source.Key)),
             ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
@@ -56,7 +56,7 @@ public sealed class AnonymousRecordNamingTests
         InteropModule original = Module("C:/physical/first");
         InteropType alias = new(new("public-alias"), "PublicStorage", NativeTypeCategory.Alias, 4, 4)
         { declarationName = "PublicStorage", sourceQualifiedName = "PublicStorage", elementType = new("anonymous-struct"), source = new("native.h", 8, 1) };
-        InteropModule interop = new(original.libraryId, original.targetId, original.pointerSize, original.types.Add(alias), [], []);
+        InteropModule interop = new(original.libraryId, original.targetId, original.pointerSize, original.types.Add(alias), [], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel projected = new DefaultManagedProjection().Project(interop, new("Generated.Anonymous", "Api")
         {
             names = explicitName ? ImmutableDictionary<string, string>.Empty.Add("anonymous-struct", "ChosenRecord")

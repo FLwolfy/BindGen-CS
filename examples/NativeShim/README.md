@@ -13,7 +13,7 @@ public entry header. `cpp.nativeShims` declares a self-contained C header, imple
 source and exact exports. The worker parses that public ABI and native construction
 includes the declared shim source. The consumer compiles the host target's managed
 files and copies its native binary into the executable directory. It prints `42`.
-The repository Runtime project reference can become `BGCS.Runtime` version `3.0.0`
+The repository Runtime project reference can become `BGCS.Runtime` from the matching development candidate
 for an external consumer after publication.
 
 The default API is an instance context with FunctionTable imports. The consumer

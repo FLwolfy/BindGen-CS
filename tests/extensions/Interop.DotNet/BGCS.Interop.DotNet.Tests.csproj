@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../extensions/foundation/BGCS.Interop.DotNet/BGCS.Interop.DotNet.csproj" />
+    <ProjectReference Include="../../../src/BGCS.Analysis/BGCS.Analysis.csproj" />
+    <ProjectReference Include="../../../src/BGCS.CSharp/BGCS.CSharp.csproj" />
+  </ItemGroup>
+</Project>

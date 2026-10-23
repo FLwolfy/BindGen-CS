@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using BGCS.Configuration;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Interop;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -24,7 +24,7 @@ public sealed class CountedStringConfigurationTests
             "undefined-direction" => rule with { lengthDirection = (NativeParameterDirection)999 },
             _ => rule with { lengthParameter = null }
         };
-        BindingConfiguration configuration = new() { schemaVersion = 1, library = new() { id = "text", nativeName = "text" },
+        BindingConfiguration configuration = new() { schemaVersion = 2, library = new() { id = "text", nativeName = "text" },
             source = new() { headers = ["native.h"] }, semantics = new() { stringParameters = [rule] } };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
     }
@@ -38,13 +38,13 @@ public sealed class CountedStringConfigurationTests
         {
             string path = Path.Combine(root, "bindgen.json");
             File.WriteAllText(path, """
-                {"schemaVersion":1,"library":{"id":"text","nativeName":"text"},"source":{"headers":["text.h"]},
+                {"schemaVersion":2,"library":{"id":"text","nativeName":"text"},"source":{"headers":["text.h"]},
                  "semantics":{"stringParameters":[{"function":"set_name","parameter":"data","encoding":"utf8",
                   "codeUnitWidth":1,"lengthUnit":"bytes","direction":"input","lifetime":"call",
                   "zeroTerminated":false,"retainsPointer":false,"allowsNull":true,"lengthParameter":"count",
                   "lengthDirection":"input","maximumCodeUnits":300}]}}
                 """);
-            StringParameterConfiguration rule = Assert.Single(GenerationRequest.FromFile(path).configuration.semantics.stringParameters);
+            StringParameterConfiguration rule = Assert.Single(TestInputs.LoadRequest(path).configuration.semantics.stringParameters);
             Assert.Equal(NativeParameterDirection.Input, rule.lengthDirection);
             Assert.Equal(300, rule.maximumCodeUnits);
             Assert.Equal("count", rule.lengthParameter);

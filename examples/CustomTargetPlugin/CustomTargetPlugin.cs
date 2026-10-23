@@ -8,11 +8,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Targets;
 
 namespace BGCS.Examples.CustomTargetPlugin;
 
@@ -20,7 +20,7 @@ namespace BGCS.Examples.CustomTargetPlugin;
 public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.custom-target", "3.0.0", [new("example.custom-target", ExtensionPort.NativeTargetProvider)])
+    public PluginDescriptor descriptor => new("bgcs.examples.custom-target", "4.0.0", [new("example.custom-target", ExtensionPort.NativeTargetProvider)])
     {
         configurationSchema = JsonSerializer.Deserialize<JsonElement>("""
             {"type":"object","additionalProperties":false,"required":["profile"],"properties":{"profile":{"type":"string","minLength":1}}}
@@ -31,7 +31,7 @@ public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvid
     public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
     {
         string profile = configuration.ResolveInputPath("/profile");
-        registry.RegisterFactory<INativeTargetProvider>("example.custom-target", () => new Provider(profile));
+        registry.RegisterFactory<INativeTargetProvider>("example.custom-target", _ => new Provider(profile));
     }
 
     /// <inheritdoc />
@@ -71,7 +71,11 @@ public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvid
                 explicitSdk ? input.cxxSystemIncludeFolders : profile.cxxSystemIncludeDirectories.Select(path => Path.GetFullPath(path, root)),
                 input.sdkVersion, input.compilerVersion);
             target = new(request.targetId, profile.platformId, profile.architectureId, profile.abiId, profile.triple, sdk,
-                new(profile.requiresExplicitSdk, profile.supportsDynamicModules), profile.byteOrder);
+                new(profile.requiresExplicitSdk, profile.supportsDynamicModules), profile.byteOrder)
+            {
+                sourceConventions = profile.sourceConventions,
+                headerSearchPaths = profile.headerSearchPaths.Select(path => path with { path = Path.GetFullPath(path.path, root) }).ToImmutableArray()
+            };
             return true;
         }
 
@@ -94,6 +98,8 @@ public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvid
         [JsonRequired] public NativeByteOrder byteOrder { get; init; }
         [JsonRequired] public bool requiresExplicitSdk { get; init; }
         [JsonRequired] public bool supportsDynamicModules { get; init; }
+        [JsonRequired] public NativeSourceConventions sourceConventions { get; init; } = null!;
+        public ImmutableArray<HeaderSearchPath> headerSearchPaths { get; init; } = [];
         public string? sysRoot { get; init; }
         public string[] systemIncludeDirectories { get; init; } = [];
         public string[] cxxSystemIncludeDirectories { get; init; } = [];

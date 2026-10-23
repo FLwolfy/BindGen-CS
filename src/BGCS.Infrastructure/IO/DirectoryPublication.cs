@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -11,7 +12,8 @@ internal static class DirectoryPublication
 
     internal static void Move(
         string source,
-        string destination
+        string destination,
+        IHostPathService paths
     ) {
         long started = Stopwatch.GetTimestamp();
         while (true)
@@ -21,7 +23,7 @@ internal static class DirectoryPublication
                 Directory.Move(source, destination);
                 return;
             }
-            catch (Exception exception) when (IsTemporaryAccessFailure(exception)
+            catch (Exception exception) when (paths.ClassifyIoFailure(exception) is HostIoFailureKind.SharingViolation or HostIoFailureKind.TemporaryAccess
                 && Stopwatch.GetElapsedTime(started) < RetryWindow)
             {
                 // Temporary readers can deny rename even while publication ownership is held.
@@ -31,8 +33,5 @@ internal static class DirectoryPublication
         }
     }
 
-    private static bool IsTemporaryAccessFailure(Exception exception)
-        => OperatingSystem.IsWindows()
-            && exception is IOException or UnauthorizedAccessException
-            && (exception.HResult & 0xffff) is 5 or 32 or 33;
+
 }

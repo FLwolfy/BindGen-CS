@@ -1,6 +1,6 @@
 using System;
 using BGCS.Configuration;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Interop;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -11,7 +11,7 @@ public sealed class EventLoopConfigurationTests
     public void ExplicitNonblockingEventLoopFactsSurviveConfigurationFreezingWithoutBecomingDefaults()
     {
         BindingConfiguration configuration = Configuration();
-        BindingConfiguration frozen = new BindingConfigurationLoader().ValidateAndFreeze(configuration);
+        BindingConfiguration frozen = BindingConfigurationLoader.ValidateAndFreeze(configuration);
         CallbackParameterConfiguration callback = Assert.Single(frozen.semantics.callbackParameters);
         Assert.Equal(NativeCallbackThreading.EventLoop, callback.threading);
         Assert.True(callback.registration!.unregisterIsNonBlocking);
@@ -32,7 +32,7 @@ public sealed class EventLoopConfigurationTests
             asyncOperations = [new() { function = "Start", completionCallback = "completion", resultArgumentIndex = 0,
                 statusArgumentIndex = 1, cancellationIsNonBlocking = nonblocking }]
         } };
-        Assert.Contains("cancelFunction", Assert.Throws<ArgumentException>(() => new BindingConfigurationLoader().ValidateAndFreeze(configuration)).Message,
+        Assert.Contains("cancelFunction", Assert.Throws<ArgumentException>(() => BindingConfigurationLoader.ValidateAndFreeze(configuration)).Message,
             StringComparison.Ordinal);
     }
 
@@ -46,14 +46,14 @@ public sealed class EventLoopConfigurationTests
             callbackParameters = [callback with { registration = callback.registration! with { unregisterIsNonBlocking = false } }],
             asyncOperations = [configuration.semantics.asyncOperations[0] with { cancellationIsNonBlocking = false }]
         } };
-        BindingConfiguration frozen = new BindingConfigurationLoader().ValidateAndFreeze(configuration);
+        BindingConfiguration frozen = BindingConfigurationLoader.ValidateAndFreeze(configuration);
         Assert.False(Assert.Single(frozen.semantics.callbackParameters).registration!.unregisterIsNonBlocking);
         Assert.False(Assert.Single(frozen.semantics.asyncOperations).cancellationIsNonBlocking);
     }
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "event-loop", nativeName = "event-loop" }, source = new() { headers = ["native.h"] },
+        schemaVersion = 2, library = new() { id = "event-loop", nativeName = "event-loop" }, source = new() { headers = ["native.h"] },
         semantics = new()
         {
             callbackParameters = [new()

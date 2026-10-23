@@ -3,12 +3,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -33,7 +33,7 @@ public sealed class StringResultProjectionTests
         ManagedApiModel model = Project(Module(encoding));
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpStringResultPlan result = Assert.Single(plan.stringResults);
         Assert.Equal("string", result.signature.returnType);
         Assert.Equal(model.interop.functions[0].id, result.signature.nativeExport);
@@ -41,7 +41,7 @@ public sealed class StringResultProjectionTests
         Assert.NotNull(result.releaseIndex);
         Assert.Empty(plan.directOwnedFactories);
         Assert.Empty(plan.ownedProjectionOmissions);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         var sources = sink.sources.Select(source => (Path: source.Key, Text: source.Value)).ToArray();
         new EmittedInteropContractReader().Verify(plan, sources, "native");
         foreach (string mutation in new[] { "lease", "cleanup", "codec", "cap", "null" })
@@ -117,7 +117,7 @@ public sealed class StringResultProjectionTests
         var functions = original.functions.SetItem(0, getter);
         if (fault == "wrong-release-type") functions = functions.SetItem(1, functions[1] with { returnType = new("integer") });
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types, functions, []) { byteOrder = original.byteOrder };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(Project(module), new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Project(module), new("native", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.stringResults);
         Assert.Equal(getter.id, Assert.Single(plan.ownedProjectionOmissions).nativeExport);
         Assert.Contains(plan.methods, method => method.nativeExport == getter.id);
@@ -134,8 +134,8 @@ public sealed class StringResultProjectionTests
             new(NativeLifetimeKind.Module, null, getter.returnOwnership!.evidence), getter.returnOwnership.evidence);
         getter = getter with { returnOwnership = borrowed, returnString = getter.returnString! with
         { ownership = borrowed, lifetime = borrowed.lifetime, allowsNull = true, zeroTerminated = false, fixedLength = 3 } };
-        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types, original.functions.SetItem(0, getter), []);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(Project(module), new("native", new NeutralBackendTests.MemorySink()));
+        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types, original.functions.SetItem(0, getter), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Project(module), new("native", new NeutralBackendTests.MemorySink()));
         CSharpStringResultPlan result = Assert.Single(plan.stringResults);
         Assert.Null(result.releaseIndex);
         Assert.Equal(3, result.exactCodeUnits);

@@ -1,9 +1,10 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using BGCS.Contracts.Artifacts;
+using BGCS.Core.Artifacts;
 using BGCS.Infrastructure.IO;
 using BGCS.Infrastructure.Verification;
 
@@ -12,6 +13,10 @@ namespace BGCS.Infrastructure.Publishing;
 /// <summary>Reads a complete owned output while cooperating with the publication lock.</summary>
 public sealed class ArtifactPublicationReader
 {
+    private readonly IHostPathService m_paths;
+    /// <summary>Captures the explicitly selected host path service.</summary>
+    /// <param name="paths">The host path identity service.</param>
+    public ArtifactPublicationReader(IHostPathService paths) => m_paths = paths ?? throw new ArgumentNullException(nameof(paths));
     /// <summary>Verifies the complete previous artifact set without altering its files or ownership.</summary>
     /// <param name="outputRoot">The formal output to inspect.</param>
     /// <param name="libraryId">The expected logical owner.</param>
@@ -42,21 +47,21 @@ public sealed class ArtifactPublicationReader
         ArgumentException.ThrowIfNullOrWhiteSpace(outputRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryId);
         ArgumentNullException.ThrowIfNull(reader);
-        OwnedPathBoundary boundary = new(outputRoot);
+        OwnedPathBoundary boundary = new(outputRoot, m_paths);
         string absolute = boundary.physicalPath;
         if (!Directory.Exists(absolute)) { boundary.Verify(); return reader(absolute, []); }
-        using FileStream publicationLock = DirectoryPublicationLease.Acquire(absolute, TimeSpan.FromSeconds(30), cancellationToken);
+        using FileStream publicationLock = DirectoryPublicationLease.Acquire(absolute, m_paths, TimeSpan.FromSeconds(30), cancellationToken);
         boundary.Verify();
         if (!Directory.Exists(absolute)) { boundary.Verify(); return reader(absolute, []); }
         if (!Directory.EnumerateFileSystemEntries(absolute).Any()) { boundary.Verify(); return reader(absolute, []); }
         string manifestPath = Path.Combine(absolute, ".bgcs-artifacts.json");
         ArtifactDigestVerifier.RejectLinkedAncestors(manifestPath);
         if (!File.Exists(manifestPath)) throw new IOException("The existing output has no BGCS artifact ownership manifest.");
-        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(manifestPath);
+        PublicationOwnership owner = PublicationJournalStorage.Read<PublicationOwnership>(manifestPath, m_paths);
         if (owner.schemaVersion != 1 || owner.libraryId != libraryId || owner.artifacts.IsDefault)
             throw new IOException("The existing output does not match the expected BGCS publication owner.");
         cancellationToken.ThrowIfCancellationRequested();
-        new ArtifactDigestVerifier().Verify(absolute, owner.artifacts, [".bgcs-artifacts.json"]);
+        new ArtifactDigestVerifier(m_paths).Verify(absolute, owner.artifacts, [".bgcs-artifacts.json"]);
         boundary.Verify();
         TResult result = reader(absolute, owner.artifacts);
         boundary.Verify();

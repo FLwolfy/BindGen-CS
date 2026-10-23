@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.IO;
 using System.Reflection;
@@ -13,6 +14,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class OutputDirectoryTransactionTests : IDisposable
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     private readonly string m_root = Path.Combine(Path.GetTempPath(), "BgcsOutputOwnership", Guid.NewGuid().ToString("N"));
 
     public OutputDirectoryTransactionTests() => Directory.CreateDirectory(m_root);
@@ -23,8 +25,8 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
         string output = Path.Combine(m_root, "output");
         Directory.CreateDirectory(output);
         File.WriteAllText(Path.Combine(output, "value.txt"), "current");
-        using var owner = new OutputDirectoryTransaction(output);
-        Assert.Throws<TimeoutException>(() => new OutputDirectoryTransaction(output, TimeSpan.FromMilliseconds(60)));
+        using var owner = new OutputDirectoryTransaction(output, m_paths);
+        Assert.Throws<TimeoutException>(() => new OutputDirectoryTransaction(output, m_paths, TimeSpan.FromMilliseconds(60)));
         Assert.Equal("current", File.ReadAllText(Path.Combine(output, "value.txt")));
         Assert.Single(Directory.GetDirectories(m_root, ".bgcs-staging-*"));
     }
@@ -34,9 +36,9 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
     {
         string name = new('a', 120);
         string output = Path.Combine(m_root, name);
-        using var outer = new OutputDirectoryTransaction(output);
+        using var outer = new OutputDirectoryTransaction(output, m_paths);
         Assert.DoesNotContain(name, Path.GetFileName(outer.stagingPath));
-        using (var inner = new OutputDirectoryTransaction(Path.Combine(outer.stagingPath, "Native")))
+        using (var inner = new OutputDirectoryTransaction(Path.Combine(outer.stagingPath, "Native"), m_paths))
         {
             File.WriteAllText(Path.Combine(inner.stagingPath, "api.h"), "complete");
             inner.Commit();
@@ -55,7 +57,7 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
         string output = Path.Combine(m_root, "output");
         Directory.CreateDirectory(output);
         File.WriteAllText(Path.Combine(output, "value.txt"), "previous");
-        using var publication = new OutputDirectoryTransaction(output);
+        using var publication = new OutputDirectoryTransaction(output, m_paths);
         File.WriteAllText(Path.Combine(publication.stagingPath, "value.txt"), "candidate");
         string blocked = Path.Combine(blockCandidate ? publication.stagingPath : output, "value.txt");
         using var reader = new FileStream(blocked, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -86,7 +88,7 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
         string output = Path.Combine(m_root, "output");
         Directory.CreateDirectory(output);
         File.WriteAllText(Path.Combine(output, "value.txt"), "previous");
-        using var publication = new OutputDirectoryTransaction(output);
+        using var publication = new OutputDirectoryTransaction(output, m_paths);
         string candidate = Path.Combine(publication.stagingPath, "value.txt");
         File.WriteAllText(candidate, "candidate");
         using var reader = new FileStream(candidate, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -120,11 +122,11 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
     public void DisposedTransactionsReleaseOwnershipAndRejectPublication()
     {
         string output = Path.Combine(m_root, "output");
-        var first = new OutputDirectoryTransaction(output);
+        var first = new OutputDirectoryTransaction(output, m_paths);
         first.Dispose();
         first.Dispose();
         Assert.Throws<ObjectDisposedException>(first.Commit);
-        using var second = new OutputDirectoryTransaction(output, TimeSpan.Zero);
+        using var second = new OutputDirectoryTransaction(output, m_paths, TimeSpan.Zero);
         File.WriteAllText(Path.Combine(second.stagingPath, "value.txt"), "next");
         second.Commit();
         Assert.Equal("next", File.ReadAllText(Path.Combine(output, "value.txt")));
@@ -142,7 +144,7 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
         File.SetAttributes(previous, FileAttributes.ReadOnly);
         try
         {
-            using var candidate = new OutputDirectoryTransaction(output);
+            using var candidate = new OutputDirectoryTransaction(output, m_paths);
             File.WriteAllText(Path.Combine(candidate.stagingPath, "value.txt"), "candidate");
 
             IOException failure = Assert.Throws<IOException>(candidate.Commit);
@@ -183,7 +185,7 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
             using var waiting = new CancellationTokenSource(TimeSpan.FromMilliseconds(80));
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Task.Run(() =>
             {
-                using var rejected = new OutputDirectoryTransaction(output, cancellationToken: waiting.Token);
+                using var rejected = new OutputDirectoryTransaction(output, m_paths, cancellationToken: waiting.Token);
             }));
             Assert.False(Directory.Exists(output));
             File.WriteAllText(release, "release");
@@ -191,7 +193,7 @@ public sealed class OutputDirectoryTransactionTests : IDisposable
             Assert.False(completed.timedOut);
             Assert.Equal(0, completed.exitCode);
             Assert.Equal("child", File.ReadAllText(Path.Combine(output, "value.txt")));
-            using var next = new OutputDirectoryTransaction(output, TimeSpan.Zero);
+            using var next = new OutputDirectoryTransaction(output, m_paths, TimeSpan.Zero);
             File.WriteAllText(Path.Combine(next.stagingPath, "value.txt"), "parent");
             next.Commit();
             Assert.Equal("parent", File.ReadAllText(Path.Combine(output, "value.txt")));

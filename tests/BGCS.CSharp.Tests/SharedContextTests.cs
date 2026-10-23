@@ -8,13 +8,13 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using BGCS.Runtime;
@@ -37,8 +37,8 @@ public sealed class SharedContextTests
         ManagedApiModel model = NeutralBackendTests.Model() with { style = ManagedApiStyle.Static };
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native_fixture", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         Assert.Equal("NativeApiContext", plan.contextName);
         Assert.Equal(model, plan.api);
         Assert.Contains("public static unsafe partial class NativeApi", sink.sources["Api/NativeApi.g.cs"]);
@@ -68,7 +68,7 @@ public sealed class SharedContextTests
         ManagedApiModel model = NeutralBackendTests.Model();
         model = model with { style = ManagedApiStyle.Static, methods = model.methods.SetItem(0, model.methods[0] with { name = methodName }) };
         NeutralBackendTests.MemorySink sink = new();
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Empty(sink.sources);
     }
 
@@ -85,10 +85,10 @@ public sealed class SharedContextTests
             recipeHelpers = [new("count", "size_t", new ManagedRecipeProjection("uint", "{value}", "checked((uint){value})"))]
         };
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         // Source contributors may add ordinary helpers to the public partial facade.
         sink.sources.Add("Extensions/FacadeHelper.g.cs", "namespace Generated.Example; public static partial class NativeApi { public static int Marker => 7; }");
-        new EmittedInteropContractReader().Verify(new CSharpEmissionPlanner().Plan(model, new("unused", sink)),
+        new EmittedInteropContractReader().Verify(new CSharpTestPlanner().Plan(model, new("unused", sink)),
             sink.sources.Select(pair => (pair.Key, pair.Value)), "unused");
         string[] framework = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         var compilation = CSharpCompilation.Create("SharedContext_" + Guid.NewGuid().ToString("N"),

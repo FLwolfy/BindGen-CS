@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -22,11 +22,11 @@ public sealed class FlatIdentifierNamingTests
             DirectoryInfo? repository = new(AppContext.BaseDirectory);
             while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
             string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-                .WithWorkerAssetRoot(Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder()
+                .UseWorkerDirectory(Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
             BindingConfiguration config = new()
             {
-                schemaVersion = 1,
+                schemaVersion = 2,
                 library = new() { id = "flat_names", nativeName = "flat_names" }, source = new() { headers = ["native.h"], parseMacros = false },
                 api = new() { @namespace = "Generated.FlatNames", name = "FlatApi", naming = new()
                     { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.English, functions = new() { casing = ManagedNameCasing.Pascal } } }
@@ -65,10 +65,10 @@ public sealed class FlatIdentifierNamingTests
         {
             string path = Path.Combine(root, "bindgen.json");
             File.WriteAllText(path, """
-                {"schemaVersion":1,"library":{"id":"names","nativeName":"names"},"source":{"headers":["native.h"]},
+                {"schemaVersion":2,"library":{"id":"names","nativeName":"names"},"source":{"headers":["native.h"]},
                  "api":{"naming":{"flatIdentifierSegmentation":"custom","flatIdentifierWords":["create","window"],"functions":{"casing":"pascal"}}}}
                 """);
-            ManagedNamingPolicy policy = GenerationRequest.FromFile(path).configuration.api.naming;
+            ManagedNamingPolicy policy = TestInputs.LoadRequest(path).configuration.api.naming;
             Assert.Equal(ManagedFlatIdentifierSegmentation.Custom, policy.flatIdentifierSegmentation);
             Assert.Equal(new[] { "create", "window" }, policy.flatIdentifierWords.ToArray());
             string schema = new SchemaCatalog().CreateBindingSchema().ToJsonString();

@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -7,8 +8,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
 using BGCS.Infrastructure.Caching;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.IO;
@@ -20,6 +21,7 @@ namespace BGCS.Infrastructure.Tests;
 
 public sealed class OwnedPathAliasTests : IDisposable
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     // Keep the actual host spelling (including any OS parent alias) at every public entry point.
     private readonly string m_root = Path.Combine(Path.GetTempPath(), "bgcs-owned-alias-" + Guid.NewGuid().ToString("N"));
     private readonly List<string> m_links = [];
@@ -59,13 +61,13 @@ public sealed class OwnedPathAliasTests : IDisposable
         switch (surface)
         {
             case "reader":
-                Assert.Equal("original", await new DirectoryArtifactReader(logical, [s_artifact]).ReadTextAsync("value.txt", default));
+                Assert.Equal("original", await new DirectoryArtifactReader(logical, [s_artifact], m_paths).ReadTextAsync("value.txt", default));
                 break;
             case "sink":
-                new DirectoryArtifactSink(logical).WriteText("value.txt", "original");
+                new DirectoryArtifactSink(logical, m_paths).WriteText("value.txt", "original");
                 break;
             case "editor":
-                using (CandidateTextEditor editor = new(logical, [s_artifact], "extra/"))
+                using (CandidateTextEditor editor = new(logical, [s_artifact], m_paths, "extra/"))
                 {
                     await editor.ReplaceTextAsync("value.txt", "updated", default);
                     await editor.AddTextAsync("extra/new.txt", "text/plain", "new", default);
@@ -74,9 +76,9 @@ public sealed class OwnedPathAliasTests : IDisposable
                     Assert.Single(editor.artifacts);
                 }
                 break;
-            case "verifier": new ArtifactDigestVerifier().Verify(logical, [s_artifact]); break;
+            case "verifier": new ArtifactDigestVerifier(m_paths).Verify(logical, [s_artifact]); break;
             case "cache":
-                GenerationStageCache cache = new(logical);
+                GenerationStageCache cache = new(logical, m_paths);
                 cache.Prepare();
                 ContentDigest key = Digest("key");
                 Assert.True(cache.Store(key, [new(s_artifact, Encoding.UTF8.GetBytes("original"))]));
@@ -87,17 +89,17 @@ public sealed class OwnedPathAliasTests : IDisposable
             case "publisher": Publish(logical, "original"); break;
             case "publication-reader":
                 Publish(logical, "original");
-                Assert.Equal(s_artifact, Assert.Single(new ArtifactPublicationReader().ReadVerified(logical, "fixture")));
+                Assert.Equal(s_artifact, Assert.Single(new ArtifactPublicationReader(m_paths).ReadVerified(logical, "fixture")));
                 break;
             case "transaction":
-                using (OutputDirectoryTransaction transaction = new(logical))
+                using (OutputDirectoryTransaction transaction = new(logical, m_paths))
                 {
                     File.WriteAllText(Path.Combine(transaction.stagingPath, "value.txt"), "original");
                     transaction.Commit();
                 }
                 break;
             case "transaction-set":
-                using (OutputDirectorySetTransaction transactions = new([logical]))
+                using (OutputDirectorySetTransaction transactions = new([logical], m_paths))
                 {
                     File.WriteAllText(Path.Combine(transactions.GetStagingPath(logical), "value.txt"), "original");
                     transactions.Commit();
@@ -125,33 +127,33 @@ public sealed class OwnedPathAliasTests : IDisposable
         switch (surface)
         {
             case "reader":
-                DirectoryArtifactReader reader = new(logical, [s_artifact]);
+                DirectoryArtifactReader reader = new(logical, [s_artifact], m_paths);
                 operation = async () => { _ = await reader.ReadTextAsync("value.txt", default); };
                 break;
             case "sink":
-                DirectoryArtifactSink sink = new(logical);
+                DirectoryArtifactSink sink = new(logical, m_paths);
                 operation = () => { sink.WriteText("new.txt", "unsafe"); return Task.CompletedTask; };
                 break;
             case "editor":
-                CandidateTextEditor editor = new(logical, [s_artifact]); owner = editor;
+                CandidateTextEditor editor = new(logical, [s_artifact], m_paths); owner = editor;
                 operation = async () => { await editor.ReplaceTextAsync("value.txt", "unsafe", default); };
                 break;
             case "cache":
-                GenerationStageCache cache = new(logical);
+                GenerationStageCache cache = new(logical, m_paths);
                 operation = () => { cache.Store(Digest("key"), [new(s_artifact, Encoding.UTF8.GetBytes("original"))]); return Task.CompletedTask; };
                 break;
             case "publisher":
-                ArtifactPublisher publisher = new(logical, "fixture"); owner = publisher;
-                new DirectoryArtifactSink(publisher.candidateRoot).WriteText("value.txt", "unsafe");
+                ArtifactPublisher publisher = new(logical, "fixture", m_paths); owner = publisher;
+                new DirectoryArtifactSink(publisher.candidateRoot, m_paths).WriteText("value.txt", "unsafe");
                 operation = () => { publisher.Commit([Descriptor("value.txt", "unsafe")]); return Task.CompletedTask; };
                 break;
             case "transaction":
-                OutputDirectoryTransaction transaction = new(logical); owner = transaction;
+                OutputDirectoryTransaction transaction = new(logical, m_paths); owner = transaction;
                 File.WriteAllText(Path.Combine(transaction.stagingPath, "value.txt"), "unsafe");
                 operation = () => { transaction.Commit(); return Task.CompletedTask; };
                 break;
             default:
-                OutputDirectorySetTransaction transactions = new([logical]); owner = transactions;
+                OutputDirectorySetTransaction transactions = new([logical], m_paths); owner = transactions;
                 File.WriteAllText(Path.Combine(transactions.GetStagingPath(logical), "value.txt"), "unsafe");
                 operation = () => { transactions.Commit(); return Task.CompletedTask; };
                 break;
@@ -175,13 +177,13 @@ public sealed class OwnedPathAliasTests : IDisposable
         Directory.CreateDirectory(Path.Combine(m_target, "nested"));
         string second = Path.Combine(m_root, "second");
         await Link(second, Path.Combine(m_alias, "nested"));
-        Assert.Equal(PhysicalPathResolver.Resolve(Path.Combine(m_target, "nested", "absent", "file.h")),
-            PhysicalPathResolver.Resolve(Path.Combine(second, "absent", "file.h")));
+        Assert.Equal(PhysicalPathResolver.Resolve(Path.Combine(m_target, "nested", "absent", "file.h"), m_paths),
+            PhysicalPathResolver.Resolve(Path.Combine(second, "absent", "file.h"), m_paths));
         if (!OperatingSystem.IsWindows())
         {
             string relative = Path.Combine(m_root, "relative");
             await Link(relative, Path.Combine("alias", "nested"));
-            Assert.Equal(PhysicalPathResolver.Resolve(Path.Combine(m_target, "nested")), PhysicalPathResolver.Resolve(relative));
+            Assert.Equal(PhysicalPathResolver.Resolve(Path.Combine(m_target, "nested"), m_paths), PhysicalPathResolver.Resolve(relative, m_paths));
         }
     }
 
@@ -190,31 +192,31 @@ public sealed class OwnedPathAliasTests : IDisposable
     {
         await Link(m_alias, m_target);
         string logical = Path.Combine(m_alias, "owned"), physical = Path.Combine(m_target, "owned");
-        using (OutputDirectoryTransaction first = new(logical))
-            Assert.Throws<TimeoutException>(() => new OutputDirectoryTransaction(physical, TimeSpan.FromMilliseconds(60)));
-        Assert.Throws<ArgumentException>(() => new OutputDirectorySetTransaction([logical, physical]));
-        Assert.Throws<IOException>(() => new ArtifactPublisher(logical, "fixture", [Path.Combine(physical, "source.h")]));
+        using (OutputDirectoryTransaction first = new(logical, m_paths))
+            Assert.Throws<TimeoutException>(() => new OutputDirectoryTransaction(physical, m_paths, TimeSpan.FromMilliseconds(60)));
+        Assert.Throws<ArgumentException>(() => new OutputDirectorySetTransaction([logical, physical], m_paths));
+        Assert.Throws<IOException>(() => new ArtifactPublisher(logical, "fixture", m_paths, [Path.Combine(physical, "source.h")]));
     }
 
     [Fact]
     public async Task LinkedOwnedLeavesAndEscapingDescendantsRemainForbidden()
     {
         await Link(m_alias, m_target);
-        Assert.Throws<IOException>(() => new DirectoryArtifactReader(m_alias, []));
-        Assert.Throws<IOException>(() => new DirectoryArtifactSink(m_alias));
-        Assert.Throws<IOException>(() => new CandidateTextEditor(m_alias, []));
-        Assert.Throws<IOException>(() => new ArtifactDigestVerifier().Verify(m_alias, []));
-        Assert.Throws<IOException>(() => new GenerationStageCache(m_alias));
-        Assert.Throws<IOException>(() => new ArtifactPublisher(m_alias, "fixture"));
-        Assert.Throws<IOException>(() => new OutputDirectoryTransaction(m_alias));
+        Assert.Throws<IOException>(() => new DirectoryArtifactReader(m_alias, [], m_paths));
+        Assert.Throws<IOException>(() => new DirectoryArtifactSink(m_alias, m_paths));
+        Assert.Throws<IOException>(() => new CandidateTextEditor(m_alias, [], m_paths));
+        Assert.Throws<IOException>(() => new ArtifactDigestVerifier(m_paths).Verify(m_alias, []));
+        Assert.Throws<IOException>(() => new GenerationStageCache(m_alias, m_paths));
+        Assert.Throws<IOException>(() => new ArtifactPublisher(m_alias, "fixture", m_paths));
+        Assert.Throws<IOException>(() => new OutputDirectoryTransaction(m_alias, m_paths));
         string owned = Path.Combine(m_target, "owned");
         Publish(owned, "original");
         File.WriteAllText(Path.Combine(m_other, "secret.txt"), "secret");
         await Link(Path.Combine(owned, "escape"), m_other);
-        Assert.Throws<IOException>(() => new DirectoryArtifactReader(owned, [Descriptor("escape/secret.txt", "secret")]));
-        Assert.Throws<IOException>(() => new DirectoryArtifactSink(owned).WriteText("escape/new.txt", "unsafe"));
-        Assert.Throws<IOException>(() => new ArtifactDigestVerifier().Verify(owned, [s_artifact], [".bgcs-artifacts.json"]));
-        Assert.Throws<IOException>(() => new ArtifactPublisher(owned, "fixture"));
+        Assert.Throws<IOException>(() => new DirectoryArtifactReader(owned, [Descriptor("escape/secret.txt", "secret")], m_paths));
+        Assert.Throws<IOException>(() => new DirectoryArtifactSink(owned, m_paths).WriteText("escape/new.txt", "unsafe"));
+        Assert.Throws<IOException>(() => new ArtifactDigestVerifier(m_paths).Verify(owned, [s_artifact], [".bgcs-artifacts.json"]));
+        Assert.Throws<IOException>(() => new ArtifactPublisher(owned, "fixture", m_paths));
         Assert.False(File.Exists(Path.Combine(m_other, "new.txt")));
         Assert.Equal("secret", File.ReadAllText(Path.Combine(m_other, "secret.txt")));
     }
@@ -226,46 +228,46 @@ public sealed class OwnedPathAliasTests : IDisposable
         Directory.CreateDirectory(missing);
         await Link(m_alias, missing);
         Directory.Delete(missing);
-        Assert.Equal(PhysicalPathResolver.Resolve(missing), PhysicalPathResolver.Resolve(m_alias));
-        Assert.Throws<IOException>(() => new ArtifactPublisher(m_alias, "fixture"));
-        Assert.Throws<IOException>(() => new GenerationStageCache(m_alias));
+        Assert.Equal(PhysicalPathResolver.Resolve(missing, m_paths), PhysicalPathResolver.Resolve(m_alias, m_paths));
+        Assert.Throws<IOException>(() => new ArtifactPublisher(m_alias, "fixture", m_paths));
+        Assert.Throws<IOException>(() => new GenerationStageCache(m_alias, m_paths));
         Assert.False(Directory.Exists(missing));
         string cycle = Path.Combine(m_root, "cycle");
         await Link(cycle, m_alias);
         DeleteLink(m_alias); m_links.Remove(m_alias);
         await Link(m_alias, cycle);
-        Assert.Throws<IOException>(() => PhysicalPathResolver.Resolve(cycle));
+        Assert.Throws<IOException>(() => PhysicalPathResolver.Resolve(cycle, m_paths));
     }
 
     [Fact]
     public async Task AliasPublicationRecoversTheSamePhysicalJournalAndPreviousOwner()
     {
         await Link(m_alias, m_target);
-        string logical = Path.Combine(m_alias, "owned"), physical = PhysicalPathResolver.Resolve(Path.Combine(m_target, "owned"));
+        string logical = Path.Combine(m_alias, "owned"), physical = PhysicalPathResolver.Resolve(Path.Combine(m_target, "owned"), m_paths);
         Publish(logical, "original");
         string parent = Path.GetDirectoryName(physical)!;
         string candidate = Path.Combine(parent, ".bgcs-staging-" + Guid.NewGuid().ToString("N"));
         string backup = Path.Combine(parent, ".bgcs-backup-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(candidate);
-        new DirectoryArtifactSink(candidate).WriteText("value.txt", "candidate");
+        new DirectoryArtifactSink(candidate, m_paths).WriteText("value.txt", "candidate");
         ImmutableArray<ArtifactDescriptor> artifacts = [Descriptor("value.txt", "candidate")];
         File.WriteAllText(Path.Combine(candidate, ".bgcs-artifacts.json"), JsonSerializer.Serialize(new { schemaVersion = 1, libraryId = "fixture", artifacts }));
         Directory.Move(physical, backup);
         Directory.Move(candidate, physical);
-        string identity = OperatingSystem.IsWindows() ? physical.ToUpperInvariant() : physical;
+        string identity = m_paths.GetIdentityKey(physical);
         string journal = Path.Combine(parent, ".bgcs-publication-" + Digest(identity).value + ".json");
         File.WriteAllText(journal, JsonSerializer.Serialize(new { destination = physical, candidate, backup, libraryId = "fixture", state = "prepared", artifacts }));
-        using (ArtifactPublisher recovered = new(logical, "fixture"))
+        using (ArtifactPublisher recovered = new(logical, "fixture", m_paths))
             Assert.Equal("original", File.ReadAllText(Path.Combine(physical, "value.txt")));
         Assert.False(File.Exists(journal));
         Assert.False(Directory.Exists(candidate));
         Assert.False(Directory.Exists(backup));
     }
 
-    private static void Publish(string destination, string text)
+    private void Publish(string destination, string text)
     {
-        using ArtifactPublisher publisher = new(destination, "fixture");
-        new DirectoryArtifactSink(publisher.candidateRoot).WriteText("value.txt", text);
+        using ArtifactPublisher publisher = new(destination, "fixture", m_paths);
+        new DirectoryArtifactSink(publisher.candidateRoot, m_paths).WriteText("value.txt", text);
         publisher.Commit([Descriptor("value.txt", text)]);
     }
 

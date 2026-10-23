@@ -22,7 +22,7 @@ internal static class ImportLibraryNameContractVerifier
             return;
         }
         if (constant.value != libraryName || !constant.reference.StartsWith("global::" + constant.declaringType + ".", StringComparison.Ordinal)
-            || plan.api.importLibraryNameConstant is null || plan.importMode == BGCS.Contracts.BindingImportMode.FunctionTable)
+            || plan.api.importLibraryNameConstant is null || plan.importMode == BGCS.Core.BindingImportMode.FunctionTable)
             throw new InvalidOperationException("The external native library constant changed its planned import identity.");
         foreach (MemberDeclarationSyntax declaration in roots.SelectMany(root => root.DescendantNodes().OfType<MemberDeclarationSyntax>()))
         {

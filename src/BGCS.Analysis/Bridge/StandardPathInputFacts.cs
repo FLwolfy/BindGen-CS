@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -20,7 +20,7 @@ public static class StandardPathInputFacts
     ) {
         ArgumentNullException.ThrowIfNull(source);
         NativeType actual = StandardLibraryFactReader.Resolve(source, path);
-        if (new StandardLibraryFactReader().Read(source, actual.id)?.family != BGCS.Contracts.Bridge.StandardValueKind.Path
+        if (new StandardLibraryFactReader().Read(source, actual.id)?.family != BGCS.Core.Bridge.StandardValueKind.Path
             || actual.declaration is not StableId declaration || !source.GetDeclaration(declaration).isCompleteDefinition)
             throw new NotSupportedException("UTF-8 path input requires the complete actual std::filesystem::path type; custom path construction needs an explicit native shim.");
         NativeType[] units = source.types.Where(type => type.category == NativeTypeCategory.Primitive && type.primitiveKind == "Char8")

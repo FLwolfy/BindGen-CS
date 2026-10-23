@@ -60,13 +60,16 @@ internal static class DirectReceiverEmitter
         bool buffers = BufferInputEmitter.Open(text, method, arguments, inputs, "            ", captureAddresses: true);
         string invoke = "m_context." + Helper(operation.methodIndex) + "(" + string.Join(", ", new[] { address }.Concat(TextInputEmitter.ForwardedInputs(method, inputs).Select(input => arguments[input]))) + ")";
         text.Append("            ");
-        if (signature.returnType != "void") text.Append(signature.returnType).Append(' ').Append(returned).Append(" = ");
+        bool copiedResult = method.copiedResultIndex is not null;
+        if (signature.returnType != "void" && !copiedResult) text.Append(signature.returnType).Append(' ').Append(returned).Append(" = ");
         text.Append("m_handle.Invoke(").Append(address).Append(" => ");
-        if (signature.returnType == "void") text.Append("{ ").Append(invoke).Append("; return 0; }");
+        if (signature.returnType == "void" || copiedResult) text.Append("{ ").Append(invoke).Append("; return 0; }");
         else text.Append(invoke);
         text.AppendLine(");");
         BufferInputEmitter.Complete(text, method, inputs, "            ");
-        if (signature.returnType != "void") text.Append("            return ").Append(returned).AppendLine(";");
+        if (method.copiedResultIndex is int copiedIndex)
+            text.Append("            return ").Append(RecipeConversionEmitter.Result(method, copiedIndex, ValueInputEmitter.CopiedLocal(method, copiedIndex))).AppendLine(";");
+        else if (signature.returnType != "void") text.Append("            return ").Append(returned).AppendLine(";");
         BufferInputEmitter.Close(text, buffers, "            ");
         ValueInputEmitter.Close(text, values, "            ");
         return text.AppendLine("        }").ToString();
@@ -86,7 +89,7 @@ internal static class DirectReceiverEmitter
         foreach (int input in inputs)
             if (ValueInputEmitter.IsAddress(method, input)) arguments[input] = "(" + method.parameterTypes[input] + ")" + arguments[input];
         StringBuilder text = new();
-        text.Append("    private ").Append(operation.objectSignature.returnType).Append(' ').Append(helper).Append("(nint ").Append(address);
+        text.Append("    private ").Append(method.copiedResultIndex is null ? operation.objectSignature.returnType : method.returnType).Append(' ').Append(helper).Append("(nint ").Append(address);
         foreach (int input in TextInputEmitter.ForwardedInputs(method, inputs))
             text.Append(", ").Append(ValueInputEmitter.IsAddress(method, input) ? "nint" : method.stringInputs.Any(item => item.parameterIndex == input)
                 ? OverloadPlanner.InputType(method, input) : method.parameterTypes[input]).Append(' ').Append(method.parameterNames[input]);

@@ -17,7 +17,7 @@ class ExactCaseEvidenceTests(unittest.TestCase):
             'assemblySha256': 'a' * 64, 'sourceAssembly': 'BGCS.Tests.dll', 'executionRequested': True,
             'compiledMethods': [{'className': 'BGCS.Tests.Example', 'fullyQualifiedName': 'BGCS.Tests.Example.Theory', 'theory': True, 'parameterCount': 1, 'generic': False}],
             'discoveredCases': self.cases, 'selectedCases': copy.deepcopy(self.cases),
-            'executedCases': [{key: case[key] for key in ('id', 'fullyQualifiedName', 'displayName')} | {'outcome': 'Passed', 'duration': '00:00:01'} for case in self.cases],
+            'executedCases': [{key: case[key] for key in ('id', 'fullyQualifiedName', 'displayName')} | {'outcome': 'Passed', 'duration': '00:00:01', 'errorMessage': None, 'errorStackTrace': None} for case in self.cases],
             'vstestIdentity': {key: 'b' * 64 for key in ('consoleSha256', 'translationLayerSha256', 'objectModelSha256')}}
 
     def test_full_execution_preserves_every_literal_argument(self):

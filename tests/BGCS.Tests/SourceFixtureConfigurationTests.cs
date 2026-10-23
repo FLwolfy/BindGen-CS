@@ -6,13 +6,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.Tests.NeutralPlugin;
 using Xunit;
 
@@ -60,11 +60,11 @@ public sealed class SourceFixtureConfigurationTests
     private sealed class Registry : IExtensionRegistryBuilder
     {
         internal object? service;
-        public void RegisterFactory<TService>(string id, Func<TService> factory) where TService : class
+        public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class
         {
             Assert.Equal("fixture.source/helpers", id);
             Assert.Null(service);
-            service = factory();
+            service = factory(new(null, AppContext.BaseDirectory));
         }
     }
 }

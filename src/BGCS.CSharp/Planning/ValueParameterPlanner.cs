@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.CSharp.Planning;
 
 /// <summary>Plans explicit one-value pointer conversions without changing the raw import signature.</summary>
 public sealed class ValueParameterPlanner
 {
-    /// <summary>Checks the generated pointee carrier and plans an address-checked borrow of original managed storage.</summary>
+    /// <summary>Checks the generated pointee carrier and plans either an original storage borrow or an exact bridge value copy.</summary>
     /// <param name="module">The native ABI.</param>
     /// <param name="function">The containing function.</param>
     /// <param name="parameter">The exact annotated pointer.</param>
@@ -41,7 +41,7 @@ public sealed class ValueParameterPlanner
         string carrierType = resolve(element.id);
         bool boolean = element.category == NativeTypeCategory.Primitive && element.primitiveKind == "Bool";
         if (boolean && carrierType != "byte") throw new NotSupportedException("A Boolean value borrow requires the checked raw one-byte Boolean carrier.");
-        return new(parameterIndex, carrierType, parameter.singleValue!.direction, alignment, CSharpValueAllocationMode.AddressCheckedPinnedBorrow)
+        return new(parameterIndex, carrierType, parameter.singleValue!.direction, alignment, parameter.singleValue.copySource is null ? CSharpValueAllocationMode.AddressCheckedPinnedBorrow : CSharpValueAllocationMode.NativeValueCopy)
         { managedElementType = boolean ? "bool" : carrierType };
 
         InteropType Underlying(StableId identity)
@@ -53,14 +53,16 @@ public sealed class ValueParameterPlanner
     }
 }
 
-/// <summary>Identifies the implemented synchronous address-borrowing strategy.</summary>
+/// <summary>Identifies the implemented synchronous storage and address-validation strategy.</summary>
 public enum CSharpValueAllocationMode
 {
     /// <summary>The original managed storage stays pinned and its actual address alignment is checked before the native call.</summary>
-    AddressCheckedPinnedBorrow
+    AddressCheckedPinnedBorrow,
+    /// <summary>A bridge-validated original by-value argument or result uses separate raw local storage.</summary>
+    NativeValueCopy
 }
 
-/// <summary>Plans an explicit in, ref or out borrow of checked raw storage without destroying native-visible aliases.</summary>
+/// <summary>Plans checked raw value storage while keeping original reference aliases separate from source-level value copies.</summary>
 /// <param name="parameterIndex">The native pointer's index.</param>
 /// <param name="elementType">The checked raw pointee syntax.</param>
 /// <param name="direction">The declared native read and write access to borrowed storage.</param>
@@ -74,6 +76,6 @@ public sealed record CSharpValueParameterPlan(
     CSharpValueAllocationMode allocationMode
 )
 {
-    /// <summary>Gets the original managed storage type borrowed by the facade; the exact raw ABI element remains separate.</summary>
+    /// <summary>Gets the logical managed input or result type; the exact raw ABI element remains separate.</summary>
     public string managedElementType { get; init; } = elementType;
 }

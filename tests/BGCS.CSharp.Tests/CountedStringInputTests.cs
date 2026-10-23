@@ -5,12 +5,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -37,10 +37,10 @@ public sealed class CountedStringInputTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("counted_native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.Counted.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpStringInputPlan text = Assert.Single(Assert.Single(plan.methods).stringInputs);
         Assert.Equal(1, text.lengthIndex);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         const string consumer = """
             namespace Generated.Counted;
             public static unsafe class Consumer {
@@ -116,7 +116,7 @@ public sealed class CountedStringInputTests
         if (fault == "shared-count") function = function with { parameters = function.parameters.Add(parameter with { id = new("other"), name = "other" }) };
         var types = fault == "floating-count" ? module.types.Select(type => type.id == new StableId("count")
             ? type with { primitiveKind = "Float" } : type).ToImmutableArray() : module.types;
-        module = new(module.libraryId, module.targetId, module.pointerSize, types, [function], []);
+        module = new(module.libraryId, module.targetId, module.pointerSize, types, [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.NotNull(new FriendlyApiEligibilityAnalyzer().GetTextInputRestriction(module, function, parameter));
         if (parameter.buffer is not null) Assert.NotNull(new FriendlyApiEligibilityAnalyzer().GetBufferInputRestriction(module, function, parameter));
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Counted", "CountedApi"), CancellationToken.None);
@@ -129,10 +129,10 @@ public sealed class CountedStringInputTests
     {
         InteropModule original = Module();
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types.Select(type => type.id == new StableId("unit")
-            ? type with { primitiveKind = "SignedChar", nativeName = "signed char", isSigned = true } : type).ToImmutableArray(), original.functions, []);
+            ? type with { primitiveKind = "SignedChar", nativeName = "signed char", isSigned = true } : type).ToImmutableArray(), original.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Counted", "CountedApi"), CancellationToken.None);
         Assert.Single(Assert.Single(model.methods).stringInputs);
-        CSharpMethodPlan method = Assert.Single(new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())).methods);
+        CSharpMethodPlan method = Assert.Single(new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())).methods);
         Assert.Equal("sbyte*", method.parameterTypes[0]);
         Assert.Equal(NativeTextEncoding.Utf8, Assert.Single(method.stringInputs).encoding);
     }
@@ -148,6 +148,6 @@ public sealed class CountedStringInputTests
             NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence)
         { zeroTerminated = false, retainsPointer = false, allowsNull = false, lengthParameter = new("length"), lengthDirection = NativeParameterDirection.Input } };
         return new("counted", "windows-x64-msvc", 8, [unit, pointer, count, result],
-            [new(new("read"), "ReadText", result.id, [data, new(new("length"), "length", count.id)], "C")], []);
+            [new(new("read"), "ReadText", result.id, [data, new(new("length"), "length", count.id)], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

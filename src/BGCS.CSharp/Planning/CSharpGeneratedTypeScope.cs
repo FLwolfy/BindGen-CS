@@ -1,4 +1,4 @@
-using BGCS.Contracts.Managed;
+using BGCS.Core.Managed;
 
 namespace BGCS.CSharp.Planning;
 

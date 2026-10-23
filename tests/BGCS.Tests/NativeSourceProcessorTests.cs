@@ -5,8 +5,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -59,7 +59,7 @@ public sealed class NativeSourceProcessorTests
             GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration with
             { output = configuration.output with { processors = configuration.output.processors.Add(tamper) } }, scratch.root));
             Assert.False(rejected.success);
-            Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.severity == BGCS.Contracts.BindingDiagnosticSeverity.Error);
+            Assert.Contains(rejected.diagnostics, diagnostic => diagnostic.severity == BGCS.Core.BindingDiagnosticSeverity.Error);
             Assert.Equal(before, Files(result.outputRoot));
         }
     }
@@ -98,7 +98,7 @@ public sealed class NativeSourceProcessorTests
 
     private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime, bool singleFile) => new()
     {
-        schemaVersion = 1, library = new() { id = "processors", nativeName = "processor_fixture" },
+        schemaVersion = 2, library = new() { id = "processors", nativeName = "processor_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.Processors", name = "ProcessorApi", importMode = mode,
             names = ImmutableDictionary<string, string>.Empty.Add("native_add", "AddNative") },
@@ -118,13 +118,13 @@ public sealed class NativeSourceProcessorTests
         .Select(artifact => artifact.relativePath + ":" + Convert.ToBase64String(File.ReadAllBytes(Path.Combine(result.outputRoot, artifact.relativePath)))).ToArray();
     private static string[] Files(string root) => Directory.GetFiles(root, "*", SearchOption.AllDirectories)
         .Order(StringComparer.Ordinal).Select(path => Path.GetRelativePath(root, path) + ":" + Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)))).ToArray();
-    private static BindingHostBuilder Builder() => BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot());
+    private static BindingHostBuilder Builder() => BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot());
     private static string WorkerRoot()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
     private sealed class Scratch : IDisposable
     {

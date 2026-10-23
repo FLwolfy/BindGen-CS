@@ -2,11 +2,11 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
 using Microsoft.CodeAnalysis.CSharp;
@@ -29,13 +29,13 @@ public sealed class EventLoopLifecycleTests
         ManagedApiModel model = Model(asynchronous);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = asynchronous,
-            managedRuntime = new("nonblocking-test", ManagedRuntimeKind.CoreClr, NativeModuleMechanism.ExternalFunctionTable,
+            managedRuntime = new("nonblocking-test", new ManagedRuntimeId("fixture.runtime"), NativeModuleMechanism.ExternalFunctionTable,
                 [mode], requiresStaticCallbackThunks: true, allowsBlockingDisposal: false) };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Empty(plan.callbackOmissions);
         if (asynchronous) Assert.True(Assert.Single(plan.asyncOperations).nonBlockingShutdown);
         else Assert.True(Assert.Single(plan.retainedCallbacks).nonBlockingShutdown);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string source = sink.sources.Single(item => item.Key.StartsWith(asynchronous ? "Async/" : "Callbacks/", StringComparison.Ordinal)
             && item.Value.Contains("StopAndJoinAsync", StringComparison.Ordinal)).Value;
         Assert.DoesNotContain("Task.Run", source, StringComparison.Ordinal);
@@ -84,9 +84,9 @@ public sealed class EventLoopLifecycleTests
         start = start with { parameters = start.parameters.SetItem(0, start.parameters[0] with { callback = callback }), asynchronous = start.asynchronous! with
         { cancellationIsNonBlocking = fault == "unknown-cancel" ? null : fault != "blocking-cancel" } };
         InteropModule module = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types,
-            model.interop.functions.SetItem(0, start), []);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model with { interop = module }, new("native", new NeutralBackendTests.MemorySink())
-        { managedRuntime = new("event-loop-test", ManagedRuntimeKind.CoreClr, NativeModuleMechanism.ExternalFunctionTable, [BindingImportMode.FunctionTable], true, false) });
+            model.interop.functions.SetItem(0, start), []) { byteOrder = model.interop.byteOrder };
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model with { interop = module }, new("native", new NeutralBackendTests.MemorySink())
+        { managedRuntime = new("event-loop-test", new ManagedRuntimeId("fixture.runtime"), NativeModuleMechanism.ExternalFunctionTable, [BindingImportMode.FunctionTable], true, false) });
         Assert.Empty(plan.asyncOperations);
         Assert.Single(plan.callbackOmissions);
         Assert.Equal(3, plan.methods.Length);
@@ -102,6 +102,6 @@ public sealed class EventLoopLifecycleTests
         start = start with { parameters = start.parameters.SetItem(0, start.parameters[0] with { callback = callback }),
             asynchronous = start.asynchronous is { } protocol ? protocol with { cancellationIsNonBlocking = true } : null };
         return model with { interop = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types,
-            model.interop.functions.SetItem(0, start), []) };
+            model.interop.functions.SetItem(0, start), []) { byteOrder = model.interop.byteOrder } };
     }
 }

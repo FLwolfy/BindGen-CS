@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using BGCS.Contracts;
+using BGCS.Core;
 
 namespace BGCS.Tool.Commands;
 

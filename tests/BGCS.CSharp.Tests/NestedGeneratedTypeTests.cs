@@ -4,10 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -35,8 +35,8 @@ public sealed class NestedGeneratedTypeTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { singleFile = sourceRuntime, includeRuntimeSource = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         CSharpCompilation compilation = Compile(sink);
         string prefix = "Generated.Example." + (nested ? "NativeApi+" : string.Empty);
         INamedTypeSymbol outer = compilation.GetTypeByMetadataName(prefix + "Outer")!;
@@ -68,8 +68,8 @@ public sealed class NestedGeneratedTypeTests
         ManagedApiModel model = Model(true, ManagedApiStyle.Instance);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string path = fault == "delegate" ? "Types/NativeCallback.g.cs" : "Types/Outer.g.cs";
         CompilationUnitSyntax root = SyntaxFactory.ParseCompilationUnit(sink.sources[path]);
         ClassDeclarationSyntax owner = Assert.Single(root.DescendantNodes().OfType<ClassDeclarationSyntax>());
@@ -105,7 +105,7 @@ public sealed class NestedGeneratedTypeTests
         var index = model.types.IndexOf(model.types.Single(type => model.interop.GetType(type.nativeType).category == NativeTypeCategory.Record && type.name == "Outer"));
         model = model with { types = model.types.SetItem(index, model.types[index] with { name = name }) };
         NeutralBackendTests.MemorySink sink = new();
-        Exception? failure = await Record.ExceptionAsync(async () => await new CSharpBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
+        Exception? failure = await Record.ExceptionAsync(async () => await new CSharpTestBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
         Assert.True(failure is ArgumentException or InvalidOperationException, failure?.ToString());
         Assert.Empty(sink.sources);
     }
@@ -120,7 +120,7 @@ public sealed class NestedGeneratedTypeTests
         InteropType functionPointer = new(new("callback-pointer"), "int(*)(Outer*)", NativeTypeCategory.Pointer, 8, 8) { elementType = callable.id };
         InteropType alias = new(new("callback-alias"), "NativeCallback", NativeTypeCategory.Alias, 8, 8) { declarationName = "NativeCallback", elementType = functionPointer.id };
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize,
-            original.types.AddRange(ImmutableArray.Create(pointer, callable, functionPointer, alias)), original.functions, []);
+            original.types.AddRange(ImmutableArray.Create(pointer, callable, functionPointer, alias)), original.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.Example", "NativeApi")
         { nestGeneratedTypesInApi = nested, style = style, enums = [new("WideFlags", ManagedIntegralKind.UInt64, [new("High", "9223372036854775808")])] }, CancellationToken.None);
     }

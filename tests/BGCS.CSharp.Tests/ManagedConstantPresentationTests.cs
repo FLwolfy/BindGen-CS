@@ -6,12 +6,12 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -44,7 +44,7 @@ public sealed class ManagedConstantPresentationTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native\"module", sink) { importMode = importMode, includeRuntimeSource = shared,
             runtimeNamespace = shared ? "Generated.Presentation.Runtime" : "BGCS.Runtime", singleFile = shared };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal("42", model.interop.constants.Single(item => item.name == "NATIVE_VALUE").value.value);
         Assert.Equal("18446744073709551615", model.interop.types.Single(type => type.id.value == "mode").enumValues[0].evaluatedValue);
         CSharpConstantPlan constant = plan.constants.Single(item => item.name == "Presented");
@@ -53,7 +53,7 @@ public sealed class ManagedConstantPresentationTests
         Assert.Equal("ulong", plan.storage.Single().enumUnderlyingType);
         Assert.Equal("9223372036854775815UL", plan.storage.Single().enumValues[0].value);
         Assert.Equal(EvidenceLevel.UserAsserted, plan.storage.Single().enumValues[0].presentationEvidence!.level);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         string text = string.Join("\n", sink.sources.Values);
         Assert.Contains("Managed &lt;assertion&gt; &amp;&amp; prose.", text);
@@ -86,7 +86,7 @@ public sealed class ManagedConstantPresentationTests
     {
         NeutralBackendTests.MemorySink sink = new();
         ManagedApiModel model = Project(Request() with { constants = [new("NATIVE_VALUE") { managedType = type, expression = expression }] });
-        Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(model, new("native", sink)));
+        Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(model, new("native", sink)));
         Assert.Empty(sink.sources);
     }
 
@@ -107,7 +107,7 @@ public sealed class ManagedConstantPresentationTests
             "enum-member" => request with { nativeEnums = [new("NativeMode") { values = [new("missing")] }] },
             _ => request with { nativeEnums = [new("NativeMode") { values = [new("HIGH") { expression = "18446744073709551616UL" }] }] }
         };
-        Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(Project(request), new("native", new NeutralBackendTests.MemorySink())));
+        Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(Project(request), new("native", new NeutralBackendTests.MemorySink())));
     }
 
     [Theory]
@@ -120,7 +120,7 @@ public sealed class ManagedConstantPresentationTests
         ManagedApiModel model = enumeration
             ? original with { types = original.types.Select(type => type.nativeType.value == "mode" ? type with { enumPresentation = new([new(new("high"), forged)]) } : type).ToImmutableArray() }
             : original with { constants = original.constants.Select(constant => constant.sourceDeclaration.value == "value" ? constant with { presentation = forged } : constant).ToImmutableArray() };
-        Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
+        Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
     }
 
     [Theory]
@@ -133,8 +133,8 @@ public sealed class ManagedConstantPresentationTests
             ManagedApiModel model = Project(Request() with { style = shared ? ManagedApiStyle.Static : ManagedApiStyle.Instance, emitLibraryNameConstant = enabled });
             NeutralBackendTests.MemorySink sink = new();
             EmissionRequest request = new("native", sink);
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-            await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+            CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+            await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
             Assert.Equal(enabled ? shared ? 2 : 1 : 0, sink.sources.Values.Sum(text => text.Split("public const string NativeLibraryName =", StringSplitOptions.None).Length - 1));
             bool injected = false;
             var changed = sink.sources.Select(source =>
@@ -161,8 +161,8 @@ public sealed class ManagedConstantPresentationTests
             nativeEnums = [new("NativeMode") { values = [new("HIGH") { expression = "7UL" }] }] });
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string before = string.Join("\n", sink.sources.Values);
         var changed = sink.sources.Select(source => (source.Key, source.Value.Replace(mutation == "scalar" ? "= 43;" : "= 7UL,", mutation == "scalar" ? "= 44;" : "= 8UL,", StringComparison.Ordinal))).ToArray();
         Assert.NotEqual(before, string.Join("\n", changed.Select(item => item.Item2)));
@@ -175,15 +175,15 @@ public sealed class ManagedConstantPresentationTests
     public void LibraryNameConstantCannotCollideWithItsContainingType(ManagedApiStyle style)
     {
         ManagedApiModel model = Project(Request() with { name = "NativeLibraryName", style = style });
-        Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
-        new CSharpEmissionPlanner().Plan(model with { emitLibraryNameConstant = false }, new("native", new NeutralBackendTests.MemorySink()));
+        Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
+        new CSharpTestPlanner().Plan(model with { emitLibraryNameConstant = false }, new("native", new NeutralBackendTests.MemorySink()));
     }
 
     [Fact]
     public void UnrelatedConsumerNamespaceDoesNotPreventFrameworkOnlyConstantValidation()
     {
         ManagedApiModel model = Project(Request() with { constants = [new("NATIVE_VALUE") { expression = "6 * 7" }] });
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()) { additionalUsings = ["ExternalConsumer.Namespace"] });
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()) { additionalUsings = ["ExternalConsumer.Namespace"] });
         Assert.Equal("42", plan.constants.Single(item => item.sourceDeclaration.value == "value").expression);
     }
 
@@ -193,11 +193,11 @@ public sealed class ManagedConstantPresentationTests
         ManagedApiModel model = Project(Request() with { constants = [new("NATIVE_VALUE") { managedType = "Int64", expression = "Constants.Original + 1" }] });
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { additionalUsings = ["System"] };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpConstantPlan constant = plan.constants.Single(item => item.sourceDeclaration.value == "value");
         Assert.Equal("long", constant.type);
         Assert.Equal("43L", constant.expression);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         var changed = sink.sources.Select(source => (source.Key, source.Value.Replace("const long", "const Int64", StringComparison.Ordinal)
             .Replace("using global::System;", "using global::System;\nusing Int64 = global::System.Int32;", StringComparison.Ordinal))).ToArray();
         Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan, changed, request.libraryName));
@@ -208,17 +208,17 @@ public sealed class ManagedConstantPresentationTests
     {
         Evidence fact = new(EvidenceLevel.Declared, "compiler:negative-zero");
         InteropModule interop = new("floats", "windows-x64-msvc", 8, [], [], [])
-        { constants = [new(new("floating"), "FLOATING", "FLOATING", new(NativeScalarConstantKind.Binary32, "80000000", 4, null, fact), null)] };
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian, constants = [new(new("floating"), "FLOATING", "FLOATING", new(NativeScalarConstantKind.Binary32, "80000000", 4, null, fact), null)] };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, Request() with
         { constants = [new("FLOATING") { name = "Floating", managedType = "Double" }] }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { additionalUsings = ["System"] };
-        CSharpConstantPlan field = Assert.Single(new CSharpEmissionPlanner().Plan(model, request).constants);
+        CSharpConstantPlan field = Assert.Single(new CSharpTestPlanner().Plan(model, request).constants);
         Assert.Equal("double", field.type);
         Assert.False(field.isCompileTimeConstant);
         Assert.Contains("UInt32BitsToSingle(0x80000000U)", field.expression);
         Assert.Equal("80000000", Assert.Single(interop.constants).value.value);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         Assert.Equal(42, CompileAndRun(sink, """
             public static class AssertionProbe { public static int Run() {
                 return global::System.BitConverter.DoubleToUInt64Bits(global::Generated.Presentation.PresentationApi.Constants.Floating) == 0x8000000000000000UL ? 42 : 1;
@@ -233,7 +233,7 @@ public sealed class ManagedConstantPresentationTests
     {
         ManagedApiModel model = Project(Request() with { constants = [new("NATIVE_VALUE") { name = "Floating", managedType = type, expression = expression }] });
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("native", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("native", sink), CancellationToken.None);
         Assert.Equal(42, CompileAndRun(sink, $$"""
             public static class AssertionProbe { public static int Run() {
                 return global::System.BitConverter.{{bits}}(global::Generated.Presentation.PresentationApi.Constants.Floating) == {{expected}} ? 42 : 1;
@@ -255,11 +255,11 @@ public sealed class ManagedConstantPresentationTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { singleFile = shared, includeRuntimeSource = shared,
             runtimeNamespace = shared ? "Generated.Presentation.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpConstantPlan constant = plan.constants.Single(item => item.name == "ModeConstant");
         Assert.Equal(enumeration, constant.type);
         Assert.Equal("(" + enumeration + ")(9223372036854775808UL)", constant.expression);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         string context = shared ? "PresentationApiContext" : "PresentationApi";
         Assert.Equal(42, CompileAndRun(sink, $$"""
@@ -287,7 +287,7 @@ public sealed class ManagedConstantPresentationTests
         InteropType mode = new(new("mode"), "NativeMode", NativeTypeCategory.Enumeration, 8, 8)
         { elementType = unsigned.id, declarationName = "NativeMode", enumValues = [new(new("high"), "HIGH", "~0ULL", "18446744073709551615")] };
         InteropModule interop = new("presentation", "windows-x64-msvc", 8, [unsigned, mode], [], [])
-        { constants = [new(new("value"), "NATIVE_VALUE", "NATIVE_VALUE", new(NativeScalarConstantKind.Integer, "42", 4, true, fact), null),
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian, constants = [new(new("value"), "NATIVE_VALUE", "NATIVE_VALUE", new(NativeScalarConstantKind.Integer, "42", 4, true, fact), null),
             new(new("original"), "ORIGINAL", "ORIGINAL", new(NativeScalarConstantKind.Integer, "42", 4, true, fact), null)],
             stringConstants = [new(new("text"), "TEXT", "TEXT", new(NativeStringLiteralKind.Utf8, [65, 0], 1, fact), null)] };
         return new DefaultManagedProjection().Project(interop, request, CancellationToken.None);

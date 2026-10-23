@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -18,7 +18,7 @@ public sealed class NativeValueProtocolBuilder
     /// <param name="module">Its merged final C ABI.</param>
     /// <returns>The same native ABI with immutable value protocols.</returns>
     public InteropModule Attach(
-        CppBridgeModule bridge,
+        NativeBridgePlan bridge,
         InteropModule module
     ) {
         ArgumentNullException.ThrowIfNull(bridge);

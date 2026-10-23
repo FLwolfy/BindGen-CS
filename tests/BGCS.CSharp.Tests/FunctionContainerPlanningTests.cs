@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Managed;
 using BGCS.CSharp.Planning;
 using Xunit;
 
@@ -13,7 +13,7 @@ public sealed class FunctionContainerPlanningTests
     {
         ManagedApiModel model = NeutralBackendTests.Model();
         NeutralBackendTests.MemorySink sink = new();
-        CSharpEmissionPlanner planner = new();
+        CSharpTestPlanner planner = new();
         CSharpEmissionPlan planned = planner.Plan(model, new("native", sink));
         Assert.Empty(planned.functionContainers);
         Assert.Equal(model.methods.Select(method => method.nativeExport), planned.methods.Select(method => method.nativeExport));
@@ -30,7 +30,7 @@ public sealed class FunctionContainerPlanningTests
     {
         ManagedApiModel original = NeutralBackendTests.Model();
         ManagedApiModel model = original with { functionContainers = [new("Math", [new(original.methods[0].nativeExport, "Plus")])] };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         CSharpContainerMethodPlan operation = Assert.Single(Assert.Single(plan.functionContainers).methods);
         Assert.Equal(plan.methods[0].name, operation.targetName);
         Assert.Equal("Plus", operation.signature.name);
@@ -42,7 +42,7 @@ public sealed class FunctionContainerPlanningTests
     {
         ManagedApiModel model = NeutralBackendTests.Model();
         NeutralBackendTests.MemorySink sink = new();
-        CSharpEmissionPlanner planner = new();
+        CSharpTestPlanner planner = new();
         Assert.Throws<NotSupportedException>(() => planner.Plan(model with
         { functionContainers = [new("Math", [new(new("missing-native-operation"), "Plus")])] }, new("native", sink)));
         ManagedFunctionContainer container = new("Math", [new(model.methods[0].nativeExport, "Plus")]);

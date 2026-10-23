@@ -1,11 +1,14 @@
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Inputs;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using BGCS.Frontend.Clang;
-using BGCS.Contracts.Requests;
-using BGCS.Platforms.Targeting;
+using BGCS.Core.Requests;
+using BGCS.Targets.Desktop.Targeting;
+using BGCS.Hosting.Standard;
+using System.Text.Json;
+using BGCS.Core.Hosting;
 
 namespace BGCS.Tests.ParserLibraryHost;
 
@@ -15,11 +18,12 @@ internal static class Program
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-library-host-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        using HostServices host = new HostServicesProvider().Create(new(root, JsonSerializer.SerializeToElement(new { })));
         try
         {
             string header = Path.Combine(root, "native.h");
             File.WriteAllText(header, "int bgcs_library_add(int left, int right);");
-            FrontendResult parsed = new ClangFrontend().ParseAsync(new(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.C, [header])
+            FrontendResult parsed = new ClangFrontend(host).ParseAsync(new(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.C, [header])
                 { pathBase = root, parseMacros = false }, CancellationToken.None).GetAwaiter().GetResult();
             if (parsed.module.diagnostics.Any(diagnostic => diagnostic.isFailure))
             {

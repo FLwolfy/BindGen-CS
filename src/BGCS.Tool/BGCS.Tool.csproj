@@ -26,13 +26,13 @@
 
   <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../BGCS/BGCS.csproj" />
-    <ProjectReference Include="../BGCS.Contracts/BGCS.Contracts.csproj" />
+    <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Package content">
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-    <None Include="../BGCS.Frontend.Clang/Resources/Clang/LICENSE.txt" Pack="true" PackagePath="licenses/clang-resource/LICENSE.txt" />
-    <None Include="../BGCS.Frontend.Clang/Resources/Clang/README.md" Pack="true" PackagePath="licenses/clang-resource/README.md" />
+    <None Include="../../extensions/frontends/BGCS.Frontend.Clang/Resources/Clang/LICENSE.txt" Pack="true" PackagePath="licenses/clang-resource/LICENSE.txt" />
+    <None Include="../../extensions/frontends/BGCS.Frontend.Clang/Resources/Clang/README.md" Pack="true" PackagePath="licenses/clang-resource/README.md" />
   </ItemGroup>
 
   <Target Name="BGCSIncludeToolWorker" AfterTargets="Publish" Condition="'$(BGCSWorkerPackageRoot)' != '' and '$(RuntimeIdentifier)' != ''">

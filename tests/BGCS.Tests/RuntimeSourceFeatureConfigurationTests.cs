@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -32,8 +32,8 @@ public sealed class RuntimeSourceFeatureConfigurationTests
             DirectoryInfo? repository = new(AppContext.BaseDirectory);
             while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
             string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-                .WithWorkerAssetRoot(Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0")).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder()
+                .UseWorkerDirectory(Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0")).Build();
             GenerationResult minimal = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(minimal.success, minimal.GetDiagnosticSummary());
             configuration = configuration with { runtime = configuration.runtime with { sourceFeatures = ["runtime.complete"] } };
@@ -81,5 +81,5 @@ public sealed class RuntimeSourceFeatureConfigurationTests
         Assert.Throws<ArgumentException>(() => new GenerationRequest(Configuration() with { runtime = runtime }, Path.GetTempPath()));
     }
 
-    private static BindingConfiguration Configuration() => new() { schemaVersion = 1, library = new() { id = "source-complete", nativeName = "source_complete" }, source = new() { headers = ["native.h"] } };
+    private static BindingConfiguration Configuration() => new() { schemaVersion = 2, library = new() { id = "source-complete", nativeName = "source_complete" }, source = new() { headers = ["native.h"] } };
 }

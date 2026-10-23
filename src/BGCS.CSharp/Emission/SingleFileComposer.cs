@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace BGCS.CSharp.Emission;
 
@@ -19,16 +20,19 @@ public sealed class SingleFileComposer
     /// <param name="sources">Named source text snapshots; paths provide ordering and diagnostic locations.</param>
     /// <param name="targetNamespace">The generated API namespace, validated before composition.</param>
     /// <param name="abiReferenceTarget">Optional native target identifier written in the generated header.</param>
+    /// <param name="cancellationToken">Cancels parsing and composition before candidate publication.</param>
     /// <returns>The combined source text; the caller owns artifact publication.</returns>
     /// <exception cref="ArgumentNullException">The source sequence is null.</exception>
     /// <exception cref="InvalidOperationException">A source text contains syntax errors.</exception>
     public string ComposeSources(
         IEnumerable<(string Path, string Text)> sources,
         string targetNamespace,
-        string? abiReferenceTarget = null
+        string? abiReferenceTarget = null,
+        CancellationToken cancellationToken = default
     ) {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetNamespace);
+        cancellationToken.ThrowIfCancellationRequested();
         targetNamespace = BGCS.CSharp.Planning.CSharpNames.Namespace(targetNamespace);
         Dictionary<string, UsingDirectiveSyntax> usings = new(StringComparer.Ordinal);
         List<AttributeListSyntax> attributes = [];
@@ -36,11 +40,12 @@ public sealed class SingleFileComposer
         bool nullableEnabled = false;
         foreach ((string sourceFile, string sourceText) in sources.OrderBy(source => source.Path, StringComparer.OrdinalIgnoreCase))
         {
-            SyntaxTree tree = CSharpSyntaxTree.ParseText(sourceText, path: sourceFile);
-            Diagnostic[] errors = tree.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
+            cancellationToken.ThrowIfCancellationRequested();
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(sourceText, path: sourceFile, cancellationToken: cancellationToken);
+            Diagnostic[] errors = tree.GetDiagnostics(cancellationToken).Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
             if (errors.Length > 0)
                 throw new InvalidOperationException($"Cannot compose invalid generated source '{sourceFile}':{Environment.NewLine}{FormatParsingErrors(sourceText, errors)}");
-            CompilationUnitSyntax root = tree.GetCompilationUnitRoot();
+            CompilationUnitSyntax root = tree.GetCompilationUnitRoot(cancellationToken);
             nullableEnabled |= root.DescendantTrivia(descendIntoTrivia: true).Select(trivia => trivia.GetStructure()).OfType<NullableDirectiveTriviaSyntax>().Any(directive => directive.SettingToken.IsKind(SyntaxKind.EnableKeyword));
             foreach (UsingDirectiveSyntax directive in root.Usings)
                 usings.TryAdd(directive.WithoutTrivia().ToFullString(), directive.WithoutTrivia());
@@ -57,11 +62,13 @@ public sealed class SingleFileComposer
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         CompilationUnitSyntax output = SyntaxFactory.CompilationUnit().WithAttributeLists(SyntaxFactory.List(attributes)).WithUsings(SyntaxFactory.List(usings.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value)));
         output = output.WithMembers(SyntaxFactory.List(members));
         string normalized = GeneratedSourceFormatter.Normalize(output, Environment.NewLine).Replace("> )", ">)", StringComparison.Ordinal);
         string nullableDirective = nullableEnabled ? $"#nullable enable{Environment.NewLine}" : string.Empty;
         string text = CreateHeader(abiReferenceTarget) + nullableDirective + normalized + Environment.NewLine;
+        cancellationToken.ThrowIfCancellationRequested();
         return text;
     }
 

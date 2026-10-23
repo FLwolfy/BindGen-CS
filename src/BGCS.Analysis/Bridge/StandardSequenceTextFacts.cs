@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -14,7 +14,7 @@ public static class StandardSequenceTextFacts
     /// <param name="group">The finite original argument and data/length channels.</param>
     /// <returns>Counted text for a standard path or explicitly encoded string, otherwise null.</returns>
     public static StringContract? Read(
-        CppBridgeModule module,
+        NativeBridgePlan module,
         BridgeArgumentGroup group
     ) {
         ArgumentNullException.ThrowIfNull(module); ArgumentNullException.ThrowIfNull(group);

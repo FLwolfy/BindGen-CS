@@ -6,19 +6,19 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Emission;
 using BGCS.CSharp.Planning;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Interop;
 using BGCS.CSharp.Validation;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Targets;
 
 namespace BGCS.CSharp;
 
@@ -101,10 +101,10 @@ public sealed class CSharpBackend : IBindingBackend
         NativeMetadataSyntaxDecorator.Apply(plan, sources, cancellationToken);
         if (request.singleFile)
         {
-            string text = new SingleFileComposer().ComposeSources(sources, ns, model.interop.targetId);
+            string text = new SingleFileComposer().ComposeSources(sources, ns, model.interop.targetId, cancellationToken);
             sources = [(request.singleFileName, text)];
         }
-        new EmittedInteropContractReader().Verify(plan, sources.Select(source => (source.Path, source.Text)), request.libraryName, cancellationToken);
+        new EmittedInteropContractReader().Verify(plan, sources.ToArray(), request.libraryName, cancellationToken);
         HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
         foreach ((string path, string _) in sources)
         {
@@ -136,6 +136,13 @@ public sealed class CSharpBackend : IBindingBackend
             string text
         ) {
             cancellationToken.ThrowIfCancellationRequested();
+            if (request.singleFile)
+            {
+                // Composition parses and formats the complete source set before
+                // contract verification; formatting each fragment first is redundant.
+                sources.Add((path, text));
+                return;
+            }
             SyntaxTree tree = CSharpSyntaxTree.ParseText(text, new CSharpParseOptions(LanguageVersion.CSharp14), path, cancellationToken: cancellationToken);
             Diagnostic[] errors = tree.GetDiagnostics(cancellationToken).Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
             if (errors.Length != 0) throw new InvalidOperationException("The planned C# artifact is syntactically invalid: " + string.Join("; ", errors.Select(error => error.ToString())));

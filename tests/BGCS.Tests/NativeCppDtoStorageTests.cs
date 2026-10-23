@@ -8,9 +8,9 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -29,11 +29,11 @@ public sealed class NativeCppDtoStorageTests
         try
         {
             await File.WriteAllTextAsync(Path.Combine(root, "dto.hpp"), Header);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(Configuration(runtimeMode), root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
-            CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
+            NativeBridgePlan plan = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
             foreach (string name in new[] { "Inner", "Packet", "Standalone", "Aligned", "View" })
             {
                 var original = plan.source.declarations.Single(declaration => declaration.kind == "Class" && declaration.qualifiedName == "Demo::" + name);
@@ -60,7 +60,7 @@ public sealed class NativeCppDtoStorageTests
             await File.WriteAllTextAsync(Path.Combine(root, "dto.hpp"), Header);
             BindingConfiguration configuration = Configuration("package");
             configuration = configuration with { source = configuration.source with { languageStandard = "c++17" } };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.False(result.success);
             Assert.Contains("bridge.dto-copy", result.GetDiagnosticSummary());
@@ -82,7 +82,7 @@ public sealed class NativeCppDtoStorageTests
 
     private static BindingConfiguration Configuration(string runtime) => new()
     {
-        schemaVersion = 1, library = new() { id = "dto", nativeName = "dto_fixture" },
+        schemaVersion = 2, library = new() { id = "dto", nativeName = "dto_fixture" },
         source = new() { language = SourceLanguage.Cpp, headers = ["dto.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.NativeDto", name = "DtoApi", names = ImmutableDictionary<string, string>.Empty
             .Add("Demo::Inner", "Inner").Add("Demo::Packet", "Packet").Add("Demo::Standalone", "Standalone").Add("Demo::Aligned", "Aligned").Add("Demo::View", "View") },
@@ -204,6 +204,6 @@ public sealed class NativeCppDtoStorageTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

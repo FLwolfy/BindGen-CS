@@ -18,67 +18,67 @@
       "sha256": "478292cf688596958aaf8ff127230c449ff2a16f28fc8768084e97bcaa94911a"
     },
     {
-      "path": "src/BGCS.Contracts/BindingCollection.cs",
+      "path": "src/BGCS.Core/BindingCollection.cs",
       "category": "production",
       "sha256": "df035dc206d832e81c3d8fe3178e2074b562d51869562f633d260e932ec1c69f"
     },
     {
-      "path": "src/BGCS.Contracts/BindingConstant.cs",
+      "path": "src/BGCS.Core/BindingConstant.cs",
       "category": "production",
       "sha256": "7f3b8d3b92472d7ade350b850f93ae264b72b9e425cc9d6e7c8d77c700aeec13"
     },
     {
-      "path": "src/BGCS.Contracts/BindingDelegate.cs",
+      "path": "src/BGCS.Core/BindingDelegate.cs",
       "category": "production",
       "sha256": "3c4a9bf729b5a985c2ea177320d4a3b18d0b77b4b75de68149399a95f1e2466e"
     },
     {
-      "path": "src/BGCS.Contracts/BindingEmissionException.cs",
+      "path": "src/BGCS.Core/BindingEmissionException.cs",
       "category": "production",
       "sha256": "f35c4f9c4339af2e92b5ed9614e063d3de9dd9abc84afb00a5e2786ce7544c3d"
     },
     {
-      "path": "src/BGCS.Contracts/BindingFunction.cs",
+      "path": "src/BGCS.Core/BindingFunction.cs",
       "category": "production",
       "sha256": "eca8b964f3fd09af69b4a47d7c4def3fefb36b93c75fdbd5cc0a080b5e50076e"
     },
     {
-      "path": "src/BGCS.Contracts/BindingGenerationResult.cs",
+      "path": "src/BGCS.Core/BindingGenerationResult.cs",
       "category": "production",
       "sha256": "c9fac4ff20b9979fa0e85a16dde4f7e05bb0869aa892501b2ee1fc6f18626b2c"
     },
     {
-      "path": "src/BGCS.Contracts/BindingImport.cs",
+      "path": "src/BGCS.Core/BindingImport.cs",
       "category": "production",
       "sha256": "a5e43255a18d2a73cc5f9aade57cd64999669ed8efab5abfe2558f4e0357d31e"
     },
     {
-      "path": "src/BGCS.Contracts/BindingModule.cs",
+      "path": "src/BGCS.Core/BindingModule.cs",
       "category": "production",
       "sha256": "b99ff4dcc60ff98cc1fb49adf86e2ebaf9b5caefe514e5b45c2adc640e96a48c"
     },
     {
-      "path": "src/BGCS.Contracts/BindingType.cs",
+      "path": "src/BGCS.Core/BindingType.cs",
       "category": "production",
       "sha256": "04bd78d5efb2dd0cf84e23652c1ddbbcc509a627af5fa5b4471cec241061856b"
     },
     {
-      "path": "src/BGCS.Contracts/Emission/EmissionContext.cs",
+      "path": "src/BGCS.Core/Emission/EmissionContext.cs",
       "category": "production",
       "sha256": "96f018a12c2d2c1be557f4792078e8c9c4b442f54d391f4a733c36b4e35ca591"
     },
     {
-      "path": "src/BGCS.Contracts/Emission/IBindingEmitter.cs",
+      "path": "src/BGCS.Core/Emission/IBindingEmitter.cs",
       "category": "production",
       "sha256": "9a5e50fc41a85876f9e72a760eb84a50167d908cda90596ef7d37b68dbe0b85e"
     },
     {
-      "path": "src/BGCS.Contracts/MarshallingPlan.cs",
+      "path": "src/BGCS.Core/MarshallingPlan.cs",
       "category": "production",
       "sha256": "0c9270e12d9bca76dd51abd8a1b5c71c1ce0e3bd0c5dd890431be0c1d9302e39"
     },
     {
-      "path": "src/BGCS.Contracts/StrictSafetySeverity.cs",
+      "path": "src/BGCS.Core/StrictSafetySeverity.cs",
       "category": "production",
       "sha256": "d0d06973c0fc01454cc65dce11457297d2f87b647b2fe5546f0a6cbeeea5df6d"
     },
@@ -1160,8 +1160,8 @@
   ],
   "movedNeutralTests": [
     {
-      "destination": "tests/BGCS.Contracts.Tests/BindingImmutabilityTests.cs",
-      "newNamespace": "BGCS.Contracts.Tests",
+      "destination": "tests/BGCS.Core.Tests/BindingImmutabilityTests.cs",
+      "newNamespace": "BGCS.Core.Tests",
       "oldNamespace": "BGCS.Generation.Tests",
       "source": "tests/BGCS.Generation.Tests/BindingImmutabilityTests.cs"
     },

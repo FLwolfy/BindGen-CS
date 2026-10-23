@@ -1,8 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 
 namespace BGCS.Tests.NeutralPlugin;
 

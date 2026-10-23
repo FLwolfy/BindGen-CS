@@ -13,6 +13,7 @@ import platform
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import tempfile
 import time
@@ -32,6 +33,78 @@ import installed_custom_target
 import installed_source_contributor
 from native_fixture_build import compile_shared
 from disk_budget import check_free_space, wait_for_process
+
+
+def release_consumer_outputs(work: Path, evidence: Path, label: str, relative_paths: tuple[str, ...]) -> None:
+    """Release only this run's completed executable copies, preserving source and plugin inputs."""
+    allowed = {"sdk-published", "sdk/bin", "sdk/obj", "advanced-clang-sdk/bin", "advanced-clang-sdk/obj",
+               "custom-target-sdk/bin", "custom-target-sdk/obj", "source-protocol-sdk/bin", "source-protocol-sdk/obj"}
+    if (not relative_paths or len(set(relative_paths)) != len(relative_paths)
+            or any(path not in allowed for path in relative_paths) or not re.fullmatch(r"[a-z-]+", label)):
+        raise ValueError("Consumer output release requires distinct explicitly owned stage paths.")
+    parent = ROOT / "artifacts/temporary"
+    if (work.parent != parent or not work.name.startswith("package-consumers-")
+            or work.resolve(strict=True) != work.absolute() or not work.resolve().is_relative_to(ROOT.resolve())):
+        raise RuntimeError("Consumer output release escaped its newly owned temporary workspace.")
+
+    def checked(path: Path):
+        metadata = path.lstat()
+        if (stat.S_ISLNK(metadata.st_mode)
+                or getattr(metadata, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+            raise RuntimeError("Consumer output release refuses linked paths: " + str(path))
+        return metadata
+
+    for ancestor in (ROOT, ROOT / "artifacts", parent, work):
+        if not stat.S_ISDIR(checked(ancestor).st_mode):
+            raise RuntimeError("The owned consumer boundary is no longer a directory.")
+    owner = checked(work)
+    owner_identity = owner.st_dev, owner.st_ino
+    if evidence.resolve().is_relative_to(work.resolve()):
+        raise RuntimeError("Consumer release evidence must remain outside its disposable workspace.")
+    planned = []
+    for relative in relative_paths:
+        target = work / relative
+        current = work
+        for part in Path(relative).parts:
+            current /= part
+            if not current.exists() and not current.is_symlink():
+                raise FileNotFoundError("A completed consumer output is missing: " + str(current))
+            checked(current)
+        if not stat.S_ISDIR(checked(target).st_mode) or not target.resolve(strict=True).is_relative_to(work.resolve()):
+            raise RuntimeError("A completed consumer output escaped its owned boundary.")
+        files, byte_count = 0, 0
+        for directory, children, names in os.walk(target, followlinks=False):
+            checked(Path(directory))
+            for child in children:
+                if not stat.S_ISDIR(checked(Path(directory) / child).st_mode):
+                    raise RuntimeError("A consumer output child is no longer a directory.")
+            for name in names:
+                metadata = checked(Path(directory) / name)
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise RuntimeError("A consumer output contains a nonregular file.")
+                files += 1
+                byte_count += metadata.st_size
+        metadata = checked(target)
+        planned.append((target, (metadata.st_dev, metadata.st_ino), {"path": relative, "files": files, "bytes": byte_count}))
+    journal = evidence / ("released-" + label + ".json")
+    if journal.exists():
+        raise RuntimeError("Consumer release evidence already exists for this stage.")
+    record = {"scope": "completed-owned-consumer-executable-copies", "complete": False,
+              "freeBytesBefore": shutil.disk_usage(ROOT).free, "outputs": [row for _, _, row in planned]}
+    journal.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    for target, identity, row in planned:
+        check_free_space(ROOT)
+        owner_now, target_now = checked(work), checked(target)
+        if ((owner_now.st_dev, owner_now.st_ino) != owner_identity
+                or (target_now.st_dev, target_now.st_ino) != identity
+                or not target.resolve(strict=True).is_relative_to(work.resolve(strict=True))):
+            raise RuntimeError("The exact owned consumer output changed before release.")
+        shutil.rmtree(target)
+        row["released"] = True
+        journal.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        check_free_space(ROOT)
+    record.update(complete=True, freeBytesAfter=shutil.disk_usage(ROOT).free)
+    journal.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
 
 def preserve_failure_inputs(work: Path, evidence: Path, name: str) -> None:
@@ -182,7 +255,7 @@ def verify_package_receipt(packages: Path, version: str, revision: str, complete
         raise RuntimeError("The packaging receipt does not describe the requested product version.")
     files = {file.name: file for file in packages.glob(f"*.{version}.*nupkg")}
     if complete:
-        expected = {f"{name}.{version}.nupkg" for name in PRODUCT_MANIFEST["products"] + PRODUCT_MANIFEST["technicalPackages"]}
+        expected = {f"{name}.{version}.nupkg" for name in PRODUCT_MANIFEST["products"] + PRODUCT_MANIFEST["optionalProducts"] + PRODUCT_MANIFEST["technicalPackages"]}
         expected |= {f"BindGen-CS.{rid}.{version}.nupkg" for rid in PRODUCT_MANIFEST["toolRuntimeIdentifiers"]}
         expected |= {f"{name}.{version}.snupkg" for name in PRODUCT_MANIFEST["symbolProducts"]}
         if files.keys() != expected:
@@ -236,7 +309,7 @@ def schema_differences(delivered, actual, path: str = ""):
 
 
 def configuration(namespace: str, output: str, runtime: str = "package", single: bool = False, cpp: bool = False) -> dict:
-    return {"schemaVersion": 1, "library": {"id": "package_probe", "nativeName": "package_probe"},
+    return {"schemaVersion": 2, "library": {"id": "package_probe", "nativeName": "package_probe"},
             "source": {"language": "cpp" if cpp else "c", "headers": ["widget.hpp" if cpp else "native.h"]},
             "api": {"namespace": namespace, "name": "NativeApi", "names": {"native_add": "Add"}},
             "runtime": {"mode": runtime}, "output": {"root": output, "layout": "singleFile" if single else "split"}}
@@ -244,7 +317,7 @@ def configuration(namespace: str, output: str, runtime: str = "package", single:
 
 def copy_installed_plugin_contract(host_output: Path, plugin_output: Path) -> None:
     """Bind the plugin manifest to the exact shared Contracts bytes of its installed SDK host."""
-    source = host_output / "BGCS.Contracts.dll"
+    source = host_output / "BGCS.Core.dll"
     destination = plugin_output / source.name
     if not source.is_file():
         raise FileNotFoundError("The installed SDK host has no shared Contracts execution assembly.")
@@ -272,6 +345,54 @@ def record_source_completion(report: dict, source_at_start: dict, final_source: 
 
 
 
+
+def verify_optional_extension_consumers(dotnet: str, version: str, work: Path, evidence: Path, run) -> list[dict]:
+    """Restore each independently selected extension without the full generator product."""
+    classes = {"Android": "AndroidPlugin", "AppleMobile": "AppleMobilePlugin", "BrowserWasm": "BrowserWasmPlugin",
+               "FreeBsd": "FreeBsdPlugin", "NativeAot": "NativeAotPlugin"}
+    receipts = []
+    for family, plugin in classes.items():
+        product = "BGCS.Extension." + family
+        directory = work / ("extension-" + family)
+        write_project(directory, version, [product])
+        source = """using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using BGCS.Core.Plugins;
+using BGCS.Extension.FAMILY;
+IBindingPlugin plugin = new PLUGIN();
+Registry registry = new();
+plugin.Configure(registry, new(plugin.descriptor.id, JsonSerializer.SerializeToElement(new { }), AppContext.BaseDirectory));
+if (!registry.ids.SetEquals(plugin.descriptor.services.Select(value => value.id))) throw new InvalidOperationException("Optional plugin registration does not match its declared services.");
+string[] forbidden = { "BGCS", "BGCS.Engine", "BGCS.Infrastructure", "BGCS.Frontend.Clang", "BGCS.Runtime" };
+if (AppDomain.CurrentDomain.GetAssemblies().Any(value => forbidden.Contains(value.GetName().Name))) throw new InvalidOperationException("Optional Core-only composition loaded generator/runtime implementation.");
+Console.WriteLine(plugin.descriptor.id + ": independent Core-only registration passed.");
+sealed class Registry : IExtensionRegistryBuilder
+{
+    internal HashSet<string> ids { get; } = new(StringComparer.Ordinal);
+    public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        if (!ids.Add(id)) throw new InvalidOperationException("Duplicate optional service identity.");
+    }
+}
+""".replace("FAMILY", family).replace("PLUGIN", plugin)
+        (directory / "Program.cs").write_text(source, encoding="utf-8")
+        run([dotnet, "build", "Consumer.csproj", "-c", "Release", "-m:1", "-nr:false"], directory, evidence, "optional-" + family + "-build")
+        output = directory / "bin/Release/net10.0"
+        run([dotnet, str(output / "Consumer.dll")], directory, evidence, "optional-" + family + "-registration")
+        deps = json.loads((output / "Consumer.deps.json").read_text(encoding="utf-8-sig"))
+        delivered = {name.rsplit("/", 1)[0] for name in deps["libraries"]}
+        if delivered != {"Consumer", "BGCS.Core", product}:
+            raise RuntimeError("An optional extension unexpectedly depends on another product or third-party package: " + product + ": " + str(delivered))
+        if (output / "BGCS.Engine.dll").exists() or (output / "BGCS.Frontend.Clang.dll").exists():
+            raise RuntimeError("Optional extension consumption copied the generation engine or parser.")
+        receipts.append({"product": product, "pluginType": plugin, "coreOnlyProductDependency": True,
+            "assemblySha256": hashlib.sha256((output / (product + ".dll")).read_bytes()).hexdigest(),
+            "coreSha256": hashlib.sha256((output / "BGCS.Core.dll").read_bytes()).hexdigest()})
+    return receipts
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default=os.environ.get("DOTNET_HOST_PATH", "dotnet"))
@@ -288,6 +409,8 @@ def main() -> None:
         parser.error("--host-tool requires --sdk-only; complete certification already installs the tool.")
     if args.sdk_only and (args.wasm or args.native_feature_matrix) and not args.host_tool:
         parser.error("Partial browser/native feature matrices require --host-tool to consume an actual installed generator product.")
+    if not re.fullmatch(r"4\.0\.0(?:-ci(?:\.[0-9A-Za-z-]+)*)?", args.version):
+        parser.error("Only 4.0.0 or private 4.0.0-ci candidate packages can be certified from this tree.")
     packages = args.packages.resolve()
     evidence = args.output.resolve()
     evidence.mkdir(parents=True, exist_ok=True)
@@ -324,8 +447,8 @@ def main() -> None:
             raise RuntimeError("Complete installed-product certification requires a clean verifier working tree at the packaged revision.")
         report["packagingEvidence"] = verify_package_receipt(packages, args.version, revision, not args.sdk_only)
         sdk_version = run([args.dotnet, "--version"], ROOT, evidence, "selected-dotnet-sdk").strip()
-        if not sdk_version.startswith("10."):
-            raise RuntimeError("Installed product certification requires the selected .NET 10 SDK.")
+        if sdk_version != "10.0.402":
+            raise RuntimeError("Installed product certification requires the exact locked .NET SDK10.0.402.")
         report["dotnetSdkVersion"] = sdk_version
         run([args.dotnet, "--list-runtimes"], ROOT, evidence, "selected-dotnet-runtimes")
         with tempfile.TemporaryDirectory(prefix="package-consumers-", dir=temporary_parent) as temp:
@@ -347,9 +470,11 @@ def main() -> None:
             ET.SubElement(sources, "add", key="local-bgcs", value=str(packages))
             ET.SubElement(sources, "add", key="nuget.org", value="https://api.nuget.org/v3/index.json")
             ET.ElementTree(nuget).write(work / "NuGet.config", encoding="utf-8", xml_declaration=True)
+            report["optionalExtensions"] = verify_optional_extension_consumers(args.dotnet, args.version, work, evidence, run)
+            report["checks"].append("installed-five-optional-extensions-core-only-registration-and-closure")
             sdk = work / "sdk"
             plugin = work / "plugin"
-            write_project(plugin, args.version, ["BGCS.Contracts"])
+            write_project(plugin, args.version, ["BGCS.Core"])
             # A library avoids giving the generator's consumer application another entry point.
             document = ET.parse(plugin / "Consumer.csproj")
             document.find("./PropertyGroup/OutputType").text = "Library"
@@ -357,16 +482,16 @@ def main() -> None:
             document.write(plugin / "Consumer.csproj", encoding="utf-8", xml_declaration=True)
             (plugin / "Plugin.cs").write_text('''using System;
 using System.Threading;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 public sealed class PackagePlugin : IBindingPlugin
 {
     public PluginDescriptor descriptor => new("package.plugin", "1.0.0", [new("package.transform", ExtensionPort.InteropTransform)]);
     public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        => registry.RegisterFactory<IInteropTransform>("package.transform", () => new NeutralTransform());
+        => registry.RegisterFactory<IInteropTransform>("package.transform", _ => new NeutralTransform());
     private sealed class NeutralTransform : IInteropTransform
     {
         public string id => "package.transform";
@@ -403,12 +528,12 @@ using System.IO;
 using System.Linq;
 using BGCS;
 using BGCS.Configuration;
-await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().AddPlugin<PackagePlugin>()
+await using BindingHost host = BindingGenerator.CreateBuilder().AddPlugin<PackagePlugin>()
     .Build();
 SchemaCatalog schemas = new();
 File.WriteAllText("sdk-binding.schema.json", schemas.CreateBindingSchema().ToJsonString());
 File.WriteAllText("sdk-workspace.schema.json", schemas.CreateWorkspaceSchema().ToJsonString());
-File.WriteAllText("sdk-plugin.schema.json", schemas.CreatePluginSchema().ToJsonString());
+File.WriteAllText("sdk-extension.schema.json", schemas.CreatePluginSchema().ToJsonString());
 foreach (string file in new[] { "Generated", "Source", "Single", "Cpp" })
 {
     Console.WriteLine("Running installed SDK request: " + file);
@@ -437,7 +562,7 @@ Console.WriteLine("Installed SDK C/C++ generation and Contracts-only plugin pass
             plugin_manifest_path = plugin_output / "source-plugin.json"
             plugin_manifest_path.write_text(json.dumps({
                 "schemaVersion": 1, "assembly": "Package.Plugin.dll", "entryType": "BGCS.Tests.NeutralPlugin.SourceFixturePlugin",
-                "plugin": {"id": "fixture.source-plugin", "version": "1.0.0", "contractsMajor": 3,
+                "plugin": {"id": "fixture.source-plugin", "version": "1.0.0", "contractsMajor": 4,
                            "services": [{"id": "fixture.source/helpers", "port": "sourceContributor", "priority": 0}],
                            "configurationSchema": installed_source_contributor.configuration_schema()},
                 "assets": [{"path": path.name, "digest": {"value": hashlib.sha256(path.read_bytes()).hexdigest()}} for path in plugin_assets]
@@ -452,7 +577,7 @@ Console.WriteLine("Installed SDK C/C++ generation and Contracts-only plugin pass
             report["checks"].append("installed-sdk-clean-published-worker-without-global-package-fallback")
             report["checks"].append("installed-sdk-c-cpp-and-contracts-only-plugin")
             with zipfile.ZipFile(packages / f"BGCS.{args.version}.nupkg") as delivered_sdk:
-                for kind, filename in (("binding", "bindgen.schema.json"), ("workspace", "workspace.schema.json"), ("plugin", "plugin.schema.json")):
+                for kind, filename in (("binding", "bindgen.schema.json"), ("workspace", "workspace.schema.json"), ("extension", "extension.schema.json")):
                     delivered = json.loads(delivered_sdk.read("schemas/" + filename))
                     actual = json.loads((sdk / ("sdk-" + kind + ".schema.json")).read_text(encoding="utf-8"))
                     if delivered != actual:
@@ -460,12 +585,16 @@ Console.WriteLine("Installed SDK C/C++ generation and Contracts-only plugin pass
                         (evidence / (kind + "-schema-differences.json")).write_text(json.dumps(differences, indent=2) + "\n", encoding="utf-8")
                         raise RuntimeError("The delivered " + kind + " schema differs from the actual installed SDK contract: " + ", ".join(item["path"] for item in differences[:8]))
             report["checks"].append("delivered-schemas-match-installed-sdk-contracts")
+            release_consumer_outputs(work, evidence, "sdk", ("sdk-published", "sdk/bin", "sdk/obj"))
             advanced_worker = installed_advanced_worker.prepare(args.dotnet, args.version, ROOT, work, evidence, run, write_project)
             report["installedAdvancedWorkerPlugin"] = advanced_worker["evidence"]
             report["checks"].append("installed-advanced-clang-plugin-sdk-and-runtime-compile")
+            release_consumer_outputs(work, evidence, "advanced-worker", ("advanced-clang-sdk/bin", "advanced-clang-sdk/obj"))
             custom_target = installed_custom_target.prepare(args.dotnet, args.version, ROOT, work, evidence, run, write_project)
+            release_consumer_outputs(work, evidence, "custom-target", ("custom-target-sdk/bin", "custom-target-sdk/obj"))
             source_contributor = installed_source_contributor.prepare(args.dotnet, args.version, work, evidence,
                 plugin_manifest_path, run, write_project)
+            release_consumer_outputs(work, evidence, "source-contributor", ("source-protocol-sdk/bin", "source-protocol-sdk/obj"))
             for folder, namespace, reference in (("Generated", "Package.Probe", ["BGCS.Runtime"]), ("Source", "Package.Source", []), ("Single", "Package.Single", [])):
                 consumer = work / (folder + "Consumer")
                 managed = next((sdk / folder).glob("*/managed"))

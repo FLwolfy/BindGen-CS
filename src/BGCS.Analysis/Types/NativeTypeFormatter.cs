@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using System.Text;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Types;
 
@@ -63,6 +64,20 @@ public sealed class NativeTypeFormatter
         ArgumentNullException.ThrowIfNull(module);
         return Type(type, initialDeclarator, string.Empty, []);
 
+        static bool Identifier(string value)
+        {
+            bool first = true;
+            foreach (Rune rune in value.EnumerateRunes())
+            {
+                UnicodeCategory category = Rune.GetUnicodeCategory(rune);
+                bool initial = rune.Value == '_' || Rune.IsLetter(rune) || category == UnicodeCategory.LetterNumber;
+                if (!(first ? initial : initial || Rune.IsDigit(rune) || category is UnicodeCategory.NonSpacingMark
+                    or UnicodeCategory.SpacingCombiningMark or UnicodeCategory.ConnectorPunctuation)) return false;
+                first = false;
+            }
+            return !first;
+        }
+
         string Type(
             StableId id,
             string declarator,
@@ -106,7 +121,7 @@ public sealed class NativeTypeFormatter
                             throw new NotSupportedException("The native callable type requires an explicit supported calling-convention declaration.");
                         string parameters = string.Join(", ", native.parameterTypes.Select(parameter => Type(parameter, string.Empty, string.Empty, active))
                             .Concat(native.isVariadic ? ["..."] : []));
-                        if (sourceDeclaration && module.language == BGCS.Contracts.Inputs.SourceLanguage.C && native.hasPrototype && parameters.Length == 0) parameters = "void";
+                        if (sourceDeclaration && module.language == BGCS.Core.Inputs.SourceLanguage.C && native.hasPrototype && parameters.Length == 0) parameters = "void";
                         return Type(result, declarator + "(" + parameters + ")", qualifiers, active)
                             + (native.callingConvention is null or "C" or "Default" ? string.Empty : " [" + native.callingConvention + "]");
                     case NativeTypeCategory.Record:
@@ -114,19 +129,22 @@ public sealed class NativeTypeFormatter
                     case NativeTypeCategory.Alias:
                         string name = native.category == NativeTypeCategory.Record && native.spelling.Contains('<', StringComparison.Ordinal)
                             ? native.spelling : native.declaration is StableId declaration ? module.GetDeclaration(declaration).qualifiedName : native.spelling;
-                        if (sourceDeclaration && module.language == BGCS.Contracts.Inputs.SourceLanguage.C && native.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration)
+                        if (sourceDeclaration && module.language == BGCS.Core.Inputs.SourceLanguage.C && native.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration)
                         {
-                            NativeDeclaration? named = native.declaration is StableId owner ? module.GetDeclaration(owner) : null;
-                            if (named is not null) name = named.name;
-                            string tag = native.category == NativeTypeCategory.Enumeration ? "enum " : named?.role == "Union" ? "union " : "struct ";
-                            foreach (string prefix in new[] { "struct ", "union ", "enum " })
-                                if (name.StartsWith(prefix, StringComparison.Ordinal)) { name = name[prefix.Length..]; break; }
-                            name = tag + name;
+                            // Compiler spelling distinguishes real tag names from typedef names for anonymous storage.
+                            // The display declaration name cannot establish which C namespace owns that identity.
+                            string[] words = native.spelling.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                            bool identifier = words.Length == 1 && Identifier(words[0]);
+                            bool tag = words.Length == 2 && words[0] is "struct" or "union" or "enum" && Identifier(words[1]);
+                            if (!identifier && !tag)
+                                throw new NotSupportedException("The native C storage has no usable compiler-established declaration spelling: '" + native.spelling
+                                    + "'. Give anonymous storage an explicit source typedef or supply a typed native lowering.");
+                            name = string.Join(" ", words);
                         }
                         name = absoluteNames ? "::" + name.TrimStart(':') : name.TrimStart(':');
                         return Finish(name);
                     default:
-                        return Finish(sourceDeclaration && module.language == BGCS.Contracts.Inputs.SourceLanguage.C && native.primitiveKind == "Bool" ? "_Bool" : native.spelling);
+                        return Finish(sourceDeclaration && module.language == BGCS.Core.Inputs.SourceLanguage.C && native.primitiveKind == "Bool" ? "_Bool" : native.spelling);
                 }
             }
             finally { active.Remove(id); }

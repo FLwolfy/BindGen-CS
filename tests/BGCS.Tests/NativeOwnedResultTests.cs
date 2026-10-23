@@ -8,8 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Inputs;
 using BGCS.Runtime;
 using Xunit;
 
@@ -45,7 +45,7 @@ public sealed class NativeOwnedResultTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "owned", nativeName = "owned_fixture" },
+                schemaVersion = 2, library = new() { id = "owned", nativeName = "owned_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false },
                 api = new() { @namespace = "Generated.Owned", name = "WidgetApi", importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget").Add("Widget::Live", "Live").Add("Widget::Add", "Add").Add("Widget::Set", "Set") },
@@ -53,7 +53,7 @@ public sealed class NativeOwnedResultTests
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
             Assert.True(built.success, built.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(built.outputRoot));
@@ -118,8 +118,10 @@ public sealed class NativeOwnedResultTests
                 Console.WriteLine("owned-lifetime-ok");
                 {{observedProvider}}
                 """);
-            string output = await RunAsync(consumer, "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false");
-            output = await RunAsync(consumer, Path.Combine(consumer, "bin", "Debug", "net10.0", "Consumer.dll"), native);
+            string buildOutput = await RunAsync(consumer, "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false");
+            string consumerAssembly = Path.Combine(consumer, "bin", "Release", "net10.0", "Consumer.dll");
+            Assert.True(File.Exists(consumerAssembly), "The SDK did not produce the fixture consumer assembly: " + consumerAssembly + Environment.NewLine + buildOutput);
+            string output = await RunAsync(consumer, consumerAssembly, native);
             Assert.Contains("owned-lifetime-ok", output);
         }
         finally { Directory.Delete(temporary, recursive: true); }
@@ -146,6 +148,6 @@ public sealed class NativeOwnedResultTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

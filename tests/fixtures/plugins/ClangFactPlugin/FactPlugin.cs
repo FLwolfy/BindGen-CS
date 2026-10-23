@@ -6,11 +6,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Requests;
 using BGCS.Frontend.Clang.Advanced;
 
 namespace ClangFactFixture;
@@ -30,7 +30,7 @@ public class FactPlugin : IBindingPlugin, IExternalInputProvider
     public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration settings)
     {
         configuration = settings;
-        registry.RegisterFactory<IClangFactContributor>("clang.fixture.facts", () => CreateContributor(settings));
+        registry.RegisterFactory<IClangFactContributor>("clang.fixture.facts", _ => CreateContributor(settings));
     }
     protected virtual FactContributor CreateContributor(PluginConfiguration settings) => new(settings);
     public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken token)

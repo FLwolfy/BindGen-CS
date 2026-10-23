@@ -7,10 +7,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Processing;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -30,7 +30,7 @@ public sealed class SourceProcessorTests
         const string input = "A ab B ac C";
         const string pattern = "(?<word>a)(b|c)";
         Editor editor = new(("Api.cs", input));
-        await new RegexArtifactProcessor("oracle", 0, ["**/*.cs"], pattern, replacement).ProcessAsync(editor.Request(), default);
+        await new RegexArtifactProcessor(["**/*.cs"], pattern, replacement).ProcessAsync(editor.Request(), default);
         Assert.Equal(Regex.Replace(input, pattern, replacement, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)), editor.Text("Api.cs"));
     }
 
@@ -38,7 +38,7 @@ public sealed class SourceProcessorTests
     public async Task FrozenSelectorsUseManagedRelativeCaseSensitivePathsAndLiteralReplacement()
     {
         List<string> paths = ["Types/*.cs"];
-        TextArtifactProcessor processor = new("literal", 0, paths, "NAME", "$&", ignoreCase: true);
+        TextArtifactProcessor processor = new(paths, "NAME", "$&", ignoreCase: true);
         paths[0] = "**/*.cs";
         Editor editor = new(("Types/Value.cs", "Name NAME"), ("Types/Nested/Other.cs", "NAME"), ("Api.cs", "NAME"), ("types/Value.cs", "NAME"));
         await processor.ProcessAsync(editor.Request(), default);
@@ -75,7 +75,7 @@ public sealed class SourceProcessorTests
             foreach (string candidate in candidates)
             {
                 Editor editor = new((candidate, "BEFORE"));
-                await new TextArtifactProcessor("glob", 0, [selector], "BEFORE", "AFTER", requireMatch: false).ProcessAsync(editor.Request(), default);
+                await new TextArtifactProcessor([selector], "BEFORE", "AFTER", requireMatch: false).ProcessAsync(editor.Request(), default);
                 Assert.True(editor.Text(candidate) == (oracle.IsMatch(candidate) ? "AFTER" : "BEFORE"),
                     "Selector: " + selector + "; candidate: " + candidate);
             }
@@ -89,7 +89,7 @@ public sealed class SourceProcessorTests
         cancellation.Cancel();
         Editor editor = new(("Api.cs", "BEFORE"));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await new TextArtifactProcessor(
-            "cancel", 0, ["Types/**"], "BEFORE", "AFTER", requireMatch: false).ProcessAsync(editor.Request(), cancellation.Token));
+            ["Types/**"], "BEFORE", "AFTER", requireMatch: false).ProcessAsync(editor.Request(), cancellation.Token));
         Assert.Equal("BEFORE", editor.Text("Api.cs"));
     }
 
@@ -100,7 +100,7 @@ public sealed class SourceProcessorTests
     [InlineData("Types\\Other.cs")]
     [InlineData("Types/**bad.cs")]
     public void TraversalAndInvalidPortableSelectorsFailBeforeProcessing(string path)
-        => Assert.Throws<ArgumentException>(() => new TextArtifactProcessor("paths", 0, [path], "a", "b"));
+        => Assert.Throws<ArgumentException>(() => new TextArtifactProcessor([path], "a", "b"));
 
     [Theory]
     [InlineData(0, RegexOptions.None)]
@@ -108,7 +108,7 @@ public sealed class SourceProcessorTests
     [InlineData(1000, RegexOptions.RightToLeft)]
     [InlineData(1000, RegexOptions.ECMAScript)]
     public void UnboundedOrUnsupportedRegexPoliciesFailBeforeProcessing(int timeout, RegexOptions options)
-        => Assert.Throws<ArgumentException>(() => new RegexArtifactProcessor("regex", 0, ["**/*.cs"], "x", "y", timeout, options));
+        => Assert.Throws<ArgumentException>(() => new RegexArtifactProcessor(["**/*.cs"], "x", "y", timeout, options));
 
     [Fact]
     public async Task RegexCaseFoldingIsInvariantAndCancellationDoesNotMutateCandidates()
@@ -118,7 +118,7 @@ public sealed class SourceProcessorTests
         {
             CultureInfo.CurrentCulture = new("tr-TR");
             Editor editor = new(("Api.cs", "FILE"));
-            RegexArtifactProcessor processor = new("culture", 0, ["**/*.cs"], "file", "ok", options: RegexOptions.IgnoreCase);
+            RegexArtifactProcessor processor = new(["**/*.cs"], "file", "ok", options: RegexOptions.IgnoreCase);
             await processor.ProcessAsync(editor.Request(), default);
             Assert.Equal("ok", editor.Text("Api.cs"));
             using CancellationTokenSource cancellation = new();
@@ -133,31 +133,31 @@ public sealed class SourceProcessorTests
     public async Task MissingMatchesAreExplicitAndAdditionalSourceIsParsedAndCollisionChecked()
     {
         Editor editor = new(("Api.cs", "namespace Example; public partial class Api { }"));
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await new TextArtifactProcessor("required", 0, ["**/*.cs"], "missing", "x").ProcessAsync(editor.Request(), default));
-        await new TextArtifactProcessor("optional", 0, ["**/*.cs"], "missing", "x", requireMatch: false).ProcessAsync(editor.Request(), default);
-        AdditionalSourceArtifactProcessor additional = new("add", 0, "Extras/Part.cs", "namespace Example; public partial class Api { public int Extra() => 42; }");
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await new TextArtifactProcessor(["**/*.cs"], "missing", "x").ProcessAsync(editor.Request(), default));
+        await new TextArtifactProcessor(["**/*.cs"], "missing", "x", requireMatch: false).ProcessAsync(editor.Request(), default);
+        AdditionalSourceArtifactProcessor additional = new("Extras/Part.cs", "namespace Example; public partial class Api { public int Extra() => 42; }");
         await additional.ProcessAsync(editor.Request(), default);
         Assert.Contains("42", editor.Text("Extras/Part.cs"), StringComparison.Ordinal);
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await new AdditionalSourceArtifactProcessor("collision", 0, "extras/part.cs", "namespace Example; class Other { }").ProcessAsync(editor.Request(), default));
-        Assert.Throws<ArgumentException>(() => new AdditionalSourceArtifactProcessor("syntax", 0, "Bad.cs", "class {"));
-        Assert.Throws<ArgumentException>(() => new AdditionalSourceArtifactProcessor("top", 0, "Top.cs", "System.Console.WriteLine(42);"));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await new AdditionalSourceArtifactProcessor("extras/part.cs", "namespace Example; class Other { }").ProcessAsync(editor.Request(), default));
+        Assert.Throws<ArgumentException>(() => new AdditionalSourceArtifactProcessor("Bad.cs", "class {"));
+        Assert.Throws<ArgumentException>(() => new AdditionalSourceArtifactProcessor("Top.cs", "System.Console.WriteLine(42);"));
     }
 
     [Fact]
     public void EveryFrozenArtifactAffectingRuleChoiceChangesItsFingerprint()
     {
         ICacheFingerprintProvider[] processors =
-        [new TextArtifactProcessor("rule", 0, ["**/*.cs"], "a", "b"),
-         new TextArtifactProcessor("rule", 0, ["**/*.cs"], "a", "c"),
-         new TextArtifactProcessor("rule", 1, ["**/*.cs"], "a", "b"),
-         new TextArtifactProcessor("rule", 0, ["Api.cs"], "a", "b"),
-         new TextArtifactProcessor("rule", 0, ["**/*.cs"], "a", "b", ignoreCase: true),
-         new RegexArtifactProcessor("rule", 0, ["**/*.cs"], "a", "b"),
-         new RegexArtifactProcessor("rule", 0, ["**/*.cs"], "a", "b", timeoutMilliseconds: 2),
-         new AdditionalSourceArtifactProcessor("rule", 0, "Extra.cs", "class Extra { }")];
+        [new TextArtifactProcessor(["**/*.cs"], "a", "b"),
+         new TextArtifactProcessor(["**/*.cs"], "a", "c"),
+         new TextArtifactProcessor(["**/*.cs"], "a", "b", requireMatch: false),
+         new TextArtifactProcessor(["Api.cs"], "a", "b"),
+         new TextArtifactProcessor(["**/*.cs"], "a", "b", ignoreCase: true),
+         new RegexArtifactProcessor(["**/*.cs"], "a", "b"),
+         new RegexArtifactProcessor(["**/*.cs"], "a", "b", timeoutMilliseconds: 2),
+         new AdditionalSourceArtifactProcessor("Extra.cs", "class Extra { }")];
         ContentDigest[] values = processors.Select(processor => processor.CaptureFingerprint(null!, default).fingerprint).ToArray();
         Assert.Equal(values.Length, values.Distinct().Count());
-        Assert.Equal(values[0], new TextArtifactProcessor("rule", 0, ["**/*.cs"], "a", "b").CaptureFingerprint(null!, default).fingerprint);
+        Assert.Equal(values[0], new TextArtifactProcessor(["**/*.cs"], "a", "b").CaptureFingerprint(null!, default).fingerprint);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public sealed class SourceProcessorTests
         Assert.Contains("class After", editor.Text("Api.cs"), StringComparison.Ordinal);
     }
 
-    private sealed class RenameSyntax() : SyntaxArtifactProcessor("syntax", 0, ["**/*.cs"])
+    private sealed class RenameSyntax() : SyntaxArtifactProcessor(["**/*.cs"])
     {
         protected override CompilationUnitSyntax Rewrite(string path, CompilationUnitSyntax root, CancellationToken cancellationToken)
         {

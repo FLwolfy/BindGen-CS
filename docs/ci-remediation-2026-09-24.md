@@ -1,3 +1,5 @@
+> Historical design record. Superseded by [the current architecture](architecture.md) and [acceptance](acceptance.md); not a current capability or release receipt.
+
 # CI failure remediation (2026-09-24)
 
 > Historical plan/checkpoint: the body preserves its original revision and scope, not current usage or mandatory gates. See current [architecture](architecture.md), [acceptance](acceptance.md) and [roadmap](roadmap.md). Removed responsibilities have no runtime compatibility layer.
@@ -72,9 +74,9 @@ Run #36 remediation checks on macOS Arm64: warning-as-error solution build passe
 
 - .NET solution build: 0 warnings, 0 errors on macOS Arm64.
 - Complete local macOS Arm64 acceptance matrix: passed; all ten mandatory categories are 9.0/10.0 in `artifacts/acceptance/report.md` (uncommitted working tree).
-- `dotnet restore src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj -r osx-x64`: passed, eliminating the missing-package restore failure.
+- `dotnet restore extensions/frontends/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj -r osx-x64`: passed, eliminating the missing-package restore failure.
 - `BGCS.Frontend.Clang.Tests`: 111 passed; target-retargeting regression passed after the parser-options change.
-- `BGCS.Cpp2C.Tests`: 70 passed, including provider and optional C# safety-policy regressions.
+- `BGCS.NativeBridge.Tests`: 70 passed, including provider and optional C# safety-policy regressions.
 - `BGCS.Generation.Tests`: 87 passed, including native packed ABI runtime and suppressed-member verification.
 - `BGCS.Tool.Tests`: 24 passed, including native-build and C++ schema regressions.
 - Native runtime override was exercised on macOS Arm64 with the bundled ClangSharp 20 libraries.

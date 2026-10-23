@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -30,7 +30,7 @@ public sealed class VirtualProxyProtocolVerifier
                 || proxy.quiescence != NativeQuiescenceKind.Unknown && proxy.lifetime.evidence.level is EvidenceLevel.Unknown or EvidenceLevel.Inferred)
                 Fail("A virtual proxy has incomplete source identity, callback slots or lifetime evidence.");
             InteropType concrete = Resolve(proxy.proxyType), nativeInterface = Resolve(proxy.interfaceType);
-            if (concrete.category != NativeTypeCategory.Record || concrete.size is not null || concrete.sourceNativeType is null
+            if (concrete.category != NativeTypeCategory.Record || concrete.size is not null || concrete.sourceNativeType is not null || concrete.sourceGeneratedType is null
                 || nativeInterface.category != NativeTypeCategory.Record || nativeInterface.size is not null || nativeInterface.sourceNativeType != proxy.sourceInterface)
                 Fail("A virtual proxy lost its concrete or original opaque native interface identity.");
             InteropFunction factory = Function(proxy.createFunction), destroy = Function(proxy.destroyFunction), cast = Function(proxy.interfaceCastFunction);
@@ -45,9 +45,9 @@ public sealed class VirtualProxyProtocolVerifier
                 Fail("A virtual proxy construction lost its exact owned output or matching cleanup domain.");
             InteropParameter cleanup = Parameter(destroy, proxy.destroyInstanceParameter), castInput = Parameter(cast, proxy.castInstanceParameter);
             if (destroy.parameters.Length != 2 || destroy.parameters[0].id != cleanup.id || !ObjectPointer(cleanup.type, concrete.id)
-                || destroy.sourceRole != "Destroy" || destroy.sourceOwnerType != concrete.sourceNativeType
+                || destroy.sourceRole != "Destroy" || destroy.sourceOwnerType is not null || destroy.sourceGeneratedOwnerType != concrete.sourceGeneratedType
                 || cast.parameters.Length != 3 || cast.parameters[0].id != castInput.id || !ObjectPointer(castInput.type, concrete.id)
-                || cast.sourceRole != "BaseCast" || cast.sourceOwnerType != concrete.sourceNativeType || !ObjectOutput(borrowed.type, nativeInterface.id)
+                || cast.sourceRole != "BaseCast" || cast.sourceOwnerType is not null || cast.sourceGeneratedOwnerType != concrete.sourceGeneratedType || !ObjectOutput(borrowed.type, nativeInterface.id)
                 || borrowed.ownership is not { kind: NativeOwnershipKind.Borrowed, lifetime.kind: NativeLifetimeKind.Owner } borrowing
                 || borrowing.lifetime.owner != castInput.id)
                 Fail("A virtual proxy changed its concrete destruction or compiler-adjusted borrowed interface relationship.");

@@ -50,5 +50,5 @@ public sealed class SourceProcessorConfigurationTests
         Assert.Empty(Configuration().output.processors);
     }
 
-    private static BindingConfiguration Configuration() => new() { schemaVersion = 1, library = new() { id = "processor", nativeName = "processor" }, source = new() { headers = ["native.h"] } };
+    private static BindingConfiguration Configuration() => new() { schemaVersion = 2, library = new() { id = "processor", nativeName = "processor" }, source = new() { headers = ["native.h"] } };
 }

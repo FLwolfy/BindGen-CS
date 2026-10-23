@@ -7,11 +7,11 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -23,8 +23,8 @@ public sealed class WorkspaceExecutionTests
     {
         using Scratch scratch = new();
         ConcurrentQueue<string> parsed = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(parsed, fail: "bad")).Build();
-        BindingWorkspace workspace = new([Project(scratch.root, "dependent", ["bad"]), Project(scratch.root, "independent", []), Project(scratch.root, "bad", [])]);
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ProbeFrontend(parsed, fail: "bad")).Build();
+        BindingWorkspace workspace = new([Project(scratch.root, "dependent", ["bad"]), Project(scratch.root, "independent", []), Project(scratch.root, "bad", [])], TestHostPaths.Create());
         WorkspaceDiffResult result = await host.DiffWorkspaceAsync(workspace);
         Assert.False(result.success);
         Assert.True(result.hasChanges);
@@ -41,9 +41,9 @@ public sealed class WorkspaceExecutionTests
         using Scratch scratch = new();
         WorkspaceProject first = Project(scratch.root, "first", ["second"]);
         WorkspaceProject second = Project(scratch.root, "second", ["first"]);
-        Assert.Contains("cycle", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second])).Message);
-        Assert.Contains("duplicated", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, first])).Message);
-        Assert.Contains("unknown", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first])).Message);
+        Assert.Contains("cycle", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second], TestHostPaths.Create())).Message);
+        Assert.Contains("duplicated", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, first], TestHostPaths.Create())).Message);
+        Assert.Contains("unknown", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first], TestHostPaths.Create())).Message);
         Assert.False(Directory.Exists(Path.Combine(scratch.root, "out")));
     }
 
@@ -54,11 +54,11 @@ public sealed class WorkspaceExecutionTests
         WorkspaceProject first = Project(scratch.root, "first", []);
         WorkspaceProject second = Project(scratch.root, "second", []);
         GenerationRequest nested = second.request.WithConfiguration(second.request.configuration with { output = new() { root = "out/first/nested" } });
-        Assert.Contains("overlap", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second with { request = nested }])).Message);
+        Assert.Contains("overlap", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second with { request = nested }], TestHostPaths.Create())).Message);
         GenerationRequest source = second.request.WithConfiguration(second.request.configuration with { source = new() { headers = ["out/first/native.h"] } });
-        Assert.Contains("protected input", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second with { request = source }])).Message);
+        Assert.Contains("protected input", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second with { request = source }], TestHostPaths.Create())).Message);
         GenerationRequest cache = second.request.WithConfiguration(second.request.configuration with { cache = new() { directory = "out/first/cache" } });
-        Assert.Contains("cache", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second with { request = cache }])).Message);
+        Assert.Contains("cache", Assert.Throws<ArgumentException>(() => new BindingWorkspace([first, second with { request = cache }], TestHostPaths.Create())).Message);
     }
 
     [Fact]
@@ -68,25 +68,25 @@ public sealed class WorkspaceExecutionTests
         string projectRoot = Path.Combine(scratch.root, "nested");
         Directory.CreateDirectory(projectRoot);
         File.WriteAllText(Path.Combine(projectRoot, "bindgen.json"), """
-            {"schemaVersion":1,"library":{"id":"first","nativeName":"first"},"source":{"headers":["first.h"]},
-             "targets":[{"id":"host"},{"id":"emscripten-wasm32-emscripten"}],"output":{"root":"generated"}}
+            {"schemaVersion":2,"library":{"id":"first","nativeName":"first"},"source":{"headers":["first.h"]},
+             "targets":[{"id":"host"},{"id":"fixture-secondary"}],"output":{"root":"generated"}}
             """);
         string workspacePath = Path.Combine(scratch.root, "workspace.json");
         string json = """
-            {"schemaVersion":1,"projects":[{"id":"first","configuration":"nested/bindgen.json","targets":["emscripten-wasm32-emscripten"]}]}
+            {"schemaVersion":1,"projects":[{"id":"first","configuration":"nested/bindgen.json","targets":["fixture-secondary"]}]}
             """;
         File.WriteAllText(workspacePath, json);
-        BindingWorkspace workspace = new WorkspaceLoader().Load(workspacePath);
+        BindingWorkspace workspace = new WorkspaceLoader(TestHostPaths.Create()).Load(workspacePath);
         WorkspaceProject project = Assert.Single(workspace.projects);
         Assert.Equal(projectRoot, project.request.baseDirectory);
-        Assert.Equal("emscripten-wasm32-emscripten", Assert.Single(project.request.configuration.targets).id);
-        Assert.Contains(project.request.configurationInputs, input => input.path == workspacePath);
+        Assert.Equal("fixture-secondary", Assert.Single(project.request.configuration.targets).id);
+        Assert.Contains(project.request.configurationSnapshot.files, input => input.path == workspacePath);
         File.WriteAllText(workspacePath, json.Replace("\"schemaVersion\":1", "\"schemaVersion\":1,\"schemaVersion\":1", StringComparison.Ordinal));
-        Assert.Throws<JsonException>(() => new WorkspaceLoader().Load(workspacePath));
-        File.WriteAllText(workspacePath, json.Replace("emscripten-wasm32-emscripten", "unknown-target", StringComparison.Ordinal));
-        Assert.Throws<JsonException>(() => new WorkspaceLoader().Load(workspacePath));
+        Assert.Throws<JsonException>(() => new WorkspaceLoader(TestHostPaths.Create()).Load(workspacePath));
+        File.WriteAllText(workspacePath, json.Replace("fixture-secondary", "unknown-target", StringComparison.Ordinal));
+        Assert.Throws<JsonException>(() => new WorkspaceLoader(TestHostPaths.Create()).Load(workspacePath));
         File.WriteAllText(workspacePath, json.Replace("\"projects\":", "\"unknown\":true,\"projects\":", StringComparison.Ordinal));
-        Assert.Throws<JsonException>(() => new WorkspaceLoader().Load(workspacePath));
+        Assert.Throws<JsonException>(() => new WorkspaceLoader(TestHostPaths.Create()).Load(workspacePath));
     }
 
     [Fact]
@@ -94,8 +94,8 @@ public sealed class WorkspaceExecutionTests
     {
         using Scratch scratch = new();
         ConcurrentQueue<string> parsed = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(parsed, fail: "bad")).Build();
-        BindingWorkspace workspace = new([Project(scratch.root, "dependent", ["bad"]), Project(scratch.root, "independent", []), Project(scratch.root, "bad", [])]);
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ProbeFrontend(parsed, fail: "bad")).Build();
+        BindingWorkspace workspace = new([Project(scratch.root, "dependent", ["bad"]), Project(scratch.root, "independent", []), Project(scratch.root, "bad", [])], TestHostPaths.Create());
         WorkspaceResult result = await host.GenerateWorkspaceAsync(workspace);
         Assert.False(result.success);
         Assert.Equal(["dependent", "independent", "bad"], result.projects.Select(project => project.projectId).ToArray());
@@ -115,8 +115,8 @@ public sealed class WorkspaceExecutionTests
         using Scratch scratch = new();
         ConcurrencyProbe probe = new();
         ConcurrentQueue<string> parsed = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(parsed, probe: probe)).Build();
-        BindingWorkspace workspace = new([Project(scratch.root, "dependent", ["first", "second"]), Project(scratch.root, "first", []), Project(scratch.root, "second", [])], parallelism: 2);
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ProbeFrontend(parsed, probe: probe)).Build();
+        BindingWorkspace workspace = new([Project(scratch.root, "dependent", ["first", "second"]), Project(scratch.root, "first", []), Project(scratch.root, "second", [])], TestHostPaths.Create(), parallelism: 2);
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(30));
         WorkspaceResult result = await host.GenerateWorkspaceAsync(workspace, cancellation.Token);
         Assert.True(result.success, string.Join(Environment.NewLine, result.diagnostics.Select(diagnostic => diagnostic.message)));
@@ -130,15 +130,15 @@ public sealed class WorkspaceExecutionTests
     {
         using Scratch scratch = new();
         File.WriteAllText(Path.Combine(scratch.root, "bindgen.json"), """
-            {"schemaVersion":1,"library":{"id":"first","nativeName":"first"},"source":{"headers":["first.h"]},
-             "targets":[{"id":"emscripten-wasm32-emscripten"}],"output":{"root":"out/first"}}
+            {"schemaVersion":2,"library":{"id":"first","nativeName":"first"},"source":{"headers":["first.h"]},
+             "targets":[{"id":"fixture-secondary"}],"output":{"root":"out/first"}}
             """);
         string path = Path.Combine(scratch.root, "workspace.json");
         File.WriteAllText(path, """{"schemaVersion":1,"projects":[{"id":"first","configuration":"bindgen.json"}]}""");
-        BindingWorkspace workspace = new WorkspaceLoader().Load(path);
+        BindingWorkspace workspace = new WorkspaceLoader(TestHostPaths.Create()).Load(path);
         File.AppendAllText(path, " ");
         ConcurrentQueue<string> parsed = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(parsed)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ProbeFrontend(parsed)).Build();
         WorkspaceResult result = await host.GenerateWorkspaceAsync(workspace);
         Assert.False(result.success);
         Assert.Contains(result.diagnostics, diagnostic => diagnostic.message.Contains("changed", StringComparison.Ordinal));
@@ -152,9 +152,9 @@ public sealed class WorkspaceExecutionTests
         using Scratch scratch = new();
         TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ConcurrentQueue<string> parsed = new();
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ProbeFrontend(parsed, started: started)).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ProbeFrontend(parsed, started: started)).Build();
         using CancellationTokenSource cancellation = new();
-        Task<WorkspaceResult> running = host.GenerateWorkspaceAsync(new([Project(scratch.root, "first", []), Project(scratch.root, "second", []), Project(scratch.root, "third", ["first"])]), cancellation.Token);
+        Task<WorkspaceResult> running = host.GenerateWorkspaceAsync(new([Project(scratch.root, "first", []), Project(scratch.root, "second", []), Project(scratch.root, "third", ["first"])], TestHostPaths.Create()), cancellation.Token);
         await started.Task.WaitAsync(TimeSpan.FromSeconds(15));
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => running);
@@ -167,14 +167,20 @@ public sealed class WorkspaceExecutionTests
         File.WriteAllText(Path.Combine(root, id + ".h"), "int echo(void);");
         return new(id, new(new BindingConfiguration
         {
-            schemaVersion = 1, library = new() { id = id, nativeName = id }, source = new() { headers = [id + ".h"] },
-            targets = [new() { id = "emscripten-wasm32-emscripten" }], api = new() { @namespace = "Example." + id, name = "NativeApi" },
+            schemaVersion = 2, library = new() { id = id, nativeName = id }, source = new() { headers = [id + ".h"] },
+            targets = [new() { id = "host" }], api = new() { @namespace = "Example." + id, name = "NativeApi" },
             output = new() { root = "out/" + id }, cache = new() { enabled = false, directory = ".cache/" + id }
         }, root), prerequisites);
     }
 
     private sealed class ProbeFrontend(ConcurrentQueue<string> parsed, string? fail = null, ConcurrencyProbe? probe = null, TaskCompletionSource? started = null) : IFrontend
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
             string id = Path.GetFileNameWithoutExtension(request.headers[0]);
@@ -192,7 +198,7 @@ public sealed class WorkspaceExecutionTests
             NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
             NativeDeclaration function = new(new("function"), "Function", "echo", "echo", null, new(request.headers[0], 1, 1))
             { returnType = integer.id, callingConvention = "C" };
-            NativeModule module = new(request.target.targetId.value, request.target.triple, 4, [integer], [function], []) { language = SourceLanguage.C, byteOrder = request.target.byteOrder };
+            NativeModule module = new(request.target.targetId.value, request.target.triple, TestComposition.PointerSize(request.target), [integer], [function], []) { language = SourceLanguage.C, byteOrder = request.target.byteOrder };
             return new(module, new([], []));
         }
     }

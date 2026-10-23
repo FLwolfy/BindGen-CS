@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 
 namespace BGCS.CSharp.Projection;
 
@@ -96,6 +96,8 @@ internal static class ManagedNameResolver
             InteropType? owner = module.types.FirstOrDefault(type => function.sourceOwnerType is not null
                 && type.sourceNativeType == function.sourceOwnerType && type.category == NativeTypeCategory.Record);
             owner ??= module.types.FirstOrDefault(type => function.sourceOwnerType is not null && type.sourceNativeType == function.sourceOwnerType);
+            owner ??= module.types.FirstOrDefault(type => function.sourceGeneratedOwnerType is not null
+                && type.sourceGeneratedType == function.sourceGeneratedOwnerType && type.category == NativeTypeCategory.Record);
             if (owner?.sourceQualifiedName is string ownerName) return Identifier(Unqualified(ownerName), function.id.value);
             if (function.sourceQualifiedName is string callable)
             {

@@ -9,11 +9,11 @@ BGCS 负责生成源码。原生编译、链接、导出检查、打包与部署
 
 生成成功后，`GenerationResult.nativeSources` 为每个目标提供类型化的
 `NativeSourceManifest`。相同数据发布在
-`<target>/native/metadata/bridge.manifest.json`。重新打开既有输出时使用：
+`<target>/metadata/native-source.manifest.json`。重新打开既有输出时使用：
 
 ```csharp
 var manifests = BindingArtifactManifest.ReadNativeSources(
-    outputRoot, libraryId, cancellationToken);
+    outputRoot, libraryId, paths, cancellationToken);
 ```
 
 该 SDK 方法持有发布锁，验证所有权、完整产物哈希及类型化清单。它不会验证消费者之后
@@ -62,16 +62,18 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using BGCS;
-using BGCS.Contracts.Artifacts;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Hosting;
 
 static (string[] Sources,
     (string Directory, bool IsSystem, bool IsFramework)[] Includes)
     ReadNativeInputs(string outputRoot, string libraryId, string targetId,
+        IHostPathService paths,
         IReadOnlyDictionary<string, string> remappedRoots,
         CancellationToken cancellationToken)
 {
     NativeSourceManifest manifest = BindingArtifactManifest
-        .ReadNativeSources(outputRoot, libraryId, cancellationToken)
+        .ReadNativeSources(outputRoot, libraryId, paths, cancellationToken)
         .Single(item => item.targetId == targetId);
 
     string Resolve(string rootId, string relativePath)

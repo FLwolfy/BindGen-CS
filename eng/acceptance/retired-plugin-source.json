@@ -18,27 +18,27 @@
       "sha256": "055f52a31406869f06fce4432db3bbe3b595c3793b91dd0abceb924ce72027a7"
     },
     {
-      "path": "src/BGCS.Contracts/Extensions/BindingPluginContract.cs",
+      "path": "src/BGCS.Core/Extensions/BindingPluginContract.cs",
       "category": "production",
       "sha256": "1c069396b27640e27eb86e25e4fc3b5dafe0bbe9178172bc1c852fb52f1501a3"
     },
     {
-      "path": "src/BGCS.Contracts/Extensions/BindingPluginService.cs",
+      "path": "src/BGCS.Core/Extensions/BindingPluginService.cs",
       "category": "production",
       "sha256": "7b46d85e18523d6a42259eef4a570fd6cb0d45031fa231b5bcd0682d7c8be1d9"
     },
     {
-      "path": "src/BGCS.Contracts/Extensions/IBindingPlugin.cs",
+      "path": "src/BGCS.Core/Extensions/IBindingPlugin.cs",
       "category": "production",
       "sha256": "aa80cedbb4a4203e3443c396b44a053a7c35e31977835578dfa93cced1934dec"
     },
     {
-      "path": "src/BGCS.Contracts/Extensions/IBindingPluginHost.cs",
+      "path": "src/BGCS.Core/Extensions/IBindingPluginHost.cs",
       "category": "production",
       "sha256": "fa98a5188d1b38848a4114239f7b2f8c93cb10edb6abe3b7a757c453d6996f87"
     },
     {
-      "path": "src/BGCS.Contracts/Extensions/ICacheFingerprintProvider.cs",
+      "path": "src/BGCS.Core/Extensions/ICacheFingerprintProvider.cs",
       "category": "production",
       "sha256": "956033c979cb6a884785d48295332b0e853f5192a423621469b2ae68347f9552"
     },
@@ -54,7 +54,7 @@
     }
   ],
   "retainedFixture": "tests/fixtures/FailingFingerprintPlugin/FailingFingerprintPlugin.csproj",
-  "fixtureCurrentContract": "BGCS.Contracts.Plugins.IBindingPlugin; Contracts-only reference",
+  "fixtureCurrentContract": "BGCS.Core.Plugins.IBindingPlugin; Contracts-only reference",
   "replacementTests": {
     "tests/BGCS.Infrastructure.Tests/NeutralPluginLoaderTests.cs": [
       "PublicContractUsesFrozenDescriptorsTypedFactoriesAndCompleteFingerprintInputs",

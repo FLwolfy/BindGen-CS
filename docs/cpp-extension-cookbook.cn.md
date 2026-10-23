@@ -6,44 +6,46 @@
 
 | 需求 | 扩展 |
 | --- | --- |
-| 固定 C 载体与转换表达式 | `cpp.typeLowerings` |
+| 固定 C 载体与转换表达式 | `bridge.typeLowerings` |
 | 一个原生参数展开成多个 C 输入 | `abiParameters` 与类型化 argument group |
-| 排除、命名、包装普通调用 | `cpp.callableLowerings` |
-| 根据中立声明规划类型和调用 | Contracts-only lowering 插件 |
-| 通过准确的 C 导出暴露私有实现 | `cpp.nativeShims` |
-| 生成具体模板实例 | `cpp.templateInstantiations` |
-| 生成原始虚接口回调适配 | `cpp.virtualCallbacks` |
-| 保留原始导出并增加检查过的标量元素序列输入 | `cpp.sequenceInputAdapters` |
-| 对准确的自定义模板族复用有限容器协议 | `cpp.familyBindings` |
+| 排除、命名、包装普通调用 | `bridge.callableLowerings` |
+| 根据中立声明规划类型和调用 | Core-only lowering 插件 |
+| 通过准确的 C 导出暴露私有实现 | `bridge.nativeShims` |
+| 生成具体模板实例 | `bridge.cpp.templateInstantiations` |
+| 生成原始虚接口回调适配 | `bridge.cpp.virtualCallbacks` |
+| 保留原始导出并增加检查过的标量元素序列输入 | `bridge.cpp.sequenceInputAdapters` |
+| 对准确的自定义模板族复用有限容器协议 | `bridge.cpp.familyBindings` |
 
 ## 准确匹配自定义容器模板族
 
-`cpp.familyBindings` 可以让自定义模板族选择有限的 `string`、`vector`、`span`、
+`bridge.cpp.familyBindings` 可以让自定义模板族选择有限的 `string`、`vector`、`span`、
 `array`、`optional`、`map`、`set`、`expected`、`uniquePointer`、`sharedPointer`、
 `variant`、`path`、`duration` 或 `timePoint` 协议。使用准确的限定模板名称，不带模板参数或通配符：
 
 ```json
 {
-  "cpp": {
-    "familyBindings": [
-      {
-        "nativeTemplate": "Engine::Vector",
-        "family": "vector",
-        "evidence": {
-          "level": "userAsserted",
-          "origin": "已根据 Engine Vector 的公开实现检查该协议"
+  "bridge": {
+    "cpp": {
+      "familyBindings": [
+        {
+          "nativeTemplate": "Engine::Vector",
+          "family": "vector",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "已根据 Engine Vector 的公开实现检查该协议"
+          }
+        },
+        {
+          "nativeTemplate": "Engine::Text",
+          "family": "string",
+          "stringEncoding": "utf8",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "Engine Text 保存 UTF-8 code unit"
+          }
         }
-      },
-      {
-        "nativeTemplate": "Engine::Text",
-        "family": "string",
-        "stringEncoding": "utf8",
-        "evidence": {
-          "level": "userAsserted",
-          "origin": "Engine Text 保存 UTF-8 code unit"
-        }
-      }
-    ]
+      ]
+    }
   }
 }
 ```
@@ -100,7 +102,7 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 `UserAsserted` 声明。绑定模板族不能证明借用元素比 owner 活得更久，也不能证明任意
 线程均可析构。自定义 bool vector 不会仅因为选择 vector 协议就被认定为 packed 存储。
 
-序列输入重载仍需配置 `cpp.sequenceInputAdapters`；借用 span 仍需显式声明 call
+序列输入重载仍需配置 `bridge.cpp.sequenceInputAdapters`；借用 span 仍需显式声明 call
 生命周期和不保留。String 族必须声明与编译器 code-unit 宽度匹配的 UTF 编码。不同成员
 协议和额外所有权语义使用类型化 recipe、插件或 native shim。
 `generate` 后的 native build 和实际调用仍待执行，支持程度以验证收据为准。
@@ -121,32 +123,58 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 
 ```json
 {
-  "cpp": {
-    "familyBindings": [{
-      "nativeType": "Engine::Text",
-      "family": "string",
-      "stringEncoding": "utf8",
-      "stringAccess": "cStrNullTerminated",
-      "evidence": { "level": "userAsserted", "origin": "已审核 Engine Text 协议" },
-      "cStr": {
-        "maximumCodeUnits": 1048576,
-        "readableLifetime": {
-          "kind": "call",
-          "evidence": { "level": "userAsserted", "origin": "单次访问调用内可读" }
+  "bridge": {
+    "cpp": {
+      "familyBindings": [
+        {
+          "nativeType": "Engine::Text",
+          "family": "string",
+          "stringEncoding": "utf8",
+          "stringAccess": "cStrNullTerminated",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "已审核 Engine Text 协议"
+          },
+          "cStr": {
+            "maximumCodeUnits": 1048576,
+            "readableLifetime": {
+              "kind": "call",
+              "evidence": {
+                "level": "userAsserted",
+                "origin": "单次访问调用内可读"
+              }
+            },
+            "nullTerminated": {
+              "level": "userAsserted",
+              "origin": "声明的可读上限内有终止符"
+            },
+            "constructorCopiesInput": {
+              "level": "userAsserted",
+              "origin": "Text(const char*) 返回前复制输入"
+            }
+          }
         },
-        "nullTerminated": { "level": "userAsserted", "origin": "声明的可读上限内有终止符" },
-        "constructorCopiesInput": { "level": "userAsserted", "origin": "Text(const char*) 返回前复制输入" }
-      }
-    }, {
-      "nativeType": "Engine::Path",
-      "family": "path",
-      "pathFormat": "nativeUtf8",
-      "evidence": { "level": "userAsserted", "origin": "u8string 提供带原生分隔符的计数 UTF-8" }
-    }],
-    "sequenceInputAdapters": [{
-      "function": "Engine::CheckText",
-      "parameters": [{ "parameter": "value" }]
-    }]
+        {
+          "nativeType": "Engine::Path",
+          "family": "path",
+          "pathFormat": "nativeUtf8",
+          "evidence": {
+            "level": "userAsserted",
+            "origin": "u8string 提供带原生分隔符的计数 UTF-8"
+          }
+        }
+      ],
+      "sequenceInputAdapters": [
+        {
+          "function": "Engine::CheckText",
+          "parameters": [
+            {
+              "parameter": "value"
+            }
+          ]
+        }
+      ]
+    }
   }
 }
 ```
@@ -178,13 +206,29 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 
 ```json
 {
-  "cpp": {
-    "sequenceInputAdapters": [
-      { "function": "Demo::SumVector", "parameters": [{ "parameter": "values" }] },
-      { "function": "Demo::SumSpan", "parameters": [{
-        "parameter": "values", "retainsArgument": false, "lifetime": "call"
-      }] }
-    ]
+  "bridge": {
+    "cpp": {
+      "sequenceInputAdapters": [
+        {
+          "function": "Demo::SumVector",
+          "parameters": [
+            {
+              "parameter": "values"
+            }
+          ]
+        },
+        {
+          "function": "Demo::SumSpan",
+          "parameters": [
+            {
+              "parameter": "values",
+              "retainsArgument": false,
+              "lifetime": "call"
+            }
+          ]
+        }
+      ]
+    }
   }
 }
 ```
@@ -203,21 +247,23 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 
 ```json
 {
-  "cpp": {
-    "typeLowerings": [{
-      "id": "engine.entity-id",
-      "typePattern": "Engine::EntityId",
-      "priority": 100,
-      "cAbiType": "uint64_t",
-      "parameterExpression": "Engine::EntityId::FromRaw({value})",
-      "resultExpression": "({value}).Raw()",
-      "managedProjection": {
-        "managedType": "EntityId",
-        "managedToNativeExpression": "{value}.Value",
-        "nativeToManagedExpression": "new EntityId({value})",
-        "requiredNamespace": "Engine.Managed"
+  "bridge": {
+    "typeLowerings": [
+      {
+        "id": "engine.entity-id",
+        "typePattern": "Engine::EntityId",
+        "priority": 100,
+        "cAbiType": "uint64_t",
+        "parameterExpression": "Engine::EntityId::FromRaw({value})",
+        "resultExpression": "({value}).Raw()",
+        "managedProjection": {
+          "managedType": "EntityId",
+          "managedToNativeExpression": "{value}.Value",
+          "nativeToManagedExpression": "new EntityId({value})",
+          "requiredNamespace": "Engine.Managed"
+        }
       }
-    }]
+    ]
   }
 }
 ```
@@ -234,17 +280,25 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 
 ```json
 {
-  "cpp": {
-    "typeLowerings": [{
-      "id": "engine.range",
-      "typePattern": "Engine::Range",
-      "cAbiType": "uint64_t",
-      "abiParameters": [
-        { "name": "data", "cAbiType": "const int32_t*" },
-        { "name": "length", "cAbiType": "size_t" }
-      ],
-      "parameterExpression": "{nativeType}({data}, {length})"
-    }]
+  "bridge": {
+    "typeLowerings": [
+      {
+        "id": "engine.range",
+        "typePattern": "Engine::Range",
+        "cAbiType": "uint64_t",
+        "abiParameters": [
+          {
+            "name": "data",
+            "cAbiType": "const int32_t*"
+          },
+          {
+            "name": "length",
+            "cAbiType": "size_t"
+          }
+        ],
+        "parameterExpression": "{nativeType}({data}, {length})"
+      }
+    ]
   }
 }
 ```
@@ -265,7 +319,7 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 
 ```json
 {
-  "cpp": {
+  "bridge": {
     "callableLowerings": [
       {
         "id": "engine.checked-add",
@@ -286,9 +340,9 @@ Count 保留原生表示与有理数单位，不悄悄换算成纳秒，也不�
 
 包装必须包含准确的一次 `{invocation}`。使用的头文件需要已经登记为 source 输入。排除规则不能同时声明 helper、包装或导出名；改名不能改变原函数的类型身份。
 
-## Contracts-only 插件
+## Core-only 插件
 
-[examples/LoweringPlugin](../examples/LoweringPlugin/README.md) 包含完整实现。插件实现 `BGCS.Contracts.Plugins.IBindingPlugin`，注册会话级 `ICppCallableLowering` 工厂。服务读取 `NativeDeclaration` 并返回完整 `CppCallableLoweringPlan`，包含 receiver 载体、准确的 native member action、C 导出和类型图。
+[examples/LoweringPlugin](../examples/LoweringPlugin/README.md) 包含完整实现。插件实现 `BGCS.Core.Plugins.IBindingPlugin`，注册会话级 `INativeCallableLowering` 工厂。服务读取 `NativeDeclaration` 并返回完整 `NativeCallableLoweringPlan`，包含 receiver 载体、准确的 native member action、C 导出和类型图。
 
 ```bash
 cd examples/LoweringPlugin
@@ -308,13 +362,23 @@ bindgen-cs generate bindgen.json
 
 ```json
 {
-  "cpp": {
-    "nativeShims": [{
-      "id": "widget",
-      "publicHeaders": ["shims/widget_c.h"],
-      "sourceFiles": ["shims/widget_c.cpp"],
-      "exports": ["bgcs_widget_create", "bgcs_widget_destroy", "bgcs_widget_sum"]
-    }]
+  "bridge": {
+    "nativeShims": [
+      {
+        "id": "widget",
+        "publicHeaders": [
+          "shims/widget_c.h"
+        ],
+        "sourceFiles": [
+          "shims/widget_c.cpp"
+        ],
+        "exports": [
+          "bgcs_widget_create",
+          "bgcs_widget_destroy",
+          "bgcs_widget_sum"
+        ]
+      }
+    ]
   }
 }
 ```
@@ -326,13 +390,13 @@ bindgen-cs bridge examples/NativeShim/bindgen.json
 bindgen-cs generate examples/NativeShim/bindgen.json
 ```
 
-`<target>/native/metadata/bridge.module.json` 保存类型化操作，`bridge.manifest.json` 保存可迁移的 `NativeSourceManifest`。[输入说明](native-source-inputs.cn.md)展示了 `GenerationResult.nativeSources`、会话根绑定及验证后的 `ReadNativeSources` 选择方式。编译、链接和调用属于消费者。C 导出本身不能证明释放线程域或 callback quiescence；请求拥有型和长期回调包装前需要明确相应协议。
+`<target>/native/metadata/bridge.module.json` 保存类型化操作，`<target>/metadata/native-source.manifest.json` 保存可迁移的 `NativeSourceManifest`。[输入说明](native-source-inputs.cn.md)展示了 `GenerationResult.nativeSources`、会话根绑定及验证后的 `ReadNativeSources` 选择方式。编译、链接和调用属于消费者。C 导出本身不能证明释放线程域或 callback quiescence；请求拥有型和长期回调包装前需要明确相应协议。
 
 ## 模板和原始虚回调
 
 类型实例放在 `cpp.templateInstantiations.types`，字段为 `id` 和 `nativeType`。函数实例字段为 `id`、`nativeCallable`、`returnType`、`parameterTypes`。worker 产生具体事实，函数 wrapper 根据参数声明使用 `std::forward`。
 
-`cpp.virtualCallbacks` 条目包含 `id` 和 `nativeInterface`。第二次普通 C++ 解析验证 proxy，独立 C 解析复核命名 callback typedef。最终 `InteropModule.virtualProxies` 保留准确的方法名、callback 值通道、factory/user-data 身份、真正调整指针的基类转换和匹配的具体析构入口。原生保留边界与 quiescence 仍然未知。
+`bridge.cpp.virtualCallbacks` 条目包含 `id` 和 `nativeInterface`。第二次普通 C++ 解析验证 proxy，独立 C 解析复核命名 callback typedef。最终 `InteropModule.virtualProxies` 保留准确的方法名、callback 值通道、factory/user-data 身份、真正调整指针的基类转换和匹配的具体析构入口。原生保留边界与 quiescence 仍然未知。
 
 默认 `releaseThreadDomain: "unknown"` 保留 raw API。只有能明确断言具体 proxy 及其接口基类可以在任意关闭线程上销毁时，才设置 `releaseThreadDomain: "any"`；证据等级保持 `UserAsserted`。它允许生成符合条件、由调用者控制的托管 registration，但仍须提供 stop-and-join，保证**全部原生 proxy 执行已经结束**。仅阻止新调用、等待托管 thunk 计数归零，不能证明 C++ proxy 栈帧已经返回。
 

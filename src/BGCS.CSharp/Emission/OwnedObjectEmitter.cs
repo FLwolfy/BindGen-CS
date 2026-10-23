@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using BGCS.Contracts;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Managed;
+using BGCS.Core;
+using BGCS.Core.Requests;
+using BGCS.Core.Managed;
 using BGCS.CSharp.Planning;
 
 namespace BGCS.CSharp.Emission;

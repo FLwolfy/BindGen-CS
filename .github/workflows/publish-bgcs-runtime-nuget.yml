@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 3.0.0 or 3.0.0-preview.1)"
+        description: "Accepted public release version (4.0.0; private -ci candidates are never published)"
         required: true
         type: string
 
@@ -81,6 +81,8 @@ jobs:
           version = ET.parse('Directory.Build.props').findtext('./PropertyGroup/Version')
           if not version or not re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?', version):
               raise SystemExit('Directory.Build.props must declare a valid release version.')
+          if '-ci.' in version or version.endswith('-ci'):
+              raise SystemExit('Private source-validation candidates cannot be tagged or published. Accept the final source revision first.')
           requested = os.environ.get('REQUESTED_VERSION', '')
           if os.environ['GITHUB_EVENT_NAME'] == 'push':
               requested = os.environ['GITHUB_REF_NAME'].removeprefix('v')
@@ -343,30 +345,22 @@ jobs:
         env:
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          shopt -s nullglob
-          require_package() {
-            if [[ ! -f "artifacts/nuget/$1" ]]; then
-              echo "Missing release package: $1" >&2
-              exit 1
-            fi
-          }
-          libraries=(BGCS.Contracts BGCS BGCS.Runtime)
-          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64)
-          for package in "${libraries[@]}"; do
-            require_package "${package}.${VERSION}.nupkg"
-            require_package "${package}.${VERSION}.snupkg"
-          done
-          require_package "BGCS.ParserRuntime.osx-x64.${VERSION}.nupkg"
-          require_package "BindGen-CS.${VERSION}.nupkg"
-          for rid in "${tool_rids[@]}"; do
-            require_package "BindGen-CS.${rid}.${VERSION}.nupkg"
-          done
-          packages=(artifacts/nuget/*.nupkg artifacts/nuget/*.snupkg)
-          expected=$(( ${#libraries[@]} * 2 + 2 + ${#tool_rids[@]} ))
-          if (( ${#packages[@]} != expected )); then
-            echo "Expected ${expected} release packages, found ${#packages[@]}." >&2
-            exit 1
-          fi
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          manifest = json.loads(Path('distribution/manifests/product-packages.json').read_text(encoding='utf-8'))
+          version = os.environ['VERSION']
+          products = [*manifest['products'], *manifest['optionalProducts'], *manifest['technicalPackages'],
+                      *('BindGen-CS.' + rid for rid in manifest['toolRuntimeIdentifiers'])]
+          expected = {f'{name}.{version}.nupkg' for name in products}
+          expected |= {f'{name}.{version}.snupkg' for name in manifest['symbolProducts']}
+          directory = Path('artifacts/nuget')
+          actual = {path.name for pattern in ('*.nupkg', '*.snupkg') for path in directory.glob(pattern)}
+          if actual != expected:
+              raise SystemExit(f'Release package set differs: missing={sorted(expected - actual)}, unexpected={sorted(actual - expected)}')
+          print(f'Authenticated the complete {len(expected)}-archive release set.')
+          PY
 
       - name: Generate SPDX SBOM and SLSA provenance
         run: >-
@@ -458,11 +452,17 @@ jobs:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          libraries=(BGCS.Contracts BGCS.Runtime BGCS)
-          tool_rids=(win-x64 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64)
-          dotnet nuget push "artifacts/nuget/BGCS.ParserRuntime.osx-x64.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+          mapfile -t libraries < <(python -c "import json; m=json.load(open('distribution/manifests/product-packages.json')); print('\n'.join([p for p in m['products'] if p != 'BindGen-CS'] + m['optionalProducts']))")
+          mapfile -t symbols < <(python -c "import json; m=json.load(open('distribution/manifests/product-packages.json')); print('\n'.join(m['symbolProducts']))")
+          mapfile -t technical < <(python -c "import json; m=json.load(open('distribution/manifests/product-packages.json')); print('\n'.join(m['technicalPackages']))")
+          mapfile -t tool_rids < <(python -c "import json; m=json.load(open('distribution/manifests/product-packages.json')); print('\n'.join(m['toolRuntimeIdentifiers']))")
+          for package in "${technical[@]}"; do
+            dotnet nuget push "artifacts/nuget/${package}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+          done
           for package in "${libraries[@]}"; do
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.nupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+          done
+          for package in "${symbols[@]}"; do
             dotnet nuget push "artifacts/nuget/${package}.${VERSION}.snupkg" --api-key "${NUGET_API_KEY}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
           done
           # RID packages first: the pointer package is unusable until they resolve.

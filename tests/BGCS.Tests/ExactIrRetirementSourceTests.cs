@@ -9,11 +9,11 @@ using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -153,7 +153,7 @@ public sealed class ExactIrRetirementSourceTests
             Assert.Equal(NativeLifetimeKind.Call, facts.lifetime.kind);
             Assert.Equal(NativeCallbackThreading.CallerThread, facts.threading);
             Assert.Equal(false, facts.retained);
-            Assert.Equal(BGCS.Contracts.Common.EvidenceLevel.UserAsserted, facts.evidence.level);
+            Assert.Equal(BGCS.Core.Common.EvidenceLevel.UserAsserted, facts.evidence.level);
         }
         finally { Directory.Delete(root, recursive: true); }
     }
@@ -192,11 +192,11 @@ public sealed class ExactIrRetirementSourceTests
                 Assert.Equal(8, Marshal.SizeOf(point));
                 Assert.Equal(0, Marshal.OffsetOf(point, "x").ToInt32());
                 Assert.Equal(4, Marshal.OffsetOf(point, "y").ToInt32());
-                DllImportAttribute import = Assert.Single(assembly.GetTypes().SelectMany(type => type.GetMethods(
-                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-                    .Select(method => method.GetCustomAttribute<DllImportAttribute>()), attribute => attribute is not null)!;
-                Assert.Equal("bgcs_add", import.EntryPoint);
-                Assert.Equal(configuration.library.nativeName, import.Value);
+                AttributeSyntax import = Assert.Single(CSharpSyntaxTree.ParseText(File.ReadAllText(source)).GetRoot().DescendantNodes().OfType<AttributeSyntax>(),
+                    attribute => attribute.Name.ToString().EndsWith("DllImport", StringComparison.Ordinal));
+                Assert.Equal(configuration.library.nativeName, Assert.IsType<LiteralExpressionSyntax>(import.ArgumentList!.Arguments[0].Expression).Token.ValueText);
+                Assert.Contains(import.ArgumentList.Arguments, argument => argument.NameEquals?.Name.Identifier.ValueText == "EntryPoint"
+                    && argument.Expression is LiteralExpressionSyntax literal && literal.Token.ValueText == "bgcs_add");
             }
             finally { load.Unload(); }
         }
@@ -205,7 +205,7 @@ public sealed class ExactIrRetirementSourceTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "exact-ir", nativeName = "exact_ir_fixture" },
+        schemaVersion = 2, library = new() { id = "exact-ir", nativeName = "exact_ir_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.ExactIr", name = "ExactApi", importMode = BindingImportMode.DllImport },
          cache = new() { enabled = false }
@@ -240,7 +240,7 @@ public sealed class ExactIrRetirementSourceTests
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(root!.FullName,
-            "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(root!.FullName,
+            "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
     }
 }

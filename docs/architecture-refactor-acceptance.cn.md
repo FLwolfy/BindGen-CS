@@ -1,9 +1,11 @@
+> Historical design record. Superseded by [the current architecture](architecture.md) and [acceptance](acceptance.md); not a current capability or release receipt.
+
 # BGCS 架构重构验收
 
 > 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
 
 
-> 历史验收记录：本文保留 2026-10-04 旧架构与当时检查点的原始结果，不代表 BGCS 3.0 当前源码或发布认证。3.0 的当前工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
+> 历史验收记录：本文保留 2026-10-04 旧架构与当时检查点的原始结果，不代表 BGCS 4.0 当前源码或发布认证。现行工程边界与同 revision 门禁见[当前架构](architecture.cn.md)和[验收规范](acceptance.cn.md)。
 
 [文档索引](README.cn.md) · [架构](architecture.cn.md) · [完整计划](platform-architecture-refactor-plan.cn.md) · [C# 规范](csharp-development-standard.cn.md)
 
@@ -66,9 +68,9 @@
 ```text
 BGCS.Tool          唯一生产 CLI，组合命令与验证
 BGCS               C 到 C# 应用流程、配置、分析、Binding IR 和输出
-BGCS.Cpp2C         C++ 分析/lowering、Bridge IR、C 桥输出、原生构建
+BGCS.NativeBridge         C++ 分析/lowering、Bridge IR、C 桥输出、原生构建
 BGCS.Frontend.Clang        Clang 解析、AST、目标 provider 和 SDK/builtin headers
-BGCS.Contracts  实际拥有冻结的 Binding/Bridge IR，不依赖其他 BGCS 项目
+BGCS.Core  实际拥有冻结的 Binding/Bridge IR，不依赖其他 BGCS 项目
 BGCS.Infrastructure          目标契约、插件、缓存、IO、集合、文本和写出基础能力
 BGCS.CSharp      具体语言的词法、语法及 C# 条件编译
 BGCS.Runtime       独立的互操作基础库

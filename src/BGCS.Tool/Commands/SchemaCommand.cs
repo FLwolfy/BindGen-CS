@@ -22,7 +22,7 @@ internal static class SchemaCommand
             {
                 if (args[index] == "--kind")
                 {
-                    if (++index >= args.Length) throw new ArgumentException("--kind requires binding, workspace or plugin.");
+                    if (++index >= args.Length) throw new ArgumentException("--kind requires binding, workspace or extension.");
                     kind = args[index];
                 }
                 else if (!args[index].StartsWith('-') && destination is null) destination = args[index];
@@ -32,9 +32,9 @@ internal static class SchemaCommand
             JsonObject schema = kind switch
             {
                 "binding" => catalog.CreateBindingSchema(),
-                "plugin" => catalog.CreatePluginSchema(),
+                "extension" => catalog.CreatePluginSchema(),
                 "workspace" => catalog.CreateWorkspaceSchema(),
-                _ => throw new ArgumentException("--kind must be binding, workspace or plugin.")
+                _ => throw new ArgumentException("--kind must be binding, workspace or extension.")
             };
             string path = Path.GetFullPath(destination ?? (kind == "binding" ? "bindgen.schema.json" : kind + ".schema.json"), workingDirectory);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);

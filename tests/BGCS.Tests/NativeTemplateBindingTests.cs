@@ -6,9 +6,9 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Cpp2C.Planning;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.NativeBridge.Planning;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -53,18 +53,18 @@ public sealed class NativeTemplateBindingTests
             string scalar = changed == "alias" ? "Demo::Scalar" : "int";
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "template_binding", nativeName = "template_binding" },
+                schemaVersion = 2, library = new() { id = "template_binding", nativeName = "template_binding" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["template.hpp"], parseMacros = false },
-                cpp = new() { templateInstantiations = new() { functions = [new("selected", callable, scalar, [scalar])] } },
+                bridge = new() { cpp = new() { templateInstantiations = new() { functions = [new("selected", callable, scalar, [scalar])] } } },
                 api = new() { @namespace = "Generated.TemplateBinding", name = "TemplateBindingApi" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(first.success, first.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(first.outputRoot));
-            CppBridgeModule module = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
-            string wrapper = new TemplateInstantiationPlanner().Plan(configuration.cpp.templateInstantiations).functionWrappers["selected"];
+            NativeBridgePlan module = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
+            string wrapper = new TemplateInstantiationPlanner().Plan(configuration.bridge.cpp.templateInstantiations).functionWrappers["selected"];
             BridgeExport export = Assert.Single(module.exports, value => value.operation.declaration is { } id && module.source.GetDeclaration(id).qualifiedName == wrapper);
             nint binary = NativeLibrary.Load(Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target))));
             try
@@ -87,6 +87,6 @@ public sealed class NativeTemplateBindingTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

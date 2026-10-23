@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,11 +11,12 @@ namespace BGCS.Infrastructure.Tests;
 
 public class FileSetTests
 {
+    private readonly IHostPathService m_paths = HostTestPaths.Create();
     [Fact]
     public void Construction_CapturesNormalizedPathsWithoutRetainingMutableInputs()
     {
         string[] paths = ["sample.h", Path.Combine("child", "..", "sample.h")];
-        FileSet files = new(paths);
+        FileSet files = new(paths, m_paths);
         paths[0] = "replacement.h";
 
         Assert.Single(files);
@@ -27,7 +29,7 @@ public class FileSetTests
     [Fact]
     public void SetRelations_NormalizeEveryComparedCollection()
     {
-        FileSet files = new(["a.h", "b.h"]);
+        FileSet files = new(["a.h", "b.h"], m_paths);
         string relativeA = Path.Combine("child", "..", "a.h");
 
         Assert.True(files.SetEquals([relativeA, Path.GetFullPath("b.h"), "a.h"]));
@@ -43,25 +45,25 @@ public class FileSetTests
     [Fact]
     public void Membership_UsesTheHostFileSystemComparison()
     {
-        FileSet files = new(["CaseSensitive.h"]);
+        FileSet files = new(["CaseSensitive.h"], m_paths);
 
-        Assert.Equal(OperatingSystem.IsWindows(), files.Contains("casesensitive.h"));
+        Assert.Equal(!m_paths.GetSemantics(Directory.GetCurrentDirectory()).caseSensitive, files.Contains("casesensitive.h"));
     }
 
     [Fact]
     public void Construction_RejectsInvalidEntriesAndNullCollections()
     {
-        Assert.Throws<ArgumentNullException>(() => new FileSet(null!));
-        Assert.Throws<ArgumentException>(() => new FileSet([" "]));
-        Assert.Throws<ArgumentException>(() => new FileSet(["invalid\0path"]));
-        FileSet files = new(["a.h"]);
+        Assert.Throws<ArgumentNullException>(() => new FileSet(null!, m_paths));
+        Assert.Throws<ArgumentException>(() => new FileSet([" "], m_paths));
+        Assert.Throws<ArgumentException>(() => new FileSet(["invalid\0path"], m_paths));
+        FileSet files = new(["a.h"], m_paths);
         Assert.Throws<ArgumentNullException>(() => files.SetEquals(null!));
     }
 
     [Fact]
     public void Contains_WhenPathIsEmpty_ShouldReturnFalse()
     {
-        FileSet files = new(["a.h", "b.h"]);
+        FileSet files = new(["a.h", "b.h"], m_paths);
 
         Assert.False(files.Contains(string.Empty));
         Assert.False(files.Contains(null!));

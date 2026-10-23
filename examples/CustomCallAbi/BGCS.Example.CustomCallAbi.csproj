@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>false</IsPackable><GenerateDependencyFile>true</GenerateDependencyFile></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../../extensions/foundation/BGCS.Interop.DotNet/BGCS.Interop.DotNet.csproj" />
+  </ItemGroup>
+</Project>

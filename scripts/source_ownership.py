@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import subprocess
 
-SOURCE_ROOTS = ('src', 'integrations', 'tests', 'eng', 'distribution', 'schemas', 'examples', 'docs', 'scripts', '.github')
+SOURCE_ROOTS = ('src', 'extensions', 'tests', 'eng', 'distribution', 'schemas', 'examples', 'docs', 'scripts', '.github')
 SOURCE_EXTENSIONS = frozenset(('.cs', '.csproj', '.props', '.targets', '.proj', '.slnx', '.py', '.sh', '.json',
                                '.xml', '.md', '.txt', '.yml', '.yaml', '.h', '.hpp', '.hh', '.c', '.cpp', '.cc',
                                '.in', '.cmake', '.nuspec'))

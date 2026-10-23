@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Bridge;
+using BGCS.Core.Interop;
+using BGCS.Core.Inputs;
 using BGCS.CSharp.Planning;
 using Xunit;
 
@@ -32,20 +32,20 @@ public sealed class NativeStandardPathInputTests
             await File.WriteAllTextAsync(Path.Combine(root,"paths.hpp"),Header);
             BindingConfiguration configuration=new()
             {
-                schemaVersion=1,library=new(){id="paths",nativeName="path_input_fixture"},
+                schemaVersion = 2,library=new(){id="paths",nativeName="path_input_fixture"},
                 source=new(){language=SourceLanguage.Cpp,headers=["paths.hpp"],parseMacros=false,includeTransitivelyReferencedHeaders=false,
                     selection=new(){includeDeclarations=["paths::CheckValue","paths::CheckRef","paths::CountUnits"]}},
                 api=new(){@namespace="Generated.PathInput",name="PathApi",importMode=mode,
-                    style=sourceRuntime?BGCS.Contracts.Managed.ManagedApiStyle.Static:BGCS.Contracts.Managed.ManagedApiStyle.Instance,nestGeneratedTypesInApi=sourceRuntime},
-                cpp=new(){sequenceInputAdapters=[Request("paths::CheckValue"),Request("paths::CheckRef"),Request("paths::CountUnits")]},
+                    style=sourceRuntime?BGCS.Core.Managed.ManagedApiStyle.Static:BGCS.Core.Managed.ManagedApiStyle.Instance,nestGeneratedTypesInApi=sourceRuntime},
+                bridge = new() { cpp = new() { sequenceInputAdapters=[Request("paths::CheckValue"),Request("paths::CheckRef"),Request("paths::CountUnits")] } },
                 runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},
                 cache=new(){enabled=false}
             };
-            await using BindingHost host=BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host=BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built=await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration,root));
             Assert.True(built.success,built.GetDiagnosticSummary());
             var target=Assert.Single(built.targetModels);
-            CppBridgeModule bridge=target.bridge!;
+            NativeBridgePlan bridge=target.bridge!;
             Assert.Equal(3,bridge.exports.Count(export=>export.inputAdapterOf is not null));
             foreach(BridgeExport adapter in bridge.exports.Where(export=>export.inputAdapterOf is not null))
             {
@@ -58,7 +58,7 @@ public sealed class NativeStandardPathInputTests
             }
             string targetRoot=Path.Combine(built.outputRoot,target.targetId);
             string binary=Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
-            CSharpEmissionPlan plan=new CSharpEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
+            CSharpEmissionPlan plan=new HostTestEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
                 {importMode=mode,runtimeNamespace=sourceRuntime?"Generated.PathInput.Runtime":"BGCS.Runtime"});
             string context=sourceRuntime?"PathApiContext":"PathApi";
             string factory=mode==BindingImportMode.FunctionTable?"ApiContext.Load(binary)":"ApiContext.Create()";
@@ -75,7 +75,7 @@ public sealed class NativeStandardPathInputTests
         finally{Directory.Delete(root,recursive:true);}
     }
 
-    private static string Consumer(CppBridgeModule bridge,CSharpEmissionPlan plan)
+    private static string Consumer(NativeBridgePlan bridge,CSharpEmissionPlan plan)
     {
         StringBuilder source=new();
         foreach(string name in new[]{"CheckValue","CheckRef","CountUnits"})
@@ -106,7 +106,7 @@ public sealed class NativeStandardPathInputTests
         DirectoryInfo? root=new(AppContext.BaseDirectory);
         while(root is not null&&!File.Exists(Path.Combine(root.FullName,"BindGen-CS.slnx")))root=root.Parent;
         string configuration=AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar+"Release"+Path.DirectorySeparatorChar,StringComparison.Ordinal)?"Release":"Debug";
-        return Path.Combine(root!.FullName,"src","BGCS.Frontend.Clang.Worker","bin",configuration,"net10.0");
+        return Path.Combine(root!.FullName,"extensions","frontends","BGCS.Frontend.Clang.Worker","bin",configuration,"net10.0");
     }
     private sealed class NoWrites:IArtifactSink{public string WriteText(string relativePath,string content)=>throw new InvalidOperationException("Planning cannot write.");}
     private const string Header="""

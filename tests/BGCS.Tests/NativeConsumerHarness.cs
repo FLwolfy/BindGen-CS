@@ -11,13 +11,13 @@ using System.Security;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Inputs;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Targets;
 using BGCS.Infrastructure.Verification;
 using BGCS.Infrastructure.Publishing;
-using BGCS.Platforms.Targeting;
-using BGCS.Platforms.Toolchains;
+using BGCS.Targets.Desktop;
+using BGCS.Targets.Desktop.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -44,7 +44,7 @@ internal static class NativeConsumerHarness
     internal static async Task CompileManagedAsync(GenerationResult generated, GenerationRequest request)
     {
         Assert.True(generated.success, generated.GetDiagnosticSummary());
-        new ArtifactDigestVerifier().Verify(generated.outputRoot, generated.artifacts, [".bgcs-artifacts.json"]);
+        new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(generated.outputRoot, generated.artifacts, [".bgcs-artifacts.json"]);
         foreach (TargetInspection target in generated.targetModels)
         {
             string[] sources = generated.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp"
@@ -76,11 +76,11 @@ internal static class NativeConsumerHarness
                 """);
             string? sdk = Environment.GetEnvironmentVariable("DOTNET_ROOT");
             string dotnet = string.IsNullOrWhiteSpace(sdk) ? "dotnet" : Path.Combine(sdk, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
-            await RunAsync(dotnet, ["build", "Consumer.csproj", "--no-incremental", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false"], consumer);
-            Assert.True(File.Exists(Path.Combine(consumer, "bin", "Debug", request.configuration.api.framework, "Consumer.dll")),
-                "The SDK did not produce the fixture consumer assembly.");
+            string buildOutput = await RunAsync(dotnet, ["build", "Consumer.csproj", "-c", "Release", "--no-incremental", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false"], consumer);
+            string consumerAssembly = Path.Combine(consumer, "bin", "Release", request.configuration.api.framework, "Consumer.dll");
+            Assert.True(File.Exists(consumerAssembly), "The SDK did not produce the fixture consumer assembly: " + consumerAssembly + Environment.NewLine + buildOutput);
         }
-        new ArtifactDigestVerifier().Verify(generated.outputRoot, generated.artifacts, [".bgcs-artifacts.json"]);
+        new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(generated.outputRoot, generated.artifacts, [".bgcs-artifacts.json"]);
     }
 
     internal static async Task CompileNativeFixturesAsync(GenerationResult generated, string sourceRoot, string libraryName,
@@ -170,7 +170,11 @@ internal static class NativeConsumerHarness
     }
 
     internal static NativeTargetDescriptor ParserTarget(SourceLanguage language)
-        => ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), language);
+    {
+        if (!new DesktopTargetProvider().TryResolve(new(new("host")) { language = language }, out NativeTargetDescriptor? target))
+            throw new PlatformNotSupportedException("The fixture requires a maintained desktop parser target.");
+        return target;
+    }
 
     internal static IEnumerable<string> ManifestSystemIncludeArguments(NativeSourceManifest manifest,
         IReadOnlyDictionary<string, string> roots, NativeTargetDescriptor? parserTarget)
@@ -236,7 +240,7 @@ internal static class NativeConsumerHarness
         yield return Path.Combine(sdk.sdkRoot, "Lib", sdk.sdkVersion, "um", "x64");
     }
 
-    internal static async Task RunAsync(string executable, IEnumerable<string> arguments, string directory)
+    internal static async Task<string> RunAsync(string executable, IEnumerable<string> arguments, string directory)
     {
         ProcessStartInfo start = new(executable) { WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
@@ -245,7 +249,9 @@ internal static class NativeConsumerHarness
         using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(3));
         try { await process.WaitForExitAsync(deadline.Token); }
         finally { if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); } }
-        Assert.True(process.ExitCode == 0, await output + Environment.NewLine + await error);
+        string diagnostics = await output + Environment.NewLine + await error;
+        Assert.True(process.ExitCode == 0, diagnostics);
+        return diagnostics;
     }
 
     internal static object? InvokeFactory(this MethodInfo method, object?[] arguments)
@@ -268,7 +274,7 @@ internal static class NativeConsumerHarness
         string targetRoot = Directory.GetParent(managedRoot)!.FullName;
         string outputRoot = Directory.GetParent(targetRoot)!.FullName;
         using JsonDocument manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(outputRoot, ".bgcs-artifacts.json")));
-        var artifacts = new ArtifactPublicationReader().ReadVerified(outputRoot, manifest.RootElement.GetProperty("libraryId").GetString()!);
+        var artifacts = new ArtifactPublicationReader(TestHostPaths.Create()).ReadVerified(outputRoot, manifest.RootElement.GetProperty("libraryId").GetString()!);
         string managedPrefix = Path.GetRelativePath(outputRoot, managedRoot).Replace('\\', '/') + "/";
         string consumer = Path.Combine(NativeDirectory(targetRoot), "Consumer");
         Directory.CreateDirectory(consumer);
@@ -288,14 +294,17 @@ internal static class NativeConsumerHarness
         string? sdk = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         ProcessStartInfo start = new(string.IsNullOrEmpty(sdk) ? "dotnet" : Path.Combine(sdk, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"))
         { WorkingDirectory = consumer, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
-        foreach (string argument in new[] { "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
+        foreach (string argument in new[] { "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
         using Process process = Process.Start(start)!;
         Task<string> output = process.StandardOutput.ReadToEndAsync(), error = process.StandardError.ReadToEndAsync();
         using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(3));
         try { await process.WaitForExitAsync(deadline.Token); }
         finally { if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); } }
-        Assert.True(process.ExitCode == 0, await output + Environment.NewLine + await error);
-        using FileStream image = File.OpenRead(Path.Combine(consumer, "bin", "Debug", "net10.0", "Consumer.dll"));
+        string diagnostics = await output + Environment.NewLine + await error;
+        Assert.True(process.ExitCode == 0, diagnostics);
+        string consumerAssembly = Path.Combine(consumer, "bin", "Release", "net10.0", "Consumer.dll");
+        Assert.True(File.Exists(consumerAssembly), "The SDK did not produce the fixture consumer assembly: " + consumerAssembly + Environment.NewLine + diagnostics);
+        using FileStream image = File.OpenRead(consumerAssembly);
         AssemblyLoadContext load = new("BGCS.NativeConsumer." + Guid.NewGuid().ToString("N"), isCollectible: true);
         nint native = NativeLibrary.Load(nativeBinary);
         try

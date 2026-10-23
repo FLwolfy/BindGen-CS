@@ -1,3 +1,5 @@
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -10,15 +12,15 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.Infrastructure.Workers;
-using BGCS.Platforms.Targeting;
+using BGCS.Targets.Desktop;
 using Xunit;
 using ExamplePlugin = BGCS.Examples.CustomTargetPlugin.CustomTargetPlugin;
 
@@ -31,9 +33,8 @@ public sealed class CustomTargetPluginBoundaryTests
     {
         using Fixture fixture = new();
         bool mutate = false;
-        await using BindingHost host = fixture.Builder().AddValidator("private-target-late-change", 0,
-            () => new MutationValidator(() => { if (mutate) fixture.WriteHeader(44); })).Build();
-        GenerationRequest request = GenerationRequest.FromFile(fixture.configuration);
+        await using BindingHost host = fixture.Builder().RegisterFactory<IGenerationValidator>(new("private-target-late-change", ExtensionPort.GenerationValidator, 0), _ => new MutationValidator(() => { if (mutate) fixture.WriteHeader(44); })).Build();
+        GenerationRequest request = TestInputs.LoadRequest(fixture.configuration);
         GenerationResult first = await host.GenerateAsync(request);
         Assert.True(first.success, first.GetDiagnosticSummary());
         Assert.Equal("example-private-host", Assert.Single(first.targetModels).native.targetId);
@@ -68,18 +69,19 @@ public sealed class CustomTargetPluginBoundaryTests
     public async Task UnknownPlatformNeedsAnExplicitExistingRuntimeAndCannotSelectBrowserAbi()
     {
         using Fixture fixture = new();
+        fixture.WriteProfile(1, unknown: true);
         await using BindingHost host = fixture.Builder().Build();
-        GenerationRequest request = GenerationRequest.FromFile(fixture.configuration);
+        GenerationRequest request = TestInputs.LoadRequest(fixture.configuration);
         GenerationResult missing = await host.GenerateAsync(new(request.configuration with
             { api = request.configuration.api with { runtime = null } }, fixture.root));
         Assert.False(missing.success);
         Assert.False(missing.published);
         Assert.Contains("api.runtime", missing.GetDiagnosticSummary());
         GenerationResult browser = await host.GenerateAsync(new(request.configuration with
-            { api = request.configuration.api with { runtime = ManagedRuntimeKind.BrowserWasm } }, fixture.root));
+            { api = request.configuration.api with { runtime = new ManagedRuntimeId("fixture.unsupported") } }, fixture.root));
         Assert.False(browser.success);
         Assert.False(browser.published);
-        Assert.Contains("Wasm", browser.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime", browser.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
         Assert.False(Directory.Exists(missing.outputRoot));
     }
 
@@ -91,12 +93,12 @@ public sealed class CustomTargetPluginBoundaryTests
         json["targets"]![0]!["toolchain"] = "auto";
         string removed = Path.Combine(fixture.root, "removed.json");
         File.WriteAllText(removed, json.ToJsonString());
-        Assert.Throws<JsonException>(() => GenerationRequest.FromFile(removed));
+        Assert.Throws<JsonException>(() => TestInputs.LoadRequest(removed));
         json["targets"]![0]!.AsObject().Remove("toolchain");
         json["targets"]![0]!["settings"] = new System.Text.Json.Nodes.JsonObject
         { ["systemIncludeDirectories"] = new System.Text.Json.Nodes.JsonArray("sdk/include") };
         File.WriteAllText(removed, json.ToJsonString());
-        string declared = Assert.Single(GenerationRequest.FromFile(removed).configuration.targets).settings.systemIncludeDirectories.Single();
+        string declared = Assert.Single(TestInputs.LoadRequest(removed).configuration.targets).settings.systemIncludeDirectories.Single();
         Assert.Equal(Path.Combine(fixture.root, "sdk", "include"), Path.GetFullPath(declared, fixture.root));
     }
 
@@ -136,12 +138,12 @@ public sealed class CustomTargetPluginBoundaryTests
             WriteHeader(42);
         }
         internal BindingHostBuilder Builder()
-            => BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(m_worker ??= DeployWorker());
+            => BindingGenerator.CreateBuilder().UseWorkerDirectory(m_worker ??= DeployWorker());
 
         private string DeployWorker()
         {
             string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-            string compiled = Path.Combine(m_repository, "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0");
+            string compiled = Path.Combine(m_repository, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0");
             string worker = Path.Combine(root, "worker");
             Directory.CreateDirectory(worker);
             foreach (string file in Directory.GetFiles(compiled))
@@ -153,7 +155,7 @@ public sealed class CustomTargetPluginBoundaryTests
             Directory.CreateDirectory(Path.Combine(worker, native));
             foreach (string file in Directory.GetFiles(Path.Combine(compiled, native)))
                 File.Copy(file, Path.Combine(worker, native, Path.GetFileName(file)));
-            WorkerAssetManifest assets = new(1, RuntimeInformation.RuntimeIdentifier, WorkerProtocol.C_PARSER_IDENTITY,
+            WorkerAssetManifest assets = new(1, RuntimeInformation.RuntimeIdentifier, ClangParserIdentity.C_IDENTITY,
                 Directory.GetFiles(worker, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal)
                     .Select(file => new ArtifactDescriptor(Path.GetRelativePath(worker, file).Replace('\\', '/'), "application/octet-stream",
                         new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file)))))).ToImmutableArray());
@@ -161,13 +163,14 @@ public sealed class CustomTargetPluginBoundaryTests
             return worker;
         }
         internal void WriteHeader(int value) => File.WriteAllText(Path.Combine(root, "sdk", "include", "private_sdk.h"), "#define EXAMPLE_SDK_VALUE " + value + "\n");
-        internal void WriteProfile(int revision)
+        internal void WriteProfile(int revision, bool unknown = false)
         {
-            NativeTargetDescriptor host = new TargetResolver().Resolve(new(new("host")));
+            Assert.True(new DesktopTargetProvider().TryResolve(new(new("host"), new(compilerPath: "uninstalled-parser-location")), out NativeTargetDescriptor? host));
             File.WriteAllText(Path.Combine(root, "target-sdk.json"), JsonSerializer.Serialize(new
             {
-                platformId = "private-desktop", host.architectureId, host.abiId, host.triple,
+                platformId = unknown ? "private-desktop" : host.platformId, host.architectureId, host.abiId, host.triple,
                 byteOrder = "littleEndian", requiresExplicitSdk = true, supportsDynamicModules = true,
+                host.sourceConventions, headerSearchPaths = host.headerSearchPaths,
                 systemIncludeDirectories = new[] { "sdk/include" }, defines = new[] { "PROFILE_VERSION=" + revision }
             }));
         }

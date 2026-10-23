@@ -1,0 +1,785 @@
+[
+  {
+    "id": "TestMetaAttribute.TestNamespaceMetaAttribute",
+    "source": "TestMetaAttribute.TestNamespaceMetaAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestMetaAttribute.cs",
+    "sourceSha256": "ab909b4c065b008a349f1b09f4157cd0026580a090dfa3f0b64af588b6355319",
+    "expected": "TestMetaAttribute.TestNamespaceMetaAttribute.hpp.json",
+    "caseId": "F001"
+  },
+  {
+    "id": "TestMetaAttribute.TestClassMetaAttribute",
+    "source": "TestMetaAttribute.TestClassMetaAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestMetaAttribute.cs",
+    "sourceSha256": "70cf4864829b0ebe6f0067e6a57e8fe8778bbda3ae6dfa67bcf71e6d7799a129",
+    "expected": "TestMetaAttribute.TestClassMetaAttribute.hpp.json",
+    "caseId": "F002"
+  },
+  {
+    "id": "TestMetaAttribute.TestTemplateMetaAttribute",
+    "source": "TestMetaAttribute.TestTemplateMetaAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestMetaAttribute.cs",
+    "sourceSha256": "44253593057b8c2d90a137fc77df6329dc619d35819b0c5b5fd2f3a29ba09817",
+    "expected": "TestMetaAttribute.TestTemplateMetaAttribute.hpp.json",
+    "caseId": "F003"
+  },
+  {
+    "id": "TestSystemAttributes.TestSimple",
+    "source": "TestSystemAttributes.TestSimple.hpp",
+    "target": "windows-x86-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "36359ab88de36994f3fe15bf203ff8a26e05757fae48c14931ccb27e1991304f",
+    "expected": "TestSystemAttributes.TestSimple.hpp.json",
+    "caseId": "F004"
+  },
+  {
+    "id": "TestSystemAttributes.TestStructAttributes",
+    "source": "TestSystemAttributes.TestStructAttributes.hpp",
+    "target": "windows-x86-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "6accde77f5fd369b3169598e34748f6bac67121f327fcd326f292637ce050617",
+    "expected": "TestSystemAttributes.TestStructAttributes.hpp.json",
+    "caseId": "F005"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11VarAlignas",
+    "source": "TestSystemAttributes.TestCpp11VarAlignas.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "f41023801b89c79cf42f9ece1b3811423d1166702268818da65d06652bb163ad",
+    "expected": "TestSystemAttributes.TestCpp11VarAlignas.hpp.json",
+    "caseId": "F006"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11StructAlignas",
+    "source": "TestSystemAttributes.TestCpp11StructAlignas.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "75a6de5b59c2553fc0f013abb93da85327620ec1e08937891d4418a8cf1562c6",
+    "expected": "TestSystemAttributes.TestCpp11StructAlignas.hpp.json",
+    "caseId": "F007"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11StructAlignasWithAttribute",
+    "source": "TestSystemAttributes.TestCpp11StructAlignasWithAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "8127f5e94907cfb77e50e5e24944ad90bc91b886eddcff0a85d125e6a335edc3",
+    "expected": "TestSystemAttributes.TestCpp11StructAlignasWithAttribute.hpp.json",
+    "caseId": "F008"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11StructAttributes",
+    "source": "TestSystemAttributes.TestCpp11StructAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "6ce990954b89038cf166a07dd36b99367e97ad6623537a94e1cae3caa8e819bc",
+    "expected": "TestSystemAttributes.TestCpp11StructAttributes.hpp.json",
+    "caseId": "F009"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11VariablesAttributes",
+    "source": "TestSystemAttributes.TestCpp11VariablesAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "81016827f290692f20f8c342376b219ff867e61aa43a384d645d28e7da196039",
+    "expected": "TestSystemAttributes.TestCpp11VariablesAttributes.hpp.json",
+    "caseId": "F010"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11FunctionsAttributes",
+    "source": "TestSystemAttributes.TestCpp11FunctionsAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "49b51ae27d5175d7eb79a8a7d54db3a95b9cfd1259d538854c46ef80e1f21d15",
+    "expected": "TestSystemAttributes.TestCpp11FunctionsAttributes.hpp.json",
+    "caseId": "F011"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11NamespaceAttributes",
+    "source": "TestSystemAttributes.TestCpp11NamespaceAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "5c39964420aaca1829215c524a571aa0760c4e8413e9601efd4d0e40cf649e11",
+    "expected": "TestSystemAttributes.TestCpp11NamespaceAttributes.hpp.json",
+    "caseId": "F012"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11EnumAttributes",
+    "source": "TestSystemAttributes.TestCpp11EnumAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "ff9e7441ada42524c4f28882f035df433f6629d3819a634d1d990f85b6efa8d0",
+    "expected": "TestSystemAttributes.TestCpp11EnumAttributes.hpp.json",
+    "caseId": "F013"
+  },
+  {
+    "id": "TestSystemAttributes.TestCpp11TemplateStructAttributes",
+    "source": "TestSystemAttributes.TestCpp11TemplateStructAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "ef755b15b6453ed46ef4b1f27c0dd86f737c1a3b7cd02159a64baca355519fd5",
+    "expected": "TestSystemAttributes.TestCpp11TemplateStructAttributes.hpp.json",
+    "caseId": "F014"
+  },
+  {
+    "id": "TestSystemAttributes.TestCppNoParseOptionsAttributes",
+    "source": "TestSystemAttributes.TestCppNoParseOptionsAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "49b51ae27d5175d7eb79a8a7d54db3a95b9cfd1259d538854c46ef80e1f21d15",
+    "expected": "TestSystemAttributes.TestCppNoParseOptionsAttributes.hpp.json",
+    "caseId": "F015"
+  },
+  {
+    "id": "TestTokenAttributes.TestSimple",
+    "source": "TestTokenAttributes.TestSimple.hpp",
+    "target": "windows-x86-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "36359ab88de36994f3fe15bf203ff8a26e05757fae48c14931ccb27e1991304f",
+    "expected": "TestTokenAttributes.TestSimple.hpp.json",
+    "caseId": "F016"
+  },
+  {
+    "id": "TestTokenAttributes.TestStructAttributes",
+    "source": "TestTokenAttributes.TestStructAttributes.hpp",
+    "target": "windows-x86-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "6accde77f5fd369b3169598e34748f6bac67121f327fcd326f292637ce050617",
+    "expected": "TestTokenAttributes.TestStructAttributes.hpp.json",
+    "caseId": "F017"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11VarAlignas",
+    "source": "TestTokenAttributes.TestCpp11VarAlignas.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "f41023801b89c79cf42f9ece1b3811423d1166702268818da65d06652bb163ad",
+    "expected": "TestTokenAttributes.TestCpp11VarAlignas.hpp.json",
+    "caseId": "F018"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11StructAttributes",
+    "source": "TestTokenAttributes.TestCpp11StructAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "6ce990954b89038cf166a07dd36b99367e97ad6623537a94e1cae3caa8e819bc",
+    "expected": "TestTokenAttributes.TestCpp11StructAttributes.hpp.json",
+    "caseId": "F019"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11StructAttributesWithMacro",
+    "source": "TestTokenAttributes.TestCpp11StructAttributesWithMacro.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "edcb0cfeff91505d5903242efdbb57f25638f4ea03ca4bea7cb8faa1a7e06b8c",
+    "expected": "TestTokenAttributes.TestCpp11StructAttributesWithMacro.hpp.json",
+    "caseId": "F020"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11VariablesAttributes",
+    "source": "TestTokenAttributes.TestCpp11VariablesAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "81016827f290692f20f8c342376b219ff867e61aa43a384d645d28e7da196039",
+    "expected": "TestTokenAttributes.TestCpp11VariablesAttributes.hpp.json",
+    "caseId": "F021"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11FunctionsAttributes",
+    "source": "TestTokenAttributes.TestCpp11FunctionsAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "49b51ae27d5175d7eb79a8a7d54db3a95b9cfd1259d538854c46ef80e1f21d15",
+    "expected": "TestTokenAttributes.TestCpp11FunctionsAttributes.hpp.json",
+    "caseId": "F022"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11FunctionsAttributesOnNewLine",
+    "source": "TestTokenAttributes.TestCpp11FunctionsAttributesOnNewLine.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "85c7e02ec55b2e6a2360800d06bea0527562a157f0cea1ad4cc39063cfe63337",
+    "expected": "TestTokenAttributes.TestCpp11FunctionsAttributesOnNewLine.hpp.json",
+    "caseId": "F023"
+  },
+  {
+    "id": "TestTokenAttributes.FunctionAttributes_UseDeclaratorLocationWhenReturnTypeCallsSameName",
+    "source": "TestTokenAttributes.FunctionAttributes_UseDeclaratorLocationWhenReturnTypeCallsSameName.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "b5cc900e807b257acbbe3436f26eb21c2c95e41d48abd6aac163f5d6d83c7289",
+    "expected": "TestTokenAttributes.FunctionAttributes_UseDeclaratorLocationWhenReturnTypeCallsSameName.hpp.json",
+    "caseId": "F024"
+  },
+  {
+    "id": "TestTokenAttributes.TypedefAttributes_BeforeCursorExtentAreParsed",
+    "source": "TestTokenAttributes.TypedefAttributes_BeforeCursorExtentAreParsed.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "5f15fd1d6c0d898f7197305c672a2793585401d479342e617567efc5d3e08f07",
+    "expected": "TestTokenAttributes.TypedefAttributes_BeforeCursorExtentAreParsed.hpp.json",
+    "caseId": "F025"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11NamespaceAttributes",
+    "source": "TestTokenAttributes.TestCpp11NamespaceAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "5c39964420aaca1829215c524a571aa0760c4e8413e9601efd4d0e40cf649e11",
+    "expected": "TestTokenAttributes.TestCpp11NamespaceAttributes.hpp.json",
+    "caseId": "F026"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11EnumAttributes",
+    "source": "TestTokenAttributes.TestCpp11EnumAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "ff9e7441ada42524c4f28882f035df433f6629d3819a634d1d990f85b6efa8d0",
+    "expected": "TestTokenAttributes.TestCpp11EnumAttributes.hpp.json",
+    "caseId": "F027"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp11TemplateStructAttributes",
+    "source": "TestTokenAttributes.TestCpp11TemplateStructAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "ef755b15b6453ed46ef4b1f27c0dd86f737c1a3b7cd02159a64baca355519fd5",
+    "expected": "TestTokenAttributes.TestCpp11TemplateStructAttributes.hpp.json",
+    "caseId": "F028"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp17StructUnknownAttributes",
+    "source": "TestTokenAttributes.TestCpp17StructUnknownAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "92c40042af581cf4547743a83b41b27e09abfa1a5a455e16ff496622817dddb0",
+    "expected": "TestTokenAttributes.TestCpp17StructUnknownAttributes.hpp.json",
+    "caseId": "F029"
+  },
+  {
+    "id": "TestTokenAttributes.TestCommentParen",
+    "source": "TestTokenAttributes.TestCommentParen.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "197c37b6269525c0cdc21c7b4a632a66f987b70350e986f459d6d19755e0790e",
+    "expected": "TestTokenAttributes.TestCommentParen.hpp.json",
+    "caseId": "F030"
+  },
+  {
+    "id": "TestTokenAttributes.TestCommentParenWithAttribute",
+    "source": "TestTokenAttributes.TestCommentParenWithAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "38be099cdbc437031e2f186148491e548acade4a3aea7497f2f59bd928258887",
+    "expected": "TestTokenAttributes.TestCommentParenWithAttribute.hpp.json",
+    "caseId": "F031"
+  },
+  {
+    "id": "TestTokenAttributes.TestCommentWithAttributeCharacters",
+    "source": "TestTokenAttributes.TestCommentWithAttributeCharacters.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "744a5490481b1ae40011d61b1ee6a3768ad29fa4d572b9694163d78d57663535",
+    "expected": "TestTokenAttributes.TestCommentWithAttributeCharacters.hpp.json",
+    "caseId": "F032"
+  },
+  {
+    "id": "TestTokenAttributes.TestAttributeInvalidBracketEnd",
+    "source": "TestTokenAttributes.TestAttributeInvalidBracketEnd.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "78f84bf7a0721e4fd859519dc410d8743cd2387bf52f31ad2610ae1c938b36d5",
+    "expected": "TestTokenAttributes.TestAttributeInvalidBracketEnd.hpp.json",
+    "caseId": "F033"
+  },
+  {
+    "id": "TestTokenAttributes.TestAttributeInvalidParenEnd",
+    "source": "TestTokenAttributes.TestAttributeInvalidParenEnd.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "4bea3050ab33ffda1b10dde6857e5431422e2a607f519f0c92e9772334a245ed",
+    "expected": "TestTokenAttributes.TestAttributeInvalidParenEnd.hpp.json",
+    "caseId": "F034"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp17VarTemplateAttribute",
+    "source": "TestTokenAttributes.TestCpp17VarTemplateAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "32469e99b22b2ef49527c6544669a641a73b564e8a032a641ae6b68cb7ea6329",
+    "expected": "TestTokenAttributes.TestCpp17VarTemplateAttribute.hpp.json",
+    "caseId": "F035"
+  },
+  {
+    "id": "TestTokenAttributes.TestCpp17FunctionTemplateAttribute",
+    "source": "TestTokenAttributes.TestCpp17FunctionTemplateAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "1765414c0a05099c5759f767c77fd4263b5678c32d7889992e784fc2b892a87b",
+    "expected": "TestTokenAttributes.TestCpp17FunctionTemplateAttribute.hpp.json",
+    "caseId": "F036"
+  },
+  {
+    "id": "TestTokenAttributes.TestCppNoParseOptionsAttributes",
+    "source": "TestTokenAttributes.TestCppNoParseOptionsAttributes.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestTokenAttributes.cs",
+    "sourceSha256": "49b51ae27d5175d7eb79a8a7d54db3a95b9cfd1259d538854c46ef80e1f21d15",
+    "expected": "TestTokenAttributes.TestCppNoParseOptionsAttributes.hpp.json",
+    "caseId": "F037"
+  },
+  {
+    "id": "TestComments.TestSimple",
+    "source": "TestComments.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Documentation/TestComments.cs",
+    "sourceSha256": "4739ed84fedc5f8c4d461e0a3c66715d42656765dd603a29ed945b781b0d6d50",
+    "expected": "TestComments.TestSimple.hpp.json",
+    "caseId": "F038"
+  },
+  {
+    "id": "TestComments.TestComplex",
+    "source": "TestComments.TestComplex.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Documentation/TestComments.cs",
+    "sourceSha256": "4e9fd519bd2ccb99c24db82d03e3acd42492643f24387c29b8173f3f5a2509b6",
+    "expected": "TestComments.TestComplex.hpp.json",
+    "caseId": "F039"
+  },
+  {
+    "id": "TestComments.TestParen",
+    "source": "TestComments.TestParen.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Documentation/TestComments.cs",
+    "sourceSha256": "197c37b6269525c0cdc21c7b4a632a66f987b70350e986f459d6d19755e0790e",
+    "expected": "TestComments.TestParen.hpp.json",
+    "caseId": "F040"
+  },
+  {
+    "id": "TestEnums.TestSimple",
+    "source": "TestEnums.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestEnums.cs",
+    "sourceSha256": "cab14c9658857670accdedf32fcb9545da0a5e37bf7369eb285a7260aaa7663a",
+    "expected": "TestEnums.TestSimple.hpp.json",
+    "caseId": "F041"
+  },
+  {
+    "id": "TestExpressions.TestInitListExpression",
+    "source": "TestExpressions.TestInitListExpression.hpp",
+    "target": "host",
+    "legacyFile": "Parsing/TestExpressions.cs",
+    "sourceSha256": "599f68b1a46837519c4fea45ae445350c93b5714dc306c7393c8cb3f27f745ed",
+    "expected": "TestExpressions.TestInitListExpression.hpp.json",
+    "caseId": "F042"
+  },
+  {
+    "id": "TestExpressions.TestBinaryExpressions",
+    "source": "TestExpressions.TestBinaryExpressions.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestExpressions.cs",
+    "sourceSha256": "d3691556ac62ccd9c4a6f5904cdd0f1a271d89b51d45d99e74840738fd3fdf4b",
+    "expected": "TestExpressions.TestBinaryExpressions.hpp.json",
+    "caseId": "F043"
+  },
+  {
+    "id": "TestExpressions.TestUnaryExpressions",
+    "source": "TestExpressions.TestUnaryExpressions.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestExpressions.cs",
+    "sourceSha256": "cd3f2e94456af94e9f889689cc7aa6bae64acff8cb28ed9fa0014308699ca6d9",
+    "expected": "TestExpressions.TestUnaryExpressions.hpp.json",
+    "caseId": "F044"
+  },
+  {
+    "id": "TestExpressions.TestBinaryOr",
+    "source": "TestExpressions.TestBinaryOr.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestExpressions.cs",
+    "sourceSha256": "eb2bc8be07e5d4f36c2739a8e4fc3f46163ba7519d43501875a04379c885b45d",
+    "expected": "TestExpressions.TestBinaryOr.hpp.json",
+    "caseId": "F045"
+  },
+  {
+    "id": "TestExpressions.TestParameterDefaultValue",
+    "source": "TestExpressions.TestParameterDefaultValue.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestExpressions.cs",
+    "sourceSha256": "ae721da38a9618e56716f7b4fce4e89f137ab1f67768e8da7205d9f4b85812ab",
+    "expected": "TestExpressions.TestParameterDefaultValue.hpp.json",
+    "caseId": "F046"
+  },
+  {
+    "id": "TestExpressions.TestNullPtrExpression",
+    "source": "TestExpressions.TestNullPtrExpression.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestExpressions.cs",
+    "sourceSha256": "8092c008aec015fd75050f44a46aacf23b6083ee69806d58499c223c9d7bf103",
+    "expected": "TestExpressions.TestNullPtrExpression.hpp.json",
+    "caseId": "F047"
+  },
+  {
+    "id": "TestFunctions.TestSimple",
+    "source": "TestFunctions.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "5513a3468c8ad64fa248edaa9a2004af5746f29e16c8bf4f813e10d63dd9afec",
+    "expected": "TestFunctions.TestSimple.hpp.json",
+    "caseId": "F048"
+  },
+  {
+    "id": "TestFunctions.TestFunctionPrototype",
+    "source": "TestFunctions.TestFunctionPrototype.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "a187ce70d92befc5d8a6259a6aa8733311e160e817fd5f7f6170b90926d56c72",
+    "expected": "TestFunctions.TestFunctionPrototype.hpp.json",
+    "caseId": "F049"
+  },
+  {
+    "id": "TestFunctions.TestFunctionFields",
+    "source": "TestFunctions.TestFunctionFields.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "b196269313ea6c248f6679efb4f7a8b71f421cebeb10b7d70e69160aa0aa20ea",
+    "expected": "TestFunctions.TestFunctionFields.hpp.json",
+    "caseId": "F050"
+  },
+  {
+    "id": "TestFunctions.TestFunctionTypedefFields",
+    "source": "TestFunctions.TestFunctionTypedefFields.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "05ccfecc4ada17d3976f05c83a44ba6562570c74fadf89244dbb6103f4017556",
+    "expected": "TestFunctions.TestFunctionTypedefFields.hpp.json",
+    "caseId": "F051"
+  },
+  {
+    "id": "TestFunctions.TestFunctionVariadic",
+    "source": "TestFunctions.TestFunctionVariadic.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "772abed0c2b4d60c25d5fe2f029618ca964c3dd00a5197dd4db841688decb323",
+    "expected": "TestFunctions.TestFunctionVariadic.hpp.json",
+    "caseId": "F052"
+  },
+  {
+    "id": "TestFunctions.TestFunctionTemplate",
+    "source": "TestFunctions.TestFunctionTemplate.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "4294e5b1d006c86bf1feb6caac9047be7cb6a35da2f5f71671adc55cc9ea80f4",
+    "expected": "TestFunctions.TestFunctionTemplate.hpp.json",
+    "caseId": "F053"
+  },
+  {
+    "id": "TestFunctions.TestFunctionPointersByParam",
+    "source": "TestFunctions.TestFunctionPointersByParam.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "78aefc3bb66acfff066518ae697abd0decc915862ef9988e2245fe120b8f2fe8",
+    "expected": "TestFunctions.TestFunctionPointersByParam.hpp.json",
+    "caseId": "F054"
+  },
+  {
+    "id": "TestGlobalVariables.TestSimple",
+    "source": "TestGlobalVariables.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestGlobalVariables.cs",
+    "sourceSha256": "377286677afced9bb4d6d6599e4c40c93754fdf0ac96a4b466582e7b82c38f4b",
+    "expected": "TestGlobalVariables.TestSimple.hpp.json",
+    "caseId": "F055"
+  },
+  {
+    "id": "TestMethods.TestSimple",
+    "source": "TestMethods.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestMethods.cs",
+    "sourceSha256": "43eb16761b685663bdd8c28ccf8d419a639473c2779a72c198bc10083b1224b3",
+    "expected": "TestMethods.TestSimple.hpp.json",
+    "caseId": "F056"
+  },
+  {
+    "id": "TestNamespaces.TestSimple",
+    "source": "TestNamespaces.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestNamespaces.cs",
+    "sourceSha256": "ea8f3e9be09fea863c6cf72c72099335236ffe7e1c0fe3c7718c3fb01a0bf992",
+    "expected": "TestNamespaces.TestSimple.hpp.json",
+    "caseId": "F057"
+  },
+  {
+    "id": "TestNamespaces.TestNamespacedTypedef",
+    "source": "TestNamespaces.TestNamespacedTypedef.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestNamespaces.cs",
+    "sourceSha256": "15bfdd604a3f0d8ee5f86e4c0bb63e4b0c343a5e2091606206f5801189786461",
+    "expected": "TestNamespaces.TestNamespacedTypedef.hpp.json",
+    "caseId": "F058"
+  },
+  {
+    "id": "TestStructs.TestSimple",
+    "source": "TestStructs.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestStructs.cs",
+    "sourceSha256": "98b2abc940ea881f0c8a1f24a8a25fa4315d60abe2039f648b57ade659fb1aca",
+    "expected": "TestStructs.TestSimple.hpp.json",
+    "caseId": "F059"
+  },
+  {
+    "id": "TestStructs.TestAnonymous",
+    "source": "TestStructs.TestAnonymous.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestStructs.cs",
+    "sourceSha256": "80cb8d1087a40b9e0251e5a102c59177ba6400b24a0ed78c5f34cd9091a19aa0",
+    "expected": "TestStructs.TestAnonymous.hpp.json",
+    "caseId": "F060"
+  },
+  {
+    "id": "TestStructs.TestAnonymousUnion",
+    "source": "TestStructs.TestAnonymousUnion.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestStructs.cs",
+    "sourceSha256": "dacc199b3ebeaf0670b76dac127596e95234d900032b45b2699ec12a99c90516",
+    "expected": "TestStructs.TestAnonymousUnion.hpp.json",
+    "caseId": "F061"
+  },
+  {
+    "id": "TestStructs.TestAnonymousUnionWithField",
+    "source": "TestStructs.TestAnonymousUnionWithField.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestStructs.cs",
+    "sourceSha256": "a54f18e5b6a3d87e8bb4db06e4318f887cdabc2433aae1f9401887889171e8b2",
+    "expected": "TestStructs.TestAnonymousUnionWithField.hpp.json",
+    "caseId": "F062"
+  },
+  {
+    "id": "TestStructs.TestAnonymousUnionWithField2",
+    "source": "TestStructs.TestAnonymousUnionWithField2.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestStructs.cs",
+    "sourceSha256": "3005322bf8afc03d1ebe86a7601afeb2ac8e8c263d193c595fd2937edd7fae06",
+    "expected": "TestStructs.TestAnonymousUnionWithField2.hpp.json",
+    "caseId": "F063"
+  },
+  {
+    "id": "TestMacros.TestSimple",
+    "source": "TestMacros.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Preprocessor/TestMacros.cs",
+    "sourceSha256": "43c08ef2a622c6aef3d6c0fb09281861d567f0d17e69067c454e4b5e55983a76",
+    "expected": "TestMacros.TestSimple.hpp.json",
+    "caseId": "F064"
+  },
+  {
+    "id": "TestPragma.TestPragmaOnce",
+    "source": "TestPragma.TestPragmaOnce.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Preprocessor/TestPragma.cs",
+    "sourceSha256": "2df102b00829e79f00023bfba5562bedd725f6e67c85e6095f34e28a1949f519",
+    "expected": "TestPragma.TestPragmaOnce.hpp.json",
+    "caseId": "F065"
+  },
+  {
+    "id": "TestTypeAliases.TestSimple",
+    "source": "TestTypeAliases.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypeAliases.cs",
+    "sourceSha256": "afd1a518ba7e7f208fdfc323090a51f05c8a3165f4b243469cf7ac1222bf3290",
+    "expected": "TestTypeAliases.TestSimple.hpp.json",
+    "caseId": "F066"
+  },
+  {
+    "id": "TestTypedefs.TestSimple",
+    "source": "TestTypedefs.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypedefs.cs",
+    "sourceSha256": "838a3d54127d4ae2dcfb551b40f371c2e3fc864d241ce144b4ccb445601c5f90",
+    "expected": "TestTypedefs.TestSimple.hpp.json",
+    "caseId": "F067"
+  },
+  {
+    "id": "TestTypes.TestSimple",
+    "source": "TestTypes.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "e67a1bc0da18932d2a559b8122a034307cafd26f569552aa535bae4a982147c8",
+    "expected": "TestTypes.TestSimple.hpp.json",
+    "caseId": "F068"
+  },
+  {
+    "id": "TestTypes.TestTemplateParameters",
+    "source": "TestTypes.TestTemplateParameters.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "96f0b62439e467738883e7563e45babc5673b7859c650df9327c70cef61f8e57",
+    "expected": "TestTypes.TestTemplateParameters.hpp.json",
+    "caseId": "F069"
+  },
+  {
+    "id": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature",
+    "source": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "eedbdc0206683118d9e7f0411d764e00a629d8dd875be4a3ee1471a97f910812",
+    "expected": "TestTypes.TemplateTemplateParameter_RetainsNestedSignature.hpp.json",
+    "caseId": "F070"
+  },
+  {
+    "id": "TestTypes.TestTemplateInheritance",
+    "source": "TestTypes.TestTemplateInheritance.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "3b4b167edb062995c3b52a4239ff9f2cbfd23b842f514cac346f8131bf05a915",
+    "expected": "TestTypes.TestTemplateInheritance.hpp.json",
+    "caseId": "F071"
+  },
+  {
+    "id": "TestTypes.TestTemplatePartialSpecialization",
+    "source": "TestTypes.TestTemplatePartialSpecialization.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "e12cb747f2b478246cfe4db7757be761bd2365ff25bd5b41bbdd64be80926253",
+    "expected": "TestTypes.TestTemplatePartialSpecialization.hpp.json",
+    "caseId": "F072"
+  },
+  {
+    "id": "TestTypes.TestClassPrototype",
+    "source": "TestTypes.TestClassPrototype.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "e0f2283fe8570b7a81ab61a8d74921325a52dcd9cbdc4e115d96c19dba09365d",
+    "expected": "TestTypes.TestClassPrototype.hpp.json",
+    "caseId": "F073"
+  },
+  {
+    "id": "TestAnnotateAttributes.TestAnnotateAttribute",
+    "source": "TestAnnotateAttributes.TestAnnotateAttribute.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestAnnotateAttributes.cs",
+    "sourceSha256": "70d8e49e33a2bba37d5ea4e3bf7a6fe92de1da2e1c47f757171d178154b546ae",
+    "expected": "TestAnnotateAttributes.TestAnnotateAttribute.hpp.json",
+    "caseId": "F074"
+  },
+  {
+    "id": "TestAnnotateAttributes.TestAnnotateAttributeInNamespace",
+    "source": "TestAnnotateAttributes.TestAnnotateAttributeInNamespace.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestAnnotateAttributes.cs",
+    "sourceSha256": "ab909b4c065b008a349f1b09f4157cd0026580a090dfa3f0b64af588b6355319",
+    "expected": "TestAnnotateAttributes.TestAnnotateAttributeInNamespace.hpp.json",
+    "caseId": "F075"
+  },
+  {
+    "id": "TestAnnotateAttributes.TestAnnotateAttributeWithMacro",
+    "source": "TestAnnotateAttributes.TestAnnotateAttributeWithMacro.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "AttributesTest/TestAnnotateAttributes.cs",
+    "sourceSha256": "2732b0938b93c7e3351a3b878666227f1bd6de0b23ef54d54a42c21db7ed69ce",
+    "expected": "TestAnnotateAttributes.TestAnnotateAttributeWithMacro.hpp.json",
+    "caseId": "F076"
+  },
+  {
+    "id": "TestSystemAttributes.TestClassPublicExportAttribute",
+    "source": "TestSystemAttributes.TestClassPublicExportAttribute.hpp",
+    "target": "windows-x86-msvc",
+    "legacyFile": "AttributesTest/TestSystemAttributes.cs",
+    "sourceSha256": "a8e2040fbeb5ab2637b4862e1dd1a43e79882c633ebbe1c4586443225519ce57",
+    "expected": "TestSystemAttributes.TestClassPublicExportAttribute.hpp.json",
+    "caseId": "F077"
+  },
+  {
+    "id": "TestFunctions.TestFunctionExport",
+    "source": "TestFunctions.TestFunctionExport.hpp",
+    "target": "windows-x86-msvc",
+    "legacyFile": "Parsing/TestFunctions.cs",
+    "sourceSha256": "3a5cf02fbcccaa6ad09e55e776bf3e67cbd85a0e9bfaba21e0cb923a13fd5100",
+    "expected": "TestFunctions.TestFunctionExport.hpp.json",
+    "caseId": "F078"
+  },
+  {
+    "id": "TestNamespaces.TestNamespaceFindByFullName",
+    "source": "TestNamespaces.TestNamespaceFindByFullName.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestNamespaces.cs",
+    "sourceSha256": "15d0b107649215589bfd6fa887f25bbd227b22277249d400fd12078c9985957f",
+    "expected": "TestNamespaces.TestNamespaceFindByFullName.hpp.json",
+    "caseId": "F079"
+  },
+  {
+    "id": "TestNamespaces.TestInlineNamespace",
+    "source": "TestNamespaces.TestInlineNamespace.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Parsing/TestNamespaces.cs",
+    "sourceSha256": "ab84a326ac9e387e6cf2ea8c7e10ce6d2a28189bab191f81822af95fa8e061b5",
+    "expected": "TestNamespaces.TestInlineNamespace.hpp.json",
+    "caseId": "F080"
+  },
+  {
+    "id": "TestTypeAliases.TestSquash",
+    "source": "TestTypeAliases.TestSquash.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypeAliases.cs",
+    "sourceSha256": "4e5d88448e9b617747063c85756d0bb969f351493d3db9cd8fd3d79fa4a35fe9",
+    "expected": "TestTypeAliases.TestSquash.hpp.json",
+    "caseId": "F081"
+  },
+  {
+    "id": "TestTypeAliases.TestTemplate",
+    "source": "TestTypeAliases.TestTemplate.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypeAliases.cs",
+    "sourceSha256": "d36b9fb119067a5f32fbd0137de74a03bd150ebfda3667c3ab7e92b5262d8e7d",
+    "expected": "TestTypeAliases.TestTemplate.hpp.json",
+    "caseId": "F082"
+  },
+  {
+    "id": "TestTypeAliases.TestTemplateComplex",
+    "source": "TestTypeAliases.TestTemplateComplex.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypeAliases.cs",
+    "sourceSha256": "fb2928d9afeb433cb9bba3711e6ad82a6fb3981133d65960cd43cfb9637d81bb",
+    "expected": "TestTypeAliases.TestTemplateComplex.hpp.json",
+    "caseId": "F083"
+  },
+  {
+    "id": "TestTypedefs.TestSquash",
+    "source": "TestTypedefs.TestSquash.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypedefs.cs",
+    "sourceSha256": "a77a420a79c7b3c98dd6db8cb6cfbf921e8cded3403814c4f7ab0c22542be39d",
+    "expected": "TestTypedefs.TestSquash.hpp.json",
+    "caseId": "F084"
+  },
+  {
+    "id": "TestTypes.IncompleteArray_UsesUnboundExtentInsteadOfNegativeStorageSize",
+    "source": "TestTypes.IncompleteArray_UsesUnboundExtentInsteadOfNegativeStorageSize.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "76bdf64c7bb3b01c5e3c848a72143a78af9eb2ddf194c938fab989ac5a3c2097",
+    "expected": "TestTypes.IncompleteArray_UsesUnboundExtentInsteadOfNegativeStorageSize.hpp.json",
+    "caseId": "F085"
+  },
+  {
+    "id": "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent",
+    "source": "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Types/TestTypes.cs",
+    "sourceSha256": "898d203690d8d2f111e8f69371375a777c37a500769efdc1624fb6d4b7063e60",
+    "expected": "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent.hpp.json",
+    "caseId": "F086"
+  },
+  {
+    "id": "TestReadme.TestSimple",
+    "source": "TestReadme.TestSimple.hpp",
+    "target": "windows-x64-msvc",
+    "legacyFile": "Documentation/TestReadme.cs",
+    "sourceSha256": "dcda782aa6079a204d3e5bbe4944e256de4184aa8b21b58257ff1a2d65174bd7",
+    "expected": "TestReadme.TestSimple.hpp.json",
+    "caseId": "F087"
+  }
+]

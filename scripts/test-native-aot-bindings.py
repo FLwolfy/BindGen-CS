@@ -75,7 +75,7 @@ def main():
     dotnet = str(Path(args.dotnet).resolve())
     work = args.output.resolve() / uuid.uuid4().hex
     work.mkdir(parents=True)
-    report = {"success": False, "host": platform.platform(), "managedRuntime": "nativeAot", "modes": list(MODES),
+    report = {"success": False, "host": platform.platform(), "managedRuntime": "dotnet.native-aot", "modes": list(MODES),
               "injectedNativeError": args.inject_native_error, "installedProducts": bool(args.tool_path) and not args.local_checkpoint,
               "privateRepositoryCheckpoint": args.local_checkpoint,
               "wideEnumPresentation": "generator-configured UInt64 enum; friendly and raw native uint64 typedef round trips"}
@@ -88,9 +88,9 @@ def main():
         compiler = find_compiler(args.compiler)
         report["compiler"] = compiler
         (work / "global.json").write_text(json.dumps({"sdk": {
-            "version": "10.0.100", "rollForward": "latestFeature"}}), encoding="utf-8")
+            "version": "10.0.402", "rollForward": "latestPatch", "allowPrerelease": False}}), encoding="utf-8")
         report["dotnetSdkVersion"] = helper.run([dotnet, "--version"], work, work / "dotnet-version.log", environment).strip()
-        if not report["dotnetSdkVersion"].startswith("10."):
+        if report["dotnetSdkVersion"] != "10.0.402":
             raise RuntimeError("The native invocation gate requires an actual .NET 10 SDK.")
         report["nativeCompilerVersion"] = helper.run([compiler, "--version"], work, work / "native-compiler-version.log", environment).strip()
         shutil.copytree(ROOT / "tests/fixtures/NativeApi", work / "Native")
@@ -103,15 +103,15 @@ def main():
                 raise RuntimeError("The explicitly selected installed tool/runtime product is missing.")
         else:
             if not args.no_build:
-                for name in ("BGCS.Tool", "BGCS.Frontend.Clang.Worker", "BGCS.Runtime"):
-                    helper.build_project(dotnet, ROOT / f"src/{name}/{name}.csproj", work,
+                for name, directory in (("BGCS.Tool", "src/BGCS.Tool"), ("BGCS.Frontend.Clang.Worker", "extensions/frontends/BGCS.Frontend.Clang.Worker"), ("BGCS.Runtime", "src/BGCS.Runtime"), ("BGCS.Extension.BrowserWasm", "extensions/BGCS.Extension.BrowserWasm"), ("BGCS.Extension.NativeAot", "extensions/BGCS.Extension.NativeAot")):
+                    helper.build_project(dotnet, ROOT / directory / (name + ".csproj"), work,
                                          work / (name + "-build.log"), environment, args.configuration)
             tool = cpp_acceptance_fixture.stage_repository_generator(ROOT, work, args.configuration)
             runtime = ROOT / f"src/BGCS.Runtime/bin/{args.configuration}/net10.0/BGCS.Runtime.dll"
         report.update(cpp_acceptance_fixture.execution_identity(ROOT, tool, runtime))
         shutil.copyfile(runtime, work / "BGCS.Runtime.dll")
         bridge = cpp_acceptance_fixture.prepare(
-            ROOT, work, dotnet, tool, compiler, environment, helper.run)
+            ROOT, work, dotnet, tool, compiler, environment, helper.run, configuration=args.configuration)
         aggregates = prepare_aggregates(work)
         report["aggregateFixtureInputs"] = {path.name: digest(path) for path in (aggregates["header"], aggregates["source"], aggregates["probe"])}
         bridge_source = bridge["source"]

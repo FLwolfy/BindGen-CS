@@ -9,7 +9,7 @@ public sealed class ValidationCommandTests {
     public void ApiSnapshot_ReflectsTheActualAssemblyAndWritesStableOutput() {
         string directory = CreateDirectory();
         try {
-            string assembly = Path.Combine(AppContext.BaseDirectory, "BGCS.Contracts.dll");
+            string assembly = Path.Combine(AppContext.BaseDirectory, "BGCS.Core.dll");
             string snapshot = Path.Combine(directory, "snapshot.txt");
             using StringWriter error = new();
             int exitCode = CliInvocation.Run(["validate", "api-snapshot", assembly, snapshot],
@@ -17,7 +17,7 @@ public sealed class ValidationCommandTests {
 
             Assert.True(exitCode == 0, error.ToString());
             string first = File.ReadAllText(snapshot);
-            Assert.Contains("interface BGCS.Contracts.Targets.INativeTargetProvider", first);
+            Assert.Contains("interface BGCS.Core.Targets.INativeTargetProvider", first);
             Assert.Equal(0, CliInvocation.Run(["validate", "api-snapshot", assembly, snapshot],
                 directory, TextWriter.Null, error));
             Assert.Equal(first, File.ReadAllText(snapshot));

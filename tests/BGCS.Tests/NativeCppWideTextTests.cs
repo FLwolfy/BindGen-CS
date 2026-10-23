@@ -7,9 +7,9 @@ using System.Runtime.Loader;
 using System.Text;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -62,7 +62,7 @@ public sealed class NativeCppWideTextTests
                 };
                 }
                 """);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             AnalysisResult analysis = await host.AnalyzeAsync(new(["wide.hpp"], SourceLanguage.Cpp, root) { parseMacros = false });
             Assert.True(analysis.success, analysis.GetDiagnosticSummary());
             NativeModule module = analysis.module!;
@@ -101,7 +101,7 @@ public sealed class NativeCppWideTextTests
             names.Add("Wide::Probe::Read", "Read");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "cpp_wide", nativeName = "cpp_wide_fixture" },
+                schemaVersion = 2, library = new() { id = "cpp_wide", nativeName = "cpp_wide_fixture" },
                 source = new() { headers = ["wide.hpp"], language = SourceLanguage.Cpp, parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.CppWide", name = "WideApi", names = names.ToImmutable() },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
@@ -189,6 +189,6 @@ public sealed class NativeCppWideTextTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

@@ -1,3 +1,4 @@
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -5,11 +6,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -24,11 +25,11 @@ public sealed class InspectionAndDiffTests
         while (repository is not null && !File.Exists(Path.Combine(repository, "BindGen-CS.slnx"))) repository = Path.GetDirectoryName(repository);
         Assert.NotNull(repository);
         string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        string worker = Path.Combine(repository!, "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0");
+        string worker = Path.Combine(repository!, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0");
         File.WriteAllText(Path.Combine(scratch.root, "native.h"), "int native_add(int a, int b);");
         BindingConfiguration input = Configuration() with { targets = [new() { id = "host" }] };
         GenerationRequest request = new(input, scratch.root);
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
         GenerationResult result = await host.GenerateAsync(request);
         Assert.True(result.success, result.GetDiagnosticSummary());
         var before = Directory.GetFiles(result.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes);
@@ -46,7 +47,7 @@ public sealed class InspectionAndDiffTests
         InspectionResult result = await host.InspectAsync(new(Configuration(), scratch.root));
         Assert.True(result.success, string.Join(Environment.NewLine, result.diagnostics.Select(diagnostic => diagnostic.message)));
         TargetInspection target = Assert.Single(result.targets);
-        Assert.Equal("emscripten-wasm32-emscripten", target.targetId);
+        Assert.Equal(TestComposition.HostTargetId(), target.targetId);
         Assert.Null(target.bridge);
         Assert.NotNull(target.managed);
         Assert.Same(target.interop, target.managed!.interop);
@@ -90,10 +91,10 @@ public sealed class InspectionAndDiffTests
         const string newPrefix = "current-validator-";
         string oldMessage = oldPrefix + new string('x', 240);
         string newMessage = newPrefix + new string('y', 240);
-        await using BindingHost original = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddValidator("metadata-probe", 0, () => new MetadataValidator(0, oldMessage)).Build();
-        await using BindingHost changed = BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend())
-            .AddValidator("metadata-probe", 7, () => new MetadataValidator(7, newMessage)).Build();
+        await using BindingHost original = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IGenerationValidator>(new("metadata-probe", ExtensionPort.GenerationValidator, 0), _ => new MetadataValidator(0, oldMessage)).Build();
+        await using BindingHost changed = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend())
+            .RegisterFactory<IGenerationValidator>(new("metadata-probe", ExtensionPort.GenerationValidator, 7), _ => new MetadataValidator(7, newMessage)).Build();
         GenerationRequest request = new(Configuration(), scratch.root);
         GenerationResult published = await original.GenerateAsync(request);
         Assert.True(published.success, published.GetDiagnosticSummary());
@@ -104,7 +105,7 @@ public sealed class InspectionAndDiffTests
         Assert.Contains(difference.changes, change => change.kind == ArtifactChangeKind.Changed && change.relativePath.EndsWith("/metadata/verification.json", StringComparison.Ordinal));
         Assert.Contains(difference.changes, change => change.kind == ArtifactChangeKind.Changed && change.relativePath == "generation.report.json");
         BindingDiagnostic verification = Assert.Single(difference.diagnostics.Where(diagnostic => diagnostic.code == "BGCS-DIFF-METADATA"
-            && diagnostic.message.StartsWith("Metadata changed in 'emscripten-wasm32-emscripten/metadata/verification.json'", StringComparison.Ordinal)));
+            && diagnostic.message.StartsWith("Metadata changed in '" + TestComposition.HostTargetId() + "/metadata/verification.json'", StringComparison.Ordinal)));
         Assert.Equal(BindingDiagnosticSeverity.Information, verification.severity);
         Assert.Contains("$[\"validationGates\"][0][\"priority\"]: 0 -> 7", verification.message);
         BindingDiagnostic report = Assert.Single(difference.diagnostics.Where(diagnostic => diagnostic.code == "BGCS-DIFF-METADATA"
@@ -157,12 +158,12 @@ public sealed class InspectionAndDiffTests
         while (repository is not null && !File.Exists(Path.Combine(repository, "BindGen-CS.slnx"))) repository = Path.GetDirectoryName(repository);
         Assert.NotNull(repository);
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        string worker = Path.Combine(repository!, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        string worker = Path.Combine(repository!, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
         File.WriteAllText(Path.Combine(scratch.root, "native.hpp"), "inline int add(int a, int b) { return a+b; }");
         BindingConfiguration input = Configuration() with { source = new() { language = SourceLanguage.Cpp, headers = ["native.hpp"], parseMacros = false }, targets = [new() { id = "host" }] };
-        await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker)
-            .WithManagedProjectionFactory(() => throw new InvalidOperationException("The bridge must not project managed APIs."))
-            .WithBackendFactory(() => throw new InvalidOperationException("The bridge must not emit managed source.")).Build();
+        await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker)
+            .RegisterFactory<IManagedProjection>(new("fixture.projection", ExtensionPort.ManagedProjection), _ => throw new InvalidOperationException("The bridge must not project managed APIs."))
+            .RegisterFactory<IBindingBackend>(new("fixture.backend", ExtensionPort.BindingBackend), _ => throw new InvalidOperationException("The bridge must not emit managed source.")).Build();
         GenerationResult result = await host.BridgeAsync(new(input, scratch.root));
         Assert.True(result.success, result.GetDiagnosticSummary());
         Assert.Contains(result.artifacts, artifact => artifact.mediaType == "text/x-c++");
@@ -175,11 +176,11 @@ public sealed class InspectionAndDiffTests
             Assert.DoesNotContain(".bgcs-staging-", File.ReadAllText(Path.Combine(result.outputRoot, artifact.relativePath))));
     }
 
-    private static BindingHost Host() => BindingHost.CreateBuilder().AddBuiltIns().WithFrontendFactory(() => new ScalarFrontend()).Build();
+    private static BindingHost Host() => BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend()).Build();
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "example", nativeName = "example" },
-        source = new() { headers = ["native.h"] }, targets = [new() { id = "emscripten-wasm32-emscripten" }],
+        schemaVersion = 2, library = new() { id = "example", nativeName = "example" },
+        source = new() { headers = ["native.h"] }, targets = [new() { id = "host" }],
         api = new() { @namespace = "Example", name = "NativeApi" }, cache = new() { enabled = false }
     };
     private sealed class MetadataValidator(int order, string message) : IGenerationValidator
@@ -194,11 +195,17 @@ public sealed class InspectionAndDiffTests
     }
     private sealed class ScalarFrontend : IFrontend
     {
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
         public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
             NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
             NativeDeclaration function = new(new("function"), "Function", "echo", "echo", null, new(request.headers[0], 1, 1)) { returnType = integer.id, callingConvention = "C" };
-            return ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple, 4, [integer], [function], []) { language = SourceLanguage.C, byteOrder = request.target.byteOrder }, new([], [])));
+            return ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple, TestComposition.PointerSize(request.target), [integer], [function], []) { language = SourceLanguage.C, byteOrder = request.target.byteOrder }, new([], [])));
         }
     }
     private sealed class Scratch : IDisposable

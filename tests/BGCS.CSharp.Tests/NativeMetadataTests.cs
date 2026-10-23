@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Emission;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
@@ -35,8 +35,8 @@ public sealed class NativeMetadataTests
         ManagedApiModel model = Model(true, sourceRuntime);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(mode, sourceRuntime, sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         MethodDeclarationSyntax[] methods = Roots(sink).SelectMany(root => root.DescendantNodes().OfType<MethodDeclarationSyntax>())
             .Where(method => method.AttributeLists.SelectMany(list => list.Attributes).Any(IsNative)).ToArray();
@@ -61,7 +61,7 @@ public sealed class NativeMetadataTests
         ManagedApiModel model = Model(false, true);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(mode, true, sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         Assert.DoesNotContain(Roots(sink).SelectMany(root => root.DescendantNodes().OfType<AttributeSyntax>()), IsNative);
         Assert.DoesNotContain(sink.sources.Values, source => source.Contains("class NativeNameAttribute", StringComparison.Ordinal));
         Assert.False(new ManagedProjectionRequest("Example", "Api").emitNativeMetadata);
@@ -80,8 +80,8 @@ public sealed class NativeMetadataTests
         ManagedApiModel model = Model(true, false);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(BindingImportMode.FunctionTable, false, sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         string key = Assert.Single(sink.sources.Keys, path => path.EndsWith(".Raw.g.cs", StringComparison.Ordinal));
         CompilationUnitSyntax root = CSharpSyntaxTree.ParseText(sink.sources[key]).GetCompilationUnitRoot();
         MethodDeclarationSyntax method = Assert.Single(root.DescendantNodes().OfType<MethodDeclarationSyntax>(), candidate => candidate.Identifier.ValueText == "ManagedAdd");
@@ -122,8 +122,8 @@ public sealed class NativeMetadataTests
         { emitNativeMetadata = true }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(mode, false, sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         InteropModule reordered = new(module.libraryId, module.targetId, module.pointerSize, module.types,
             module.functions.Reverse().ToImmutableArray(), []) { byteOrder = module.byteOrder };
         plan = plan with { api = model with { interop = reordered } };
@@ -156,11 +156,18 @@ public sealed class NativeMetadataTests
         ManagedApiModel model = Model(true, false);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(BindingImportMode.FunctionTable, false, sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         InteropModule module = model.interop;
+        if (duplicate)
+        {
+            Assert.Throws<ArgumentException>(() => new InteropModule(module.libraryId, module.targetId, module.pointerSize, module.types,
+                module.functions.Add(module.functions[0]), module.diagnostics));
+            new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
+            return;
+        }
         InteropModule changed = new(module.libraryId, module.targetId, module.pointerSize, module.types,
-            duplicate ? module.functions.Add(module.functions[0]) : module.functions.RemoveAt(0), module.diagnostics)
+            module.functions.RemoveAt(0), module.diagnostics)
         { byteOrder = module.byteOrder };
         plan = plan with { api = model with { interop = changed } };
         Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan,
@@ -176,8 +183,8 @@ public sealed class NativeMetadataTests
         ManagedApiModel model = Model(true, false);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(mode, false, sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request) with { physicalImports = default };
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request) with { physicalImports = default };
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan,
             sink.sources.Select(source => (source.Key, source.Value)), request.libraryName));
         Assert.Contains("physical native import carriers", failure.Message, StringComparison.Ordinal);
@@ -190,7 +197,7 @@ public sealed class NativeMetadataTests
     {
         ManagedApiModel model = Model(true, sourceRuntime);
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, Request(BindingImportMode.DllImport, sourceRuntime, sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, Request(BindingImportMode.DllImport, sourceRuntime, sink), CancellationToken.None);
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         CSharpCompilation compilation = CSharpCompilation.Create("Metadata_" + Guid.NewGuid().ToString("N"),
             sink.sources.Select(source => CSharpSyntaxTree.ParseText(source.Value, new(LanguageVersion.CSharp14, documentationMode: DocumentationMode.Diagnose), source.Key)),
@@ -239,19 +246,19 @@ public sealed class NativeMetadataTests
             emitNativeMetadata = true, emitCallbackDelegates = false,
             names = ImmutableDictionary<string, string>.Empty.Add("native_install", "Install")
         }, CancellationToken.None);
-        ManagedRuntimeProfile profile = new("metadata-browser", ManagedRuntimeKind.BrowserWasm,
+        ManagedRuntimeProfile profile = new("metadata-browser", new ManagedRuntimeId("fixture.nonblocking-runtime"),
             NativeModuleMechanism.StaticAdapter, [BindingImportMode.DllImport, BindingImportMode.LibraryImport], true, false)
         {
-            functionPointerTransport = ManagedFunctionPointerTransport.BrowserWasm32TableIndex,
-            libraryImportConvention = ManagedImportConventionStrategy.BrowserCdeclDefault
+            functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger,
+            libraryImportConvention = ManagedImportConventionStrategy.RuntimeDefault, defaultCallingConvention = "Cdecl"
         };
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("__Internal", sink) { importMode = mode, managedRuntime = profile };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpPhysicalImportPlan physical = Assert.Single(plan.physicalImports);
         Assert.Equal(new[] { "nint" }, physical.parameterTypes);
         Assert.Contains("delegate*", plan.methods[0].parameterTypes[0], StringComparison.Ordinal);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         string key = Assert.Single(sink.sources.Keys, path => path.Contains("NativeImports", StringComparison.Ordinal));
         CompilationUnitSyntax imports = CSharpSyntaxTree.ParseText(sink.sources[key]).GetCompilationUnitRoot();

@@ -8,14 +8,14 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Common;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Plugins;
+using BGCS.Core.Common;
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
-using BGCS.Platforms.Targeting;
+using BGCS.Targets.Desktop.Targeting;
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -39,7 +39,7 @@ public sealed class NeutralCppBridgeTests
     {
         string repository = FindRepository();
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        string worker = Path.Combine(repository, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        string worker = Path.Combine(repository, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-neutral-cpp-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         nint library = 0;
@@ -71,12 +71,12 @@ public sealed class NeutralCppBridgeTests
             await File.WriteAllTextAsync(Path.Combine(temporary, "dependency.hpp"), "inline int dependency_only(int value) { return value; }");
             BindingConfiguration input = new()
             {
-                schemaVersion = 1, library = new() { id = "widget", nativeName = "widget_bridge" },
+                schemaVersion = 2, library = new() { id = "widget", nativeName = "widget_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Widget", name = "WidgetApi", names = ImmutableDictionary<string, string>.Empty.Add("Sample::Widget::Identity", "Identity").Add("Sample::echo_flags", "EchoFlags").Add("Sample::add_quantity", "AddQuantity") },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }};
             System.Collections.Generic.List<BGCS.Tests.NeutralPlugin.QuantityPlugin> plugins = [];
-            BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker);
+            BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker);
             if (manifestPlugin)
             {
                 string pluginRoot = Path.Combine(temporary, "plugins");
@@ -114,7 +114,7 @@ public sealed class NeutralCppBridgeTests
             Assert.True(File.Exists(Path.Combine(nativeRoot, "managed", "Types", "SampleWidget.g.cs")));
             Assert.True(File.Exists(Path.Combine(nativeRoot, "managed", "Types", "SampleFlags.g.cs")));
             string manifestPath = Path.Combine(nativeRoot, "native", "metadata", "bridge.module.json");
-            CppBridgeModule plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(manifestPath))!;
+            NativeBridgePlan plan = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(manifestPath))!;
             Assert.Contains(plan.exports, export => export.operation.kind == BridgeOperationKind.Construct && export.resultRelease is not null);
             Assert.Contains(plan.exports, export => export.operation.kind == BridgeOperationKind.BaseCast);
             Assert.DoesNotContain(plan.exports, export => export.operation.declaration is not null && plan.source.GetDeclaration(export.operation.declaration.Value).name == "dependency_only");

@@ -2,7 +2,8 @@
   "legacyFixture": "entryTests/TypeNamingConvention",
   "legacyVariant": "config",
   "configuration": {
-    "/api/naming/types/casing": "camel"
+    "/api/naming/types/casing": "camel",
+    "/bridge/aggregateStrategy": "pointerBridge"
   },
   "types": [
     {
@@ -20,7 +21,27 @@
       "parameterNames": [
         "value"
       ],
-      "returns": "sampleType"
+      "returns": "sampleType",
+      "parameterRefKinds": [
+        "None"
+      ]
+    },
+    {
+      "type": "EntryTests.Generated.EntryApi+RawApi",
+      "name": "MakeSample",
+      "parameters": [
+        "int",
+        "sampleType*"
+      ],
+      "parameterNames": [
+        "value",
+        "bgcs_result"
+      ],
+      "returns": "void",
+      "parameterRefKinds": [
+        "None",
+        "None"
+      ]
     }
   ],
   "absentTypes": [

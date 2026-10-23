@@ -3,7 +3,7 @@
   "libraryId": "sdl3",
   "platform": "windows-x64",
   "sourceNormalization": "quoted-locked-corpus-include-root-v1",
-  "selectionPolicySha256": "72e98800299edc085c3f90f09451aea3752c1e4dc08d2ebcc85d2e9b493a8d0a",
+  "selectionPolicySha256": "a30534e7dda000005976f33bc7c093fbdba6d603bcd55ca5075e89f4b23167f1",
   "omittedDeclarations": {
     "excludedDeclarations": [
       "SDL_sscanf",
@@ -56,10 +56,10 @@
     ]
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "20dd8cabde77792ca824bb20813781af635d59dbc99ae82c351885c39d1f986d",
-    "windows-x64-msvc/native/include/bgcs_sdl3_helpers.h": "8f71efa0818d7e24af21cc4ecb8dc2a3be0ca90b2a745c7d2f99eea9e3c3025a",
-    "windows-x64-msvc/native/src/bgcs_sdl3_helpers.c": "819775cee81d70f2c05181df9c6abe3796f51b67d03950c4f444bfe1db824e38",
-    "windows-x64-msvc/native/src/storage.assertions.c": "cd9ed184be797918ed0394c8581009e329de17bb96fcfa8bcd8ce9ddba831d81"
+    "windows-x64-msvc/managed/Bindings.cs": "eb436cfb00fca7085c99292e917abebef33ac722d9e22c3f44b51802cefdf1dc",
+    "windows-x64-msvc/native/include/bgcs_sdl3.h": "d34c22117039be92613e6e22f2f335e35b397ae7557d95a726165f0f881d4a01",
+    "windows-x64-msvc/native/src/bgcs_sdl3.c": "f1c7609738f28c5b539ed5163ba735a8dde34ebb8c403c7f14fa190bcf7354ff",
+    "windows-x64-msvc/native/src/storage.assertions.c": "55ad7f29655a9a41feae9592970971f13be67d9f416d8a7da6aed70704f69165"
   },
-  "publicApiSha256": "25c9cc20f476fa37bd5babf1ef85d62d0eacc5a86a10a366d16e73593927e082"
+  "publicApiSha256": "57ab4d878ece0824a236872e01e9b04b93f70e6ce4a625edfc3b255839af6a3d"
 }

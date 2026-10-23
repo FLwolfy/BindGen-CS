@@ -10,7 +10,7 @@
     },
     "schemaVersion": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "extends": {
       "type": "array",
@@ -1595,12 +1595,12 @@
                 "minimum": 1
               },
               "runtime": {
-                "enum": [
-                  "coreClr",
-                  "nativeAot",
-                  "browserWasm",
-                  null
-                ]
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "description": "An open execution-model identity registered by the selected runtime extension; null lets that extension explicitly resolve an applicable default."
               },
               "names": {
                 "type": "object",
@@ -2362,122 +2362,191 @@
             },
             "additionalProperties": false
           },
-          "cpp": {
+          "bridge": {
             "type": "object",
             "properties": {
-              "familyBindings": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "nativeTemplate": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "default": null
-                    },
-                    "nativeType": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "default": null
-                    },
-                    "family": {
-                      "enum": [
-                        "string",
-                        "vector",
-                        "span",
-                        "array",
-                        "map",
-                        "set",
-                        "optional",
-                        "variant",
-                        "expected",
-                        "path",
-                        "duration",
-                        "timePoint",
-                        "uniquePointer",
-                        "sharedPointer"
-                      ],
-                      "default": "string"
-                    },
-                    "evidence": {
+              "aggregateStrategy": {
+                "enum": [
+                  "pointerBridge",
+                  "direct"
+                ],
+                "default": "pointerBridge"
+              },
+              "cpp": {
+                "type": "object",
+                "properties": {
+                  "familyBindings": {
+                    "type": "array",
+                    "items": {
                       "type": "object",
                       "properties": {
-                        "level": {
-                          "enum": [
-                            "unknown",
-                            "inferred",
-                            "declared",
-                            "userAsserted",
-                            "verified"
-                          ]
+                        "nativeTemplate": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "default": null
                         },
-                        "origin": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "level",
-                        "origin"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "stringEncoding": {
-                      "enum": [
-                        "unknown",
-                        "utf8",
-                        "utf16",
-                        "utf32"
-                      ],
-                      "default": "unknown"
-                    },
-                    "stringAccess": {
-                      "enum": [
-                        "indexed",
-                        "cStrNullTerminated"
-                      ],
-                      "default": "indexed"
-                    },
-                    "cStr": {
-                      "type": [
-                        "object",
-                        "null"
-                      ],
-                      "properties": {
-                        "readableLifetime": {
+                        "nativeType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "default": null
+                        },
+                        "family": {
+                          "enum": [
+                            "string",
+                            "vector",
+                            "span",
+                            "array",
+                            "map",
+                            "set",
+                            "optional",
+                            "variant",
+                            "expected",
+                            "path",
+                            "duration",
+                            "timePoint",
+                            "uniquePointer",
+                            "sharedPointer"
+                          ],
+                          "default": "string"
+                        },
+                        "evidence": {
                           "type": "object",
                           "properties": {
-                            "kind": {
+                            "level": {
                               "enum": [
                                 "unknown",
-                                "call",
-                                "owner",
-                                "registration",
-                                "operation",
-                                "static",
-                                "module"
+                                "inferred",
+                                "declared",
+                                "userAsserted",
+                                "verified"
                               ]
                             },
-                            "owner": {
-                              "type": [
-                                "object",
-                                "null"
-                              ],
+                            "origin": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "origin"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "stringEncoding": {
+                          "enum": [
+                            "unknown",
+                            "utf8",
+                            "utf16",
+                            "utf32"
+                          ],
+                          "default": "unknown"
+                        },
+                        "stringAccess": {
+                          "enum": [
+                            "indexed",
+                            "cStrNullTerminated"
+                          ],
+                          "default": "indexed"
+                        },
+                        "cStr": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "readableLifetime": {
+                              "type": "object",
                               "properties": {
-                                "value": {
+                                "kind": {
+                                  "enum": [
+                                    "unknown",
+                                    "call",
+                                    "owner",
+                                    "registration",
+                                    "operation",
+                                    "static",
+                                    "module"
+                                  ]
+                                },
+                                "owner": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "value": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "evidence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "level": {
+                                      "enum": [
+                                        "unknown",
+                                        "inferred",
+                                        "declared",
+                                        "userAsserted",
+                                        "verified"
+                                      ]
+                                    },
+                                    "origin": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "level",
+                                    "origin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "owner",
+                                "evidence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "nullTerminated": {
+                              "type": "object",
+                              "properties": {
+                                "level": {
+                                  "enum": [
+                                    "unknown",
+                                    "inferred",
+                                    "declared",
+                                    "userAsserted",
+                                    "verified"
+                                  ]
+                                },
+                                "origin": {
                                   "type": "string"
                                 }
                               },
                               "required": [
-                                "value"
+                                "level",
+                                "origin"
                               ],
                               "additionalProperties": false
                             },
-                            "evidence": {
-                              "type": "object",
+                            "maximumCodeUnits": {
+                              "type": "integer",
+                              "default": 1048576
+                            },
+                            "constructorCopiesInput": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
                               "properties": {
                                 "level": {
                                   "enum": [
@@ -2500,117 +2569,92 @@
                             }
                           },
                           "required": [
-                            "kind",
-                            "owner",
-                            "evidence"
+                            "readableLifetime",
+                            "nullTerminated"
                           ],
                           "additionalProperties": false
                         },
-                        "nullTerminated": {
-                          "type": "object",
-                          "properties": {
-                            "level": {
-                              "enum": [
-                                "unknown",
-                                "inferred",
-                                "declared",
-                                "userAsserted",
-                                "verified"
-                              ]
-                            },
-                            "origin": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "level",
-                            "origin"
+                        "variantAccess": {
+                          "enum": [
+                            "none",
+                            "memberGet"
                           ],
-                          "additionalProperties": false
+                          "default": "none"
                         },
-                        "maximumCodeUnits": {
-                          "type": "integer",
-                          "default": 1048576
-                        },
-                        "constructorCopiesInput": {
-                          "type": [
-                            "object",
-                            "null"
-                          ],
-                          "properties": {
-                            "level": {
-                              "enum": [
-                                "unknown",
-                                "inferred",
-                                "declared",
-                                "userAsserted",
-                                "verified"
-                              ]
-                            },
-                            "origin": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "level",
-                            "origin"
-                          ],
-                          "additionalProperties": false
+                        "pathFormat": {
+                          "enum": [
+                            "genericUtf8",
+                            "nativeUtf8",
+                            null
+                          ]
                         }
                       },
                       "required": [
-                        "readableLifetime",
-                        "nullTerminated"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "variantAccess": {
-                      "enum": [
-                        "none",
-                        "memberGet"
-                      ],
-                      "default": "none"
-                    },
-                    "pathFormat": {
-                      "enum": [
-                        "genericUtf8",
-                        "nativeUtf8",
-                        null
-                      ]
-                    }
-                  },
-                  "required": [
-                    "family",
-                    "evidence"
-                  ],
-                  "additionalProperties": false
-                },
-                "default": []
-              },
-              "templateInstantiations": {
-                "type": "object",
-                "properties": {
-                  "types": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "nativeType": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "nativeType"
+                        "family",
+                        "evidence"
                       ],
                       "additionalProperties": false
                     },
                     "default": []
                   },
-                  "functions": {
+                  "templateInstantiations": {
+                    "type": "object",
+                    "properties": {
+                      "types": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "nativeType": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "nativeType"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "default": []
+                      },
+                      "functions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "nativeCallable": {
+                              "type": "string"
+                            },
+                            "returnType": {
+                              "type": "string"
+                            },
+                            "parameterTypes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "nativeCallable",
+                            "returnType",
+                            "parameterTypes"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "default": []
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "virtualCallbacks": {
                     "type": "array",
                     "items": {
                       "type": "object",
@@ -2618,24 +2662,71 @@
                         "id": {
                           "type": "string"
                         },
-                        "nativeCallable": {
+                        "nativeInterface": {
                           "type": "string"
                         },
-                        "returnType": {
-                          "type": "string"
-                        },
-                        "parameterTypes": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
+                        "releaseThreadDomain": {
+                          "type": "string",
+                          "enum": [
+                            "unknown",
+                            "any"
+                          ],
+                          "default": "unknown",
+                          "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
                         }
                       },
                       "required": [
                         "id",
-                        "nativeCallable",
-                        "returnType",
-                        "parameterTypes"
+                        "nativeInterface"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "default": []
+                  },
+                  "sequenceInputAdapters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "function": {
+                          "type": "string"
+                        },
+                        "parameters": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "parameter": {
+                                "type": "string"
+                              },
+                              "retainsArgument": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "lifetime": {
+                                "enum": [
+                                  "unknown",
+                                  "call",
+                                  "owner",
+                                  "registration",
+                                  "operation",
+                                  "static",
+                                  "module"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "parameter"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "function",
+                        "parameters"
                       ],
                       "additionalProperties": false
                     },
@@ -2746,7 +2837,7 @@
                           "typeDependencies": {
                             "type": "array",
                             "items": {
-                              "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
+                              "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
                             }
                           },
                           "requiredHeaders": {
@@ -2911,7 +3002,7 @@
                     "sourceFragments": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items"
+                        "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items"
                       },
                       "default": []
                     }
@@ -2973,84 +3064,6 @@
                       "additionalProperties": false
                     }
                   },
-                  "additionalProperties": false
-                },
-                "default": []
-              },
-              "virtualCallbacks": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "nativeInterface": {
-                      "type": "string"
-                    },
-                    "releaseThreadDomain": {
-                      "type": "string",
-                      "enum": [
-                        "unknown",
-                        "any"
-                      ],
-                      "default": "unknown",
-                      "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "nativeInterface"
-                  ],
-                  "additionalProperties": false
-                },
-                "default": []
-              },
-              "sequenceInputAdapters": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "function": {
-                      "type": "string"
-                    },
-                    "parameters": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "parameter": {
-                            "type": "string"
-                          },
-                          "retainsArgument": {
-                            "type": [
-                              "boolean",
-                              "null"
-                            ]
-                          },
-                          "lifetime": {
-                            "enum": [
-                              "unknown",
-                              "call",
-                              "owner",
-                              "registration",
-                              "operation",
-                              "static",
-                              "module"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "parameter"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "function",
-                    "parameters"
-                  ],
                   "additionalProperties": false
                 },
                 "default": []
@@ -4853,12 +4866,12 @@
           "minimum": 1
         },
         "runtime": {
-          "enum": [
-            "coreClr",
-            "nativeAot",
-            "browserWasm",
-            null
-          ]
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "An open execution-model identity registered by the selected runtime extension; null lets that extension explicitly resolve an applicable default."
         },
         "names": {
           "type": "object",
@@ -5620,122 +5633,191 @@
       },
       "additionalProperties": false
     },
-    "cpp": {
+    "bridge": {
       "type": "object",
       "properties": {
-        "familyBindings": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "nativeTemplate": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "default": null
-              },
-              "nativeType": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "default": null
-              },
-              "family": {
-                "enum": [
-                  "string",
-                  "vector",
-                  "span",
-                  "array",
-                  "map",
-                  "set",
-                  "optional",
-                  "variant",
-                  "expected",
-                  "path",
-                  "duration",
-                  "timePoint",
-                  "uniquePointer",
-                  "sharedPointer"
-                ],
-                "default": "string"
-              },
-              "evidence": {
+        "aggregateStrategy": {
+          "enum": [
+            "pointerBridge",
+            "direct"
+          ],
+          "default": "pointerBridge"
+        },
+        "cpp": {
+          "type": "object",
+          "properties": {
+            "familyBindings": {
+              "type": "array",
+              "items": {
                 "type": "object",
                 "properties": {
-                  "level": {
-                    "enum": [
-                      "unknown",
-                      "inferred",
-                      "declared",
-                      "userAsserted",
-                      "verified"
-                    ]
+                  "nativeTemplate": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "default": null
                   },
-                  "origin": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "level",
-                  "origin"
-                ],
-                "additionalProperties": false
-              },
-              "stringEncoding": {
-                "enum": [
-                  "unknown",
-                  "utf8",
-                  "utf16",
-                  "utf32"
-                ],
-                "default": "unknown"
-              },
-              "stringAccess": {
-                "enum": [
-                  "indexed",
-                  "cStrNullTerminated"
-                ],
-                "default": "indexed"
-              },
-              "cStr": {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "properties": {
-                  "readableLifetime": {
+                  "nativeType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "default": null
+                  },
+                  "family": {
+                    "enum": [
+                      "string",
+                      "vector",
+                      "span",
+                      "array",
+                      "map",
+                      "set",
+                      "optional",
+                      "variant",
+                      "expected",
+                      "path",
+                      "duration",
+                      "timePoint",
+                      "uniquePointer",
+                      "sharedPointer"
+                    ],
+                    "default": "string"
+                  },
+                  "evidence": {
                     "type": "object",
                     "properties": {
-                      "kind": {
+                      "level": {
                         "enum": [
                           "unknown",
-                          "call",
-                          "owner",
-                          "registration",
-                          "operation",
-                          "static",
-                          "module"
+                          "inferred",
+                          "declared",
+                          "userAsserted",
+                          "verified"
                         ]
                       },
-                      "owner": {
-                        "type": [
-                          "object",
-                          "null"
-                        ],
+                      "origin": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "level",
+                      "origin"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "stringEncoding": {
+                    "enum": [
+                      "unknown",
+                      "utf8",
+                      "utf16",
+                      "utf32"
+                    ],
+                    "default": "unknown"
+                  },
+                  "stringAccess": {
+                    "enum": [
+                      "indexed",
+                      "cStrNullTerminated"
+                    ],
+                    "default": "indexed"
+                  },
+                  "cStr": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "readableLifetime": {
+                        "type": "object",
                         "properties": {
-                          "value": {
+                          "kind": {
+                            "enum": [
+                              "unknown",
+                              "call",
+                              "owner",
+                              "registration",
+                              "operation",
+                              "static",
+                              "module"
+                            ]
+                          },
+                          "owner": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "value": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "evidence": {
+                            "type": "object",
+                            "properties": {
+                              "level": {
+                                "enum": [
+                                  "unknown",
+                                  "inferred",
+                                  "declared",
+                                  "userAsserted",
+                                  "verified"
+                                ]
+                              },
+                              "origin": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "level",
+                              "origin"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "owner",
+                          "evidence"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "nullTerminated": {
+                        "type": "object",
+                        "properties": {
+                          "level": {
+                            "enum": [
+                              "unknown",
+                              "inferred",
+                              "declared",
+                              "userAsserted",
+                              "verified"
+                            ]
+                          },
+                          "origin": {
                             "type": "string"
                           }
                         },
                         "required": [
-                          "value"
+                          "level",
+                          "origin"
                         ],
                         "additionalProperties": false
                       },
-                      "evidence": {
-                        "type": "object",
+                      "maximumCodeUnits": {
+                        "type": "integer",
+                        "default": 1048576
+                      },
+                      "constructorCopiesInput": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
                         "properties": {
                           "level": {
                             "enum": [
@@ -5758,117 +5840,92 @@
                       }
                     },
                     "required": [
-                      "kind",
-                      "owner",
-                      "evidence"
+                      "readableLifetime",
+                      "nullTerminated"
                     ],
                     "additionalProperties": false
                   },
-                  "nullTerminated": {
-                    "type": "object",
-                    "properties": {
-                      "level": {
-                        "enum": [
-                          "unknown",
-                          "inferred",
-                          "declared",
-                          "userAsserted",
-                          "verified"
-                        ]
-                      },
-                      "origin": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "level",
-                      "origin"
+                  "variantAccess": {
+                    "enum": [
+                      "none",
+                      "memberGet"
                     ],
-                    "additionalProperties": false
+                    "default": "none"
                   },
-                  "maximumCodeUnits": {
-                    "type": "integer",
-                    "default": 1048576
-                  },
-                  "constructorCopiesInput": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
-                    "properties": {
-                      "level": {
-                        "enum": [
-                          "unknown",
-                          "inferred",
-                          "declared",
-                          "userAsserted",
-                          "verified"
-                        ]
-                      },
-                      "origin": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "level",
-                      "origin"
-                    ],
-                    "additionalProperties": false
+                  "pathFormat": {
+                    "enum": [
+                      "genericUtf8",
+                      "nativeUtf8",
+                      null
+                    ]
                   }
                 },
                 "required": [
-                  "readableLifetime",
-                  "nullTerminated"
-                ],
-                "additionalProperties": false
-              },
-              "variantAccess": {
-                "enum": [
-                  "none",
-                  "memberGet"
-                ],
-                "default": "none"
-              },
-              "pathFormat": {
-                "enum": [
-                  "genericUtf8",
-                  "nativeUtf8",
-                  null
-                ]
-              }
-            },
-            "required": [
-              "family",
-              "evidence"
-            ],
-            "additionalProperties": false
-          },
-          "default": []
-        },
-        "templateInstantiations": {
-          "type": "object",
-          "properties": {
-            "types": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "nativeType": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "id",
-                  "nativeType"
+                  "family",
+                  "evidence"
                 ],
                 "additionalProperties": false
               },
               "default": []
             },
-            "functions": {
+            "templateInstantiations": {
+              "type": "object",
+              "properties": {
+                "types": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "nativeType": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "nativeType"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "default": []
+                },
+                "functions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "nativeCallable": {
+                        "type": "string"
+                      },
+                      "returnType": {
+                        "type": "string"
+                      },
+                      "parameterTypes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "nativeCallable",
+                      "returnType",
+                      "parameterTypes"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "default": []
+                }
+              },
+              "additionalProperties": false
+            },
+            "virtualCallbacks": {
               "type": "array",
               "items": {
                 "type": "object",
@@ -5876,24 +5933,71 @@
                   "id": {
                     "type": "string"
                   },
-                  "nativeCallable": {
+                  "nativeInterface": {
                     "type": "string"
                   },
-                  "returnType": {
-                    "type": "string"
-                  },
-                  "parameterTypes": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
+                  "releaseThreadDomain": {
+                    "type": "string",
+                    "enum": [
+                      "unknown",
+                      "any"
+                    ],
+                    "default": "unknown",
+                    "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
                   }
                 },
                 "required": [
                   "id",
-                  "nativeCallable",
-                  "returnType",
-                  "parameterTypes"
+                  "nativeInterface"
+                ],
+                "additionalProperties": false
+              },
+              "default": []
+            },
+            "sequenceInputAdapters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "function": {
+                    "type": "string"
+                  },
+                  "parameters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "parameter": {
+                          "type": "string"
+                        },
+                        "retainsArgument": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "lifetime": {
+                          "enum": [
+                            "unknown",
+                            "call",
+                            "owner",
+                            "registration",
+                            "operation",
+                            "static",
+                            "module"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "parameter"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "function",
+                  "parameters"
                 ],
                 "additionalProperties": false
               },
@@ -6004,7 +6108,7 @@
                     "typeDependencies": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
+                        "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
                       }
                     },
                     "requiredHeaders": {
@@ -6169,7 +6273,7 @@
               "sourceFragments": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items"
+                  "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items"
                 },
                 "default": []
               }
@@ -6231,84 +6335,6 @@
                 "additionalProperties": false
               }
             },
-            "additionalProperties": false
-          },
-          "default": []
-        },
-        "virtualCallbacks": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "nativeInterface": {
-                "type": "string"
-              },
-              "releaseThreadDomain": {
-                "type": "string",
-                "enum": [
-                  "unknown",
-                  "any"
-                ],
-                "default": "unknown",
-                "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
-              }
-            },
-            "required": [
-              "id",
-              "nativeInterface"
-            ],
-            "additionalProperties": false
-          },
-          "default": []
-        },
-        "sequenceInputAdapters": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "function": {
-                "type": "string"
-              },
-              "parameters": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "parameter": {
-                      "type": "string"
-                    },
-                    "retainsArgument": {
-                      "type": [
-                        "boolean",
-                        "null"
-                      ]
-                    },
-                    "lifetime": {
-                      "enum": [
-                        "unknown",
-                        "call",
-                        "owner",
-                        "registration",
-                        "operation",
-                        "static",
-                        "module"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "parameter"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            },
-            "required": [
-              "function",
-              "parameters"
-            ],
             "additionalProperties": false
           },
           "default": []
@@ -6609,7 +6635,7 @@
         },
         "schemaVersion": {
           "type": "integer",
-          "const": 1
+          "const": 2
         },
         "extends": {
           "type": "array",
@@ -8194,12 +8220,12 @@
                     "minimum": 1
                   },
                   "runtime": {
-                    "enum": [
-                      "coreClr",
-                      "nativeAot",
-                      "browserWasm",
-                      null
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "description": "An open execution-model identity registered by the selected runtime extension; null lets that extension explicitly resolve an applicable default."
                   },
                   "names": {
                     "type": "object",
@@ -8961,122 +8987,191 @@
                 },
                 "additionalProperties": false
               },
-              "cpp": {
+              "bridge": {
                 "type": "object",
                 "properties": {
-                  "familyBindings": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "nativeTemplate": {
-                          "type": [
-                            "string",
-                            "null"
-                          ],
-                          "default": null
-                        },
-                        "nativeType": {
-                          "type": [
-                            "string",
-                            "null"
-                          ],
-                          "default": null
-                        },
-                        "family": {
-                          "enum": [
-                            "string",
-                            "vector",
-                            "span",
-                            "array",
-                            "map",
-                            "set",
-                            "optional",
-                            "variant",
-                            "expected",
-                            "path",
-                            "duration",
-                            "timePoint",
-                            "uniquePointer",
-                            "sharedPointer"
-                          ],
-                          "default": "string"
-                        },
-                        "evidence": {
+                  "aggregateStrategy": {
+                    "enum": [
+                      "pointerBridge",
+                      "direct"
+                    ],
+                    "default": "pointerBridge"
+                  },
+                  "cpp": {
+                    "type": "object",
+                    "properties": {
+                      "familyBindings": {
+                        "type": "array",
+                        "items": {
                           "type": "object",
                           "properties": {
-                            "level": {
-                              "enum": [
-                                "unknown",
-                                "inferred",
-                                "declared",
-                                "userAsserted",
-                                "verified"
-                              ]
+                            "nativeTemplate": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "default": null
                             },
-                            "origin": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "level",
-                            "origin"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "stringEncoding": {
-                          "enum": [
-                            "unknown",
-                            "utf8",
-                            "utf16",
-                            "utf32"
-                          ],
-                          "default": "unknown"
-                        },
-                        "stringAccess": {
-                          "enum": [
-                            "indexed",
-                            "cStrNullTerminated"
-                          ],
-                          "default": "indexed"
-                        },
-                        "cStr": {
-                          "type": [
-                            "object",
-                            "null"
-                          ],
-                          "properties": {
-                            "readableLifetime": {
+                            "nativeType": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "default": null
+                            },
+                            "family": {
+                              "enum": [
+                                "string",
+                                "vector",
+                                "span",
+                                "array",
+                                "map",
+                                "set",
+                                "optional",
+                                "variant",
+                                "expected",
+                                "path",
+                                "duration",
+                                "timePoint",
+                                "uniquePointer",
+                                "sharedPointer"
+                              ],
+                              "default": "string"
+                            },
+                            "evidence": {
                               "type": "object",
                               "properties": {
-                                "kind": {
+                                "level": {
                                   "enum": [
                                     "unknown",
-                                    "call",
-                                    "owner",
-                                    "registration",
-                                    "operation",
-                                    "static",
-                                    "module"
+                                    "inferred",
+                                    "declared",
+                                    "userAsserted",
+                                    "verified"
                                   ]
                                 },
-                                "owner": {
-                                  "type": [
-                                    "object",
-                                    "null"
-                                  ],
+                                "origin": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "level",
+                                "origin"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "stringEncoding": {
+                              "enum": [
+                                "unknown",
+                                "utf8",
+                                "utf16",
+                                "utf32"
+                              ],
+                              "default": "unknown"
+                            },
+                            "stringAccess": {
+                              "enum": [
+                                "indexed",
+                                "cStrNullTerminated"
+                              ],
+                              "default": "indexed"
+                            },
+                            "cStr": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "readableLifetime": {
+                                  "type": "object",
                                   "properties": {
-                                    "value": {
+                                    "kind": {
+                                      "enum": [
+                                        "unknown",
+                                        "call",
+                                        "owner",
+                                        "registration",
+                                        "operation",
+                                        "static",
+                                        "module"
+                                      ]
+                                    },
+                                    "owner": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "value": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "value"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "evidence": {
+                                      "type": "object",
+                                      "properties": {
+                                        "level": {
+                                          "enum": [
+                                            "unknown",
+                                            "inferred",
+                                            "declared",
+                                            "userAsserted",
+                                            "verified"
+                                          ]
+                                        },
+                                        "origin": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "level",
+                                        "origin"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "owner",
+                                    "evidence"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "nullTerminated": {
+                                  "type": "object",
+                                  "properties": {
+                                    "level": {
+                                      "enum": [
+                                        "unknown",
+                                        "inferred",
+                                        "declared",
+                                        "userAsserted",
+                                        "verified"
+                                      ]
+                                    },
+                                    "origin": {
                                       "type": "string"
                                     }
                                   },
                                   "required": [
-                                    "value"
+                                    "level",
+                                    "origin"
                                   ],
                                   "additionalProperties": false
                                 },
-                                "evidence": {
-                                  "type": "object",
+                                "maximumCodeUnits": {
+                                  "type": "integer",
+                                  "default": 1048576
+                                },
+                                "constructorCopiesInput": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
                                   "properties": {
                                     "level": {
                                       "enum": [
@@ -9099,117 +9194,92 @@
                                 }
                               },
                               "required": [
-                                "kind",
-                                "owner",
-                                "evidence"
+                                "readableLifetime",
+                                "nullTerminated"
                               ],
                               "additionalProperties": false
                             },
-                            "nullTerminated": {
-                              "type": "object",
-                              "properties": {
-                                "level": {
-                                  "enum": [
-                                    "unknown",
-                                    "inferred",
-                                    "declared",
-                                    "userAsserted",
-                                    "verified"
-                                  ]
-                                },
-                                "origin": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "level",
-                                "origin"
+                            "variantAccess": {
+                              "enum": [
+                                "none",
+                                "memberGet"
                               ],
-                              "additionalProperties": false
+                              "default": "none"
                             },
-                            "maximumCodeUnits": {
-                              "type": "integer",
-                              "default": 1048576
-                            },
-                            "constructorCopiesInput": {
-                              "type": [
-                                "object",
-                                "null"
-                              ],
-                              "properties": {
-                                "level": {
-                                  "enum": [
-                                    "unknown",
-                                    "inferred",
-                                    "declared",
-                                    "userAsserted",
-                                    "verified"
-                                  ]
-                                },
-                                "origin": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "level",
-                                "origin"
-                              ],
-                              "additionalProperties": false
+                            "pathFormat": {
+                              "enum": [
+                                "genericUtf8",
+                                "nativeUtf8",
+                                null
+                              ]
                             }
                           },
                           "required": [
-                            "readableLifetime",
-                            "nullTerminated"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "variantAccess": {
-                          "enum": [
-                            "none",
-                            "memberGet"
-                          ],
-                          "default": "none"
-                        },
-                        "pathFormat": {
-                          "enum": [
-                            "genericUtf8",
-                            "nativeUtf8",
-                            null
-                          ]
-                        }
-                      },
-                      "required": [
-                        "family",
-                        "evidence"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "default": []
-                  },
-                  "templateInstantiations": {
-                    "type": "object",
-                    "properties": {
-                      "types": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "nativeType": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "nativeType"
+                            "family",
+                            "evidence"
                           ],
                           "additionalProperties": false
                         },
                         "default": []
                       },
-                      "functions": {
+                      "templateInstantiations": {
+                        "type": "object",
+                        "properties": {
+                          "types": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "nativeType": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "nativeType"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "default": []
+                          },
+                          "functions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "nativeCallable": {
+                                  "type": "string"
+                                },
+                                "returnType": {
+                                  "type": "string"
+                                },
+                                "parameterTypes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "nativeCallable",
+                                "returnType",
+                                "parameterTypes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "default": []
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "virtualCallbacks": {
                         "type": "array",
                         "items": {
                           "type": "object",
@@ -9217,24 +9287,71 @@
                             "id": {
                               "type": "string"
                             },
-                            "nativeCallable": {
+                            "nativeInterface": {
                               "type": "string"
                             },
-                            "returnType": {
-                              "type": "string"
-                            },
-                            "parameterTypes": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
+                            "releaseThreadDomain": {
+                              "type": "string",
+                              "enum": [
+                                "unknown",
+                                "any"
+                              ],
+                              "default": "unknown",
+                              "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
                             }
                           },
                           "required": [
                             "id",
-                            "nativeCallable",
-                            "returnType",
-                            "parameterTypes"
+                            "nativeInterface"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "default": []
+                      },
+                      "sequenceInputAdapters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "function": {
+                              "type": "string"
+                            },
+                            "parameters": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "parameter": {
+                                    "type": "string"
+                                  },
+                                  "retainsArgument": {
+                                    "type": [
+                                      "boolean",
+                                      "null"
+                                    ]
+                                  },
+                                  "lifetime": {
+                                    "enum": [
+                                      "unknown",
+                                      "call",
+                                      "owner",
+                                      "registration",
+                                      "operation",
+                                      "static",
+                                      "module"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "parameter"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "function",
+                            "parameters"
                           ],
                           "additionalProperties": false
                         },
@@ -9345,7 +9462,7 @@
                               "typeDependencies": {
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
+                                  "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
                                 }
                               },
                               "requiredHeaders": {
@@ -9510,7 +9627,7 @@
                         "sourceFragments": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items"
+                            "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items"
                           },
                           "default": []
                         }
@@ -9572,84 +9689,6 @@
                           "additionalProperties": false
                         }
                       },
-                      "additionalProperties": false
-                    },
-                    "default": []
-                  },
-                  "virtualCallbacks": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "nativeInterface": {
-                          "type": "string"
-                        },
-                        "releaseThreadDomain": {
-                          "type": "string",
-                          "enum": [
-                            "unknown",
-                            "any"
-                          ],
-                          "default": "unknown",
-                          "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "nativeInterface"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "default": []
-                  },
-                  "sequenceInputAdapters": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "function": {
-                          "type": "string"
-                        },
-                        "parameters": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "parameter": {
-                                "type": "string"
-                              },
-                              "retainsArgument": {
-                                "type": [
-                                  "boolean",
-                                  "null"
-                                ]
-                              },
-                              "lifetime": {
-                                "enum": [
-                                  "unknown",
-                                  "call",
-                                  "owner",
-                                  "registration",
-                                  "operation",
-                                  "static",
-                                  "module"
-                                ]
-                              }
-                            },
-                            "required": [
-                              "parameter"
-                            ],
-                            "additionalProperties": false
-                          }
-                        }
-                      },
-                      "required": [
-                        "function",
-                        "parameters"
-                      ],
                       "additionalProperties": false
                     },
                     "default": []
@@ -11452,12 +11491,12 @@
               "minimum": 1
             },
             "runtime": {
-              "enum": [
-                "coreClr",
-                "nativeAot",
-                "browserWasm",
-                null
-              ]
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "description": "An open execution-model identity registered by the selected runtime extension; null lets that extension explicitly resolve an applicable default."
             },
             "names": {
               "type": "object",
@@ -12219,122 +12258,191 @@
           },
           "additionalProperties": false
         },
-        "cpp": {
+        "bridge": {
           "type": "object",
           "properties": {
-            "familyBindings": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "nativeTemplate": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "default": null
-                  },
-                  "nativeType": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "default": null
-                  },
-                  "family": {
-                    "enum": [
-                      "string",
-                      "vector",
-                      "span",
-                      "array",
-                      "map",
-                      "set",
-                      "optional",
-                      "variant",
-                      "expected",
-                      "path",
-                      "duration",
-                      "timePoint",
-                      "uniquePointer",
-                      "sharedPointer"
-                    ],
-                    "default": "string"
-                  },
-                  "evidence": {
+            "aggregateStrategy": {
+              "enum": [
+                "pointerBridge",
+                "direct"
+              ],
+              "default": "pointerBridge"
+            },
+            "cpp": {
+              "type": "object",
+              "properties": {
+                "familyBindings": {
+                  "type": "array",
+                  "items": {
                     "type": "object",
                     "properties": {
-                      "level": {
-                        "enum": [
-                          "unknown",
-                          "inferred",
-                          "declared",
-                          "userAsserted",
-                          "verified"
-                        ]
+                      "nativeTemplate": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
                       },
-                      "origin": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "level",
-                      "origin"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "stringEncoding": {
-                    "enum": [
-                      "unknown",
-                      "utf8",
-                      "utf16",
-                      "utf32"
-                    ],
-                    "default": "unknown"
-                  },
-                  "stringAccess": {
-                    "enum": [
-                      "indexed",
-                      "cStrNullTerminated"
-                    ],
-                    "default": "indexed"
-                  },
-                  "cStr": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
-                    "properties": {
-                      "readableLifetime": {
+                      "nativeType": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "family": {
+                        "enum": [
+                          "string",
+                          "vector",
+                          "span",
+                          "array",
+                          "map",
+                          "set",
+                          "optional",
+                          "variant",
+                          "expected",
+                          "path",
+                          "duration",
+                          "timePoint",
+                          "uniquePointer",
+                          "sharedPointer"
+                        ],
+                        "default": "string"
+                      },
+                      "evidence": {
                         "type": "object",
                         "properties": {
-                          "kind": {
+                          "level": {
                             "enum": [
                               "unknown",
-                              "call",
-                              "owner",
-                              "registration",
-                              "operation",
-                              "static",
-                              "module"
+                              "inferred",
+                              "declared",
+                              "userAsserted",
+                              "verified"
                             ]
                           },
-                          "owner": {
-                            "type": [
-                              "object",
-                              "null"
-                            ],
+                          "origin": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "level",
+                          "origin"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "stringEncoding": {
+                        "enum": [
+                          "unknown",
+                          "utf8",
+                          "utf16",
+                          "utf32"
+                        ],
+                        "default": "unknown"
+                      },
+                      "stringAccess": {
+                        "enum": [
+                          "indexed",
+                          "cStrNullTerminated"
+                        ],
+                        "default": "indexed"
+                      },
+                      "cStr": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "readableLifetime": {
+                            "type": "object",
                             "properties": {
-                              "value": {
+                              "kind": {
+                                "enum": [
+                                  "unknown",
+                                  "call",
+                                  "owner",
+                                  "registration",
+                                  "operation",
+                                  "static",
+                                  "module"
+                                ]
+                              },
+                              "owner": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "properties": {
+                                  "value": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "evidence": {
+                                "type": "object",
+                                "properties": {
+                                  "level": {
+                                    "enum": [
+                                      "unknown",
+                                      "inferred",
+                                      "declared",
+                                      "userAsserted",
+                                      "verified"
+                                    ]
+                                  },
+                                  "origin": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "level",
+                                  "origin"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "owner",
+                              "evidence"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "nullTerminated": {
+                            "type": "object",
+                            "properties": {
+                              "level": {
+                                "enum": [
+                                  "unknown",
+                                  "inferred",
+                                  "declared",
+                                  "userAsserted",
+                                  "verified"
+                                ]
+                              },
+                              "origin": {
                                 "type": "string"
                               }
                             },
                             "required": [
-                              "value"
+                              "level",
+                              "origin"
                             ],
                             "additionalProperties": false
                           },
-                          "evidence": {
-                            "type": "object",
+                          "maximumCodeUnits": {
+                            "type": "integer",
+                            "default": 1048576
+                          },
+                          "constructorCopiesInput": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
                             "properties": {
                               "level": {
                                 "enum": [
@@ -12357,117 +12465,92 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "owner",
-                          "evidence"
+                          "readableLifetime",
+                          "nullTerminated"
                         ],
                         "additionalProperties": false
                       },
-                      "nullTerminated": {
-                        "type": "object",
-                        "properties": {
-                          "level": {
-                            "enum": [
-                              "unknown",
-                              "inferred",
-                              "declared",
-                              "userAsserted",
-                              "verified"
-                            ]
-                          },
-                          "origin": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "level",
-                          "origin"
+                      "variantAccess": {
+                        "enum": [
+                          "none",
+                          "memberGet"
                         ],
-                        "additionalProperties": false
+                        "default": "none"
                       },
-                      "maximumCodeUnits": {
-                        "type": "integer",
-                        "default": 1048576
-                      },
-                      "constructorCopiesInput": {
-                        "type": [
-                          "object",
-                          "null"
-                        ],
-                        "properties": {
-                          "level": {
-                            "enum": [
-                              "unknown",
-                              "inferred",
-                              "declared",
-                              "userAsserted",
-                              "verified"
-                            ]
-                          },
-                          "origin": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "level",
-                          "origin"
-                        ],
-                        "additionalProperties": false
+                      "pathFormat": {
+                        "enum": [
+                          "genericUtf8",
+                          "nativeUtf8",
+                          null
+                        ]
                       }
                     },
                     "required": [
-                      "readableLifetime",
-                      "nullTerminated"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "variantAccess": {
-                    "enum": [
-                      "none",
-                      "memberGet"
-                    ],
-                    "default": "none"
-                  },
-                  "pathFormat": {
-                    "enum": [
-                      "genericUtf8",
-                      "nativeUtf8",
-                      null
-                    ]
-                  }
-                },
-                "required": [
-                  "family",
-                  "evidence"
-                ],
-                "additionalProperties": false
-              },
-              "default": []
-            },
-            "templateInstantiations": {
-              "type": "object",
-              "properties": {
-                "types": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "nativeType": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "nativeType"
+                      "family",
+                      "evidence"
                     ],
                     "additionalProperties": false
                   },
                   "default": []
                 },
-                "functions": {
+                "templateInstantiations": {
+                  "type": "object",
+                  "properties": {
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "nativeType": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "nativeType"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "default": []
+                    },
+                    "functions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "nativeCallable": {
+                            "type": "string"
+                          },
+                          "returnType": {
+                            "type": "string"
+                          },
+                          "parameterTypes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "nativeCallable",
+                          "returnType",
+                          "parameterTypes"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "default": []
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "virtualCallbacks": {
                   "type": "array",
                   "items": {
                     "type": "object",
@@ -12475,24 +12558,71 @@
                       "id": {
                         "type": "string"
                       },
-                      "nativeCallable": {
+                      "nativeInterface": {
                         "type": "string"
                       },
-                      "returnType": {
-                        "type": "string"
-                      },
-                      "parameterTypes": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
+                      "releaseThreadDomain": {
+                        "type": "string",
+                        "enum": [
+                          "unknown",
+                          "any"
+                        ],
+                        "default": "unknown",
+                        "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
                       }
                     },
                     "required": [
                       "id",
-                      "nativeCallable",
-                      "returnType",
-                      "parameterTypes"
+                      "nativeInterface"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "default": []
+                },
+                "sequenceInputAdapters": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "function": {
+                        "type": "string"
+                      },
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "parameter": {
+                              "type": "string"
+                            },
+                            "retainsArgument": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "lifetime": {
+                              "enum": [
+                                "unknown",
+                                "call",
+                                "owner",
+                                "registration",
+                                "operation",
+                                "static",
+                                "module"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "parameter"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "function",
+                      "parameters"
                     ],
                     "additionalProperties": false
                   },
@@ -12603,7 +12733,7 @@
                         "typeDependencies": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
+                            "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items/properties/declarationDependencies/items"
                           }
                         },
                         "requiredHeaders": {
@@ -12768,7 +12898,7 @@
                   "sourceFragments": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/properties/cpp/properties/typeLowerings/items/properties/sourceFragments/items"
+                      "$ref": "#/properties/bridge/properties/typeLowerings/items/properties/sourceFragments/items"
                     },
                     "default": []
                   }
@@ -12830,84 +12960,6 @@
                     "additionalProperties": false
                   }
                 },
-                "additionalProperties": false
-              },
-              "default": []
-            },
-            "virtualCallbacks": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "nativeInterface": {
-                    "type": "string"
-                  },
-                  "releaseThreadDomain": {
-                    "type": "string",
-                    "enum": [
-                      "unknown",
-                      "any"
-                    ],
-                    "default": "unknown",
-                    "description": "unknown preserves the raw native proxy API; any explicitly asserts that destruction is valid on every closing thread. This remains UserAsserted and does not establish native retention or stop-and-join quiescence."
-                  }
-                },
-                "required": [
-                  "id",
-                  "nativeInterface"
-                ],
-                "additionalProperties": false
-              },
-              "default": []
-            },
-            "sequenceInputAdapters": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "function": {
-                    "type": "string"
-                  },
-                  "parameters": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "parameter": {
-                          "type": "string"
-                        },
-                        "retainsArgument": {
-                          "type": [
-                            "boolean",
-                            "null"
-                          ]
-                        },
-                        "lifetime": {
-                          "enum": [
-                            "unknown",
-                            "call",
-                            "owner",
-                            "registration",
-                            "operation",
-                            "static",
-                            "module"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "parameter"
-                      ],
-                      "additionalProperties": false
-                    }
-                  }
-                },
-                "required": [
-                  "function",
-                  "parameters"
-                ],
                 "additionalProperties": false
               },
               "default": []

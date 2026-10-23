@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using BGCS.CSharp.Emission;
 
 namespace BGCS.CSharp.Planning;
@@ -96,7 +96,8 @@ internal static class ValueReceiverPlanner
                 if (function.parameters[self].ownership?.retainsPointer == true)
                     return "A value receiver cannot contradict an explicit native pointer-retention contract.";
                 CSharpValueParameterPlan? value = method.valueParameters.SingleOrDefault(candidate => candidate.parameterIndex == self);
-                if (value is null || value.direction is not (NativeParameterDirection.Input or NativeParameterDirection.InputOutput))
+                if (value is null || value.allocationMode != CSharpValueAllocationMode.AddressCheckedPinnedBorrow
+                    || value.direction is not (NativeParameterDirection.Input or NativeParameterDirection.InputOutput))
                     return "A value receiver requires an existing checked in or ref borrow; output-only receivers are not instance values.";
                 CSharpStoragePlan carrier = storage[carrierIndex];
                 if (carrier.size != native.size || carrier.managedAlignment != native.alignment || carrier.managedAlignment is null

@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -42,15 +42,15 @@ public sealed class NativeGeneratedClassProviderTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1,
+                schemaVersion = 2,
                 library = new() { id = "provider_class", nativeName = "provider_class_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["counter.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }};
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await host.GenerateAsync(new(configuration, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());
             string modelFile = Assert.Single(Directory.GetFiles(generated.outputRoot, "bridge.module.json", SearchOption.AllDirectories));
-            CppBridgeModule model = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(modelFile))!;
+            NativeBridgePlan model = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(modelFile))!;
             await NativeConsumerHarness.CompileNativeFixturesAsync(generated, root, configuration.library.nativeName);
             BridgeExport construction = Assert.Single(model.exports, export => export.operation.kind == BridgeOperationKind.Construct
                 && model.source.GetType(export.operation.ownerType!.Value).spelling == "Fixture::Counter");
@@ -98,6 +98,6 @@ public sealed class NativeGeneratedClassProviderTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

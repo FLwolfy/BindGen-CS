@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -61,7 +61,7 @@ public sealed class NativeScalarConstantTests
             bool sourceRuntime = mode == BindingImportMode.LibraryImport;
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "constant_fixture", nativeName = "constant_fixture" },
+                schemaVersion = 2, library = new() { id = "constant_fixture", nativeName = "constant_fixture" },
                 source = new() { language = language, headers = ["constants.h"], parseMacros = true, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.ConstantFixture", name = "ConstantApi", importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("MAXIMUM", "Maximum").Add("SHIFTED", "Shifted").Add("MINIMUM", "Minimum")
@@ -69,7 +69,7 @@ public sealed class NativeScalarConstantTests
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
@@ -101,6 +101,6 @@ public sealed class NativeScalarConstantTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

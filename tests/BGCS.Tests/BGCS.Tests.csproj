@@ -17,7 +17,7 @@
     <ProjectReference Include="../../examples/CustomTargetPlugin/BGCS.Example.CustomTargetPlugin.csproj" />
     <ProjectReference Include="../fixtures/plugins/NeutralLoweringPlugin/NeutralLoweringPlugin.csproj" />
     <ProjectReference Include="../fixtures/plugins/ClangFactPlugin/ClangFactPlugin.csproj" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="../../src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../extensions/frontends/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../fixtures/hosts/EmbeddedSdkHost/EmbeddedSdkHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

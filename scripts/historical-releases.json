@@ -31,7 +31,7 @@
       "notes": "docs/releases/1.0.0-alpha.1.md",
       "packages": [
         "BGCS",
-        "BGCS.Cpp2C",
+        "BGCS.NativeBridge",
         "BGCS.Runtime"
       ],
       "packageCommits": [
@@ -48,7 +48,7 @@
       "notes": "docs/releases/1.0.0.md",
       "packages": [
         "BGCS",
-        "BGCS.Cpp2C",
+        "BGCS.NativeBridge",
         "BGCS.Runtime"
       ],
       "packageCommits": [
@@ -65,7 +65,7 @@
       "notes": "docs/releases/1.0.1.md",
       "packages": [
         "BGCS",
-        "BGCS.Cpp2C",
+        "BGCS.NativeBridge",
         "BGCS.Runtime"
       ],
       "packageCommits": [
@@ -115,9 +115,9 @@
       "notes": "docs/releases/2.0.3.md",
       "packages": [
         "BGCS",
-        "BGCS.Cpp2C",
+        "BGCS.NativeBridge",
         "BGCS.Runtime",
-        "BGCS.Contracts",
+        "BGCS.Core",
         "BGCS.Frontend.Clang",
         "BGCS.Infrastructure",
         "BGCS.CSharp"
@@ -136,9 +136,9 @@
       "notes": "docs/releases/2.0.4.md",
       "packages": [
         "BGCS",
-        "BGCS.Cpp2C",
+        "BGCS.NativeBridge",
         "BGCS.Runtime",
-        "BGCS.Contracts",
+        "BGCS.Core",
         "BGCS.Frontend.Clang",
         "BGCS.Infrastructure",
         "BGCS.CSharp",

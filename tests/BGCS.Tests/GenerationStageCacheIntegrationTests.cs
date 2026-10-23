@@ -6,13 +6,13 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -24,7 +24,7 @@ public sealed class GenerationStageCacheIntegrationTests
     {
         using Scratch scratch = new();
         int validated = 0;
-        await using BindingHost host = Builder().AddValidator("count-validation", 0, () => new CountingValidator(() => validated++)).Build();
+        await using BindingHost host = Builder().RegisterFactory<IGenerationValidator>(new("count-validation", ExtensionPort.GenerationValidator, 0), _ => new CountingValidator(() => validated++)).Build();
         GenerationRequest request = new(Configuration(), scratch.root);
         GenerationResult cold = await host.GenerateAsync(request);
         Assert.True(cold.success, cold.GetDiagnosticSummary());
@@ -92,8 +92,8 @@ public sealed class GenerationStageCacheIntegrationTests
     {
         using Scratch scratch = new();
         int version = 1;
-        await using BindingHost host = Builder().AddNativeTransform("unknown-state", 0, () => new UnknownStateTransform())
-            .AddArtifactProcessor("late-patch", 0, () => new PatchProcessor(version)).Build();
+        await using BindingHost host = Builder().RegisterFactory<INativeModuleTransform>(new("unknown-state", ExtensionPort.NativeModuleTransform, 0), _ => new UnknownStateTransform())
+            .RegisterFactory<IArtifactProcessor>(new("late-patch", ExtensionPort.ArtifactProcessor, 0), _ => new PatchProcessor(version)).Build();
         GenerationRequest request = new(Configuration(), scratch.root);
         GenerationResult first = await host.GenerateAsync(request);
         Assert.True(first.success, first.GetDiagnosticSummary());
@@ -110,7 +110,7 @@ public sealed class GenerationStageCacheIntegrationTests
     {
         using Scratch scratch = new();
         int version = 1;
-        await using BindingHost host = Builder().AddNativeTransform("state", 0, () => new FingerprintedTransform(version)).Build();
+        await using BindingHost host = Builder().RegisterFactory<INativeModuleTransform>(new("state", ExtensionPort.NativeModuleTransform, 0), _ => new FingerprintedTransform(version)).Build();
         GenerationRequest request = new(Configuration(), scratch.root);
         Assert.Equal("miss", Assert.Single((await host.GenerateAsync(request)).cacheStages.Where(stage => stage.stage == "csharpEmission")).status);
         Assert.Equal("hit", Assert.Single((await host.GenerateAsync(request)).cacheStages.Where(stage => stage.stage == "csharpEmission")).status);
@@ -124,8 +124,7 @@ public sealed class GenerationStageCacheIntegrationTests
         using Scratch scratch = new();
         int version = 1;
         int processed = 0;
-        await using BindingHost host = Builder().AddArtifactProcessor("fingerprinted-patch", 0,
-            () => new FingerprintedPatch(version, () => processed++)).Build();
+        await using BindingHost host = Builder().RegisterFactory<IArtifactProcessor>(new("fingerprinted-patch", ExtensionPort.ArtifactProcessor, 0), _ => new FingerprintedPatch(version, () => processed++)).Build();
         GenerationRequest request = new(Configuration(), scratch.root);
         GenerationResult first = await host.GenerateAsync(request);
         Assert.True(first.success, first.GetDiagnosticSummary());
@@ -152,7 +151,8 @@ public sealed class GenerationStageCacheIntegrationTests
         Assert.True(generated.success, generated.GetDiagnosticSummary());
         GenerationDiffResult unchanged = await host.DiffAsync(request);
         Assert.True(unchanged.success);
-        Assert.False(unchanged.hasChanges, string.Join(", ", unchanged.changes.Select(change => change.relativePath)));
+        Assert.False(unchanged.hasChanges, string.Join(", ", unchanged.changes.Select(change => change.relativePath))
+            + Environment.NewLine + string.Join(Environment.NewLine, unchanged.diagnostics.Select(diagnostic => diagnostic.message)));
         Assert.True(File.Exists(Path.Combine(generated.outputRoot, "generation.report.json")));
         await File.WriteAllTextAsync(Path.Combine(scratch.root, "native.h"), "double add(double a, double b);");
         GenerationDiffResult changed = await host.DiffAsync(request);
@@ -161,10 +161,10 @@ public sealed class GenerationStageCacheIntegrationTests
         Assert.Contains(changed.changes, artifact => artifact.relativePath.EndsWith(".g.cs", StringComparison.Ordinal));
     }
 
-    private static BindingHostBuilder Builder() => BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot());
+    private static BindingHostBuilder Builder() => BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot());
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "cache_fixture", nativeName = "cache_fixture" },
+        schemaVersion = 2, library = new() { id = "cache_fixture", nativeName = "cache_fixture" },
         source = new() { headers = ["native.h"], parseMacros = false }, api = new() { @namespace = "Generated.Cache", name = "CacheApi" }
     };
     private static string[] ManagedBytes(GenerationResult result) => result.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp")
@@ -174,7 +174,7 @@ public sealed class GenerationStageCacheIntegrationTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
     private sealed class CountingValidator(Action validate) : IGenerationValidator
     {

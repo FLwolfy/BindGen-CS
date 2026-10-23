@@ -105,7 +105,7 @@ internal static class EventLoopAsyncOperationEmitter
                     private {{callback.parameterTypes[operation.statusIndex]}} m_status;
                     private readonly global::System.Threading.Tasks.TaskCompletionSource m_published = new(global::System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
                     private global::System.Threading.Tasks.TaskCompletionSource m_cancelDrained = CompletedDrain();
-                    internal readonly {{runtime}}.NativeCallbackDispatcher dispatcher = {{runtime}}.NativeCallbackDispatcher.CaptureCurrent();
+                    internal readonly {{runtime}}.NativeCallbackDispatcher dispatcher;
                     internal readonly {{callback.delegateName}} target;
                     internal readonly {{runtime}}.CallbackExceptionBoundary exceptions = new();
                     internal readonly {{runtime}}.NativeOperation<{{operation.resultType}}> operation;
@@ -114,7 +114,7 @@ internal static class EventLoopAsyncOperationEmitter
                     internal nint nativeHandle;
                     {{pinFields}}
                     internal {{state}}({{plan.contextName}} context)
-                    { m_context = context; target = Complete; operation = new(new global::System.IDisposable[] { this }, Cancel); }
+                    { m_context = context; dispatcher = context.m_callbackDispatcher; target = Complete; operation = new(new global::System.IDisposable[] { this }, Cancel); }
                     private static global::System.Threading.Tasks.TaskCompletionSource CompletedDrain()
                     {
                         var ready = new global::System.Threading.Tasks.TaskCompletionSource(global::System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);

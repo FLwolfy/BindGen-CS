@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Cpp2C.Emission;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.NativeBridge.Emission;
 using BGCS.Infrastructure.Publishing;
 using Xunit;
 
@@ -25,19 +25,19 @@ public sealed class NeutralFrozenBridgeTests
             await File.WriteAllTextAsync(header, "class Counter { int m_value; public: explicit Counter(int value) : m_value(value) {} int Add(int value) const { return value + m_value; } };");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "frozen", nativeName = "frozen_bridge" },
+                schemaVersion = 2, library = new() { id = "frozen", nativeName = "frozen_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["counter.hpp"], parseMacros = false },
                 api = new() { @namespace = "Generated.Frozen", name = "FrozenApi" }, cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await host.GenerateAsync(new(configuration, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());
-            CppBridgeModule original = Assert.Single(generated.targetModels).bridge!;
-            CppBridgeModule restored = JsonSerializer.Deserialize<CppBridgeModule>(JsonSerializer.Serialize(original))!;
+            NativeBridgePlan original = Assert.Single(generated.targetModels).bridge!;
+            NativeBridgePlan restored = JsonSerializer.Deserialize<NativeBridgePlan>(JsonSerializer.Serialize(original))!;
             string native = Path.Combine(generated.outputRoot, generated.targetModels[0].targetId, "native");
             File.Delete(header);
             string repeated = Path.Combine(root, "reemitted");
-            var artifacts = new TypedBridgeEmitter().Emit(restored, new DirectoryArtifactSink(repeated), original.exportPrefix);
+            var artifacts = new TypedBridgeEmitter().Emit(restored, new DirectoryArtifactSink(repeated, TestHostPaths.Create()), original.exportPrefix);
             Assert.Equal(2, artifacts.Length);
             foreach (var artifact in artifacts)
                 Assert.Equal(await File.ReadAllBytesAsync(Path.Combine(native, artifact.relativePath)), await File.ReadAllBytesAsync(Path.Combine(repeated, artifact.relativePath)));
@@ -51,6 +51,6 @@ public sealed class NeutralFrozenBridgeTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

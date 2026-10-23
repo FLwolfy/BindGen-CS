@@ -3,11 +3,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using Xunit;
@@ -23,19 +23,20 @@ public sealed class PlannerModelIsolationTests
     public void AmbiguousOrMissingIdentityCannotProduceAnImportPlanOrPoisonTheNextRequest(string fault)
     {
         ManagedApiModel original = Model(false);
-        ManagedApiModel invalid;
-        if (fault == "missing-native-export")
-            invalid = original with { methods = original.methods.SetItem(0, original.methods[0] with { nativeExport = new("missing") }) };
-        else if (fault == "duplicate-managed-export")
-            invalid = original with { methods = original.methods.SetItem(1, original.methods[1] with { nativeExport = original.methods[0].nativeExport }) };
-        else
+        CSharpTestPlanner planner = new();
+        NeutralBackendTests.MemorySink sink = new();
+        if (fault == "duplicate-native-export")
         {
             InteropModule module = original.interop;
-            invalid = original with { interop = new(module.libraryId, module.targetId, module.pointerSize, module.types,
-                module.functions.Add(module.functions[0]), []) { byteOrder = module.byteOrder } };
+            Assert.Throws<ArgumentException>(() => new InteropModule(module.libraryId, module.targetId, module.pointerSize, module.types,
+                module.functions.Add(module.functions[0]), []));
+            Assert.Empty(sink.sources);
+            AssertPlan(planner.Plan(original, new("fixture", sink)), original, replacement: false);
+            return;
         }
-        CSharpEmissionPlanner planner = new();
-        NeutralBackendTests.MemorySink sink = new();
+        ManagedApiModel invalid = fault == "missing-native-export"
+            ? original with { methods = original.methods.SetItem(0, original.methods[0] with { nativeExport = new("missing") }) }
+            : original with { methods = original.methods.SetItem(1, original.methods[1] with { nativeExport = original.methods[0].nativeExport }) };
         Exception? failure = Record.Exception(() => planner.Plan(invalid, new("fixture", sink)));
         Assert.True(failure is ArgumentException or InvalidOperationException, failure?.ToString() ?? "The invalid identity unexpectedly produced a plan.");
         Assert.Empty(sink.sources);
@@ -48,7 +49,7 @@ public sealed class PlannerModelIsolationTests
         ManagedApiModel original = Model(false);
         ManagedApiModel different = Model(true);
         ManagedApiModel replacement = original with { interop = different.interop, methods = different.methods };
-        CSharpEmissionPlanner planner = new();
+        CSharpTestPlanner planner = new();
         AssertPlan(planner.Plan(original, Request()), original, replacement: false);
         AssertPlan(planner.Plan(replacement, Request()), replacement, replacement: true);
         AssertPlan(planner.Plan(original, Request()), original, replacement: false);
@@ -61,7 +62,7 @@ public sealed class PlannerModelIsolationTests
     {
         ManagedApiModel original = Model(false), different = Model(true);
         ManagedApiModel replacement = original with { interop = different.interop, methods = different.methods };
-        CSharpEmissionPlanner planner = new();
+        CSharpTestPlanner planner = new();
         await Task.WhenAll(Enumerable.Range(0, 24).Select(index => Task.Run(() =>
         {
             bool changed = index % 2 != 0;

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Compilation">
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet package">
+    <PackageId>BGCS.Engine</PackageId>
+    <Authors>FLwolfy</Authors>
+    <Description>BindGen-CS core package for generating C# interop bindings from C headers.</Description>
+    <PackageTags>interop;bindings;generator;native</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/FLwolfy/BindGen-CS</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/FLwolfy/BindGen-CS</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup Label="Package dependencies">
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup Label="Project dependencies">
+    <ProjectReference Include="../BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
+    <ProjectReference Include="../BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../BGCS.NativeBridge/BGCS.NativeBridge.csproj" />
+    <ProjectReference Include="../BGCS.CSharp/BGCS.CSharp.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup Label="Package content">
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup Label="Module dependencies">
+    <ProjectReference Include="../BGCS.Analysis/BGCS.Analysis.csproj" />
+  </ItemGroup>
+</Project>

@@ -3,11 +3,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -62,8 +62,8 @@ public sealed class NativeStringConstantTests
         ManagedApiModel model = Model(Value(NativeStringLiteralKind.Ordinary, 1, [255, 0]));
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         string path = "Api/LiteralApi.Constants.g.cs", original = sink.sources[path];
         string changed = mutation switch
         {
@@ -97,7 +97,7 @@ public sealed class NativeStringConstantTests
     private static ManagedApiModel Model(NativeStringConstant value)
     {
         InteropModule source = new("literals", "windows-x64-msvc", 8, [], [], [])
-        { stringConstants = [new(new("literal"), "LITERAL", "LITERAL", value, null)] };
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian, stringConstants = [new(new("literal"), "LITERAL", "LITERAL", value, null)] };
         return new DefaultManagedProjection().Project(source, new("Generated.Literals", "LiteralApi")
         { names = ImmutableDictionary<string, string>.Empty.Add("LITERAL", "Value") }, CancellationToken.None);
     }

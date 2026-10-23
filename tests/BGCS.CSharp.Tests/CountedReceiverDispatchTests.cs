@@ -3,12 +3,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -41,11 +41,11 @@ public sealed class CountedReceiverDispatchTests
             NeutralBackendTests.MemorySink sink = new();
             EmissionRequest request = new("counted_receivers", sink)
             { importMode = mode, includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? model.@namespace + ".Runtime" : "BGCS.Runtime" };
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+            CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
             Assert.Equal(textMethods, plan.methods.Count(method => !method.stringInputs.IsEmpty));
             if (callbacks) Assert.Equal(2, plan.callScopedCallbacks.Length);
             else Assert.Single(Assert.Single(plan.objects).directMethods);
-            await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+            await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
             await ValueStringReceiverTests.Compile(sink, "public static class ReceiverConsumer { }", mode, sourceRuntime);
             new EmittedInteropContractReader().Verify(plan, sink.sources.Select(pair => (pair.Key, pair.Value)), request.libraryName);
             MethodDeclarationSyntax[] helpers = sink.sources.SelectMany(pair => CSharpSyntaxTree.ParseText(pair.Value).GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>())

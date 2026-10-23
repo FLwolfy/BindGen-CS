@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 
@@ -12,7 +12,7 @@ public sealed class CppBridgeOperationVerifier
 {
     /// <summary>Rejects incomplete, mismatched or unsafe operation plans before candidate source is written.</summary>
     /// <param name="module">The frozen bridge and its originating native graph.</param>
-    public void Verify(CppBridgeModule module)
+    public void Verify(NativeBridgePlan module)
     {
         ArgumentNullException.ThrowIfNull(module);
         _ = CppFamilyBindingValidator.Freeze(module.familyBindings);
@@ -22,6 +22,8 @@ public sealed class CppBridgeOperationVerifier
         new BridgeRecordVerifier().Verify(module);
         foreach (BridgeType function in module.types.Where(type => type.kind == BridgeTypeKind.Function))
         {
+            if (function.nativeType is null && module.virtualProxies.Any(proxy => proxy.slots.Any(slot => slot.bridgeCallableType == function.id)))
+                continue; // The normalized generated signature is checked against its original virtual method below.
             if (function.nativeType is not StableId nativeId || function.returnType is not StableId result
                 || !types.ContainsKey(result) || function.parameterTypes.IsDefault || function.parameterTypes.Any(parameter => !types.ContainsKey(parameter))
                 || !function.hasPrototype || function.callingConvention is not ("C" or "Default")
@@ -87,6 +89,14 @@ public sealed class CppBridgeOperationVerifier
             if (export.operation is null || !Enum.IsDefined(export.operation.kind) || !Enum.IsDefined(export.resultConversion))
                 Fail(export, "The action or result conversion is unknown.");
             if (export.operation.argumentGroups.IsDefault) Fail(export, "Native argument groups must be initialized immutable arrays.");
+            if (export.operation.kind is BridgeOperationKind.VirtualProxyConstruct or BridgeOperationKind.VirtualProxyDestroy or BridgeOperationKind.VirtualProxyCast)
+            {
+                if (!module.virtualProxies.Any(proxy => proxy.id == export.operation.virtualProxyId))
+                    Fail(export, "A generated operation must reference its exact checked virtual proxy plan.");
+                continue; // VerifyBridge above checks the complete generated protocol.
+            }
+            if (export.operation.virtualProxyId is not null || export.parameters.Any(parameter => parameter.generatedType is not null || parameter.nativeType is null))
+                Fail(export, "An original native operation cannot use generated proxy channels.");
             if (export.inputAdapterOf is StableId primaryId)
             {
                 if (!exports.TryGetValue(primaryId, out BridgeExport? primary) || primary.inputAdapterOf is not null
@@ -127,17 +137,17 @@ public sealed class CppBridgeOperationVerifier
             bool needsInstance = operation.kind is BridgeOperationKind.InstanceCall or BridgeOperationKind.Destroy or BridgeOperationKind.BaseCast or BridgeOperationKind.CheckedDerivedCast;
             if (needsInstance != (operation.instanceParameter is not null))
                 Fail(export, "The action has a missing or unexpected instance parameter.");
-            if ((operation.kind != BridgeOperationKind.FreeCall) != (owner is not null))
+            if ((operation.kind is not (BridgeOperationKind.FreeCall or BridgeOperationKind.FiniteVariadicCall)) != (owner is not null))
                 Fail(export, "The action has a missing or unexpected owner type.");
             if (callable is not null && (callable.kind != "Function" || callable.isDeleted || callable.visibility is "Private" or "Protected"))
                 Fail(export, "The action is not an accessible native callable.");
-            if (callable is not null && (callable.isVariadic || !callable.hasPrototype || callable.templateParameters.Length != 0))
+            if (callable is not null && (callable.isVariadic != (operation.kind == BridgeOperationKind.FiniteVariadicCall) || !callable.hasPrototype || callable.templateParameters.Length != 0))
                 Fail(export, "The action needs a concrete fixed native prototype.");
-            if (operation.kind is BridgeOperationKind.FreeCall or BridgeOperationKind.StaticCall or BridgeOperationKind.InstanceCall or BridgeOperationKind.Construct && callable is null)
+            if (operation.kind is BridgeOperationKind.FreeCall or BridgeOperationKind.FiniteVariadicCall or BridgeOperationKind.StaticCall or BridgeOperationKind.InstanceCall or BridgeOperationKind.Construct && callable is null)
                 Fail(export, "The action omitted its native callable identity.");
             if (ownerDeclaration is not null && callable is not null && callable.parent != ownerDeclaration.id)
                 Fail(export, "The callable belongs to a different native record.");
-            if (operation.kind == BridgeOperationKind.FreeCall && callable?.parent is StableId parent && module.source.GetDeclaration(parent).kind == "Class")
+            if (operation.kind is BridgeOperationKind.FreeCall or BridgeOperationKind.FiniteVariadicCall && callable?.parent is StableId parent && module.source.GetDeclaration(parent).kind == "Class")
                 Fail(export, "A record member cannot be called as a free function.");
             if (operation.kind == BridgeOperationKind.StaticCall && callable?.isStatic != true)
                 Fail(export, "A static action requires a static native member.");
@@ -176,7 +186,7 @@ public sealed class CppBridgeOperationVerifier
                     Fail(export, "A checked derived conversion must return one borrowed pointer from one instance.");
             }
             BridgeParameter? instance = export.parameters.SingleOrDefault(parameter => parameter.id == operation.instanceParameter);
-            if (needsInstance && (instance is null || instance.conversion != BridgeConversionKind.PointerCast || Resolve(instance.nativeType).id != owner!.id))
+            if (needsInstance && (instance is null || instance.conversion != BridgeConversionKind.PointerCast || Resolve(instance.nativeType!.Value).id != owner!.id))
                 Fail(export, "The instance representation belongs to another native type.");
             if (instance is not null)
             {
@@ -188,12 +198,29 @@ public sealed class CppBridgeOperationVerifier
             BridgeParameter[] arguments = export.parameters.Where(parameter => parameter.id != operation.instanceParameter).ToArray();
             NativeDeclaration[] nativeArguments = callable?.children.Select(module.source.GetDeclaration).Where(child => child.kind == "Parameter").ToArray() ?? [];
             if (operation.argumentGroups.IsDefault) Fail(export, "Native argument groups must be initialized immutable arrays.");
-            Dictionary<StableId, NativeDeclaration> origins = [];
+            Dictionary<StableId, StableId> origins = [];
             HashSet<StableId> expanded = [];
-            if (operation.argumentGroups.IsEmpty)
+            if (operation.kind == BridgeOperationKind.FiniteVariadicCall)
+            {
+                NativeVariadicAdapter adapter = operation.finiteVariadic ?? throw new InvalidOperationException("A finite variadic operation omitted its typed adapter.");
+                if (!operation.argumentGroups.IsEmpty || adapter.sourceDeclaration != callable!.id || adapter.fixedParameterCount != nativeArguments.Length
+                    || adapter.sourceSignature != new BGCS.Analysis.Types.NativeTypeFormatter().CallableSignature(module.source, callable)
+                    || adapter.argumentTypes.IsDefault || adapter.additionalArguments.IsDefault || adapter.argumentTypes.Length != adapter.additionalArguments.Length
+                    || arguments.Length != nativeArguments.Length + adapter.argumentTypes.Length || string.IsNullOrWhiteSpace(adapter.wrapper))
+                    Fail(export, "A finite operation changed its exact original variadic signature or additional argument facts.");
+                for (int index = 0; index < arguments.Length; index++)
+                {
+                    StableId nativeId = index < nativeArguments.Length ? nativeArguments[index].type!.Value : adapter.argumentTypes[index - nativeArguments.Length];
+                    NativeType native = Resolve(nativeId);
+                    if (index >= nativeArguments.Length && (native.category is not (NativeTypeCategory.Primitive or NativeTypeCategory.Enumeration or NativeTypeCategory.Pointer)
+                        || native.primitiveKind == "Void")) Fail(export, "A finite extra argument requires a real supported scalar, enum or pointer type.");
+                    origins.Add(arguments[index].id, nativeId);
+                }
+            }
+            else if (operation.argumentGroups.IsEmpty)
             {
                 if (arguments.Length != nativeArguments.Length) Fail(export, "The action changed native argument arity.");
-                for (int index = 0; index < arguments.Length; index++) origins.Add(arguments[index].id, nativeArguments[index]);
+                for (int index = 0; index < arguments.Length; index++) origins.Add(arguments[index].id, nativeArguments[index].type!.Value);
             }
             else
             {
@@ -213,7 +240,7 @@ public sealed class CppBridgeOperationVerifier
                         string? bindingName = binding?.name;
                         if (binding is null || string.IsNullOrWhiteSpace(bindingName)) Fail(export, "A native argument binding must have a nonempty placeholder identity.");
                         if (!System.Text.RegularExpressions.Regex.IsMatch(bindingName, "^[A-Za-z][A-Za-z0-9]*$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)
-                            || bindingName == "nativeType" || !names.Add(bindingName) || !available.ContainsKey(binding.parameter) || !origins.TryAdd(binding.parameter, original))
+                            || bindingName == "nativeType" || !names.Add(bindingName) || !available.ContainsKey(binding.parameter) || !origins.TryAdd(binding.parameter, original.type!.Value))
                             Fail(export, "Native argument groups have duplicate, missing or undeclared C carrier coverage.");
                         if (group.expression is not null || group.standardSequence is not null) expanded.Add(binding.parameter);
                     }
@@ -231,10 +258,10 @@ public sealed class CppBridgeOperationVerifier
             for (int index = 0; index < arguments.Length; index++)
             {
                 BridgeParameter parameter = arguments[index];
-                if (parameter.nativeType != origins[parameter.id].type)
+                if (parameter.nativeType != origins[parameter.id])
                     Fail(export, "A parameter lost its corresponding native type identity.");
                 BridgeType carrier = types[parameter.type];
-                NativeType native = Resolve(parameter.nativeType);
+                NativeType native = Resolve(parameter.nativeType!.Value);
                 if (carrier.kind == BridgeTypeKind.Handle || carrier.kind == BridgeTypeKind.Scalar && carrier.cName == "void")
                     Fail(export, "An opaque or void type cannot be passed as C value storage.");
                 if (expanded.Contains(parameter.id))

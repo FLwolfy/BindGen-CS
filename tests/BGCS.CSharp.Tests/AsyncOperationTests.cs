@@ -3,12 +3,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -27,7 +27,7 @@ public sealed class AsyncOperationTests
         ManagedApiModel model = Model();
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = true };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpAsyncOperationPlan operation = Assert.Single(plan.asyncOperations);
         Assert.Empty(plan.callbackOmissions);
         Assert.Empty(plan.callScopedCallbacks);
@@ -35,7 +35,7 @@ public sealed class AsyncOperationTests
         Assert.Equal("global::System.Memory<int>", Assert.Single(operation.signature.parameterTypes));
         Assert.Equal("global::BGCS.Runtime.NativeOperation<int>", operation.signature.returnType);
         Assert.Single(operation.buffers);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         Assert.Contains(sink.sources.Keys, path => path.EndsWith("NativeOperation.cs", StringComparison.Ordinal));
         string source = sink.sources.Single(item => item.Key.StartsWith("Async/", StringComparison.Ordinal)).Value;
         Assert.Contains("Task.Run(Finish)", source);
@@ -83,8 +83,8 @@ public sealed class AsyncOperationTests
             _ => protocol
         };
         InteropModule module = new(original.interop.libraryId, original.interop.targetId, 8, original.interop.types,
-            original.interop.functions.SetItem(0, start with { asynchronous = protocol }), []);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(original with { interop = module }, new("native", new NeutralBackendTests.MemorySink()));
+            original.interop.functions.SetItem(0, start with { asynchronous = protocol }), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(original with { interop = module }, new("native", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.asyncOperations);
         Assert.Single(plan.callbackOmissions);
         Assert.Equal(3, plan.methods.Length);
@@ -117,7 +117,7 @@ public sealed class AsyncOperationTests
         };
         InteropFunction cancel = new(new("cancel"), "cancel", new("void"), [new(new("cancel-handle"), "handle", pointer.id)], "C");
         InteropModule updated = new(module.libraryId, module.targetId, 8, module.types.Select(type => type.id == callable.id ? callable : type).Append(buffer).ToImmutableArray(),
-            [start, module.functions[1], cancel], []);
+            [start, module.functions[1], cancel], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(updated, new("Generated.Async", "AsyncApi"), CancellationToken.None);
     }
 }

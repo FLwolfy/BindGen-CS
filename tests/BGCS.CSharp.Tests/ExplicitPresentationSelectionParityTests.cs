@@ -2,12 +2,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -41,8 +41,8 @@ public sealed class ExplicitPresentationSelectionParityTests
         ManagedApiModel selectedModel = Project(module, new("Generated.Selection", "SelectionApi") { memberFunctions = members });
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("selection_native", sink) { importMode = mode };
-        CSharpEmissionPlan before = new CSharpEmissionPlanner().Plan(original, request);
-        CSharpEmissionPlan after = new CSharpEmissionPlanner().Plan(selectedModel, request);
+        CSharpEmissionPlan before = new CSharpTestPlanner().Plan(original, request);
+        CSharpEmissionPlan after = new CSharpTestPlanner().Plan(selectedModel, request);
         CSharpValueReceiverPlan[] actual = after.storage.SelectMany(type => type.valueMembers).ToArray();
         Assert.Equal(selected, actual.Length);
         Assert.Equal(selected == 0 ? System.Array.Empty<string>() : selected == 1 ? new[] { "Read" } : new[] { "Read", "Write" },
@@ -54,7 +54,7 @@ public sealed class ExplicitPresentationSelectionParityTests
         Assert.Same(module, selectedModel.interop);
         Assert.Empty(after.objects);
         Assert.Empty(after.valueParameterOmissions);
-        await new CSharpBackend().EmitAsync(selectedModel, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(selectedModel, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(after, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
     }
 
@@ -76,15 +76,15 @@ public sealed class ExplicitPresentationSelectionParityTests
         ManagedApiModel model = Project(module, choices);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("selection_native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal(enabled ? 1 : 0, plan.pointerCarriers.Length);
         Assert.Equal(enabled ? 1 : 0, plan.pointerFunctions.Length);
         Assert.Equal(new[] { "read", "write" }, plan.methods.Select(method => method.nativeExport.value));
         Assert.All(plan.methods, method => Assert.EndsWith("*", method.parameterTypes[0], System.StringComparison.Ordinal));
         Assert.DoesNotContain(plan.methods.SelectMany(method => method.parameterTypes), type => type.Contains("NodeAddress", System.StringComparison.Ordinal));
-        Assert.Equal(Signatures(new CSharpEmissionPlanner().Plan(Project(module, new("Generated.Selection", "SelectionApi")), request)), Signatures(plan));
+        Assert.Equal(Signatures(new CSharpTestPlanner().Plan(Project(module, new("Generated.Selection", "SelectionApi")), request)), Signatures(plan));
         Assert.Same(module, model.interop);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
         Assert.Equal(enabled, sink.sources.Values.Any(source => source.Contains("struct NodeAddress", System.StringComparison.Ordinal)));
     }
@@ -95,7 +95,7 @@ public sealed class ExplicitPresentationSelectionParityTests
         InteropModule module = OwnedProjectionTests.Module();
         ManagedApiModel model = Project(module, new("Generated.Selection", "SelectionApi")
         { memberFunctions = [], pointerCarriers = [], pointerFunctions = [] });
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("selection_native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("selection_native", new NeutralBackendTests.MemorySink()));
         Assert.Single(plan.objects);
         CSharpStatusMethodPlan factory = Assert.Single(plan.statusMethods, method => method.ownedResult is not null);
         Assert.Equal("destroy", plan.methods[factory.ownedResult!.releaseIndex].nativeExport.value);
@@ -125,6 +125,6 @@ public sealed class ExplicitPresentationSelectionParityTests
             [new(new("read-self"), "self", pointer.id) { singleValue = Contract(NativeParameterDirection.Input) }], "C");
         InteropFunction write = new(new("write"), "native_write", integer.id,
             [new(new("write-self"), "self", pointer.id) { singleValue = Contract(NativeParameterDirection.InputOutput) }, new(new("write-value"), "value", integer.id)], "C");
-        return new("selection", "windows-x64-msvc", 8, [integer, record, pointer], [read, write], []);
+        return new("selection", "windows-x64-msvc", 8, [integer, record, pointer], [read, write], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

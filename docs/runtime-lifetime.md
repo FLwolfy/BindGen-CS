@@ -222,7 +222,7 @@ The generator does not infer arbitrary native unregister guarantees.
 
 ### Generated C++ virtual registrations
 
-`cpp.virtualCallbacks` explicitly selects an abstract interface. Its default
+`bridge.cpp.virtualCallbacks` explicitly selects an abstract interface. Its default
 `releaseThreadDomain = "unknown"` preserves checked raw construction, destruction,
 base adjustment and callback typedefs, while reporting why an owning managed
 registration is omitted. Explicit `"any"` is a caller assertion and remains

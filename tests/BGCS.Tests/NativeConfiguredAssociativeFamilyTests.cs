@@ -7,13 +7,13 @@ using System.Text;
 using System.Threading.Tasks;
 using BGCS.Analysis.Bridge;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.Infrastructure.Execution;
 using Xunit;
@@ -36,7 +36,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "associative.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(built.targetModels);
@@ -47,13 +47,13 @@ public sealed class NativeConfiguredAssociativeFamilyTests
                 Assert.All(values, protocol => Assert.Equal(EvidenceLevel.UserAsserted, protocol.evidence.level));
                 Assert.All(values.Where(protocol => protocol.sequence is not null), protocol => Assert.Equal(NativeLifetimeKind.Unknown, protocol.sequence!.readLifetime.kind));
             }
-            CppBridgeModule bridge = target.bridge!;
+            NativeBridgePlan bridge = target.bridge!;
             Assert.Equal(3, bridge.familyBindings.Length);
             new CppBridgeOperationVerifier().Verify(bridge);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string runtime = sourceRuntime ? "Generated.Associative.Runtime" : "BGCS.Runtime";
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
                 { importMode = mode, runtimeNamespace = runtime });
             string context = sourceRuntime ? "AssociativeApiContext" : "AssociativeApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
@@ -83,7 +83,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
             string header = Path.Combine(root, "associative.hpp");
             await File.WriteAllTextAsync(header, Header);
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
             foreach ((string source, string cause) in new[]
@@ -113,7 +113,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static string ConsumerBody(CppBridgeModule bridge, CSharpEmissionPlan plan)
+    private static string ConsumerBody(NativeBridgePlan bridge, CSharpEmissionPlan plan)
     {
         StringBuilder source = new();
         CSharpMethodPlan releaseError = plan.methods.Single(method => method.exportName == bridge.errorReleaseExport);
@@ -190,12 +190,12 @@ public sealed class NativeConfiguredAssociativeFamilyTests
             evidence = new(EvidenceLevel.UserAsserted, "fixture-explicit-associative-protocol:" + name) };
         return new()
         {
-            schemaVersion = 1, library = new() { id = "associative", nativeName = "associative_fixture" },
+            schemaVersion = 2, library = new() { id = "associative", nativeName = "associative_fixture" },
             source = new() { language = SourceLanguage.Cpp, headers = ["associative.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
                 selection = new() { includeDeclarations = new[] { "MakeMap", "MakeSet", "MakeBrokenSet", "MakeValue", "MakeError", "MakeVoidValue", "MakeVoidError" }.Select(name => "associative::" + name).ToImmutableArray() } },
             api = new() { @namespace = "Generated.Associative", name = "AssociativeApi", importMode = mode,
-                style = sourceRuntime ? BGCS.Contracts.Managed.ManagedApiStyle.Static : BGCS.Contracts.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
-            cpp = new() { familyBindings = [Binding("Map", StandardValueKind.Map), Binding("Set", StandardValueKind.Set), Binding("Result", StandardValueKind.Expected)] },
+                style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
+            bridge = new() { cpp = new() { familyBindings = [Binding("Map", StandardValueKind.Map), Binding("Set", StandardValueKind.Set), Binding("Result", StandardValueKind.Expected)] } },
             runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
              cache = new() { enabled = false }
         };
@@ -209,7 +209,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
     private sealed class NoWrites : IArtifactSink { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot emit artifacts."); }
 

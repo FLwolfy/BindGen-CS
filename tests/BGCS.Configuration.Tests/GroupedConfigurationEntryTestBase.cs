@@ -12,7 +12,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
+using BGCS.Core;
 using BGCS.Infrastructure.Verification;
 using BGCS.Runtime;
 using Microsoft.CodeAnalysis;
@@ -46,11 +46,11 @@ public abstract class GroupedConfigurationEntryTestBase
             }
             JsonObject expected = JsonNode.Parse(File.ReadAllText(Path.Combine(temporary, variant + ".expected.json")))!.AsObject();
             string currentDirectory = Environment.CurrentDirectory;
-            GenerationRequest request = await GenerationRequest.FromFileAsync(Path.Combine(temporary, variant + ".bindgen.json"));
+            GenerationRequest request = await TestInputs.LoadRequestAsync(Path.Combine(temporary, variant + ".bindgen.json"));
             Assert.Equal(temporary, request.baseDirectory);
             Assert.Equal(currentDirectory, Environment.CurrentDirectory);
             VerifyConfiguration(request.configuration, expected["configuration"]!.AsObject(), temporary);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             bool sdkBuild = expected["sdkBuild"]?.GetValue<bool>() == true || request.configuration.api.importMode == BindingImportMode.LibraryImport;
             GenerationResult result = await host.GenerateAsync(request);
             Assert.Equal(currentDirectory, Environment.CurrentDirectory);
@@ -65,7 +65,7 @@ public abstract class GroupedConfigurationEntryTestBase
                 return;
             }
             Assert.True(result.success, result.GetDiagnosticSummary());
-            new ArtifactDigestVerifier().Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
+            new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
             var sources = result.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp").OrderBy(artifact => artifact.relativePath, StringComparer.Ordinal).ToArray();
             Assert.NotEmpty(sources);
             string[] texts = sources.Select(artifact => File.ReadAllText(Path.Combine(result.outputRoot, artifact.relativePath))).ToArray();
@@ -85,7 +85,7 @@ public abstract class GroupedConfigurationEntryTestBase
                 await CompileSdkConsumerAsync(request.configuration, sources.Select(source => Path.Combine(result.outputRoot, source.relativePath)), temporary);
             CSharpCompilation compilation = Compile(request.configuration, sources.Select(source => source.relativePath).ToArray(), texts, sdkBuild);
             VerifySymbols(compilation, expected);
-            new ArtifactDigestVerifier().Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
+            new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(result.outputRoot, result.artifacts, [".bgcs-artifacts.json"]);
         }
         finally
         {
@@ -128,7 +128,7 @@ public abstract class GroupedConfigurationEntryTestBase
             RedirectStandardOutput = true, RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
         };
-        foreach (string argument in new[] { "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
+        foreach (string argument in new[] { "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the grouped fixture SDK consumer.");
         Task<string> output = process.StandardOutput.ReadToEndAsync(), error = process.StandardError.ReadToEndAsync();
         using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(3));
@@ -137,8 +137,12 @@ public abstract class GroupedConfigurationEntryTestBase
         {
             if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); }
         }
-        Assert.True(process.ExitCode == 0, await output + Environment.NewLine + await error);
-        Assert.True(File.Exists(Path.Combine(consumer, "bin", "Debug", configuration.api.framework, "Consumer.dll")), "The real SDK did not produce the grouped consumer assembly.");
+        string standardOutput = await output;
+        string standardError = await error;
+        string buildOutput = standardOutput + Environment.NewLine + standardError;
+        Assert.True(process.ExitCode == 0, buildOutput);
+        string assembly = Path.Combine(consumer, "bin", "Release", configuration.api.framework, "Consumer.dll");
+        Assert.True(File.Exists(assembly), "The real SDK did not produce the grouped consumer assembly: " + assembly + Environment.NewLine + buildOutput);
     }
 
     private static void VerifyConfiguration(BindingConfiguration configuration, JsonObject expected, string temporary)
@@ -212,6 +216,8 @@ public abstract class GroupedConfigurationEntryTestBase
             Assert.Equal(item["isStatic"]?.GetValue<bool>() ?? false, method.IsStatic);
             if (item["parameterNames"] is JsonArray names)
                 Assert.Equal(names.Select(name => name!.GetValue<string>()), method.Parameters.Select(parameter => parameter.Name));
+            if (item["parameterRefKinds"] is JsonArray kinds)
+                Assert.Equal(kinds.Select(kind => kind!.GetValue<string>()), method.Parameters.Select(parameter => parameter.RefKind.ToString()));
         }
         foreach (JsonNode? item in expected["constants"]?.AsArray() ?? [])
         {
@@ -238,7 +244,7 @@ public abstract class GroupedConfigurationEntryTestBase
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         Assert.NotNull(repository);
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        string root = Path.Combine(repository.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        string root = Path.Combine(repository.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
         Assert.True(File.Exists(Path.Combine(root, "BGCS.Frontend.Clang.Worker.dll")), "Build the isolated worker before running grouped configuration fixtures.");
         return root;
     }

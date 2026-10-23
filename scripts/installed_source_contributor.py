@@ -24,7 +24,7 @@ def configuration_schema() -> dict:
 
 def _configuration(directory: Path, manifest: Path) -> dict:
     (directory / 'empty.hpp').write_text('#pragma once\n', encoding='utf-8')
-    return {'schemaVersion': 1, 'library': {'id': 'installed_sources', 'nativeName': 'installed_sources'},
+    return {'schemaVersion': 2, 'library': {'id': 'installed_sources', 'nativeName': 'installed_sources'},
             'source': {'language': 'cpp', 'headers': ['empty.hpp'], 'parseMacros': False},
             'api': {'namespace': 'Package.SourceProtocol', 'name': 'NativeApi'},
             'runtime': {'mode': 'package'},
@@ -130,8 +130,8 @@ def prepare(dotnet: str, version: str, work: Path, evidence: Path, manifest: Pat
     (source / 'Program.cs').write_text('''using System;
 using System.Linq;
 using BGCS;
-await using BindingHost host = BindingHost.CreateDefault();
-GenerationResult result = await host.GenerateAsync(await GenerationRequest.FromFileAsync("bindgen.json"));
+await using BindingHost host = BindingGenerator.CreateDefault();
+GenerationResult result = await host.GenerateAsync(GenerationRequest.FromFile("bindgen.json"));
 if (!result.success) throw new InvalidOperationException(result.GetDiagnosticSummary());
 if (!result.artifacts.Any(item => item.relativePath.EndsWith("/contributions/fixture.source/helpers/generated.cpp", StringComparison.Ordinal)))
     throw new InvalidOperationException("The installed SDK did not generate the manifest's contributed C++ source.");

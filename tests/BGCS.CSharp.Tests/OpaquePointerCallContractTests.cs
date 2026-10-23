@@ -2,11 +2,11 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -32,7 +32,7 @@ public sealed class OpaquePointerCallContractTests
         InteropType pointer = new(new("pointer"), "Window*", NativeTypeCategory.Pointer, pointerSize, pointerSize) { elementType = record.id };
         InteropType alias = new(new("alias"), "NativeWindow", NativeTypeCategory.Alias, pointerSize, pointerSize) { elementType = pointer.id };
         InteropFunction next = new(new("next"), "window_next", alias.id, [new(new("window"), "window", alias.id)], "C");
-        InteropModule interop = new("opaque-address", target, pointerSize, [record, pointer, alias], [next], []);
+        InteropModule interop = new("opaque-address", target, pointerSize, [record, pointer, alias], [next], []) { byteOrder = NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(interop, new("Generated.OpaqueCalls", "Api")
         {
             pointerCarriers = [new("NativeWindow", "WindowAddress")],
@@ -40,14 +40,14 @@ public sealed class OpaquePointerCallContractTests
         }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpMethodPlan native = Assert.Single(plan.methods);
         Assert.EndsWith("*", native.returnType, StringComparison.Ordinal);
         Assert.Equal(native.returnType, Assert.Single(native.parameterTypes));
         Assert.DoesNotContain("WindowAddress", native.returnType, StringComparison.Ordinal);
         Assert.Equal(pointerSize, interop.GetType(alias.id).size);
         Assert.Single(plan.pointerFunctions);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string all = string.Join("\n", sink.sources.Values);
         Assert.DoesNotContain("Unsafe.As<", all, StringComparison.Ordinal);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);

@@ -4,14 +4,14 @@
 
 ## 发布内容与版本
 
-用户产品只有 `BGCS`、`BGCS.Contracts`、`BGCS.Runtime`、`BindGen-CS`。
-Cpp2C、Frontend、Infrastructure、CSharp 等实现程序集随完整 SDK/tool 交付，
+基础用户产品是 `BGCS`、`BGCS.Core`、`BGCS.Runtime`、`BindGen-CS`。
+NativeBridge、Frontend、Infrastructure、CSharp 等实现程序集随完整 SDK/tool 交付，
 不作为用户必须拼装的独立功能产品。
 
 实体集合以 [`product-packages.json`](../distribution/manifests/product-packages.json) 为准：
 
-- 四个产品的 `.nupkg`；
-- 清单中 symbol products（BGCS、Contracts、Runtime）的 `.snupkg`；
+- 四个基础产品及五个按需 `BGCS.Extension.*` 的 `.nupkg`；
+- 清单中的 symbol products（基础库及按需扩展）的 `.snupkg`；
 - 六个声明桌面宿主 RID 的 `BindGen-CS.<rid>` 包，包含 Intel macOS；
 - 携带已接受 Intel parser 闭包的技术包 `BGCS.ParserRuntime.osx-x64`。
 
@@ -39,8 +39,8 @@ bash scripts/test-nuget-packages.sh
 CI 下载并验证同 revision 接受的资源。host-only 本地检查明确属于局部验证，不能代替
 完整产品认证。
 
-SDK、Contracts、Runtime、工具的消费要求见
-[包认证](packages.cn.md#打包与认证)。本地报告不代表最终包已经上架，也不认证其他平台。
+SDK、Core、Runtime、工具的消费要求见
+[包认证](packages.cn.md#仓库包验收)。本地报告不代表最终包已经上架，也不认证其他平台。
 
 ## 自动发布与准确证据
 
@@ -49,14 +49,15 @@ SDK、Contracts、Runtime、工具的消费要求见
 
 1. main push 执行 Windows 完整生成器检查和 Linux/macOS 生成器 smoke，保留核心基线
    及原有各宿主性能预算。
-2. 一个完整产品安装任务消费实际 SDK/tool/Contracts/Runtime 包。AOT/Wasm 应用构建
-   是手动私有检查，不属于必需发布任务。
+2. 一个完整产品安装任务消费实际 SDK/tool/Core/Runtime 及可选扩展包。Linux smoke
+   运行本轮固定的小型 Browser Mono Wasm/AOT aggregate 与回调回归；其他应用发布矩阵不重复执行。
 3. 产品认证成功触发发布 preflight，认证当前 main 候选、准确 workflow/run 身份和
    下载的 artifact 字节。
 4. 按 `eng/acceptance/required-release-gates.json` 检查作业、功能/配置证据和安装报告，
    不硬编码历史作业数量。缺失、失败、跳过、过期或相互矛盾的必需证据会阻断发布。
-5. 重建接受的 revision 并消费实体包，再执行 API、依赖、源码、供应链和包/源码摘要检查。
-   原始准确 Host 证据重新核验，不能用没有记录的部分重跑替代。
+5. 从认证成功的 runs 下载已接受的包归档、产品安装回执及已认证的仓库工具。
+   重新核对准确 hash 与源码身份，再从同一份归档字节生成供应链证据。
+   原始 Host 与功能证据继续关联已接受的 CI run。
 6. attestation 与再次实体包检查完成后，创建 tag 前重查 main 和最新接受的 runs。
    `v<version>` 必须指向接受的 commit，已有不同 tag 不会移动。后续发布在同一 job 继续，
    因为 `GITHUB_TOKEN` 创建的 tag 不会再次启动 push workflow。
@@ -81,7 +82,7 @@ workflow `publish-bgcs-runtime-nuget.yml` 及工作流 environment（当前为�
 
 上传后核对公共包内容并干净安装四产品。symbols 的独立 push 必须成功，但不宣称
 symbol-server 已完成索引。只有 release workflow、公共消费检查与 GitHub release
-全部成功才算发布完成；此前3.0.0安装示例以实际发布为前提。
+全部成功才算发布完成；此前4.0.0安装示例以实际发布为前提。
 
 NuGet 版本不可变。部分上传失败只能用相同已接受内容重试；公共接受后的源码或包内容
 变化需要新版本，不能以删除替换已发布版本恢复。

@@ -3,12 +3,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -27,13 +27,13 @@ public sealed class ModuleBorrowedProjectionTests
         ManagedApiModel model = Project(Module());
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Empty(plan.directOwnedFactories);
         Assert.Equal("WidgetView", Assert.Single(plan.directBorrowedFactories).objectName);
         CSharpObjectPlan wrapper = Assert.Single(plan.objects);
         Assert.Equal(ManagedReceiverKind.ModuleBorrowed, wrapper.kind);
         Assert.Single(wrapper.directMethods);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string objects = sink.sources.Single(source => source.Key.EndsWith("Objects.g.cs", StringComparison.Ordinal)).Value;
         Assert.Contains("ModuleBorrowedNativeHandle m_handle", objects, StringComparison.Ordinal);
         Assert.DoesNotContain("releaseDomain", objects, StringComparison.Ordinal);
@@ -84,14 +84,14 @@ public sealed class ModuleBorrowedProjectionTests
         getter = getter with { returnOwnership = borrowing };
         if (fault == "input") getter = getter with { parameters = [new(new("unproven"), "unproven", getter.returnType)] };
         InteropModule interop = new(original.libraryId, original.targetId, original.pointerSize, original.types,
-            original.functions.SetItem(0, getter), []);
+            original.functions.SetItem(0, getter), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = Project(interop);
         NeutralBackendTests.MemorySink sink = new();
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", sink));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", sink));
         Assert.Empty(plan.directBorrowedFactories);
         Assert.Empty(plan.objects);
         Assert.Contains(plan.ownedProjectionOmissions, omission => omission.nativeExport == getter.id);
-        await new CSharpBackend().EmitAsync(model, new("native", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("native", sink), CancellationToken.None);
         Assert.Contains("Widget* GetStatic", string.Join("\n", sink.sources.Values), StringComparison.Ordinal);
         Assert.DoesNotContain(sink.sources.Keys, path => path.EndsWith("Objects.g.cs", StringComparison.Ordinal));
     }
@@ -102,7 +102,7 @@ public sealed class ModuleBorrowedProjectionTests
         ManagedProjectionRequest owned = Request() with
         { memberFunctions = [Request().memberFunctions[0] with { kind = ManagedReceiverKind.Owned }] };
         ManagedApiModel model = new DefaultManagedProjection().Project(Module(), owned, CancellationToken.None);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.objects);
         Assert.Null(Assert.Single(plan.directBorrowedFactories).objectName);
         Assert.Empty(plan.directOwnedFactories);
@@ -123,8 +123,8 @@ public sealed class ModuleBorrowedProjectionTests
         if (readOnlyMember)
             functions = functions.SetItem(1, functions[1] with { parameters = [functions[1].parameters[0] with { type = pointer.id }] });
         InteropModule interop = new(baseline.libraryId, baseline.targetId, baseline.pointerSize,
-            baseline.types.AddRange(ImmutableArray.Create(qualified, pointer)), functions, []);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(Project(interop), new("native", new NeutralBackendTests.MemorySink()));
+            baseline.types.AddRange(ImmutableArray.Create(qualified, pointer)), functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Project(interop), new("native", new NeutralBackendTests.MemorySink()));
         Assert.Single(plan.directBorrowedFactories);
         if (readOnlyMember) Assert.Single(Assert.Single(plan.objects).directMethods);
         else
@@ -153,6 +153,6 @@ public sealed class ModuleBorrowedProjectionTests
         InteropFunction read = new(new("read"), "read", integer.id,
             [new(new("self"), "self", pointer.id)
             { ownership = new(NativeOwnershipKind.Borrowed, new(NativeLifetimeKind.Call, null, evidence), evidence) { retainsPointer = false } }], "C");
-        return new("module-borrowed", "windows-x64-msvc", 8, [integer, widget, pointer], [get, read], []);
+        return new("module-borrowed", "windows-x64-msvc", 8, [integer, widget, pointer], [get, read], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

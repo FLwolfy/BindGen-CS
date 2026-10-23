@@ -3,12 +3,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -40,7 +40,7 @@ public sealed class BooleanValueParameterTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.BooleanValues.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpMethodPlan method = Assert.Single(plan.methods);
         Assert.All(method.parameterTypes, type => Assert.Equal("byte*", type));
         Assert.Equal(new[] { NativeParameterDirection.Input, NativeParameterDirection.Output, NativeParameterDirection.InputOutput }, method.valueParameters.Select(value => value.direction));
@@ -52,7 +52,7 @@ public sealed class BooleanValueParameterTests
             Assert.Equal(CSharpValueAllocationMode.AddressCheckedPinnedBorrow, value.allocationMode);
         });
         Assert.Empty(plan.valueParameterOmissions);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string context = sourceRuntime ? "BooleanApiContext" : "BooleanApi";
         await ValueReceiverTests.CompileWithSdkAsync(sink, $$"""
             namespace Generated.BooleanValues;
@@ -121,7 +121,7 @@ public sealed class BooleanValueParameterTests
         parameter = parameter with { singleValue = parameter.singleValue! with
         { requiredAlignment = fault == "requested-alignment" ? 2 : null, retainsPointer = fault == "retained" } };
         function = function with { parameters = function.parameters.SetItem(1, parameter) };
-        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, [function], []);
+        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.NotNull(new ValueParameterAnalyzer().GetRestriction(module, function, parameter));
     }
 
@@ -131,9 +131,9 @@ public sealed class BooleanValueParameterTests
         InteropModule original = Module();
         var types = original.types.SetItem(0, original.types[0] with { nativeName = "BOOL", primitiveKind = "Int", size = 4, alignment = 4, isSigned = true });
         types = types.SetItem(1, types[1] with { size = 4, alignment = 4 }).SetItem(2, types[2] with { size = 4, alignment = 4 });
-        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, original.functions, []);
+        InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, original.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.IntegerFlags", "Api"), CancellationToken.None);
-        CSharpMethodPlan method = Assert.Single(new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())).methods);
+        CSharpMethodPlan method = Assert.Single(new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())).methods);
         Assert.All(method.parameterTypes, type => Assert.Equal("int*", type));
         Assert.All(method.valueParameters, value => Assert.Equal("int", value.managedElementType));
     }

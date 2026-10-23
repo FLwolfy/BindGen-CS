@@ -16,7 +16,7 @@ public sealed class WorkspaceCommandTests
             File.WriteAllText(Path.Combine(directory, "native.h"), "int native_value(void);");
             foreach (string id in new[] { "first", "second" })
                 File.WriteAllText(Path.Combine(directory, id + ".json"), $$"""
-                    { "schemaVersion": 1, "library": { "id": "{{id}}", "nativeName": "native" },
+                    { "schemaVersion": 2, "library": { "id": "{{id}}", "nativeName": "native" },
                       "source": { "headers": ["native.h"] }, "output": { "root": "{{id}}-generated" } }
                     """);
             File.WriteAllText(Path.Combine(directory, "workspace.json"), """
@@ -60,7 +60,7 @@ public sealed class WorkspaceCommandTests
         {
             File.WriteAllText(Path.Combine(directory, "native.h"), "int native_add(int left, int right);");
             File.WriteAllText(Path.Combine(directory, "bindgen.json"), """
-                { "schemaVersion": 1, "library": { "id": "native", "nativeName": "native" },
+                { "schemaVersion": 2, "library": { "id": "native", "nativeName": "native" },
                   "source": { "language": "c", "headers": ["native.h"] },
                   "api": { "namespace": "Workspace.Generated", "name": "Native" },
                   "output": { "root": "Generated", "layout": "singleFile" } }
@@ -71,7 +71,9 @@ public sealed class WorkspaceCommandTests
             using StringWriter error = new();
             Assert.Equal(0, CliInvocation.Run(["workspace", "generate", "workspace.json"], directory, TextWriter.Null, error));
             string bindings = Directory.GetFiles(Path.Combine(directory, "Generated"), "Bindings.cs", SearchOption.AllDirectories).Single();
-            Assert.Equal(0, CliInvocation.Run(["workspace", "diff", "workspace.json"], directory, TextWriter.Null, error));
+            using StringWriter diffOutput = new();
+            int unchanged = CliInvocation.Run(["workspace", "diff", "workspace.json", "--json"], directory, diffOutput, error);
+            Assert.True(unchanged == 0, error + Environment.NewLine + diffOutput);
             File.AppendAllText(bindings, "// drift\n");
             Assert.Equal(2, CliInvocation.Run(["workspace", "diff", "workspace.json"], directory, TextWriter.Null, error));
             Assert.EndsWith("// drift\n", File.ReadAllText(bindings));
@@ -85,7 +87,7 @@ public sealed class WorkspaceCommandTests
         {
             File.WriteAllText(Path.Combine(directory, "native.h"), "int native_value(void);");
             string configuration = """
-                { "schemaVersion": 1, "library": { "id": "native", "nativeName": "native" },
+                { "schemaVersion": 2, "library": { "id": "native", "nativeName": "native" },
                   "source": { "headers": ["native.h"] }, "api": { "namespace": "Before", "name": "Native" } }
                 """;
             File.WriteAllText(Path.Combine(directory, "bindgen.json"), configuration);

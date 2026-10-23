@@ -184,7 +184,7 @@ def main(argv=None) -> int:
                 raise RuntimeError(name + " failed; see " + row["log"])
 
         tool = fixture.stage_repository_generator(ROOT, work, args.configuration)
-        runtime = tool.parent / "BGCS.Runtime.dll"
+        runtime = ROOT / "src/BGCS.Runtime/bin" / args.configuration / "net10.0/BGCS.Runtime.dll"
         report["executionBefore"] = fixture.execution_identity(ROOT, tool, runtime)
         for key in ("executionClosureSha256", "generatorEntrySha256", "runtimeAssemblySha256"):
             if report["executionBefore"].get(key) != original["execution"].get(key):
@@ -203,9 +203,9 @@ def main(argv=None) -> int:
         source.mkdir()
         (source / "large.h").write_text("".join(f"int bgcs_perf_{i}(int value);\n" for i in range(10000)), encoding="utf-8")
         config = source / "bindgen.json"
-        config.write_text(json.dumps({"schemaVersion": 1, "library": {"id": "performance", "nativeName": "performance"},
+        config.write_text(json.dumps({"schemaVersion": 2, "library": {"id": "performance", "nativeName": "performance"},
             "source": {"language": "c", "headers": ["large.h"], "parseMacros": False, "parseComments": False},
-            "api": {"namespace": "BGCS.Performance.Generated", "name": "PerformanceApi"},
+            "api": {"namespace": "BGCS.Performance.Generated", "name": "PerformanceApi", "runtime": "dotnet.coreclr"},
             "cache": {"enabled": True, "directory": ".cache"}}, indent=2), encoding="utf-8")
         command = [dotnet, tool, "generate", config]
         run("cache-fill", command, source)

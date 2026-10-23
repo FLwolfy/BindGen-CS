@@ -1,18 +1,27 @@
-# Contracts-only private target and SDK plugin
+# A private target and SDK
 
-This example registers `example-private-host` without adding a built-in platform.
-It uses the real host's Clang-compatible ABI under a private platform ID. It is
-not a console SDK or a new runtime/aggregate ABI implementation.
+This plugin maps the private target ID `example-private-host` to an existing,
+explicitly declared compiler target and ABI. Its only project dependency is
+`BGCS.Core`. It does not add a compiler, build integration or SDK distribution.
 
-First edit `target-sdk.json` to declare the actual target triple, architecture,
-ABI, byte order, module capabilities and read-only SDK header paths. The checked-in
-profile is x64 Windows/MSVC. For x64 GNU Linux use `abiId: "gnu"` and
-`triple: "x86_64-unknown-linux-gnu"`; for Intel macOS use `abiId: "darwin"` and
-`triple: "x86_64-apple-darwin"`. Other architectures require their exact facts.
-The sample header is intentionally small; a real SDK needs its complete selected
-header/definition environment. No host SDK is silently mixed into explicit paths.
+## Inputs
 
-From this directory:
+`target-sdk.json` declares the platform family, architecture, ABI, triple,
+byte order, export/calling spellings, optional ordered header search paths,
+and local SDK include directories. The checked-in profile is Windows x64/MSVC.
+Use the exact facts from your SDK when editing it. GNU Linux x64 and Intel macOS
+also need their own family, ABI, triple and source conventions; changing only the
+private target's name does not establish those facts.
+
+`bindgen.json` selects that target, its local plugin manifest, the profile input,
+and `dotnet.coreclr`. This sample reuses the existing desktop execution and ABI
+implementation. A different platform family requires its own applicable runtime
+and call-ABI implementation, or fails explicitly. No console SDK is certified by
+this example.
+
+## Generate
+
+Use the matching development candidate of the complete CLI:
 
 ```bash
 dotnet build BGCS.Example.CustomTargetPlugin.csproj --configuration Release
@@ -20,20 +29,23 @@ python write-manifest.py
 bindgen-cs generate bindgen.json
 ```
 
-The project references only `BGCS.Contracts`; it can use that package after release.
-The normal SDK entry is `BindingHost.CreateBuilder().AddBuiltIns().Build()` followed
-by `GenerateAsync(GenerationRequest.FromFile("bindgen.json"))`. The manifest loads
-the same plugin in SDK and CLI. Clang runs in the normal isolated parser worker.
-`api.runtime` is explicit because an unknown platform has no inferred managed
-runtime. Unsupported runtime/import/aggregate ABI combinations remain rejected.
+The same manifest works from a C# tool:
 
-The provider declares its profile before reading it and fingerprints its bytes.
-SDK directories are declared as external inputs as well as being normal parser
-inputs. Changing the profile or headers invalidates affected cache entries; late
-changes must prevent publication. Executable plugin bytes are separately locked
-by `plugin.json`; regenerate it after rebuilding. Factories create session-owned
-providers and do not retain a mutable process-global target.
+```csharp
+await using BindingHost generator = BindingGenerator.CreateDefault();
+GenerationResult result = await generator.GenerateAsync(
+    GenerationRequest.FromFile("bindgen.json"));
+```
 
-Consumers own native and managed compilation, linking, packaging and deployment.
-Generation does not prove a custom runtime or special console can invoke the result.
-Existing native module/function-table injection remains available independently.
+The default composition selects host services before reading configuration and
+manifests. Configuration cannot replace the host. The plugin supplies target
+facts; the isolated frontend extracts layouts from the actual headers.
+
+The provider declares the profile before reading it and fingerprints its bytes.
+SDK directories remain declared inputs. Changes to the profile, headers, plugin
+code or settings invalidate affected caches; late changes block publication.
+Regenerate `plugin.json` after rebuilding the plugin.
+
+The consumer maps declared input roots and compiles the generated sources using
+its own build. Module providers and external function tables customize symbol
+acquisition independently of source parsing.

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../extensions/foundation/BGCS.Targets.Desktop/BGCS.Targets.Desktop.csproj" />
+  </ItemGroup>
+<ItemGroup><ProjectReference Include="../../../extensions/BGCS.Extension.Android/BGCS.Extension.Android.csproj" /><ProjectReference Include="../../../extensions/BGCS.Extension.AppleMobile/BGCS.Extension.AppleMobile.csproj" /><ProjectReference Include="../../../extensions/BGCS.Extension.FreeBsd/BGCS.Extension.FreeBsd.csproj" /></ItemGroup>
+</Project>

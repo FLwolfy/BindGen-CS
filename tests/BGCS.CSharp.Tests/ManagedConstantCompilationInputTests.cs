@@ -6,11 +6,11 @@ using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using Microsoft.CodeAnalysis;
@@ -165,10 +165,10 @@ public sealed class ManagedConstantCompilationInputTests
     private static CSharpEmissionPlan Plan(ManagedProjectionInputs inputs)
     {
         InteropModule interop = new("external", "windows-x64-msvc", 8, [], [], [])
-        { constants = [new(new("selected"), "SELECTED", "SELECTED", new(NativeScalarConstantKind.Integer, "42", 4, true, new(EvidenceLevel.Declared, "native:compiler")), null)] };
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian, constants = [new(new("selected"), "SELECTED", "SELECTED", new(NativeScalarConstantKind.Integer, "42", 4, true, new(EvidenceLevel.Declared, "native:compiler")), null)] };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, new("Generated.External", "ExternalApi")
         { constants = [new("SELECTED") { managedType = "long", expression = "global::Vendor.Values.Answer" }] }, CancellationToken.None);
-        return new CSharpEmissionPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()) { managedProjection = inputs });
+        return new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()) { managedProjection = inputs });
     }
 
     private static ManagedSourceInput Source(string text, string? path = null)

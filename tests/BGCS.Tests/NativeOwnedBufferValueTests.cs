@@ -3,9 +3,9 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -42,7 +42,7 @@ public sealed class NativeOwnedBufferValueTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "owned_protocol", nativeName = "owned_protocol" },
+                schemaVersion = 2, library = new() { id = "owned_protocol", nativeName = "owned_protocol" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false },
                 api = new() { @namespace = "Generated.OwnedProtocol", name = "WidgetApi", importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget").Add("Widget::Update", "Update").Add("Widget::Fill", "Fill") },
@@ -57,7 +57,7 @@ public sealed class NativeOwnedBufferValueTests
                 },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(built.outputRoot));
@@ -106,6 +106,6 @@ public sealed class NativeOwnedBufferValueTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

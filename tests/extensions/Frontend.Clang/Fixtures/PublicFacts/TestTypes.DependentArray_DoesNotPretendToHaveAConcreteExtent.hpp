@@ -1,0 +1,1 @@
+template <int N> struct Buffer { int values[N]; };

@@ -1,87 +1,28 @@
-# Testing and evidence
+# Testing and acceptance
 
-[简体中文](testing.cn.md) | [Acceptance](acceptance.md) | [Packages](packages.md)
+The product stops at generation. Compiling, linking and invoking fixtures below belong to repository consumers, never the SDK, CLI or official extensions.
 
-Required CI has four jobs: Windows full generator tests, Linux generator smoke,
-macOS generator smoke, and one full installed-product check. Core feature/configuration
-baselines remain mandatory. Optional AOT/Wasm application builds are manual private
-checks; they are not additional required CI jobs. This changes execution scheduling,
-not supported target facts, source-generation contracts or existing performance limits.
+## Four gates
 
-## Generator and core feature checks
+| Check | Scope |
+| --- | --- |
+| Generator baseline — Windows x64 | Complete core/Host once, architecture/API/docs, CLI/SDK, six locked corpora and performance. |
+| Generator smoke — Linux x64 | Explicit platform differences, real worker/consumption and one fixed Browser Mono Wasm + Wasm AOT aggregate/callback regression. |
+| Generator smoke — macOS x64 | SDK/standard library, UTF-32, actual consumption and performance. |
+| Installed product baseline | Same-commit candidate archives, clean installation, closure, interface extension, Runtime-only, source Runtime and relocation. |
 
-```bash
-dotnet build BindGen-CS.slnx -c Release
-dotnet test BindGen-CS.slnx -c Release --no-build
-python scripts/generate-config-docs.py --configuration Release --check
-```
+There are no eight test shards or duplicated full platform matrices. Windows runs all discovered Host cases; smoke hosts run exact registered methods/data rows. Discovery, selection and TRX execution sets must agree. Missing, duplicated, skipped, failed or aborted required cases do not pass.
 
-Use the pinned .NET 10 SDK/runtime and matched worker/parser resource closure.
-Native invocation fixtures also need their explicitly selected compiler, SDK headers
-and linker. Those tools belong to the repository fixture, not the generation product.
-Corpus tests use locked upstream revisions and independently reviewed source/API
-snapshots. Compile/link/call checks may not repair emitted source or silently remove
-public declarations. A snapshot candidate is not an automatically accepted baseline.
+## Retained coverage
 
-The full suite covers native facts and closure, ABI/type/layout refusals, typed C++
-protocols, all three imports, Runtime delivery, ownership/callback/async cleanup,
-source processors, plugins, cache invalidation, worker cancellation/crashes, publication
-recovery and path safety. Exact discovery and execution receipts prevent omitted,
-duplicate, skipped or failed cases from being reported as a passing full suite.
+The 61 feature IDs and configuration inventory map to current owners, success/failure/boundary cases and same-source evidence. Coverage includes C/C++, three imports, two Runtime modes, aggregates/callbacks, codecs, allocators, lifetimes, extensions, caches, path safety, workers and publication recovery. Independent Engine provider tests do not reference standard platform implementations.
 
-Repository architecture, API, documentation and supply-chain audits use the non-shipped
-`eng/BGCS.RepositoryTools` project. They do not add build or audit commands to the product.
-Never write shared assembly outputs while another test or installed consumer uses them.
+Equal test counts do not prove behavioral parity. Public generation, semantics, manifests and real consumers replace private-reflection tests; internal node/allocation micro-tests are not presented as public contracts.
 
-## Original performance budgets
+## Performance
 
-`eng/acceptance/performance-budgets.json` remains authoritative for 10,000 declarations:
+The 10,000-declaration budgets remain Windows/Linux 60s cold / 10s warm and Intel macOS 120s / 30s. A worker is limited to2GiB and the default session to4GiB. Restore after deleting output must match every file and byte. Final controlled comparison samples five times and records median/variation; repeatable regressions above10% must be resolved or explicitly block acceptance. Do not relax limits or disable input checks.
 
-| Host | Cold | Warm |
-| --- | ---: | ---: |
-| Windows x64 | 60 seconds | 10 seconds |
-| Linux x64 | 60 seconds | 10 seconds |
-| Intel macOS | 120 seconds | 30 seconds |
+## Evidence
 
-The worker/session memory bounds remain 2 GiB / 4 GiB. Every host keeps its budget,
-including smoke scheduling. `scripts/test-performance-budget.sh` checks count, complete
-artifact ownership and byte-identical restoration; an emission-cache hit alone does
-not establish full-pipeline reuse. Stricter explicit overrides must be recorded.
-
-Real-library generation budgets remain cimguizmo 15s, cimgui 30s, SDL3 45s,
-miniaudio 60s, bgfx 30s and bimg 15s. Functional runs record timings; dedicated
-`BGCS_ENFORCE_GENERATION_BUDGETS=1` runs enforce them on a controlled recorded host.
-No timeout increase or missing byte check can turn a failure into a pass.
-
-## Installed products
-
-The required installation job packs the actual four-product set and consumes it in
-private clean workspaces. It checks SDK and CLI generation, neutral/advanced plugins,
-worker provisioning, Runtime package/source use and the declared archive/resource
-closure. It must use the exact recorded package bytes, not a repository project
-reference or an older global-cache package. See [packages](packages.md).
-
-## Optional manual AOT/Wasm application checks
-
-```bash
-python scripts/test-native-aot-bindings.py
-python scripts/test-wasm-bindings.py
-python scripts/test-wasm-bindings.py --aot
-```
-
-These repository harnesses compile/link generated code and run actual applications.
-They may require workload/compiler/browser downloads and substantial disk space;
-run them only as an explicitly requested private check. The generator itself does
-none of that. Target/runtime capability checks and static adapter source generation
-remain normal product functionality.
-
-Keep every assertion of a selected private fixture, including its independent native
-oracles and failure-injection controls. Missing prerequisites or failed calls are a
-failed/incomplete private check, not success. Their receipts identify actual revision,
-host, runtime, toolchain and scope; they do not claim universal platform certification.
-
-## Reporting
-
-Separate source implementation, local dirty-tree proof, clean-revision core acceptance
-and release/publication evidence. Keep logs and exact inputs for failures. Old receipts
-cannot certify a new source revision; configuring a workflow is not evidence it ran.
+Source implementation, local compilation, local tests, candidate package consumption, remote CI and public publication are separate states. A dirty workspace or historical3.x receipt cannot certify4.0. Current issues/review live under records/acceptance; execution evidence lives under artifacts. This specification itself asserts no passing gate.

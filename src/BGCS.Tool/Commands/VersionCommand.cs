@@ -1,12 +1,15 @@
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
 using System;
+using BGCS.Core.Hosting;
+using BGCS.Hosting.Standard;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Versioning;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Versioning;
 using BGCS.Infrastructure.Workers;
-using BGCS.Runtime;
 
 namespace BGCS.Tool.Commands;
 
@@ -18,6 +21,7 @@ internal static class VersionCommand
     ) {
         bool json = args.Length == 1 && args[0] == "--json";
         if (args.Length != 0 && !json) throw new ArgumentException("version accepts only the optional --json argument.");
+        using HostServices host = new HostServicesProvider().Create(new(AppContext.BaseDirectory, JsonSerializer.SerializeToElement(new { })));
         Assembly tool = typeof(VersionCommand).Assembly;
         string root = Path.Combine(AppContext.BaseDirectory, "bgcs", "worker");
         string status = "missing";
@@ -25,12 +29,12 @@ internal static class VersionCommand
         string? parserHost = null;
         if (File.Exists(Path.Combine(root, "BGCS.Frontend.Clang.Worker.dll")))
         {
-            _ = WorkerAssetLocator.Locate(applicationBase: AppContext.BaseDirectory);
+            _ = WorkerAssetLocator.Locate(host, applicationBase: AppContext.BaseDirectory);
             string manifestPath = Path.Combine(root, "worker-assets.manifest.json");
             status = File.Exists(manifestPath) ? "verified" : "unlocked";
             if (status == "verified")
             {
-                WorkerAssetManifest manifest = new WorkerAssetDeployer().ReadManifest(manifestPath);
+                WorkerAssetManifest manifest = new WorkerAssetDeployer(host.paths).ReadManifest(manifestPath);
                 parserIdentity = manifest.parserIdentity;
                 parserHost = manifest.hostRid;
             }
@@ -41,12 +45,12 @@ internal static class VersionCommand
             version = Version(tool),
             sdkVersion = Version(typeof(BindingHost).Assembly),
             contracts = new { version = Version(typeof(ContractVersion).Assembly), major = ContractVersion.C_MAJOR, apiMinor = ContractVersion.C_API_MINOR },
-            runtimeVersion = Version(typeof(NativeModuleSession).Assembly),
-            models = new { native = ModelRevision.C_NATIVE, cppBridge = ModelRevision.C_CPP_BRIDGE },
+            runtimeSourceVersion = Version(typeof(BGCS.CSharp.CSharpBackend).Assembly),
+            models = new { native = ModelRevision.C_NATIVE, nativeBridge = ModelRevision.C_NATIVE_BRIDGE },
             frontendProtocol = ModelRevision.C_FRONTEND_PROTOCOL,
             parser = new
             {
-                expectedIdentity = WorkerProtocol.C_PARSER_IDENTITY,
+                expectedIdentity = ClangParserIdentity.C_IDENTITY,
                 deployedIdentity = parserIdentity,
                 hostRid = parserHost,
                 status,
@@ -60,9 +64,9 @@ internal static class VersionCommand
         else
         {
             output.WriteLine($"{result.product} {result.version}");
-            output.WriteLine($"SDK: {result.sdkVersion}; Contracts: {result.contracts.version} (API {result.contracts.major}.{result.contracts.apiMinor}); Runtime: {result.runtimeVersion}");
-            output.WriteLine($"Models: native={result.models.native}, cppBridge={result.models.cppBridge}; frontend protocol={result.frontendProtocol}");
-            output.WriteLine($"Parser: {parserIdentity ?? WorkerProtocol.C_PARSER_IDENTITY}; asset deployment={status}{(parserHost is null ? "" : "; host=" + parserHost)}");
+            output.WriteLine($"SDK: {result.sdkVersion}; Contracts: {result.contracts.version} (API {result.contracts.major}.{result.contracts.apiMinor}); Runtime source catalog: {result.runtimeSourceVersion}");
+            output.WriteLine($"Models: native={result.models.native}, nativeBridge={result.models.nativeBridge}; frontend protocol={result.frontendProtocol}");
+            output.WriteLine($"Parser: {parserIdentity ?? ClangParserIdentity.C_IDENTITY}; asset deployment={status}{(parserHost is null ? "" : "; host=" + parserHost)}");
             output.WriteLine($"Host: {result.hostRid}; .NET: {result.framework}");
         }
         return 0;

@@ -1,3 +1,4 @@
+using BGCS.Frontend.Clang.Workers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,16 +9,17 @@ using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Interop;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.Infrastructure.Workers;
+using BGCS.Targets.Desktop;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -48,8 +50,12 @@ public sealed class ExactMixedBitfieldSourceTests
             DirectoryInfo? repository = new(AppContext.BaseDirectory);
             while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
             string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-            FrontendWorkerClient worker = new(Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0", "BGCS.Frontend.Clang.Worker.dll"));
-            NativeTargetDescriptor target = new(new(targetId), platform, "x64", abi, triple, new(), byteOrder: NativeByteOrder.LittleEndian);
+            FrontendWorkerClient worker = new(Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0", "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost());
+            Assert.True(new DesktopTargetProvider().TryResolve(new(new(targetId), tripleOverride: triple) { language = SourceLanguage.C }, out NativeTargetDescriptor? resolved));
+            NativeTargetDescriptor target = resolved!;
+            Assert.Equal(platform, target.platformId);
+            Assert.Equal(abi, target.abiId);
+            Assert.Equal(triple, target.triple);
             NativeModule native = (await worker.ParseAsync(new(target, SourceLanguage.C, [header]) { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
             Assert.DoesNotContain(native.diagnostics, diagnostic => diagnostic.isFailure);
             Assert.Empty(new NativeModuleVerifier().Validate(native));
@@ -69,8 +75,14 @@ public sealed class ExactMixedBitfieldSourceTests
             foreach (BindingImportMode mode in Enum.GetValues<BindingImportMode>())
             {
                 MemorySink sink = new();
-                EmissionRequest request = new("bits", sink) { importMode = mode, includeRuntimeSource = true, runtimeNamespace = "Generated.ExactBits.LocalRuntime" };
-                CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+                EmissionRequest request = new("bits", sink)
+                {
+                    importMode = mode,
+                    managedRuntime = TestComposition.ResolveRuntime(target),
+                    includeRuntimeSource = true,
+                    runtimeNamespace = "Generated.ExactBits.LocalRuntime"
+                };
+                CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(model, request);
                 await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
                 using MemoryStream image = Compile(sink.sources);
                 AssemblyLoadContext load = new("exact-bitfield-consumer", isCollectible: true);

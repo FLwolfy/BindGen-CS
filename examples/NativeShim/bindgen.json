@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "widget",
     "nativeName": "widget_bridge"
@@ -22,7 +22,10 @@
       "bgcs_widget_sum": "Sum"
     }
   },
-  "cpp": {
+  "output": {
+    "root": "Generated"
+  },
+  "bridge": {
     "nativeShims": [
       {
         "id": "widget",
@@ -39,8 +42,5 @@
         ]
       }
     ]
-  },
-  "output": {
-    "root": "Generated"
   }
 }

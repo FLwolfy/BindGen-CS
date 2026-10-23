@@ -1,3 +1,4 @@
+using BGCS.Core.Plugins;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -8,12 +9,10 @@ using System.Runtime.Loader;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
-using BGCS.Platforms.Targeting;
-using BGCS.Platforms.Toolchains;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -37,21 +36,20 @@ public sealed class StaticManagedAdapterTests
             await File.WriteAllTextAsync(Path.Combine(temporary, "native.h"), "int twice(int value);\n");
             await File.WriteAllTextAsync(Path.Combine(temporary, "native.c"),
                 "#if defined(_WIN32)\n#define EXPORT __declspec(dllexport)\n#else\n#define EXPORT __attribute__((visibility(\"default\")))\n#endif\nEXPORT int twice(int value) { return value * 2; }\n");
-            NativeTargetDescriptor hostTarget = new TargetResolver().Resolve(new(new("host")));
-            NativeTargetDescriptor resolved = ToolchainResolver.ResolveToolchain(hostTarget, SourceLanguage.C);
+            NativeTargetDescriptor resolved = NativeConsumerHarness.ParserTarget(SourceLanguage.C);
             NativeTargetDescriptor fixtureTarget = new(new("desktop-static-fixture"), resolved.platformId, resolved.architectureId,
                 resolved.abiId, resolved.triple, resolved.toolchain,
-                new(false, false), resolved.byteOrder);
+                new(false, false), resolved.byteOrder) { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1,
+                schemaVersion = 2,
                 library = new() { id = "static_fixture", nativeName = nativeName },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false },
                 targets = [new() { id = fixtureTarget.targetId.value }],
-                api = new() { @namespace = "Generated.StaticFixture", name = "StaticFixtureApi", runtime = ManagedRuntimeKind.NativeAot },
+                api = new() { @namespace = "Generated.StaticFixture", name = "StaticFixtureApi", runtime = new ManagedRuntimeId("fixture.static") },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }};
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot())
-                .AddTargetProvider("fixture/static-target", () => new StaticFixtureTargetProvider(fixtureTarget)).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).UseFixtureStaticRuntime()
+                .RegisterFactory<INativeTargetProvider>(new("fixture/static-target", ExtensionPort.NativeTargetProvider), _ => new StaticFixtureTargetProvider(fixtureTarget)).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
             Assert.True(built.success, built.GetDiagnosticSummary());
             AssertConfiguredMetadata(built, fixtureTarget.targetId.value, nativeName);
@@ -78,20 +76,20 @@ public sealed class StaticManagedAdapterTests
         try
         {
             await File.WriteAllTextAsync(Path.Combine(temporary, "native.h"), "int twice(int value);\n");
-            NativeTargetDescriptor resolved = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.C);
+            NativeTargetDescriptor resolved = NativeConsumerHarness.ParserTarget(SourceLanguage.C);
             NativeTargetDescriptor fixtureTarget = new(new("desktop-static-fixture"), resolved.platformId, resolved.architectureId,
-                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder);
+                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder) { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1,
+                schemaVersion = 2,
                 library = new() { id = "static_fixture", nativeName = nativeName },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false },
                 targets = [new() { id = fixtureTarget.targetId.value }],
-                api = new() { @namespace = "Generated.StaticFixture", name = "StaticFixtureApi", runtime = ManagedRuntimeKind.NativeAot, importMode = importMode },
+                api = new() { @namespace = "Generated.StaticFixture", name = "StaticFixtureApi", runtime = new ManagedRuntimeId("fixture.static"), importMode = importMode },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot())
-                .AddTargetProvider("fixture/static-target", () => new StaticFixtureTargetProvider(fixtureTarget)).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).UseFixtureStaticRuntime()
+                .RegisterFactory<INativeTargetProvider>(new("fixture/static-target", ExtensionPort.NativeTargetProvider), _ => new StaticFixtureTargetProvider(fixtureTarget)).Build();
             GenerationRequest request = new(configuration, temporary);
             GenerationResult generated = await host.GenerateAsync(request);
             Assert.True(generated.success, generated.GetDiagnosticSummary());
@@ -162,6 +160,6 @@ public sealed class StaticManagedAdapterTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from acceptance_evidence import digest, source_identity, test_receipt
+from corpus_policy import policy_digest
 from importlib.util import module_from_spec, spec_from_file_location
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,7 +81,7 @@ def main() -> None:
             or allocator.get("generatedTemporaryAllocatorInvoked") is not True
             or allocator.get("generatedTextResult") != {"checks": 8, "nativeUtf8ByteLength": 5, "allocator": "example.generated-instance", "nativeReleases": 2, "moduleUnloads": 1}):
         raise RuntimeError("The real Runtime buffer and generated text consumers must prove matching native frees and retained module lifetime.")
-    selection_digest = digest(ROOT / "tests/corpus/upstream-limitations.json")
+    selection_digest = policy_digest(ROOT / "tests/corpus/upstream-limitations.json")
     for group, required in (("c", {"miniaudio", "sdl3", "cimgui", "cimguizmo", "bgfx"}), ("cpp", {"bimg"})):
         value = receipt("corpus-" + group, output / ("corpus-" + group + ".json"))
         if {item["libraryId"] for item in value.get("libraries", [])} != required or not all(

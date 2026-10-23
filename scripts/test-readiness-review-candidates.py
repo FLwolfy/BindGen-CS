@@ -12,6 +12,33 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ReadinessCandidateTests(unittest.TestCase):
+    def test_source_indexes_resolve_canonical_owners_and_extension_records_without_certifying_them(self):
+        directory = ROOT / 'eng/acceptance'
+        inventory = json.loads((directory / 'feature-inventory.json').read_text(encoding='utf-8'))
+        index = json.loads((directory / 'feature-evidence-map.json').read_text(encoding='utf-8'))
+        self.assertEqual('eng/acceptance/feature-inventory.json', index['canonicalInventory'])
+        self.assertFalse(index['currentRevisionCertified'])
+        self.assertEqual([row['featureId'] for row in inventory['features']], [row['featureId'] for row in index['features']])
+        def resolve(document, pointer):
+            for part in pointer.removeprefix('#/').split('/'):
+                document = document[int(part)] if isinstance(document, list) else document[part]
+            return document
+        for row in index['features']:
+            canonical = resolve(inventory, row['inventoryPointer'])
+            self.assertEqual(row['featureId'], canonical['featureId'])
+            self.assertEqual(canonical['owner'], resolve(inventory, row['ownerPointer']))
+            self.assertEqual(canonical['implementation'], resolve(inventory, row['implementationPointer']))
+            self.assertEqual(canonical['releaseEvidence'], resolve(inventory, row['releaseEvidencePointer']))
+        manifest = json.loads((ROOT / 'distribution/manifests/product-packages.json').read_text(encoding='utf-8'))
+        extensions = json.loads((directory / 'extension-capabilities.json').read_text(encoding='utf-8'))
+        self.assertFalse(extensions['currentRevisionCertified'])
+        self.assertEqual(set(manifest['optionalProducts']), {row['assembly'] for row in extensions['extensions'] if row['kind'] == 'optional'})
+        for row in extensions['extensions']:
+            self.assertEqual(manifest['assemblyProjects'][row['assembly']], resolve(manifest, row['projectPointer']))
+            self.assertTrue((ROOT / row['registrationSource']).is_file())
+            self.assertTrue((ROOT / row['publicApi']).is_file())
+        self.assertTrue((ROOT / extensions['registrationDocumentation']).is_file())
+
     def fixture(self):
         method = 'Example.Tests.ValueCases.Values'
         test = {'project': 'Example.Tests', 'method': method, 'requiredCases': [method + '(mode: 1)', method + '(mode: 2)']}

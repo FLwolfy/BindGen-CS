@@ -2,7 +2,7 @@
 
 [Wiki](README.md) | [中文](configuration-guide.cn.md) | [Generated field reference](generated/config-reference.md)
 
-BGCS 3.0 uses one strict grouped `bindgen.json` for C and C++. The generator, Runtime
+BGCS 4.0 uses one strict grouped `bindgen.json` for C and C++. The generator, Runtime
 and default consumers use .NET 10 / C# 14. Configuration values become an immutable
 session input; services and parser handles do not live in that input. The complete
 installed schema is authoritative for field names and defaults:
@@ -10,7 +10,7 @@ installed schema is authoritative for field names and defaults:
 ```bash
 bindgen-cs schema bindgen.schema.json
 bindgen-cs schema workspace.schema.json --kind workspace
-bindgen-cs schema plugin.schema.json --kind plugin
+bindgen-cs schema extension.schema.json --kind extension
 ```
 
 The [English](generated/config-reference.md) and [Chinese](generated/config-reference.cn.md)
@@ -20,7 +20,7 @@ requires a built tool, exports that schema into an owned temporary directory, an
 
 The schema rejects unknown built-in fields. Plugin options are accepted only in their
 registered plugin namespace after bootstrap. There is no global unknown-field bypass.
-Only `schemaVersion: 1` is accepted; old flat configuration and facade APIs are not read.
+Only `schemaVersion: 2` is accepted; old configuration and facade APIs are not read.
 The schema validates documents and fragments, while final validation checks the fully
 composed source, library identities, targets, semantics and execution limits.
 
@@ -40,21 +40,36 @@ composed source, library identities, targets, semantics and execution limits.
 
 ```json
 {
-  "schemaVersion": 1,
-  "library": { "id": "sample", "nativeName": "sample" },
+  "schemaVersion": 2,
+  "library": {
+    "id": "sample",
+    "nativeName": "sample"
+  },
   "source": {
     "language": "c",
     "languageStandard": "c17",
-    "headers": ["include/sample.h"],
-    "includeDirectories": ["include"]
+    "headers": [
+      "include/sample.h"
+    ],
+    "includeDirectories": [
+      "include"
+    ]
   },
-  "targets": [{ "id": "host" }],
+  "targets": [
+    {
+      "id": "host"
+    }
+  ],
   "api": {
     "namespace": "Example.Sample",
     "name": "SampleApi",
-    "names": { "sample_add": "Add" }
+    "names": {
+      "sample_add": "Add"
+    }
   },
-  "output": { "root": "Generated" }
+  "output": {
+    "root": "Generated"
+  }
 }
 ```
 
@@ -104,11 +119,14 @@ SDK facts follow the **target**. Clang parsing does not require a
 Clang final compiler. Using MSVC or GNU still requires matching headers and target ABI.
 Do not mix host standard-library headers into a cross-target request.
 
-`api.runtime` can select `coreClr`, `nativeAot` or `browserWasm`; omitting it lets the
-runtime resolver choose the appropriate target default. Managed runtime and import mode
-participate in capability checks. Browser Wasm emits an explicit static export-table adapter for the consumer to
-link, rather than assuming desktop dynamic loading. GNU and musl are distinct ABI identities. Android SDK/API levels and Apple device/simulator SDK requirements
-cannot be proven from a short target or RID string.
+`api.runtime` selects an open runtime ID, such as `dotnet.coreclr`,
+`dotnet.native-aot` or `dotnet.mono-wasm`. Register the optional implementation before
+selecting it. The standard composition supplies a CoreCLR default only for its
+supported desktop targets; custom and additional targets require an applicable
+explicit profile. Runtime and import capabilities are checked together. Browser
+Wasm uses a static export-table adapter for the consumer to link. GNU and musl are
+distinct ABI identities. SDK versions and device/simulator requirements cannot be
+proven from a short target or RID string.
 
 Use `doctor`, `inspect` and the [capability evidence](capabilities.md) to review actual
 resolved facts. Missing prerequisites are diagnosed; BGCS does not implicitly download
@@ -118,7 +136,7 @@ SDKs or compiler installations.
 
 `api.namespace`, `name` and `names` control managed identity independently of parsing.
 Use exact native names or unambiguous qualified callable names for mappings. A C++
-export-name override belongs to `cpp.callableLowerings`; changing only a managed name
+export-name override belongs to `bridge.callableLowerings`; changing only a managed name
 must not change the native ABI.
 
 All import modes consume the same checked interop contracts. FunctionTable loads the
@@ -146,13 +164,22 @@ original native carrier. This example preserves a high bit in a C `uint64_t` typ
 ```json
 {
   "api": {
-    "enums": [{
-      "name": "WideFlags",
-      "underlyingType": "uInt64",
-      "isFlags": true,
-      "values": [{ "name": "HighBit", "value": "1152921504606846976" }]
-    }],
-    "enumMappings": { "bgcs_wide_flags": "WideFlags" }
+    "enums": [
+      {
+        "name": "WideFlags",
+        "underlyingType": "uInt64",
+        "isFlags": true,
+        "values": [
+          {
+            "name": "HighBit",
+            "value": "1152921504606846976"
+          }
+        ]
+      }
+    ],
+    "enumMappings": {
+      "bgcs_wide_flags": "WideFlags"
+    }
   }
 }
 ```
@@ -169,12 +196,22 @@ explicit field copies. For example:
 ```json
 {
   "api": {
-    "externalTypes": [{
-      "nativeType": "NativeVector_int",
-      "managedType": "Consumer.NativeVector<int>",
-      "fields": { "size": "Size", "capacity": "Capacity", "data": "Data" }
-    }],
-    "projectionInputs": { "sources": ["ConsumerTypes.cs"] }
+    "externalTypes": [
+      {
+        "nativeType": "NativeVector_int",
+        "managedType": "Consumer.NativeVector<int>",
+        "fields": {
+          "size": "Size",
+          "capacity": "Capacity",
+          "data": "Data"
+        }
+      }
+    ],
+    "projectionInputs": {
+      "sources": [
+        "ConsumerTypes.cs"
+      ]
+    }
   }
 }
 ```
@@ -203,19 +240,21 @@ A complete string assertion can be expressed as:
 ```json
 {
   "semantics": {
-    "stringParameters": [{
-      "function": "sample_set_name",
-      "parameter": "name",
-      "encoding": "utf8",
-      "codeUnitWidth": 1,
-      "byteOrder": "native",
-      "lengthUnit": "codeUnits",
-      "direction": "input",
-      "lifetime": "call",
-      "zeroTerminated": true,
-      "retainsPointer": false,
-      "allowsNull": false
-    }]
+    "stringParameters": [
+      {
+        "function": "sample_set_name",
+        "parameter": "name",
+        "encoding": "utf8",
+        "codeUnitWidth": 1,
+        "byteOrder": "native",
+        "lengthUnit": "codeUnits",
+        "direction": "input",
+        "lifetime": "call",
+        "zeroTerminated": true,
+        "retainsPointer": false,
+        "allowsNull": false
+      }
+    ]
   }
 }
 ```
@@ -320,7 +359,7 @@ and exact symbols, then uses ordinary parse/build/publication stages. Abstract v
 interfaces require explicit finite callback slots and a native proxy lifetime protocol.
 
 [The C++ cookbook](cpp-extension-cookbook.md), [lowering architecture](lowering.md),
-[Contracts-only plugin](../examples/LoweringPlugin/README.md) and
+[Core-only plugin](../examples/LoweringPlugin/README.md) and
 [generated C++ group reference](generated/cpp-config-reference.md) cover the concrete DTOs.
 An unsupported variadic signature needs an explicit fixed native wrapper with correct C
 argument promotions. A nontrivial C++ record must not be mapped to a same-sized managed
@@ -343,7 +382,7 @@ use separate API-local namespaces; a custom namespace is an explicit collision r
 
 ## Local composition, profiles and path ownership
 
-`extends` lists local configuration paths composed in declaration order. Paths resolve from the document which declares them; URLs are not loaded. Named profiles apply after local composition. Cycles, unknown properties and conflicts must be repaired explicitly. `GenerationRequest.FromFileAsync(path, cancellationToken: token)` supports cancellation of local reads.
+`extends` lists local configuration paths composed in declaration order. Paths resolve from the document which declares them; URLs are not loaded. Named profiles apply after local composition. Cycles, unknown properties and conflicts must be repaired explicitly. `GenerationRequest.FromFile(path)` defers reads to the selected host; pass `token` to `GenerateAsync` to cancel both configuration loading and generation.
 
 ## Plugin bootstrap and cache policy
 
@@ -353,7 +392,7 @@ loads descriptors/schema before validating plugin settings and custom target cho
 factories register neutral services, then the registry freezes. Duplicates, exclusive matches
 and conflicting output paths fail deterministically.
 
-Ordinary plugins use `BGCS.Contracts`; a Clang-specific fact contributor is an explicit
+Ordinary plugins use `BGCS.Core`; a Clang-specific fact contributor is an explicit
 worker-only advanced extension. Host and worker resource ownership stay separate. A normal
 plugin process/load boundary is not a security sandbox.
 
@@ -388,7 +427,9 @@ A cache hit cannot skip this request's required build or invocation validation.
   "execution": {
     "diagnostics": {
       "warningsAsErrors": false,
-      "errorCodes": ["BGCS-SAFETY-OWNERSHIP"]
+      "errorCodes": [
+        "BGCS-SAFETY-OWNERSHIP"
+      ]
     }
   }
 }
@@ -413,8 +454,17 @@ or validation failure must not publish a partial successful artifact set.
   "schemaVersion": 1,
   "parallelism": 2,
   "projects": [
-    { "id": "core", "configuration": "core/bindgen.json" },
-    { "id": "addon", "configuration": "addon/bindgen.json", "dependencies": ["core"] }
+    {
+      "id": "core",
+      "configuration": "core/bindgen.json"
+    },
+    {
+      "id": "addon",
+      "configuration": "addon/bindgen.json",
+      "dependencies": [
+        "core"
+      ]
+    }
   ]
 }
 ```
@@ -449,11 +499,34 @@ Ownership and presentation are independent inputs. For a native
 ```json
 {
   "semantics": {
-    "ownedResults": [{ "function": "widget_create", "releaseFunction": "widget_destroy", "releaseDomain": "widget", "releaseThreadDomain": "any" }],
-    "borrowedParameters": [{ "function": "widget_get", "parameter": "self", "lifetime": "call", "retainsPointer": false }]
+    "ownedResults": [
+      {
+        "function": "widget_create",
+        "releaseFunction": "widget_destroy",
+        "releaseDomain": "widget",
+        "releaseThreadDomain": "any"
+      }
+    ],
+    "borrowedParameters": [
+      {
+        "function": "widget_get",
+        "parameter": "self",
+        "lifetime": "call",
+        "retainsPointer": false
+      }
+    ]
   },
   "api": {
-    "memberFunctions": [{ "function": "widget_get", "nativeType": "Widget", "receiver": "self", "objectName": "WidgetObject", "name": "Get", "releaseDomain": "widget" }]
+    "memberFunctions": [
+      {
+        "function": "widget_get",
+        "nativeType": "Widget",
+        "receiver": "self",
+        "objectName": "WidgetObject",
+        "name": "Get",
+        "releaseDomain": "widget"
+      }
+    ]
   }
 }
 ```
@@ -480,23 +553,32 @@ native facts, add native enum members or change an enum's native storage width.
 {
   "api": {
     "emitLibraryNameConstant": true,
-    "constants": [{
-      "constant": "NATIVE_VALUE",
-      "name": "PresentedValue",
-      "managedType": "long",
-      "documentation": "An explicitly asserted managed value.",
-      "expression": "6L * 7L + 1L"
-    }],
-    "nativeEnums": [{
-      "nativeType": "NativeMode",
-      "name": "Mode",
-      "documentation": "Public names for the original native enum carrier.",
-      "values": [{
-        "member": "NATIVE_MODE_FIRST",
-        "name": "First",
-        "value": { "kind": "integer", "value": "11" }
-      }]
-    }]
+    "constants": [
+      {
+        "constant": "NATIVE_VALUE",
+        "name": "PresentedValue",
+        "managedType": "long",
+        "documentation": "An explicitly asserted managed value.",
+        "expression": "6L * 7L + 1L"
+      }
+    ],
+    "nativeEnums": [
+      {
+        "nativeType": "NativeMode",
+        "name": "Mode",
+        "documentation": "Public names for the original native enum carrier.",
+        "values": [
+          {
+            "member": "NATIVE_MODE_FIRST",
+            "name": "First",
+            "value": {
+              "kind": "integer",
+              "value": "11"
+            }
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -583,18 +665,24 @@ input while preserving `Add(int, int)`:
 {
   "api": {
     "nestGeneratedTypesInApi": true,
-    "functions": [{
-      "function": "add",
-      "inputVariations": [{
-        "parameters": [{
-          "parameter": "left",
-          "projection": {
-            "managedType": "long",
-            "managedToNativeExpression": "checked((int){value})"
+    "functions": [
+      {
+        "function": "add",
+        "inputVariations": [
+          {
+            "parameters": [
+              {
+                "parameter": "left",
+                "projection": {
+                  "managedType": "long",
+                  "managedToNativeExpression": "checked((int){value})"
+                }
+              }
+            ]
           }
-        }]
-      }]
-    }]
+        ]
+      }
+    ]
   }
 }
 ```
@@ -621,16 +709,34 @@ verified native lifetime or ownership semantics.
   "source": {
     "selection": {
       "categories": [
-        { "category": "callables", "includeDeclarations": ["read", "write"] },
-        { "category": "records", "includeDeclarations": ["Packet"] }
+        {
+          "category": "callables",
+          "includeDeclarations": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "category": "records",
+          "includeDeclarations": [
+            "Packet"
+          ]
+        }
       ]
     }
   },
   "api": {
     "naming": {
       "replacements": [
-        { "match": "Http", "replacement": "HTTP", "ignoreCase": true },
-        { "match": "Internal", "replacement": "" }
+        {
+          "match": "Http",
+          "replacement": "HTTP",
+          "ignoreCase": true
+        },
+        {
+          "match": "Internal",
+          "replacement": ""
+        }
       ]
     }
   }
@@ -666,10 +772,20 @@ Declare encoding and extent independently from the native ownership protocol:
 {
   "semantics": {
     "ownedResults": [
-      { "function": "get_text", "releaseFunction": "free_text", "releaseDomain": "library-text", "releaseThreadDomain": "any" }
+      {
+        "function": "get_text",
+        "releaseFunction": "free_text",
+        "releaseDomain": "library-text",
+        "releaseThreadDomain": "any"
+      }
     ],
     "stringResults": [
-      { "function": "get_text", "encoding": "utf8", "zeroTerminated": true, "allowsNull": false }
+      {
+        "function": "get_text",
+        "encoding": "utf8",
+        "zeroTerminated": true,
+        "allowsNull": false
+      }
     ]
   }
 }
@@ -716,12 +832,20 @@ The enum and each value accept optional plain-text `documentation`:
 ```json
 {
   "api": {
-    "enums": [{
-      "name": "Status",
-      "underlyingType": "uInt32",
-      "documentation": "Application status values.",
-      "values": [{ "name": "Ready", "value": "1", "documentation": "The operation is ready." }]
-    }]
+    "enums": [
+      {
+        "name": "Status",
+        "underlyingType": "uInt32",
+        "documentation": "Application status values.",
+        "values": [
+          {
+            "name": "Ready",
+            "value": "1",
+            "documentation": "The operation is ready."
+          }
+        ]
+      }
+    ]
   }
 }
 ```

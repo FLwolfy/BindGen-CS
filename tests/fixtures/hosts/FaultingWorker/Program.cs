@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Infrastructure.Workers;
+using BGCS.Frontend.Clang;
+using BGCS.Frontend.Clang.Workers;
 
 Stream input = Console.OpenStandardInput();
 Stream output = Console.OpenStandardOutput();
@@ -21,8 +23,8 @@ if (args.Length > 0 && args[0] == "--child")
     return;
 }
 string version = typeof(FrontendWorkerClient).Assembly.GetName().Version!.ToString();
-await WorkerProtocol.WriteAsync(output, new WorkerHandshake(WorkerProtocol.C_REVISION, BGCS.Contracts.Versioning.ModelRevision.C_NATIVE, version,
-    WorkerProtocol.C_PARSER_IDENTITY, RuntimeInformation.RuntimeIdentifier), CancellationToken.None);
+await WorkerProtocol.WriteAsync(output, new WorkerHandshake(WorkerProtocol.C_REVISION, BGCS.Core.Versioning.ModelRevision.C_NATIVE, version,
+    ClangParserIdentity.C_IDENTITY, RuntimeInformation.RuntimeIdentifier), CancellationToken.None);
 WorkerParseRequest envelope = await WorkerProtocol.ReadAsync<WorkerParseRequest>(input, CancellationToken.None);
 switch (envelope.request.headers[0])
 {

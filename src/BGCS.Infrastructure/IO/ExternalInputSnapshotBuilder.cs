@@ -5,8 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Hosting;
 
 namespace BGCS.Infrastructure.IO;
 
@@ -16,21 +17,23 @@ public sealed class ExternalInputSnapshotBuilder
     /// <summary>Captures all explicitly declared external files and complete directory content closures.</summary>
     /// <param name="inputs">The complete immutable declarations relevant to the affected stage.</param>
     /// <param name="pathBase">The captured absolute base for local input paths.</param>
+    /// <param name="paths">The explicitly selected host path identity service.</param>
     /// <param name="cancellationToken">Cancels traversal and hashing.</param>
     /// <returns>A detached snapshot that can be rechecked before cache reuse or publication.</returns>
     public SourceSnapshot Capture(
         ImmutableArray<DeclaredExternalInput> inputs,
         string pathBase,
+        IHostPathService paths,
         CancellationToken cancellationToken = default
     ) {
         if (inputs.IsDefault) throw new ArgumentException("External inputs must be an initialized immutable collection.", nameof(inputs));
         ArgumentException.ThrowIfNullOrWhiteSpace(pathBase);
         if (!Path.IsPathFullyQualified(pathBase)) throw new ArgumentException("External inputs require an absolute captured path base.", nameof(pathBase));
-        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        IEqualityComparer<string> comparer = paths.comparer;
         Dictionary<string, InputDependency> files = new(comparer);
         Dictionary<string, DirectoryInputDependency> directories = new(comparer);
         Dictionary<string, MissingInputDependency> missing = new(comparer);
-        PhysicalPathResolver.ResolutionScope? paths = null;
+        PhysicalPathResolver.ResolutionScope? resolution = null;
         foreach (DeclaredExternalInput input in inputs)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -43,20 +46,20 @@ public sealed class ExternalInputSnapshotBuilder
             {
                 if (File.Exists(path) || Directory.Exists(path)) throw new IOException("An external input has the wrong filesystem kind.");
                 if (!input.allowMissing) throw new FileNotFoundException("A required external input is missing.", path);
-                missing[path] = new(path, PhysicalPathResolver.Resolve(path));
+                missing[path] = new(path, PhysicalPathResolver.Resolve(path, paths));
                 continue;
             }
             if (input.kind == ExternalInputKind.File) AddFile(path);
             else
             {
-                directories[path] = DirectoryMembershipDigest.Capture(path, cancellationToken: cancellationToken);
+                directories[path] = DirectoryMembershipDigest.CaptureWithinBoundary(path, paths, null, cancellationToken);
                 HashSet<string> visited = new(comparer);
                 Stack<string> pending = new();
                 pending.Push(path);
                 while (pending.TryPop(out string? directory))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!visited.Add((paths ??= new()).Resolve(directory, cancellationToken))) continue;
+                    if (!visited.Add((resolution ??= new(paths)).Resolve(directory, cancellationToken))) continue;
                     foreach (FileSystemInfo entry in new DirectoryInfo(directory).EnumerateFileSystemInfos())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -69,16 +72,17 @@ public sealed class ExternalInputSnapshotBuilder
         SourceSnapshot snapshot = new(files.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray(),
             directories.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray())
         { absentInputs = missing.Values.OrderBy(input => input.path, StringComparer.Ordinal).ToImmutableArray() };
+        snapshot = InputPathSemanticsSnapshot.CaptureWithinBoundary(snapshot, paths);
         // Recheck the capture-local component observations independently before
         // the existing second complete byte, absence and membership verification.
-        paths?.Verify(cancellationToken);
-        if (!SourceSnapshotVerifier.Matches(snapshot, cancellationToken)) throw new IOException("External inputs changed while their snapshot was being captured.");
+        resolution?.Verify(cancellationToken);
+        if (!SourceSnapshotVerifier.Matches(snapshot, paths, cancellationToken)) throw new IOException("External inputs changed while their snapshot was being captured.");
         return snapshot;
 
         void AddFile(string path)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string physical = (paths ??= new()).Resolve(path, cancellationToken);
+            string physical = (resolution ??= new(paths)).Resolve(path, cancellationToken);
             using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.SequentialScan);
             InputDependency dependency = new(path, physical, stream.Length, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(stream))));
             if (files.TryGetValue(path, out InputDependency? previous) && previous != dependency) throw new IOException("An external file changed during dependency discovery.");

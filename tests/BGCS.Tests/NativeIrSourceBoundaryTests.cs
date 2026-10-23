@@ -3,12 +3,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -42,7 +42,7 @@ public sealed class NativeIrSourceBoundaryTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "ir-source-boundary", nativeName = "ir_source_boundary" },
+                schemaVersion = 2, library = new() { id = "ir-source-boundary", nativeName = "ir_source_boundary" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.IrSource", name = "SourceApi", importMode = mode },
                 semantics = new() { callbackParameters = [new() { function = "NativeInvoke", parameter = "callback", lifetime = NativeLifetimeKind.Call,
@@ -56,7 +56,7 @@ public sealed class NativeIrSourceBoundaryTests
             NativeDeclaration declaration = Assert.Single(target.native.declarations, declaration => declaration.name == "NativeInvoke");
             if (OperatingSystem.IsWindows()) Assert.Contains(declaration.attributes, attribute => attribute.Contains("dllimport", StringComparison.OrdinalIgnoreCase));
             Assert.Single(target.native.types, type => type.category == NativeTypeCategory.Alias && type.spelling == "NativeHandler");
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new("ir_source_boundary", new UnusedSink()) { importMode = mode });
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new("ir_source_boundary", new UnusedSink()) { importMode = mode });
             CSharpAbiDelegatePlan abi = Assert.Single(plan.abiDelegates);
             CSharpCallbackMethodPlan callback = Assert.Single(plan.callScopedCallbacks);
             Assert.Equal("NativeInvoke", plan.methods[callback.methodIndex].exportName);
@@ -80,7 +80,7 @@ public sealed class NativeIrSourceBoundaryTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0")).Build();
     }
 
     private sealed class UnusedSink : IArtifactSink

@@ -38,7 +38,7 @@ def prepare(dotnet: str, version: str, root: Path, work: Path, evidence: Path, r
     manifest.write_text(json.dumps({
         "schemaVersion": 1, "assembly": "ClangFactPlugin.dll", "entryType": "ClangFactFixture.FingerprintedFactPlugin",
         "workerOnly": True, "workerParserIdentity": parser_identity,
-        "plugin": {"id": "clang.fixture", "version": "1.0.0", "contractsMajor": 3,
+        "plugin": {"id": "clang.fixture", "version": "1.0.0", "contractsMajor": 4,
             "services": [{"id": "clang.fixture.facts", "port": "frontendFactContributor", "priority": 0}],
             "configurationSchema": {"type": "object", "additionalProperties": False, "required": ["externalFile"],
                 "properties": {"externalFile": {"type": "string", "minLength": 1}, "mode": {"type": "string"}}}},
@@ -50,7 +50,7 @@ def prepare(dotnet: str, version: str, root: Path, work: Path, evidence: Path, r
     external = source / "external.txt"
     external.write_text("installed-worker-input", encoding="utf-8")
     configuration = {
-        "schemaVersion": 1, "library": {"id": "advanced_worker", "nativeName": "advanced_worker"},
+        "schemaVersion": 2, "library": {"id": "advanced_worker", "nativeName": "advanced_worker"},
         "source": {"language": "c", "headers": [str(source / "native.h")],
             "includeDirectories": [str(source)], "parseMacros": False},
         "api": {"namespace": "Package.AdvancedWorker", "name": "NativeApi"},
@@ -68,8 +68,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using BGCS;
-await using BindingHost host = BindingHost.CreateDefault();
-GenerationRequest request = await GenerationRequest.FromFileAsync("bindgen.json");
+await using BindingHost host = BindingGenerator.CreateDefault();
+GenerationRequest request = GenerationRequest.FromFile("bindgen.json");
 GenerationResult result = await host.GenerateAsync(request);
 if (!result.success) throw new InvalidOperationException(result.GetDiagnosticSummary());
 if (AssemblyLoadContext.Default.Assemblies.Any(assembly => assembly.GetName().Name == "ClangFactPlugin"))

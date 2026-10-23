@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using BGCS.Contracts;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Interop;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
 
 namespace BGCS.CSharp.Emission;
 
@@ -16,6 +16,17 @@ internal static class FriendlyApiEmitter
     internal static string Emit(
         CSharpEmissionPlan plan,
         EmissionRequest request
+    ) => EmitCore(plan, request, signatureInspection: false);
+
+    internal static string EmitForSignatureInspection(
+        CSharpEmissionPlan plan,
+        EmissionRequest request
+    ) => EmitCore(plan, request, signatureInspection: true);
+
+    private static string EmitCore(
+        CSharpEmissionPlan plan,
+        EmissionRequest request,
+        bool signatureInspection
     ) {
         Dictionary<StableId, InteropFunction> nativeExports = plan.api.interop.functions.ToDictionary(function => function.id);
         Dictionary<StableId, ManagedMember> members = plan.api.methods.ToDictionary(member => member.nativeExport);
@@ -38,8 +49,17 @@ internal static class FriendlyApiEmitter
                     type,
                     index
                 ) => (member.stringInputs.Contains(function.parameters[index].id)
-                    ? function.parameters[index].text!.allowsNull == true ? "string?" : "string" : RecipeConversionEmitter.InputType(method, index)) + " " + method.parameterNames[index]))).AppendLine(")")
-                .AppendLine("    {");
+                    ? function.parameters[index].text!.allowsNull == true ? "string?" : "string" : RecipeConversionEmitter.InputType(method, index)) + " " + method.parameterNames[index]))).AppendLine(")");
+            // The reader compares only this exact declaration for plain forwarders.
+            // Conversion and resource-bearing methods retain their complete emitter path.
+            if (signatureInspection && method.stringInputs.IsDefaultOrEmpty && method.valueProjections.IsEmpty
+                && method.returnProjection is null && method.bufferInputs.IsDefaultOrEmpty && method.bufferProtocols.IsDefaultOrEmpty
+                && method.valueParameters.IsDefaultOrEmpty && method.copiedResultIndex is null && member.stringInputs.IsDefaultOrEmpty)
+            {
+                text.AppendLine("    ;");
+                continue;
+            }
+            text.AppendLine("    {");
             string[] arguments = method.parameterNames.ToArray();
             for (int index = 0; index < arguments.Length; index++) arguments[index] = RecipeConversionEmitter.Input(method, index, arguments[index]);
             TextInputEmitter.Append(text, method, request.runtimeNamespace, arguments);

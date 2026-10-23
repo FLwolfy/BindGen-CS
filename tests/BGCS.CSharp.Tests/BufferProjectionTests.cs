@@ -1,10 +1,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Projection;
 using Xunit;
 
@@ -47,11 +47,11 @@ public sealed class BufferProjectionTests
         };
         InteropParameter data = new(new("data"), "data", pointer.id) { buffer = invalid };
         InteropFunction function = new(new("sum"), "sum", integer.id, [data, length], "C");
-        InteropModule module = new("buffers", "windows-x64-msvc", 8, [integer, octet, constant, pointer], [function], []);
+        InteropModule module = new("buffers", "windows-x64-msvc", 8, [integer, octet, constant, pointer], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Buffers", "BufferApi"), CancellationToken.None);
         Assert.Empty(Assert.Single(model.methods).bufferInputs);
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         Assert.Contains("public int Sum(int* data, byte length)", sink.sources["Api/BufferApi.Raw.g.cs"]);
         Assert.DoesNotContain("public int Sum", sink.sources["Api/BufferApi.Methods.g.cs"]);
     }

@@ -1,0 +1,2 @@
+
+[[noreturn]] void x() {};

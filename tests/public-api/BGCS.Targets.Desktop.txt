@@ -1,0 +1,51 @@
+class BGCS.Targets.Desktop.Capabilities.PlatformCapabilityCatalog [abstract; sealed]
+  method BGCS.Core.Targets.TargetCapabilities Get(BGCS.Core.Targets.NativeTargetDescriptor target) [static]
+class BGCS.Targets.Desktop.DesktopTargetProvider [sealed; interfaces=BGCS.Core.Plugins.ICacheFingerprintProvider|BGCS.Core.Plugins.IExternalInputProvider|BGCS.Core.Targets.INativeTargetProvider]
+  ctor()
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Boolean TryResolve(BGCS.Core.Targets.NativeTargetRequest request, out BGCS.Core.Targets.NativeTargetDescriptor target) [virtual; final]
+  method System.Collections.Immutable.ImmutableArray<BGCS.Core.Inputs.DeclaredExternalInput> GetExternalInputs(BGCS.Core.Plugins.ExternalInputContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.Targets.Desktop.DesktopTargetsExtension [sealed; interfaces=BGCS.Core.Plugins.IBindingPlugin|BGCS.Core.Plugins.ICacheFingerprintProvider|System.IDisposable]
+  ctor()
+  property BGCS.Core.Plugins.PluginDescriptor descriptor { get } [virtual; final]
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
+  method System.Void Configure(BGCS.Core.Plugins.IExtensionRegistryBuilder registry, BGCS.Core.Plugins.PluginConfiguration configuration) [virtual; final]
+class BGCS.Targets.Desktop.Targeting.Providers.AppleNativeTargetProvider [sealed; interfaces=BGCS.Core.Targets.INativeTargetProvider]
+  ctor()
+  method System.Boolean TryResolve(BGCS.Core.Targets.NativeTargetRequest request, out BGCS.Core.Targets.NativeTargetDescriptor target) [virtual; final]
+class BGCS.Targets.Desktop.Targeting.Providers.UnixNativeTargetProvider [sealed; interfaces=BGCS.Core.Targets.INativeTargetProvider]
+  ctor()
+  method System.Boolean TryResolve(BGCS.Core.Targets.NativeTargetRequest request, out BGCS.Core.Targets.NativeTargetDescriptor target) [virtual; final]
+class BGCS.Targets.Desktop.Targeting.Providers.WindowsNativeTargetProvider [sealed; interfaces=BGCS.Core.Targets.INativeTargetProvider]
+  ctor()
+  method System.Boolean TryResolve(BGCS.Core.Targets.NativeTargetRequest request, out BGCS.Core.Targets.NativeTargetDescriptor target) [virtual; final]
+class BGCS.Targets.Desktop.Targeting.TargetResolver [sealed]
+  ctor()
+  ctor(System.Collections.Generic.IEnumerable<BGCS.Core.Targets.INativeTargetProvider> providers)
+  method BGCS.Core.Targets.NativeTargetDescriptor Resolve(BGCS.Core.Targets.NativeTargetRequest request)
+  method System.Boolean TryResolve(BGCS.Core.Targets.NativeTargetRequest request, out BGCS.Core.Targets.NativeTargetDescriptor target)
+  method System.Collections.Generic.IReadOnlyList<BGCS.Core.Targets.INativeTargetProvider> CreateBuiltInProviders() [static]
+class BGCS.Targets.Desktop.Toolchains.AppleSdkDiscovery [abstract; sealed]
+  method BGCS.Core.Targets.NativeTargetDescriptor Resolve(BGCS.Core.Targets.NativeTargetId targetId, System.String sdkRoot, System.String compilerPath [optional; default=null]) [static]
+  method System.String FindInstalledRoot(System.String sdkName) [static]
+class BGCS.Targets.Desktop.Toolchains.MsvcToolchainDiscovery [abstract; sealed]
+  method BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo Resolve(System.String compiler, System.String architecture, System.String sdkRoot [optional; default=null], System.String sdkVersion [optional; default=null]) [static]
+  method System.String FindCompiler(System.String architecture) [static]
+class BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo [sealed; interfaces=System.IEquatable<BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo>]
+  ctor(System.String compiler, System.Version compilerVersion, System.String sdkRoot, System.String sdkVersion, System.Collections.Immutable.ImmutableArray<System.String> includeDirectories)
+  property System.String compiler { get; init }
+  property System.Version compilerVersion { get; init }
+  property System.Collections.Immutable.ImmutableArray<System.String> includeDirectories { get; init }
+  property System.String sdkRoot { get; init }
+  property System.String sdkVersion { get; init }
+  method BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo <Clone>$()
+  method System.Boolean Equals(BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo other) [virtual; final]
+  method System.Boolean Equals(System.Object obj) [virtual]
+  method System.Boolean op_Equality(BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo left, BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo right) [static]
+  method System.Boolean op_Inequality(BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo left, BGCS.Targets.Desktop.Toolchains.MsvcToolchainInfo right) [static]
+  method System.Int32 GetHashCode() [virtual]
+  method System.String ToString() [virtual]
+  method System.Void Deconstruct(out System.String compiler, out System.Version compilerVersion, out System.String sdkRoot, out System.String sdkVersion, out System.Collections.Immutable.ImmutableArray<System.String> includeDirectories)
+class BGCS.Targets.Desktop.Toolchains.ToolchainResolver [abstract; sealed]
+  method BGCS.Core.Targets.NativeTargetDescriptor ResolveToolchain(BGCS.Core.Targets.NativeTargetDescriptor target, BGCS.Core.Inputs.SourceLanguage language) [static]
+  method System.Collections.Generic.IReadOnlyList<BGCS.Core.Targets.HeaderSearchPath> ResolveHeaderSearchPaths(BGCS.Core.Targets.NativeTargetDescriptor target, BGCS.Core.Inputs.SourceLanguage language) [static]

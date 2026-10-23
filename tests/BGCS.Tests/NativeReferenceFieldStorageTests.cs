@@ -1,3 +1,4 @@
+using BGCS.Frontend.Clang.Workers;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -5,10 +6,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Analysis.Interop;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
-using BGCS.Cpp2C.Emission;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
+using BGCS.NativeBridge.Emission;
 using BGCS.Infrastructure.Execution;
 using BGCS.Infrastructure.Workers;
 using Xunit;
@@ -34,7 +35,7 @@ public sealed class NativeReferenceFieldStorageTests
                 struct Variants { LargeReferent&& object; void (&function)(); void (&&rfunction)(); int tail; };
                 """);
             var target = NativeConsumerHarness.ParserTarget(SourceLanguage.Cpp);
-            NativeModule parsed = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"))
+            NativeModule parsed = (await new FrontendWorkerClient(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost())
                 .ParseAsync(new(target, SourceLanguage.Cpp, [header])
                 { pathBase = root, languageStandard = "c++23", parseMacros = false }, CancellationToken.None)).module;
             Assert.DoesNotContain(parsed.diagnostics, diagnostic => diagnostic.isFailure);
@@ -44,7 +45,7 @@ public sealed class NativeReferenceFieldStorageTests
             Assert.InRange(first.storageSize!.Value, 1, 63);
             Assert.Equal(EvidenceLevel.Declared, first.storageEvidence!.level);
             NativeModule observed = corruptStorage ? Copy(parsed, first with { storageSize = first.storageSize + 1 }) : parsed;
-            string proof = new NativeStorageAssertionEmitter().Emit(observed, [header]);
+            string proof = new NativeStorageAssertionEmitter().Emit(observed, [header], NativeAssertionConventions.For(observed));
             Assert.Contains("BGCS native reference field storage differs from parsed facts", proof);
             Assert.Contains("_type = decltype(((Variants*)nullptr)->function);", proof);
             Assert.Contains("_type = decltype(((Variants*)nullptr)->rfunction);", proof);
@@ -109,7 +110,7 @@ public sealed class NativeReferenceFieldStorageTests
             _ => "invalid field storage facts"
         }, StringComparison.Ordinal));
         if (condition is "missing" or "unproven" or "negative")
-            Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(module, []));
+            Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(module, [], new("", "", new("X86_64SysV", false))));
     }
 
     private static NativeModule Copy(NativeModule source, NativeDeclaration field)
@@ -122,6 +123,6 @@ public sealed class NativeReferenceFieldStorageTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

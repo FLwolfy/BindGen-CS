@@ -1,3 +1,4 @@
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -7,11 +8,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.CSharp;
 using Xunit;
 
@@ -27,7 +28,7 @@ public sealed class CacheExtensionRegressionTests
         using Workspace workspace = new();
         GenerationRequest request = new(new BindingConfiguration
         {
-            schemaVersion = 1,
+            schemaVersion = 2,
             library = new() { id = "extension_cache", nativeName = "extension_cache" },
             source = new() { headers = ["native.h"], parseMacros = false },
             api = new() { @namespace = "Generated.ExtensionCache", name = "ExtensionApi" }
@@ -43,8 +44,8 @@ public sealed class CacheExtensionRegressionTests
         }
         int calls = 0;
         BindingHostBuilder builder = Builder();
-        if (backend) builder.WithBackendFactory(() => new MarkerBackend(() => calls++));
-        else builder.AddArtifactProcessor("new-processor", 0, () => new MarkerProcessor(() => calls++));
+        if (backend) builder.RegisterFactory<IBindingBackend>(new("fixture.backend", ExtensionPort.BindingBackend), _ => new MarkerBackend(() => calls++));
+        else builder.RegisterFactory<IArtifactProcessor>(new("new-processor", ExtensionPort.ArtifactProcessor, 0), _ => new MarkerProcessor(() => calls++));
         await using BindingHost changed = builder.Build();
         GenerationResult result = await changed.GenerateAsync(request);
         Assert.True(result.success, result.GetDiagnosticSummary());
@@ -88,7 +89,7 @@ public sealed class CacheExtensionRegressionTests
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         Assert.NotNull(repository);
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(repository.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(repository.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
     }
 
     private sealed class Workspace : IDisposable

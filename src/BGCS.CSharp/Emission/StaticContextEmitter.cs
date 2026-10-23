@@ -1,6 +1,7 @@
 using System;
 using System.Text;
-using BGCS.Contracts.Requests;
+using System.Linq;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 
 namespace BGCS.CSharp.Emission;
@@ -21,8 +22,10 @@ internal static class StaticContextEmitter
         string runtime = "global::" + CSharpNames.Namespace(plan.runtimeNamespace);
         StringBuilder text = new();
         bool allocator = ContextEmitter.HasTemporaryAllocator(plan);
+        bool dispatcher = ContextEmitter.HasCallbackDispatcher(plan);
         text.Append("    public static ").Append(CSharpNames.Identifier(plan.contextName)).Append(" FromStatic(")
-            .Append(allocator ? ContextEmitter.TemporaryAllocatorParameter(plan.runtimeNamespace) : string.Empty).AppendLine(")")
+            .Append(string.Join(", ", new[] { dispatcher ? runtime + ".NativeCallbackDispatcher callbackDispatcher" : null,
+                allocator ? ContextEmitter.TemporaryAllocatorParameter(plan.runtimeNamespace) : null }.OfType<string>())).AppendLine(")")
             .AppendLine("    {")
             .Append("        if (StaticNativeAdapter.GetRevision() != 1u || StaticNativeAdapter.GetCount() != ").Append(table.exportNames.Length).AppendLine("u")
             .Append("            || StaticNativeAdapter.GetPointerSize() != ").Append(plan.api.interop.pointerSize).AppendLine("u")
@@ -39,6 +42,7 @@ internal static class StaticContextEmitter
             text.Append("        symbols[").Append(index).Append("] = new(").Append(ContextEmitter.Literal(table.exportNames[index]))
                 .Append(", unchecked((nint)StaticNativeAdapter.GetExport(").Append(index).AppendLine("u)));");
         text.Append("        return FromProvider(new ").Append(runtime).Append(".StaticModuleProvider(symbols)")
+            .Append(dispatcher ? ", callbackDispatcher" : string.Empty)
             .Append(allocator ? ", temporaryAllocatorFactory" : string.Empty).AppendLine(");")
             .AppendLine("    }").AppendLine("    private static class StaticNativeAdapter").AppendLine("    {");
         Import("GetExport", table.getExportSymbol, "nuint", "uint index");

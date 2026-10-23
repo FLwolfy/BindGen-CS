@@ -10,10 +10,10 @@ using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Projection;
 using BGCS.Runtime;
 using Microsoft.CodeAnalysis;
@@ -39,7 +39,7 @@ public sealed class ManagedRecipeProjectionTests
             recipeHelpers = [new("unused-count", "size_t", new("uint", "{value}", "checked((uint){value})"))]
         };
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         Assert.Contains("public long Add(long left, long right)", sink.sources["Api/NativeApi.Methods.g.cs"]);
         Assert.Contains("public int Add(int left, int right)", sink.sources["Api/NativeApi.Raw.g.cs"]);
         Assert.Contains("public static ulong ToNative_unused_count(uint value)", sink.sources["Extensions/ConfiguredLoweringProjections.g.cs"]);
@@ -60,7 +60,7 @@ public sealed class ManagedRecipeProjectionTests
         ManagedApiModel model = NeutralBackendTests.Model() with
         { recipeHelpers = [new("unused", "uint32_t", new("uint", "{value} +", "checked((uint){value})"))] };
         NeutralBackendTests.MemorySink sink = new();
-        InvalidOperationException failure = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        InvalidOperationException failure = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Contains("syntactically invalid", failure.Message);
         Assert.Empty(sink.sources);
     }
@@ -113,7 +113,7 @@ public sealed class ManagedRecipeProjectionTests
         { functions = [new("add") { parameters = [new("left", projection), new("right", projection)], returns = projection }] }, CancellationToken.None);
         Assert.Equal(2, model.methods[0].valueProjections.Length);
         NeutralBackendTests.MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type api = compiled.assembly.GetType("Generated.Example.NativeApi", true)!;
         using IDisposable instance = (IDisposable)api.GetMethod("FromProvider")!.InvokeFactory([new StaticModuleProvider(Exports())])!;

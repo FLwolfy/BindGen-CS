@@ -52,6 +52,12 @@ Cause: Preparing, identifying or reading an eligible generation cache failed.
 
 Resolution: Inspect the cache failure, choose a writable nonoverlapping cache directory, or disable caching while retaining ordinary generation and validation.
 
+## BGCS-CALL-ABI — Physical calling ABI is unsupported
+
+Cause: The selected ABI provider cannot establish a safe forward or reverse call for the final physical signature. The diagnostic retains the exact rejected native type location when supplied.
+
+Resolution: Use a supported pointer bridge or explicit native shim, or supply an applicable ABI implementation with an exact call plan. Do not substitute equal-sized storage for calling compatibility.
+
 ## BGCS-CONSTANT-OMITTED — Object macro has no supported scalar value
 
 Cause: The compiler did not establish a supported scalar constant for an object macro; its original replacement remains in native facts.

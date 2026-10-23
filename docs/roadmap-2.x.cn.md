@@ -1,4 +1,6 @@
-> 这是 2.x 的历史设计记录。旧 API 名称、评分及完成声明不代表 BGCS 3.0；请参阅[当前路线图](roadmap.cn.md)和[发布证据规则](release-evidence-state-flow.md)。
+> Historical design record. Superseded by [the current architecture](architecture.md) and [acceptance](acceptance.md); not a current capability or release receipt.
+
+> 这是 2.x 的历史设计记录。旧 API 名称、评分及完成声明不代表 BGCS 4.0；请参阅[当前路线图](roadmap.cn.md)和[发布证据规则](release-evidence-state-flow.md)。
 
 > 历史计划/检查点：下文保留原 revision 的范围与证据，不是当前使用说明或强制门禁。当前仅生成范围见[架构](architecture.cn.md)、[验收](acceptance.cn.md)和[路线](roadmap.cn.md)；移除职责不提供运行兼容层。
 
@@ -94,7 +96,7 @@
 
 ### Phase 4：C++ 语义 Bridge 与最终 Lowering SPI
 
-状态：声明的桌面子集已完成。内置 lowering、`typeLowerings` / `callableLowerings`、typed `ICppTypeLowering` / `ICppCallableLowering` / `ICppArtifactContributor` plugin 和显式 `nativeShims` 使用同一个确定性 registry。被取代的预发布 adapter SPI 已删除，没有 compatibility layer。
+状态：声明的桌面子集已完成。内置 lowering、`typeLowerings` / `callableLowerings`、typed `INativeTypeLowering` / `INativeCallableLowering` / `ICppArtifactContributor` plugin 和显式 `nativeShims` 使用同一个确定性 registry。被取代的预发布 adapter SPI 已删除，没有 compatibility layer。
 
 - 完整覆盖 ctor/dtor、static/instance、cv/ref qualifier、overload、operator、namespace 和异常边界。
 - inheritance graph、virtual/non-virtual base、pointer adjustment、RTTI 可用性形成显式模型。

@@ -1,3 +1,4 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections;
 using System.Collections.Frozen;
@@ -12,7 +13,8 @@ namespace BGCS.Infrastructure.IO;
 /// </summary>
 /// <remarks>
 /// Relative entries are resolved during construction. Membership queries resolve relative paths
-/// against the current working directory. Windows paths use case-insensitive comparison.
+/// against the current working directory. Component comparison follows the explicitly
+/// selected host's observed directory semantics.
 /// </remarks>
 public sealed class FileSet : IReadOnlySet<string>
 {
@@ -21,6 +23,7 @@ public sealed class FileSet : IReadOnlySet<string>
     /// <summary>
     /// Copies and normalizes the selected paths without retaining the caller's collection.
     /// </summary>
+    /// <param name="pathService">The explicitly selected host path service.</param>
     /// <param name="paths">
     /// Source file paths; duplicates collapse after absolute path normalization.
     /// </param>
@@ -30,11 +33,13 @@ public sealed class FileSet : IReadOnlySet<string>
     /// <exception cref="ArgumentException">
     /// An entry is empty or is not a valid path.
     /// </exception>
-    public FileSet(IEnumerable<string> paths)
-    {
+    public FileSet(
+        IEnumerable<string> paths,
+        IHostPathService pathService
+    ) {
         ArgumentNullException.ThrowIfNull(paths);
         m_paths = Normalize(paths).ToFrozenSet(
-            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            pathService.comparer);
     }
 
     /// <inheritdoc />

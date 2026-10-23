@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "scope": "C/C++ source generation with Contracts extension ports and binding-lifetime Runtime helpers",
   "authorization": "Explicit generator-only product scope; no removed requirement is certified as passing.",
-  "previousBaselineRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "previousBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
   "removedFeatures": [
     {
       "featureId": "native.objective-c-facts",
@@ -28,7 +28,7 @@
       "originalRequirement": {
         "featureId": "native-build.providers-and-artifact-validation",
         "owner": "BGCS.NativeBuild",
-        "basis": "tests/BGCS.Cpp2C.Tests/NativeBuildProviderTests.cs"
+        "basis": "tests/BGCS.NativeBridge.Tests/NativeBuildProviderTests.cs"
       }
     },
     {
@@ -65,7 +65,7 @@
       "reason": "Remote configuration URL transport is removed; local configuration composition remains.",
       "originalRequirement": {
         "configurationId": "CFG0001",
-        "source": "src/BGCS.Cpp2C/Configuration/BaseConfig.cs",
+        "source": "src/BGCS.NativeBridge/Configuration/BaseConfig.cs",
         "member": "url",
         "type": "string?"
       }
@@ -75,7 +75,7 @@
       "reason": "Native linker search directories belong to consumer/repository build tools.",
       "originalRequirement": {
         "configurationId": "CFG0035",
-        "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+        "source": "src/BGCS.NativeBridge/Configuration/Cpp2CGeneratorConfig.cs",
         "member": "librarySearchFolders",
         "type": "List<string>"
       }
@@ -85,7 +85,7 @@
       "reason": "Native link libraries belong to consumer/repository build tools.",
       "originalRequirement": {
         "configurationId": "CFG0036",
-        "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+        "source": "src/BGCS.NativeBridge/Configuration/Cpp2CGeneratorConfig.cs",
         "member": "linkLibraries",
         "type": "List<string>"
       }
@@ -95,7 +95,7 @@
       "reason": "Native linker options belong to consumer/repository build tools.",
       "originalRequirement": {
         "configurationId": "CFG0037",
-        "source": "src/BGCS.Cpp2C/Configuration/Cpp2CGeneratorConfig.cs",
+        "source": "src/BGCS.NativeBridge/Configuration/Cpp2CGeneratorConfig.cs",
         "member": "linkerArguments",
         "type": "List<string>"
       }
@@ -8286,7 +8286,7 @@
     },
     {
       "scope": "cpp-neutral-parity",
-      "id": "tests/BGCS.Cpp2C.Tests/Cpp2CEndToEndWorkflowTests.cs",
+      "id": "tests/BGCS.NativeBridge.Tests/Cpp2CEndToEndWorkflowTests.cs",
       "reason": "Remote configuration transport removed from product scope.",
       "evidence": {
         "path": "tests/BGCS.Tests/RemoteConfigurationTests.cs",
@@ -11868,5 +11868,7 @@
     "hostMappingScopeChangesSha256": "933dcb7e6253beb57a00a539f70a453416ca46fc36d7824082627ebc5d88a0f2",
     "releaseReady": false,
     "removedEvidenceCertified": false
-  }
+  },
+  "historicalDefinitionRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
+  "releaseReady": false
 }

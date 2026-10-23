@@ -1,0 +1,1249 @@
+{
+  "schemaVersion": 1,
+  "historicalBaseline": "Official immutable BGCS NuGet 3.0.1",
+  "notCurrentCertification": true,
+  "cases": [
+    {
+      "original": "AttributesTest/TestAnnotateAttributes.cs:TestAnnotateAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestAnnotateAttributes.TestAnnotateAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F074"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F074\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestAnnotateAttributes.cs:TestAnnotateAttributeInNamespace",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestAnnotateAttributes.TestAnnotateAttributeInNamespace"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F075"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F075\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestAnnotateAttributes.cs:TestAnnotateAttributeWithMacro",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestAnnotateAttributes.TestAnnotateAttributeWithMacro"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F076"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F076\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestMetaAttribute.cs:TestNamespaceMetaAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestMetaAttribute.TestNamespaceMetaAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F001"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F001\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestMetaAttribute.cs:TestClassMetaAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestMetaAttribute.TestClassMetaAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F002"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F002\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestMetaAttribute.cs:TestTemplateMetaAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestMetaAttribute.TestTemplateMetaAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F003"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F003\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F004"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F004\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestStructAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestStructAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F005"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F005\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11VarAlignas",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11VarAlignas"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F006"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F006\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11StructAlignas",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11StructAlignas"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F007"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F007\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11StructAlignasWithAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11StructAlignasWithAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F008"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F008\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11StructAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11StructAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F009"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F009\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11VariablesAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11VariablesAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F010"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F010\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11FunctionsAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11FunctionsAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F011"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F011\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11NamespaceAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11NamespaceAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F012"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F012\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11EnumAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11EnumAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F013"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F013\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCpp11TemplateStructAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCpp11TemplateStructAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F014"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F014\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestCppNoParseOptionsAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestCppNoParseOptionsAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F015"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F015\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestSystemAttributes.cs:TestClassPublicExportAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestSystemAttributes.TestClassPublicExportAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F077"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F077\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F016"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F016\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestStructAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestStructAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F017"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F017\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11VarAlignas",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11VarAlignas"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F018"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F018\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11StructAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11StructAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F019"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F019\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11StructAttributesWithMacro",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11StructAttributesWithMacro"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F020"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F020\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11VariablesAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11VariablesAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F021"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F021\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11FunctionsAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11FunctionsAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F022"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F022\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11FunctionsAttributesOnNewLine",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11FunctionsAttributesOnNewLine"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F023"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F023\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:FunctionAttributes_UseDeclaratorLocationWhenReturnTypeCallsSameName",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.FunctionAttributes_UseDeclaratorLocationWhenReturnTypeCallsSameName"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F024"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F024\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TypedefAttributes_BeforeCursorExtentAreParsed",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TypedefAttributes_BeforeCursorExtentAreParsed"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F025"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F025\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11NamespaceAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11NamespaceAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F026"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F026\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11EnumAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11EnumAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F027"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F027\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp11TemplateStructAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp11TemplateStructAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F028"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F028\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp17StructUnknownAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp17StructUnknownAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F029"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F029\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCommentParen",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCommentParen"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F030"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F030\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCommentParenWithAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCommentParenWithAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F031"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F031\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCommentWithAttributeCharacters",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCommentWithAttributeCharacters"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F032"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F032\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestAttributeInvalidBracketEnd",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestAttributeInvalidBracketEnd"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F033"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F033\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestAttributeInvalidParenEnd",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestAttributeInvalidParenEnd"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F034"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F034\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp17VarTemplateAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp17VarTemplateAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F035"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F035\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCpp17FunctionTemplateAttribute",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCpp17FunctionTemplateAttribute"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F036"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F036\")"
+      ]
+    },
+    {
+      "original": "AttributesTest/TestTokenAttributes.cs:TestCppNoParseOptionsAttributes",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTokenAttributes.TestCppNoParseOptionsAttributes"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F037"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F037\")"
+      ]
+    },
+    {
+      "original": "Documentation/TestComments.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestComments.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F038"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F038\")"
+      ]
+    },
+    {
+      "original": "Documentation/TestComments.cs:TestComplex",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestComments.TestComplex"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F039"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F039\")"
+      ]
+    },
+    {
+      "original": "Documentation/TestComments.cs:TestParen",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestComments.TestParen"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F040"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F040\")"
+      ]
+    },
+    {
+      "original": "Documentation/TestReadme.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestReadme.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F087"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F087\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestEnums.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestEnums.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F041"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F041\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestExpressions.cs:TestInitListExpression",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestExpressions.TestInitListExpression"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F042"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F042\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestExpressions.cs:TestBinaryExpressions",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestExpressions.TestBinaryExpressions"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F043"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F043\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestExpressions.cs:TestUnaryExpressions",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestExpressions.TestUnaryExpressions"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F044"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F044\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestExpressions.cs:TestBinaryOr",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestExpressions.TestBinaryOr"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F045"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F045\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestExpressions.cs:TestParameterDefaultValue",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestExpressions.TestParameterDefaultValue"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F046"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F046\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestExpressions.cs:TestNullPtrExpression",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestExpressions.TestNullPtrExpression"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F047"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F047\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F048"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F048\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestFunctionPrototype",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestFunctionPrototype"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F049"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F049\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestFunctionFields",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestFunctionFields"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F050"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F050\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestFunctionTypedefFields",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestFunctionTypedefFields"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F051"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F051\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestFunctionExport",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestFunctionExport"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F078"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F078\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestFunctionVariadic",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestFunctionVariadic"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F052"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F052\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestFunctionTemplate",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestFunctionTemplate"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F053"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F053\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestFunctions.cs:TestFunctionPointersByParam",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestFunctions.TestFunctionPointersByParam"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F054"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F054\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestGlobalVariables.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestGlobalVariables.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F055"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F055\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestMethods.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestMethods.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F056"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F056\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestNamespaces.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestNamespaces.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F057"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F057\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestNamespaces.cs:TestNamespacedTypedef",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestNamespaces.TestNamespacedTypedef"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F058"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F058\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestNamespaces.cs:TestNamespaceFindByFullName",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestNamespaces.TestNamespaceFindByFullName"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F079"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F079\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestNamespaces.cs:TestInlineNamespace",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestNamespaces.TestInlineNamespace"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F080"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F080\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestStructs.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestStructs.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F059"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F059\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestStructs.cs:TestAnonymous",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestStructs.TestAnonymous"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F060"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F060\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestStructs.cs:TestAnonymousUnion",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestStructs.TestAnonymousUnion"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F061"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F061\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestStructs.cs:TestAnonymousUnionWithField",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestStructs.TestAnonymousUnionWithField"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F062"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F062\")"
+      ]
+    },
+    {
+      "original": "Parsing/TestStructs.cs:TestAnonymousUnionWithField2",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestStructs.TestAnonymousUnionWithField2"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F063"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F063\")"
+      ]
+    },
+    {
+      "original": "Preprocessor/TestMacros.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestMacros.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F064"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F064\")"
+      ]
+    },
+    {
+      "original": "Preprocessor/TestPragma.cs:TestPragmaOnce",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestPragma.TestPragmaOnce"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F065"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F065\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypeAliases.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypeAliases.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F066"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F066\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypeAliases.cs:TestSquash",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypeAliases.TestSquash"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F081"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F081\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypeAliases.cs:TestTemplate",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypeAliases.TestTemplate"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F082"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F082\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypeAliases.cs:TestTemplateComplex",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypeAliases.TestTemplateComplex"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F083"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F083\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypedefs.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypedefs.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F067"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F067\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypedefs.cs:TestSquash",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypedefs.TestSquash"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F084"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F084\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:TestSimple",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.TestSimple"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F068"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F068\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:TestTemplateParameters",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.TestTemplateParameters"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F069"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F069\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:TemplateTemplateParameter_RetainsNestedSignature",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.TemplateTemplateParameter_RetainsNestedSignature"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F070"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F070\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:IncompleteArray_UsesUnboundExtentInsteadOfNegativeStorageSize",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.IncompleteArray_UsesUnboundExtentInsteadOfNegativeStorageSize"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F085"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F085\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:DependentArray_DoesNotPretendToHaveAConcreteExtent",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F086"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F086\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:TestTemplateInheritance",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.TestTemplateInheritance"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F071"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F071\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:TestTemplatePartialSpecialization",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.TestTemplatePartialSpecialization"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F072"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F072\")"
+      ]
+    },
+    {
+      "original": "Types/TestTypes.cs:TestClassPrototype",
+      "replacement": "PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase",
+      "cases": [
+        "TestTypes.TestClassPrototype"
+      ],
+      "scope": "public detached source facts; private mutable AST formatting/options are not a supported API",
+      "publicCaseIds": [
+        "F073"
+      ],
+      "requiredCases": [
+        "BGCS.Frontend.Clang.Tests.PublicFrontendSnapshotTests.DetachedPublicFactsRetainEveryHistoricalSourceCase(caseId: \"F073\")"
+      ]
+    }
+  ],
+  "privateMutationInvariants": {
+    "original": "Parsing/AstOwnershipTests.cs",
+    "replacement": "BGCS.Analysis.Tests.NativeGraphOwnershipTests",
+    "preserved": "unique owned children, reciprocal parents, multiple ownership rejection, cycles, shared type/template references, immutable replacement",
+    "notPublicContract": "mutation of internal Clang AST nodes, lookup formatter implementation"
+  },
+  "privateMetadataHelpers": {
+    "original": "AttributesTest/AttributeArgumentTests.cs",
+    "replacement": "PublicFrontendSnapshotTests annotation source cases + existing configuration strict conversion tests",
+    "scope": "literal attribute preservation remains tested; direct mutation/formatting calls to internal helper objects are deliberately retired rather than made public"
+  },
+  "resourceBoundary": {
+    "original": "Interop/ClangResourceHeaderIntegrityTests.cs private extractor reflection",
+    "replacement": "WorkerAssetProvisioningTests public bundled-resource preparation + WorkerExecutionCaptureTests public execution identity",
+    "preserved": "hash verification, reuse, missing/extra files, malformed archive paths, file/directory conflicts, cancellation, output ownership; private arbitrary-byte extraction is not a public seam"
+  },
+  "workerIdentity": {
+    "original": "WorkerExecutionCaptureTests private CaptureVerifiedDeployment reflection",
+    "replacement": "FrontendWorkerClient.CaptureExecutionIdentity + WorkerAssetDeployer public verification",
+    "preserved": "manifest encoding, BOM, complete runtime/host closure, altered bytes at equal length/timestamp, missing/extra/duplicate/escaped/reserved artifacts, cancellation",
+    "scope": "private lazy-extra enumeration timing no longer defines test access; generic path/publication fault boundaries test late input changes"
+  },
+  "publicFixtureCount": 87,
+  "isolatedHistoricalSdkDependency": "TestExpressions.TestInitListExpression retains its original body; the GUID declaration-only input is now repository-owned guiddef.h, independent of SDK version/path. SDK discovery and standard-library parsing remain in public target tests."
+}

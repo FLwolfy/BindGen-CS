@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -7,11 +8,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Native;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Capabilities;
+using BGCS.Core.Interop;
+using BGCS.Core.Inputs;
+using BGCS.Core.Native;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -33,7 +35,7 @@ public sealed class NativeVirtualCallbackTests
         string root = Path.Combine(Path.GetTempPath(), "bgcs-neutral-virtual-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         nint library = 0, instance = 0;
-        CppBridgeModule? plan = null;
+        NativeBridgePlan? plan = null;
         BridgeExport? factory = null;
         Callback? callback = null;
         ReferenceCallback? referenceCallback = null;
@@ -56,18 +58,20 @@ public sealed class NativeVirtualCallbackTests
                 """, new UTF8Encoding(false));
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1,
+                schemaVersion = 2,
                 library = new() { id = "virtual", nativeName = "virtual_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator")] },
+                bridge = new() { cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator")] } },
                 api = new() { @namespace = "Generated.Virtual", name = "VirtualApi" },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }};
-            string worker = Path.Combine(Repository(), "src", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(worker).Build();
+            string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
+            ConcurrentQueue<SourceLanguage> parses = new();
+            await using BindingHost host = BindingGenerator.CreateBuilder().ObserveWorkerParses(worker, parses).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());
+            Assert.Equal(new[] { SourceLanguage.Cpp, SourceLanguage.C }, parses.ToArray());
             string target = Assert.Single(Directory.GetDirectories(Path.Combine(root, "Generated")));
-            plan = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
+            plan = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(target, "native", "metadata", "bridge.module.json")))!;
             CppVirtualProxyPlan proxy = Assert.Single(plan.virtualProxies);
             Assert.Equal(2, proxy.slots.Length);
             VirtualCallbackSlot slot = Assert.Single(proxy.slots, candidate => plan.source.GetDeclaration(candidate.nativeMethod).name == "Compute");
@@ -87,6 +91,10 @@ public sealed class NativeVirtualCallbackTests
             Assert.Equal(NativeLifetimeKind.Unknown, protocol.lifetime.kind);
             Assert.Equal(EvidenceLevel.Unknown, protocol.lifetime.evidence.level);
             Assert.Equal(NativeQuiescenceKind.Unknown, protocol.quiescence);
+            StableId interfaceDeclaration = plan.source.GetType(proxy.nativeInterface).declaration!.Value;
+            BindingCapabilityReport capability = Assert.Single(result.capabilities, value => value.declarationId == interfaceDeclaration);
+            Assert.Equal(DeclarationGenerationStatus.GeneratedRaw, capability.status);
+            Assert.Contains(capability.reasons, reason => reason.Contains("explicit cleanup protocol", StringComparison.Ordinal));
             VirtualProxySlotContract computeContract = Assert.Single(protocol.slots, value => value.sourceMethod == slot.nativeMethod);
             Assert.Equal("Compute", computeContract.sourceName);
             Assert.Equal(1, Assert.Single(computeContract.parameters).index);
@@ -102,7 +110,10 @@ public sealed class NativeVirtualCallbackTests
                 new BGCS.Analysis.Bridge.VirtualProxyProtocolVerifier().Verify(restored);
                 Assert.Equal(protocol.createFunction, Assert.Single(restored.virtualProxies).createFunction);
             }
-            factory = Assert.Single(plan.exports, export => export.operation.declaration is { } id && plan.source.GetDeclaration(id).qualifiedName == proxy.factory);
+            factory = Assert.Single(plan.exports, export => export.operation.kind == BridgeOperationKind.VirtualProxyConstruct && export.operation.virtualProxyId == proxy.id);
+            Assert.Null(factory.operation.declaration);
+            Assert.DoesNotContain(plan.source.types, type => type.id == proxy.generatedType);
+            Assert.DoesNotContain(plan.source.declarations, declaration => declaration.qualifiedName == proxy.proxyType || declaration.qualifiedName == proxy.factory);
             Assert.Equal(factory.id, protocol.createFunction);
             Assert.Equal(factory.resultRelease, protocol.destroyFunction);
             Assert.Equal(protocol.destroyFunction, protocol.ownership.releaseFunction);
@@ -118,7 +129,7 @@ public sealed class NativeVirtualCallbackTests
                 checkedHeader.types.Select(type => type.id == exactCallback.id ? type with { isVariadic = true } : type).ToImmutableArray(), checkedHeader.declarations, checkedHeader.diagnostics)
             { language = checkedHeader.language, byteOrder = checkedHeader.byteOrder };
             Assert.Throws<InvalidOperationException>(() => new BGCS.Analysis.Bridge.BridgeContractVerifier().VerifyAndMerge(plan, corruptedCallback, "virtual"));
-            CppBridgeModule wrongFactorySlot = plan with
+            NativeBridgePlan wrongFactorySlot = plan with
             { virtualProxies = [proxy with { slots = proxy.slots.Replace(slot, slot with { bridgeCallableType = new("missing-callback-type") }) }] };
             Assert.Throws<InvalidOperationException>(() => new BGCS.Analysis.Bridge.CppBridgeOperationVerifier().Verify(wrongFactorySlot));
             Assert.DoesNotContain(plan.exports, export => export.operation.declaration is { } id
@@ -157,8 +168,8 @@ public sealed class NativeVirtualCallbackTests
             Assert.Equal(0, error);
             Assert.Equal(0, create(10, callbacks[0], callbacks[1], out instance, out error));
             Assert.Equal(0, error);
-            BridgeExport upcast = plan.exports.Single(export => export.operation.kind == BridgeOperationKind.BaseCast
-                && export.operation.ownerType == factory.nativeResultType && export.operation.castTarget == proxy.nativeInterface);
+            BridgeExport upcast = plan.exports.Single(export => export.operation.kind == BridgeOperationKind.VirtualProxyCast
+                && export.operation.virtualProxyId == proxy.id && export.operation.castTarget == proxy.nativeInterface);
             Assert.Equal(upcast.id, protocol.interfaceCastFunction);
             Assert.Equal(0, Function<Cast>(upcast)(instance, out nint nativeInterface, out error));
             Assert.Equal(0, error);

@@ -3,7 +3,7 @@
   "libraryId": "cimgui",
   "platform": "windows-x64",
   "sourceNormalization": "quoted-locked-corpus-include-root-v1",
-  "selectionPolicySha256": "72e98800299edc085c3f90f09451aea3752c1e4dc08d2ebcc85d2e9b493a8d0a",
+  "selectionPolicySha256": "a30534e7dda000005976f33bc7c093fbdba6d603bcd55ca5075e89f4b23167f1",
   "omittedDeclarations": {
     "excludedDeclarations": [
       "igText",
@@ -28,7 +28,10 @@
     "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "030e98946431cb0097083f89767f059a8c8f884149010e970fda3c01419d8769"
+    "windows-x64-msvc/managed/Bindings.cs": "fb18acf29da78958658d9d09eadfd39446c8b0f978718861689e5f8448a8d2b0",
+    "windows-x64-msvc/native/include/bgcs_cimgui.h": "0aefe5708af35894a8ec5275a761d7000332cf60360a987a4a05beb38f6f6ae0",
+    "windows-x64-msvc/native/src/bgcs_cimgui.c": "1c92dc92f91fe2c8307eb783ef7f8ca0230772d1f90cb9e8695ca441f7c47fb4",
+    "windows-x64-msvc/native/src/storage.assertions.c": "7295a323690043b144d07fc32ec4cd819417061eeec12a65cbba0e89a9810054"
   },
-  "publicApiSha256": "1513dccaa87651d5b7c68754b192341813dc2711d16f1356a7186636342637e4"
+  "publicApiSha256": "4b80fe3d522d8f1f0019276ce5f64bdee09f09dacd295a303443ae6dd77097c7"
 }

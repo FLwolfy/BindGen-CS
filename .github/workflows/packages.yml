@@ -59,13 +59,13 @@ jobs:
           path: artifacts/release-tooling
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
-      - name: Pack and install all four products
+      - name: Pack and install the four products and five explicit extensions
         shell: bash
         env:
           CONFIGURATION: Release
           BGCS_OSX_X64_PACKAGE_RUNTIME_DIR: ${{ github.workspace }}/artifacts/clang-runtime/osx-x64
         run: |
-          export PACKAGE_TEST_VERSION="$(python -c 'import xml.etree.ElementTree as E; print(E.parse("Directory.Build.props").findtext("./PropertyGroup/Version"))' | tr -d '\r')"
+          export PACKAGE_TEST_VERSION="$(python scripts/acceptance_evidence.py package-version . --declared | tr -d '\r')"
           python scripts/compiler_test_environment.py -- "$BASH" scripts/test-nuget-packages.sh
       - name: Audit delivered dependency metadata before accepting packages
         shell: bash

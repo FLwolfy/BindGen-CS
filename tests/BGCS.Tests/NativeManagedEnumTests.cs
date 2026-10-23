@@ -12,10 +12,10 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -53,7 +53,7 @@ public sealed class NativeManagedEnumTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "enum_fixture", nativeName = "enum_fixture" },
+                schemaVersion = 2, library = new() { id = "enum_fixture", nativeName = "enum_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["enums.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
@@ -71,8 +71,8 @@ public sealed class NativeManagedEnumTests
             string path = Path.Combine(root, "bindgen.json");
             await File.WriteAllTextAsync(path, JsonSerializer.Serialize(configuration, new JsonSerializerOptions
             { WriteIndented = true, Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false) } }));
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
-            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, GenerationRequest.FromFile(path));
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
+            GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, TestInputs.LoadRequest(path));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
             await InvokeAsync(Path.Combine(target, "managed"), Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(target))), mode, sourceRuntime, root);
@@ -107,14 +107,17 @@ public sealed class NativeManagedEnumTests
         string? sdk = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         ProcessStartInfo start = new(string.IsNullOrEmpty(sdk) ? "dotnet" : Path.Combine(sdk, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"))
         { WorkingDirectory = consumer, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
-        foreach (string argument in new[] { "build", "Consumer.csproj", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
+        foreach (string argument in new[] { "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
         using Process process = Process.Start(start)!;
         Task<string> output = process.StandardOutput.ReadToEndAsync(), error = process.StandardError.ReadToEndAsync();
         using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(3));
         try { await process.WaitForExitAsync(deadline.Token); }
         finally { if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); } }
-        Assert.True(process.ExitCode == 0, await output + Environment.NewLine + await error);
-        using FileStream image = File.OpenRead(Path.Combine(consumer, "bin", "Debug", "net10.0", "Consumer.dll"));
+        string diagnostics = await output + Environment.NewLine + await error;
+        Assert.True(process.ExitCode == 0, diagnostics);
+        string consumerAssembly = Path.Combine(consumer, "bin", "Release", "net10.0", "Consumer.dll");
+        Assert.True(File.Exists(consumerAssembly), "The SDK did not produce the fixture consumer assembly: " + consumerAssembly + Environment.NewLine + diagnostics);
+        using FileStream image = File.OpenRead(consumerAssembly);
         AssemblyLoadContext load = new("BGCS.NativeManagedEnum.Test", isCollectible: true);
         nint native = NativeLibrary.Load(binary);
         try
@@ -134,6 +137,6 @@ public sealed class NativeManagedEnumTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

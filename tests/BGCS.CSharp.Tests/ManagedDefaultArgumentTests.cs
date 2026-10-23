@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Immutable;
 using System.Threading;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using Xunit;
@@ -43,10 +43,10 @@ public sealed class ManagedDefaultArgumentTests
         NoWrites sink = new();
         Action operation = () =>
         {
-            ManagedApiModel model = new DefaultManagedProjection().Project(new("fixture", "windows-x64-msvc", 8, [integer], [function], []),
+            ManagedApiModel model = new DefaultManagedProjection().Project(new("fixture", "windows-x64-msvc", 8, [integer], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian },
                 new("Generated.Defaults", "Api")
                 { functions = [new("read") { defaults = defaults }], defaultOverloadLimit = mutation == "unbounded-expansion" ? 1 : 128 }, CancellationToken.None);
-            _ = new CSharpEmissionPlanner().Plan(model, new("unused", sink));
+            _ = new CSharpTestPlanner().Plan(model, new("unused", sink));
         };
         Exception error = mutation == "ambiguous-omission" ? Assert.Throws<InvalidOperationException>(operation) : Assert.Throws<ArgumentException>(operation);
         Assert.Contains(reason, error.Message, StringComparison.Ordinal);

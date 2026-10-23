@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -22,7 +22,7 @@ internal static class NativeMetadataPlanner
         // Default/uninitialized physical plans are rejected by the independent
         // physical-contract verifier; metadata must not turn that rejection into
         // an incidental enumeration failure or read unused table transports.
-        ILookup<int, CSharpPhysicalImportPlan> physicalImports = (plan.importMode == BGCS.Contracts.BindingImportMode.FunctionTable || plan.physicalImports.IsDefault
+        ILookup<int, CSharpPhysicalImportPlan> physicalImports = (plan.importMode == BGCS.Core.BindingImportMode.FunctionTable || plan.physicalImports.IsDefault
             ? ImmutableArray<CSharpPhysicalImportPlan>.Empty : plan.physicalImports).ToLookup(import => import.methodIndex);
         Dictionary<string, string> canonicalTypes = new(StringComparer.Ordinal);
         for (int index = 0; index < plan.methods.Length; index++)
@@ -39,7 +39,7 @@ internal static class NativeMetadataPlanner
                 function.parameters.Select(parameter => new NativeParameterMetadata(parameter.sourceName ?? parameter.name,
                     plan.api.interop.GetType(parameter.type).nativeName)).ToImmutableArray());
             result.Add(Key(context + ".RawApi", method.name.TrimStart('@'), method.parameterTypes, canonicalTypes), metadata);
-            if (plan.importMode != BGCS.Contracts.BindingImportMode.FunctionTable)
+            if (plan.importMode != BGCS.Core.BindingImportMode.FunctionTable)
             {
                 CSharpPhysicalImportPlan? physical = physicalImports[index].SingleOrDefault();
                 result.Add(Key(context + ".NativeImports", physical?.declarationName ?? "Function" + index,

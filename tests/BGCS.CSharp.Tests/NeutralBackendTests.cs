@@ -11,13 +11,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.Runtime;
@@ -48,15 +48,15 @@ public sealed class NeutralBackendTests
         InteropFunction setter = new(new("set-message-callback"), "set_message_callback", nothing.id,
             [new(new("callback-argument"), "callback", callback.id)], "C");
         InteropModule module = new("messages", "windows-x64-msvc", 8,
-            [nothing, incomplete, alias, pointer, signature, callback], [setter], []);
+            [nothing, incomplete, alias, pointer, signature, callback], [setter], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Messages", "CallbackApi"), CancellationToken.None);
         MemorySink sink = new();
         EmissionRequest request = new("callback", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
 
         Assert.Equal("delegate* unmanaged[Cdecl]<NativeMessageTag*, void>", Assert.Single(plan.methods).parameterTypes[0]);
         Assert.Empty(plan.callScopedCallbacks);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type storage = compiled.assembly.GetType("Generated.Messages.NativeMessageTag", true)!;
         Assert.Empty(storage.GetFields());
@@ -69,16 +69,20 @@ public sealed class NeutralBackendTests
         ManagedApiModel original = Model();
         InteropType union = new(new("empty-union"), "NativeUnion", NativeTypeCategory.Record, 8, 8)
         { declarationName = "NativeUnion", recordKind = "Union" };
-        InteropModule module = new("example", original.interop.targetId, 8, original.interop.types.Add(union), original.interop.functions, []);
+        InteropModule module = new("example", original.interop.targetId, 8, original.interop.types.Add(union), original.interop.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Example", "NativeApi"), CancellationToken.None);
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type storage = compiled.assembly.GetType("Generated.Example.NativeUnion", true)!;
         Assert.True(storage.IsExplicitLayout);
         Assert.Equal(8, Marshal.SizeOf(storage));
-        Assert.All(storage.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
-            field => Assert.Equal(0, Marshal.OffsetOf(storage, field.Name).ToInt32()));
+        string declaration = sink.sources.Single(source => source.Key.EndsWith("/NativeUnion.g.cs", StringComparison.Ordinal)).Value;
+        var layout = Assert.Single(CSharpSyntaxTree.ParseText(declaration).GetRoot().DescendantNodes()
+            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.AttributeSyntax>(), attribute => attribute.Name.ToString().EndsWith("StructLayout", StringComparison.Ordinal)
+                || attribute.Name.ToString().EndsWith("StructLayoutAttribute", StringComparison.Ordinal));
+        var extent = Assert.Single(layout.ArgumentList!.Arguments, argument => argument.NameEquals?.Name.Identifier.ValueText == "Size");
+        Assert.Equal("8", extent.Expression.ToString());
     }
 
     [Theory]
@@ -90,10 +94,10 @@ public sealed class NeutralBackendTests
         InteropType integer = original.interop.types[0];
         InteropType record = new(new("sample-value"), "SampleValue", NativeTypeCategory.Record, 4, 4)
         { declarationName = "SampleValue", fields = [new(new("sample-field"), "Value", integer.id, 0, 0, null)] };
-        InteropModule module = new("example", original.interop.targetId, 8, original.interop.types.Add(record), original.interop.functions, []);
+        InteropModule module = new("example", original.interop.targetId, 8, original.interop.types.Add(record), original.interop.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Example", "NativeApi"), CancellationToken.None);
         MemorySink sink = new();
-        var artifacts = await new CSharpBackend().EmitAsync(model,
+        var artifacts = await new CSharpTestBackend().EmitAsync(model,
             new("unused", sink) { singleFile = singleFile, singleFileName = "SampleBindings.cs" }, CancellationToken.None);
         if (singleFile) Assert.Equal("SampleBindings.cs", Assert.Single(artifacts).relativePath);
         string source = Assert.Single(sink.sources.Values, value => value.Contains("partial struct SampleValue", StringComparison.Ordinal));
@@ -115,10 +119,10 @@ public sealed class NeutralBackendTests
         InteropType pointer = new(new("void-pointer"), "void*", NativeTypeCategory.Pointer, 8, 8) { elementType = original.interop.types[1].id };
         InteropType packed = new(new("packed"), "Packed", NativeTypeCategory.Record, 9, 1)
         { declarationName = "Packed", fields = [new(new("prefix"), "prefix", octet.id, 0, 0, null), new(new("value"), "value", pointer.id, 1, 8, null)] };
-        InteropModule module = new("example", "windows-x64-msvc", 8, original.interop.types.AddRange(ImmutableArray.Create(octet, pointer, packed)), original.interop.functions, []);
+        InteropModule module = new("example", "windows-x64-msvc", 8, original.interop.types.AddRange(ImmutableArray.Create(octet, pointer, packed)), original.interop.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         MemorySink sink = new();
         var model = new DefaultManagedProjection().Project(module, new("Generated.Example", "NativeApi"), CancellationToken.None);
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type carrier = compiled.assembly.GetType("Generated.Example.Packed", true)!;
         Assert.Equal(9, Marshal.SizeOf(carrier));
@@ -138,12 +142,12 @@ public sealed class NeutralBackendTests
         InteropType integer = original.interop.types[0];
         InteropType pointer = new(new("integer-pointer"), "int*", NativeTypeCategory.Pointer, pointerSize, pointerSize) { elementType = integer.id };
         InteropType array = new(new("pointer-array"), "PointerArray", NativeTypeCategory.Array, pointerSize * 3, pointerSize) { elementType = pointer.id, arrayLength = 3 };
-        InteropModule module = new("example", pointerSize == 4 ? "windows-x86-msvc" : "windows-x64-msvc", pointerSize, original.interop.types.AddRange(ImmutableArray.Create(pointer, array)), original.interop.functions, []);
+        InteropModule module = new("example", pointerSize == 4 ? "windows-x86-msvc" : "windows-x64-msvc", pointerSize, original.interop.types.AddRange(ImmutableArray.Create(pointer, array)), original.interop.functions, []) { byteOrder = original.interop.byteOrder };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Example", "NativeApi")
         { names = explicitName ? ImmutableDictionary<string, string>.Empty.Add(array.id.value, "AddressSlots") : ImmutableDictionary<string, string>.Empty }, CancellationToken.None);
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
-        string arrayName = new CSharpEmissionPlanner().Plan(model, new("unused", new MemorySink()), CancellationToken.None).storage.Single(storage => storage.nativeType == array.id).name;
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        string arrayName = new CSharpTestPlanner().Plan(model, new("unused", new MemorySink()), CancellationToken.None).storage.Single(storage => storage.nativeType == array.id).name;
         if (explicitName) Assert.Equal("AddressSlots", arrayName);
         sink.WriteText("Probe.cs", $$"""
             namespace Generated.Example;
@@ -175,11 +179,11 @@ public sealed class NeutralBackendTests
             new(NativeLifetimeKind.Call, null, evidence), evidence) { zeroTerminated = true, retainsPointer = false, allowsNull = false };
         InteropParameter parameter = new(new("text"), "text", pointer.id) { text = contract };
         InteropFunction function = new(new("utf8-size"), "utf8_size", integer.id, [parameter], "C");
-        InteropModule interop = new("example", "windows-x64-msvc", 8, [octet, pointer, integer], [function], []);
+        InteropModule interop = new("example", "windows-x64-msvc", 8, [octet, pointer, integer], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi"), CancellationToken.None);
         Assert.Equal(parameter.id, Assert.Single(Assert.Single(model.methods).stringInputs));
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime" }, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime" }, CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type api = compiled.assembly.GetType("Generated.Example.NativeApi", true)!;
         var exports = new Dictionary<string, nint> { ["utf8_size"] = Utf8SizeAddress() };
@@ -194,7 +198,7 @@ public sealed class NeutralBackendTests
             Assert.IsType<ArgumentException>(Assert.Throws<TargetInvocationException>(() => method.Invoke(context, ["A\0B"])).InnerException);
         }
         InteropModule inferred = new("example", interop.targetId, 8, interop.types,
-            [function with { parameters = [parameter with { text = contract with { evidence = new(EvidenceLevel.Inferred, "name-guess") } }] }], []);
+            [function with { parameters = [parameter with { text = contract with { evidence = new(EvidenceLevel.Inferred, "name-guess") } }] }], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.Empty(Assert.Single(new DefaultManagedProjection().Project(inferred, new("Generated.Example", "NativeApi"), CancellationToken.None).methods).stringInputs);
     }
 
@@ -217,11 +221,11 @@ public sealed class NeutralBackendTests
         InteropParameter parameter = new(new("text"), "text", pointer.id) { text = text };
         InteropFunction first = new(new("first-unit"), "first_unit", integer.id, [parameter], "C");
         InteropFunction last = new(new("next-unit"), "next_unit", integer.id, [parameter], "C");
-        InteropModule module = new("wide", "windows-x64-msvc", 8, [unit, aligned, pointer, integer], [first, last], []);
+        InteropModule module = new("wide", "windows-x64-msvc", 8, [unit, aligned, pointer, integer], [first, last], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Wide", "WideApi"), CancellationToken.None);
         Assert.All(model.methods, method => Assert.Equal(parameter.id, Assert.Single(method.stringInputs)));
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? "Generated.Wide.Runtime" : "BGCS.Runtime" }, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? "Generated.Wide.Runtime" : "BGCS.Runtime" }, CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type api = compiled.assembly.GetType("Generated.Wide.WideApi", true)!;
         Dictionary<string, nint> exports = WideAddresses(width);
@@ -231,7 +235,7 @@ public sealed class NeutralBackendTests
         Assert.Equal((uint)65, api.GetMethod("FirstUnit")!.Invoke(context, ["AB"]));
         Assert.Equal(width == 2 ? (uint)0xd83d : 0x1f408U, api.GetMethod("NextUnit")!.Invoke(context, ["A🐈"]));
         Assert.IsType<EncoderFallbackException>(Assert.Throws<TargetInvocationException>(() => api.GetMethod("FirstUnit")!.Invoke(context, ["\ud800"])).InnerException);
-        InteropModule unknown = new("wide", module.targetId, 8, module.types, [first with { parameters = [parameter with { text = text with { byteOrder = NativeTextByteOrder.Unknown } }] }], []);
+        InteropModule unknown = new("wide", module.targetId, 8, module.types, [first with { parameters = [parameter with { text = text with { byteOrder = NativeTextByteOrder.Unknown } }] }], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.Empty(Assert.Single(new DefaultManagedProjection().Project(unknown, new("Generated.Wide", "WideApi"), CancellationToken.None).methods).stringInputs);
     }
 
@@ -265,10 +269,10 @@ public sealed class NeutralBackendTests
             declarationName = "Packet", recordKind = "Struct",
             fields = [new(new("count"), "count", integer.id, 0, 0, null), new(new("data"), "data", flexible.id, 4, 32, null)]
         };
-        InteropModule interop = new("example", original.interop.targetId, 8, original.interop.types.AddRange(ImmutableArray.Create(flexible, packet)), original.interop.functions, []);
+        InteropModule interop = new("example", original.interop.targetId, 8, original.interop.types.AddRange(ImmutableArray.Create(flexible, packet)), original.interop.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi"), CancellationToken.None);
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         string source = sink.sources["Types/Packet.g.cs"];
         Assert.Contains("GetDataPointer", source);
         Assert.DoesNotContain("InlineArray", source);
@@ -284,10 +288,10 @@ public sealed class NeutralBackendTests
     {
         ManagedApiModel model = Model();
         InteropModule interop = new("example", model.interop.targetId, model.interop.pointerSize, model.interop.types,
-            [model.interop.functions[0] with { hasPrototype = false }], []);
+            [model.interop.functions[0] with { hasPrototype = false }], []) { byteOrder = model.interop.byteOrder };
         model = new DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi"), CancellationToken.None);
         MemorySink sink = new();
-        await Assert.ThrowsAsync<CSharpPlanningException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        await Assert.ThrowsAsync<CSharpPlanningException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Empty(sink.sources);
     }
 
@@ -297,7 +301,7 @@ public sealed class NeutralBackendTests
     public async Task FunctionTable_CompilesInvokesIndependentInstancesAndClosesCalls(bool singleFile)
     {
         MemorySink sink = new();
-        var artifacts = await new CSharpBackend().EmitAsync(Model(), new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
+        var artifacts = await new CSharpTestBackend().EmitAsync(Model(), new("unused", sink) { singleFile = singleFile }, CancellationToken.None);
         foreach (ArtifactDescriptor artifact in artifacts)
             Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(sink.sources[artifact.relativePath]))), artifact.digest.value);
         Assert.Equal(singleFile ? 1 : 3, artifacts.Length);
@@ -325,7 +329,7 @@ public sealed class NeutralBackendTests
     public async Task MissingExport_FailsConstructionAndReleasesTheOwnedProvider()
     {
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(Model(), new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(Model(), new("unused", sink), CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type api = compiled.assembly.GetType("Generated.Example.NativeApi", true)!;
         int released = 0;
@@ -342,7 +346,7 @@ public sealed class NeutralBackendTests
     {
         MemorySink sink = new();
         ManagedApiModel model = ModelWithStorage();
-        await new CSharpBackend().EmitAsync(model, new("unused", sink) { importMode = mode }, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { importMode = mode }, CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Type outer = compiled.assembly.GetType("Generated.Example.Outer", true)!;
         Assert.Equal(96, Marshal.SizeOf(outer));
@@ -360,11 +364,11 @@ public sealed class NeutralBackendTests
         ManagedApiModel model = Model();
         model = model with { methods = model.methods.SetItem(0, model.methods[0] with { parameterNames = ["class", "m_owner"] }) };
         MemorySink sink = new();
-        await new CSharpBackend().EmitAsync(model, new("library\"with\\escapes", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("library\"with\\escapes", sink), CancellationToken.None);
         using CompiledSources compiled = Compile(sink);
         Assert.NotNull(compiled.assembly.GetType("Generated.Example.NativeApi"));
         MemorySink rejected = new();
-        await Assert.ThrowsAsync<ArgumentException>(async () => await new CSharpBackend().EmitAsync(model with { name = "Api; malicious" }, new("unused", rejected), CancellationToken.None));
+        await Assert.ThrowsAsync<ArgumentException>(async () => await new CSharpTestBackend().EmitAsync(model with { name = "Api; malicious" }, new("unused", rejected), CancellationToken.None));
         Assert.Empty(rejected.sources);
     }
 
@@ -374,11 +378,11 @@ public sealed class NeutralBackendTests
         ManagedApiModel model = ModelWithStorage();
         InteropType outer = model.interop.types.Single(type => type.declarationName == "Outer");
         InteropFunction bad = new(new("bad"), "bad", outer.id, [], "C");
-        InteropModule interop = new("example", model.interop.targetId, 8, model.interop.types, [bad], []);
+        InteropModule interop = new("example", model.interop.targetId, 8, model.interop.types, [bad], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         model = new DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi"), CancellationToken.None);
         MemorySink sink = new();
-        var failure = await Assert.ThrowsAsync<CSharpPlanningException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
-        Assert.Contains("calling-ABI evidence", failure.Message);
+        var failure = await Assert.ThrowsAsync<CSharpPlanningException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        Assert.Contains("complete plan", failure.Message);
         Assert.Empty(sink.sources);
     }
 
@@ -388,7 +392,7 @@ public sealed class NeutralBackendTests
         InteropType nothing = new(new("void"), "void", NativeTypeCategory.Primitive, 0, 1) { primitiveKind = "Void" };
         InteropFunction add = new(new("add"), "add", integer.id, [new(new("left"), "left", integer.id), new(new("right"), "right", integer.id)], "C");
         InteropFunction notify = new(new("notify"), "notify", nothing.id, [], "C");
-        return new DefaultManagedProjection().Project(new("example", "windows-x64-msvc", 8, [integer, nothing], [add, notify], []),
+        return new DefaultManagedProjection().Project(new("example", "windows-x64-msvc", 8, [integer, nothing], [add, notify], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian },
             new("Generated.Example", "NativeApi"), CancellationToken.None);
     }
 
@@ -405,7 +409,7 @@ public sealed class NeutralBackendTests
         InteropType unsigned = new(new("ulong"), "unsigned long long", NativeTypeCategory.Primitive, 8, 8) { primitiveKind = "UnsignedLongLong", isSigned = false };
         InteropType flags = new(new("flags"), "Flags", NativeTypeCategory.Enumeration, 8, 8)
         { declarationName = "Flags", elementType = unsigned.id, enumValues = [new(new("all"), "all", "~0ull", ulong.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture))] };
-        InteropModule interop = new("example", "windows-x64-msvc", 8, original.interop.types.AddRange(ImmutableArray.Create(octet, aligned, outer, array, unsigned, flags)), original.interop.functions, []);
+        InteropModule interop = new("example", "windows-x64-msvc", 8, original.interop.types.AddRange(ImmutableArray.Create(octet, aligned, outer, array, unsigned, flags)), original.interop.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi"), CancellationToken.None);
     }
 

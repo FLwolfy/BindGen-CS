@@ -2,10 +2,10 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -25,9 +25,9 @@ public sealed class BitfieldPlanningTests
         var model = new DefaultManagedProjection().Project(module, new("Generated.Bits", "BitsApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("fixture", sink);
-        CSharpBitfieldPlan field = Assert.Single(Assert.Single(new CSharpEmissionPlanner().Plan(model, request).storage).bitfields);
+        CSharpBitfieldPlan field = Assert.Single(Assert.Single(new CSharpTestPlanner().Plan(model, request).storage).bitfields);
         Assert.Equal("bool", field.type);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         Assert.Contains(sink.sources.Values, source => source.Contains("return bits != 0;", StringComparison.Ordinal));
         Assert.Contains(sink.sources.Values, source => source.Contains("value ? 1UL : 0UL", StringComparison.Ordinal));
     }
@@ -39,7 +39,12 @@ public sealed class BitfieldPlanningTests
     {
         var model = new DefaultManagedProjection().Project(Module(order), new("Generated.Bits", "BitsApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
-        await Assert.ThrowsAsync<CSharpPlanningException>(async () => await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+        if (order == NativeByteOrder.Unknown)
+        {
+            var failure = await Assert.ThrowsAsync<NotSupportedException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
+            Assert.Contains("execution profile", failure.Message, StringComparison.Ordinal);
+        }
+        else await Assert.ThrowsAsync<CSharpPlanningException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Empty(sink.sources);
     }
 
@@ -48,9 +53,9 @@ public sealed class BitfieldPlanningTests
     {
         var model = new DefaultManagedProjection().Project(Module(NativeByteOrder.LittleEndian), new("Generated.Bits", "BitsApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("unused", sink));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("unused", sink));
         Assert.Equal(3, Assert.Single(plan.storage).bitfields[0].bitOffset);
-        await new CSharpBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None);
         EmittedInteropContractReader reader = new();
         reader.Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), "unused");
         Assert.Throws<InvalidOperationException>(() => reader.Verify(plan,

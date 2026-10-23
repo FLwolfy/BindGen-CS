@@ -1,5 +1,5 @@
 using System;
-using BGCS.Contracts.Native;
+using BGCS.Core.Native;
 
 namespace BGCS.Analysis.Bridge;
 

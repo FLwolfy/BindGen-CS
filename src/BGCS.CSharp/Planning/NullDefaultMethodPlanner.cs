@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
 
 namespace BGCS.CSharp.Planning;
 
@@ -24,7 +24,7 @@ internal static class NullDefaultMethodPlanner
             InteropFunction function = functionsById[method.nativeExport].Single();
             if (OverloadPlanner.IsDirect(plan, method, function)) continue;
             if (function.error is not null || function.asynchronous is not null || function.returnOwnership is not null || function.returnString is not null
-                || function.sourceOwnerType is not null || member.receiver is not null || function.isVariadic || !function.hasPrototype
+                || function.sourceOwnerType is not null || function.sourceGeneratedOwnerType is not null || member.receiver is not null || function.isVariadic || !function.hasPrototype
                 || !OverloadPlanner.SupportsDirectResult(plan, function.returnType)) continue;
             ImmutableArray<CSharpNullDefaultInputPlan>.Builder bindings = ImmutableArray.CreateBuilder<CSharpNullDefaultInputPlan>();
             for (int index = 0; index < function.parameters.Length; index++)
@@ -42,7 +42,7 @@ internal static class NullDefaultMethodPlanner
             HashSet<int> hidden = bindings.Select(binding => binding.parameterIndex).ToHashSet();
             int[] visible = OverloadPlanner.PublicInputs(method, Enumerable.Range(0, function.parameters.Length)).Where(index => !hidden.Contains(index)).ToArray();
             CSharpFacadeMethodPlan signature = new(method.name,
-                method.returnProjection is { fromNativeExpression: not null } projection ? projection.managedType : method.returnType,
+                method.projectedReturnType,
                 visible.Select(index => OverloadPlanner.InputType(method, index)).ToImmutableArray(), visible.Select(index => method.parameterNames[index]).ToImmutableArray())
             {
                 nativeExport = method.nativeExport,

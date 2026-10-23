@@ -1,3 +1,5 @@
+using BGCS.Frontend.Clang.Workers;
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -5,11 +7,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Workers;
 using Xunit;
 using Xunit.Abstractions;
@@ -34,14 +36,14 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
             await File.WriteAllTextAsync(Path.Combine(root, "original.h"), "#pragma once\nint original(void);\n");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "source-cleanup-" + Guid.NewGuid().ToString("N"), nativeName = "source_cleanup" },
+                schemaVersion = 2, library = new() { id = "source-cleanup-" + Guid.NewGuid().ToString("N"), nativeName = "source_cleanup" },
                 source = new() { language = SourceLanguage.C, headers = ["original.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.SourceCleanup", name = "CleanupApi" },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns()
-                .WithFrontendFactory(() => new ProtectOwnedFileFrontend(WorkerRoot(), state))
-                .AddSourceContributor("cleanup.store", 0, () => new Contributor(state)).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder()
+                .UseDetachedFrontend(() => new ProtectOwnedFileFrontend(WorkerRoot(), state))
+                .RegisterFactory<ISourceContributor>(new("cleanup.store", ExtensionPort.SourceContributor, 0), _ => new Contributor(state)).Build();
             GenerationRequest request = new(configuration, root);
             GenerationResult first = await host.GenerateAsync(request);
             Assert.True(first.published);
@@ -61,8 +63,9 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
             foreach (var artifact in first.artifacts)
                 Assert.True(File.Exists(Path.Combine(first.outputRoot, artifact.relativePath)), artifact.relativePath);
 
-            // The same immutable store still exists. Service cleanup now fails
-            // before parsing, and deleting that retained store also fails.
+            // The same immutable store still exists. The next session parses
+            // its captured inputs, then service cleanup fails before publication;
+            // deleting the retained store also fails.
             state.failServiceRelease = true;
             GenerationResult rejected = await host.GenerateAsync(request);
             Assert.False(rejected.success);
@@ -72,7 +75,7 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
             Assert.Contains("contributor-service-cleanup-sentinel", rejected.GetDiagnosticSummary(), StringComparison.Ordinal);
             Assert.Contains(captured, rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
             Assert.Equal(2, state.serviceReleases);
-            Assert.Equal(1, state.parses);
+            Assert.Equal(2, state.parses);
             AssertSame(previous, Snapshot(first.outputRoot));
             AssertLockReleased(store);
 
@@ -84,7 +87,7 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
             Assert.True(retry.published);
             Assert.DoesNotContain(retry.diagnostics, diagnostic => diagnostic.code == "BGCS-SOURCE-CLEANUP" || diagnostic.isFailure);
             Assert.Equal(3, state.serviceReleases);
-            Assert.Equal(2, state.parses);
+            Assert.Equal(3, state.parses);
             Assert.False(Directory.Exists(store));
             Assert.False(File.Exists(store + ".lock"));
         }
@@ -155,7 +158,7 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("generated.h", SourceContributionRole.PublicHeader,
-                "text/x-c-header", "#pragma once\nint contributed(void);\n", SourceLanguage.C, exposeToBindings: true)], new(BGCS.Contracts.Common.EvidenceLevel.Declared, "cleanup fixture")));
+                "text/x-c-header", "#pragma once\nint contributed(void);\n", SourceLanguage.C, exposeToBindings: true)], new(BGCS.Core.Common.EvidenceLevel.Declared, "cleanup fixture")));
         }
         public void Dispose()
         {
@@ -166,7 +169,13 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
 
     private sealed class ProtectOwnedFileFrontend(string workerRoot, StoreState state) : IFrontend
     {
-        private readonly FrontendWorkerClient m_worker = new(Path.Combine(workerRoot, "BGCS.Frontend.Clang.Worker.dll"));
+        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
+        }
+
+        private readonly FrontendWorkerClient m_worker = new(Path.Combine(workerRoot, "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost());
         public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
         {
             FrontendResult result = await m_worker.ParseAsync(request, cancellationToken);
@@ -190,6 +199,6 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

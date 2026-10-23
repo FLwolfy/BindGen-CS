@@ -3,10 +3,10 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -42,7 +42,7 @@ public sealed class ManagedEnumTests
         InteropType primitive = new(new("u64"), "unsigned long long", NativeTypeCategory.Primitive, 8, 8) { primitiveKind = "UnsignedLongLong", isSigned = false };
         InteropType alias = new(new("flags"), "native_flags", NativeTypeCategory.Alias, 8, 8) { elementType = primitive.id };
         InteropFunction function = new(new("echo"), "echo", alias.id, [new(new("value"), "value", alias.id)], "C");
-        InteropModule module = new("fixture", "windows-x64-msvc", 8, [primitive, alias], [function], []);
+        InteropModule module = new("fixture", "windows-x64-msvc", 8, [primitive, alias], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedProjectionRequest request = new("Generated.Enums", "EnumApi")
         {
             enums = [new("Flags", ManagedIntegralKind.UInt64, [new("High", "9223372036854775808")])],
@@ -50,7 +50,7 @@ public sealed class ManagedEnumTests
         };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, request, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, new("native", sink));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", sink));
         Assert.Equal("ulong", Assert.Single(plan.methods).returnType);
         Assert.Equal("ulong", Assert.Single(plan.methods).parameterTypes[0]);
         Assert.Equal("global::Generated.Enums.Flags", Assert.Single(plan.methods).returnProjection!.managedType);
@@ -59,7 +59,7 @@ public sealed class ManagedEnumTests
             request with { enums = [new("Flags", ManagedIntegralKind.Int64, [])] }, CancellationToken.None));
         Assert.Throws<NotSupportedException>(() => new DefaultManagedProjection().Project(module,
             request with { enums = [new("Flags", ManagedIntegralKind.UInt32, [])] }, CancellationToken.None));
-        InteropModule duplicate = new("fixture", "windows-x64-msvc", 8, [primitive, alias, alias with { id = new("other") }], [function], []);
+        InteropModule duplicate = new("fixture", "windows-x64-msvc", 8, [primitive, alias, alias with { id = new("other") }], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.Throws<ArgumentException>(() => new DefaultManagedProjection().Project(duplicate, request, CancellationToken.None));
     }
 
@@ -75,8 +75,8 @@ public sealed class ManagedEnumTests
         { enums = [new("WideFlags", ManagedIntegralKind.UInt64, [new("High", "9223372036854775808")]) { isFlags = true }] };
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string enumSource = sink.sources["Types/WideFlags.g.cs"];
         string edited = change switch
         {
@@ -97,7 +97,7 @@ public sealed class ManagedEnumTests
     {
         ManagedApiModel model = NeutralBackendTests.Model() with { enums = [new("NativeApi", ManagedIntegralKind.UInt64, [])] };
         NeutralBackendTests.MemorySink sink = new();
-        await Assert.ThrowsAsync<ArgumentException>(async () => await new CSharpBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
+        await Assert.ThrowsAsync<ArgumentException>(async () => await new CSharpTestBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
         Assert.Empty(sink.sources);
     }
 }

@@ -1,74 +1,28 @@
-# Core feature acceptance
+# Testing and acceptance
 
-[简体中文](acceptance.cn.md) | [Testing](testing.md) | [Assessment](assessment.md)
+The product stops at generation. Compiling, linking and invoking fixtures below belong to repository consumers, never the SDK, CLI or official extensions.
 
-Acceptance is pass/fail against the current core feature and configuration baselines.
-A removed product responsibility is recorded as an explicit scope removal, never as
-a passing feature. Source implementation, local execution and release certification
-are separate states. This specification does not assert that current gates passed.
+## Four gates
 
-## Required CI scope
-
-The required plan has three generator jobs and one full product-install job:
-
-| Job role | Required scope |
+| Check | Scope |
 | --- | --- |
-| Windows generator | Complete current generator regression/baseline checks |
-| Linux generator | Current generator smoke and its recorded host checks |
-| macOS generator | Current generator smoke and its recorded host checks |
-| Installed products | Actual full SDK/tool/Contracts/Runtime package consumption |
+| Generator baseline — Windows x64 | Complete core/Host once, architecture/API/docs, CLI/SDK, six locked corpora and performance. |
+| Generator smoke — Linux x64 | Explicit platform differences, real worker/consumption and one fixed Browser Mono Wasm + Wasm AOT aggregate/callback regression. |
+| Generator smoke — macOS x64 | SDK/standard library, UTF-32, actual consumption and performance. |
+| Installed product baseline | Same-commit candidate archives, clean installation, closure, interface extension, Runtime-only, source Runtime and relocation. |
 
-All original per-host performance budgets remain in force. Exact selected suites and
-job/receipt identities belong to the workflows and
-[required-release-gates.json](../eng/acceptance/required-release-gates.json). Do not
-silently convert a failed baseline, skipped selected test or missing input into success.
-AOT/Wasm application build/run checks are optional manual private work; target facts,
-capability refusals and source generation for them remain product functionality.
-Visual Studio TaskHost and BGCS MSBuild integration are outside the product scope.
+There are no eight test shards or duplicated full platform matrices. Windows runs all discovered Host cases; smoke hosts run exact registered methods/data rows. Discovery, selection and TRX execution sets must agree. Missing, duplicated, skipped, failed or aborted required cases do not pass.
 
-## Core proof
+## Retained coverage
 
-- Public C declarations/types/constants/macros, dependency closure and preserved facts.
-- Ordinary C ABI, layout/calling classification and explicit refusal of unsupported forms.
-- Typed C++ objects/templates/family protocols, casts, callbacks and exception boundaries.
-- Three imports, Raw/friendly surfaces, Runtime package/source and lifecycle behavior.
-- Neutral plugin activation, input/fingerprint/cache behavior and worker isolation.
-- Deterministic source/API snapshots, final emitted-contract checks and safe publication.
-- Independent compiler/link/call fixtures where the baseline requires actual invocation.
-- Clean installed products, schema/resource closure and dependency/license integrity.
+The 61 feature IDs and configuration inventory map to current owners, success/failure/boundary cases and same-source evidence. Coverage includes C/C++, three imports, two Runtime modes, aggregates/callbacks, codecs, allocators, lifetimes, extensions, caches, path safety, workers and publication recovery. Independent Engine provider tests do not reference standard platform implementations.
 
-The generator emits source and assertions. Repository tests may compile/link/call them;
-that does not reintroduce a product build pipeline. Size equality, a target name or a
-user assertion cannot become verified ABI proof. Snapshot changes require source/API
-review; generated declarations must not be removed to make a fixture compile.
+Equal test counts do not prove behavioral parity. Public generation, semantics, manifests and real consumers replace private-reflection tests; internal node/allocation micro-tests are not presented as public contracts.
 
-## Performance remains unchanged
+## Performance
 
-The 10,000-declaration test verifies count, every artifact byte and full restoration
-after deleting owned output. Budgets are Windows/Linux x64 60s cold / 10s warm and
-Intel macOS 120s cold / 30s warm; worker/session memory limits are 2 GiB / 4 GiB.
-[performance-budgets.json](../eng/acceptance/performance-budgets.json) is authoritative.
-An emission-cache hit is not full-pipeline proof. Stricter explicit limits are recorded.
+The 10,000-declaration budgets remain Windows/Linux 60s cold / 10s warm and Intel macOS 120s / 30s. A worker is limited to2GiB and the default session to4GiB. Restore after deleting output must match every file and byte. Final controlled comparison samples five times and records median/variation; repeatable regressions above10% must be resolved or explicitly block acceptance. Do not relax limits or disable input checks.
 
-Real-library dedicated limits remain cimguizmo 15s, cimgui 30s, SDL3 45s, miniaudio 60s,
-bgfx 30s and bimg 15s. Functional corpus runs record timings; controlled
-`BGCS_ENFORCE_GENERATION_BUDGETS=1` runs enforce those library budgets. OOM, incomplete
-output, unsafe source edits and missing required checks remain failures.
+## Evidence
 
-## Evidence and release
-
-Inventories map exact current implementation and executable assertions. Stable IDs,
-source/API snapshots and scope-removal records prevent historical tests from certifying
-a replacement automatically. A discovered test is not an executed test. Receipts retain
-revision, source identity, dirty state, host, selected case set and actual tool inputs.
-Dirty/local subsets cannot certify an immutable release commit or another platform.
-
-Source/API/architecture checks enforce eleven project boundaries and Contracts/Runtime
-independence. No parser handles leak through neutral ports, no production friends or
-shared production source bypass the boundaries, and unknown lifetimes remain unknown.
-
-Release additionally follows its applicable package, provenance and public-availability
-procedure. AOT/Wasm private receipts remain labeled optional with actual scope. Neither
-a configured workflow nor this document grants `releaseReady`. See
-[release verification](release-verification.md), [packages](packages.md) and
-[publishing](publish.md).
+Source implementation, local compilation, local tests, candidate package consumption, remote CI and public publication are separate states. A dirty workspace or historical3.x receipt cannot certify4.0. Current issues/review live under records/acceptance; execution evidence lives under artifacts. This specification itself asserts no passing gate.

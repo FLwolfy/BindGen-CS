@@ -8,10 +8,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Analysis.Bridge;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
 using BGCS.Infrastructure.Execution;
-using BGCS.Platforms.Toolchains;
+using BGCS.Targets.Desktop.Toolchains;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -38,16 +38,16 @@ public sealed class NativeMsvcStandardLibraryTests
             await File.WriteAllTextAsync(Path.Combine(root, "box.hpp"), Source);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "msvc_stl", nativeName = "msvc_stl_bridge" },
+                schemaVersion = 2, library = new() { id = "msvc_stl", nativeName = "msvc_stl_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["box.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 runtime = new() { mode = "source" }, cache = new() { enabled = false }};
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationRequest request = new(configuration, root);
             GenerationResult built = await host.GenerateAsync(request);
             Assert.True(built.success, built.GetDiagnosticSummary());
             await NativeConsumerHarness.CompileManagedAsync(built, request);
             string module = Assert.Single(Directory.GetFiles(built.outputRoot, "bridge.module.json", SearchOption.AllDirectories));
-            CppBridgeModule bridge = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(module))!;
+            NativeBridgePlan bridge = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(module))!;
             BridgeExport create = Assert.Single(bridge.exports, export => export.operation.kind == BridgeOperationKind.Construct
                 && bridge.source.GetType(export.operation.ownerType!.Value).spelling == "Fixture::Box");
             destructor = Assert.Single(bridge.exports, export => export.id == create.resultRelease);
@@ -154,6 +154,6 @@ public sealed class NativeMsvcStandardLibraryTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

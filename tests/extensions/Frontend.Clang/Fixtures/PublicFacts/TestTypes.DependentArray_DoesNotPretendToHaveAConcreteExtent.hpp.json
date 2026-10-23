@@ -1,0 +1,263 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:0b2fd89b6344ae23c1cfa20b36acd0d7769b712ef9500ed0e3bd3f51711536a8"
+      },
+      "category": "Array",
+      "spelling": "int[0]",
+      "size": null,
+      "alignment": null,
+      "elementType": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:4bae14ff7aef4e53c611a89ab89796193c6a276b5979664f2ad5ba98b57dea54"
+      },
+      "category": "Template",
+      "spelling": "int N",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:7d170763a2b1d1cc8188c5b63349fc86093fb1bfd00b565bbf457a353a07cee6"
+      },
+      "category": "Primitive",
+      "spelling": "int",
+      "size": 4,
+      "alignment": 4,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": "Int",
+      "isSigned": true,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:969d509afa3d2b2f2c76309ba5619255e8b5227563566e077461da9571609ab3"
+      },
+      "category": "Record",
+      "spelling": "Buffer\u003Cint N\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:e94b3d6be4b840707cf9901579eb7fd03b132b63ed2e8f65e0bf5d27d7090137"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:e94b3d6be4b840707cf9901579eb7fd03b132b63ed2e8f65e0bf5d27d7090137"
+      },
+      "kind": "Class",
+      "name": "Buffer",
+      "qualifiedName": "Buffer\u003Cint N\u003E",
+      "type": {
+        "value": "type:969d509afa3d2b2f2c76309ba5619255e8b5227563566e077461da9571609ab3"
+      },
+      "source": {
+        "file": "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent.hpp",
+        "line": 1,
+        "column": 1
+      },
+      "parent": null,
+      "children": [
+        {
+          "value": "declaration:f1e23035d9213ce1c0f2d48e24a2aa2f239cf7eb24d1fe3f580fa7c3e06da7c7"
+        }
+      ],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": true,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [
+        {
+          "value": "type:4bae14ff7aef4e53c611a89ab89796193c6a276b5979664f2ad5ba98b57dea54"
+        }
+      ],
+      "templateKind": "TemplateClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:f1e23035d9213ce1c0f2d48e24a2aa2f239cf7eb24d1fe3f580fa7c3e06da7c7"
+      },
+      "kind": "Field",
+      "name": "values",
+      "qualifiedName": "Buffer::values",
+      "type": {
+        "value": "type:0b2fd89b6344ae23c1cfa20b36acd0d7769b712ef9500ed0e3bd3f51711536a8"
+      },
+      "source": {
+        "file": "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent.hpp",
+        "line": 1,
+        "column": 34
+      },
+      "parent": {
+        "value": "declaration:e94b3d6be4b840707cf9901579eb7fd03b132b63ed2e8f65e0bf5d27d7090137"
+      },
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Public",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "Warning",
+      "message": "Unhandled declaration: CXCursor_NonTypeTemplateParameter/N in Buffer.",
+      "code": "BGCS-FRONTEND-CLANG",
+      "location": {
+        "file": "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent.hpp",
+        "line": 1,
+        "column": 15
+      }
+    },
+    {
+      "severity": "Warning",
+      "message": "Dependent sized arrays \u0060int[N]\u0060 from \u0060values\u0060 is not supported",
+      "code": "BGCS-FRONTEND-CLANG",
+      "location": {
+        "file": "TestTypes.DependentArray_DoesNotPretendToHaveAConcreteExtent.hpp",
+        "line": 1,
+        "column": 38
+      }
+    }
+  ]
+}

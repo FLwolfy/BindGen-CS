@@ -1,9 +1,10 @@
+using BGCS.Core.Hosting;
 using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BGCS.Contracts.Artifacts;
+using BGCS.Core.Artifacts;
 using BGCS.Infrastructure.IO;
 
 namespace BGCS.Infrastructure.Publishing;
@@ -34,9 +35,10 @@ internal static class PublicationJournalStorage
 
     internal static void Write<T>(
         string path,
-        T value
+        T value,
+        IHostPathService paths
     ) {
-        OwnedPathBoundary boundary = new(path);
+        OwnedPathBoundary boundary = new(path, paths);
         path = boundary.physicalPath;
         string temporary = path + ".tmp";
         OwnedPathBoundary.RejectPhysicalLinks(temporary);
@@ -61,9 +63,11 @@ internal static class PublicationJournalStorage
         finally { OwnedFileCleanup.Delete(ownsTemporary ? temporary : null, failure); }
     }
 
-    internal static T Read<T>(string path)
-    {
-        OwnedPathBoundary boundary = new(path);
+    internal static T Read<T>(
+        string path,
+        IHostPathService paths
+    ) {
+        OwnedPathBoundary boundary = new(path, paths);
         using FileStream stream = File.OpenRead(boundary.physicalPath);
         if (stream.Length > 16 * 1024 * 1024) throw new IOException("A publication manifest exceeds its size limit.");
         T value = JsonSerializer.Deserialize<T>(stream, options) ?? throw new IOException("A publication manifest is empty.");

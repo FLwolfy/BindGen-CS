@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/bindgen.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "miniaudio",
     "nativeName": "miniaudio"
@@ -31,7 +31,8 @@
     "names": {
       "ma_version": "CorpusVersion",
       "ma_version_string": "CorpusVersionString"
-    }
+    },
+    "runtime": "dotnet.coreclr"
   },
   "runtime": {
     "mode": "package"

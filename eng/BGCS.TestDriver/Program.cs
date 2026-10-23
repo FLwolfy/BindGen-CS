@@ -57,6 +57,7 @@ internal static class Program
                 Case[] cases = ValidateCases(discovery.cases, methods, assembly);
                 Case[] selected = execute ? cases : [];
                 Run? run = null;
+                Exception? runFailure = null;
                 if (execute)
                 {
                     if (selected.Length == 0) throw new InvalidOperationException("The full baseline contains no discovered cases.");
@@ -65,32 +66,43 @@ internal static class Program
                     using CancellationTokenSource runDeadline = new(TimeSpan.FromHours(4));
                     using CancellationTokenRegistration cancelRun = runDeadline.Token.Register(wrapper.CancelTestRun);
                     wrapper.RunTests(discovery.cases.Where(item => selectedIds.Contains(item.Id.ToString("D"))).ToArray(), settings, run);
-                    runDeadline.Token.ThrowIfCancellationRequested();
-                    if (!run.completed || run.aborted || run.cancelled || run.errors.Count != 0 || run.results.Count != selected.Length
-                        || run.results.Any(item => item.Outcome != TestOutcome.Passed))
-                        throw new InvalidOperationException("The exact-case run failed, skipped, aborted or returned an incomplete result set: " + string.Join("; ", run.errors));
-                    ValidateResults(selected, run.results);
+                    try
+                    {
+                        runDeadline.Token.ThrowIfCancellationRequested();
+                        if (!run.completed || run.aborted || run.cancelled || run.errors.Count != 0 || run.results.Count != selected.Length
+                            || run.results.Any(item => item.Outcome != TestOutcome.Passed))
+                            throw new InvalidOperationException("The exact-case run failed, skipped, aborted or returned an incomplete result set: " + string.Join("; ", run.errors));
+                        ValidateResults(selected, run.results);
+                    }
+                    catch (Exception failure) when (failure is InvalidOperationException or OperationCanceledException)
+                    {
+                        runFailure = failure;
+                    }
                 }
                 var document = new
                 {
-                    schemaVersion = 1, success = true, discoveryComplete = true, discoveryTotal = cases.Length,
+                    schemaVersion = 1, success = runFailure is null, discoveryComplete = true, discoveryTotal = cases.Length,
                     assemblySha256 = Hash(assembly), sourceAssembly = Path.GetFileName(assembly), executionRequested = execute,
                     compiledMethods = methods, discoveredCases = cases, selectedCases = selected,
                     executedCases = run?.results.Select(item => new
                     {
                         id = item.TestCase.Id.ToString("D"), fullyQualifiedName = item.TestCase.FullyQualifiedName,
-                        displayName = item.TestCase.DisplayName, outcome = item.Outcome.ToString(), duration = item.Duration.ToString("c", System.Globalization.CultureInfo.InvariantCulture)
+                        displayName = item.TestCase.DisplayName, outcome = item.Outcome.ToString(), duration = item.Duration.ToString("c", System.Globalization.CultureInfo.InvariantCulture),
+                        errorMessage = Bounded(item.ErrorMessage, 8192), errorStackTrace = Bounded(item.ErrorStackTrace, 16384)
                     }).OrderBy(item => item.id, StringComparer.Ordinal).ToArray(),
                     vstestIdentity = new { consoleSha256 = Hash(console), translationLayerSha256 = Hash(typeof(VsTestConsoleWrapper).Assembly.Location), objectModelSha256 = Hash(typeof(TestCase).Assembly.Location) }
                 };
                 File.WriteAllText(output, JsonSerializer.Serialize(document, s_json) + "\n", new UTF8Encoding(false));
                 Console.WriteLine("Structured discovery: " + cases.Length + "; execution requested " + execute + "; executed " + (run?.results.Count ?? 0));
+                if (runFailure is not null) throw runFailure;
                 return 0;
             }
             finally { wrapper.EndSession(); }
         }
         catch (Exception failure) { Console.Error.WriteLine(failure); return 1; }
     }
+
+    private static string? Bounded(string? value, int maximum) => value is null || value.Length <= maximum ? value : value[..maximum] + " [truncated]";
 
     private static CompiledMethod[] ReadMethods(string assembly)
     {
@@ -185,7 +197,18 @@ internal static class Program
         internal readonly List<TestResult> results = [];
         internal readonly List<string> errors = [];
         internal bool completed, aborted, cancelled;
-        public void HandleTestRunStatsChange(TestRunChangedEventArgs? changed) { if (changed?.NewTestResults is not null) results.AddRange(changed.NewTestResults); }
+        public void HandleTestRunStatsChange(TestRunChangedEventArgs? changed)
+        {
+            if (changed?.NewTestResults is null) return;
+            int before = results.Count;
+            foreach (TestResult result in changed.NewTestResults)
+            {
+                results.Add(result);
+                if (result.Outcome != TestOutcome.Passed)
+                    Console.Error.WriteLine("FAIL " + result.TestCase.DisplayName + ": " + Bounded(result.ErrorMessage, 8192) + "\n" + Bounded(result.ErrorStackTrace, 16384));
+            }
+            if (results.Count / 100 != before / 100) Console.WriteLine("Completed cases: " + results.Count);
+        }
         public void HandleTestRunComplete(TestRunCompleteEventArgs complete, TestRunChangedEventArgs? last, ICollection<AttachmentSet>? attachments, ICollection<string>? executors)
         {
             HandleTestRunStatsChange(last); completed = true; aborted = complete.IsAborted; cancelled = complete.IsCanceled;

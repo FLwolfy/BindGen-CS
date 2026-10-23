@@ -6,9 +6,9 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Bridge;
+using BGCS.Core.Inputs;
+using BGCS.Core.Managed;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -46,10 +46,10 @@ public sealed class NativeCppBooleanTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "boolean", nativeName = "boolean_fixture" },
+                schemaVersion = 2, library = new() { id = "boolean", nativeName = "boolean_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["boolean.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeBoolean", name = "BooleanApi" },
-                cpp = new() { typeLowerings = custom ? [new TypeLoweringRecipe {
+                bridge = new() { typeLowerings = custom ? [new TypeLoweringRecipe {
                     id = "explicit-bool-int", typePattern = "bool", cAbiType = "uint8_t",
                     parameterExpression = "static_cast<bool>({value})", resultExpression = "static_cast<uint8_t>({value})",
                     managedProjection = new ManagedRecipeProjection("int", "(byte)({value} != 0 ? 1 : 0)", "{value} != 0 ? 1 : 0")
@@ -57,7 +57,7 @@ public sealed class NativeCppBooleanTests
                 semantics = new() { ownedResults = [new() { function = "Demo::Toggle::Toggle(bool)", releaseThreadDomain = "any" }] },
                 runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));
@@ -116,6 +116,6 @@ public sealed class NativeCppBooleanTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

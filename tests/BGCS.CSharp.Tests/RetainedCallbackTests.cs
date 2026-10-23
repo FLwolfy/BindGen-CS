@@ -3,13 +3,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -28,13 +28,13 @@ public sealed class RetainedCallbackTests
         ManagedApiModel model = Model();
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpRetainedCallbackPlan operation = Assert.Single(plan.retainedCallbacks);
         Assert.Empty(plan.callScopedCallbacks);
         Assert.Empty(plan.callbackOmissions);
         Assert.True(operation.callback.staticThunk);
         Assert.Equal("void*", operation.handleType);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string source = sink.sources.Single(source => source.Key.Contains("Registration_", StringComparison.Ordinal)).Value;
         Assert.Contains("KeepOpenUntilUnregistered", source);
         Assert.Contains("while (!m_ready || m_nativeUses != 0)", source);
@@ -76,12 +76,12 @@ public sealed class RetainedCallbackTests
         { byteOrder = fault == "browser" ? NativeByteOrder.LittleEndian : original.interop.byteOrder };
         EmissionRequest request = new("native", new NeutralBackendTests.MemorySink())
         {
-            managedRuntime = fault == "browser" ? new("nonblocking-test", ManagedRuntimeKind.BrowserWasm, NativeModuleMechanism.StaticAdapter,
-                [BindingImportMode.FunctionTable], true, false) { functionPointerTransport = ManagedFunctionPointerTransport.BrowserWasm32TableIndex } : null,
+            managedRuntime = fault == "browser" ? new("nonblocking-test", new ManagedRuntimeId("fixture.nonblocking-runtime"), NativeModuleMechanism.StaticAdapter,
+                [BindingImportMode.FunctionTable], true, false) { functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger } : null,
             staticExportTable = fault == "browser" ? new("retained", "retained_get", "retained_revision", "retained_count", "retained_identity", "retained_pointer_size",
                 new string('a', 64), module.functions.Select(function => function.exportName).ToImmutableArray()) : null
         };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(original with { interop = module }, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(original with { interop = module }, request);
         Assert.Empty(plan.retainedCallbacks);
         Assert.Equal(2, plan.methods.Length);
         Assert.Single(plan.callbackOmissions);
@@ -106,7 +106,7 @@ public sealed class RetainedCallbackTests
         InteropFunction register = new(new("register"), "register", pointer.id,
             [new(new("callback"), "callback", callbackPointer.id) { callback = callback }, new(new("userdata"), "userdata", pointer.id)], "C");
         InteropFunction stop = new(new("stop"), "stop", empty.id, [new(new("handle"), "handle", pointer.id)], "C");
-        InteropModule module = new("retained", "windows-x64-msvc", 8, [integer, empty, pointer, callable, callbackPointer], [register, stop], []);
+        InteropModule module = new("retained", "windows-x64-msvc", 8, [integer, empty, pointer, callable, callbackPointer], [register, stop], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.Retained", "CallbackApi"), CancellationToken.None);
     }
 }

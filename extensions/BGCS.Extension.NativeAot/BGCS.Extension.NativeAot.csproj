@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <PackageDescription>Explicit NativeAOT execution support for BGCS using common .NET call-ABI algorithms.</PackageDescription>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/BGCS.Core/BGCS.Core.csproj" />
+    <ProjectReference Include="../foundation/BGCS.Interop.DotNet/BGCS.Interop.DotNet.csproj" />
+  </ItemGroup>
+</Project>

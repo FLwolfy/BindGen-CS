@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -48,12 +48,12 @@ public sealed class ValueStringResultTests
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("value_strings", sink) { importMode = mode, includeRuntimeSource = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.ValueStrings.Runtime" : "BGCS.Runtime", maximumValueStringCodeUnits = 73 };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpValueStringResultPlan result = Assert.Single(plan.valueStringResults);
         Assert.Equal(73, result.maximumCodeUnits);
         Assert.DoesNotContain(plan.statusMethods, status => status.methodIndex == result.factory.methodIndex);
         Assert.Null(module.functions[0].parameters[0].ownership!.releaseThreadDomain);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         MethodDeclarationSyntax method = Assert.Single(sink.sources.SelectMany(pair => CSharpSyntaxTree.ParseText(pair.Value).GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>()),
             declaration => declaration.Identifier.ValueText == "Make" && declaration.ReturnType.ToString() == "string");
         string source = method.ToFullString();
@@ -103,7 +103,7 @@ public sealed class ValueStringResultTests
             functions[0].parameters[0] with { ownership = functions[0].parameters[0].ownership! with { releaseFunction = new("other-release") } }) });
         if (fault == "asynchronous") functions = functions.SetItem(0, functions[0] with { asynchronous = new(new("completion"), NativeQuiescenceKind.NoActiveNativeInvocations, protocol.evidence) });
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, functions, []) { byteOrder = original.byteOrder };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.valueStringResults);
         Assert.Contains(plan.methods, method => method.nativeExport == new StableId("make"));
         Assert.Contains(plan.ownedProjectionOmissions, omission => omission.nativeExport == new StableId("make"));

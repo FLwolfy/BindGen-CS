@@ -18,13 +18,15 @@ flowchart LR
 
 分别验证原生存储、托管载体存储和按值调用 ABI。ExplicitLayout 能表示 offset，不会自动修复寄存器分类、栈对齐或运行时 marshalling。
 
+默认 `bridge.aggregateStrategy = pointerBridge` 将跨边界 aggregate 改为类型化指针和输出参数；原生桥内部执行原始按值调用。显式 `direct` 仍须取得精确调用计划。
+
 当前 C# 规划允许支持的 primitive、enum、pointer 和固定 callback ABI。已解析的 .NET 10 CoreCLR/NativeAOT 聚合 profile 还可以采用 Windows x64 或 System V AMD64 的已实现调用算法；这个机制描述不等于平台认证收据。
 
 规划递归核对标量载体、数组 stride、完整字段、重叠规则、size 与托管 alignment。可表示时 explicit layout 采用匹配的 packing；生成的外层 alignment probe 在创建上下文时检查实际托管字段位置。ABI manifest 记录 runtime profile、storage packing 和调用分类。
 
 Windows x64 的普通小聚合按大小分类；System V AMD64 还根据真实浮点/整数成员进行 eightbyte 分类，未对齐字段或较大的记录使用 memory 形式。不能只根据 `sizeof` 推出调用兼容；见 [Microsoft x64 ABI](https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170) 与 [.NET 10 分类实现](https://github.com/dotnet/runtime/blob/v10.0.0/src/coreclr/vm/methodtablebuilder.cpp)。
 
-未知 profile、无法匹配的 alignment、位字段、柔性数组、空/不完整记录与特殊标量仍要求 pointer 或 native bridge。Browser 和其他 CPU 的聚合 profile 尚未开放，需要先实现并验证对应调用路径。测试必须真实执行参数、返回值和反向回调，并覆盖 import mode 与托管执行模型，不能以编译成功代替。
+未知 profile、无法匹配的 alignment、位字段、柔性数组、空/不完整记录与特殊标量仍要求 pointer 或 native bridge。Browser 的 managed/native 边界只允许其已实现的标量/地址载体，aggregate 通过桥接转换；未实现的直接聚合 ABI 不会自动开放。其他 CPU 同样需要适用的调用计划。测试必须真实执行参数、返回值和反向回调，并覆盖 import mode 与托管执行模型，不能以编译成功代替。
 
 嵌套过度对齐回归分别验证 `Outer.size = 96`、`Outer.nested = 32`、`Outer.suffix = 64`。总大小正确但字段错误仍是错误。普通托管分配不承诺任意原生对齐；需要时使用配对 aligned allocator，并核对每个指针的对齐。
 

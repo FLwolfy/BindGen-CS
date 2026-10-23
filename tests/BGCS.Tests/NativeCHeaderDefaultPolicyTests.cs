@@ -3,8 +3,8 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
+using BGCS.Core;
+using BGCS.Core.Inputs;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -38,7 +38,7 @@ public sealed class NativeCHeaderDefaultPolicyTests
             await File.WriteAllTextAsync(Path.Combine(root, "library.c"), "#include \"library.h\"\nFIXTURE_EXPORT int External(int value) { return value + 1; }\n");
             BindingConfiguration configuration = Configuration() with { api = Configuration().api with { importMode = mode } };
             Assert.False(configuration.source.includeHeaderHelpers);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             string targetId = Assert.Single(built.targetModels).targetId;
@@ -85,7 +85,7 @@ public sealed class NativeCHeaderDefaultPolicyTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "original", nativeName = "original_fixture" },
+        schemaVersion = 2, library = new() { id = "original", nativeName = "original_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["library.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.Original", name = "OriginalApi", names = ImmutableDictionary<string, string>.Empty.Add("EXTERNAL_ALIAS", "ExternalAlias") },
          cache = new() { enabled = false }
@@ -96,6 +96,6 @@ public sealed class NativeCHeaderDefaultPolicyTests
         DirectoryInfo? repository = new(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }

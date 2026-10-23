@@ -14,7 +14,12 @@
       "feature": "Named exact ABI delegate declarations and independent callback naming",
       "tests": "tests/BGCS.CSharp.Tests/AbiDelegateDeclarationTests.cs",
       "executedReceipt": "artifacts/test-results/cpp-async-and-delegate-planning.trx",
-      "assertions": ["Standalone callback typedef declaration", "CoreCLR exact delegate reuse", "Prototype/convention/visibility artifact tamper refusal", "Standalone opt-out preserves raw function pointers and checked callback wrapper"]
+      "assertions": [
+        "Standalone callback typedef declaration",
+        "CoreCLR exact delegate reuse",
+        "Prototype/convention/visibility artifact tamper refusal",
+        "Standalone opt-out preserves raw function pointers and checked callback wrapper"
+      ]
     },
     {
       "feature": "Call-scoped CoreCLR and explicit userdata static callbacks",
@@ -22,58 +27,128 @@
       "executedReceipt": "artifacts/test-results/cpp-call-scoped-callback-native-composed.trx",
       "executedCases": 6,
       "localScope": "Windows x64 CoreCLR; all three imports; Runtime package/source; source static facade and single file",
-      "assertions": ["Actual native callback invocation", "Forced GC and original pointer identity", "Exact native bool byte and void callbacks", "Explicit fallback before original exception rethrow", "UTF8/span/written-count/ref-value composition and failure copyback", "Context closure during callback retains the current call"]
+      "assertions": [
+        "Actual native callback invocation",
+        "Forced GC and original pointer identity",
+        "Exact native bool byte and void callbacks",
+        "Explicit fallback before original exception rethrow",
+        "UTF8/span/written-count/ref-value composition and failure copyback",
+        "Context closure during callback retains the current call"
+      ]
     },
     {
       "feature": "Returned-handle retained registrations",
-      "tests": ["tests/BGCS.CSharp.Tests/RetainedCallbackTests.cs", "tests/BGCS.Tests/NativeRetainedCallbackTests.cs"],
+      "tests": [
+        "tests/BGCS.CSharp.Tests/RetainedCallbackTests.cs",
+        "tests/BGCS.Tests/NativeRetainedCallbackTests.cs"
+      ],
       "planningReceipt": "artifacts/test-results/cpp-retained-callback-planning.trx",
       "executedReceipt": "artifacts/test-results/cpp-retained-callback-native-six.trx",
       "executedCases": 6,
       "localScope": "Windows x64 CoreCLR; all three imports; Runtime package/source; source static facade and single file",
-      "assertions": ["Inline callbacks before handle publication", "Real native worker threads", "Native execution continues after managed thunk finally", "Self-dispose stops and joins outside its native callback frame", "Captured exceptions and explicit fallback", "Null failure leaves no native retention", "Context closure preserves cleanup module leases", "Unknown/partial quiescence and forbidden blocking profiles preserve raw only"]
+      "assertions": [
+        "Inline callbacks before handle publication",
+        "Real native worker threads",
+        "Native execution continues after managed thunk finally",
+        "Self-dispose stops and joins outside its native callback frame",
+        "Captured exceptions and explicit fallback",
+        "Null failure leaves no native retention",
+        "Context closure preserves cleanup module leases",
+        "Unknown/partial quiescence and forbidden blocking profiles preserve raw only"
+      ]
     },
     {
       "feature": "Callback and user-data pair registrations",
-      "tests": ["tests/BGCS.CSharp.Tests/CallbackStateRegistrationTests.cs", "tests/BGCS.Tests/NativeRetainedCallbackTests.cs:SameCallbackAndUserDataUnregisterWaitsForTheCompleteNativeThreadFrame"],
+      "tests": [
+        "tests/BGCS.CSharp.Tests/CallbackStateRegistrationTests.cs",
+        "tests/BGCS.Tests/NativeRetainedCallbackTests.cs:SameCallbackAndUserDataUnregisterWaitsForTheCompleteNativeThreadFrame"
+      ],
       "planningReceipt": "artifacts/test-results/cpp-paired-callback-planning-corrected.trx",
       "executedReceipt": "artifacts/test-results/cpp-paired-callback-native-six.trx",
       "executedCases": 6,
       "localScope": "Windows x64 CoreCLR; all three imports; Runtime package/source; source static facade and single file",
       "historicalAbortedReceipt": "artifacts/test-results/cpp-paired-callback-native-first.trx",
-      "assertions": ["One captured callback address is reused by native register and unregister", "Native pointer identity mismatch count remains zero", "Exact callback/state argument identities and declared order", "Scalar success and failed-result full quiescence", "Void registration has no invented scalar success", "Real threaded retained lifecycle, self-close, exception fallback and context cleanup", "Incomplete pair protocols preserve raw only"]
+      "assertions": [
+        "One captured callback address is reused by native register and unregister",
+        "Native pointer identity mismatch count remains zero",
+        "Exact callback/state argument identities and declared order",
+        "Scalar success and failed-result full quiescence",
+        "Void registration has no invented scalar success",
+        "Real threaded retained lifecycle, self-close, exception fallback and context cleanup",
+        "Incomplete pair protocols preserve raw only"
+      ]
     },
     {
       "feature": "C++ exception-status and owned-result callback composition",
-      "tests": ["tests/BGCS.CSharp.Tests/CallbackStatusCompositionTests.cs", "tests/BGCS.Tests/NativeCallbackStatusTests.cs"],
+      "tests": [
+        "tests/BGCS.CSharp.Tests/CallbackStatusCompositionTests.cs",
+        "tests/BGCS.Tests/NativeCallbackStatusTests.cs"
+      ],
       "planningReceipt": "artifacts/test-results/cpp-status-callback-planning.trx",
       "executedReceipt": "artifacts/test-results/cpp-status-callback-native-six.trx",
       "executedCases": 6,
       "localScope": "Windows x64 CoreCLR; all three imports; Runtime package/source; source static facade and single file",
-      "assertions": ["Existing checked status operation owns native error cleanup", "Scalar and void results preserve original callback exceptions", "Captured managed failure wins over native error status after native cleanup", "A successful owned constructor result is disposed before rethrowing a captured callback failure", "Real native live-object counter returns to zero", "Aliases and named views reuse one checked callback signature", "Context closure during construction retains owned native cleanup access"]
+      "assertions": [
+        "Existing checked status operation owns native error cleanup",
+        "Scalar and void results preserve original callback exceptions",
+        "Captured managed failure wins over native error status after native cleanup",
+        "A successful owned constructor result is disposed before rethrowing a captured callback failure",
+        "Real native live-object counter returns to zero",
+        "Aliases and named views reuse one checked callback signature",
+        "Context closure during construction retains owned native cleanup access"
+      ]
     },
     {
       "feature": "Owned C++ instance callbacks and ordinary owned instance results",
-      "tests": ["tests/BGCS.CSharp.Tests/OwnedInstanceCallbackTests.cs", "tests/BGCS.Tests/NativeOwnedInstanceCallbackTests.cs"],
+      "tests": [
+        "tests/BGCS.CSharp.Tests/OwnedInstanceCallbackTests.cs",
+        "tests/BGCS.Tests/NativeOwnedInstanceCallbackTests.cs"
+      ],
       "planningReceipt": "artifacts/test-results/cpp-owned-instance-callback-planning-corrected.trx",
       "planningCases": 13,
       "executedReceipt": "artifacts/test-results/cpp-owned-instance-callback-native-six.trx",
       "executedCases": 6,
       "localScope": "Windows x64 MSVC/CoreCLR; all three imports; Runtime package/source; source static facade and single file",
-      "assertions": ["Exact same-context owned receiver and qualifier-preserving factory identity", "Receiver lease spans the complete native call including self-disposal and concurrent disposal", "One rooted native callback address per invocation for delegate and user-data thunk paths", "Scalar and void member callbacks preserve original managed exceptions after native error cleanup", "Ordinary and callback-bearing instance methods adopt matching owned native results", "Invalid native output counts and captured callback failures dispose an adopted result before rethrowing", "Original ref/in/Span address aliases survive receiver Invoke dispatch", "Context closure retains native result/error/object cleanup access", "Complete wrapper/factory/helper artifact tampering is rejected independently of buffer configuration", "Unproved and module-borrowed receiver protocols preserve raw ABI with explicit omissions"],
-      "limits": ["Unknown receiver retention remains unknown; the call lease does not authorize native use after return.", "Temporary pinned input and callback addresses still require explicit nonretention.", "NativeAOT, browser Wasm, other systems and final packaged revision require independent certification."],
+      "assertions": [
+        "Exact same-context owned receiver and qualifier-preserving factory identity",
+        "Receiver lease spans the complete native call including self-disposal and concurrent disposal",
+        "One rooted native callback address per invocation for delegate and user-data thunk paths",
+        "Scalar and void member callbacks preserve original managed exceptions after native error cleanup",
+        "Ordinary and callback-bearing instance methods adopt matching owned native results",
+        "Invalid native output counts and captured callback failures dispose an adopted result before rethrowing",
+        "Original ref/in/Span address aliases survive receiver Invoke dispatch",
+        "Context closure retains native result/error/object cleanup access",
+        "Complete wrapper/factory/helper artifact tampering is rejected independently of buffer configuration",
+        "Unproved and module-borrowed receiver protocols preserve raw ABI with explicit omissions"
+      ],
+      "limits": [
+        "Unknown receiver retention remains unknown; the call lease does not authorize native use after return.",
+        "Temporary pinned input and callback addresses still require explicit nonretention.",
+        "NativeAOT, browser Wasm, other systems and final packaged revision require independent certification."
+      ],
       "releaseCertification": false
     },
     {
       "feature": "Native terminal operations and pinned Memory buffers",
-      "tests": ["tests/BGCS.CSharp.Tests/AsyncOperationTests.cs", "tests/BGCS.Tests/NativeAsyncOperationTests.cs"],
+      "tests": [
+        "tests/BGCS.CSharp.Tests/AsyncOperationTests.cs",
+        "tests/BGCS.Tests/NativeAsyncOperationTests.cs"
+      ],
       "planningReceipt": "artifacts/test-results/cpp-async-planning-terminal-guards.trx",
       "executedReceipt": "artifacts/test-results/cpp-async-operation-native-six.trx",
       "executedCases": 6,
       "localScope": "Windows x64 CoreCLR; all three imports; Runtime package/source; source static facade and single file",
       "historicalFailedReceipt": "artifacts/test-results/cpp-async-operation-native-first.trx",
       "historicalFailure": "Formal-output overlap guard treated a native include-root snapshot as a declared external extension input before native consumer invocation; corrected with a separate native-source snapshot category",
-      "assertions": ["Result/status/userdata channels are exact typed identities", "Task completion follows separate full native join", "Cancellation requests do not release native storage", "Pin alignment/null/bounds checks precede native start", "Tracked MemoryManager checks native post-callback writes before Unpin", "Inline completion, success, acknowledged cancellation, failure, null start and context-close calls", "Undefined enum values, duplicate retained identities and equivalent success/cancellation statuses are refused"]
+      "assertions": [
+        "Result/status/userdata channels are exact typed identities",
+        "Task completion follows separate full native join",
+        "Cancellation requests do not release native storage",
+        "Pin alignment/null/bounds checks precede native start",
+        "Tracked MemoryManager checks native post-callback writes before Unpin",
+        "Inline completion, success, acknowledged cancellation, failure, null start and context-close calls",
+        "Undefined enum values, duplicate retained identities and equivalent success/cancellation statuses are refused"
+      ]
     }
   ],
   "remaining": [
@@ -81,5 +156,10 @@
     "NativeAOT and browser callback certification requires independent actual fixtures at the final revision",
     "Synchronous native joins are unavailable in a managed runtime profile that forbids blocking disposal",
     "Do not retire the complete legacy Host/backend stack based solely on this callback ledger"
-  ]
+  ],
+  "historicalOnly": true,
+  "currentRevisionCertified": false,
+  "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
+  "currentEvidenceInventory": "eng/acceptance/feature-inventory.json",
+  "scopeNotice": "Historical source/assertion correspondence and old local observations only. Current4.0 implementation and exact same-revision execution mappings are authoritative in feature/configuration inventories; no old receipt certifies current behavior."
 }

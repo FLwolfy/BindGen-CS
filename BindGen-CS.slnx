@@ -5,48 +5,80 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/src/">
+    <Project Path="src/BGCS/BGCS.csproj" />
     <Project Path="src/BGCS.Analysis/BGCS.Analysis.csproj" />
-    <Project Path="src/BGCS.Contracts/BGCS.Contracts.csproj" />
-    <Project Path="src/BGCS.Cpp2C/BGCS.Cpp2C.csproj" />
+    <Project Path="src/BGCS.Core/BGCS.Core.csproj" />
     <Project Path="src/BGCS.CSharp/BGCS.CSharp.csproj" />
-    <Project Path="src/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj" />
-    <Project Path="src/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
+    <Project Path="src/BGCS.Engine/BGCS.Engine.csproj" />
     <Project Path="src/BGCS.Infrastructure/BGCS.Infrastructure.csproj" />
-    <Project Path="src/BGCS.Platforms/BGCS.Platforms.csproj" />
+    <Project Path="src/BGCS.NativeBridge/BGCS.NativeBridge.csproj" />
     <Project Path="src/BGCS.Runtime/BGCS.Runtime.csproj" />
     <Project Path="src/BGCS.Tool/BGCS.Tool.csproj" />
-    <Project Path="src/BGCS/BGCS.csproj" />
+  </Folder>
+  <Folder Name="/extensions/">
+    <Project Path="extensions/BGCS.Extension.Android/BGCS.Extension.Android.csproj" />
+    <Project Path="extensions/BGCS.Extension.AppleMobile/BGCS.Extension.AppleMobile.csproj" />
+    <Project Path="extensions/BGCS.Extension.BrowserWasm/BGCS.Extension.BrowserWasm.csproj" />
+    <Project Path="extensions/BGCS.Extension.FreeBsd/BGCS.Extension.FreeBsd.csproj" />
+    <Project Path="extensions/BGCS.Extension.NativeAot/BGCS.Extension.NativeAot.csproj" />
+  </Folder>
+  <Folder Name="/extensions/foundation/">
+    <Project Path="extensions/foundation/BGCS.Hosting.Standard/BGCS.Hosting.Standard.csproj" />
+    <Project Path="extensions/foundation/BGCS.Interop.DotNet/BGCS.Interop.DotNet.csproj" />
+    <Project Path="extensions/foundation/BGCS.Targets.Desktop/BGCS.Targets.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/extensions/frontends/">
+    <Project Path="extensions/frontends/BGCS.Frontend.Clang/BGCS.Frontend.Clang.csproj" />
+    <Project Path="extensions/frontends/BGCS.Frontend.Clang.Worker/BGCS.Frontend.Clang.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/BGCS.Analysis.Tests/BGCS.Analysis.Tests.csproj" />
     <Project Path="tests/BGCS.Architecture.Tests/BGCS.Architecture.Tests.csproj" />
     <Project Path="tests/BGCS.Configuration.Tests/BGCS.Configuration.Tests.csproj" />
-    <Project Path="tests/BGCS.Contracts.Tests/BGCS.Contracts.Tests.csproj" />
-    <Project Path="tests/BGCS.Cpp2C.Tests/BGCS.Cpp2C.Tests.csproj" />
+    <Project Path="tests/BGCS.Core.Tests/BGCS.Core.Tests.csproj" />
     <Project Path="tests/BGCS.CSharp.Tests/BGCS.CSharp.Tests.csproj" />
-    <Project Path="tests/BGCS.Frontend.Clang.Tests/BGCS.Frontend.Clang.Tests.csproj" />
+    <Project Path="tests/BGCS.Engine.Tests/BGCS.Engine.Tests.csproj" />
     <Project Path="tests/BGCS.Infrastructure.Tests/BGCS.Infrastructure.Tests.csproj" />
-    <Project Path="tests/BGCS.Platforms.Tests/BGCS.Platforms.Tests.csproj" />
+    <Project Path="tests/BGCS.NativeBridge.Tests/BGCS.NativeBridge.Tests.csproj" />
+    <Project Path="tests/BGCS.RepositoryTools.Tests/BGCS.RepositoryTools.Tests.csproj" />
     <Project Path="tests/BGCS.Runtime.Tests/BGCS.Runtime.Tests.csproj" />
     <Project Path="tests/BGCS.Tests/BGCS.Tests.csproj" />
     <Project Path="tests/BGCS.Tool.Tests/BGCS.Tool.Tests.csproj" />
-    <Project Path="tests/BGCS.Worker.Tests/BGCS.Worker.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/extensions/">
+    <Project Path="tests/extensions/BrowserWasm/BGCS.Extension.BrowserWasm.Tests.csproj" />
+    <Project Path="tests/extensions/Frontend.Clang/BGCS.Frontend.Clang.Tests.csproj" />
+    <Project Path="tests/extensions/Frontend.Clang.Worker/BGCS.Worker.Tests.csproj" />
+    <Project Path="tests/extensions/Hosting.Standard/BGCS.Hosting.Standard.Tests.csproj" />
+    <Project Path="tests/extensions/Interop.DotNet/BGCS.Interop.DotNet.Tests.csproj" />
+    <Project Path="tests/extensions/NativeAot/BGCS.Extension.NativeAot.Tests.csproj" />
+    <Project Path="tests/extensions/Targets.Desktop/BGCS.Targets.Desktop.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/fixtures/">
     <Project Path="tests/fixtures/FailingFingerprintPlugin/FailingFingerprintPlugin.csproj" />
     <Project Path="tests/fixtures/OutputPublisher/OutputPublisher.csproj" />
     <Project Path="tests/fixtures/ParserLibraryHost/ParserLibraryHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/fixtures/hosts/">
     <Project Path="tests/fixtures/hosts/EmbeddedSdkHost/EmbeddedSdkHost.csproj" />
     <Project Path="tests/fixtures/hosts/FaultingWorker/FaultingWorker.csproj" />
     <Project Path="tests/fixtures/hosts/ProcessProbe/ProcessProbe.csproj" />
+  </Folder>
+  <Folder Name="/tests/fixtures/plugins/">
     <Project Path="tests/fixtures/plugins/ClangFactPlugin/ClangFactPlugin.csproj" />
     <Project Path="tests/fixtures/plugins/NeutralLoweringPlugin/NeutralLoweringPlugin.csproj" />
   </Folder>
-  <Folder Name="/examples/">
-    <Project Path="examples/CustomTargetPlugin/BGCS.Example.CustomTargetPlugin.csproj" />
-  </Folder>
-  <Folder Name="/Repository tools/">
+  <Folder Name="/eng/">
     <Project Path="eng/BGCS.RepositoryTools/BGCS.RepositoryTools.csproj" />
-    <Project Path="tests/BGCS.RepositoryTools.Tests/BGCS.RepositoryTools.Tests.csproj" />
+    <Project Path="eng/BGCS.TestDriver/BGCS.TestDriver.csproj" />
+    <Project Path="eng/BGCS.TestDriver.Fixtures/BGCS.TestDriver.Fixtures.csproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/CustomCallAbi/BGCS.Example.CustomCallAbi.csproj" />
+    <Project Path="examples/CustomLowering/BGCS.Example.CustomLowering.csproj" />
+    <Project Path="examples/CustomTargetPlugin/BGCS.Example.CustomTargetPlugin.csproj" />
+    <Project Path="examples/EmbeddedGeneration/BGCS.Example.EmbeddedGeneration.csproj" />
+    <Project Path="examples/InlineExtension/BGCS.Example.InlineExtension.csproj" />
+    <Project Path="examples/LoweringPlugin/BGCS.Example.LoweringPlugin.csproj" />
   </Folder>
 </Solution>

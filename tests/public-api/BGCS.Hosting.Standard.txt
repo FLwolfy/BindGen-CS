@@ -1,0 +1,15 @@
+class BGCS.Hosting.Standard.HostPathService [sealed; interfaces=BGCS.Core.Hosting.IHostPathService]
+  ctor(System.Func<System.String,BGCS.Core.Hosting.HostPathSemantics> observe, System.Func<System.Exception,BGCS.Core.Hosting.HostIoFailureKind> classify)
+  property System.Collections.Generic.IEqualityComparer<System.String> comparer { get } [virtual; final]
+  method BGCS.Core.Hosting.HostIoFailureKind ClassifyIoFailure(System.Exception failure) [virtual; final]
+  method BGCS.Core.Hosting.HostPathIdentity GetIdentity(System.String path) [virtual; final]
+  method BGCS.Core.Hosting.HostPathSemantics GetSemantics(System.String directory) [virtual; final]
+  method System.Boolean Equals(System.String left, System.String right) [virtual; final]
+  method System.Boolean IsWithin(System.String candidate, System.String root, System.Boolean includeRoot [optional; default=true]) [virtual; final]
+  method System.String GetIdentityKey(System.String path) [virtual; final]
+  method System.String GetRelativePath(System.String baseDirectory, System.String path) [virtual; final]
+  method System.Void Verify() [virtual; final]
+class BGCS.Hosting.Standard.HostServicesProvider [sealed; interfaces=BGCS.Core.Hosting.IHostServicesProvider|BGCS.Core.Plugins.ICacheFingerprintProvider]
+  ctor()
+  method BGCS.Core.Hosting.HostServices Create(BGCS.Core.Hosting.HostServicesRequest request) [virtual; final]
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]

@@ -4,15 +4,15 @@
 
 ## Release contents and version
 
-The four user products are `BGCS`, `BGCS.Contracts`, `BGCS.Runtime` and `BindGen-CS`.
-Internal implementation assemblies such as Cpp2C, Frontend, Infrastructure and CSharp
+The four base user products are `BGCS`, `BGCS.Core`, `BGCS.Runtime` and `BindGen-CS`.
+Internal implementation assemblies such as NativeBridge, Frontend, Infrastructure and CSharp
 are bundled by the full SDK/tool, not separate products a user must assemble.
 
 The physical set is defined by
 [`product-packages.json`](../distribution/manifests/product-packages.json):
 
-- `.nupkg` files for the four products;
-- `.snupkg` files for its declared symbol products (`BGCS`, Contracts and Runtime);
+- `.nupkg` files for the four base products and five optional `BGCS.Extension.*` implementations;
+- `.snupkg` files for its declared symbol products (base libraries and optional extensions);
 - `BindGen-CS.<rid>` packages for the declared six desktop host RIDs, including Intel macOS;
 - the technical `BGCS.ParserRuntime.osx-x64` package with the accepted Intel parser closure.
 
@@ -43,8 +43,9 @@ feeds `BGCS.ParserRuntime.osx-x64`, not an old standalone frontend product.
 CI downloads and verifies the same-revision accepted artifact. A host-only local run
 is explicitly partial and cannot substitute for complete product certification.
 
-See [package certification](packages.md#packaging-and-certification) for SDK, Contracts,
-Runtime and installed tool consumer requirements; AOT/Wasm application checks are optional manual private work. A local
+See [package certification](packages.md#repository-package-verification) for SDK, Core,
+Runtime and installed tool consumer requirements. The targeted Linux Browser regression
+is part of generator CI; broader application matrices are separate. A local
 report does not establish final package availability or certify another platform.
 
 ## Automatic publication and exact evidence
@@ -55,16 +56,18 @@ The ordinary automatic chain is:
 
 1. A main push runs Windows full generator checks and Linux/macOS generator smoke,
    preserving core feature baselines and original per-host performance budgets.
-2. One full product-install job consumes the actual SDK/tool/Contracts/Runtime packages.
-   AOT/Wasm application builds are manual private checks, not mandatory release jobs.
+2. One full product-install job consumes the actual SDK/tool/Core/Runtime and optional
+   extension packages. Linux smoke runs the fixed Browser Mono Wasm/AOT aggregate and
+   callback regression; broader application publishing matrices are not repeated.
 3. Successful product certification triggers release preflight. It authenticates the
    current main candidate, exact workflow/run identities and downloaded artifact bytes.
 4. Required jobs, feature/configuration evidence and installed-product reports are checked
    against `eng/acceptance/required-release-gates.json`. There is no historical fixed job
    count. Missing, failed, skipped, stale or contradictory required evidence blocks release.
-5. The accepted revision is rebuilt and its physical packages consumed. API, dependency,
-   source, supply-chain and package/source digest checks run. Original exact Host evidence
-   is reverified rather than replaced by an unrecorded partial rerun.
+5. Download the accepted package archives, installed-product receipt and authenticated
+   repository tooling from the certified runs. Recheck their exact hashes and source
+   identities, then generate supply-chain evidence from those same archive bytes.
+   Original Host and feature evidence remains linked to the accepted CI run.
 6. After attestations and another physical-package check, tag creation rechecks main and
    the latest accepted runs. `v<version>` must point to that accepted commit; an existing
    different tag is never moved. Publishing continues in the same job, since a tag made
@@ -96,7 +99,7 @@ uploads come only from the authorized job, not a locally generated provenance do
 The workflow verifies public package payloads and installs the four products after upload.
 Separate symbol pushes must succeed; that does not claim symbol-server indexing.
 Publication is complete only after the release workflow, public-consumption checks and
-GitHub release succeed. Before that, installation examples for 3.0.0 are conditional on
+GitHub release succeed. Before that, installation examples for 4.0.0 are conditional on
 actual publication.
 
 NuGet versions are immutable. Retry a partial upload with identical accepted contents;
@@ -108,10 +111,8 @@ replace or delete a published version as a recovery mechanism.
 
 The independent `Archive historical releases` workflow maintains the reviewed
 entries in `scripts/historical-releases.json` and the [release history](releases/README.md).
-It runs after accepted CI when those entries, their release notes, or the archive
-workflow change, or while a reviewed archive remains unpublished. This resumes
-interrupted archival work after a later CI fix. It also supports a manual run
-against accepted main.
+It is triggered manually against accepted main. Routine generator CI does not
+rebuild or republish historical releases.
 
 It downloads the original NuGet packages, checks their identities, source commits,
 ZIP integrity and hashes, then publishes GitHub drafts only after their uploaded

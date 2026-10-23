@@ -1,3 +1,4 @@
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -5,17 +6,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Validation;
-using BGCS.Platforms;
+using BGCS.Interop.DotNet;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -57,7 +58,7 @@ public sealed class NativeStringResultTests
                 }).ToImmutableArray();
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "string-result", nativeName = "string_result_fixture" },
+                schemaVersion = 2, library = new() { id = "string-result", nativeName = "string_result_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["text.h"], includeTransitivelyReferencedHeaders = false, parseMacros = false },
                 api = new()
                 {
@@ -80,15 +81,15 @@ public sealed class NativeStringResultTests
                 runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                  cache = new() { enabled = false }
             };
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             TargetInspection target = Assert.Single(result.targetModels);
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
-            CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
             {
                 importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.StringResults.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
-                managedRuntime = ManagedRuntimeResolver.Resolve(target.resolvedTarget!, ManagedRuntimeKind.CoreClr)
+                managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!)
             });
             Assert.Equal(13, plan.stringResults.Length);
             Assert.Equal(2, plan.ownedProjectionOmissions.Length);
@@ -150,8 +151,8 @@ public sealed class NativeStringResultTests
             if (mode == BindingImportMode.FunctionTable && !sourceRuntime)
             {
                 var before = Directory.GetFiles(result.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(result.outputRoot, path), File.ReadAllBytes, StringComparer.Ordinal);
-                await using BindingHost tampering = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot())
-                    .AddArtifactProcessor("string-result.tamper", 0, () => new Tamper()).Build();
+                await using BindingHost tampering = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot())
+                    .RegisterFactory<IArtifactProcessor>(new("string-result.tamper", ExtensionPort.ArtifactProcessor, 0), _ => new Tamper()).Build();
                 GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(tampering, new(configuration, root));
                 Assert.False(rejected.success);
                 Assert.Contains("string result", rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
@@ -188,7 +189,7 @@ public sealed class NativeStringResultTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 
     private const string Header = """

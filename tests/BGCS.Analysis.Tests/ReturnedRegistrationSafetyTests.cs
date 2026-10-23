@@ -2,10 +2,10 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using BGCS.Analysis.Safety;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Native;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Native;
 using Xunit;
 
 namespace BGCS.Analysis.Tests;

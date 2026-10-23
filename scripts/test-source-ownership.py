@@ -70,7 +70,7 @@ class SourceOwnershipTests(unittest.TestCase):
 
     def test_project_native_schema_and_tool_sources_cannot_be_hidden(self):
         self.write('.gitignore', 'Hidden/\n')
-        expected = ('integrations/Hidden/Task.targets', 'distribution/Hidden/Product.nuspec',
+        expected = ('extensions/Hidden/Provider.cs', 'distribution/Hidden/Product.nuspec',
                     'schemas/Hidden/bindgen.json', 'eng/Hidden/Tool.csproj', 'tests/Hidden/fixture.hpp',
                     'docs/Hidden/guide.md', 'scripts/Hidden/tool.py', '.github/Hidden/workflow.yml')
         for name in expected:

@@ -6,11 +6,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -33,9 +33,9 @@ public sealed class ImportLibraryConstantTests
         EmissionRequest request = new("native", sink) { importMode = mode, managedProjection = Inputs(ConsumerSource),
             includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.LibraryConstant.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal("global::Vendor.LibraryNames.Native", plan.importLibraryName!.reference);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         Assert.Contains("global::Vendor.LibraryNames.Native", string.Join("\n", sink.sources.Values), StringComparison.Ordinal);
         Assert.DoesNotContain("public const string NativeLibraryName", string.Join("\n", sink.sources.Values), StringComparison.Ordinal);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
@@ -68,14 +68,14 @@ public sealed class ImportLibraryConstantTests
     {
         Assert.NotEmpty(caseId);
         NeutralBackendTests.MemorySink sink = new();
-        Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(Model(reference),
+        Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(Model(reference),
             new("native", sink) { importMode = BindingImportMode.DllImport, managedProjection = Inputs(source) }));
         Assert.Empty(sink.sources);
     }
 
     [Fact]
     public void FunctionTableDoesNotSilentlyIgnoreAStaticImportConstant()
-        => Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(Model("Vendor.LibraryNames.Native"),
+        => Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(Model("Vendor.LibraryNames.Native"),
             new("native", new NeutralBackendTests.MemorySink()) { managedProjection = Inputs(ConsumerSource) }));
 
     private const string ConsumerSource = "namespace Vendor {public static class LibraryNames {public const string Native=\"native\";public const string Other=\"native\";} }";
@@ -90,7 +90,7 @@ public sealed class ImportLibraryConstantTests
     private static ManagedApiModel Model(string reference)
     {
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
-        InteropModule module = new("library-constant", "windows-x64-msvc", 8, [integer], [new(new("answer"), "answer", integer.id, [], "C")], []);
+        InteropModule module = new("library-constant", "windows-x64-msvc", 8, [integer], [new(new("answer"), "answer", integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.LibraryConstant", "Api")
         { importLibraryNameConstant = reference }, CancellationToken.None);
     }

@@ -7,12 +7,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Plugins;
-using BGCS.Contracts.Ports;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Plugins;
+using BGCS.Core.Ports;
+using BGCS.Core.Requests;
 using BGCS.Tests.NeutralPlugin;
 using Xunit;
 
@@ -44,7 +44,7 @@ public sealed class ManagedTransformTests
         Assert.Equal(new[] { "custom_first", "custom_second" }, managed.memberNames.Select(member => member.name));
         Assert.Contains("custom_first", ManagedSources(result), StringComparison.Ordinal);
         Assert.DoesNotContain(typeof(ManagedNamesPlugin).Assembly.GetReferencedAssemblies(), reference =>
-            reference.Name?.StartsWith("BGCS", StringComparison.Ordinal) == true && reference.Name != "BGCS.Contracts");
+            reference.Name?.StartsWith("BGCS", StringComparison.Ordinal) == true && reference.Name != "BGCS.Core");
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class ManagedTransformTests
     {
         using Scratch scratch = new();
         string prefix = "first_";
-        await using BindingHost host = Builder().AddManagedTransform("fixture.managed-names", 5, () => new ManagedNamesTransform(prefix)).Build();
+        await using BindingHost host = Builder().RegisterFactory<IManagedApiTransform>(new("fixture.managed-names", ExtensionPort.ManagedApiTransform, 5), _ => new ManagedNamesTransform(prefix)).Build();
         GenerationRequest request = new(Configuration(), scratch.root);
         GenerationResult cold = await host.GenerateAsync(request);
         Assert.True(cold.success, cold.GetDiagnosticSummary());
@@ -75,11 +75,11 @@ public sealed class ManagedTransformTests
     {
         using Scratch scratch = new();
         List<string> trace = [];
-        BindingHostBuilder builder = Builder().AddManagedTransform("z-last", 0, () => new Observed("z-last", 0, trace))
-            .AddManagedTransform("b-first", 10, () => new Observed("b-first", 10, trace))
-            .AddManagedTransform("a-first", 10, () => new Observed("a-first", 10, trace));
-        Assert.Throws<InvalidOperationException>(() => builder.AddInteropTransform("a-first", 0, () => null!));
-        Assert.Throws<InvalidOperationException>(() => builder.AddManagedTransform("a-first", 0, () => null!));
+        BindingHostBuilder builder = Builder().RegisterFactory<IManagedApiTransform>(new("z-last", ExtensionPort.ManagedApiTransform, 0), _ => new Observed("z-last", trace))
+            .RegisterFactory<IManagedApiTransform>(new("b-first", ExtensionPort.ManagedApiTransform, 10), _ => new Observed("b-first", trace))
+            .RegisterFactory<IManagedApiTransform>(new("a-first", ExtensionPort.ManagedApiTransform, 10), _ => new Observed("a-first", trace));
+        Assert.Throws<InvalidOperationException>(() => builder.RegisterFactory<IInteropTransform>(new("a-first", ExtensionPort.InteropTransform, 0), _ => null!));
+        Assert.Throws<InvalidOperationException>(() => builder.RegisterFactory<IManagedApiTransform>(new("a-first", ExtensionPort.ManagedApiTransform, 0), _ => null!));
         await using BindingHost host = builder.Build();
         GenerationResult result = await host.GenerateAsync(new(Configuration(), scratch.root));
         Assert.True(result.success, result.GetDiagnosticSummary());
@@ -91,8 +91,6 @@ public sealed class ManagedTransformTests
     [InlineData("clone-abi")]
     [InlineData("change-abi")]
     [InlineData("null")]
-    [InlineData("identity")]
-    [InlineData("priority")]
     [InlineData("dispose")]
     public async Task InvalidManagedTransformationCannotReplaceTheLastCompletePublication(string fault)
     {
@@ -104,7 +102,7 @@ public sealed class ManagedTransformTests
         Dictionary<string, byte[]> before = Directory.GetFiles(output, "*", SearchOption.AllDirectories)
             .ToDictionary(path => Path.GetRelativePath(output, path), File.ReadAllBytes, StringComparer.Ordinal);
         Faulty service = new(fault);
-        await using BindingHost changed = Builder().AddManagedTransform("faulty", 0, () => service).Build();
+        await using BindingHost changed = Builder().RegisterFactory<IManagedApiTransform>(new("faulty", ExtensionPort.ManagedApiTransform, 0), _ => service).Build();
         GenerationResult rejected = await changed.GenerateAsync(request);
         Assert.False(rejected.success);
         Assert.True(service.disposed);
@@ -114,10 +112,61 @@ public sealed class ManagedTransformTests
         foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(output, path)));
     }
 
-    private sealed class Observed(string name, int order, List<string> trace) : IManagedApiTransform, IDisposable
+    [Theory]
+    [InlineData("identity")]
+    [InlineData("priority")]
+    public async Task FrozenRegistrationMetadataCannotReplaceTheLastCompletePublication(string mutation)
     {
-        public string id => name;
-        public int priority => order;
+        using Scratch scratch = new();
+        GenerationRequest request = new(Configuration(), scratch.root);
+        await using (BindingHost original = Builder().Build())
+            Assert.True((await original.GenerateAsync(request)).success);
+        string output = Path.Combine(scratch.root, "Generated");
+        Dictionary<string, byte[]> before = Directory.GetFiles(output, "*", SearchOption.AllDirectories)
+            .ToDictionary(path => Path.GetRelativePath(output, path), File.ReadAllBytes, StringComparer.Ordinal);
+        MetadataMutationPlugin plugin = new(mutation);
+        await using BindingHost changed = Builder().AddPluginFactory(plugin.descriptor, () => plugin).Build();
+        GenerationResult rejected = await changed.GenerateAsync(request);
+        Assert.False(rejected.success);
+        Assert.True(plugin.disposed);
+        Assert.Contains(mutation == "identity" ? "frozen outside Configure" : "changed its frozen discovery descriptor", rejected.GetDiagnosticSummary());
+        if (mutation == "identity") Assert.True(plugin.transformDisposed);
+        else Assert.False(plugin.serviceCreated);
+        Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(output, "*", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(output, path)).Order(StringComparer.Ordinal));
+        foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(output, path)));
+    }
+
+    private sealed class MetadataMutationPlugin(string mutation) : IBindingPlugin
+    {
+        private int m_priority;
+        internal bool disposed { get; private set; }
+        internal bool serviceCreated { get; private set; }
+        internal bool transformDisposed { get; private set; }
+        public PluginDescriptor descriptor => new("fixture.metadata-mutation", "1.0.0",
+            [new("fixture.metadata-transform", ExtensionPort.ManagedApiTransform, m_priority)]);
+        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
+        {
+            registry.RegisterFactory<IManagedApiTransform>("fixture.metadata-transform", _ =>
+            {
+                serviceCreated = true;
+                return new LateRegistrationTransform(() => registry.RegisterFactory<IManagedApiTransform>("late.identity", _ => throw new InvalidOperationException("Late service activated.")),
+                    () => transformDisposed = true);
+            });
+            if (mutation == "priority") m_priority++;
+        }
+        public void Dispose() => disposed = true;
+    }
+
+    private sealed class LateRegistrationTransform(Action register, Action release) : IManagedApiTransform, IDisposable
+    {
+        public ManagedApiModel Transform(ManagedApiModel model, AnalysisContext context, CancellationToken cancellationToken)
+        { register(); return model; }
+        public void Dispose() => release();
+    }
+
+    private sealed class Observed(string name, List<string> trace) : IManagedApiTransform, IDisposable
+    {
         public ManagedApiModel Transform(ManagedApiModel model, AnalysisContext context, CancellationToken cancellationToken)
         { trace.Add(name); return model; }
         public void Dispose() => trace.Add("dispose:" + name);
@@ -125,13 +174,9 @@ public sealed class ManagedTransformTests
 
     private sealed class Faulty(string fault) : IManagedApiTransform, IDisposable
     {
-        private bool m_executed;
-        public string id => fault == "identity" && m_executed ? "changed" : "faulty";
-        public int priority => fault == "priority" && m_executed ? 1 : 0;
         internal bool disposed { get; private set; }
         public ManagedApiModel Transform(ManagedApiModel model, AnalysisContext context, CancellationToken cancellationToken)
         {
-            m_executed = true;
             if (fault == "null") return null!;
             if (fault is not ("clone-abi" or "change-abi")) return model;
             InteropModule abi = model.interop;
@@ -153,7 +198,7 @@ public sealed class ManagedTransformTests
         .Select(artifact => File.ReadAllText(Path.Combine(result.outputRoot, artifact.relativePath))));
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 1, library = new() { id = "managed_transform", nativeName = "managed_transform" },
+        schemaVersion = 2, library = new() { id = "managed_transform", nativeName = "managed_transform" },
         source = new() { headers = ["native.h"], parseMacros = false },
         api = new() { @namespace = "Generated.ManagedTransform", name = "ManagedApi" }
     };
@@ -163,7 +208,7 @@ public sealed class ManagedTransformTests
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "BindGen-CS.slnx"))) repository = repository.Parent;
         Assert.NotNull(repository);
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(repository.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
+        return BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(repository.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
     }
     private sealed class Scratch : IDisposable
     {

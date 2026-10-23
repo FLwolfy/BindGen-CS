@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/bindgen.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "library": {
     "id": "cimgui",
     "nativeName": "cimgui"
@@ -54,7 +54,8 @@
       "ImGuiTextBuffer_size": "CorpusBufferSize",
       "ImGuiTextBuffer_c_str": "CorpusBufferText",
       "ImGuiTextBuffer_destroy": "CorpusBufferDestroy"
-    }
+    },
+    "runtime": "dotnet.coreclr"
   },
   "runtime": {
     "mode": "package"

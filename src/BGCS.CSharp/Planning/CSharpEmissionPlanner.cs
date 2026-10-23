@@ -7,13 +7,15 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using BGCS.Contracts;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Common;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
 using BGCS.Analysis.Safety;
+using BGCS.Analysis.Calls;
+using BGCS.Core.Calls;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
 
@@ -37,6 +39,9 @@ public sealed class CSharpEmissionPlanner
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.sink);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.libraryName);
+        if (model.interop.types.Any(type => type.sourceNativeType is not null && type.sourceGeneratedType is not null)
+            || model.interop.functions.Any(function => function.sourceOwnerType is not null && function.sourceGeneratedOwnerType is not null))
+            throw new ArgumentException("A declaration cannot claim both original-native and generated-bridge owner identities.", nameof(model));
         new BGCS.Analysis.Bridge.VirtualProxyProtocolVerifier().Verify(model.interop);
         new BGCS.Analysis.Interop.NativeFunctionAliasVerifier().Verify(model.interop);
         CSharpNames.Namespace(model.@namespace);
@@ -54,26 +59,17 @@ public sealed class CSharpEmissionPlanner
         string contextName = CSharpNames.Identifier(model.style == ManagedApiStyle.Static ? model.name.TrimStart('@') + "Context" : model.name);
         if (model.name.TrimStart('@') is "RawApi" or "NativeImports" or "StaticNativeAdapter")
             throw new ArgumentException("The API context name conflicts with one of its required nested implementation types.");
-        if (request.framework != "net10.0") throw new NotSupportedException("BGCS 3.0 requires net10.0 consumers.");
+        if (request.framework != "net10.0") throw new NotSupportedException("BGCS requires net10.0 consumers.");
         if (model.interop.pointerSize is not (4 or 8)) throw new NotSupportedException("A verified 32-bit or 64-bit pointer representation is required.");
         if (!Enum.IsDefined(model.interop.byteOrder)) throw new NotSupportedException("The native ABI contains an undefined byte-order fact.");
         if (model.interop.diagnostics.Any(diagnostic => diagnostic.isFailure))
             throw new InvalidOperationException("Native ABI errors must be resolved before C# planning.");
-        if (request.managedRuntime is { } runtime)
+        var runtime = request.managedRuntime ?? throw new NotSupportedException("A source backend requires an explicitly resolved managed runtime profile.");
+        CallPlanValidator.VerifyProfile(model.interop, runtime);
         {
-            if (runtime.kind == BGCS.Contracts.Targets.ManagedRuntimeKind.BrowserWasm
-                && (!runtime.requiresStaticCallbackThunks || runtime.allowsBlockingDisposal
-                    || runtime.moduleMechanism != BGCS.Contracts.Targets.NativeModuleMechanism.StaticAdapter
-                    || model.interop.pointerSize != 4 || model.interop.byteOrder != NativeByteOrder.LittleEndian))
-                throw new NotSupportedException("Browser imports require the little-endian wasm32 static adapter, static reverse-call thunks and nonblocking lifecycle profile.");
-            if (!Enum.IsDefined(runtime.kind) || !Enum.IsDefined(runtime.moduleMechanism) || !Enum.IsDefined(runtime.libraryImportConvention) || runtime.importModes.IsDefault
-                || !runtime.importModes.Contains(request.importMode))
+            if (!runtime.importModes.Contains(request.importMode))
                 throw new NotSupportedException("The resolved managed runtime profile does not admit this import mode.");
-            if (runtime.libraryImportConvention == BGCS.Contracts.Targets.ManagedImportConventionStrategy.BrowserCdeclDefault
-                && (runtime.kind != BGCS.Contracts.Targets.ManagedRuntimeKind.BrowserWasm
-                    || runtime.moduleMechanism != BGCS.Contracts.Targets.NativeModuleMechanism.StaticAdapter || model.interop.pointerSize != 4))
-                throw new NotSupportedException("Default Cdecl source-generated imports require the implemented browser wasm32 static profile.");
-            if (runtime.moduleMechanism == BGCS.Contracts.Targets.NativeModuleMechanism.StaticAdapter && request.importMode == BindingImportMode.FunctionTable)
+            if (runtime.moduleMechanism == BGCS.Core.Targets.NativeModuleMechanism.StaticAdapter && request.importMode == BindingImportMode.FunctionTable)
             {
                 StaticExportTableDescriptor table = request.staticExportTable ?? throw new NotSupportedException("A static function table requires an explicit generated native adapter contract.");
                 _ = new ContentDigest(table.abiIdentity);
@@ -85,12 +81,12 @@ public sealed class CSharpEmissionPlanner
                     throw new InvalidOperationException("The static native adapter export order differs from the frozen C ABI.");
             }
         }
-        if (request.staticExportTable is not null && (request.managedRuntime?.moduleMechanism != BGCS.Contracts.Targets.NativeModuleMechanism.StaticAdapter || request.importMode != BindingImportMode.FunctionTable))
+        if (request.staticExportTable is not null && (request.managedRuntime?.moduleMechanism != BGCS.Core.Targets.NativeModuleMechanism.StaticAdapter || request.importMode != BindingImportMode.FunctionTable))
             throw new ArgumentException("A static native table contract is only consumed by a static FunctionTable profile.");
         Dictionary<StableId, ManagedType> managed = model.types.ToDictionary(type => type.nativeType);
         Dictionary<StableId, InteropFunction> nativeExports = model.interop.functions.ToDictionary(function => function.id);
         Dictionary<StableId, CSharpTypePlan> types = [];
-        AggregateAbiPlanner aggregates = new(model.interop, request.managedRuntime);
+        AggregateAbiPlanner aggregates = new(model.interop, runtime, request.callPlans);
         Dictionary<StableId, CSharpOpaqueCallablePlan> opaqueCallables = [];
         HashSet<StableId> active = [];
         HashSet<string> names = new(StringComparer.Ordinal) { model.name.TrimStart('@'), contextName.TrimStart('@') };
@@ -174,6 +170,8 @@ public sealed class CSharpEmissionPlanner
                 catch (NotSupportedException failure)
                 { valueOmissions.Add(new(function.id, parameter.id, parameter.source ?? function.source, failure.Message)); }
             }
+            try { aggregates.RequireSignature(NativeCallSignature.FromFunction(function)); }
+            catch (NotSupportedException failure) { throw new CSharpPlanningException(function.id, function.source, failure.Message, failure); }
             CheckCallableValue(function.returnType, true);
             foreach (InteropParameter parameter in function.parameters) CheckCallableValue(parameter.type, false);
             ImmutableDictionary<int, CSharpRecipeProjectionPlan>.Builder valueProjections = ImmutableDictionary.CreateBuilder<int, CSharpRecipeProjectionPlan>();
@@ -217,6 +215,8 @@ public sealed class CSharpEmissionPlanner
                         codeUnitWidth = item.Parameter.text.codeUnitWidth,
                         maximumCodeUnits = item.Parameter.text.maximumCodeUnits
                     }).ToImmutableArray(),
+                copiedResultIndex = valueParameters.Where(value => value.allocationMode == CSharpValueAllocationMode.NativeValueCopy && value.direction == NativeParameterDirection.Output)
+                    .Select(value => (int?)value.parameterIndex).SingleOrDefault(),
                 valueProjections = valueProjections.ToImmutable(),
                 returnProjection = returnProjection,
                 bufferProtocols = bufferProtocols,
@@ -228,9 +228,9 @@ public sealed class CSharpEmissionPlanner
         if (methods.Select(method => method.exportName).Distinct(StringComparer.Ordinal).Count() != methods.Count)
             throw new ArgumentException("Native export names are duplicated.");
         bool platformDefaultImports = request.importMode == BindingImportMode.LibraryImport
-            && request.managedRuntime?.libraryImportConvention == BGCS.Contracts.Targets.ManagedImportConventionStrategy.BrowserCdeclDefault;
-        if (platformDefaultImports && methods.Any(method => method.callingConvention != "Cdecl"))
-            throw new NotSupportedException("The browser native import default cannot represent a different calling convention.");
+            && request.managedRuntime?.libraryImportConvention == BGCS.Core.Targets.ManagedImportConventionStrategy.RuntimeDefault;
+        if (platformDefaultImports && methods.Any(method => method.callingConvention != runtime.defaultCallingConvention))
+            throw new NotSupportedException("A native import differs from the explicitly established runtime default convention.");
         CSharpEmissionPlan result = new(model, request.importMode, types.Values.OrderBy(type => type.nativeType.value, StringComparer.Ordinal).ToImmutableArray(), methods.ToImmutable())
         {
             storage = storage.ToImmutable(),
@@ -280,6 +280,7 @@ public sealed class CSharpEmissionPlanner
         OverloadPlanner.Validate(result, request);
         _ = NativeMetadataPlanner.Plan(result);
         result = ImportLibraryNamePlanner.Apply(result, request, cancellationToken);
+        result = result with { capabilities = CapabilityReportPlanner.Plan(result, request) };
         return result;
 
         string Resolve(StableId id)
@@ -312,6 +313,7 @@ public sealed class CSharpEmissionPlanner
                             {
                                 if (native.isVariadic || !native.hasPrototype || native.returnType is not StableId returnType)
                                     throw new NotSupportedException("A managed callback invocation requires a fixed, complete supported prototype; use a native adapter for this signature.");
+                                aggregates.RequireSignature(NativeCallSignature.FromCallback(native));
                                 CheckCallableValue(returnType, true);
                                 foreach (StableId parameter in native.parameterTypes) CheckCallableValue(parameter, false);
                                 syntax = "delegate* unmanaged[" + Convention(native.callingConvention ?? "Unknown") + "]<"

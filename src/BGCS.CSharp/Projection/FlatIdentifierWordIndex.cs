@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using BGCS.Contracts.Managed;
+using BGCS.Core.Managed;
 
 namespace BGCS.CSharp.Projection;
 

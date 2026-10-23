@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using BGCS.Core.Hosting;
 
 namespace BGCS.Infrastructure.IO;
 
@@ -12,15 +13,20 @@ public static class PhysicalPathResolver
     /// <param name="path">The logical path.</param>
     /// <returns>The absolute physical identity.</returns>
     /// <exception cref="IOException">A link is cyclic or cannot be resolved.</exception>
-    public static string Resolve(string path)
-        => ResolvePath(path, null, CancellationToken.None);
+    /// <param name="paths">The explicitly selected host path semantics.</param>
+    public static string Resolve(
+        string path,
+        IHostPathService paths
+    )
+        => ResolvePath(path, paths, null, CancellationToken.None);
 
     private static string ResolvePath(
         string path,
+        IHostPathService paths,
         ResolutionScope? scope,
         CancellationToken cancellationToken
     )
-        => ResolveCore(Path.GetFullPath(path), new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal), 0, scope, cancellationToken);
+        => ResolveCore(Path.GetFullPath(path), new HashSet<string>(paths.comparer), 0, scope, cancellationToken);
 
     private static string ResolveCore(
         string absolute,
@@ -78,15 +84,18 @@ public static class PhysicalPathResolver
     /// <remarks>This scope is not an atomic filesystem snapshot and does not claim to detect changes restored before revalidation.</remarks>
     internal sealed class ResolutionScope
     {
+        private readonly IHostPathService m_paths;
         private readonly Dictionary<string, ComponentObservation> m_observations = new(StringComparer.Ordinal);
         private bool m_closed;
+
+        internal ResolutionScope(IHostPathService paths) => m_paths = paths ?? throw new ArgumentNullException(nameof(paths));
 
         internal string Resolve(
             string path,
             CancellationToken cancellationToken
         ) {
             if (m_closed) throw new InvalidOperationException("The physical path observation scope has already closed.");
-            return ResolvePath(path, this, cancellationToken);
+            return ResolvePath(path, m_paths, this, cancellationToken);
         }
 
         internal ComponentObservation Observe(string path)

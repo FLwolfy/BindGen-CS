@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgcs.dev/schemas/capability-report.schema.json",
+  "title": "BGCS declaration source-generation outcomes",
+  "description": "Array of typed reports. Status0=GeneratedNativeBridge,1=GeneratedRaw,2=GeneratedFriendly,3=Excluded,4=Unsupported. No consumer build or invocation certification.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "declarationId": {
+        "$ref": "#/$defs/id"
+      },
+      "nativeName": {
+        "type": "string"
+      },
+      "nativeTargetId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "runtimeId": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "minLength": 1
+      },
+      "runtimeProfileId": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "minLength": 1
+      },
+      "status": {
+        "type": "integer",
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "reasons": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "consumerRequirements": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "source": {
+        "anyOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "file",
+              "line",
+              "column"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "callAbi": {
+        "anyOf": [
+          {
+            "type": "null"
+          },
+          {
+            "$ref": "#/$defs/id"
+          }
+        ]
+      },
+      "runtimeProfileDigest": {
+        "anyOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "required": [
+      "declarationId",
+      "nativeName",
+      "nativeTargetId",
+      "runtimeId",
+      "runtimeProfileId",
+      "status",
+      "reasons",
+      "consumerRequirements",
+      "source",
+      "callAbi",
+      "runtimeProfileDigest"
+    ],
+    "additionalProperties": false
+  },
+  "$defs": {
+    "id": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -31,11 +31,11 @@ public sealed class InputVariationTests
             new([new("left", new("short", "(int){value}"))]) { name = "AddShort" }] }] }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { singleFile = singleFile, includeRuntimeSource = singleFile, runtimeNamespace = singleFile ? "Generated.Example.Runtime" : "BGCS.Runtime" };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal(original.methods.Length, plan.methods.Length);
         Assert.Equal(2, plan.inputVariations.Length);
         Assert.Same(original.interop, model.interop);
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         string[] platform = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         CSharpCompilation compilation = CSharpCompilation.Create("InputVariations_" + Guid.NewGuid().ToString("N"),
             sink.sources.Select(source => CSharpSyntaxTree.ParseText(source.Value, new(LanguageVersion.CSharp14), source.Key)),
@@ -74,7 +74,7 @@ public sealed class InputVariationTests
         method = method with { inputVariations = fault == "limit" ? [variation, variation with { name = "Alternative" }] : [variation] };
         model = model with { methods = model.methods.SetItem(0, method), defaultOverloadLimit = fault == "limit" ? 1 : 128 };
         NeutralBackendTests.MemorySink sink = new();
-        Exception? error = await Record.ExceptionAsync(async () => await new CSharpBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
+        Exception? error = await Record.ExceptionAsync(async () => await new CSharpTestBackend().EmitAsync(model, new("native", sink), CancellationToken.None));
         Assert.True(error is ArgumentException or InvalidOperationException, error?.ToString());
         Assert.Empty(sink.sources);
     }

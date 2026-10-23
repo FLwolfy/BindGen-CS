@@ -8,12 +8,12 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Analysis.Bridge;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Bridge;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Requests;
+using BGCS.Core;
+using BGCS.Core.Bridge;
+using BGCS.Core.Common;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Requests;
 using BGCS.Infrastructure.Execution;
 using Xunit;
 
@@ -43,7 +43,7 @@ public sealed class NativeConfiguredFamilyTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "custom.hpp"), Header);
             BindingConfiguration configuration = Configuration(mode, sourceRuntime);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(built.success, built.GetDiagnosticSummary());
             var target = Assert.Single(built.targetModels);
@@ -62,7 +62,7 @@ public sealed class NativeConfiguredFamilyTests
             Assert.Equal(NativeTextEncoding.Utf8, text.encoding);
             Assert.Equal(EvidenceLevel.UserAsserted, text.encodingEvidence.level);
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
-            CppBridgeModule bridge = JsonSerializer.Deserialize<CppBridgeModule>(await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "metadata", "bridge.module.json")))!;
+            NativeBridgePlan bridge = JsonSerializer.Deserialize<NativeBridgePlan>(await File.ReadAllTextAsync(Path.Combine(targetRoot, "native", "metadata", "bridge.module.json")))!;
             Assert.Equal(5, bridge.familyBindings.Length);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CheckNative(bridge, binary);
@@ -102,7 +102,7 @@ public sealed class NativeConfiguredFamilyTests
         {
             string header = Path.Combine(root, "custom.hpp");
             await File.WriteAllTextAsync(header, Header);
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false);
             GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
@@ -140,7 +140,7 @@ public sealed class NativeConfiguredFamilyTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static void CheckNative(CppBridgeModule bridge, string binary)
+    private static void CheckNative(NativeBridgePlan bridge, string binary)
     {
         nint library = NativeLibrary.Load(binary);
         try
@@ -202,15 +202,11 @@ public sealed class NativeConfiguredFamilyTests
             [new("values") { retainsArgument = borrowed ? false : null, lifetime = borrowed ? NativeLifetimeKind.Call : NativeLifetimeKind.Unknown }]);
         return new()
         {
-            schemaVersion = 1, library = new() { id = "family", nativeName = "family_fixture" },
+            schemaVersion = 2, library = new() { id = "family", nativeName = "family_fixture" },
             source = new() { language = SourceLanguage.Cpp, headers = ["custom.hpp"], parseMacros = false,
                 includeTransitivelyReferencedHeaders = false, selection = new() { includeDeclarations = functions.Select(name => "look::" + name).ToImmutableArray() } },
             api = new() { @namespace = "Generated.Family", name = "FamilyApi", importMode = mode },
-            cpp = new()
-            {
-                familyBindings = [Binding("Vector", StandardValueKind.Vector), Binding("Text", StandardValueKind.String), Binding("Array", StandardValueKind.Array), Binding("Span", StandardValueKind.Span), Binding("Optional", StandardValueKind.Optional)],
-                sequenceInputAdapters = [Sequence("SumVector"), Sequence("SumText"), Sequence("SumArray"), Sequence("SumSpan", true)]
-            },
+            bridge = new() { cpp = new() { familyBindings = [Binding("Vector", StandardValueKind.Vector), Binding("Text", StandardValueKind.String), Binding("Array", StandardValueKind.Array), Binding("Span", StandardValueKind.Span), Binding("Optional", StandardValueKind.Optional)], sequenceInputAdapters = [Sequence("SumVector"), Sequence("SumText"), Sequence("SumArray"), Sequence("SumSpan", true)] } },
             runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
              cache = new() { enabled = false }
         };
@@ -224,7 +220,7 @@ public sealed class NativeConfiguredFamilyTests
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(root!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 
     private const string Header = """

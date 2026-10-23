@@ -1,10 +1,16 @@
 """Validate disclosed corpus source selection against exact locked upstream limitations."""
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 from acceptance_evidence import digest
+
+
+def policy_digest(path: Path) -> str:
+    """Hash repository policy bytes with only the declared CRLF-to-LF normalization."""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def selection_policy(root: Path, lock: dict, corpus: Path) -> dict:
@@ -33,5 +39,5 @@ def selection_policy(root: Path, lock: dict, corpus: Path) -> dict:
                 raise RuntimeError("An upstream limitation's exact declaration or signature changed.")
             if "portableCounterpart" in limitation and limitation["portableCounterpart"] in excluded:
                 raise RuntimeError("A compiler-only helper exclusion must preserve its portable public operation.")
-    return {"schemaVersion": policy["schemaVersion"], "policySha256": digest(path), "scope": policy["scope"],
+    return {"schemaVersion": policy["schemaVersion"], "policySha256": policy_digest(path), "scope": policy["scope"],
             "libraries": policy["libraries"]}

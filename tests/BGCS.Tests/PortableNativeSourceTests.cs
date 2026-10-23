@@ -1,3 +1,4 @@
+using BGCS.Core.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -8,9 +9,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts.Artifacts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Targets;
+using BGCS.Core.Artifacts;
+using BGCS.Core.Inputs;
+using BGCS.Core.Targets;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -41,16 +42,16 @@ public sealed class PortableNativeSourceTests
         {
             NativeTargetDescriptor resolved = NativeConsumerHarness.ParserTarget(language);
             staticTarget = new(new("portable-static-fixture"), resolved.platformId, resolved.architectureId,
-                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder);
+                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder) { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
             configuration = configuration with { targets = [new() { id = staticTarget.targetId.value }],
-                api = configuration.api with { runtime = ManagedRuntimeKind.NativeAot } };
+                api = configuration.api with { runtime = new ManagedRuntimeId("fixture.static") } };
         }
         await using BindingHost host = Host(staticTarget);
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.source));
         Assert.True(result.success, result.GetDiagnosticSummary());
         NativeSourceManifest manifest = Assert.Single(result.nativeSources);
         Assert.Equal(staticAdapter, manifest.staticExportTable is not null);
-        NativeSourceManifest disk = Assert.Single(BindingArtifactManifest.ReadNativeSources(result.outputRoot, "portable"));
+        NativeSourceManifest disk = Assert.Single(BindingArtifactManifest.ReadNativeSources(result.outputRoot, "portable", TestHostPaths.Create()));
         Assert.Equal(JsonSerializer.Serialize(manifest), JsonSerializer.Serialize(disk));
         Assert.NotEmpty(manifest.sources);
         Assert.All(manifest.sources, source => Assert.Contains(Path.GetExtension(source.relativePath), new[] { ".c", ".cpp", ".cc", ".cxx" }));
@@ -72,7 +73,7 @@ public sealed class PortableNativeSourceTests
                 return Path.GetFullPath(Path.GetRelativePath(scratch.source, binding.directory), frozen);
             return binding.directory;
         }, StringComparer.Ordinal);
-        _ = Assert.Single(BindingArtifactManifest.ReadNativeSources(relocated, "portable"));
+        _ = Assert.Single(BindingArtifactManifest.ReadNativeSources(relocated, "portable", TestHostPaths.Create()));
         List<string> arguments = manifest.defines.Select(define => "-D" + define).ToList();
         arguments.AddRange(NativeConsumerHarness.ManifestSystemIncludeArguments(manifest, roots, Assert.Single(result.targetModels).resolvedTarget));
         string binary = Path.Combine(scratch.root, OperatingSystem.IsWindows() ? "portable.dll" : OperatingSystem.IsMacOS() ? "libportable.dylib" : "libportable.so");
@@ -83,7 +84,10 @@ public sealed class PortableNativeSourceTests
         try
         {
             string export = Assert.Single(Assert.Single(result.targetModels).interop.functions, function => function.sourceName == "compute").exportName;
-            Assert.Contains(export, manifest.requiredExports);
+            NativeExportBinding binding = Assert.Single(manifest.exportBindings, binding => binding.exportName == export);
+            Assert.Equal("portable", binding.moduleId);
+            Assert.Equal("portable", manifest.module.id);
+            Assert.NotNull(manifest.runtimeRequirements);
             nint address = NativeLibrary.GetExport(library, export);
             if (manifest.staticExportTable is { } table)
             {
@@ -160,7 +164,7 @@ public sealed class PortableNativeSourceTests
             Assert.Empty(failed.nativeSources);
             Assert.Empty(failed.nativeInputRoots);
             Assert.Equal(owner, await File.ReadAllTextAsync(Path.Combine(original.outputRoot, ".bgcs-artifacts.json")));
-            Assert.NotEmpty(BindingArtifactManifest.ReadNativeSources(original.outputRoot, "portable"));
+            Assert.NotEmpty(BindingArtifactManifest.ReadNativeSources(original.outputRoot, "portable", TestHostPaths.Create()));
         }
     }
 
@@ -219,8 +223,9 @@ public sealed class PortableNativeSourceTests
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        BindingHostBuilder builder = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(directory!.FullName, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
-        if (target is not null) builder.AddTargetProvider("fixture/portable-static", () => new StaticTargetProvider(target));
+        BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0"));
+        if (target is not null) builder.UseFixtureStaticRuntime();
+        if (target is not null) builder.RegisterFactory<INativeTargetProvider>(new("fixture/portable-static", ExtensionPort.NativeTargetProvider), _ => new StaticTargetProvider(target));
         return builder.Build();
     }
 
@@ -251,7 +256,7 @@ public sealed class PortableNativeSourceTests
         internal Scratch() => Directory.CreateDirectory(source);
         internal BindingConfiguration Configuration(SourceLanguage language) => new()
         {
-            schemaVersion = 1,
+            schemaVersion = 2,
             library = new() { id = "portable", nativeName = "portable" },
             source = new() { language = language, headers = ["native.h"] },
             api = new() { @namespace = "Portable.Bindings", name = "NativeApi" },

@@ -6,9 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using BGCS.Contracts.Common;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Requests;
+using BGCS.Core.Common;
+using BGCS.Core.Managed;
+using BGCS.Core.Requests;
 using BGCS.CSharp.Emission;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -286,7 +286,7 @@ internal static class ConstantPresentationPlanner
     {
         string directory = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         string[] assemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? throw new InvalidOperationException("Framework metadata for constant validation is unavailable."))
-            .Split(Path.PathSeparator).Where(path => string.Equals(Path.GetDirectoryName(path), directory, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)).ToArray();
+            .Split(Path.PathSeparator).Where(path => string.Equals(Path.GetDirectoryName(path), directory, StringComparison.Ordinal)).ToArray();
         return assemblies.Select(path => (MetadataReference)MetadataReference.CreateFromFile(path)).ToImmutableArray();
     }
 

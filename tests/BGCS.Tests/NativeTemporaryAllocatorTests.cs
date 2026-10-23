@@ -3,10 +3,10 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
-using BGCS.Contracts.Inputs;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
+using BGCS.Core;
+using BGCS.Core.Inputs;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -50,7 +50,7 @@ public sealed class NativeTemporaryAllocatorTests
                 });
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 1, library = new() { id = "temporary-allocator", nativeName = "temporary_allocator_fixture" },
+                schemaVersion = 2, library = new() { id = "temporary-allocator", nativeName = "temporary_allocator_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false, parseMacros = false },
                 api = new() { @namespace = "Generated.TemporaryAllocator", name = "AllocatorApi", importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance },
@@ -60,8 +60,8 @@ public sealed class NativeTemporaryAllocatorTests
                  cache = new() { enabled = false }
             };
             string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-            await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(Path.Combine(repository,
-                "src", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0")).Build();
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(repository,
+                "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0")).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
             string target = Assert.Single(Directory.GetDirectories(result.outputRoot));

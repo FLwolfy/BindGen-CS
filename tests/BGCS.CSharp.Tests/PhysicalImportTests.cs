@@ -3,12 +3,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BGCS.Contracts;
-using BGCS.Contracts.Interop;
-using BGCS.Contracts.Managed;
-using BGCS.Contracts.Native;
-using BGCS.Contracts.Requests;
-using BGCS.Contracts.Targets;
+using BGCS.Core;
+using BGCS.Core.Interop;
+using BGCS.Core.Managed;
+using BGCS.Core.Native;
+using BGCS.Core.Requests;
+using BGCS.Core.Targets;
 using BGCS.CSharp.Planning;
 using BGCS.CSharp.Projection;
 using BGCS.CSharp.Validation;
@@ -32,14 +32,14 @@ public sealed class PhysicalImportTests
         EmissionRequest request = new("__Internal", sink) { importMode = mode, managedRuntime = Profile(),
             staticExportTable = mode == BindingImportMode.FunctionTable ? new("transport", "transport_get", "transport_revision", "transport_count",
                 "transport_identity", "transport_pointer_size", new string('a', 64), ["exchange"]) : null };
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(model, request);
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpPhysicalImportPlan physical = Assert.Single(plan.physicalImports);
         Assert.Equal("nint", physical.returnType);
         Assert.Equal(new[] { "nint", "void*" }, physical.parameterTypes);
         Assert.Equal(new[] { 0 }, physical.addressParameters);
         Assert.True(physical.addressResult);
         Assert.All(new[] { plan.methods[0].returnType, plan.methods[0].parameterTypes[0] }, type => Assert.StartsWith("delegate* unmanaged[Cdecl]", type, StringComparison.Ordinal));
-        await new CSharpBackend().EmitAsync(model, request, CancellationToken.None);
+        await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(item => (item.Key, item.Value)), request.libraryName);
         string key = Assert.Single(sink.sources.Keys, path => mode == BindingImportMode.FunctionTable
             ? path.EndsWith("Api.g.cs", StringComparison.Ordinal) && !path.Contains("Raw", StringComparison.Ordinal)
@@ -84,7 +84,7 @@ public sealed class PhysicalImportTests
     [InlineData(BindingImportMode.LibraryImport)]
     public void DefaultDesktopImportsKeepTheirOriginalTypedCarriers(BindingImportMode mode)
     {
-        CSharpEmissionPlan plan = new CSharpEmissionPlanner().Plan(Model(), new("native", new NeutralBackendTests.MemorySink()) { importMode = mode });
+        CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Model(), new("native", new NeutralBackendTests.MemorySink()) { importMode = mode });
         Assert.Empty(plan.physicalImports);
         Assert.StartsWith("delegate*", plan.methods[0].returnType, StringComparison.Ordinal);
     }
@@ -101,10 +101,12 @@ public sealed class PhysicalImportTests
     public void TableIndexTransportRequiresItsExactRuntimeCapability(string fault)
     {
         ManagedApiModel model = Model();
-        ManagedRuntimeProfile profile = Profile();
+        EmissionRequest request = PlanningFixture.Prepare(model, new("native", new NeutralBackendTests.MemorySink())
+        { importMode = BindingImportMode.DllImport, managedRuntime = Profile() });
+        ManagedRuntimeProfile profile = request.managedRuntime!;
         profile = fault switch
         {
-            "runtime" => profile with { kind = ManagedRuntimeKind.CoreClr },
+            "runtime" => profile with { runtimeId = new ManagedRuntimeId("fixture.runtime") },
             "module" => profile with { moduleMechanism = NativeModuleMechanism.DynamicLibrary },
             "enum" => profile with { functionPointerTransport = (ManagedFunctionPointerTransport)12345 },
             "missing-capability" => profile with { functionPointerTransport = ManagedFunctionPointerTransport.Typed },
@@ -115,8 +117,9 @@ public sealed class PhysicalImportTests
         if (fault is "width" or "endian")
             model = model with { interop = new(model.interop.libraryId, model.interop.targetId, fault == "width" ? 8 : 4,
                 model.interop.types, model.interop.functions, []) { byteOrder = fault == "endian" ? NativeByteOrder.BigEndian : NativeByteOrder.LittleEndian } };
-        Assert.ThrowsAny<NotSupportedException>(() => new CSharpEmissionPlanner().Plan(model,
-            new("native", new NeutralBackendTests.MemorySink()) { importMode = BindingImportMode.DllImport, managedRuntime = profile }));
+        if (fault is "width" or "endian" or "enum")
+            Assert.Throws<NotSupportedException>(() => new CSharpEmissionPlanner().Plan(model, request with { managedRuntime = profile }));
+        else Assert.Throws<InvalidOperationException>(() => new CSharpEmissionPlanner().Plan(model, request with { managedRuntime = profile }));
     }
 
     [Fact]
@@ -131,15 +134,15 @@ public sealed class PhysicalImportTests
         InteropModule module = new("transport", original.interop.targetId, 4, original.interop.types.Add(record), [function], [])
         { byteOrder = NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Transport", "TransportApi"), CancellationToken.None);
-        NotSupportedException failure = Assert.ThrowsAny<NotSupportedException>(() => new CSharpEmissionPlanner().Plan(model,
+        NotSupportedException failure = Assert.ThrowsAny<NotSupportedException>(() => new CSharpTestPlanner().Plan(model,
             new("native", new NeutralBackendTests.MemorySink()) { importMode = BindingImportMode.DllImport, managedRuntime = Profile() }));
         Assert.Contains("aggregate", failure.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static ManagedRuntimeProfile Profile() => new("browser-static-table-index", ManagedRuntimeKind.BrowserWasm,
+    private static ManagedRuntimeProfile Profile() => new("browser-static-table-index", new ManagedRuntimeId("fixture.nonblocking-runtime"),
         NativeModuleMechanism.StaticAdapter, [BindingImportMode.FunctionTable, BindingImportMode.DllImport, BindingImportMode.LibraryImport], true, false)
-    { functionPointerTransport = ManagedFunctionPointerTransport.BrowserWasm32TableIndex,
-        libraryImportConvention = ManagedImportConventionStrategy.BrowserCdeclDefault };
+    { functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger,
+        libraryImportConvention = ManagedImportConventionStrategy.RuntimeDefault, defaultCallingConvention = "Cdecl" };
 
     private static ManagedApiModel Model()
     {

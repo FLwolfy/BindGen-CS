@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 2,
+  "library": { "id": "sample", "nativeName": "sample" },
+  "source": { "language": "c", "headers": ["native.h"] },
+  "api": { "namespace": "Sample.Generated", "name": "SampleApi" }
+}

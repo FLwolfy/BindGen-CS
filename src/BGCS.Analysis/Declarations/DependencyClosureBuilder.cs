@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using BGCS.Contracts.Common;
+using BGCS.Core.Common;
 
 namespace BGCS.Analysis.Declarations;
 

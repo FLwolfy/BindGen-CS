@@ -12,12 +12,16 @@ import unittest
 from unittest.mock import patch
 
 from acceptance_evidence import digest
-from corpus_policy import selection_policy
+from corpus_policy import policy_digest, selection_policy
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("bgcs_corpus_snapshots", ROOT / "scripts/test-corpus.py")
 CORPUS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CORPUS)
+
+REPORT_SPEC = importlib.util.spec_from_file_location("bgcs_acceptance_report_policy", ROOT / "scripts/write-acceptance-report.py")
+REPORT = importlib.util.module_from_spec(REPORT_SPEC)
+REPORT_SPEC.loader.exec_module(REPORT)
 
 
 class CorpusSnapshotTests(unittest.TestCase):
@@ -77,6 +81,68 @@ class CorpusSnapshotTests(unittest.TestCase):
             with self.subTest(library=path.name):
                 self.assertEqual(expected, json.loads(path.read_text(encoding="utf-8-sig"))["selectionPolicySha256"])
 
+    def aggregate_policy_fixture(self):
+        """Synthetic policy controls stop at the next gate and never create acceptance evidence."""
+        root = self.work / "aggregate-policy"
+        policy = root / "tests/corpus/upstream-limitations.json"
+        policy.parent.mkdir(parents=True)
+        lf = (ROOT / "tests/corpus/upstream-limitations.json").read_bytes().replace(b"\r\n", b"\n")
+        policy.write_bytes(lf)
+        source = {"revision": "a" * 40, "workingTreeDirty": False, "checkedOutSourceSha256": "b" * 64}
+        gates, tests, output = root / "gates", root / "test-results", root / "artifacts/acceptance"
+        for path in (gates, tests, output, root / "scripts"):
+            path.mkdir(parents=True)
+        shutil.copyfile(ROOT / "scripts/test-corpus.py", root / "scripts/test-corpus.py")
+        (gates / "run-start.json").write_text(json.dumps({"source": source, "startedAtUnixSeconds": 0,
+            "usesPrebuiltOutputs": False}), encoding="utf-8")
+        for names in REPORT.CATEGORIES.values():
+            for name in names:
+                (gates / name).touch()
+        (tests / "PolicyControl.trx").write_text("synthetic parser input; not executed-test evidence", encoding="utf-8")
+        (output / "examples.json").write_text(json.dumps({"success": True,
+            "checks": [{"nativeInvoked": True}, {"nativeInvoked": True}]}), encoding="utf-8")
+        allocator = {"success": True, "source": source, "sourceBytesStable": True, "nativeBuilt": True,
+            "runtimeConsumerInvoked": True, "independentNativeChecksum": True,
+            "result": {"checks": 10, "nativeChecksum": 819, "allocator": "example.instance", "nativeReleases": 1, "moduleUnloads": 1},
+            "generatedTemporaryAllocatorInvoked": True,
+            "generatedTextResult": {"checks": 8, "nativeUtf8ByteLength": 5, "allocator": "example.generated-instance", "nativeReleases": 2, "moduleUnloads": 1}}
+        (output / "custom-allocator.json").write_text(json.dumps(allocator), encoding="utf-8")
+        for group, libraries in CORPUS.GROUPS.items():
+            receipt = {"success": True, "selectedApiPolicy": {"policySha256": hashlib.sha256(lf).hexdigest()},
+                "libraries": [{"libraryId": name, "generated": True, "managedCompiled": True, "reviewedSnapshots": True}
+                              for name in libraries]}
+            (output / ("corpus-" + group + ".json")).write_text(json.dumps(receipt), encoding="utf-8")
+        return root, policy, lf, source, gates, tests, output
+
+    def consume_aggregate_policy(self, root, source, gates, tests, output):
+        with patch.object(REPORT, "ROOT", root), patch.object(REPORT, "source_identity", return_value=source), \
+                patch.object(REPORT, "test_receipt", return_value={"passed": 1}), \
+                patch.dict("os.environ", {"GITHUB_ACTIONS": "false"}), \
+                patch("sys.argv", ["write-acceptance-report.py", "--gate-root", str(gates), "--test-root", str(tests), "--output", str(output)]):
+            REPORT.main()
+
+    def test_aggregate_policy_consumer_accepts_lf_and_crlf_identity_without_certifying_later_gates(self):
+        root, policy, lf, source, gates, tests, output = self.aggregate_policy_fixture()
+        for raw in (lf, lf.replace(b"\n", b"\r\n")):
+            with self.subTest(crlf=b"\r\n" in raw):
+                policy.write_bytes(raw)
+                # Reaching this unchanged downstream refusal proves both corpus policy receipts passed.
+                with self.assertRaisesRegex(RuntimeError, "performance gate did not produce an actual timing receipt"):
+                    self.consume_aggregate_policy(root, source, gates, tests, output)
+                self.assertEqual(raw, policy.read_bytes())
+                self.assertFalse((output / "report.json").exists())
+
+    def test_aggregate_policy_consumer_rejects_a_semantic_change_before_later_gates(self):
+        root, policy, lf, source, gates, tests, output = self.aggregate_policy_fixture()
+        value = json.loads(lf)
+        value["libraries"]["miniaudio"]["reason"] += " Additional source-policy rationale."
+        changed = (json.dumps(value, indent=2) + "\n").encode("utf-8")
+        self.assertNotEqual(hashlib.sha256(lf).hexdigest(), hashlib.sha256(changed).hexdigest())
+        policy.write_bytes(changed)
+        with self.assertRaisesRegex(RuntimeError, "current exact source-selection policy"):
+            self.consume_aggregate_policy(root, source, gates, tests, output)
+        self.assertFalse((output / "report.json").exists())
+
     def group_report(self, group, status):
         """Simulate producer reports only; these controls never execute a compiler or consumer."""
         lock = CORPUS.load_lock(CORPUS.DEFAULT_LOCK)
@@ -95,7 +161,7 @@ class CorpusSnapshotTests(unittest.TestCase):
                 "upstreamInvoked": False,
                 "corpusLockSha256": digest(CORPUS.DEFAULT_LOCK), "repositories": repositories,
                 "repositoriesAfter": json.loads(json.dumps(repositories)), "libraries": libraries,
-                "selectedApiPolicy": {"schemaVersion": policy["schemaVersion"], "policySha256": digest(policy_path),
+                "selectedApiPolicy": {"schemaVersion": policy["schemaVersion"], "policySha256": policy_digest(policy_path),
                                       "scope": policy["scope"], "libraries": policy["libraries"]},
                 "executionIdentity": {"sourceRevision": "b" * 40, "sourceWorktreeDirty": False,
                     **{key: "c" * 64 for key in ("checkedOutSourceSha256", "generatorEntrySha256", "generatorAssemblySha256",
@@ -230,6 +296,35 @@ class CorpusSnapshotTests(unittest.TestCase):
         limitation, = policy["libraries"]["bimg"]["upstreamLimitations"]
         header = corpus / limitation["repository"] / limitation["header"]
         return root, corpus, lock, header
+
+    def test_selection_policy_producer_has_equal_lf_and_crlf_identity_without_rewriting_inputs(self):
+        root, corpus, lock, _ = self.policy_fixture()
+        path = root / "tests/corpus/upstream-limitations.json"
+        value = json.loads(path.read_text(encoding="utf-8"))
+        lf = (json.dumps(value, indent=2) + "\n").encode("utf-8")
+        crlf = lf.replace(b"\n", b"\r\n")
+        self.assertNotEqual(hashlib.sha256(lf).hexdigest(), hashlib.sha256(crlf).hexdigest())
+        path.write_bytes(lf)
+        first = selection_policy(root, lock, corpus)
+        self.assertEqual(lf, path.read_bytes())
+        path.write_bytes(crlf)
+        second = selection_policy(root, lock, corpus)
+        self.assertEqual(crlf, path.read_bytes())
+        self.assertEqual(first, second)
+        self.assertEqual(hashlib.sha256(lf).hexdigest(), second["policySha256"])
+
+    def test_selection_policy_semantic_change_still_changes_its_identity(self):
+        root, corpus, lock, _ = self.policy_fixture()
+        first = selection_policy(root, lock, corpus)
+        path = root / "tests/corpus/upstream-limitations.json"
+        value = json.loads(path.read_text(encoding="utf-8"))
+        value["libraries"]["miniaudio"]["reason"] += " Additional reviewed source rationale."
+        path.write_bytes((json.dumps(value, indent=2) + "\n").encode("utf-8"))
+        second = selection_policy(root, lock, corpus)
+        self.assertNotEqual(first["policySha256"], second["policySha256"])
+        self.assertNotEqual(first["libraries"], second["libraries"])
+        self.assertEqual(first["libraries"]["miniaudio"]["excludedDeclarations"],
+                         second["libraries"]["miniaudio"]["excludedDeclarations"])
 
     def test_compiler_only_helper_keeps_its_exact_branch_and_portable_operation(self):
         root, corpus, lock, _ = self.policy_fixture()

@@ -1,0 +1,223 @@
+{
+  "language": "Cpp",
+  "targetId": "windows-x64-msvc",
+  "triple": "x86_64-pc-windows-msvc",
+  "pointerSize": 8,
+  "byteOrder": "LittleEndian",
+  "types": [
+    {
+      "id": {
+        "value": "type:27beb99460346c9ffb6dcd143876cd97b49e104e061aa2b8619833aa17e88e66"
+      },
+      "category": "Record",
+      "spelling": "MyStruct\u003Ctype-parameter-0-0\u003E",
+      "size": null,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": {
+        "value": "declaration:11e1e65805f957bb67f1acf9cef8d7a6e8b2faea18779700e3358538ef8f4fc6"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:c3c958aa8b0ce80a72a28cb6ef519fd6e12a22c5ea735048a479d91c2cbc69f4"
+      },
+      "category": "Alias",
+      "spelling": "MyStructT",
+      "size": 0,
+      "alignment": null,
+      "elementType": {
+        "value": "type:27beb99460346c9ffb6dcd143876cd97b49e104e061aa2b8619833aa17e88e66"
+      },
+      "canonicalType": {
+        "value": "type:27beb99460346c9ffb6dcd143876cd97b49e104e061aa2b8619833aa17e88e66"
+      },
+      "declaration": {
+        "value": "declaration:626107ab6f7467b1fdef2eace5806bcca0053d9b241dc1ad33495f4c484f09dc"
+      },
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    },
+    {
+      "id": {
+        "value": "type:d2005ff0293f48d54c0db1157f3b425285683547954cd777c4d20b8e53efdfd5"
+      },
+      "category": "Template",
+      "spelling": "T",
+      "size": 0,
+      "alignment": null,
+      "elementType": null,
+      "canonicalType": null,
+      "declaration": null,
+      "primitiveKind": null,
+      "isSigned": null,
+      "qualifier": null,
+      "arrayLength": null,
+      "isRValueReference": false,
+      "returnType": null,
+      "parameterTypes": [],
+      "callingConvention": null,
+      "isVariadic": false,
+      "hasPrototype": true
+    }
+  ],
+  "declarations": [
+    {
+      "id": {
+        "value": "declaration:11e1e65805f957bb67f1acf9cef8d7a6e8b2faea18779700e3358538ef8f4fc6"
+      },
+      "kind": "Class",
+      "name": "MyStruct",
+      "qualifiedName": "MyStruct\u003Ctype-parameter-0-0\u003E",
+      "type": {
+        "value": "type:27beb99460346c9ffb6dcd143876cd97b49e104e061aa2b8619833aa17e88e66"
+      },
+      "source": {
+        "file": "TestTypeAliases.TestTemplateComplex.hpp",
+        "line": 3,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": "Test using Template",
+      "documentationContent": {
+        "summary": "Test using Template",
+        "parameters": [],
+        "returns": null,
+        "typeParameters": []
+      },
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": "Class",
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [
+        {
+          "value": "type:d2005ff0293f48d54c0db1157f3b425285683547954cd777c4d20b8e53efdfd5"
+        }
+      ],
+      "templateKind": "TemplateClass",
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    },
+    {
+      "id": {
+        "value": "declaration:626107ab6f7467b1fdef2eace5806bcca0053d9b241dc1ad33495f4c484f09dc"
+      },
+      "kind": "Typedef",
+      "name": "MyStructT",
+      "qualifiedName": "MyStructT",
+      "type": {
+        "value": "type:c3c958aa8b0ce80a72a28cb6ef519fd6e12a22c5ea735048a479d91c2cbc69f4"
+      },
+      "source": {
+        "file": "TestTypeAliases.TestTemplateComplex.hpp",
+        "line": 6,
+        "column": 1
+      },
+      "parent": null,
+      "children": [],
+      "documentation": null,
+      "documentationContent": null,
+      "sourceTypeSpelling": null,
+      "sourceType": null,
+      "visibility": "Default",
+      "isSystemDeclaration": false,
+      "isDefinition": false,
+      "role": null,
+      "offset": null,
+      "storageSize": null,
+      "storageEvidence": null,
+      "bitOffset": null,
+      "bitWidth": null,
+      "value": null,
+      "returnType": null,
+      "isVariadic": false,
+      "hasPrototype": true,
+      "addressability": "Unknown",
+      "addressabilityEvidence": null,
+      "isStatic": false,
+      "isInline": false,
+      "nativeLinkage": "Unknown",
+      "isDeleted": false,
+      "referenceQualifier": "None",
+      "linkage": null,
+      "isConst": false,
+      "isVolatile": false,
+      "isNoThrow": null,
+      "isVirtual": false,
+      "isAbstract": false,
+      "isCompleteDefinition": false,
+      "isDefaultConstructible": null,
+      "isStandardLayout": null,
+      "isTriviallyCopyable": null,
+      "callingConvention": null,
+      "attributes": [],
+      "baseClasses": [],
+      "templateArguments": [],
+      "templateParameters": [],
+      "templateKind": null,
+      "evaluatedIntegralValue": null,
+      "constantValue": null,
+      "stringConstant": null,
+      "functionReference": null,
+      "functionReferenceEvidence": null,
+      "macro": null
+    }
+  ],
+  "diagnostics": []
+}

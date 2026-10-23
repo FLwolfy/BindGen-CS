@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using BGCS.Contracts;
+using BGCS.Core;
 using Xunit;
 
 namespace BGCS.Tool.Tests;

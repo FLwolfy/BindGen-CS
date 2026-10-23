@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BGCS.Configuration;
-using BGCS.Contracts;
+using BGCS.Core;
 using Xunit;
 
 namespace BGCS.Tests;
@@ -37,13 +37,13 @@ public sealed class SiblingHeaderRelocationTests
                     "#include \"Left/common.h\"\n#include \"Right/common.h\"\n#define REPLACED 0\n#undef REPLACED\n#define REPLACED 64\n#define REMOVED 1\n#undef REMOVED\nvoid Observe(Left* left, Right* right);\n");
                 BindingConfiguration configuration = new()
                 {
-                    schemaVersion = 1, library = new() { id = "sibling", nativeName = "sibling" },
+                    schemaVersion = 2, library = new() { id = "sibling", nativeName = "sibling" },
                     source = new() { headers = ["../headers/native.h"], includeDirectories = ["../headers"] },
                     api = new() { @namespace = "Generated.Siblings", name = "SiblingApi", importMode = mode,
                         names = ImmutableDictionary<string, string>.Empty.Add("REPLACED", "ObservedValue").Add("REMOVED", "RemovedValue") },
                     cache = new() { enabled = false }
                 };
-                await using BindingHost host = BindingHost.CreateBuilder().AddBuiltIns().WithWorkerAssetRoot(WorkerRoot()).Build();
+                await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
                 GenerationResult result = await host.GenerateAsync(new(configuration, configurationRoot));
                 Assert.True(result.success, result.GetDiagnosticSummary());
                 generated[index] = result.artifacts.Where(artifact => artifact.relativePath.EndsWith(".cs", StringComparison.Ordinal))
@@ -66,6 +66,6 @@ public sealed class SiblingHeaderRelocationTests
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BindGen-CS.slnx"))) directory = directory.Parent;
         string repository = directory?.FullName ?? throw new InvalidOperationException("The repository root is unavailable.");
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
-        return Path.Combine(repository, "src", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
+        return Path.Combine(repository, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
 }
