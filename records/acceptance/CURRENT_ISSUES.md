@@ -153,6 +153,22 @@ recovery and 10-percent relative limits: current medians are 18.852 seconds cold
 and 7.971 warm, with ratios 1.020345 and 0.984826. These are local source receipts;
 the new clean commit must still pass all four remote gates and public consumption.
 
+The clean `8233544` run passed all three generator jobs. Windows executed all
+3,600 cases across 19 TRX files with no failures or skips, including every one of
+the 755 Host cases exactly once. Its original 10,000-declaration timings were
+13.670 seconds cold and 5.284 warm; the six-library corpus passed, with cimguizmo
+at 9.813 seconds. Linux and macOS retained their real consumer checks.
+
+The subsequent full installed-product job exposed a repository packing error:
+MSBuild received the percent-escaped six-RID list as one literal item and rejected
+it with NETSDK1083. The packing launcher now quotes the semicolon-separated
+property value instead of escaping its separators. All six builds and restored
+RID-graph requirements remain. The 39 package-boundary controls pass, including
+a real MSBuild evaluation of every selected RID; the actual SDK framework target
+reproduces the original failure and accepts the corrected argument. No product
+generation, ABI, input, performance or platform rule changed. A new clean commit
+still requires all four remote gates and verified public consumption.
+
 ## Certification policy
 
 - Run the full retained local baseline with explicit Release configuration after

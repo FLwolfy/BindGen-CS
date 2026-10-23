@@ -481,9 +481,34 @@ class PackageClosureTests(unittest.TestCase):
                 for rid, arguments in zip(rids, calls):
                     self.assertEqual("src/BGCS.Tool/BGCS.Tool.csproj", arguments[0])
                     self.assertEqual(rid, arguments[arguments.index("--runtime") + 1])
-                    self.assertIn("-p:RuntimeIdentifiers=" + "%3B".join(rids), arguments)
+                    self.assertIn('-p:RuntimeIdentifiers="' + ";".join(rids) + '"', arguments)
                     self.assertIn("-p:Version=0.0.0-control", arguments)
                     self.assertNotIn("--no-build", arguments)
+
+    def test_real_msbuild_receives_distinct_restore_rids_and_one_build_rid(self):
+        dotnet = os.environ.get("DOTNET_HOST_PATH") or shutil.which("dotnet")
+        if not dotnet:
+            self.fail("The locked .NET SDK is required to verify packaging property semantics.")
+        capture = self.capture_product_builds()
+        project = self.root / "inspect-rids.proj"
+        project.write_text(
+            '<Project><Target Name="Inspect"><ItemGroup>'
+            '<ParsedRid Include="$(RuntimeIdentifiers)" /></ItemGroup>'
+            '<WriteLinesToFile File="$(RidReport)" Lines="$(RuntimeIdentifier);@(ParsedRid)" '
+            'Overwrite="true" /></Target></Project>', encoding="utf-8")
+        for rids in (list(PACK.RIDS), ["win-x64"]):
+            with self.subTest(rids=rids):
+                previous = len(capture.read_text(encoding="utf-8").splitlines()) if capture.exists() else 0
+                PACK.build_tool_rids(sys.executable, "Release", "0.0.0-control", rids)
+                calls = [json.loads(line)["arguments"] for line in capture.read_text(encoding="utf-8").splitlines()[previous:]]
+                for rid, arguments in zip(rids, calls):
+                    report = self.root / (rid + ".txt")
+                    restore_property = next(argument for argument in arguments if argument.startswith("-p:RuntimeIdentifiers="))
+                    # Evaluate the real launcher argument with MSBuild, without restoring or building any product.
+                    PACK.execute(dotnet, ["msbuild", str(project), "-t:Inspect", "-nologo", "-nr:false",
+                        restore_property, "-p:RuntimeIdentifier=" + arguments[arguments.index("--runtime") + 1],
+                        "-p:RidReport=" + str(report)])
+                    self.assertEqual([rid, *rids], report.read_text(encoding="utf-8-sig").splitlines())
 
     def test_managed_child_removes_every_platform_case_without_changing_parent_or_native_discovery(self):
         for index, names in enumerate((("Platform",), ("PLATFORM",), ("pLaTfOrM",), ("Platform", "PLATFORM", "platform"))):

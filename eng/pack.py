@@ -107,7 +107,8 @@ def build_products(dotnet: str, configuration: str, version: str, parser_osx_x64
 
 def build_tool_rids(dotnet: str, configuration: str, version: str, rids: list[str]) -> None:
     """Close every requested tool RID before capturing any restored dependency metadata."""
-    runtime_identifiers = "%3B".join(rids)
+    # MSBuild must parse an item list. %3B would preserve one literal RID containing semicolons.
+    runtime_identifiers = '"' + ";".join(rids) + '"'
     for rid in rids:
         execute(dotnet, ["build", "src/BGCS.Tool/BGCS.Tool.csproj", "--configuration", configuration,
                         "--runtime", rid, "-m:2", "-nr:false", "-p:UseSharedCompilation=false",
