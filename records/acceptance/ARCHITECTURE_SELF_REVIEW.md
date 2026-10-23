@@ -49,3 +49,20 @@ Repository consumers choose Release explicitly rather than inheriting ambient
 MSBuild configuration. Historical parser fixtures retain their exact byte hashes;
 only those captured header literals are exempt from editor whitespace trimming.
 Neither measure changes a product capability or relaxes a generated-code check.
+
+The CI correction review confirms that prepared C# emission retains the original
+emission body and its complete actual-source validation. The sealed preparation
+owns one immutable checked plan and request; callers can substitute only the sink.
+Custom backends retain their existing port and do not inherit the built-in cache.
+Warm cache artifacts and final processor output still undergo current contract
+checks. There is no mutable cross-session plan cache or unchecked plan entry point.
+
+Inspection cleanup first verifies the captured logical-to-physical boundary, then
+checks and removes its physical scratch leaf. A legitimate temporary-directory
+parent alias is supported without accepting a redirected owned directory.
+
+Two proposed performance shortcuts were rejected: omitting included callables
+from bridge verification would change real written-array facts and contributor
+input; skipping fresh link observations would weaken replacement detection.
+Neither was implemented. Function-pointer formatting now uses Roslyn's output
+directly instead of rewriting arbitrary string literal contents.

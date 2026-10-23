@@ -165,6 +165,22 @@ def stop_process_tree(process: subprocess.Popen) -> None:
     process.wait(timeout=30)
 
 
+def emit_failure_log_tails(log_path: Path, error_path: Path | None) -> None:
+    """Expose bounded child diagnostics while preserving each complete evidence file."""
+    for path in (log_path, error_path):
+        if path is None:
+            continue
+        try:
+            with path.open("rb") as stream:
+                stream.seek(0, os.SEEK_END)
+                size = stream.tell()
+                stream.seek(max(0, size - 8192))
+                tail = stream.read(8192).decode("utf-8-sig", errors="replace")
+            print(f"\n--- {path.name}: last {min(size, 8192)} of {size} bytes ---\n{tail}", file=sys.stderr, flush=True)
+        except OSError as failure:
+            print(f"Could not read failed child log '{path.name}': {failure}", file=sys.stderr, flush=True)
+
+
 def run_process(arguments: list[str], work: Path, evidence: Path, name: str, timeout: int = 900,
                 environment_overrides: dict[str, str] | None = None, separate_stderr: bool = False) -> str:
     environment = dict(os.environ)
@@ -177,10 +193,11 @@ def run_process(arguments: list[str], work: Path, evidence: Path, name: str, tim
             environment.pop(name_to_remove, None)
     environment.update(environment_overrides or {})
     log_path = evidence / f"{name}.log"
+    error_path = evidence / (name + ".stderr.log") if separate_stderr else None
     try:
         check_free_space(ROOT)
         with log_path.open("wb") as log, ExitStack() as streams:
-            error = streams.enter_context((evidence / (name + ".stderr.log")).open("wb")) if separate_stderr else subprocess.STDOUT
+            error = streams.enter_context(error_path.open("wb")) if error_path is not None else subprocess.STDOUT
             process = subprocess.Popen(arguments, cwd=work, stdout=log, stderr=error,
                                        env=environment, start_new_session=os.name != "nt",
                                        creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0)
@@ -190,12 +207,14 @@ def run_process(arguments: list[str], work: Path, evidence: Path, name: str, tim
                 stop_process_tree(process)
                 raise
     except BaseException:
+        emit_failure_log_tails(log_path, error_path)
         try:
             preserve_failure_inputs(work, evidence, name)
         except OSError as failure:
             (evidence / (name + "-input-capture-error.log")).write_text(str(failure), encoding="utf-8")
         raise
     if code:
+        emit_failure_log_tails(log_path, error_path)
         try:
             preserve_failure_inputs(work, evidence, name)
         except OSError as failure:

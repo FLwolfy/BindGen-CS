@@ -65,7 +65,7 @@ public sealed class SingleFileComposer
         cancellationToken.ThrowIfCancellationRequested();
         CompilationUnitSyntax output = SyntaxFactory.CompilationUnit().WithAttributeLists(SyntaxFactory.List(attributes)).WithUsings(SyntaxFactory.List(usings.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value)));
         output = output.WithMembers(SyntaxFactory.List(members));
-        string normalized = GeneratedSourceFormatter.Normalize(output, Environment.NewLine).Replace("> )", ">)", StringComparison.Ordinal);
+        string normalized = GeneratedSourceFormatter.Normalize(output, Environment.NewLine);
         string nullableDirective = nullableEnabled ? $"#nullable enable{Environment.NewLine}" : string.Empty;
         string text = CreateHeader(abiReferenceTarget) + nullableDirective + normalized + Environment.NewLine;
         cancellationToken.ThrowIfCancellationRequested();

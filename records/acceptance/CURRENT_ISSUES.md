@@ -42,6 +42,42 @@ code removes duplicate formatting and lookup work, defers unrequested convenienc
 planning and streams the complete typed model into its emission fingerprint.
 These changes require measured acceptance; prose does not close the performance gate.
 
+## Current CI corrections — 2026-10-23
+
+The first 4.0 candidate at `93e0589` did not pass CI. Windows exceeded the
+unchanged cimguizmo budget (16.344 seconds against 15); Linux's targeted Browser
+consumer omitted its declared header root from the final Emscripten invocation;
+macOS reached CLI inspection and exited unsuccessfully. These remain failed
+receipts, not release evidence.
+
+The finite correction batch preserves the complete frontend facts and all input,
+ABI and publication checks. It reuses completed immutable type identities and
+one fully checked C# emission plan, avoids body traversal while finding XML
+documentation, cleans inspection scratch through its verified physical boundary,
+and forwards the Browser fixture's existing include flags at its final native
+compile. Installed-product failures now preserve bounded log tails and complete
+command logs. No consumer build capability was added to the product.
+
+Local results for this batch: C# 1,057/1,057; frontend 220/220; affected cache and
+processor cases 41/41; inspection and other focused Host cases 30/30; owned-path
+alias cases 21/21. Architecture, source ownership, production style/documentation
+and all 17 reviewed API snapshots passed. These focused results supplement the
+previous full baseline; they are not a new full-baseline receipt.
+
+Five alternating cimguizmo comparisons measured medians of 14.968 seconds before
+and 14.391 after. The formal six-library generation/consumer run stayed within
+every original budget, including cimguizmo at 14.843 seconds. All six managed
+consumers and 12 native syntax checks passed. Its initial snapshot-only failures
+are preserved. Review confirmed identical public APIs, selection policy and
+native sources; only function-pointer-cast whitespace changed after removing an
+unsafe text-wide replacement that could corrupt string literals. The six Windows
+managed source hashes were updated deliberately; budgets and selected declarations
+were not changed.
+
+Current same-commit three-platform CI, complete installed-product acceptance and
+public 4.0 package consumption are still required. In particular, the macOS
+inspection and Browser corrections need their actual remote environments.
+
 ## Certification policy
 
 - Run the full retained local baseline with explicit Release configuration after

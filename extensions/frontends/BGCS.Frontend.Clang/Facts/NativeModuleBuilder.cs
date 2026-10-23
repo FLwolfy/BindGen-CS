@@ -29,6 +29,7 @@ internal sealed class NativeModuleBuilder
     private readonly FrontendRequest m_request;
     private readonly SourcePathMapper m_sourcePaths;
     private readonly Dictionary<string, NativeType> m_types = new(StringComparer.Ordinal);
+    private readonly Dictionary<CppType, StableId> m_completedTypeIds = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, NativeDeclaration> m_declarations = new(StringComparer.Ordinal);
     private readonly Dictionary<StableId, CXCursor> m_declarationCursors = [];
     private readonly HashSet<string> m_visitingTypes = new(StringComparer.Ordinal);
@@ -81,6 +82,11 @@ internal sealed class NativeModuleBuilder
             && type.cursor.kind != 0 && !m_compilation!.storageFacts.ContainsKey(type))
             CaptureCanonicalStorage(type, type.cursor.Type.CanonicalType.UnqualifiedType, new(ReferenceEqualityComparer.Instance));
         bool hasStorage = m_compilation!.storageFacts.TryGetValue(type, out NativeStorageFacts storage);
+        // Parsed storage facts are immutable here; canonical capture below only
+        // fills missing entries. Types without those facts must retain the full
+        // identity path because a later alias can establish their storage.
+        if (hasStorage && m_completedTypeIds.TryGetValue(type, out StableId completed))
+            return completed;
         // Display names deliberately abbreviate named pointees/aliases. Their
         // compound shapes can share a spelling such as value_type* across
         // different concrete owners, while the compiler's canonical storage
@@ -88,7 +94,12 @@ internal sealed class NativeModuleBuilder
         string identity = Identity("type", type, m_sourcePaths.MapCompilerProvenance(type.fullName) + "|" + type.typeKind + "|" + type.sizeOf
             + "|" + m_sourcePaths.MapCompilerProvenance(hasStorage ? storage.TypeSpelling ?? string.Empty : string.Empty));
         StableId id = new(identity);
-        if (m_types.ContainsKey(identity) || !m_visitingTypes.Add(identity))
+        if (m_types.ContainsKey(identity))
+        {
+            if (hasStorage) m_completedTypeIds[type] = id;
+            return id;
+        }
+        if (!m_visitingTypes.Add(identity))
             return id;
         NativeTypeCategory category = type switch
         {
@@ -158,6 +169,7 @@ internal sealed class NativeModuleBuilder
         if (type is ICppDeclaration declaration)
             fact = fact with { declaration = AddDeclaration((CppElement)declaration, null) };
         m_types.Add(identity, fact);
+        if (hasStorage) m_completedTypeIds[type] = id;
         return id;
     }
 

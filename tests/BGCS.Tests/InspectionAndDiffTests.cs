@@ -1,8 +1,11 @@
 using BGCS.Core.Plugins;
 using System;
 using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BGCS.Configuration;
@@ -11,12 +14,69 @@ using BGCS.Core.Inputs;
 using BGCS.Core.Native;
 using BGCS.Core.Ports;
 using BGCS.Core.Requests;
+using BGCS.Infrastructure.Execution;
 using Xunit;
 
 namespace BGCS.Tests;
 
 public sealed class InspectionAndDiffTests
 {
+    [Fact]
+    public async Task RealInspectAndDiffCleanUpAnAliasedTemporaryRootWithoutChangingFormalOutput()
+    {
+        using Scratch scratch = new();
+        string? repository = AppContext.BaseDirectory;
+        while (repository is not null && !File.Exists(Path.Combine(repository, "BindGen-CS.slnx"))) repository = Path.GetDirectoryName(repository);
+        Assert.NotNull(repository);
+        string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
+        string worker = Path.Combine(repository!, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", build, "net10.0");
+        string driver = Path.Combine(repository, "tests", "fixtures", "hosts", "EmbeddedSdkHost", "bin", build, "net10.0", "EmbeddedSdkHost.dll");
+        string physical = Path.Combine(scratch.root, "physical-temp"), alias = Path.Combine(scratch.root, "temp-alias");
+        Directory.CreateDirectory(physical);
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                string powershell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
+                string command = "$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path '" + alias.Replace("'", "''", StringComparison.Ordinal)
+                    + "' -Target '" + physical.Replace("'", "''", StringComparison.Ordinal) + "' | Out-Null";
+                var linked = await ProcessExecutor.ExecuteAsync(powershell,
+                    ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(command))],
+                    scratch.root, TimeSpan.FromSeconds(30));
+                Assert.True(linked.exitCode == 0, linked.standardOutput + linked.standardError);
+            }
+            else Directory.CreateSymbolicLink(alias, physical);
+            string inputRoot = Path.Combine(scratch.root, "inputs");
+            Directory.CreateDirectory(inputRoot);
+            await File.WriteAllTextAsync(Path.Combine(inputRoot, "native.h"), "int echo(void);");
+            string configuration = Path.Combine(inputRoot, "bindgen.json");
+            await File.WriteAllTextAsync(configuration, """
+                {"schemaVersion":2,"library":{"id":"example","nativeName":"example"},"source":{"headers":["native.h"],"parseMacros":false},
+                 "api":{"namespace":"Example","name":"NativeApi"},"cache":{"enabled":false}}
+                """);
+            string? dotnetRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+            string dotnet = string.IsNullOrEmpty(dotnetRoot) ? "dotnet" : Path.Combine(dotnetRoot, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+            Dictionary<string, string?> environment = new() { ["TMPDIR"] = alias, ["TEMP"] = alias, ["TMP"] = alias };
+            ProcessExecutionResult child = await ProcessExecutor.ExecuteAsync(dotnet, [driver, "--inspect-and-diff", worker, configuration],
+                inputRoot, TimeSpan.FromSeconds(120), environmentOverrides: environment);
+            Assert.False(child.timedOut, child.standardError);
+            Assert.True(child.exitCode == 0, child.standardOutput + Environment.NewLine + child.standardError);
+            using JsonDocument result = JsonDocument.Parse(child.standardOutput);
+            Assert.True(result.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal(Path.TrimEndingDirectorySeparator(alias), Path.TrimEndingDirectorySeparator(result.RootElement.GetProperty("tempRoot").GetString()!));
+            Assert.True(result.RootElement.GetProperty("formalOutputUnchanged").GetBoolean());
+            Assert.Empty(Directory.EnumerateFileSystemEntries(physical));
+        }
+        finally
+        {
+            if (new DirectoryInfo(alias).LinkTarget is not null)
+            {
+                if (OperatingSystem.IsWindows()) Directory.Delete(alias);
+                else File.Delete(alias);
+            }
+        }
+    }
+
     [Fact]
     public async Task RealHeaderDiff_KeepsLogicalOutputAndInputMembershipIdenticalToGeneration()
     {

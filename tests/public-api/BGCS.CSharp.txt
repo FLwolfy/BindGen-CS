@@ -1,6 +1,10 @@
 class BGCS.CSharp.CSharpBackend [sealed; interfaces=BGCS.Core.Ports.IBindingBackend]
   ctor()
+  method BGCS.CSharp.CSharpEmission Prepare(BGCS.Core.Managed.ManagedApiModel model, BGCS.Core.Requests.EmissionRequest request, System.Threading.CancellationToken cancellationToken [optional; default=null])
   method System.Threading.Tasks.ValueTask<System.Collections.Immutable.ImmutableArray<BGCS.Core.Artifacts.ArtifactDescriptor>> EmitAsync(BGCS.Core.Managed.ManagedApiModel model, BGCS.Core.Requests.EmissionRequest request, System.Threading.CancellationToken cancellationToken) [virtual; final]
+class BGCS.CSharp.CSharpEmission [sealed]
+  property BGCS.CSharp.Planning.CSharpEmissionPlan plan { get }
+  method System.Threading.Tasks.ValueTask<System.Collections.Immutable.ImmutableArray<BGCS.Core.Artifacts.ArtifactDescriptor>> EmitAsync(BGCS.Core.Artifacts.IArtifactSink sink, System.Threading.CancellationToken cancellationToken [optional; default=null])
 class BGCS.CSharp.Emission.RuntimeSourceCatalog [sealed]
   ctor()
   method System.Collections.Immutable.ImmutableArray<System.String> GetFeatureIds() [static]

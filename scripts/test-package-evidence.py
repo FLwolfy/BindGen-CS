@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -25,6 +27,19 @@ SPEC.loader.exec_module(VERIFIER)
 
 
 class PackageEvidenceTests(unittest.TestCase):
+    def test_failed_child_emits_bounded_stdout_and_separate_stderr_without_losing_logs(self):
+        output = io.StringIO()
+        command = [sys.executable, "-c", "import sys; print('discarded-prefix-'+'x'*20000); print('stdout-tail-marker'); print('stderr-tail-marker',file=sys.stderr); sys.exit(7)"]
+        with contextlib.redirect_stderr(output), self.assertRaisesRegex(RuntimeError, "failed-child exited 7"):
+            VERIFIER.run_process(command, self.repository, self.packages, "failed-child", separate_stderr=True)
+        diagnostic = output.getvalue()
+        self.assertIn("stdout-tail-marker", diagnostic)
+        self.assertIn("stderr-tail-marker", diagnostic)
+        self.assertNotIn("discarded-prefix", diagnostic)
+        self.assertLess(len(diagnostic), 17000)
+        self.assertIn("discarded-prefix", (self.packages / "failed-child.log").read_text())
+        self.assertIn("stderr-tail-marker", (self.packages / "failed-child.stderr.log").read_text())
+
     def consumer_outputs(self):
         work = self.repository / "artifacts/temporary/package-consumers-owned-fixture"
         (work / "sdk/bin").mkdir(parents=True)

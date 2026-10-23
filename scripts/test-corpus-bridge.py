@@ -4,9 +4,12 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shlex
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
+import xml.etree.ElementTree as ET
 
 
 spec = importlib.util.spec_from_file_location("corpus_gate", Path(__file__).with_name("test-corpus.py"))
@@ -134,6 +137,28 @@ class CorpusBridgeInputs(unittest.TestCase):
         (self.root / self.header["relativePath"]).write_text("/* changed */", encoding="utf-8")
         with self.assertRaisesRegex(RuntimeError, "missing or modified"):
             upstream.generated_native_inputs(self.root, "bimg", required=True)
+
+    def test_browser_fixture_link_flags_reach_original_header_from_every_import_bridge(self):
+        fixture = Path(__file__).resolve().parents[1] / "tests/wasm/TypedBridge"
+        project = ET.parse(fixture / "Consumer.project.xml")
+        properties = {item.tag: item.text or "" for group in project.getroot().findall("PropertyGroup") for item in group}
+        work = Path(self.temporary.name) / "browser 位 space"
+        (work / "Native").mkdir(parents=True)
+        shutil.copyfile(fixture / "native.h", work / "Native/native.h")
+        flags = properties.get("EmccExtraLDFlags", "").replace("$(EmccExtraCFlags)", properties["EmccExtraCFlags"])
+        flags = flags.replace("$(MSBuildProjectDirectory)", work.as_posix())
+        self.assertNotIn("$(", flags)
+        includes = [Path(argument[2:]) for argument in shlex.split(flags) if argument.startswith("-I")]
+        self.assertIn(work / "Native", includes)
+        for mode in ("DllImport", "LibraryImport", "FunctionTable"):
+            with self.subTest(mode=mode):
+                header = work / "Generated" / mode / "emscripten-wasm32-emscripten/native/include" / ("typed_" + mode.lower() + ".h")
+                header.parent.mkdir(parents=True)
+                header.write_text('#include "native.h"\n', encoding="utf-8")
+                candidates = [header.parent / "native.h", *(directory / "native.h" for directory in includes)]
+                resolved = next((path for path in candidates if path.is_file()), None)
+                self.assertEqual(work / "Native/native.h", resolved)
+                self.assertNotEqual(header.parent, resolved.parent)
 
 
 if __name__ == "__main__":

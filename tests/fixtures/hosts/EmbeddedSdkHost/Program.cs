@@ -14,6 +14,26 @@ internal static class Program
 {
     private static async Task<int> Main(string[] arguments)
     {
+        if (arguments is ["--inspect-and-diff", string inspectionWorker, string input])
+        {
+            await using BindingHost inspectionHost = CreateHost(inspectionWorker);
+            GenerationRequest request = GenerationRequest.FromFile(input);
+            GenerationResult generated = await inspectionHost.GenerateAsync(request);
+            if (!generated.success) throw new InvalidOperationException(generated.GetDiagnosticSummary());
+            var previous = Directory.GetFiles(generated.outputRoot, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes);
+            InspectionResult inspection = await inspectionHost.InspectAsync(request);
+            GenerationDiffResult difference = await inspectionHost.DiffAsync(request);
+            bool unchanged = previous.Count == Directory.GetFiles(generated.outputRoot, "*", SearchOption.AllDirectories).Length
+                && previous.All(file => file.Value.SequenceEqual(File.ReadAllBytes(file.Key)));
+            bool success = inspection.success && difference.success && !difference.hasChanges && unchanged;
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                success, tempRoot = Path.GetTempPath(), inspectionSucceeded = inspection.success,
+                differenceSucceeded = difference.success, difference.hasChanges, formalOutputUnchanged = unchanged,
+                diagnostics = inspection.diagnostics.Concat(difference.diagnostics)
+            }));
+            return success ? 0 : 1;
+        }
         if (arguments is [string schemaKind, string destination] && schemaKind is "--schema" or "--plugin-schema")
         {
             string absolute = Path.GetFullPath(destination);
@@ -26,10 +46,8 @@ internal static class Program
         Stopwatch elapsed = Stopwatch.StartNew();
         ReportPhase("entry");
         GenerationResult result;
-        const string newId = "bgcs.frontend.clang.worker";
         bool nativeParserLoaded;
-        await using (BindingHost host = BindingGenerator.CreateBuilder().ReplaceFactory<IFrontend>(newId, new(newId, ExtensionPort.Frontend), context =>
-            new FrontendWorkerClient(WorkerAssetLocator.Locate(context.RequireHostServices(), arguments[0]), context.RequireHostServices(), TimeSpan.FromSeconds(300))).Build())
+        await using (BindingHost host = CreateHost(arguments[0]))
         {
             ReportPhase("host-built");
             GenerationRequest request = GenerationRequest.FromFile(arguments[1]);
@@ -50,5 +68,12 @@ internal static class Program
             Console.Error.WriteLine($"Embedded SDK host phase={phase}, elapsed={elapsed.Elapsed}.");
             Console.Error.Flush();
         }
+    }
+
+    private static BindingHost CreateHost(string worker)
+    {
+        const string identity = "bgcs.frontend.clang.worker";
+        return BindingGenerator.CreateBuilder().ReplaceFactory<IFrontend>(identity, new(identity, ExtensionPort.Frontend), context =>
+            new FrontendWorkerClient(WorkerAssetLocator.Locate(context.RequireHostServices(), worker), context.RequireHostServices(), TimeSpan.FromSeconds(300))).Build();
     }
 }

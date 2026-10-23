@@ -174,10 +174,10 @@ public sealed partial class BindingHost
         finally
         {
             boundary.Verify();
-            if (Directory.Exists(scratch))
+            if (Directory.Exists(boundary.physicalPath))
             {
-                OwnedPathBoundary.RejectPhysicalLinks(scratch);
-                Directory.Delete(scratch, recursive: true);
+                OwnedPathBoundary.RejectPhysicalLinks(boundary.physicalPath);
+                Directory.Delete(boundary.physicalPath, recursive: true);
             }
         }
     }

@@ -31,7 +31,8 @@ internal static class GeneratedSourceFormatter
         ) => Restore(originalsByPosition[trivia.SpanStart], trivia, endOfLine)).ToFullString();
     }
 
-    private static SyntaxTrivia[] Documentation(SyntaxNode root) => root.DescendantTrivia(descendIntoTrivia: false)
+    private static SyntaxTrivia[] Documentation(SyntaxNode root) => root.DescendantTrivia(
+        descendIntoChildren: node => node.HasStructuredTrivia, descendIntoTrivia: false)
         .Where(trivia => trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia)).ToArray();
 
     private static SyntaxTrivia Restore(

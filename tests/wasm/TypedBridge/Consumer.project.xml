@@ -14,6 +14,7 @@
     <DisableParallelAot>true</DisableParallelAot>
     <DisableParallelEmccCompile>true</DisableParallelEmccCompile>
     <EmccExtraCFlags>-I&quot;$(MSBuildProjectDirectory)/Native&quot;</EmccExtraCFlags>
+    <EmccExtraLDFlags>$(EmccExtraCFlags)</EmccExtraLDFlags>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BGCS.Runtime"><HintPath>BGCS.Runtime.dll</HintPath></Reference>

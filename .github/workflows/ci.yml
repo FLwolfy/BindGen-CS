@@ -130,6 +130,8 @@ jobs:
             artifacts/performance-diagnostics/**/*.log
             artifacts/performance-diagnostics/**/*.nettrace
             artifacts/performance-diagnostics/**/*.speedscope.json
+            artifacts/host-installed/**/*.json
+            artifacts/host-installed/**/*.log
           if-no-files-found: ignore
       - name: Preserve the targeted optional browser regression
         if: always() && runner.os == 'Linux'

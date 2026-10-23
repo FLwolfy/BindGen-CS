@@ -534,9 +534,11 @@ public sealed partial class BindingHost
                             singleFileName = configuration.output.singleFileName,
                             managedProjection = managedProjection?.inputs
                         };
-                        if (backend is BGCS.CSharp.CSharpBackend)
+                        BGCS.CSharp.CSharpEmission? preparedEmission = null;
+                        if (backend is BGCS.CSharp.CSharpBackend csharpBackend)
                         {
-                            emittedPlan = new BGCS.CSharp.Planning.CSharpEmissionPlanner().Plan(model, emission, cancellation.Token);
+                            preparedEmission = csharpBackend.Prepare(model, emission, cancellation.Token);
+                            emittedPlan = preparedEmission.plan;
                             foreach (var omission in emittedPlan.virtualProxyOmissions)
                                 diagnostics.Add(new(BindingDiagnosticSeverity.Warning,
                                     "Managed virtual callback registration '" + omission.proxy.value + "' was omitted: " + omission.reason,
@@ -628,12 +630,16 @@ public sealed partial class BindingHost
                         else if (stageCache is not null)
                         {
                             EmissionStageCache.CapturingSink capture = new(emission.sink, configuration.cache.maximumEntryBytes);
-                            emitted = await backend.EmitAsync(model, emission with { sink = capture }, cancellation.Token).ConfigureAwait(false);
+                            emitted = preparedEmission is not null
+                                ? await preparedEmission.EmitAsync(capture, cancellation.Token).ConfigureAwait(false)
+                                : await backend.EmitAsync(model, emission with { sink = capture }, cancellation.Token).ConfigureAwait(false);
                             ImmutableArray<CachedStageArtifact> captured = capture.Complete(emitted);
                             if (!captured.IsEmpty || emitted.IsEmpty) pendingCacheEntries.Add((stageCache, stageKey, captured));
                             else cacheMiss = "The complete emission exceeds the cache entry budget.";
                         }
-                        else emitted = await backend.EmitAsync(model, emission, cancellation.Token).ConfigureAwait(false);
+                        else emitted = preparedEmission is not null
+                            ? await preparedEmission.EmitAsync(emission.sink, cancellation.Token).ConfigureAwait(false)
+                            : await backend.EmitAsync(model, emission, cancellation.Token).ConfigureAwait(false);
                         cacheEvidence.Add(new(targetId, "csharpEmission", cacheHit ? "hit" : stageCache is not null ? "miss" : "disabled", cacheReason ?? cacheMiss));
                         if (cacheMiss is not null) diagnostics.Add(new(BindingDiagnosticSeverity.Warning, "Emission cache entry was not reused: " + cacheMiss, "BGCS-CACHE-MISS"));
                     }
