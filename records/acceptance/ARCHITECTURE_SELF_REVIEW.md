@@ -74,3 +74,12 @@ parameter identity, channel, ABI and processed-source checks still run at each
 original boundary. No shared service, cross-session cache, unchecked plan entry
 point or public contract was added. A proposed parallel formatter was removed
 after controlled comparisons failed to establish a useful gain.
+
+Frontend identity-prefix reuse is bounded by one NativeModuleBuilder and its
+frozen source mapping. Its key retains native cursor identity and the presumed
+source mode; only mapped USR and semantic-owner strings are shared. Category,
+fallback, location, macro-definition offsets and final hashes stay per-use, and
+native cursor handles remain entirely inside the frontend. No fact, layout,
+graph ownership or external-input verification is skipped. The locked LLVM
+cursor equality and location implementations were also reviewed: the ignored
+declaration-group flag does not change these cached prefix inputs.

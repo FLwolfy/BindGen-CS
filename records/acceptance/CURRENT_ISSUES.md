@@ -128,6 +128,31 @@ were rejected for insufficient measured benefit and are absent from production.
 No budget, selected declaration, input fence or validation was relaxed. The next
 controlled CI must still pass every original gate before release.
 
+The controlled run at `357db0a` again passed Linux and macOS, including their
+isolated SDK/CLI consumers and Linux's Mono/Wasm AOT regression. Windows passed
+its strict 10,000-declaration budget (23.249 seconds cold, 8.337 warm), but
+cimguizmo still exceeded 15 seconds at 15.141. The failed receipt remains valid;
+the small projection correction alone did not close the issue.
+
+The next finite correction shares only the mapped USR and semantic-owner prefix
+for an equal native cursor and presumed-identity mode inside one module builder.
+The source mapping is frozen, while category, fallback, location, macro offsets
+and final hashing remain per-use computations. All 220 public frontend cases,
+including the 87 fact snapshots and template/ownership/source-identity regressions,
+pass. The Release build has zero warnings/errors; architecture, style,
+documentation, ownership and all 17 API snapshots pass.
+
+Five alternating cimguizmo comparisons retain identical native/managed bytes,
+with modest median improvement from 15.656 to 15.391 seconds. Those samples do
+not certify the 15-second budget. The subsequent original formal six-library
+collector passes every budget, managed compilation, native syntax check and
+reviewed snapshot; cimguizmo measures 14.954 seconds. A current strict 10,000-case
+sample passes at 18.622 seconds cold and 7.877 warm. One final five-pair comparison
+against the verified public 3.0.1 closure passes unchanged absolute, memory,
+recovery and 10-percent relative limits: current medians are 18.852 seconds cold
+and 7.971 warm, with ratios 1.020345 and 0.984826. These are local source receipts;
+the new clean commit must still pass all four remote gates and public consumption.
+
 ## Certification policy
 
 - Run the full retained local baseline with explicit Release configuration after

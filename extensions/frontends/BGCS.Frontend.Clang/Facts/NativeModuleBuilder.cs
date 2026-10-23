@@ -30,6 +30,7 @@ internal sealed class NativeModuleBuilder
     private readonly SourcePathMapper m_sourcePaths;
     private readonly Dictionary<string, NativeType> m_types = new(StringComparer.Ordinal);
     private readonly Dictionary<CppType, StableId> m_completedTypeIds = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<(CXCursor Cursor, bool PresumedIdentity), (string Usr, string Owner)> m_cursorIdentities = [];
     private readonly Dictionary<string, NativeDeclaration> m_declarations = new(StringComparer.Ordinal);
     private readonly Dictionary<StableId, CXCursor> m_declarationCursors = [];
     private readonly HashSet<string> m_visitingTypes = new(StringComparer.Ordinal);
@@ -410,13 +411,21 @@ internal sealed class NativeModuleBuilder
         string fallback
     ) {
         fallback = m_sourcePaths.MapCompilerProvenance(fallback);
-        using var nativeUsr = ClangSharp.Interop.clang.getCursorUSR(element.cursor);
         // A macro's byte offset identifies its definition occurrence. Erasing
         // it would merge an inactive definition with a later active redefinition.
-        string usr = element.cursor.kind == 0 ? string.Empty : m_sourcePaths.MapUsr(nativeUsr.ToString(), element.cursor.GetSourceLocation().file ?? string.Empty,
-            m_request.usePresumedSourceLocations && element is not CppMacro);
-        string owner = element.cursor.kind == 0 ? string.Empty : CXUtil.GetSemanticRecordIdentity(element.cursor, m_sourcePaths);
-        string key = (usr.Length > 0 ? usr + "|" + fallback : fallback + "|" + GetLocation(element)) + owner;
+        bool presumedIdentity = m_request.usePresumedSourceLocations && element is not CppMacro;
+        if (!m_cursorIdentities.TryGetValue((element.cursor, presumedIdentity), out var cursorIdentity))
+        {
+            // Only the borrowed cursor and frozen source mapping determine this
+            // prefix. Category, fallback and location remain per-use facts.
+            using var nativeUsr = ClangSharp.Interop.clang.getCursorUSR(element.cursor);
+            string usr = element.cursor.kind == 0 ? string.Empty : m_sourcePaths.MapUsr(nativeUsr.ToString(), element.cursor.GetSourceLocation().file ?? string.Empty,
+                presumedIdentity);
+            string owner = element.cursor.kind == 0 ? string.Empty : CXUtil.GetSemanticRecordIdentity(element.cursor, m_sourcePaths);
+            cursorIdentity = (usr, owner);
+            m_cursorIdentities.Add((element.cursor, presumedIdentity), cursorIdentity);
+        }
+        string key = (cursorIdentity.Usr.Length > 0 ? cursorIdentity.Usr + "|" + fallback : fallback + "|" + GetLocation(element)) + cursorIdentity.Owner;
         return category + ":" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
     }
 
